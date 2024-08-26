@@ -1,6 +1,4 @@
 import { expect, test } from "@playwright/test";
-import * as dotenv from "dotenv";
-import path from "path";
 
 test("should be able to move flow from folder, rename it and be displayed on correct folder", async ({
   page,

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("should be able to see output preview from grouped components", async ({
+test("should be able to see output preview from grouped components and connect components with a single click", async ({
   page,
 }) => {
   await page.goto("/");
@@ -51,7 +51,7 @@ test("should be able to see output preview from grouped components", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-1000, 500);
+      await page.mouse.move(-600, 300);
       await page.waitForTimeout(400);
     });
 
@@ -71,7 +71,7 @@ test("should be able to see output preview from grouped components", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-1000, 800);
+      await page.mouse.move(-600, 300);
       await page.waitForTimeout(400);
     });
 
@@ -86,7 +86,7 @@ test("should be able to see output preview from grouped components", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-800, 800);
+      await page.mouse.move(-600, 300);
       await page.waitForTimeout(400);
     });
 
@@ -101,7 +101,7 @@ test("should be able to see output preview from grouped components", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-200, 800);
+      await page.mouse.move(-600, 300);
       await page.waitForTimeout(200);
     });
 
@@ -117,7 +117,7 @@ test("should be able to see output preview from grouped components", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-200, 500);
+      await page.mouse.move(-600, 300);
     });
 
   await page.mouse.up();
@@ -134,13 +134,11 @@ test("should be able to see output preview from grouped components", async ({
   const elementCombineTextOutput0 = await page
     .getByTestId("handle-combinetext-shownode-combined text-right")
     .nth(0);
-  await elementCombineTextOutput0.hover();
-  await page.mouse.down();
+  await elementCombineTextOutput0.click();
   const elementCombineTextInput1 = await page
     .getByTestId("handle-combinetext-shownode-first text-left")
     .nth(1);
-  await elementCombineTextInput1.hover();
-  await page.mouse.up();
+  await elementCombineTextInput1.click();
 
   await page
     .getByTestId("title-Combine Text")
@@ -157,40 +155,32 @@ test("should be able to see output preview from grouped components", async ({
   const elementTextOutput0 = await page
     .getByTestId("handle-textinput-shownode-text-right")
     .nth(0);
-  await elementTextOutput0.hover();
-  await page.mouse.down();
+  await elementTextOutput0.click();
   const elementGroupInput0 = await page.getByTestId(
     "handle-groupnode-shownode-first text-left",
   );
-
-  await elementGroupInput0.hover();
-  await page.mouse.up();
+  await elementGroupInput0.click();
 
   //connection 3
   const elementTextOutput1 = await page
     .getByTestId("handle-textinput-shownode-text-right")
     .nth(2);
-  await elementTextOutput1.hover();
-  await page.mouse.down();
+  await elementTextOutput1.click();
   const elementGroupInput1 = await page
     .getByTestId("handle-groupnode-shownode-second text-left")
     .nth(1);
-
-  await elementGroupInput1.hover();
-  await page.mouse.up();
+  await elementGroupInput1.click();
 
   //connection 4
   const elementGroupOutput = await page
     .getByTestId("handle-groupnode-shownode-combined text-right")
     .nth(0);
-  await elementGroupOutput.hover();
-  await page.mouse.down();
+  await elementGroupOutput.click();
   const elementTextOutputInput = await page
     .getByTestId("handle-textoutput-shownode-text-left")
     .nth(0);
 
-  await elementTextOutputInput.hover();
-  await page.mouse.up();
+  await elementTextOutputInput.click();
 
   await page
     .getByTestId("popover-anchor-input-input_value")
