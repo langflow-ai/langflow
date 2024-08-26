@@ -25,7 +25,6 @@ import {
   ChevronRight,
   ChevronRightSquare,
   ChevronUp,
-  ChevronsDownUp,
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
