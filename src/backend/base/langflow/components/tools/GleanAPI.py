@@ -32,12 +32,8 @@ class GleanAPIComponent(LCToolComponent):
     def build_tool(self) -> Tool:
         wrapper = self._build_wrapper()
 
-        return Tool(
-            name="glean_search_api",
-            description="Search with the Glean API",
-            func=wrapper.run
-        )
-    
+        return Tool(name="glean_search_api", description="Search with the Glean API", func=wrapper.run)
+
     def run_model(self) -> Union[Data, list[Data]]:
         wrapper = self._build_wrapper()
 
@@ -58,24 +54,24 @@ class GleanAPIComponent(LCToolComponent):
         self.status = data
 
         return data
-    
+
     def _build_wrapper(self):
         class GleanAPIWrapper(BaseModel):
             """
             Wrapper around Glean API.
             """
+
             glean_api_url: str
             glean_access_token: str
             act_as: str = "langflow-component@datastax.com"
 
             def _prepare_request(
-                    self,
-                    query: str,
-                    page_size: int = 10,
-                    field_name: Optional[str] = None,
-                    values: Optional[List[dict]] = None,
-                ) -> dict:
-
+                self,
+                query: str,
+                page_size: int = 10,
+                field_name: Optional[str] = None,
+                values: Optional[List[dict]] = None,
+            ) -> dict:
                 facet_filters = [{"field_name": field_name, "values": values}]
                 if not field_name or not values:
                     facet_filters = []
@@ -84,32 +80,28 @@ class GleanAPIComponent(LCToolComponent):
                     "url": urljoin(self.glean_api_url, "search"),
                     "headers": {
                         "Authorization": f"Bearer {self.glean_access_token}",
-                        "X-Scio-ActAs": self.act_as  # TODO: Update?
+                        "X-Scio-ActAs": self.act_as,  # TODO: Update?
                     },
                     "payload": {
                         "query": query,
                         "pageSize": page_size,
                         "requestOptions": {
                             "facetFilters": facet_filters,
-                        }
-                    }
+                        },
+                    },
                 }
-            
+
             def run(self, query: str, **kwargs: Any) -> str:
                 results = self.results(query, **kwargs)
 
                 return self._result_as_string(results)
-            
+
             def results(self, query: str, **kwargs: Any) -> dict:
                 results = self._search_api_results(query, **kwargs)
 
                 return results
 
-            def _search_api_results(
-                self,
-                query: str,
-                **kwargs: Any
-            ) -> Dict[str, Any]:
+            def _search_api_results(self, query: str, **kwargs: Any) -> Dict[str, Any]:
                 request_details = self._prepare_request(query, **kwargs)
 
                 response = httpx.post(
@@ -126,7 +118,4 @@ class GleanAPIComponent(LCToolComponent):
             def _result_as_string(result: dict) -> str:
                 return str(result)  # TODO: Make pretty
 
-        return GleanAPIWrapper(
-            glean_api_url=self.glean_api_url,
-            glean_access_token=self.glean_access_token
-        )
+        return GleanAPIWrapper(glean_api_url=self.glean_api_url, glean_access_token=self.glean_access_token)
