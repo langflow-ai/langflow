@@ -47,7 +47,7 @@ async def upload_file(
         file_content = await file.read()
         # get the extension of the file
         file_extension = file.filename.split(".")[-1]
-        file_name = hashlib.sha256(file_content).hexdigest()+f".{file_extension}"
+        file_name = hashlib.sha256(file_content).hexdigest() + f".{file_extension}"
         folder = flow_id_str
         await storage_service.save_file(flow_id=folder, file_name=file_name, data=file_content)
         return UploadFileResponse(flowId=flow_id_str, file_path=f"{folder}/{file_name}")
