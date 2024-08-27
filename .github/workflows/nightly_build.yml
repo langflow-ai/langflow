@@ -12,12 +12,13 @@ env:
 jobs:
   create-nightly-tag:
     runs-on: ubuntu-latest
+    needs: [backend-unit-tests, backend-integration-tests]
     if: github.repository == 'langflowai/langflow'
     defaults:
       run:
         shell: bash
     permissions:
-      # Additional permission needed to generate tag
+      # Required to create tag
       contents: write
     outputs:
       TAG: ${{ steps.create_tag.outputs.tag }}
@@ -51,23 +52,22 @@ jobs:
           ./scripts/ci/update_pyproject_version.py $TAG
           ./scripts/ci/update_pyproject_name.py langflow-nightly
 
-          git add pyproject.toml src/backend/base/pyproject.toml
+          git add pyproject.toml
           git commit -m "Update version and project name in files"
 
           git tag -a $TAG -m "Langflow nightly $TAG"
-          git push origin $TAG
-      - if: ${{ failure() }}
-        name: Nightly Tag Failure Slack Message
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          RUN_ID: ${{ github.run_id }}
-        run: python scripts/slack_notifications.py nightly tag
+          echo "Created tag: $TAG"
+
+      # TODO: Slack message on failure
+      # TODO: update email to noreply or generic
+      # git push origin $TAG || echo "Tag push failed. Check if the tag already exists."
 
   frontend-tests:
     name: Run Frontend Tests
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests/end-to-end"
+      ref: ${{ needs.create-nightly-tag.outputs.TAG }} # TODO: DD this to typescript
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
@@ -77,53 +77,53 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12"]'
+      ref: ${{ needs.create-nightly-tag.outputs.TAG }} # TODO: DD this to typescript
 
   backend-integration-tests:
     name: Run Backend Integration Tests
     uses: ./.github/workflows/integration_tests.yml
     with:
       python-versions: '["3.10", "3.11", "3.12"]'
+      ref: ${{ needs.create-nightly-tag.outputs.TAG }} # TODO: DD this to typescript
 
-  run-nightly-build:
+  release-nightly-build:
     name: Run Nightly Langflow Build
-    needs: [backend-unit-tests, backend-integration-tests]
-    uses: ./.github/workflows/release.yml
+    needs: [backend-unit-tests, backend-integration-tests, create-nightly-tag]
+    uses: ./.github/workflows/release_nightly.yml
     with:
-      release_package_base: false
-      release_package_main: true
       build_docker_base: false
-      build_docker_main: true
-      create_release: false
+      build_docker_main: false
+      nightly_tag: ${{ needs.create-nightly-tag.outputs.TAG }}
 
-  slack-notification:
-    name: Send Slack Notification
-    needs: run-nightly-build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send success notification to Slack
-        if: success()
-        uses: slackapi/slack-github-action@v1.26.0
-        with:
-          payload: |
-            {
-              "channel": "#langflow-nightly-builds",
-              "username": "GitHub Actions",
-              "text": "Nightly Build Successful :white_check_mark:",
-              "icon_emoji": ":rocket:"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  # slack-notification:
+  #   name: Send Slack Notification
+  #   needs: run-nightly-build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Send success notification to Slack
+  #       if: success()
+  #       uses: slackapi/slack-github-action@v1.26.0
+  #       with:
+  #         payload: |
+  #           {
+  #             "channel": "#langflow-nightly-builds",
+  #             "username": "GitHub Actions",
+  #             "text": "Nightly Build Successful :white_check_mark:",
+  #             "icon_emoji": ":rocket:"
+  #           }
+  #       env:
+  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      - name: Send failure notification to Slack
-        if: failure()
-        uses: slackapi/slack-github-action@v1.26.0
-        with:
-          payload: |
-            {
-              "channel": "#langflow-nightly-builds",
-              "username": "GitHub Actions",
-              "text": "Nightly Build Failed :x:",
-              "icon_emoji": ":warning:"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  #     - name: Send failure notification to Slack
+  #       if: failure()
+  #       uses: slackapi/slack-github-action@v1.26.0
+  #       with:
+  #         payload: |
+  #           {
+  #             "channel": "#langflow-nightly-builds",
+  #             "username": "GitHub Actions",
+  #             "text": "Nightly Build Failed :x:",
+  #             "icon_emoji": ":warning:"
+  #           }
+  #       env:
+  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
