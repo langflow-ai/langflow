@@ -63,7 +63,7 @@ jobs:
           node-version: "20"
       - name: Verify Nightly Name and Version
         run: |
-          name=$(poetry version --short | cut -d' ' -f1)
+          name=$(poetry version | cut -d' ' -f1)
           version=$(poetry version --short)
           if [ "$name" != "langflow-nightly" ]; then
             echo "Name $name does not match langflow-nightly. Exiting the workflow."
