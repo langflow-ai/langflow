@@ -21,6 +21,8 @@ import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 import { sortKeys } from "./utils";
 import sensitiveSort from "./utils/sensitive-sort";
+import FeatureFlags from "@/../feature-config.json";
+
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -407,7 +409,7 @@ export default function ExtraSidebar(): JSX.Element {
               ),
             )}
         </ParentDisclosureComponent>
-        <ParentDisclosureComponent defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
+        {FeatureFlags.ENABLE_MVPS&& <ParentDisclosureComponent defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
           key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
           button={{
             title: "Bunde",
@@ -518,7 +520,7 @@ export default function ExtraSidebar(): JSX.Element {
                 <div key={index}></div>
               ),
             )}
-        </ParentDisclosureComponent>
+        </ParentDisclosureComponent>}
       </div>
     </div>
   );
