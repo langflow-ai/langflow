@@ -1,3 +1,4 @@
+import FeatureFlags from "@/../feature-config.json";
 import { cloneDeep } from "lodash";
 import { LinkIcon, SparklesIcon } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
@@ -5,7 +6,10 @@ import IconComponent from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
-import { BUNDLES_SIDEBAR_FOLDER_NAMES, PRIORITY_SIDEBAR_ORDER } from "../../../../constants/constants";
+import {
+  BUNDLES_SIDEBAR_FOLDER_NAMES,
+  PRIORITY_SIDEBAR_ORDER,
+} from "../../../../constants/constants";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -21,8 +25,6 @@ import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 import { sortKeys } from "./utils";
 import sensitiveSort from "./utils/sensitive-sort";
-import FeatureFlags from "@/../feature-config.json";
-
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -214,8 +216,9 @@ export default function ExtraSidebar(): JSX.Element {
         >
           <IconComponent
             name={search ? "X" : "Search"}
-            className={`h-5 w-5 stroke-[1.5] text-primary ${search ? "cursor-pointer" : "cursor-default"
-              }`}
+            className={`h-5 w-5 stroke-[1.5] text-primary ${
+              search ? "cursor-pointer" : "cursor-default"
+            }`}
             aria-hidden="true"
           />
         </div>
@@ -282,7 +285,7 @@ export default function ExtraSidebar(): JSX.Element {
                           }
                           official={
                             dataFilter[SBSectionName][SBItemName].official ===
-                              false
+                            false
                               ? false
                               : true
                           }
@@ -376,44 +379,45 @@ export default function ExtraSidebar(): JSX.Element {
                   </DisclosureComponent>
                   {index ===
                     Object.keys(dataFilter).length -
-                    PRIORITY_SIDEBAR_ORDER.length +
-                    1 && (
-                      <>
-                        <a
-                          target={"_blank"}
-                          href="https://langflow.store"
-                          className="components-disclosure-arrangement"
-                        >
-                          <div className="flex gap-4">
-                            {/* BUG ON THIS ICON */}
-                            <SparklesIcon
-                              strokeWidth={1.5}
-                              className="w-[22px] text-primary"
-                            />
+                      PRIORITY_SIDEBAR_ORDER.length +
+                      1 && (
+                    <>
+                      <a
+                        target={"_blank"}
+                        href="https://langflow.store"
+                        className="components-disclosure-arrangement"
+                      >
+                        <div className="flex gap-4">
+                          {/* BUG ON THIS ICON */}
+                          <SparklesIcon
+                            strokeWidth={1.5}
+                            className="w-[22px] text-primary"
+                          />
 
-                            <span className="components-disclosure-title">
-                              Discover More
-                            </span>
+                          <span className="components-disclosure-title">
+                            Discover More
+                          </span>
+                        </div>
+                        <div className="components-disclosure-div">
+                          <div>
+                            <LinkIcon className="h-4 w-4 text-foreground" />
                           </div>
-                          <div className="components-disclosure-div">
-                            <div>
-                              <LinkIcon className="h-4 w-4 text-foreground" />
-                            </div>
-                          </div>
-                        </a>
-                      </>
-                    )}
+                        </div>
+                      </a>
+                    </>
+                  )}
                 </Fragment>
               ) : (
                 <div key={index}></div>
               ),
             )}
         </ParentDisclosureComponent>
-        {FeatureFlags.ENABLE_MVPS &&
+        {FeatureFlags.ENABLE_MVPS && (
           <>
             <Separator />
 
-            <ParentDisclosureComponent defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
+            <ParentDisclosureComponent
+              defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
               key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
               button={{
                 title: "Bundles",
@@ -423,7 +427,8 @@ export default function ExtraSidebar(): JSX.Element {
             >
               {Object.keys(dataFilter)
                 .sort(sortKeys)
-                .filter((x) => BUNDLES_SIDEBAR_FOLDER_NAMES.includes(x)).map((SBSectionName: keyof APIObjectType, index) =>
+                .filter((x) => BUNDLES_SIDEBAR_FOLDER_NAMES.includes(x))
+                .map((SBSectionName: keyof APIObjectType, index) =>
                   Object.keys(dataFilter[SBSectionName]).length > 0 ? (
                     <Fragment
                       key={`DisclosureComponent${index + search + JSON.stringify(getFilterEdge)}`}
@@ -453,27 +458,33 @@ export default function ExtraSidebar(): JSX.Element {
                             .map((SBItemName: string, index) => (
                               <ShadTooltip
                                 content={
-                                  dataFilter[SBSectionName][SBItemName].display_name
+                                  dataFilter[SBSectionName][SBItemName]
+                                    .display_name
                                 }
                                 side="right"
                                 key={index}
                               >
                                 <SidebarDraggableComponent
                                   sectionName={SBSectionName as string}
-                                  apiClass={dataFilter[SBSectionName][SBItemName]}
+                                  apiClass={
+                                    dataFilter[SBSectionName][SBItemName]
+                                  }
                                   key={index}
                                   onDragStart={(event) =>
                                     onDragStart(event, {
                                       //split type to remove type in nodes saved with same name removing it's
                                       type: removeCountFromString(SBItemName),
-                                      node: dataFilter[SBSectionName][SBItemName],
+                                      node: dataFilter[SBSectionName][
+                                        SBItemName
+                                      ],
                                     })
                                   }
                                   color={nodeColors[SBSectionName]}
                                   itemName={SBItemName}
                                   //convert error to boolean
                                   error={
-                                    !!dataFilter[SBSectionName][SBItemName].error
+                                    !!dataFilter[SBSectionName][SBItemName]
+                                      .error
                                   }
                                   display_name={
                                     dataFilter[SBSectionName][SBItemName]
@@ -492,33 +503,33 @@ export default function ExtraSidebar(): JSX.Element {
                       </DisclosureComponent>
                       {index ===
                         Object.keys(dataFilter).length -
-                        PRIORITY_SIDEBAR_ORDER.length +
-                        1 && (
-                          <>
-                            <a
-                              target={"_blank"}
-                              href="https://langflow.store"
-                              className="components-disclosure-arrangement"
-                            >
-                              <div className="flex gap-4">
-                                {/* BUG ON THIS ICON */}
-                                <SparklesIcon
-                                  strokeWidth={1.5}
-                                  className="w-[22px] text-primary"
-                                />
+                          PRIORITY_SIDEBAR_ORDER.length +
+                          1 && (
+                        <>
+                          <a
+                            target={"_blank"}
+                            href="https://langflow.store"
+                            className="components-disclosure-arrangement"
+                          >
+                            <div className="flex gap-4">
+                              {/* BUG ON THIS ICON */}
+                              <SparklesIcon
+                                strokeWidth={1.5}
+                                className="w-[22px] text-primary"
+                              />
 
-                                <span className="components-disclosure-title">
-                                  Discover More
-                                </span>
+                              <span className="components-disclosure-title">
+                                Discover More
+                              </span>
+                            </div>
+                            <div className="components-disclosure-div">
+                              <div>
+                                <LinkIcon className="h-4 w-4 text-foreground" />
                               </div>
-                              <div className="components-disclosure-div">
-                                <div>
-                                  <LinkIcon className="h-4 w-4 text-foreground" />
-                                </div>
-                              </div>
-                            </a>
-                          </>
-                        )}
+                            </div>
+                          </a>
+                        </>
+                      )}
                     </Fragment>
                   ) : (
                     <div key={index}></div>
@@ -526,8 +537,7 @@ export default function ExtraSidebar(): JSX.Element {
                 )}
             </ParentDisclosureComponent>
           </>
-
-        }
+        )}
       </div>
     </div>
   );
