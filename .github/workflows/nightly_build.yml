@@ -67,7 +67,7 @@ jobs:
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests/end-to-end"
-      ref: ${{ needs.create-nightly-tag.outputs.TAG }} # TODO: DD this to typescript
+      ref: ${{ needs.create-nightly-tag.outputs.TAG }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
@@ -78,7 +78,7 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12"]'
-      ref: ${{ needs.create-nightly-tag.outputs.TAG }} # TODO: DD this to typescript
+      ref: ${{ needs.create-nightly-tag.outputs.TAG }}
 
   backend-integration-tests:
     name: Run Backend Integration Tests
@@ -86,8 +86,7 @@ jobs:
     uses: ./.github/workflows/integration_tests.yml
     with:
       python-versions: '["3.10", "3.11", "3.12"]'
-      ref: ${{ needs.create-nightly-tag.outputs.TAG }} # TODO: DD this to typescript
-
+      ref: ${{ needs.create-nightly-tag.outputs.TAG }}
 
   # release-nightly-build:
   #   name: Run Nightly Langflow Build
