@@ -12,6 +12,7 @@ import {
   useAutoLogin,
   useRefreshAccessToken,
 } from "./controllers/API/queries/auth";
+import { useGetStarterProjectsQuery } from "./controllers/API/queries/starter-projects";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
 import useSaveConfig from "./hooks/use-save-config";
 import router from "./routes";
@@ -35,6 +36,8 @@ export default function App() {
   const { mutate: mutateAutoLogin } = useAutoLogin();
 
   useGetVersionQuery();
+
+  useGetStarterProjectsQuery();
 
   const { mutate: mutateRefresh } = useRefreshAccessToken();
 
