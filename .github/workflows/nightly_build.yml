@@ -12,8 +12,6 @@ env:
 jobs:
   create-nightly-tag:
     runs-on: ubuntu-latest
-    needs: [backend-unit-tests, backend-integration-tests]
-    if: github.repository == 'langflowai/langflow'
     defaults:
       run:
         shell: bash
