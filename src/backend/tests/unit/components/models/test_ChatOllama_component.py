@@ -124,8 +124,3 @@ def test_build_model(mock_chat_ollama, component):
     assert model.base_url == "http://localhost:11434"
     assert model.model == "llama3.1"
 
-
-@patch("langchain_community.chat_models.ChatOllama")
-def test_build_model_failure(mock_chat_ollama, component):
-    # Mock the ChatOllama to raise an exception when initialized
-    pass
