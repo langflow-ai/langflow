@@ -34,11 +34,6 @@ on:
         required: false
         type: boolean
         default: true
-      nightly_build:
-        description: "Whether release is for a nightly build"
-        required: false
-        type: boolean
-        default: false
   workflow_call:
     inputs:
       release_package_base:
@@ -71,11 +66,6 @@ on:
         required: false
         type: boolean
         default: true
-      nightly_build:
-        description: "Whether release is for a nightly build"
-        required: false
-        type: boolean
-        default: false
 
 env:
   POETRY_VERSION: "1.8.2"
@@ -246,7 +236,6 @@ jobs:
       version: ""
       release_type: ${{ matrix.release_type }}
       pre_release: ${{ inputs.pre_release }}
-      nightly_build: ${{ inputs.nightly_build }}
     secrets: inherit
 
   call_docker_build_main:
@@ -263,7 +252,6 @@ jobs:
       version: ""
       release_type: ${{ matrix.release_type }}
       pre_release: ${{ inputs.pre_release }}
-      nightly_build: ${{ inputs.nightly_build }}
     secrets: inherit
 
   create_release:
