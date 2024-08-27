@@ -46,15 +46,15 @@ jobs:
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
 
-          MAIN_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py main)"
-          echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
-          poetry run python ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
-          poetry run python ./scripts/ci/update_pyproject_name.py langflow-nightly main
-
           BASE_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py base)"
           echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
-          poetry run python ./scripts/ci/update_pyproject_version.py $BASE_TAG base
           poetry run python ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
+          poetry run python ./scripts/ci/update_pyproject_version.py $BASE_TAG base
+
+          MAIN_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py main)"
+          echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
+          poetry run python ./scripts/ci/update_pyproject_name.py langflow-nightly main
+          poetry run python ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
 
           git add pyproject.toml src/backend/base/pyproject.toml
           git commit -m "Update version and project name in files"
