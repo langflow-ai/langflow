@@ -105,7 +105,6 @@ wolframalpha = "^5.1.3"
 astra-assistants = "^2.0.15"
 composio-langchain = "^0.5.3"
 spider-client = "^0.0.27"
-packaging = ">=23.2,<24.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -137,6 +136,7 @@ vulture = "^2.11"
 dictdiffer = "^0.9.0"
 pytest-split = "^0.9.0"
 pytest-flakefinder = "^1.1.0"
+packaging = ">=23.2,<24.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
