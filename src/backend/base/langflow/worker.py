@@ -1,12 +1,11 @@
 from typing import TYPE_CHECKING
 
-from asyncer import syncify
-
 from langflow.api.run_utils import simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.core.celery_app import celery_app
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
+from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     pass
@@ -29,11 +28,13 @@ def run_flow_task(
         flow_read = FlowRead(**flow)
         input_request_object = SimplifiedAPIRequest(**input_request)
         user_read = UserRead(**api_key_user)
-        result = syncify(simple_run_flow)(
-            flow=flow_read,
-            input_request=input_request_object,
-            stream=stream,
-            api_key_user=user_read,
+        result = run_until_complete(
+            simple_run_flow(
+                flow=flow_read,
+                input_request=input_request_object,
+                stream=stream,
+                api_key_user=user_read,
+            )
         )
         return result
     except Exception as e:
