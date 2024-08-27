@@ -76,9 +76,12 @@ services:
           action: sync
           target: /app/src/backend/base/langflow
     depends_on:
-      - db
-      - broker
-      - result_backend
+        db:
+          condition: service_healthy
+        broker:
+          condition: service_healthy
+        result_backend:
+          condition: service_healthy
     environment:
       - NO_FRONTEND=no-frontend
       - LANGFLOW_CELERY_ENABLED=true
@@ -139,7 +142,7 @@ services:
     ports:
       - 6379:6379
     healthcheck:
-      test: "exit 0"
+      test: "redis-cli ping"
 
   celeryworker:
     <<: *backend
@@ -147,11 +150,16 @@ services:
       - .env
     command: /bin/sh -c "python -m celery -A langflow.worker.celery_app worker --loglevel=DEBUG --concurrency=1 -n lf-worker@%h -E"
     healthcheck:
-      test: "exit 0"
+      test: "python -m celery -A langflow.worker.celery_app inspect ping"
     deploy:
       replicas: 1
     depends_on:
-      - broker
+        db:
+          condition: service_healthy
+        broker:
+          condition: service_healthy
+        result_backend:
+          condition: service_healthy
 
   flower:
     <<: *backend
@@ -160,7 +168,8 @@ services:
     environment:
       - FLOWER_PORT=5555
     depends_on:
-      - celeryworker
+        celeryworker:
+          condition: service_healthy
     command: /bin/sh -c "python -m celery -A langflow.worker.celery_app --broker=${BROKER_URL?Variable not set} flower --port=5555"
     deploy:
       labels:
@@ -181,6 +190,9 @@ services:
     env_file:
       - .env
     restart: on-failure
+    depends_on:
+      backend:
+        condition: service_healthy
     deploy:
       labels:
         - traefik.enable=true
@@ -210,6 +222,7 @@ services:
         delay: 5s
         max_attempts: 3
         window: 120s
+
   prometheus:
     image: prom/prometheus:v2.37.9
     env_file:
@@ -233,8 +246,8 @@ services:
     image: grafana/grafana:8.2.6
     env_file:
       - .env
-    # ports:
-    #   - 3000:3000
+    ports:
+      - 3000:3001
     volumes:
       - grafana_data:/var/lib/grafana
     deploy:
@@ -242,7 +255,7 @@ services:
         - traefik.enable=true
         - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
         - traefik.http.routers.${STACK_NAME?Variable not set}-grafana-http.rule=PathPrefix(`/grafana`)
-        - traefik.http.services.${STACK_NAME?Variable not set}-grafana.loadbalancer.server.port=3000
+        - traefik.http.services.${STACK_NAME?Variable not set}-grafana.loadbalancer.server.port=3001
 
 volumes:
   grafana_data:
