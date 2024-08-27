@@ -249,7 +249,6 @@ setup_devcontainer: ## set up the development container
 	poetry run langflow --path src/frontend/build
 
 setup_env: ## set up the environment
-	@sh ./scripts/setup/update_poetry.sh 1.8.2
 	@sh ./scripts/setup/setup_env.sh
 
 frontend: ## run the frontend in development mode
@@ -385,6 +384,11 @@ docker_compose_up: docker_build docker_compose_down
 docker_compose_down:
 	@echo 'Running docker compose down'
 	docker compose -f $(DOCKER_COMPOSE) down || true
+
+dcdev_up:
+	@echo 'Running docker compose up'
+	docker compose -f docker/dev.docker-compose.yml down || true
+	docker compose -f docker/dev.docker-compose.yml up --remove-orphans
 
 lock_base:
 	cd src/backend/base && poetry lock

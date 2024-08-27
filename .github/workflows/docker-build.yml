@@ -36,9 +36,17 @@ jobs:
   get-version:
     name: Get Version
     runs-on: ubuntu-latest
+
     outputs:
       version: ${{ steps.get-version-input.outputs.version || steps.get-version-base.outputs.version || steps.get-version-main.outputs.version }}
     steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12 + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: "3.12"
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
       - name: Get Version from Input
         if : ${{ inputs.version != '' }}
         id: get-version-input
@@ -49,13 +57,13 @@ jobs:
         if : ${{ inputs.version == '' && inputs.release_type == 'base' }}
         id: get-version-base
         run: |
-          version=$(poetry version --short)
+          version=$(cd src/backend/base && poetry version --short)
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Base
         if : ${{ inputs.version == '' && inputs.release_type == 'main' }}
         id: get-version-main
         run: |
-          version=$(cd src/backend/base && poetry version --short)
+          version=$(poetry version --short)
           echo version=$version >> $GITHUB_OUTPUT
   setup:
     runs-on: ubuntu-latest

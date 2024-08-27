@@ -12,7 +12,7 @@ export const useDeleteDeleteFlows: useMutationFunctionType<
   undefined,
   IDeleteFlows
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const deleteFlowsFn = async (payload: IDeleteFlows): Promise<any> => {
     const response = await api.delete<any>(`${getURL("FLOWS")}/`, {
@@ -25,7 +25,12 @@ export const useDeleteDeleteFlows: useMutationFunctionType<
   const mutation: UseMutationResult<IDeleteFlows, any, IDeleteFlows> = mutate(
     ["useLoginUser"],
     deleteFlowsFn,
-    options,
+    {
+      ...options,
+      onSettled: () => {
+        queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
+      },
+    },
   );
 
   return mutation;

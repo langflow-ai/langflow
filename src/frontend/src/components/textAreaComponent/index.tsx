@@ -1,8 +1,6 @@
+import ComponentTextModal from "@/modals/textAreaModal";
 import { classNames } from "@/utils/utils";
 import { useEffect } from "react";
-import { EDIT_TEXT_MODAL_TITLE } from "../../constants/constants";
-import { TypeModal } from "../../constants/enums";
-import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
@@ -41,17 +39,14 @@ export default function TextAreaComponent({
             "w-full",
             "resize-none",
           )}
-          rows={Math.min(3, value.split("\n").length)}
+          rows={1}
           placeholder={"Type something..."}
           onChange={(event) => {
             onChange(event.target.value);
           }}
         />
-        <GenericModal
+        <ComponentTextModal
           changeVisibility={updateVisibility}
-          type={TypeModal.TEXT}
-          buttonText="Finish Editing"
-          modalTitle={EDIT_TEXT_MODAL_TITLE}
           value={value}
           setValue={(value: string) => {
             onChange(value);
@@ -76,7 +71,7 @@ export default function TextAreaComponent({
               />
             </Button>
           </div>
-        </GenericModal>
+        </ComponentTextModal>
         {password !== undefined && (
           <Button
             unstyled

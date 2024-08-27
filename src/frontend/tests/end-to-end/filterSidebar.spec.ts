@@ -1,8 +1,16 @@
 import { expect, test } from "@playwright/test";
 
-test("LLMChain - Filter", async ({ page }) => {
+test("user must see on handle click the possibility connections - LLMChain", async ({
+  page,
+}) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -16,7 +24,7 @@ test("LLMChain - Filter", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.waitForTimeout(1000);
@@ -32,7 +40,7 @@ test("LLMChain - Filter", async ({ page }) => {
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("api request");
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page
     .getByTestId("dataAPI Request")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));

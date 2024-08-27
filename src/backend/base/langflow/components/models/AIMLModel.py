@@ -1,6 +1,3 @@
-import operator
-from functools import reduce
-
 from langflow.field_typing.range_spec import RangeSpec
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
@@ -9,7 +6,6 @@ from langflow.base.models.aiml_constants import AIML_CHAT_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import (
-    BoolInput,
     DictInput,
     DropdownInput,
     FloatInput,
@@ -35,19 +31,6 @@ class AIMLModelComponent(LCModelComponent):
             range_spec=RangeSpec(min=0, max=128000),
         ),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
-        BoolInput(
-            name="json_mode",
-            display_name="JSON Mode",
-            advanced=True,
-            info="If True, it will output JSON regardless of passing a schema.",
-        ),
-        DictInput(
-            name="output_schema",
-            is_list=True,
-            display_name="Schema",
-            advanced=True,
-            info="The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
-        ),
         DropdownInput(
             name="model_name",
             display_name="Model Name",
@@ -79,14 +62,12 @@ class AIMLModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})
         aiml_api_key = self.api_key
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
         aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com"
-        json_mode = bool(output_schema_dict) or self.json_mode
         seed = self.seed
 
         if isinstance(aiml_api_key, SecretStr):
@@ -101,7 +82,6 @@ class AIMLModelComponent(LCModelComponent):
             base_url=aiml_api_base,
             max_tokens=max_tokens or None,
             seed=seed,
-            json_mode=json_mode,
             **model_kwargs,
         )
 

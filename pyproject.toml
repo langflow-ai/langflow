@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.15"
+version = "1.0.16"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -49,8 +49,7 @@ pinecone-client = "^3.0.3"
 pymongo = "^4.6.0"
 supabase = "^2.3.0"
 certifi = ">=2023.11.17,<2025.0.0"
-psycopg = "^3.1.9"
-psycopg-binary = "^3.1.9"
+psycopg = "3.1.9" # https://github.com/psycopg/psycopg/issues/858
 fastavro = "^1.8.0"
 celery = { extras = ["redis"], version = "^5.3.6", optional = true }
 redis = "^5.0.1"
@@ -60,8 +59,7 @@ pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
 langfuse = "^2.33.0"
 metal-sdk = "^2.5.0"
 markupsafe = "^2.1.3"
-# jq is not available for windows
-boto3 = "^1.34.0"
+boto3 = "~1.34.162"
 numexpr = "^2.8.6"
 qianfan = "0.3.5"
 pgvector = "^0.2.3"
@@ -72,11 +70,11 @@ elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
 dspy-ai = "^2.4.0"
 assemblyai = "^0.26.0"
-litellm = "^1.38.0"
+litellm = "^1.44.0"
 chromadb = "^0.4"
-langchain-anthropic = "^0.1.6"
+langchain-anthropic = "^0.1.23"
 langchain-astradb = "^0.3.3"
-langchain-openai = "0.1.17"
+langchain-openai = "0.1.22"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
 langchain-google-vertexai = "1.0.7"
 langchain-groq = "0.1.6"
@@ -90,7 +88,7 @@ upstash-vector = "^0.4.0"
 gitpython = "^3.1.43"
 cassio = { extras = ["cassio"], version = "^0.1.7", optional = true }
 unstructured = {extras = ["docx", "md", "pptx"], version = "^0.14.4"}
-langchain-aws = "^0.1.6"
+langchain-aws = "^0.1.16"
 langchain-mongodb = "^0.1.6"
 kubernetes = "^30.1.0"
 firecrawl-py = "^0.0.16"
@@ -105,7 +103,7 @@ yfinance = "^0.2.40"
 langchain-google-community = "1.0.7"
 wolframalpha = "^5.1.3"
 astra-assistants = "^2.0.15"
-composio-langchain = "^0.3.28"
+composio-langchain = "^0.5.3"
 spider-client = "^0.0.27"
 
 
@@ -124,7 +122,6 @@ types-pillow = "^10.2.0.20240213"
 types-pyyaml = "^6.0.12.8"
 types-python-jose = "^3.3.4.8"
 types-passlib = "^1.7.7.13"
-locust = "^2.23.1"
 pytest-mock = "^3.14.0"
 pytest-xdist = "^3.6.0"
 types-pywin32 = "^306.0.0.4"
@@ -138,6 +135,7 @@ pre-commit = "^3.7.0"
 vulture = "^2.11"
 dictdiffer = "^0.9.0"
 pytest-split = "^0.9.0"
+pytest-flakefinder = "^1.1.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
@@ -164,6 +162,8 @@ testpaths = ["tests", "integration"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
+log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 markers = ["async_test", "api_key_required"]
 
 

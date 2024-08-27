@@ -196,7 +196,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply form-input block w-full rounded-md border-border bg-muted px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
+    @apply form-input block w-full rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
   }
 
   .input-edit-node {
@@ -217,9 +217,6 @@
 
   .round-button-form {
     @apply flex h-12 w-12 cursor-pointer justify-center rounded-full bg-border px-3 py-1 shadow-md;
-  }
-  .round-button-div {
-    @apply flex items-center gap-3;
   }
   .build-trigger-loading-icon {
     @apply stroke-build-trigger;
@@ -342,7 +339,7 @@
     @apply h-8 w-8 rounded;
   }
   .generic-node-tooltip-div {
-    @apply ml-2 max-w-[220px] truncate;
+    @apply ml-2 flex max-w-[220px] gap-1 truncate;
   }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;
@@ -568,7 +565,7 @@
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium;
   }
   .header-menu-bar-display {
-    @apply flex max-w-[115px] cursor-pointer items-center gap-2 lg:max-w-[145px];
+    @apply flex max-w-[110px] cursor-pointer items-center gap-2 lg:max-w-[150px];
   }
   .header-menu-flow-name {
     @apply flex-1 truncate;
@@ -581,7 +578,7 @@
     @apply flex-max-width h-12 items-center justify-between border-b border-border bg-muted;
   }
   .header-start-display {
-    @apply flex items-center justify-start gap-2;
+    @apply flex items-center gap-2;
   }
   .header-end-division {
     @apply flex justify-end px-2;

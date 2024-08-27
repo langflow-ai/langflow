@@ -2,7 +2,7 @@ import { useLoginUser } from "@/controllers/API/queries/auth";
 import { useFolderStore } from "@/stores/foldersStore";
 import * as Form from "@radix-ui/react-form";
 import { useContext, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -10,7 +10,6 @@ import { SIGNIN_ERROR_ALERT } from "../../constants/alerts_constants";
 import { CONTROL_LOGIN_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { LoginType } from "../../types/api";
 import {
   inputHandlerEventType,
@@ -23,10 +22,7 @@ export default function LoginPage(): JSX.Element {
 
   const { password, username } = inputState;
   const { login } = useContext(AuthContext);
-  const navigate = useNavigate();
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setLoading = useFlowsManagerStore((state) => state.setIsLoading);
-  const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
 
   function handleInput({
@@ -45,11 +41,9 @@ export default function LoginPage(): JSX.Element {
 
     mutate(user, {
       onSuccess: (data) => {
-        setAllFlows([]);
         setSelectedFolder(null);
 
-        setLoading(true);
-        login(data.access_token, "login");
+        login(data.access_token, "login", data.refresh_token);
       },
       onError: (error) => {
         setErrorData({

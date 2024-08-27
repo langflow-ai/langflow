@@ -4,9 +4,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
 
 from langflow.graph.schema import RunOutputs
+from langflow.graph.utils import serialize_field
 from langflow.schema import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
@@ -259,6 +260,13 @@ class ResultDataResponse(BaseModel):
     duration: Optional[str] = None
     used_frozen_result: Optional[bool] = False
 
+    @field_serializer("results")
+    @classmethod
+    def serialize_results(cls, v):
+        if isinstance(v, dict):
+            return {key: serialize_field(val) for key, val in v.items()}
+        return serialize_field(v)
+
 
 class VertexBuildResponse(BaseModel):
     id: Optional[str] = None
@@ -330,3 +338,6 @@ class FlowDataRequest(BaseModel):
 
 class ConfigResponse(BaseModel):
     frontend_timeout: int
+    auto_saving: bool
+    auto_saving_interval: int
+    health_check_max_retries: int

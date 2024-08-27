@@ -1,27 +1,27 @@
 import asyncio
 import json
-from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Generator, Iterator, List
+from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Generator, Iterator, List, cast
 
 import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, log_transaction, serialize_field
+from langflow.graph.utils import UnbuiltObject, log_transaction, log_vertex_build, serialize_field
 from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.exceptions import NoComponentInstance
 from langflow.graph.vertex.schema import NodeData
 from langflow.inputs.inputs import InputTypes
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.graph.utils import log_vertex_build
 from langflow.template.field.base import UNDEFINED, Output
 from langflow.utils.schemas import ChatOutputResponse, DataOutputResponse
 from langflow.utils.util import unescape_string
 
 if TYPE_CHECKING:
-    from langflow.graph.edge.base import ContractEdge
+    from langflow.graph.edge.base import CycleEdge
 
 
 class CustomComponentVertex(Vertex):
@@ -44,7 +44,7 @@ class ComponentVertex(Vertex):
 
     def get_output(self, name: str) -> Output:
         if self._custom_component is None:
-            raise ValueError(f"Vertex {self.id} does not have a component instance.")
+            raise NoComponentInstance(self.id)
         return self._custom_component.get_output(name)
 
     def _built_object_repr(self):
@@ -70,7 +70,7 @@ class ComponentVertex(Vertex):
         for key, value in self._built_object.items():
             self.add_result(key, value)
 
-    def get_edge_with_target(self, target_id: str) -> Generator["ContractEdge", None, None]:
+    def get_edge_with_target(self, target_id: str) -> Generator["CycleEdge", None, None]:
         """
         Get the edge with the target id.
 
@@ -84,7 +84,7 @@ class ComponentVertex(Vertex):
             if edge.target_id == target_id:
                 yield edge
 
-    async def _get_result(self, requester: "Vertex") -> Any:
+    async def _get_result(self, requester: "Vertex", target_handle_name: str | None = None) -> Any:
         """
         Retrieves the result of the built component.
 
@@ -93,10 +93,19 @@ class ComponentVertex(Vertex):
         Returns:
             The built result if use_result is True, else the built object.
         """
+        flow_id = self.graph.flow_id
         if not self._built:
-            asyncio.create_task(
-                log_transaction(source=self, target=requester, flow_id=str(self.graph.flow_id), status="error")
-            )
+            if flow_id:
+                asyncio.create_task(
+                    log_transaction(source=self, target=requester, flow_id=str(flow_id), status="error")
+                )
+            for edge in self.get_edge_with_target(requester.id):
+                # We need to check if the edge is a normal edge
+                # or a contract edge
+
+                if edge.is_cycle and edge.target_param:
+                    return requester.get_value_from_template_dict(edge.target_param)
+
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
         if requester is None:
@@ -104,10 +113,22 @@ class ComponentVertex(Vertex):
 
         edges = self.get_edge_with_target(requester.id)
         result = UNDEFINED
-        edge = None
         for edge in edges:
-            if edge is not None and edge.source_handle.name in self.results:
-                result = self.results[edge.source_handle.name]
+            if (
+                edge is not None
+                and edge.source_handle.name in self.results
+                and edge.target_handle.field_name == target_handle_name
+            ):
+                # Get the result from the output instead of the results dict
+                try:
+                    output = self.get_output(edge.source_handle.name)
+
+                    if output.value is UNDEFINED:
+                        result = self.results[edge.source_handle.name]
+                    else:
+                        result = cast(Any, output.value)
+                except NoComponentInstance:
+                    result = self.results[edge.source_handle.name]
                 break
         if result is UNDEFINED:
             if edge is None:
@@ -115,10 +136,9 @@ class ComponentVertex(Vertex):
             elif edge.source_handle.name not in self.results:
                 raise ValueError(f"Result not found for {edge.source_handle.name}. Results: {self.results}")
             else:
-                raise ValueError(f"Result not found for {edge.source_handle.name}")
-        asyncio.create_task(
-            log_transaction(source=self, target=requester, flow_id=str(self.graph.flow_id), status="success")
-        )
+                raise ValueError(f"Result not found for {edge.source_handle.name} in {edge}")
+        if flow_id:
+            asyncio.create_task(log_transaction(source=self, target=requester, flow_id=str(flow_id), status="success"))
         return result
 
     def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[dict]:

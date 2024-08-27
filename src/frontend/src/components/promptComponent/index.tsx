@@ -1,7 +1,5 @@
+import PromptModal from "@/modals/promptModal";
 import { useEffect } from "react";
-
-import { TypeModal } from "../../constants/enums";
-import GenericModal from "../../modals/genericModal";
 import { PromptAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
@@ -25,14 +23,11 @@ export default function PromptAreaComponent({
 
   return (
     <div className={disabled ? "pointer-events-none w-full" : "w-full"}>
-      <GenericModal
+      <PromptModal
         id={id}
         field_name={field_name}
         readonly={readonly}
-        type={TypeModal.PROMPT}
         value={value}
-        buttonText="Check & Save"
-        modalTitle="Edit Prompt"
         setValue={onChange}
         nodeClass={nodeClass}
         setNodeClass={setNodeClass}
@@ -63,7 +58,7 @@ export default function PromptAreaComponent({
             )}
           </div>
         </Button>
-      </GenericModal>
+      </PromptModal>
     </div>
   );
 }

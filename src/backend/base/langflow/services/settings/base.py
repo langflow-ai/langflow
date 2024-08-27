@@ -74,6 +74,8 @@ class Settings(BaseSettings):
     max_overflow: int = 20
     """The number of connections to allow that can be opened beyond the pool size.
     If not provided, the default is 20."""
+    db_connect_timeout: int = 20
+    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the database."""
 
     # sqlite configuration
     sqlite_pragmas: Optional[dict] = {"synchronous": "NORMAL", "journal_mode": "WAL"}
@@ -151,6 +153,14 @@ class Settings(BaseSettings):
     """If set to True, Langflow will track transactions between flows."""
     vertex_builds_storage_enabled: bool = True
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
+
+    # Config
+    auto_saving: bool = True
+    """If set to True, Langflow will auto save flows."""
+    auto_saving_interval: int = 300
+    """The interval in ms at which Langflow will auto save flows."""
+    health_check_max_retries: int = 5
+    """The maximum number of retries for the health check."""
 
     @field_validator("dev")
     @classmethod

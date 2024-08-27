@@ -1,26 +1,12 @@
-import { AxiosError } from "axios";
+import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
 import { cloneDeep } from "lodash";
-import pDebounce from "p-debounce";
-import { Edge, Node, Viewport } from "reactflow";
 import { create } from "zustand";
-import { SAVE_DEBOUNCE_TIME } from "../constants/constants";
-import {
-  readFlowsFromDatabase,
-  updateFlowInDatabase,
-} from "../controllers/API";
 import { FlowType } from "../types/flow";
 import {
   FlowsManagerStoreType,
   UseUndoRedoOptions,
 } from "../types/zustand/flowsManager";
-import {
-  extractFieldsFromComponenents,
-  processFlows,
-} from "../utils/reactflowUtils";
-import useAlertStore from "./alertStore";
 import useFlowStore from "./flowStore";
-import { useFolderStore } from "./foldersStore";
-import { useTypesStore } from "./typesStore";
 
 const defaultOptions: UseUndoRedoOptions = {
   maxHistorySize: 100,
@@ -31,31 +17,30 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
+  healthCheckMaxRetries: 5,
+  setHealthCheckMaxRetries: (healthCheckMaxRetries: number) =>
+    set({ healthCheckMaxRetries }),
+  autoSaving: true,
+  setAutoSaving: (autoSaving: boolean) => set({ autoSaving }),
+  autoSavingInterval: SAVE_DEBOUNCE_TIME,
+  setAutoSavingInterval: (autoSavingInterval: number) =>
+    set({ autoSavingInterval }),
   examples: [],
   setExamples: (examples: FlowType[]) => {
     set({ examples });
   },
   currentFlowId: "",
-  setCurrentFlow: (flow: FlowType) => {
-    set((state) => ({
+  setCurrentFlow: (flow: FlowType | undefined) => {
+    set({
       currentFlow: flow,
-      currentFlowId: flow.id,
-    }));
+      currentFlowId: flow?.id ?? "",
+    });
+    useFlowStore.getState().resetFlow(flow);
   },
   getFlowById: (id: string) => {
-    return get().flows.find((flow) => flow.id === id);
+    return get().flows?.find((flow) => flow.id === id);
   },
-  setCurrentFlowId: (currentFlowId: string) => {
-    set((state) => ({
-      currentFlowId,
-      currentFlow: state.flows.find((flow) => flow.id === currentFlowId),
-    }));
-  },
-  flows: [],
-  allFlows: [],
-  setAllFlows: (allFlows: FlowType[]) => {
-    set({ allFlows });
-  },
+  flows: undefined,
   setFlows: (flows: FlowType[]) => {
     set({
       flows,
@@ -67,100 +52,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setSaveLoading: (saveLoading: boolean) => set({ saveLoading }),
   isLoading: false,
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
-  refreshFlows: () => {
-    return new Promise<void>((resolve, reject) => {
-      set({ isLoading: true });
-
-      const starterFolderId = useFolderStore.getState().starterProjectId;
-
-      readFlowsFromDatabase()
-        .then((dbData) => {
-          if (dbData) {
-            const { data, flows } = processFlows(dbData);
-            const examples = flows.filter(
-              (flow) => flow.folder_id === starterFolderId,
-            );
-            get().setExamples(examples);
-
-            const flowsWithoutStarterFolder = flows.filter(
-              (flow) => flow.folder_id !== starterFolderId,
-            );
-
-            get().setFlows(flowsWithoutStarterFolder);
-            useTypesStore.setState((state) => ({
-              data: { ...state.data, ["saved_components"]: data },
-              ComponentFields: extractFieldsFromComponenents({
-                ...state.data,
-                ["saved_components"]: data,
-              }),
-            }));
-            set({ isLoading: false });
-            resolve();
-          }
-        })
-        .catch((e) => {
-          set({ isLoading: false });
-          useAlertStore.getState().setErrorData({
-            title: "Could not load flows from database",
-          });
-          reject(e);
-        });
-    });
-  },
-  autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => {
-    if (get().currentFlow) {
-      get().saveFlow(
-        { ...get().currentFlow!, data: { nodes, edges, viewport } },
-        true,
-      );
-    }
-  },
-  saveFlow: (flow: FlowType, silent?: boolean) => {
-    set({ saveLoading: true }); // set saveLoading true immediately
-    return get().saveFlowDebounce(flow, silent); // call the debounced function directly
-  },
-  saveFlowDebounce: pDebounce((flow: FlowType, silent?: boolean) => {
-    const folderUrl = useFolderStore.getState().folderUrl;
-    const hasFolderUrl = folderUrl != null && folderUrl !== "";
-
-    flow.folder_id = hasFolderUrl
-      ? useFolderStore.getState().folderUrl
-      : useFolderStore.getState().myCollectionId ?? "";
-
-    set({ saveLoading: true });
-    return new Promise<void>((resolve, reject) => {
-      updateFlowInDatabase(flow)
-        .then((updatedFlow) => {
-          if (updatedFlow) {
-            // updates flow in state
-            if (!silent) {
-              useAlertStore
-                .getState()
-                .setSuccessData({ title: "Changes saved successfully" });
-            }
-            get().setFlows(
-              get().flows.map((flow) => {
-                if (flow.id === updatedFlow.id) {
-                  return updatedFlow;
-                }
-                return flow;
-              }),
-            );
-            //update tabs state
-
-            resolve();
-            set({ saveLoading: false });
-          }
-        })
-        .catch((err) => {
-          useAlertStore.getState().setErrorData({
-            title: "Error while saving changes",
-            list: [(err as AxiosError).message],
-          });
-          reject(err);
-        });
-    });
-  }, SAVE_DEBOUNCE_TIME),
   takeSnapshot: () => {
     const currentFlowId = get().currentFlowId;
     // push the current graph to the past state

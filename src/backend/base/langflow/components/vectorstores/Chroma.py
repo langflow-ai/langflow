@@ -5,7 +5,7 @@ from chromadb.config import Settings
 from langchain_chroma.vectorstores import Chroma
 from loguru import logger
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.io import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, StrInput, MultilineInput
 from langflow.schema import Data
@@ -98,6 +98,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> Chroma:
         """
         Builds the Chroma object.
@@ -151,7 +152,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         if self.allow_duplicates:
             stored_data = []
         else:
-            stored_data = chroma_collection_to_data(vector_store.get(self.limit))
+            stored_data = chroma_collection_to_data(vector_store.get(limit=self.limit))
             for value in deepcopy(stored_data):
                 del value.id
                 _stored_documents_without_id.append(value)

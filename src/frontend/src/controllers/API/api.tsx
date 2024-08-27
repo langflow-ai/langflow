@@ -1,6 +1,6 @@
 import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
@@ -21,8 +21,6 @@ function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   let { accessToken, authenticationErrorCount } = useContext(AuthContext);
-
-  const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
   const { mutate: mutationLogout } = useLogout();
   const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
   const logout = useAuthStore((state) => state.logout);
@@ -32,10 +30,10 @@ function ApiInterceptor() {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (
-          error?.response?.status === 403 ||
-          error?.response?.status === 401
-        ) {
+        const isAuthenticationError =
+          error?.response?.status === 403 || error?.response?.status === 401;
+
+        if (isAuthenticationError) {
           if (!autoLogin) {
             if (error?.config?.url?.includes("github")) {
               return Promise.reject(error);
@@ -53,11 +51,10 @@ function ApiInterceptor() {
             }
           }
         }
+
         await clearBuildVerticesState(error);
-        if (
-          error?.response?.status !== 401 &&
-          error?.response?.status !== 403
-        ) {
+
+        if (!isAuthenticationError) {
           return Promise.reject(error);
         }
       },
@@ -152,7 +149,6 @@ function ApiInterceptor() {
         onSuccess: async (data) => {
           authenticationErrorCount = 0;
           await remakeRequest(error);
-          setSaveLoading(false);
           authenticationErrorCount = 0;
         },
         onError: (error) => {
@@ -212,6 +208,7 @@ export type StreamingRequestParams = {
   onData: (event: object) => Promise<boolean>;
   body?: object;
   onError?: (statusCode: number) => void;
+  onNetworkError?: (error: Error) => void;
 };
 
 async function performStreamingRequest({
@@ -220,6 +217,7 @@ async function performStreamingRequest({
   onData,
   body,
   onError,
+  onNetworkError,
 }: StreamingRequestParams) {
   let headers = {
     "Content-Type": "application/json",
@@ -252,35 +250,48 @@ async function performStreamingRequest({
   if (response.body === null) {
     return;
   }
-  for await (const chunk of response.body) {
-    const decodedChunk = await textDecoder.decode(chunk);
-    let all = decodedChunk.split("\n\n");
-    for (const string of all) {
-      if (string.endsWith("}")) {
-        const allString = current.join("") + string;
-        let data: object;
-        try {
-          data = JSON.parse(allString);
-          current = [];
-        } catch (e) {
+  try {
+    const reader = response.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      const decodedChunk = textDecoder.decode(value);
+      let all = decodedChunk.split("\n\n");
+      for (const string of all) {
+        if (string.endsWith("}")) {
+          const allString = current.join("") + string;
+          let data: object;
+          try {
+            data = JSON.parse(allString);
+            current = [];
+          } catch (e) {
+            current.push(string);
+            continue;
+          }
+          const shouldContinue = await onData(data);
+          if (!shouldContinue) {
+            controller.abort();
+            return;
+          }
+        } else {
           current.push(string);
-          continue;
         }
-        const shouldContinue = await onData(data);
-        if (!shouldContinue) {
-          controller.abort();
-          return;
-        }
-      } else {
-        current.push(string);
       }
     }
-  }
-  if (current.length > 0) {
-    const allString = current.join("");
-    if (allString) {
-      const data = JSON.parse(current.join(""));
-      await onData(data);
+    if (current.length > 0) {
+      const allString = current.join("");
+      if (allString) {
+        const data = JSON.parse(current.join(""));
+        await onData(data);
+      }
+    }
+  } catch (e: any) {
+    if (onNetworkError) {
+      onNetworkError(e);
+    } else {
+      throw e;
     }
   }
 }

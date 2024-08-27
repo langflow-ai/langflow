@@ -1,4 +1,5 @@
 import { AIMLIcon } from "@/icons/AIML";
+import Perplexity from "@/icons/Perplexity/Perplexity";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import {
@@ -99,6 +100,7 @@ import {
   MoonIcon,
   MoreHorizontal,
   Network,
+  OptionIcon,
   Package2,
   Palette,
   Paperclip,
@@ -596,4 +598,7 @@ export const nodeIconsLucide: iconsType = {
   "AI/ML": AIMLIcon,
   GitLoader: GitLoaderIcon,
   athenaIcon: AthenaIcon,
+  OptionIcon: OptionIcon,
+  Option: OptionIcon,
+  Perplexity,
 };

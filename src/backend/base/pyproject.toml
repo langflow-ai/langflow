@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.93"
+version = "0.0.94"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -32,7 +32,7 @@ httpx = "*"
 uvicorn = "^0.30.0"
 gunicorn = "^22.0.0"
 langchain = "~0.2.0"
-langchain-core = "^0.2.24"
+langchain-core = "^0.2.32"
 langchainhub = "~0.1.15"
 sqlmodel = "^0.0.18"
 loguru = "^0.7.1"
@@ -104,7 +104,6 @@ types-pillow = "^10.2.0.20240213"
 types-pyyaml = "^6.0.12.8"
 types-python-jose = "^3.3.4.8"
 types-passlib = "^1.7.7.13"
-locust = "^2.23.1"
 pytest-mock = "^3.14.0"
 pytest-xdist = "^3.6.0"
 types-pywin32 = "^306.0.0.4"
@@ -119,6 +118,7 @@ vulture = "^2.11"
 dictdiffer = "^0.9.0"
 pytest-split = "^0.9.0"
 devtools = "^0.12.2"
+pytest-flakefinder = "^1.1.0"
 
 
 [tool.pytest.ini_options]

@@ -9,6 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Re
 from loguru import logger
 from sqlmodel import Session, select
 
+from langflow.api.utils import parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -33,8 +34,9 @@ from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
-from langflow.services.database.models.user.model import User
+from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
     get_cache_service,
     get_session,
@@ -174,10 +176,10 @@ async def simple_run_flow_task(
 @router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)
 async def simplified_run_flow(
     background_tasks: BackgroundTasks,
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
     input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
     stream: bool = False,
-    api_key_user: User = Depends(api_key_security),
+    api_key_user: UserRead = Depends(api_key_security),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
 ):
     """
@@ -228,6 +230,8 @@ async def simplified_run_flow(
 
     This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency, supporting a wide range of applications by allowing for dynamic input and output configuration along with performance optimizations through session management and caching.
     """
+    if flow is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
     start_time = time.perf_counter()
     try:
         result = await simple_run_flow(
@@ -363,7 +367,7 @@ async def experimental_run_flow(
     tweaks: Annotated[Optional[Tweaks], Body(embed=True)] = None,  # noqa: F821
     stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
-    api_key_user: User = Depends(api_key_security),
+    api_key_user: UserRead = Depends(api_key_security),
     session_service: SessionService = Depends(get_session_service),
 ):
     """
@@ -477,7 +481,7 @@ async def process(
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
     task_service: "TaskService" = Depends(get_task_service),
-    api_key_user: User = Depends(api_key_security),
+    api_key_user: UserRead = Depends(api_key_security),
     sync: Annotated[bool, Body(embed=True)] = True,  # noqa: F821
     session_service: SessionService = Depends(get_session_service),
 ):
@@ -591,9 +595,14 @@ async def custom_component_update(
         )
         if hasattr(cc_instance, "set_attributes"):
             template = code_request.get_template()
-            params = {
-                key: value_dict.get("value") for key, value_dict in template.items() if isinstance(value_dict, dict)
-            }
+            params = {}
+
+            for key, value_dict in template.items():
+                if isinstance(value_dict, dict):
+                    value = value_dict.get("value")
+                    input_type = str(value_dict.get("_input_type"))
+                    params[key] = parse_value(value, input_type)
+
             load_from_db_fields = [
                 field_name
                 for field_name, field_dict in template.items()

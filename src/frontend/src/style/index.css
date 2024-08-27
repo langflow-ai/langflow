@@ -6,6 +6,7 @@
 
 @layer base {
   :root {
+    --node-selected: 243 75% 59%;
     --background: 0 0% 100%; /* hsl(0 0% 100%) */
     --foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
     --muted: 210 40% 98%; /* hsl(210 40% 98%) */
@@ -71,6 +72,7 @@
   }
 
   .dark {
+    --node-selected: 234 89% 74%;
     --background: 224 28% 7.5%; /* hsl(224 10% 7.5%) */
     --foreground: 213 31% 80%; /* hsl(213 31% 91%) */
     --ice: #60a5fa;

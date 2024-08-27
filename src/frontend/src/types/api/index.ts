@@ -15,6 +15,11 @@ export type APITemplateType = {
   [key: string]: InputFieldType;
 };
 
+export type APICodeValidateType = {
+  imports: { errors: Array<string> };
+  function: { errors: Array<string> };
+};
+
 export type CustomFieldsType = {
   [key: string]: Array<string>;
 };
@@ -77,6 +82,7 @@ export type InputFieldType = {
   refresh_button?: boolean;
   refresh_button_text?: string;
   combobox?: boolean;
+  info?: string;
   [key: string]: any;
 };
 

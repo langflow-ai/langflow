@@ -9,7 +9,6 @@ import {
 const useDeleteFlow = () => {
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
-  const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
 
   const { mutate } = useDeleteDeleteFlows();
 
@@ -27,10 +26,9 @@ const useDeleteFlow = () => {
         {
           onSuccess: () => {
             const { data, flows: myFlows } = processFlows(
-              flows.filter((flow) => !id.includes(flow.id)),
+              (flows ?? []).filter((flow) => !id.includes(flow.id)),
             );
             setFlows(myFlows);
-            setIsLoading(false);
             useTypesStore.setState((state) => ({
               data: { ...state.data, ["saved_components"]: data },
               ComponentFields: extractFieldsFromComponenents({

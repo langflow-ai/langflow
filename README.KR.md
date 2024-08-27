@@ -33,6 +33,7 @@
 <div align="center">
   <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
   <a href="./README.PT.md"><img alt="README in Portuguese" src="https://img.shields.io/badge/Portuguese-d9d9d9"></a>
+  <a href="./README.ES.md"><img alt="README in Spanish" src="https://img.shields.io/badge/Spanish-d9d9d9"></a>  
   <a href="./README.zh_CN.md"><img alt="README in Simplified Chinese" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
   <a href="./README.ja.md"><img alt="README in Japanese" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
   <a href="./README.KR.md"><img alt="README in KOREAN" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
@@ -69,6 +70,7 @@ pip으로 Langflow 다운로드:
 # >=Python 3.10 이 시스템에 미리 설치되어 있어야 합니다.
 python -m pip install langflow -U
 ```
+
 혹은
 
 복제된 Repo에서 설치하려면 다음과 같이 Langflow의 프론트엔드와 백엔드를 구축하고 설치할 수 있습니다:
@@ -105,7 +107,7 @@ results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 
 ## DataStax Langflow
 
-DataStax Langflow는 [AstraDB](https://www.datastax.com/products/datastax-astra) 와 통합된 Langflow의 호스팅된 버전입니다. 별도의 설치나 설정이 필요하지 않고 몇 분 안에 실행됩니다. [무료로 가입하기](https://langflow.datastax.com).
+DataStax Langflow는 [AstraDB](https://www.datastax.com/products/datastax-astra) 와 통합된 Langflow의 호스팅된 버전입니다. 별도의 설치나 설정이 필요하지 않고 몇 분 안에 실행됩니다. [무료로 가입하기](https://astra.datastax.com/signup?type=langflow).
 
 ## Hugging Face Spaces에 Langflow 배포하기
 
@@ -113,7 +115,7 @@ DataStax Langflow는 [AstraDB](https://www.datastax.com/products/datastax-astra)
 
 ## Google Cloud Platform에 Langflow 배포하기
 
-Google Cloud Shell을 사용하여 Google Cloud Platform(GCP)에 Langflow를 배포하려면 단계별 가이드를 따르십시오. 가이드는 [**Langflow in Google Cloud Platform**](/docs/docs/Deployment/deployment-gcp.md ) 문서에서 확인할 수 있습니다.
+Google Cloud Shell을 사용하여 Google Cloud Platform(GCP)에 Langflow를 배포하려면 단계별 가이드를 따르십시오. 가이드는 [**Langflow in Google Cloud Platform**](/docs/docs/Deployment/deployment-gcp.md) 문서에서 확인할 수 있습니다.
 
 또는 아래의 **"Cloud Shell에서 열기"** 버튼을 클릭하여 Google Cloud Shell을 시작하고 Langflow 저장소를 복제한 후 필요한 리소스를 설정하고 GCP 프로젝트에 Langflow를 배포하는 과정을 안내하는 **대화형 튜토리얼**을 시작합니다.
 

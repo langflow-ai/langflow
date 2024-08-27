@@ -1,5 +1,3 @@
-from langchain_aws import ChatBedrock
-
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput, SecretStrInput
@@ -60,6 +58,10 @@ class AmazonBedrockComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        try:
+            from langchain_aws import ChatBedrock
+        except ImportError:
+            raise ImportError("langchain_aws is not installed. Please install it with `pip install langchain_aws`.")
         if self.aws_access_key:
             import boto3  # type: ignore
 
