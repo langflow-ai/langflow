@@ -17,6 +17,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import ReactFlow, {
   Background,
   Connection,
+  ControlButton,
   Controls,
   Edge,
   NodeDragHandler,
@@ -53,6 +54,8 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
+import IconComponent from "@/components/genericIconComponent";
+import ShadTooltip from "@/components/shadTooltipComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -472,7 +475,52 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
           >
             <Background className="" />
             {!view && (
-              <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border"></Controls>
+              <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border">
+                <ControlButton onClick={()=>{
+                  const wrapper = reactFlowWrapper.current!;
+                  const viewport = reactFlowInstance?.getViewport();
+                  const x = wrapper.getBoundingClientRect().width/2
+                  const y = wrapper.getBoundingClientRect().height/2
+                  const nodePosition = reactFlowInstance?.screenToFlowPosition({ x, y })!;
+
+
+                  const data ={node:{
+                    description: "",
+                    display_name: "",
+                    documentation: "",
+                    template: {},
+                  },type: "note"}
+                  const newId = getNodeId(data.type);
+
+                  const newNode: NodeType = {
+                    id: newId,
+                    type: "noteNode",
+                    position: { x: 0, y: 0 },
+                    data: {
+                      ...data,
+                      id: newId,
+                    },
+                  };
+                  paste(
+                    { nodes: [newNode], edges: [] },
+                    {x:nodePosition.x,y:nodePosition?.y,
+                      paneX:wrapper.getBoundingClientRect().x,
+                      paneY:wrapper.getBoundingClientRect().y},
+                  );
+                }} className="postion absolute -top-10 rounded-sm">
+                  <ShadTooltip content="Add note">
+                    <div>
+
+                      <IconComponent
+                        name="SquarePen"
+                        aria-hidden="true"
+                        className="scale-125"
+                      />
+                    </div>
+                  </ShadTooltip>
+                </ControlButton>
+
+              </Controls>
             )}
             <SelectionMenu
               lastSelection={lastSelection}
