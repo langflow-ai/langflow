@@ -74,7 +74,10 @@ function NoteNode({
       >
         <div className="flex h-fit w-full items-center align-middle">
           <div className="flex w-full gap-2">
-            <IconComponent name="SquarePen" className="min-w-fit" />
+            <div data-testid="note_icon">
+              <IconComponent name="SquarePen" className="min-w-fit" />
+            </div>
+
             <div className="w-11/12">
               <NodeName
                 nodeId={data.id}

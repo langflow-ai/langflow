@@ -64,13 +64,11 @@ The future of AI is both exciting and uncertain. As the technology continues to 
   await page.waitForSelector('[data-testid="extended-disclosure"]', {
     timeout: 30000,
   });
-  await page.getByTestId("note_component").click();
+  await page.getByTestId("add_note").click();
 
   await page.waitForTimeout(1000);
 
-  const modelElement = await page.getByTestId("note_component");
   const targetElement = await page.locator('//*[@id="react-flow-id"]');
-  await modelElement.dragTo(targetElement);
 
   await page.mouse.up();
   await page.mouse.down();
@@ -89,14 +87,14 @@ The future of AI is both exciting and uncertain. As the technology continues to 
   await page.waitForTimeout(1000);
   await page.getByTestId("popover-anchor-input-title-Note").fill(randomTitle);
 
-  await page.getByTestId("icon-StickyNote").dblclick();
+  await page.getByTestId("note_icon").first().dblclick();
 
-  await page.locator(".generic-node-desc").dblclick();
+  await page.locator(".generic-node-desc").last().dblclick();
   await page.getByTestId("textarea").fill(noteText);
 
   expect(await page.getByText("2500/2500")).toBeVisible();
 
-  await page.getByTestId("icon-StickyNote").dblclick();
+  await page.getByTestId("note_icon").first().dblclick();
 
   const textMarkdown = await page.locator(".markdown").innerText();
 
@@ -111,7 +109,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   let hasStyles = await element?.evaluate((el) => {
     const style = window.getComputedStyle(el);
-    return style.backgroundColor === "rgb(254, 243, 199)";
+    return style.backgroundColor === "rgb(224, 231, 255)";
   });
   expect(hasStyles).toBe(true);
 

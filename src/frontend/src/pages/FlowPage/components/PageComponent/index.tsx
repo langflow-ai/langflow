@@ -480,6 +480,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
               <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border">
                 {FeatureFlags.ENABLE_MVPS && (
                   <ControlButton
+                    data-testid="add_note"
                     onClick={() => {
                       const wrapper = reactFlowWrapper.current!;
                       const viewport = reactFlowInstance?.getViewport();
