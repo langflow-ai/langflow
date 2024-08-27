@@ -26,6 +26,7 @@ type BuildVerticesParams = {
   ) => void; // Replace any with the actual type if it's not any
   onBuildComplete?: (allNodesValid: boolean) => void;
   onBuildError?: (title, list, idList: VertexLayerElementType[]) => void;
+  onBuildStopped?: () => void;
   onBuildStart?: (idList: VertexLayerElementType[]) => void;
   onValidateNodes?: (nodes: string[]) => void;
   nodes?: Node[];
@@ -143,6 +144,7 @@ export async function buildFlowVertices({
   onBuildUpdate,
   onBuildComplete,
   onBuildError,
+  onBuildStopped,
   onBuildStart,
   onValidateNodes,
   nodes,
@@ -297,6 +299,8 @@ export async function buildFlowVertices({
       }
       throw new Error("error in streaming request");
     },
+    // network error are likely caused by the window.stop() called in the stopBuild function
+    onNetworkError: onBuildStopped,
   });
 }
 

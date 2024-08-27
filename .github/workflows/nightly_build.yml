@@ -1,0 +1,17 @@
+name: Nightly Build
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *" # Run every day at midnight (UTC)
+
+env:
+  POETRY_VERSION: "1.8.2"
+
+jobs:
+  hello-world:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run hello world
+        run: |
+          echo "Hello, world!"
