@@ -3,7 +3,8 @@ name: Nightly Build
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *" # Run every day at midnight (UTC)
+    # Run job at 6:30 UTC, 10.30pm PST, or 11.30pm PDT
+    - cron: "30 6 * * *"
 
 env:
   POETRY_VERSION: "1.8.3"
@@ -19,7 +20,8 @@ jobs:
       # Required to create tag
       contents: write
     outputs:
-      tag: ${{ steps.create_tag.outputs.tag }}
+      main_tag: ${{ steps.create_tag.outputs.main_tag }}
+      base_tag: ${{ steps.create_tag.outputs.base_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -45,11 +47,12 @@ jobs:
           git config --global user.name "Langflow Bot"
 
           MAIN_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py main)"
-          echo "tag=$MAIN_TAG" >> $GITHUB_OUTPUT
+          echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
           poetry run python ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
           poetry run python ./scripts/ci/update_pyproject_name.py langflow-nightly main
 
           BASE_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py base)"
+          echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
           poetry run python ./scripts/ci/update_pyproject_version.py $BASE_TAG base
           poetry run python ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
 
@@ -60,7 +63,6 @@ jobs:
           git push origin $TAG || echo "Tag push failed. Check if the tag already exists."
 
       # TODO: Slack message on failure
-      # TODO: update email to noreply or generic
 
   frontend-tests:
     name: Run Frontend Tests
@@ -98,7 +100,8 @@ jobs:
     with:
       build_docker_base: false
       build_docker_main: false
-      nightly_tag: ${{ needs.create-nightly-tag.outputs.tag }}
+      nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
+      nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
 
   # slack-notification:
   #   name: Send Slack Notification
