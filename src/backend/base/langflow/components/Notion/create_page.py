@@ -9,7 +9,7 @@ from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 
 class NotionPageCreator(LCToolComponent):
-    display_name: str = "Create Page [Notion]"
+    display_name: str = "Create Page "
     description: str = "A component for creating Notion pages."
     documentation: str = "https://docs.langflow.org/integrations/notion/page-create"
     icon = "NotionDirectoryLoader"

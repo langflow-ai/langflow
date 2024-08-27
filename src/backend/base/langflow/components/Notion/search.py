@@ -9,7 +9,7 @@ from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 
 class NotionSearch(LCToolComponent):
-    display_name: str = "Search [Notion]"
+    display_name: str = "Search "
     description: str = "Searches all pages and databases that have been shared with an integration."
     documentation: str = "https://docs.langflow.org/integrations/notion/search"
     icon = "NotionDirectoryLoader"

@@ -12,7 +12,7 @@ from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 class AddContentToPage(LCToolComponent):
-    display_name: str = "Add Content to Page [Notion]"
+    display_name: str = "Add Content to Page "
     description: str = "Convert markdown text to Notion blocks and append them to a Notion page."
     documentation: str = "https://developers.notion.com/reference/patch-block-children"
     icon = "NotionDirectoryLoader"

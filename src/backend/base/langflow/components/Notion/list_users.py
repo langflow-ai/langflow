@@ -9,7 +9,7 @@ from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 
 class NotionUserList(LCToolComponent):
-    display_name = "List Users [Notion]"
+    display_name = "List Users "
     description = "Retrieve users from Notion."
     documentation = "https://docs.langflow.org/integrations/notion/list-users"
     icon = "NotionDirectoryLoader"

@@ -8,7 +8,7 @@ from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 
 class NotionPageContent(LCToolComponent):
-    display_name = "Page Content Viewer [Notion]"
+    display_name = "Page Content Viewer "
     description = "Retrieve the content of a Notion page as plain text."
     documentation = "https://docs.langflow.org/integrations/notion/page-content-viewer"
     icon = "NotionDirectoryLoader"

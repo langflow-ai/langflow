@@ -10,7 +10,7 @@ from langchain.tools import StructuredTool
 from loguru import logger
 
 class NotionPageUpdate(LCToolComponent):
-    display_name: str = "Update Page Property [Notion]"
+    display_name: str = "Update Page Property "
     description: str = "Update the properties of a Notion page."
     documentation: str = "https://docs.langflow.org/integrations/notion/page-update"
     icon = "NotionDirectoryLoader"

@@ -10,7 +10,7 @@ from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 
 class NotionListPages(LCToolComponent):
-    display_name: str = "List Pages [Notion]"
+    display_name: str = "List Pages "
     description: str = (
         "Query a Notion database with filtering and sorting. "
         "The input should be a JSON string containing the 'filter' and 'sorts' objects. "
