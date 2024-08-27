@@ -248,8 +248,13 @@ async function performStreamingRequest({
   if (response.body === null) {
     return;
   }
-  for await (const chunk of response.body) {
-    const decodedChunk = await textDecoder.decode(chunk);
+  const reader = response.body.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    const decodedChunk = textDecoder.decode(value);
     let all = decodedChunk.split("\n\n");
     for (const string of all) {
       if (string.endsWith("}")) {
