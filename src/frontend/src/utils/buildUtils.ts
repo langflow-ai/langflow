@@ -402,7 +402,6 @@ export async function buildVertices({
           buildResults.push(false);
           return;
         }
-        console.log("tak")
 
         // Build the vertex
         await buildVertex({
