@@ -64,6 +64,7 @@ jobs:
 
   frontend-tests:
     name: Run Frontend Tests
+    needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests/end-to-end"
@@ -74,6 +75,7 @@ jobs:
 
   backend-unit-tests:
     name: Run Backend Unit Tests
+    needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12"]'
@@ -81,6 +83,7 @@ jobs:
 
   backend-integration-tests:
     name: Run Backend Integration Tests
+    needs: create-nightly-tag
     uses: ./.github/workflows/integration_tests.yml
     with:
       python-versions: '["3.10", "3.11", "3.12"]'
@@ -88,7 +91,13 @@ jobs:
 
   release-nightly-build:
     name: Run Nightly Langflow Build
-    needs: [backend-unit-tests, backend-integration-tests, create-nightly-tag]
+    needs:
+      [
+        frontend-tests,
+        backend-unit-tests,
+        backend-integration-tests,
+        create-nightly-tag,
+      ]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: false
