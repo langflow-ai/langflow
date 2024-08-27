@@ -33,6 +33,13 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
       ),
     }));
   },
+  updateMessagePartial: (message) => {
+    set(() => ({
+      messages: get().messages.map((msg) =>
+        msg.id === message.id ? { ...msg, ...message } : msg,
+      ),
+    }));
+  },
   clearMessages: () => {
     set(() => ({ messages: [] }));
   },
