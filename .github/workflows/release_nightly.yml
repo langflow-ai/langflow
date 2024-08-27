@@ -14,9 +14,13 @@ on:
         required: true
         type: boolean
         default: false
-      nightly_tag:
-        description: "Tag for the nightly build"
-        required: false
+      nightly_tag_main:
+        description: "Tag for the nightly main build"
+        required: true
+        type: string
+      nightly_tag_base:
+        description: "Tag for the nightly base build"
+        required: true
         type: string
   workflow_call:
     inputs:
@@ -30,8 +34,12 @@ on:
         required: true
         type: boolean
         default: false
-      nightly_tag:
-        description: "Tag for the nightly build"
+      nightly_tag_main:
+        description: "Tag for the nightly main build"
+        required: true
+        type: string
+      nightly_tag_base:
+        description: "Tag for the nightly base build"
         required: true
         type: string
 
@@ -42,14 +50,14 @@ jobs:
   release-nightly-base:
     name: Release Langflow Nightly Base
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.check-version.outputs.version }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Check out the code at a specific ref (e.g., nightly tag)
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.nightly_tag }}
-
+          ref: ${{ inputs.nightly_tag_main }}
       - name: Install poetry
         run: pipx install poetry==${{ env.POETRY_VERSION }}
       - name: Set up Python 3.12
@@ -62,15 +70,16 @@ jobs:
         with:
           node-version: "20"
       - name: Verify Nightly Name and Version
+        working-directory: src/backend/base
         run: |
           name=$(poetry version | cut -d' ' -f1)
           version=$(poetry version --short)
-          if [ "$name" != "langflow-nightly" ]; then
-            echo "Name $name does not match langflow-nightly. Exiting the workflow."
+          if [ "$name" != "langflow-base-nightly" ]; then
+            echo "Name $name does not match langflow-base-nightly. Exiting the workflow."
             exit 1
           fi
-          if [ "$version" != "${{ inputs.nightly_tag }}" ]; then
-            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag }}. Exiting the workflow."
+          if [ "$version" != "${{ inputs.nightly_tag_base }}" ]; then
+            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_base }}. Exiting the workflow."
             exit 1
           fi
       - name: Build project for distribution
@@ -106,13 +115,14 @@ jobs:
     name: Release Langflow Nightly Main
     needs: [release-nightly-base]
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.check-version.outputs.version }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Check out the code at a specific ref (e.g., nightly tag)
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.nightly_tag }}
+          ref: ${{ inputs.nightly_tag_main }}
 
       - name: Install poetry
         run: pipx install poetry==${{ env.POETRY_VERSION }}
@@ -133,8 +143,8 @@ jobs:
             echo "Name $name does not match langflow-nightly. Exiting the workflow."
             exit 1
           fi
-          if [ "$version" != "${{ inputs.nightly_tag }}" ]; then
-            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag }}. Exiting the workflow."
+          if [ "$version" != "${{ inputs.nightly_tag_main }}" ]; then
+            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_main }}. Exiting the workflow."
             exit 1
           fi
       - name: Build project for distribution
