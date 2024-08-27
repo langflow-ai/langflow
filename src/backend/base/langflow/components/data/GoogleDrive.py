@@ -33,7 +33,6 @@ class GoogleDriveComponent(Component):
             info="JSON credentials file. Leave empty to fallback to environment variables",
             file_types=["json"],
         ),
-
         MessageTextInput(
             name="document_id", display_name="Document ID", info="Single Google Drive document ID to read from"
         ),
@@ -67,11 +66,7 @@ class GoogleDriveComponent(Component):
         if self.document_id and self.folder_id:
             raise ValueError("Both document ID and folder ID cannot be provided")
 
-
-
-        doc_args = {
-            "file_loader_cls": CustomUnstructuredFileLoader
-        }
+        doc_args = {"file_loader_cls": CustomUnstructuredFileLoader}
         if self.document_id:
             doc_args["document_ids"] = [self.document_id]
         elif self.folder_id:
@@ -81,8 +76,7 @@ class GoogleDriveComponent(Component):
             raise ValueError("Either document ID or folder ID must be provided")
 
         if self.service_account_credentials:
-            loader = GoogleDriveLoader(
-                service_account_key=Path(self.service_account_credentials), **doc_args)
+            loader = GoogleDriveLoader(service_account_key=Path(self.service_account_credentials), **doc_args)
         elif self.json_string:
             try:
                 token_info = json.loads(self.json_string)
@@ -90,9 +84,7 @@ class GoogleDriveComponent(Component):
                 print(e)
                 raise ValueError("Invalid JSON string: " + str(e)) from e
             creds = Credentials.from_authorized_user_info(token_info)
-            loader = CustomGoogleDriveLoader(
-                creds=creds, **doc_args
-            )
+            loader = CustomGoogleDriveLoader(creds=creds, **doc_args)
         else:
             raise ValueError("Either service account credentials or JSON string must be provided")
         try:

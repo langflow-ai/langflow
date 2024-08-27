@@ -185,7 +185,9 @@ def parallel_load_data(
     # loaded_files is an iterator, so we need to convert it to a list
     return list(loaded_files)
 
+
 class CustomUnstructuredFileLoader(UnstructuredFileLoader):
-    def __init__(self, file: Union[str, List[str], Path, List[Path]], *, mode: str = "single",
-                 **unstructured_kwargs: Any):
+    def __init__(
+        self, file: Union[str, List[str], Path, List[Path]], *, mode: str = "single", **unstructured_kwargs: Any
+    ):
         super().__init__(file, mode=mode, **unstructured_kwargs)
