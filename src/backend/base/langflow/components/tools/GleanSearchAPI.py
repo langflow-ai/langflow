@@ -1,6 +1,7 @@
 import httpx
+import json
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Union
 from urllib.parse import urljoin
 
 from langchain_core.pydantic_v1 import BaseModel
@@ -25,8 +26,7 @@ class GleanSearchAPIComponent(LCToolComponent):
         SecretStrInput(name="glean_access_token", display_name="Glean Access Token", required=True),
         StrInput(name="query", display_name="Query", required=True),
         IntInput(name="page_size", display_name="Page Size", value=10),
-        StrInput(name="field_name", display_name="Field Name", required=False),
-        NestedDictInput(name="values", display_name="Values", required=False),
+        NestedDictInput(name="request_options", display_name="Request Options", required=False),
     ]
 
     def build_tool(self) -> Tool:
@@ -40,8 +40,7 @@ class GleanSearchAPIComponent(LCToolComponent):
         results = wrapper.results(
             query=self.query,
             page_size=self.page_size,
-            field_name=self.field_name,
-            values=self.values,
+            request_options=self.request_options,
         )
 
         list_results = results.get("results", [])
@@ -60,34 +59,31 @@ class GleanSearchAPIComponent(LCToolComponent):
             """
             Wrapper around Glean API.
             """
-
             glean_api_url: str
             glean_access_token: str
-            act_as: str = "langflow-component@langflow.org"
+            act_as: str = "langflow-component@datastax.com"  # TODO: Detect this
 
             def _prepare_request(
                 self,
                 query: str,
                 page_size: int = 10,
-                field_name: Optional[str] = None,
-                values: Optional[List[dict]] = None,
+                request_options: Optional[Dict[str, Any]] = None,
             ) -> dict:
-                facet_filters = [{"field_name": field_name, "values": values}]
-                if not field_name or not values:
-                    facet_filters = []
+                # Ensure there's a trailing slash
+                url = self.glean_api_url
+                if not url.endswith('/'):
+                    url += '/'
 
                 return {
-                    "url": urljoin(self.glean_api_url, "search"),
+                    "url": urljoin(url, "search"),
                     "headers": {
                         "Authorization": f"Bearer {self.glean_access_token}",
-                        "X-Scio-ActAs": self.act_as,  # TODO: Update?
+                        "X-Scio-ActAs": self.act_as,
                     },
                     "payload": {
                         "query": query,
                         "pageSize": page_size,
-                        "requestOptions": {
-                            "facetFilters": facet_filters,
-                        },
+                        "requestOptions": request_options,
                     },
                 }
 
@@ -116,6 +112,6 @@ class GleanSearchAPIComponent(LCToolComponent):
 
             @staticmethod
             def _result_as_string(result: dict) -> str:
-                return str(result)  # TODO: Make pretty
+                return json.dumps(result, indent=4)
 
         return GleanAPIWrapper(glean_api_url=self.glean_api_url, glean_access_token=self.glean_access_token)
