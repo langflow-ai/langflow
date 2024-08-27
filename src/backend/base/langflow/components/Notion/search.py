@@ -1,5 +1,5 @@
 import requests
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -7,6 +7,7 @@ from langflow.inputs import SecretStrInput, StrInput, DropdownInput
 from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
+
 
 class NotionSearch(LCToolComponent):
     display_name: str = "Search "
@@ -54,20 +55,20 @@ class NotionSearch(LCToolComponent):
 
         for result in results:
             result_data = {
-                'id': result['id'],
-                'type': result['object'],
-                'last_edited_time': result['last_edited_time'],
+                "id": result["id"],
+                "type": result["object"],
+                "last_edited_time": result["last_edited_time"],
             }
 
-            if result['object'] == 'page':
-                result_data['title_or_url'] = result['url']
+            if result["object"] == "page":
+                result_data["title_or_url"] = result["url"]
                 text = f"id: {result['id']}\ntitle_or_url: {result['url']}\n"
-            elif result['object'] == 'database':
-                if 'title' in result and isinstance(result['title'], list) and len(result['title']) > 0:
-                    result_data['title_or_url'] = result['title'][0]['plain_text']
+            elif result["object"] == "database":
+                if "title" in result and isinstance(result["title"], list) and len(result["title"]) > 0:
+                    result_data["title_or_url"] = result["title"][0]["plain_text"]
                     text = f"id: {result['id']}\ntitle_or_url: {result['title'][0]['plain_text']}\n"
                 else:
-                    result_data['title_or_url'] = "N/A"
+                    result_data["title_or_url"] = "N/A"
                     text = f"id: {result['id']}\ntitle_or_url: N/A\n"
 
             text += f"type: {result['object']}\nlast_edited_time: {result['last_edited_time']}\n\n"
@@ -85,7 +86,9 @@ class NotionSearch(LCToolComponent):
             args_schema=self.NotionSearchSchema,
         )
 
-    def _search_notion(self, query: str, filter_value: str = "page", sort_direction: str = "descending") -> List[Dict[str, Any]]:
+    def _search_notion(
+        self, query: str, filter_value: str = "page", sort_direction: str = "descending"
+    ) -> List[Dict[str, Any]]:
         url = "https://api.notion.com/v1/search"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
@@ -95,18 +98,12 @@ class NotionSearch(LCToolComponent):
 
         data = {
             "query": query,
-            "filter": {
-                "value": filter_value,
-                "property": "object"
-            },
-            "sort": {
-                "direction": sort_direction,
-                "timestamp": "last_edited_time"
-            }
+            "filter": {"value": filter_value, "property": "object"},
+            "sort": {"direction": sort_direction, "timestamp": "last_edited_time"},
         }
 
         response = requests.post(url, headers=headers, json=data)
         response.raise_for_status()
 
         results = response.json()
-        return results['results']
+        return results["results"]

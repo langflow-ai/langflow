@@ -9,6 +9,7 @@ from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 from loguru import logger
 
+
 class NotionPageUpdate(LCToolComponent):
     display_name: str = "Update Page Property "
     description: str = "Update the properties of a Notion page."
@@ -36,7 +37,9 @@ class NotionPageUpdate(LCToolComponent):
 
     class NotionPageUpdateSchema(BaseModel):
         page_id: str = Field(..., description="The ID of the Notion page to update.")
-        properties: Union[str, Dict[str, Any]] = Field(..., description="The properties to update on the page (as a JSON string or a dictionary).")
+        properties: Union[str, Dict[str, Any]] = Field(
+            ..., description="The properties to update on the page (as a JSON string or a dictionary)."
+        )
 
     def run_model(self) -> Data:
         result = self._update_notion_page(self.page_id, self.properties)
@@ -78,9 +81,7 @@ class NotionPageUpdate(LCToolComponent):
         else:
             parsed_properties = properties
 
-        data = {
-            "properties": parsed_properties
-        }
+        data = {"properties": parsed_properties}
 
         try:
             logger.info(f"Sending request to Notion API: URL: {url}, Data: {json.dumps(data)}")

@@ -1,12 +1,13 @@
 import requests
 from typing import List, Dict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import SecretStrInput
 from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
+
 
 class NotionUserList(LCToolComponent):
     display_name = "List Users "
@@ -62,15 +63,15 @@ class NotionUserList(LCToolComponent):
         response.raise_for_status()
 
         data = response.json()
-        results = data['results']
+        results = data["results"]
 
         users = []
         for user in results:
             user_data = {
-                "id": user['id'],
-                "type": user['type'],
-                "name": user.get('name', ''),
-                "avatar_url": user.get('avatar_url', ''),
+                "id": user["id"],
+                "type": user["type"],
+                "name": user.get("name", ""),
+                "avatar_url": user.get("avatar_url", ""),
             }
             users.append(user_data)
 

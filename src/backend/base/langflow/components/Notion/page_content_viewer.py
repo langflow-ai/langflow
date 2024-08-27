@@ -1,11 +1,11 @@
 import requests
-from typing import Dict, Any, Union
 from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import SecretStrInput, StrInput
 from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
+
 
 class NotionPageContent(LCToolComponent):
     display_name = "Page Content Viewer "
@@ -60,7 +60,7 @@ class NotionPageContent(LCToolComponent):
             return self.parse_blocks(blocks_data.get("results", []))
         except requests.exceptions.RequestException as e:
             error_message = f"Error: Failed to retrieve Notion page content. {str(e)}"
-            if hasattr(e, 'response') and e.response is not None:
+            if hasattr(e, "response") and e.response is not None:
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message
         except Exception as e:

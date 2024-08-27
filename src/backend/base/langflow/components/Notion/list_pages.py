@@ -9,6 +9,7 @@ from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 
+
 class NotionListPages(LCToolComponent):
     display_name: str = "List Pages "
     description: str = (
@@ -41,7 +42,10 @@ class NotionListPages(LCToolComponent):
 
     class NotionListPagesSchema(BaseModel):
         database_id: str = Field(..., description="The ID of the Notion database to query.")
-        query_json: Optional[str] = Field(default="", description="A JSON string containing the filters and sorts for querying the database. Leave empty for no filters or sorts.")
+        query_json: Optional[str] = Field(
+            default="",
+            description="A JSON string containing the filters and sorts for querying the database. Leave empty for no filters or sorts.",
+        )
 
     def run_model(self) -> List[Data]:
         result = self._query_notion_database(self.database_id, self.query_json)
@@ -55,11 +59,11 @@ class NotionListPages(LCToolComponent):
 
         for page in result:
             page_data = {
-                'id': page['id'],
-                'url': page['url'],
-                'created_time': page['created_time'],
-                'last_edited_time': page['last_edited_time'],
-                'properties': page['properties'],
+                "id": page["id"],
+                "url": page["url"],
+                "created_time": page["created_time"],
+                "last_edited_time": page["last_edited_time"],
+                "properties": page["properties"],
             }
 
             text = (
@@ -103,7 +107,7 @@ class NotionListPages(LCToolComponent):
             response = requests.post(url, headers=headers, json=query_payload)
             response.raise_for_status()
             results = response.json()
-            return results['results']
+            return results["results"]
         except requests.exceptions.RequestException as e:
             return f"Error querying Notion database: {str(e)}"
         except KeyError:

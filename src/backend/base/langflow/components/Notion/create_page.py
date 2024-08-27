@@ -8,6 +8,7 @@ from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 
+
 class NotionPageCreator(LCToolComponent):
     display_name: str = "Create Page "
     description: str = "A component for creating Notion pages."
@@ -84,7 +85,7 @@ class NotionPageCreator(LCToolComponent):
             return result
         except requests.exceptions.RequestException as e:
             error_message = f"Failed to create Notion page. Error: {str(e)}"
-            if hasattr(e, 'response') and e.response is not None:
+            if hasattr(e, "response") and e.response is not None:
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message
 

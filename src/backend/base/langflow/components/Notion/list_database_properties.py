@@ -1,11 +1,12 @@
 import requests
-from typing import Optional, Dict, Union
+from typing import Dict, Union
 from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import SecretStrInput, StrInput
 from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
+
 
 class NotionDatabaseProperties(LCToolComponent):
     display_name: str = "List Database Properties "
