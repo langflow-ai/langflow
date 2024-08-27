@@ -19,7 +19,7 @@ jobs:
       # Required to create tag
       contents: write
     outputs:
-      TAG: ${{ steps.create_tag.outputs.tag }}
+      tag: ${{ steps.create_tag.outputs.tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,20 +41,22 @@ jobs:
       - name: Create tag
         id: create_tag
         run: |
-          git config --global user.email "jordan.frazier@datastax.com"
+          git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
 
-          TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py)"
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          MAIN_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py main)"
+          echo "tag=$MAIN_TAG" >> $GITHUB_OUTPUT
+          poetry run python ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
+          poetry run python ./scripts/ci/update_pyproject_name.py langflow-nightly main
 
-          poetry run python ./scripts/ci/update_pyproject_version.py $TAG
-          poetry run python ./scripts/ci/update_pyproject_name.py langflow-nightly
+          BASE_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py base)"
+          poetry run python ./scripts/ci/update_pyproject_version.py $BASE_TAG base
+          poetry run python ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
 
-          git add pyproject.toml
+          git add pyproject.toml src/backend/base/pyproject.toml
           git commit -m "Update version and project name in files"
 
           git tag -a $TAG -m "Langflow nightly $TAG"
-          echo "Created tag: $TAG"
           git push origin $TAG || echo "Tag push failed. Check if the tag already exists."
 
       # TODO: Slack message on failure
@@ -66,7 +68,7 @@ jobs:
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests/end-to-end"
-      ref: ${{ needs.create-nightly-tag.outputs.TAG }}
+      ref: ${{ needs.create-nightly-tag.outputs.tag }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
@@ -77,30 +79,26 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12"]'
-      ref: ${{ needs.create-nightly-tag.outputs.TAG }}
+      ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
+  # Not making nightly builds dependent on integration test success
+  # due to inherent flakiness of 3rd party integrations
   backend-integration-tests:
     name: Run Backend Integration Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/integration_tests.yml
     with:
       python-versions: '["3.10", "3.11", "3.12"]'
-      ref: ${{ needs.create-nightly-tag.outputs.TAG }}
+      ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
     name: Run Nightly Langflow Build
-    needs:
-      [
-        frontend-tests,
-        backend-unit-tests,
-        backend-integration-tests,
-        create-nightly-tag,
-      ]
+    needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: false
       build_docker_main: false
-      nightly_tag: ${{ needs.create-nightly-tag.outputs.TAG }}
+      nightly_tag: ${{ needs.create-nightly-tag.outputs.tag }}
 
   # slack-notification:
   #   name: Send Slack Notification

@@ -5,7 +5,7 @@ import re
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
 
-def update_pyproject_file(pyproject_path: str, new_project_name: str) -> None:
+def update_pyproject_name(pyproject_path: str, new_project_name: str) -> None:
     """Update the project name in pyproject.toml."""
     filepath = os.path.join(BASE_DIR, pyproject_path)
     with open(filepath, "r") as file:
@@ -24,10 +24,19 @@ def update_pyproject_file(pyproject_path: str, new_project_name: str) -> None:
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        raise Exception("New project name not specified")
+    if len(sys.argv) != 3:
+        raise Exception(
+            "Must specify project name and build type, e.g. langflow-nightly base"
+        )
     new_project_name = sys.argv[1]
-    update_pyproject_file("pyproject.toml", new_project_name)
+    build_type = sys.argv[2]
+
+    if build_type == "base":
+        update_pyproject_name("src/backend/base/pyproject.toml", new_project_name)
+    elif build_type == "main":
+        update_pyproject_name("pyproject.toml", new_project_name)
+    else:
+        raise ValueError(f"Invalid build type: {build_type}")
 
 
 if __name__ == "__main__":
