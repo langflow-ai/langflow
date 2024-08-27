@@ -63,7 +63,7 @@ help: ## show this help message
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@poetry install > /dev/null 2>&1
+	@poetry install --extras deploy > /dev/null 2>&1
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
@@ -278,6 +278,7 @@ ifdef login
 		--env-file $(env) \
 		--loop asyncio \
 		--workers $(workers)
+		--reload-include "src/backend/langflow*"
 else
 	@echo "Running backend respecting the $(env) file";
 	poetry run uvicorn \
@@ -288,6 +289,7 @@ else
 		--env-file $(env) \
 		--loop asyncio \
 		--workers $(workers)
+		--reload-include "src/backend/langflow*"
 endif
 
 build_and_run: setup_env ## build the project and run it
