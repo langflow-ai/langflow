@@ -279,46 +279,6 @@ def get_letter_from_version(version: str):
     return None
 
 
-def build_new_version_notice(current_version: str, package_name: str):
-    """
-    Build a new version notice.
-    """
-    # The idea here is that we want to show a notice to the user
-    # when a new version of Langflow is available.
-    # The key is that if the version the user has is a pre-release
-    # e.g 0.0.0a1, then we find the latest version that is pre-release
-    # otherwise we find the latest stable version.
-    # we will show the notice either way, but only if the version
-    # the user has is not the latest version.
-    if version_is_prerelease(current_version):
-        # curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1
-        # this command will give us the latest pre-release version
-        package_info = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()
-        # 4.0.0a1 or 4.0.0b1 or 4.0.0rc1
-        # find which type of pre-release version we have
-        # could be a1, b1, rc1
-        # we want the a, b, or rc and the number
-        suffix_letter = get_letter_from_version(current_version)
-        number_version = current_version.split(suffix_letter)[0]
-        latest_version = sorted(
-            package_info["releases"].keys(),
-            key=lambda x: x.split(suffix_letter)[-1] and number_version in x,
-        )[-1]
-        if version_is_prerelease(latest_version) and latest_version != current_version:
-            return (
-                True,
-                f"A new pre-release version of {package_name} is available: {latest_version}",
-            )
-    else:
-        latest_version = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()["info"]["version"]
-        if not version_is_prerelease(latest_version):
-            return (
-                False,
-                f"A new version of {package_name} is available: {latest_version}",
-            )
-    return False, ""
-
-
 def is_prerelease(version: str) -> bool:
     return "a" in version or "b" in version or "rc" in version
 
