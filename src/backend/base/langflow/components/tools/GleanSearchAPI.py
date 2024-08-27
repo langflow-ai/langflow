@@ -63,7 +63,7 @@ class GleanSearchAPIComponent(LCToolComponent):
 
             glean_api_url: str
             glean_access_token: str
-            act_as: str = "langflow-component@datastax.com"
+            act_as: str = "langflow-component@langflow.org"
 
             def _prepare_request(
                 self,
