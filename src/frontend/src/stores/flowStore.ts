@@ -642,6 +642,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().setLockChat(false);
       },
       onBuildUpdate: handleBuildUpdate,
+      onBuildStopped: () => {
+        get().setIsBuilding(false);
+        setErrorData({
+            title:
+              "Build stopped",
+          });
+        get().revertBuiltStatusFromBuilding();
+        get().setLockChat(false);
+      },
       onBuildError: (title: string, list: string[], elementList) => {
         const idList = elementList
           .map((element) => element.id)

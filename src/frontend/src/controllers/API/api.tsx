@@ -208,6 +208,7 @@ export type StreamingRequestParams = {
   onData: (event: object) => Promise<boolean>;
   body?: object;
   onError?: (statusCode: number) => void;
+  onNetworkError?: (error: Error) => void;
 };
 
 async function performStreamingRequest({
@@ -216,6 +217,7 @@ async function performStreamingRequest({
   onData,
   body,
   onError,
+  onNetworkError
 }: StreamingRequestParams) {
   let headers = {
     "Content-Type": "application/json",
@@ -248,40 +250,48 @@ async function performStreamingRequest({
   if (response.body === null) {
     return;
   }
-  const reader = response.body.getReader();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
-    const decodedChunk = textDecoder.decode(value);
-    let all = decodedChunk.split("\n\n");
-    for (const string of all) {
-      if (string.endsWith("}")) {
-        const allString = current.join("") + string;
-        let data: object;
-        try {
-          data = JSON.parse(allString);
-          current = [];
-        } catch (e) {
+  try {
+    const reader = response.body.getReader();
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) {
+        break;
+      }
+      const decodedChunk = textDecoder.decode(value);
+      let all = decodedChunk.split("\n\n");
+      for (const string of all) {
+        if (string.endsWith("}")) {
+          const allString = current.join("") + string;
+          let data: object;
+          try {
+            data = JSON.parse(allString);
+            current = [];
+          } catch (e) {
+            current.push(string);
+            continue;
+          }
+          const shouldContinue = await onData(data);
+          if (!shouldContinue) {
+            controller.abort();
+            return;
+          }
+        } else {
           current.push(string);
-          continue;
         }
-        const shouldContinue = await onData(data);
-        if (!shouldContinue) {
-          controller.abort();
-          return;
-        }
-      } else {
-        current.push(string);
       }
     }
-  }
-  if (current.length > 0) {
-    const allString = current.join("");
-    if (allString) {
-      const data = JSON.parse(current.join(""));
-      await onData(data);
+    if (current.length > 0) {
+      const allString = current.join("");
+      if (allString) {
+        const data = JSON.parse(current.join(""));
+        await onData(data);
+      }
+    }
+  } catch (e: any) {
+    if (onNetworkError) {
+      onNetworkError(e);
+    } else {
+      throw e
     }
   }
 }
