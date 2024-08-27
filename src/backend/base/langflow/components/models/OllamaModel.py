@@ -1,4 +1,5 @@
 from typing import Any
+from urllib.parse import urljoin
 
 import httpx
 from langchain_community.chat_models import ChatOllama
@@ -41,8 +42,7 @@ class ChatOllamaComponent(LCModelComponent):
                 base_url_value = self.variables(base_url_value)
             elif not base_url_value:
                 base_url_value = "http://localhost:11434"
-            build_config["model_name"]["options"] = self.get_model(base_url_value + "/api/tags")
-
+            build_config["model_name"]["options"] = self.get_model(base_url_value)
         if field_name == "keep_alive_flag":
             if field_value == "Keep":
                 build_config["keep_alive"]["value"] = "-1"
@@ -55,8 +55,9 @@ class ChatOllamaComponent(LCModelComponent):
 
         return build_config
 
-    def get_model(self, url: str) -> list[str]:
+    def get_model(self, base_url_value: str) -> list[str]:
         try:
+            url = urljoin(base_url_value, "/api/tags")
             with httpx.Client() as client:
                 response = client.get(url)
                 response.raise_for_status()
