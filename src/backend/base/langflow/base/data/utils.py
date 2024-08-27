@@ -2,13 +2,14 @@ import unicodedata
 import xml.etree.ElementTree as ET
 from concurrent import futures
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Union, Any
 
 import chardet
 import orjson
 import yaml
 
 from langflow.schema import Data
+from langchain_community.document_loaders.unstructured import UnstructuredFileLoader
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -183,3 +184,8 @@ def parallel_load_data(
         )
     # loaded_files is an iterator, so we need to convert it to a list
     return list(loaded_files)
+
+class CustomUnstructuredFileLoader(UnstructuredFileLoader):
+    def __init__(self, file: Union[str, List[str], Path, List[Path]], *, mode: str = "single",
+                 **unstructured_kwargs: Any):
+        super().__init__(file, mode=mode, **unstructured_kwargs)

@@ -1,9 +1,12 @@
 import json
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Any
 from google.oauth2.credentials import Credentials
 from google.auth.exceptions import RefreshError
+
+from langflow.base.data.utils import CustomUnstructuredFileLoader
 from langflow.custom import Component
-from langflow.inputs import MessageTextInput
+from langflow.inputs import MessageTextInput, FileInput
 from langflow.io import SecretStrInput
 from langflow.template import Output
 from langflow.schema import Data
@@ -21,12 +24,21 @@ class GoogleDriveComponent(Component):
     inputs = [
         SecretStrInput(
             name="json_string",
-            display_name="JSON String of the Service Account Token",
+            display_name="OAuth 2.0 JSON Token Info",
             info="JSON string containing OAuth 2.0 access token information for service account access",
-            required=True,
+        ),
+        FileInput(
+            name="service_account_credentials",
+            display_name="Service Account Credentials",
+            info="JSON credentials file. Leave empty to fallback to environment variables",
+            file_types=["json"],
+        ),
+
+        MessageTextInput(
+            name="document_id", display_name="Document ID", info="Single Google Drive document ID to read from"
         ),
         MessageTextInput(
-            name="document_id", display_name="Document ID", info="Single Google Drive document ID", required=True
+            name="folder_id", display_name="Folder ID", info="Google Drive Folder ID to read recursively from"
         ),
     ]
 
@@ -36,7 +48,7 @@ class GoogleDriveComponent(Component):
 
     def load_documents(self) -> Data:
         class CustomGoogleDriveLoader(GoogleDriveLoader):
-            creds: Optional[Credentials] = None
+            creds: Optional[Any] = None
             """Credentials object to be passed directly."""
 
             def _load_credentials(self):
@@ -49,26 +61,40 @@ class GoogleDriveComponent(Component):
             class Config:
                 arbitrary_types_allowed = True
 
-        json_string = self.json_string
+        if self.service_account_credentials and self.json_string:
+            raise ValueError("Both service account credentials and JSON string cannot be provided")
 
-        document_ids = [self.document_id]
-        if len(document_ids) != 1:
-            raise ValueError("Expected a single document ID")
+        if self.document_id and self.folder_id:
+            raise ValueError("Both document ID and folder ID cannot be provided")
 
-        # TODO: Add validation to check if the document ID is valid
 
-        # Load the token information from the JSON string
-        try:
-            token_info = json.loads(json_string)
-        except JSONDecodeError as e:
-            raise ValueError("Invalid JSON string") from e
 
-        # Initialize the custom loader with the provided credentials and document IDs
-        loader = CustomGoogleDriveLoader(
-            creds=Credentials.from_authorized_user_info(token_info), document_ids=document_ids
-        )
+        doc_args = {
+            "file_loader_cls": CustomUnstructuredFileLoader
+        }
+        if self.document_id:
+            doc_args["document_ids"] = [self.document_id]
+        elif self.folder_id:
+            doc_args["folder_id"] = self.folder_id
+            doc_args["recursive"] = True
+        else:
+            raise ValueError("Either document ID or folder ID must be provided")
 
-        # Load the documents
+        if self.service_account_credentials:
+            loader = GoogleDriveLoader(
+                service_account_key=Path(self.service_account_credentials), **doc_args)
+        elif self.json_string:
+            try:
+                token_info = json.loads(self.json_string)
+            except JSONDecodeError as e:
+                print(e)
+                raise ValueError("Invalid JSON string: " + str(e)) from e
+            creds = Credentials.from_authorized_user_info(token_info)
+            loader = CustomGoogleDriveLoader(
+                creds=creds, **doc_args
+            )
+        else:
+            raise ValueError("Either service account credentials or JSON string must be provided")
         try:
             docs = loader.load()
         # catch google.auth.exceptions.RefreshError
@@ -79,9 +105,6 @@ class GoogleDriveComponent(Component):
         except Exception as e:
             raise ValueError(f"Error loading documents: {e}") from e
 
-        assert len(docs) == 1, "Expected a single document to be loaded."
-
         data = docs_to_data(docs)
-        # Return the loaded documents
         self.status = data
         return Data(data={"text": data})
