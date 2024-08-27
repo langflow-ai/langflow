@@ -145,7 +145,7 @@ services:
     <<: *backend
     env_file:
       - .env
-    command: /bin/sh -c "python -m celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h -E"
+    command: /bin/sh -c "python -m celery -A langflow.worker.celery_app worker --loglevel=DEBUG --concurrency=1 -n lf-worker@%h -E"
     healthcheck:
       test: "exit 0"
     deploy:
@@ -161,7 +161,6 @@ services:
       - FLOWER_PORT=5555
     depends_on:
       - celeryworker
-
     command: /bin/sh -c "python -m celery -A langflow.worker.celery_app --broker=${BROKER_URL?Variable not set} flower --port=5555"
     deploy:
       labels:
@@ -191,18 +190,26 @@ services:
 
   broker:
     # RabbitMQ management console
-    image: rabbitmq:3-management
+    image: rabbitmq:3.11-alpine
+    env_file:
+      - .env
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-admin}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-admin}
-    volumes:
-      - rabbitmq_data:/etc/rabbitmq/
-      - rabbitmq_data:/var/lib/rabbitmq/
-      - rabbitmq_log:/var/log/rabbitmq/
     ports:
       - 5672:5672
       - 15672:15672
-
+    healthcheck:
+      test: "rabbitmq-diagnostics -q ping"
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
   prometheus:
     image: prom/prometheus:v2.37.9
     env_file:

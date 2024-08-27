@@ -75,7 +75,7 @@ class TaskService(Service):
         return task.id, result
 
     async def launch_task(self, task_func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
-        logger.debug(f"Launching task {task_func} with args {args} and kwargs {kwargs}")
+        logger.debug(f"Launching task {task_func}")
         logger.debug(f"Using backend {self.backend}")
         task = self.backend.launch_task(task_func, *args, **kwargs)
         return await task if isinstance(task, Coroutine) else task
