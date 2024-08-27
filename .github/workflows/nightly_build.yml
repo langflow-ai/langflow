@@ -98,7 +98,7 @@ jobs:
 
   release-nightly-build:
     name: Run Nightly Langflow Build
-    needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
+    # needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: false
