@@ -44,11 +44,11 @@ jobs:
           git config --global user.email "jordan.frazier@datastax.com"
           git config --global user.name "Langflow Bot"
 
-          TAG="$(./scripts/ci/pypi_nightly_tag.py)"
+          TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py)"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-          ./scripts/ci/update_pyproject_version.py $TAG
-          ./scripts/ci/update_pyproject_name.py langflow-nightly
+          poetry run python ./scripts/ci/update_pyproject_version.py $TAG
+          poetry run python ./scripts/ci/update_pyproject_name.py langflow-nightly
 
           git add pyproject.toml
           git commit -m "Update version and project name in files"
