@@ -87,20 +87,20 @@ jobs:
       python-versions: '["3.10", "3.11", "3.12"]'
       ref: ${{ needs.create-nightly-tag.outputs.TAG }}
 
-  # release-nightly-build:
-  #   name: Run Nightly Langflow Build
-  #   needs:
-  #     [
-  #       frontend-tests,
-  #       backend-unit-tests,
-  #       backend-integration-tests,
-  #       create-nightly-tag,
-  #     ]
-  #   uses: ./.github/workflows/release_nightly.yml
-  #   with:
-  #     build_docker_base: false
-  #     build_docker_main: false
-  #     nightly_tag: ${{ needs.create-nightly-tag.outputs.TAG }}
+  release-nightly-build:
+    name: Run Nightly Langflow Build
+    needs:
+      [
+        frontend-tests,
+        backend-unit-tests,
+        backend-integration-tests,
+        create-nightly-tag,
+      ]
+    uses: ./.github/workflows/release_nightly.yml
+    with:
+      build_docker_base: false
+      build_docker_main: false
+      nightly_tag: ${{ needs.create-nightly-tag.outputs.TAG }}
 
   # slack-notification:
   #   name: Send Slack Notification
