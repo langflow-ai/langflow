@@ -8,12 +8,12 @@ on:
         required: true
         type: string
         default: "['3.10', '3.11', '3.12']"
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: "(Optional) Branch to checkout"
+      ref:
+        description: "(Optional) ref to checkout"
         required: false
         type: string
+  workflow_dispatch:
+    inputs:
       python-versions:
         description: "(Optional) Python versions to test"
         required: true
@@ -37,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.ref || github.ref }}
       - name: Setup Node.js
         uses: actions/setup-node@v4
         id: setup-node
