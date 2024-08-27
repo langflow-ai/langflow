@@ -81,7 +81,7 @@ export default function NodeToolbarComponent({
   function minimize() {
     if (isMinimal) {
       setShowState((show) => !show);
-      setShowNode((data.showNode ?? true) ? false : true);
+      setShowNode(data.showNode ?? true ? false : true);
       return;
     }
     setNoticeData({

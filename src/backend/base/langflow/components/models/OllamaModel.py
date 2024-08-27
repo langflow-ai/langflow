@@ -253,7 +253,6 @@ class ChatOllamaComponent(LCModelComponent):
         try:
             output = ChatOllama(**llm_params)  # type: ignore
         except Exception as e:
-            print(f"Exception caught: {e}")
             raise ValueError("Could not initialize Ollama LLM.") from e
 
         return output  # type: ignore

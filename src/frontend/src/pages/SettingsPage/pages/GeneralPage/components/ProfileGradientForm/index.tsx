@@ -43,10 +43,10 @@ const ProfileGradientFormComponent = ({
               <GradientChooserComponent
                 value={
                   gradient == ""
-                    ? (userData?.profile_image ??
+                    ? userData?.profile_image ??
                       gradients[
                         parseInt(userData?.id ?? "", 30) % gradients.length
-                      ])
+                      ]
                     : gradient
                 }
                 onChange={(value) => {
