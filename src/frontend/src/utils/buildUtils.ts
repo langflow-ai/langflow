@@ -10,6 +10,7 @@ import { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import { VertexLayerElementType } from "../types/zustand/flow";
 import { tryParseJson } from "./utils";
+import { useMessagesStore } from "@/stores/messagesStore";
 
 type BuildVerticesParams = {
   setLockChat?: (lock: boolean) => void;
@@ -187,6 +188,7 @@ export async function buildFlowVertices({
         onBuildStart(ids.map((id) => ({ id: id, reference: id })));
       ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
     };
+    console.log(type, data);
     switch (type) {
       case "vertices_sorted": {
         const verticesToRun = data.to_run;
@@ -263,6 +265,12 @@ export async function buildFlowVertices({
         if (buildData.next_vertices_ids) {
           onStartVertices(buildData.next_vertices_ids);
         }
+        return true;
+      }
+      case "message": {
+        //adds a message to the messsage table
+        console.log(data);
+        useMessagesStore.getState().addMessage(data);
         return true;
       }
       case "end": {

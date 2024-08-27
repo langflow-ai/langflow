@@ -108,7 +108,7 @@ export default function ChatView({
         timestamp: message.timestamp,
       };
     });
-    const finalChatHistory = [...messagesFromPool, ...messagesFromMessagesStore].sort((a, b) => {
+    const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
       return (new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     })
     // this function will remove duplicates from the chat history based on the timestamp

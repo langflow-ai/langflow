@@ -40,15 +40,6 @@ class ChatComponent(Component):
         complete_message: str = ""
         if isinstance(iterator, AsyncIterator):
             iterator = asyncio.ensure_future(iterator.__anext__())
-        self._log_callback("message", {"text": "",
-                                             "sender": message.sender,
-                                             "sender_name": message.sender_name,
-                                             "id": str(message_id),
-                                             "timestamp": message.timestamp,
-                                             "flow_id": self.graph.flow_id,
-                                             "session_id": message.session_id,
-                                             "files": message.files,
-                                             })
         for chunk in iterator:
             complete_message += chunk.content
             data = {
