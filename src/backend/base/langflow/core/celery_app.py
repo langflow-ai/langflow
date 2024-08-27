@@ -4,7 +4,7 @@ from celery import Celery  # type: ignore
 def make_celery(app_name: str, config: str) -> Celery:
     celery_app = Celery(app_name)
     celery_app.config_from_object(config)
-    celery_app.conf.task_routes = {"langflow.worker.tasks.*": {"queue": "langflow"}}
+    celery_app.conf.task_routes = {"langflow.worker.*": {"queue": "langflow"}}
     return celery_app
 
 
