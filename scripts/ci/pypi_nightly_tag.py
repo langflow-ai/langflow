@@ -39,7 +39,7 @@ def create_tag(build_type: str):
     version_with_date = (
         ".".join([str(x) for x in current_version.release])
         + ".dev"
-        + datetime.now(pytz.timezone("US/Pacific")).strftime("%Y%m%d")
+        + datetime.now(pytz.timezone("UTC")).strftime("%Y%m%d")
     )
 
     # Verify if version is PEP440 compliant.
