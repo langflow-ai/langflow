@@ -6,6 +6,8 @@ import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
+import FeatureFlags from "@/../feature-config.json";
+
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -476,6 +478,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             <Background className="" />
             {!view && (
               <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border">
+                {FeatureFlags.ENABLE_MVPS &&
                 <ControlButton
                   onClick={() => {
                     const wrapper = reactFlowWrapper.current!;
@@ -526,7 +529,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                       />
                     </div>
                   </ShadTooltip>
-                </ControlButton>
+                </ControlButton>}
               </Controls>
             )}
             <SelectionMenu
