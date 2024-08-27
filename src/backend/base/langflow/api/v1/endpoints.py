@@ -6,6 +6,7 @@ from uuid import UUID
 
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlmodel import Session, select
 
@@ -285,16 +286,55 @@ async def webhook_run_flow(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post("/job/{flow_id}")
-def run_flow_task(
+@router.post("/task/start/{flow_id_or_name}")
+async def run_flow_task(
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
     stream: bool = False,
     api_key_user: User = Depends(api_key_security),
-    telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
-): ...
+):
+    try:
+        from langflow.services.deps import get_task_service
+        from langflow.worker import run_flow_task
+
+        task_service = get_task_service()
+        task_id, task = await task_service.launch_task(
+            run_flow_task,
+            flow=flow.model_dump(),
+            input_request=input_request.model_dump(),
+            stream=False,
+            api_key_user=api_key_user.model_dump(),
+        )
+        return JSONResponse(status_code=HTTPStatus.ACCEPTED, content={"task_id": task_id})
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+@router.get("/task/{task_id}", response_model=TaskStatusResponse)
+async def get_task_status(task_id: str):
+    task_service = get_task_service()
+    task = task_service.get_task(task_id)
+    result = None
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.ready():
+        result = task.result
+        if isinstance(result, Exception):
+            logger.exception(task.traceback)
+
+        if isinstance(result, dict) and "result" in result:
+            result = result["result"]
+        elif hasattr(result, "result"):
+            result = result.result
+    if task.status == "FAILURE":
+        result = str(task.result)
+        logger.error(f"Task {task_id} failed: {task.traceback}")
+
+    return TaskStatusResponse(status=task.status, result=result)
+
+
+@router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 @router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 async def experimental_run_flow(
     session: Annotated[Session, Depends(get_session)],
