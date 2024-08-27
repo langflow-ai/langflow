@@ -315,9 +315,6 @@ export const MenuBar = ({}: {}): JSX.Element => {
               disabled={!isBuilding}
               onClick={(_) => {
                 if (isBuilding) {
-                  setIsBuilding(false);
-                  revertBuiltStatusFromBuilding();
-                  setLockChat(false);
                   window.stop();
                 }
               }}
