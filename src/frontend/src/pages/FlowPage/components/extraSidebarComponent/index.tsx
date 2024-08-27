@@ -411,8 +411,8 @@ export default function ExtraSidebar(): JSX.Element {
               ),
             )}
         </ParentDisclosureComponent>
-        <Separator />
-        <NoteDraggableComponent />
+        {/* <Separator />
+        <NoteDraggableComponent /> */}
       </div>
     </div>
   );
