@@ -281,4 +281,4 @@ async function performStreamingRequest({
   }
 }
 
-export { ApiInterceptor, api, performStreamingRequest };
+export { api, ApiInterceptor, performStreamingRequest };

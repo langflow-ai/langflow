@@ -6,5 +6,5 @@ export default function getFieldTitle(
 ): string {
   return template[templateField].display_name
     ? template[templateField].display_name!
-    : template[templateField].name ?? templateField;
+    : (template[templateField].name ?? templateField);
 }
