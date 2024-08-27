@@ -105,6 +105,7 @@ jobs:
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: ${{ inputs.build_docker_base == 'true' }}
+    needs: release-nightly-main
     uses: ./.github/workflows/docker-build.yml
     strategy:
       matrix:
@@ -115,13 +116,13 @@ jobs:
       # version should be needs.release-main.outputs.version  if release_type is main
       version: ""
       release_type: ${{ matrix.release_type }}
-      pre_release: ${{ inputs.pre_release }}
       nightly_build: true
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: ${{ inputs.build_docker_main == 'true' }}
+    needs: release-nightly-main
     uses: ./.github/workflows/docker-build.yml
     strategy:
       matrix:
@@ -132,6 +133,5 @@ jobs:
       # version should be needs.release-main.outputs.version  if release_type is main
       version: ""
       release_type: ${{ matrix.release_type }}
-      pre_release: ${{ inputs.pre_release }}
       nightly_build: true
     secrets: inherit
