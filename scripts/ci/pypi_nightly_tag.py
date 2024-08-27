@@ -4,18 +4,27 @@ Idea from https://github.com/streamlit/streamlit/blob/4841cf91f1c820a39244109239
 """
 
 from datetime import datetime
+import sys
 
 import packaging.version
 import pytz
 from packaging.version import Version
 
 PYPI_LANGFLOW_URL = "https://pypi.org/pypi/langflow/json"
+PYPI_LANGFLOW_BASE_URL = "https://pypi.org/pypi/langflow-base/json"
 
 
-def get_latest_langflow_version() -> Version:
+def get_latest_langflow_version(build_type: str) -> Version:
     import requests
 
-    res = requests.get(PYPI_LANGFLOW_URL)
+    if build_type == "base":
+        url = PYPI_LANGFLOW_BASE_URL
+    elif build_type == "main":
+        url = PYPI_LANGFLOW_URL
+    else:
+        raise ValueError(f"Invalid build type: {build_type}")
+
+    res = requests.get(url)
     try:
         version_str = res.json()["info"]["version"]
     except Exception as e:
@@ -23,8 +32,8 @@ def get_latest_langflow_version() -> Version:
     return Version(version_str)
 
 
-def create_tag():
-    current_version = get_latest_langflow_version()
+def create_tag(build_type: str):
+    current_version = get_latest_langflow_version(build_type)
 
     # Append todays date
     version_with_date = (
@@ -40,5 +49,9 @@ def create_tag():
 
 
 if __name__ == "__main__":
-    tag = create_tag()
+    if len(sys.argv) != 2:
+        raise Exception("Specify base or main")
+
+    build_type = sys.argv[1]
+    tag = create_tag(build_type)
     print(tag)

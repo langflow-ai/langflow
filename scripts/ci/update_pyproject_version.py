@@ -39,11 +39,19 @@ def verify_pep440(version):
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         raise Exception("New version not specified")
     new_version = sys.argv[1]
+    build_type = sys.argv[2]
+
     verify_pep440(new_version)
-    update_pyproject_version("pyproject.toml", new_version)
+
+    if build_type == "base":
+        update_pyproject_version("src/backend/base/pyproject.toml", new_version)
+    elif build_type == "main":
+        update_pyproject_version("pyproject.toml", new_version)
+    else:
+        raise ValueError(f"Invalid build type: {build_type}")
 
 
 if __name__ == "__main__":
