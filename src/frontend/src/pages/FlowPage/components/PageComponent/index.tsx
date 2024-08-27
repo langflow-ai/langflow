@@ -1,3 +1,4 @@
+import FeatureFlags from "@/../feature-config.json";
 import NoteNode from "@/CustomNodes/NoteNode";
 import IconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
@@ -6,7 +7,6 @@ import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
-import FeatureFlags from "@/../feature-config.json";
 
 import _, { cloneDeep } from "lodash";
 import {
@@ -478,58 +478,59 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             <Background className="" />
             {!view && (
               <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border">
-                {FeatureFlags.ENABLE_MVPS &&
-                <ControlButton
-                  onClick={() => {
-                    const wrapper = reactFlowWrapper.current!;
-                    const viewport = reactFlowInstance?.getViewport();
-                    const x = wrapper.getBoundingClientRect().width / 2;
-                    const y = wrapper.getBoundingClientRect().height / 2;
-                    const nodePosition =
-                      reactFlowInstance?.screenToFlowPosition({ x, y })!;
+                {FeatureFlags.ENABLE_MVPS && (
+                  <ControlButton
+                    onClick={() => {
+                      const wrapper = reactFlowWrapper.current!;
+                      const viewport = reactFlowInstance?.getViewport();
+                      const x = wrapper.getBoundingClientRect().width / 2;
+                      const y = wrapper.getBoundingClientRect().height / 2;
+                      const nodePosition =
+                        reactFlowInstance?.screenToFlowPosition({ x, y })!;
 
-                    const data = {
-                      node: {
-                        description: "",
-                        display_name: "",
-                        documentation: "",
-                        template: {},
-                      },
-                      type: "note",
-                    };
-                    const newId = getNodeId(data.type);
+                      const data = {
+                        node: {
+                          description: "",
+                          display_name: "",
+                          documentation: "",
+                          template: {},
+                        },
+                        type: "note",
+                      };
+                      const newId = getNodeId(data.type);
 
-                    const newNode: NodeType = {
-                      id: newId,
-                      type: "noteNode",
-                      position: { x: 0, y: 0 },
-                      data: {
-                        ...data,
+                      const newNode: NodeType = {
                         id: newId,
-                      },
-                    };
-                    paste(
-                      { nodes: [newNode], edges: [] },
-                      {
-                        x: nodePosition.x,
-                        y: nodePosition?.y,
-                        paneX: wrapper.getBoundingClientRect().x,
-                        paneY: wrapper.getBoundingClientRect().y,
-                      },
-                    );
-                  }}
-                  className="postion absolute -top-10 rounded-sm"
-                >
-                  <ShadTooltip content="Add note">
-                    <div>
-                      <IconComponent
-                        name="SquarePen"
-                        aria-hidden="true"
-                        className="scale-125"
-                      />
-                    </div>
-                  </ShadTooltip>
-                </ControlButton>}
+                        type: "noteNode",
+                        position: { x: 0, y: 0 },
+                        data: {
+                          ...data,
+                          id: newId,
+                        },
+                      };
+                      paste(
+                        { nodes: [newNode], edges: [] },
+                        {
+                          x: nodePosition.x,
+                          y: nodePosition?.y,
+                          paneX: wrapper.getBoundingClientRect().x,
+                          paneY: wrapper.getBoundingClientRect().y,
+                        },
+                      );
+                    }}
+                    className="postion absolute -top-10 rounded-sm"
+                  >
+                    <ShadTooltip content="Add note">
+                      <div>
+                        <IconComponent
+                          name="SquarePen"
+                          aria-hidden="true"
+                          className="scale-125"
+                        />
+                      </div>
+                    </ShadTooltip>
+                  </ControlButton>
+                )}
               </Controls>
             )}
             <SelectionMenu
