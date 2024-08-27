@@ -10261,6 +10261,17 @@ files = [
 ]
 
 [[package]]
+name = "types-markdown"
+version = "3.7.0.20240822"
+description = "Typing stubs for Markdown"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-Markdown-3.7.0.20240822.tar.gz", hash = "sha256:183557c9f4f865bdefd8f5f96a38145c31819271cde111d35557c3bd2069e78d"},
+    {file = "types_Markdown-3.7.0.20240822-py3-none-any.whl", hash = "sha256:bec91c410aaf2470ffdb103e38438fbcc53689b00133f19e64869eb138432ad7"},
+]
+
+[[package]]
 name = "types-passlib"
 version = "1.7.7.20240327"
 description = "Typing stubs for passlib"
@@ -11561,4 +11572,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "3bdfc3e3b86f7e417c34972e5e2251d079602df87650bdc6d6b56d846dbc8a48"
+content-hash = "51dc3a97f0153a6e8a6810bfea823b200a9fc6565b2103b8cafc29c937629e0a"
