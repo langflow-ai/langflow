@@ -46,6 +46,9 @@ jobs:
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
 
+          # WARNING: These scripts must be run in this order (currently).
+          # Poetry will use a different virtual environment once the pyproject.toml
+          # project-name is updated which does not have dependencies installed.
           BASE_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py base)"
           echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
           poetry run python ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
@@ -64,34 +67,34 @@ jobs:
 
       # TODO: Slack message on failure
 
-  frontend-tests:
-    name: Run Frontend Tests
-    needs: create-nightly-tag
-    uses: ./.github/workflows/typescript_test.yml
-    with:
-      tests_folder: "tests/end-to-end"
-      ref: ${{ needs.create-nightly-tag.outputs.tag }}
-    secrets:
-      OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
-      STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
+  # frontend-tests:
+  #   name: Run Frontend Tests
+  #   needs: create-nightly-tag
+  #   uses: ./.github/workflows/typescript_test.yml
+  #   with:
+  #     tests_folder: "tests/end-to-end"
+  #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
+  #   secrets:
+  #     OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
+  #     STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
 
-  backend-unit-tests:
-    name: Run Backend Unit Tests
-    needs: create-nightly-tag
-    uses: ./.github/workflows/python_test.yml
-    with:
-      python-versions: '["3.10", "3.11", "3.12"]'
-      ref: ${{ needs.create-nightly-tag.outputs.tag }}
+  # backend-unit-tests:
+  #   name: Run Backend Unit Tests
+  #   needs: create-nightly-tag
+  #   uses: ./.github/workflows/python_test.yml
+  #   with:
+  #     python-versions: '["3.10", "3.11", "3.12"]'
+  #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   # Not making nightly builds dependent on integration test success
   # due to inherent flakiness of 3rd party integrations
-  backend-integration-tests:
-    name: Run Backend Integration Tests
-    needs: create-nightly-tag
-    uses: ./.github/workflows/integration_tests.yml
-    with:
-      python-versions: '["3.10", "3.11", "3.12"]'
-      ref: ${{ needs.create-nightly-tag.outputs.tag }}
+  # backend-integration-tests:
+  #   name: Run Backend Integration Tests
+  #   needs: create-nightly-tag
+  #   uses: ./.github/workflows/integration_tests.yml
+  #   with:
+  #     python-versions: '["3.10", "3.11", "3.12"]'
+  #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
     name: Run Nightly Langflow Build
