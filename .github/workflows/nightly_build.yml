@@ -5,7 +5,64 @@ on:
   schedule:
     - cron: "0 0 * * *" # Run every day at midnight (UTC)
 
+env:
+  POETRY_VERSION: "1.8.3"
+  PYTHON_VERSION: "3.12"
+
 jobs:
+  create-nightly-tag:
+    runs-on: ubuntu-latest
+    if: github.repository == 'langflowai/langflow'
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      # Additional permission needed to generate tag
+      contents: write
+    outputs:
+      TAG: ${{ steps.create_tag.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        run: |
+          poetry env use ${{ matrix.python-version }}
+          poetry install
+
+      - name: Create tag
+        id: create_tag
+        run: |
+          git config --global user.email "jordan.frazier@datastax.com"
+          git config --global user.name "Langflow Bot"
+
+          TAG="$(./scripts/ci/pypi_nightly_tag.py)"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+          ./scripts/ci/update_pyproject_version.py $TAG
+          ./scripts/ci/update_pyproject_name.py langflow-nightly
+
+          git add pyproject.toml src/backend/base/pyproject.toml
+          git commit -m "Update version and project name in files"
+
+          git tag -a $TAG -m "Langflow nightly $TAG"
+          git push origin $TAG
+      - if: ${{ failure() }}
+        name: Nightly Tag Failure Slack Message
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          RUN_ID: ${{ github.run_id }}
+        run: python scripts/slack_notifications.py nightly tag
+
   frontend-tests:
     name: Run Frontend Tests
     uses: ./.github/workflows/typescript_test.yml
