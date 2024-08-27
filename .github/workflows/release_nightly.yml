@@ -86,7 +86,7 @@ jobs:
         run: make build base=true
       - name: Test CLI
         run: |
-          python -m pip install dist/*.whl
+          python -m pip install src/backend/base/dist/*.whl
           python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
@@ -109,7 +109,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-base
-          path: dist
+          path: src/backend/base/dist
 
   release-nightly-main:
     name: Release Langflow Nightly Main
@@ -147,6 +147,10 @@ jobs:
             echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_main }}. Exiting the workflow."
             exit 1
           fi
+
+      - name: Wait for PyPI Propagation
+        run: sleep 300 # wait for 5 minutes to ensure PyPI propagation of base
+
       - name: Build project for distribution
         run: make build main=true
       - name: Test CLI
