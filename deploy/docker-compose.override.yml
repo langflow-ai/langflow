@@ -39,6 +39,8 @@ services:
       - "5555:5555"
 
   backend:
+    ports:
+      - "7860:7860"
     labels:
       - traefik.enable=true
       - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
@@ -52,12 +54,6 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-frontend-http.rule=PathPrefix(`/`)
       - traefik.http.services.${STACK_NAME?Variable not set}-frontend.loadbalancer.server.port=80
 
-  celeryworker:
-    labels:
-      - traefik.enable=true
-      - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
-      - traefik.http.routers.${STACK_NAME?Variable not set}-celeryworker-http.rule=PathPrefix(`/api/v1`) || PathPrefix(`/docs`) || PathPrefix(`/health`)
-      - traefik.http.services.${STACK_NAME?Variable not set}-celeryworker.loadbalancer.server.port=7860
 
 networks:
   traefik-public:

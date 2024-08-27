@@ -5,7 +5,6 @@ services:
       - .env
     networks:
       - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
-      - default
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command:
@@ -68,12 +67,24 @@ services:
 
   backend: &backend
     image: "langflowai/langflow-backend:latest"
+    build:
+      context: ../
+      dockerfile: docker/dev.Dockerfile
+    develop:
+      watch:
+        - path: ../src/backend/base/langflow
+          action: sync
+          target: /app/src/backend/base/langflow
     depends_on:
       - db
       - broker
       - result_backend
+    environment:
+      - NO_FRONTEND=no-frontend
+      - LANGFLOW_CELERY_ENABLED=true
     env_file:
       - .env
+    command: ["make", "backend"]
     healthcheck:
       test: "exit 0"
     deploy:
@@ -134,20 +145,22 @@ services:
     <<: *backend
     env_file:
       - .env
-    command: /bin/sh -c "python -m celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h -P eventlet"
+    command: /bin/sh -c "python -m celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h -E"
     healthcheck:
       test: "exit 0"
     deploy:
       replicas: 1
+    depends_on:
+      - broker
 
   flower:
     <<: *backend
     env_file:
       - .env
-    networks:
-      - default
     environment:
       - FLOWER_PORT=5555
+    depends_on:
+      - celeryworker
 
     command: /bin/sh -c "python -m celery -A langflow.worker.celery_app --broker=${BROKER_URL?Variable not set} flower --port=5555"
     deploy:
