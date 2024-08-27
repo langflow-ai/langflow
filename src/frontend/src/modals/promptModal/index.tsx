@@ -131,8 +131,8 @@ export default function PromptModal({
             field_name = Array.isArray(
               apiReturn?.frontend_node?.custom_fields?.[""],
             )
-              ? apiReturn?.frontend_node?.custom_fields?.[""][0] ?? ""
-              : apiReturn?.frontend_node?.custom_fields?.[""] ?? "";
+              ? (apiReturn?.frontend_node?.custom_fields?.[""][0] ?? "")
+              : (apiReturn?.frontend_node?.custom_fields?.[""] ?? "");
           }
           if (apiReturn) {
             let inputVariables = apiReturn.input_variables ?? [];

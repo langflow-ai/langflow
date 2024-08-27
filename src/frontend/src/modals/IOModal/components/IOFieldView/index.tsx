@@ -256,9 +256,9 @@ export default function IOFieldView({
                   pagination={!left}
                   rows={
                     Array.isArray(flowPoolNode?.data?.artifacts)
-                      ? flowPoolNode?.data?.artifacts?.map(
+                      ? (flowPoolNode?.data?.artifacts?.map(
                           (artifact) => artifact.data,
-                        ) ?? []
+                        ) ?? [])
                       : [flowPoolNode?.data?.artifacts]
                   }
                   columnMode="union"
