@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Union
 from markdown import markdown
 from bs4 import BeautifulSoup
 import requests
