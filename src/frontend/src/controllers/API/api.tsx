@@ -217,7 +217,7 @@ async function performStreamingRequest({
   onData,
   body,
   onError,
-  onNetworkError
+  onNetworkError,
 }: StreamingRequestParams) {
   let headers = {
     "Content-Type": "application/json",
@@ -253,7 +253,7 @@ async function performStreamingRequest({
   try {
     const reader = response.body.getReader();
     while (true) {
-      const {done, value} = await reader.read();
+      const { done, value } = await reader.read();
       if (done) {
         break;
       }
@@ -291,7 +291,7 @@ async function performStreamingRequest({
     if (onNetworkError) {
       onNetworkError(e);
     } else {
-      throw e
+      throw e;
     }
   }
 }
