@@ -59,8 +59,8 @@ jobs:
           git add pyproject.toml src/backend/base/pyproject.toml
           git commit -m "Update version and project name in files"
 
-          git tag -a $TAG -m "Langflow nightly $TAG"
-          git push origin $TAG || echo "Tag push failed. Check if the tag already exists."
+          git tag -a $MAIN_TAG -m "Langflow nightly $MAIN_TAG"
+          git push origin $MAIN_TAG || echo "Tag push failed. Check if the tag already exists."
 
       # TODO: Slack message on failure
 
