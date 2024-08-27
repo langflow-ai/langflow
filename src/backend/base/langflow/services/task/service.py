@@ -82,3 +82,6 @@ class TaskService(Service):
 
     def get_task(self, task_id: str) -> Any:
         return self.backend.get_task(task_id)
+
+    def list_tasks(self) -> list[str]:
+        return self.backend.list_tasks()

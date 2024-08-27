@@ -334,6 +334,12 @@ async def get_task_status(task_id: str):
     return TaskStatusResponse(status=task.status, result=result)
 
 
+@router.get("/task/list")
+async def list_tasks():
+    task_service = get_task_service()
+    return task_service.list_tasks()
+
+
 @router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 @router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 async def experimental_run_flow(

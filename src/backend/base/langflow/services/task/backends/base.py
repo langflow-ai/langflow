@@ -12,3 +12,7 @@ class TaskBackend(ABC):
     @abstractmethod
     def get_task(self, task_id: str) -> Any:
         pass
+
+    @abstractmethod
+    def list_tasks(self) -> list[str]:
+        pass

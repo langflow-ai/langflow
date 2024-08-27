@@ -2,7 +2,6 @@ from typing import Any, Callable
 
 from celery.result import AsyncResult  # type: ignore
 
-
 from langflow.services.task.backends.base import TaskBackend
 from langflow.worker import celery_app
 
@@ -24,3 +23,6 @@ class CeleryBackend(TaskBackend):
 
     def get_task(self, task_id: str) -> Any:
         return AsyncResult(task_id, app=self.celery_app)
+
+    def list_tasks(self) -> list[str]:
+        return list(self.celery_app.control.inspect().active())

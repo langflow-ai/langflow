@@ -77,3 +77,6 @@ class AnyIOBackend(TaskBackend):
 
     def get_task(self, task_id: str) -> Any:
         return self.tasks.get(task_id)
+
+    def list_tasks(self) -> list[str]:
+        return list(self.tasks.keys())
