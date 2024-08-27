@@ -25,9 +25,7 @@ def update_pyproject_name(pyproject_path: str, new_project_name: str) -> None:
 
 def main() -> None:
     if len(sys.argv) != 3:
-        raise Exception(
-            "Must specify project name and build type, e.g. langflow-nightly base"
-        )
+        raise Exception("Must specify project name and build type, e.g. langflow-nightly base")
     new_project_name = sys.argv[1]
     build_type = sys.argv[2]
 
