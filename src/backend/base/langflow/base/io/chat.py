@@ -16,7 +16,7 @@ class ChatComponent(Component):
     def store_message(
         self,
         message: Message,
-    ) -> list[Message]:
+    ) -> Message:
         messages = store_message(
             message,
             flow_id=self.graph.flow_id,
@@ -27,10 +27,11 @@ class ChatComponent(Component):
         if hasattr(self, "_log_callback") and self._log_callback and stored_message.id:
             if not isinstance(message.text, str):
                 complete_message = self._stream_message(message, stored_message.id)
-                update_message(message_id=stored_message.id, message=dict(text=complete_message))
+                message_table = update_message(message_id=stored_message.id, message=dict(text=complete_message))
+                stored_message = Message(**message_table.model_dump())
                 self.vertex._added_message = stored_message
-        self.status = messages
-        return messages
+        self.status = stored_message
+        return stored_message
 
     def _stream_message(self, message: Message, message_id: str):
         iterator = message.text
