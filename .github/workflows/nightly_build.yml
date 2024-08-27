@@ -55,11 +55,10 @@ jobs:
 
           git tag -a $TAG -m "Langflow nightly $TAG"
           echo "Created tag: $TAG"
-          exit 1
+          git push origin $TAG || echo "Tag push failed. Check if the tag already exists."
 
       # TODO: Slack message on failure
       # TODO: update email to noreply or generic
-      # git push origin $TAG || echo "Tag push failed. Check if the tag already exists."
 
   frontend-tests:
     name: Run Frontend Tests
