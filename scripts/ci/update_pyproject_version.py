@@ -44,7 +44,6 @@ def main() -> None:
     new_version = sys.argv[1]
     verify_pep440(new_version)
     update_pyproject_version("pyproject.toml", new_version)
-    update_pyproject_version("src/backend/base/pyproject.toml", new_version)
 
 
 if __name__ == "__main__":

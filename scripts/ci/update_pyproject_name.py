@@ -28,7 +28,6 @@ def main() -> None:
         raise Exception("New project name not specified")
     new_project_name = sys.argv[1]
     update_pyproject_file("pyproject.toml", new_project_name)
-    update_pyproject_file("src/backend/base/pyproject.toml", new_project_name)
 
 
 if __name__ == "__main__":
