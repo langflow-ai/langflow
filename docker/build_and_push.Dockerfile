@@ -49,9 +49,9 @@ RUN --mount=type=cache,target=/root/.cache \
 
 WORKDIR /app
 COPY pyproject.toml poetry.lock README.md ./
-COPY src/ ./src
+COPY src/backend ./src/backend
 COPY scripts/ ./scripts
-RUN python -m pip install requests --user && cd ./scripts && python update_dependencies.py
+RUN python3 -m pip install requests --user && cd ./scripts && python update_dependencies.py
 
 # 1. Install the dependencies using the current poetry.lock file to create reproducible builds
 # 2. Do not install dev dependencies
@@ -63,9 +63,9 @@ RUN python -m pip install requests --user && cd ./scripts && python update_depen
 RUN $POETRY_HOME/bin/poetry lock --no-update \
       # install current lock file with fixed dependencies versions \
       # do not install dev dependencies \
-      && $POETRY_HOME/bin/poetry install --without dev --sync -E deploy -E couchbase -E cassio \
+      && $POETRY_HOME/bin/poetry install --without dev --sync \
       && $POETRY_HOME/bin/poetry build -f wheel \
-      && $POETRY_HOME/bin/poetry run pip install dist/*.whl
+      && $POETRY_HOME/bin/poetry run python -m pip install dist/*.whl
 
 ################################
 # RUNTIME
