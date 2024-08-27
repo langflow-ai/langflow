@@ -29,7 +29,7 @@ def create_tag():
     # Append todays date
     version_with_date = (
         ".".join([str(x) for x in current_version])
-        + ".nightly"
+        + ".dev"
         + datetime.now(pytz.timezone("US/Pacific")).strftime("%Y%m%d")
     )
 
