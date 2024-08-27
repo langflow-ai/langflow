@@ -65,10 +65,11 @@ class ChatOutput(ChatComponent):
             session_id=self.session_id,
         )
         if self.session_id and isinstance(message, Message) and self.should_store_message:
-            self.store_message(
+            stored_message = self.store_message(
                 message,
             )
-            self.message.value = message
+            self.message.value = stored_message
+            message = stored_message
 
         self.status = message
         return message
