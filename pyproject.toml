@@ -23,7 +23,6 @@ documentation = "https://docs.langflow.org"
 
 [tool.poetry.scripts]
 langflow = "langflow.__main__:main"
-nltk_setup = "scripts.nltk_setup:download_nltk_data"
 
 
 [tool.poetry.dependencies]

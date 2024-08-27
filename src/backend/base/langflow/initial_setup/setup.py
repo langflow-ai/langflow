@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import time
+import nltk
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -615,3 +616,19 @@ def initialize_super_user_if_needed():
         create_default_folder_if_it_doesnt_exist(session, super_user.id)
         session.commit()
         logger.info("Super user initialized")
+
+# Function to download NLTK packages if not already downloaded
+def download_nltk_resources():
+    nltk_resources = {
+        "tokenizers": ["punkt", "punkt_tab"],
+        "taggers": ["averaged_perceptron_tagger"]
+    }
+
+    for category, packages in nltk_resources.items():
+        for package in packages:
+            try:
+                nltk.data.find(f'{category}/{package}')
+                print(f'{package} ({category}) already exists.')
+            except LookupError:
+                print(f'Downloading {package} ({category})...')
+                nltk.download(package)

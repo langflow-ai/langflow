@@ -20,6 +20,7 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.initial_setup.setup import download_nltk_resources
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
@@ -139,6 +140,9 @@ def run(
     """
     Run Langflow.
     """
+
+    # Get necessary NLTK packages (PDF parsing support)
+    download_nltk_resources()
 
     configure(log_level=log_level, log_file=log_file)
     set_var_for_macos_issue()
