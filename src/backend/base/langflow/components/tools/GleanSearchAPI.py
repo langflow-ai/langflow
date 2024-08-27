@@ -59,6 +59,7 @@ class GleanSearchAPIComponent(LCToolComponent):
             """
             Wrapper around Glean API.
             """
+
             glean_api_url: str
             glean_access_token: str
             act_as: str = "langflow-component@datastax.com"  # TODO: Detect this
@@ -71,8 +72,8 @@ class GleanSearchAPIComponent(LCToolComponent):
             ) -> dict:
                 # Ensure there's a trailing slash
                 url = self.glean_api_url
-                if not url.endswith('/'):
-                    url += '/'
+                if not url.endswith("/"):
+                    url += "/"
 
                 return {
                     "url": urljoin(url, "search"),
