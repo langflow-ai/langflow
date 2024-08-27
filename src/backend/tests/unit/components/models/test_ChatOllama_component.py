@@ -123,4 +123,3 @@ def test_build_model(mock_chat_ollama, component):
     assert isinstance(model, ChatOllama)
     assert model.base_url == "http://localhost:11434"
     assert model.model == "llama3.1"
-
