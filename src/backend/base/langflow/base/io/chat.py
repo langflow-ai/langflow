@@ -40,7 +40,7 @@ class ChatComponent(Component):
         complete_message: str = ""
         if isinstance(iterator, AsyncIterator):
             iterator = asyncio.ensure_future(iterator.__anext__())
-        self._log_callback("start_message", {"text": "",
+        self._log_callback("message", {"text": "",
                                              "sender": message.sender,
                                              "sender_name": message.sender_name,
                                              "id": str(message_id),
