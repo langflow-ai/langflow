@@ -209,7 +209,7 @@ class AddContentToPage(LCToolComponent):
         return blocks
 
     def create_block(self, block_type: str, content: str, **kwargs) -> Dict[str, Any]:
-        block = {
+        block:dict[str,Any] = {
             "object": "block",
             "type": block_type,
             block_type: {},
