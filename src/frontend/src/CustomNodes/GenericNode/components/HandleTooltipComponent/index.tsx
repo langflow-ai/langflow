@@ -21,10 +21,11 @@ export default function HandleTooltipComponent({
 
       <div className="mt-2 flex flex-col gap-0.5 text-xs text-muted-foreground">
         <div>
-          <b>Drag</b> to connect compatible inputs
+          <b>Drag</b> to connect compatible {!isInput ? "inputs" : "outputs"}
         </div>
         <div>
-          <b>Select</b> to filter compatible inputs and components
+          <b>Select</b> to filter compatible {!isInput ? "inputs" : "outputs"}{" "}
+          and components
         </div>
       </div>
     </div>
