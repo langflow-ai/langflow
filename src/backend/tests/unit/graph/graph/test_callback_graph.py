@@ -1,5 +1,8 @@
+import asyncio
+
 from langflow.components.outputs.ChatOutput import ChatOutput
 from langflow.custom.custom_component.component import Component
+from langflow.events.event_manager import EventManager
 from langflow.graph.graph.base import Graph
 from langflow.inputs.inputs import IntInput
 from langflow.schema.message import Message
@@ -20,8 +23,11 @@ class LogComponent(Component):
 def test_callback_graph():
     logs: list[tuple[str, dict]] = []
 
-    def mock_callback(event_name, data):
-        logs.append((event_name, data))
+    def mock_callback(event_type: str, data: dict):
+        logs.append((event_type, data))
+
+    event_manager = EventManager(queue=asyncio.Queue())
+    event_manager.register_event_function("on_log", mock_callback)
 
     log_component = LogComponent(_id="log_component")
     log_component.set(times=3)
@@ -29,7 +35,7 @@ def test_callback_graph():
     chat_output.set(sender_name=log_component.call_log_method)
     graph = Graph(start=log_component, end=chat_output)
 
-    results = list(graph.start(event_manager=mock_callback))
+    results = list(graph.start(event_manager=event_manager))
     assert len(results) == 3
     assert len(logs) == 3
     assert all(isinstance(log, tuple) for log in logs)
