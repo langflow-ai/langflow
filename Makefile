@@ -76,11 +76,11 @@ build_frontend: ## build the frontend static files
 	@cp -r src/frontend/build src/backend/base/langflow/frontend
 
 init: check_tools clean_python_cache clean_npm_cache ## initialize the project
-	make install_backend
-	make install_frontend
-	make build_frontend
+	@make install_backend
+	@make install_frontend
+	@make build_frontend
 	@echo "$(GREEN)All requirements are installed.$(NC)"
-	python -m langflow run
+	@python -m langflow run
 
 ######################
 # CLEAN PROJECT
@@ -109,15 +109,15 @@ setup_poetry: ## install poetry using pipx
 add:
 	@echo 'Adding dependencies'
 ifdef devel
-	cd src/backend/base && poetry add --group dev $(devel)
+	@cd src/backend/base && poetry add --group dev $(devel)
 endif
 
 ifdef main
-	poetry add $(main)
+	@poetry add $(main)
 endif
 
 ifdef base
-	cd src/backend/base && poetry add $(base)
+	@cd src/backend/base && poetry add $(base)
 endif
 
 
