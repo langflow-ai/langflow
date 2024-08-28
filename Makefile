@@ -63,16 +63,17 @@ help: ## show this help message
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@poetry install
+	@poetry install > /dev/null 2>&1
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
-	cd src/frontend && npm install
+	@cd src/frontend && npm install > /dev/null 2>&1
 
 build_frontend: ## build the frontend static files
-	cd src/frontend && CI='' npm run build
-	rm -rf src/backend/base/langflow/frontend
-	cp -r src/frontend/build src/backend/base/langflow/frontend
+	@echo 'Building frontend static files'
+	@cd src/frontend && CI='' npm run build > /dev/null 2>&1
+	@rm -rf src/backend/base/langflow/frontend
+	@cp -r src/frontend/build src/backend/base/langflow/frontend
 
 init: check_tools clean_python_cache clean_npm_cache ## initialize the project
 	make install_backend
