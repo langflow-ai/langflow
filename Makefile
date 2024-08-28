@@ -173,28 +173,28 @@ fix_codespell: ## run codespell to fix spelling errors
 	poetry run codespell --toml pyproject.toml --write
 
 format: ## run code formatters
-	poetry run ruff check . --fix
-	poetry run ruff format .
-	cd src/frontend && npm run format
+	@poetry run ruff check . --fix
+	@poetry run ruff format .
+	@cd src/frontend && npm run format
 
 lint: install_backend ## run linters
 	@poetry run mypy --namespace-packages -p "langflow"
 
 install_frontendci:
-	cd src/frontend && npm ci
+	@cd src/frontend && npm ci > /dev/null 2>&1
 
 install_frontendc:
-	cd src/frontend && rm -rf node_modules package-lock.json && npm install
+	@cd src/frontend && rm -rf node_modules package-lock.json && npm install > /dev/null 2>&1
 
 run_frontend: ## run the frontend
 	@-kill -9 `lsof -t -i:3000`
-	cd src/frontend && npm start
+	@cd src/frontend && npm start
 
 tests_frontend: ## run frontend tests
 ifeq ($(UI), true)
-	cd src/frontend && npx playwright test --ui --project=chromium
+	@cd src/frontend && npx playwright test --ui --project=chromium
 else
-	cd src/frontend && npx playwright test --project=chromium
+	@cd src/frontend && npx playwright test --project=chromium
 endif
 
 run_cli:
