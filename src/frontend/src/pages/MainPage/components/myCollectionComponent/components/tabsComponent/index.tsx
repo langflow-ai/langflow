@@ -21,16 +21,16 @@ const TabsSearchComponent = ({
     let newLocation = "";
     switch (tabOption) {
       case "Flows":
-        newLocation = location.replace(/components|all/, "flows");
+        newLocation = location.replace(/.*\/(?:all|components)/, "/flows");
         break;
       case "Components":
-        newLocation = location.replace(/flows|all/, "components");
+        newLocation = location.replace(/.*\/(?:flows|all)/, "/components");
         break;
       default:
-        newLocation = location.replace(/flows|components/, "all");
+        newLocation = location.replace(/.*\/(?:flows|components)/, "/all");
         break;
     }
-
+    console.log(newLocation);
     navigate(newLocation);
   };
 
