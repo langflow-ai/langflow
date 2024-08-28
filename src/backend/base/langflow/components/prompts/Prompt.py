@@ -24,10 +24,8 @@ class PromptComponent(Component):
     async def build_prompt(
         self,
     ) -> Message:
-        print("build_prompt")
         prompt = await Message.from_template_and_variables(**self._attributes)
         self.status = prompt.text
-
         return prompt
 
     def _update_template(self, frontend_node: dict):
@@ -43,9 +41,6 @@ class PromptComponent(Component):
         return frontend_node
 
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
-        print("post code..")
-        import traceback
-        traceback.print_stack()
         """
         This function is called after the code validation is done.
         """
