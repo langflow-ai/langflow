@@ -6,7 +6,8 @@ import shutil
 import tempfile
 from contextlib import contextmanager, suppress
 from pathlib import Path
-from typing import TYPE_CHECKING, AsyncGenerator
+from typing import TYPE_CHECKING
+from collections.abc import AsyncGenerator
 
 import orjson
 import pytest
@@ -155,7 +156,7 @@ def get_graph(_type="basic"):
     elif _type == "openapi":
         path = pytest.OPENAPI_EXAMPLE_PATH
 
-    with open(path, "r") as f:
+    with open(path) as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
@@ -167,7 +168,7 @@ def get_graph(_type="basic"):
 
 @pytest.fixture
 def basic_graph_data():
-    with open(pytest.BASIC_EXAMPLE_PATH, "r") as f:
+    with open(pytest.BASIC_EXAMPLE_PATH) as f:
         return json.load(f)
 
 
@@ -188,55 +189,55 @@ def openapi_graph():
 
 @pytest.fixture
 def json_flow():
-    with open(pytest.BASIC_EXAMPLE_PATH, "r") as f:
+    with open(pytest.BASIC_EXAMPLE_PATH) as f:
         return f.read()
 
 
 @pytest.fixture
 def grouped_chat_json_flow():
-    with open(pytest.GROUPED_CHAT_EXAMPLE_PATH, "r") as f:
+    with open(pytest.GROUPED_CHAT_EXAMPLE_PATH) as f:
         return f.read()
 
 
 @pytest.fixture
 def one_grouped_chat_json_flow():
-    with open(pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH, "r") as f:
+    with open(pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH) as f:
         return f.read()
 
 
 @pytest.fixture
 def vector_store_grouped_json_flow():
-    with open(pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH, "r") as f:
+    with open(pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH) as f:
         return f.read()
 
 
 @pytest.fixture
 def json_flow_with_prompt_and_history():
-    with open(pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY, "r") as f:
+    with open(pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY) as f:
         return f.read()
 
 
 @pytest.fixture
 def json_simple_api_test():
-    with open(pytest.SIMPLE_API_TEST, "r") as f:
+    with open(pytest.SIMPLE_API_TEST) as f:
         return f.read()
 
 
 @pytest.fixture
 def json_vector_store():
-    with open(pytest.VECTOR_STORE_PATH, "r") as f:
+    with open(pytest.VECTOR_STORE_PATH) as f:
         return f.read()
 
 
 @pytest.fixture
 def json_webhook_test():
-    with open(pytest.WEBHOOK_TEST, "r") as f:
+    with open(pytest.WEBHOOK_TEST) as f:
         return f.read()
 
 
 @pytest.fixture
 def json_memory_chatbot_no_llm():
-    with open(pytest.MEMORY_CHATBOT_NO_LLM, "r") as f:
+    with open(pytest.MEMORY_CHATBOT_NO_LLM) as f:
         return f.read()
 
 
@@ -345,13 +346,13 @@ def flow(client, json_flow: str, active_user):
 
 @pytest.fixture
 def json_chat_input():
-    with open(pytest.CHAT_INPUT, "r") as f:
+    with open(pytest.CHAT_INPUT) as f:
         return f.read()
 
 
 @pytest.fixture
 def json_two_outputs():
-    with open(pytest.TWO_OUTPUTS, "r") as f:
+    with open(pytest.TWO_OUTPUTS) as f:
         return f.read()
 
 

@@ -1,4 +1,5 @@
-from typing import Sequence, Union
+from typing import Union
+from collections.abc import Sequence
 
 import pytest
 from pydantic import ValidationError
