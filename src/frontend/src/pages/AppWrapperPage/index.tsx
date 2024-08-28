@@ -15,11 +15,8 @@ import { AxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { Outlet } from "react-router-dom";
-import { LoadingPage } from "../LoadingPage";
 
 export function AppWrapperPage() {
-  const isLoading = useFlowsManagerStore((state) => state.isLoading);
-
   const healthCheckMaxRetries = useFlowsManagerStore(
     (state) => state.healthCheckMaxRetries,
   );
@@ -107,7 +104,6 @@ export function AppWrapperPage() {
       >
         <>
           {modalErrorComponent}
-          {isLoading && <LoadingPage overlay />}
           <Outlet />
         </>
       </ErrorBoundary>

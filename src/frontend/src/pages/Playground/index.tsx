@@ -8,7 +8,6 @@ import { getComponent } from "../../controllers/API";
 import IOModal from "../../modals/IOModal";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import cloneFLowWithParent from "../../utils/storeUtils";
-import { LoadingPage } from "../LoadingPage";
 
 export default function PlaygroundPage() {
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -59,9 +58,7 @@ export default function PlaygroundPage() {
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
-      {!currentSavedFlow ? (
-        <LoadingPage />
-      ) : (
+      {currentSavedFlow && (
         <IOModal open={true} setOpen={() => {}} isPlayground>
           <></>
         </IOModal>
