@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import {
   BASE_URL_API,
@@ -11,11 +11,13 @@ import {
 import { AuthContext } from "../../contexts/authContext";
 
 import { useLogout } from "@/controllers/API/queries/auth";
+import { CustomLink } from "@/customization/components/custom-link";
 import {
   ENABLE_DARK_MODE,
   ENABLE_PROFILE_ICONS,
   ENABLE_SOCIAL_LINKS,
 } from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
@@ -42,9 +44,8 @@ export default function Header(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { mutate: mutationLogout } = useLogout();
-  const logout = useAuthStore((state) => state.logout);
 
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   const hasStore = useStoreStore((state) => state.hasStore);
 
   const dark = useDarkStore((state) => state.dark);
@@ -75,9 +76,9 @@ export default function Header(): JSX.Element {
   return (
     <div className="header-arrangement relative">
       <div className="header-start-display">
-        <Link to="/all" className="cursor-pointer">
+        <CustomLink to="/all" className="cursor-pointer">
           <span className="ml-4 text-2xl">⛓️</span>
-        </Link>
+        </CustomLink>
         {showArrowReturnIcon && (
           <Button
             unstyled
@@ -93,7 +94,7 @@ export default function Header(): JSX.Element {
       </div>
 
       <div className="flex items-center xl:absolute xl:left-1/2 xl:-translate-x-1/2">
-        <Link to="/all">
+        <CustomLink to="/all">
           <Button
             className="gap-2"
             variant={
@@ -107,10 +108,10 @@ export default function Header(): JSX.Element {
             <IconComponent name="Home" className="h-4 w-4" />
             <div className="hidden flex-1 lg:block">{USER_PROJECTS_HEADER}</div>
           </Button>
-        </Link>
+        </CustomLink>
 
         {hasStore && (
-          <Link to="/store">
+          <CustomLink to="/store">
             <Button
               className="gap-2"
               variant={location.pathname === "/store" ? "primary" : "secondary"}
@@ -120,7 +121,7 @@ export default function Header(): JSX.Element {
               <IconComponent name="Store" className="h-4 w-4" />
               <div className="hidden flex-1 lg:block">Store</div>
             </Button>
-          </Link>
+          </CustomLink>
         )}
       </div>
       <div className="header-end-division">

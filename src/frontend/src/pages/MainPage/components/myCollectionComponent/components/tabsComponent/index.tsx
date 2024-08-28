@@ -1,5 +1,5 @@
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 type TabsSearchComponentProps = {
   tabsOptions: string[];
@@ -14,7 +14,7 @@ const TabsSearchComponent = ({
   loading,
   tabActive,
 }: TabsSearchComponentProps) => {
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
 
   const changeLocation = (tabOption) => {
     const location = window.location.pathname;

@@ -12,6 +12,7 @@ import { ProtectedLoginRoute } from "./components/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authSettingsGuard";
 import { StoreGuard } from "./components/storeGuard";
 import ContextWrapper from "./contexts";
+import { ENABLE_CUSTOM_PARAM } from "./customization/feature-flags";
 import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
 import { DashboardWrapperPage } from "./pages/DashboardWrapperPage";
@@ -38,7 +39,7 @@ const SignUp = lazy(() => import("./pages/SignUpPage"));
 const router = createBrowserRouter(
   createRoutesFromElements([
     <Route
-      path="/"
+      path={ENABLE_CUSTOM_PARAM ? "/:customParam" : "/"}
       element={
         <ContextWrapper>
           <Outlet />

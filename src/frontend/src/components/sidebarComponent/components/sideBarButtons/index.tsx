@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { CustomLink } from "@/customization/components/custom-link";
 import { cn } from "../../../../utils/utils";
 import { buttonVariants } from "../../../ui/button";
 
@@ -18,7 +18,7 @@ const SideBarButtonsComponent = ({
   return (
     <div className="flex gap-2 overflow-auto lg:h-[70vh] lg:flex-col">
       {items.map((item) => (
-        <Link to={item.href!}>
+        <CustomLink to={item.href!}>
           <div
             key={item.title}
             data-testid={`sidebar-nav-${item.title}`}
@@ -35,7 +35,7 @@ const SideBarButtonsComponent = ({
               {item.title}
             </span>
           </div>
-        </Link>
+        </CustomLink>
       ))}
     </div>
   );
