@@ -37,8 +37,6 @@ export default function App() {
 
   useGetVersionQuery();
 
-  useGetStarterProjectsQuery();
-
   const { mutate: mutateRefresh } = useRefreshAccessToken();
 
   const isLoginPage = location.pathname.includes("login");
