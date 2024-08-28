@@ -222,10 +222,10 @@ class Settings(BaseSettings):
                     raise ValueError("config_dir not set, please set it or provide a database_url")
 
 
-                from langflow.version import get_version
-                from langflow.version import is_pre_release as langflow_is_pre_release
+                from langflow.utils.version import get_version_info
+                from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
-                version = get_version()
+                version = get_version_info()["version"]
                 is_pre_release = langflow_is_pre_release(version)
 
                 if info.data["save_db_in_config_dir"]:

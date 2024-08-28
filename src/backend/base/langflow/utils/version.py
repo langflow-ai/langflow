@@ -46,6 +46,12 @@ def _get_version_info():
 
 VERSION_INFO = _get_version_info()
 
+def is_pre_release(v: str) -> bool:
+    """
+    Returns a boolean indicating whether the version is a pre-release version,
+    as per the definition of a pre-release segment from PEP 440.
+    """
+    return any(label in v for label in ["a", "b", "rc"])
 
 def get_version_info():
     return VERSION_INFO
