@@ -7,8 +7,8 @@ import {
   useAutoLogin,
   useRefreshAccessToken,
 } from "./controllers/API/queries/auth";
+import { useGetConfig } from "./controllers/API/queries/config/use-get-config";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
-import useSaveConfig from "./hooks/use-save-config";
 import { LoadingPage } from "./pages/LoadingPage";
 import router from "./routes";
 import useAuthStore from "./stores/authStore";
@@ -17,6 +17,7 @@ import { useDarkStore } from "./stores/darkStore";
 export default function App() {
   const { login, setUserData, getUser } = useContext(AuthContext);
   const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
+  const autoLogin = useAuthStore((state) => state.autoLogin);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const dark = useDarkStore((state) => state.dark);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -69,12 +70,12 @@ export default function App() {
   }, []);
 
   useGetVersionQuery();
-  useSaveConfig();
+  useGetConfig();
 
   return (
     //need parent component with width and height
     <Suspense fallback={<LoadingPage />}>
-      <RouterProvider router={router} />
+      {autoLogin == null ? <LoadingPage /> : <RouterProvider router={router} />}
     </Suspense>
   );
 }
