@@ -12,7 +12,7 @@ export interface ConfigResponse {
   health_check_max_retries: number;
 }
 
-export const useGetConfig: useQueryFunctionType<undefined, undefined> = (
+export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
   options,
 ) => {
   const setAutoSaving = useFlowsManagerStore((state) => state.setAutoSaving);
@@ -38,6 +38,7 @@ export const useGetConfig: useQueryFunctionType<undefined, undefined> = (
       setAutoSavingInterval(data.auto_saving_interval);
       setHealthCheckMaxRetries(data.health_check_max_retries);
     }
+    return data;
   };
 
   const queryResult = query(["useGetConfig"], getConfigFn, options);
