@@ -6,8 +6,6 @@ from uuid import UUID
 
 import nanoid  # type: ignore
 import yaml
-from pydantic import BaseModel
-
 from langflow.graph.graph.schema import LogCallbackFunction
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
@@ -20,6 +18,7 @@ from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
 from langflow.utils.async_helpers import run_until_complete
 from langflow.utils.util import find_closest_match
+from pydantic import BaseModel
 
 from .custom_component import CustomComponent
 
@@ -729,11 +728,11 @@ class Component(CustomComponent):
         return ComponentTool(component=self)
 
     def get_project_name(self):
-        if hasattr(self, "_tracing_service"):
+        if hasattr(self, "_tracing_service") and self._tracing_service:
             return self._tracing_service.project_name
         return "Langflow"
 
-    def log(self, message: LoggableType | list[LoggableType], name: Optional[str] = None):
+    def log(self, message: LoggableType | list[LoggableType], name: str | None = None):
         """
         Logs a message.
 
