@@ -71,7 +71,7 @@ test("CRUD folders", async ({ page }) => {
   await page.getByText("Folder deleted successfully").isVisible();
 });
 
-test("add folder by drag and drop", async ({ page }) => {
+test("add a flow into a folder by drag and drop", async ({ page }) => {
   await page.goto("/");
 
   await page.waitForSelector("text=my collection", {
