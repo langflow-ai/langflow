@@ -1,10 +1,10 @@
-from typing import TYPE_CHECKING, List, Literal, Type
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, Field, create_model
 
 from langflow.inputs.inputs import FieldTypes
 
-_convert_field_type_to_type: dict[FieldTypes, Type] = {
+_convert_field_type_to_type: dict[FieldTypes, type] = {
     FieldTypes.TEXT: str,
     FieldTypes.INTEGER: int,
     FieldTypes.FLOAT: float,
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from langflow.inputs.inputs import InputTypes
 
 
-def create_input_schema(inputs: list["InputTypes"]) -> Type[BaseModel]:
+def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
     if not isinstance(inputs, list):
         raise TypeError("inputs must be a list of Inputs")
     fields = {}
@@ -35,7 +35,7 @@ def create_input_schema(inputs: list["InputTypes"]) -> Type[BaseModel]:
 
             field_type = eval(literal_string, {"Literal": Literal})  # type: ignore
         if hasattr(input_model, "is_list") and input_model.is_list:
-            field_type = List[field_type]  # type: ignore
+            field_type = list[field_type]  # type: ignore
         if input_model.name:
             name = input_model.name.replace("_", " ").title()
         elif input_model.display_name:
