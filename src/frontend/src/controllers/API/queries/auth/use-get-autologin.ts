@@ -6,6 +6,7 @@ import { useQueryFunctionType, Users } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { useLogout } from "./use-post-logout";
 
 export interface AutoLoginResponse {
   frontend_timeout: number;
@@ -21,8 +22,8 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   const { login, setUserData, getUser } = useContext(AuthContext);
   const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const logout = useAuthStore((state) => state.logout);
   const isLoginPage = location.pathname.includes("login");
+  const { mutate: mutationLogout } = useLogout();
 
   async function getAutoLoginFn(): Promise<null> {
     try {
@@ -40,7 +41,7 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
         setAutoLogin(false);
         if (!isLoginPage) {
           if (!isAuthenticated) {
-            await logout();
+            mutationLogout();
             throw new Error("Unauthorized");
           } else {
             getUser();
