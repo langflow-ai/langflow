@@ -2,7 +2,6 @@ import { lazy } from "react";
 import {
   createBrowserRouter,
   createRoutesFromElements,
-  Navigate,
   Outlet,
   Route,
 } from "react-router-dom";
@@ -12,6 +11,7 @@ import { ProtectedLoginRoute } from "./components/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authSettingsGuard";
 import { StoreGuard } from "./components/storeGuard";
 import ContextWrapper from "./contexts";
+import { CustomNavigate } from "./customization/components/custom-navigate";
 import { ENABLE_CUSTOM_PARAM } from "./customization/feature-flags";
 import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
@@ -58,7 +58,7 @@ const router = createBrowserRouter(
           >
             <Route path="" element={<DashboardWrapperPage />}>
               <Route path="" element={<HomePage />}>
-                <Route index element={<Navigate replace to={"all"} />} />
+                <Route index element={<CustomNavigate replace to={"all"} />} />
                 <Route
                   path="flows/"
                   element={<MyCollectionComponent key="flows" type="flow" />}
@@ -95,7 +95,10 @@ const router = createBrowserRouter(
                 </Route>
               </Route>
               <Route path="settings" element={<SettingsPage />}>
-                <Route index element={<Navigate replace to={"general"} />} />
+                <Route
+                  index
+                  element={<CustomNavigate replace to={"general"} />}
+                />
                 <Route
                   path="global-variables"
                   element={<GlobalVariablesPage />}
@@ -175,9 +178,9 @@ const router = createBrowserRouter(
               </ProtectedLoginRoute>
             }
           />
-          <Route path="*" element={<Navigate replace to="/" />} />
         </Route>
       </Route>
+      <Route path="*" element={<CustomNavigate replace to="/" />} />
     </Route>,
   ]),
 );
