@@ -1,4 +1,4 @@
-import FeatureFlags from "@/../feature-config.json";
+import { ENABLE_LANGFLOW_STORE } from "@/customization/feature-flags";
 import { create } from "zustand";
 import { checkHasApiKey, checkHasStore } from "../controllers/API";
 import { StoreStoreType } from "../types/zustand/store";
@@ -11,7 +11,7 @@ export const useStoreStore = create<StoreStoreType>((set) => ({
   checkHasStore: () => {
     checkHasStore().then((res) => {
       set({
-        hasStore: FeatureFlags.ENABLE_LANGFLOW_STORE && (res?.enabled ?? false),
+        hasStore: ENABLE_LANGFLOW_STORE && (res?.enabled ?? false),
       });
     });
   },

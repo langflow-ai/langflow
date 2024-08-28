@@ -10,8 +10,12 @@ import {
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
-import FeatureFlags from "@/../feature-config.json";
 import { useLogout } from "@/controllers/API/queries/auth";
+import {
+  ENABLE_DARK_MODE,
+  ENABLE_PROFILE_ICONS,
+  ENABLE_SOCIAL_LINKS,
+} from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
@@ -65,14 +69,7 @@ export default function Header(): JSX.Element {
   );
 
   const handleLogout = () => {
-    mutationLogout(undefined, {
-      onSuccess: () => {
-        logout();
-      },
-      onError: (error) => {
-        console.error(error);
-      },
-    });
+    mutationLogout();
   };
 
   return (
@@ -128,7 +125,7 @@ export default function Header(): JSX.Element {
       </div>
       <div className="header-end-division">
         <div className="header-end-display">
-          {FeatureFlags.ENABLE_SOCIAL_LINKS && (
+          {ENABLE_SOCIAL_LINKS && (
             <>
               <a
                 href="https://github.com/langflow-ai/langflow"
@@ -160,7 +157,7 @@ export default function Header(): JSX.Element {
               <Separator orientation="vertical" />
             </>
           )}
-          {FeatureFlags.ENABLE_DARK_MODE && (
+          {ENABLE_DARK_MODE && (
             <button
               className="extra-side-bar-save-disable"
               onClick={() => {
@@ -202,7 +199,7 @@ export default function Header(): JSX.Element {
                   data-testid="user-profile-settings"
                   className="shrink-0"
                 >
-                  {FeatureFlags.ENABLE_PROFILE_ICONS ? (
+                  {ENABLE_PROFILE_ICONS ? (
                     <img
                       src={profileImageUrl}
                       className="h-7 w-7 shrink-0 focus-visible:outline-0"

@@ -1,6 +1,6 @@
-import FeatureFlags from "@/../feature-config.json";
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import { ENABLE_BRANDING } from "@/customization/feature-flags";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import { useTypesStore } from "@/stores/typesStore";
@@ -106,7 +106,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
             </main>
           </div>
         )}
-        {FeatureFlags.ENABLE_BRANDING && version && (
+        {ENABLE_BRANDING && version && (
           <a
             target={"_blank"}
             href="https://medium.com/logspace/langflow-datastax-better-together-1b7462cebc4d"

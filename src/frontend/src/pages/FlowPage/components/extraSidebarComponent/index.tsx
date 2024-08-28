@@ -1,4 +1,4 @@
-import FeatureFlags from "@/../feature-config.json";
+import { ENABLE_MVPS } from "@/customization/feature-flags";
 import { cloneDeep } from "lodash";
 import { LinkIcon, SparklesIcon } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
@@ -199,10 +199,9 @@ export default function ExtraSidebar(): JSX.Element {
             // Set search input state
             setSearch(event.target.value);
           }}
-          autocomplete="off"
-          readonly="readonly"
+          autoComplete="off"
           onClick={() =>
-            document.getElementById("search").removeAttribute("readonly")
+            document?.getElementById("search")?.removeAttribute("readonly")
           }
         />
         <div
@@ -412,7 +411,7 @@ export default function ExtraSidebar(): JSX.Element {
               ),
             )}
         </ParentDisclosureComponent>
-        {FeatureFlags.ENABLE_MVPS && (
+        {ENABLE_MVPS && (
           <>
             <Separator />
 

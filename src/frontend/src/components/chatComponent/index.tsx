@@ -1,4 +1,4 @@
-import FeatureFlags from "@/../feature-config.json";
+import { ENABLE_API } from "@/customization/feature-flags";
 import { Transition } from "@headlessui/react";
 import { useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -138,7 +138,7 @@ export default function FlowToolbar(): JSX.Element {
             <div>
               <Separator orientation="vertical" />
             </div>
-            {FeatureFlags.ENABLE_API && (
+            {ENABLE_API && (
               <>
                 <div className="flex cursor-pointer items-center gap-2">
                   {currentFlow && currentFlow.data && (
