@@ -33,13 +33,13 @@ def test_create_secret(secret_manager, mocker):
             kind="Secret",
             metadata=V1ObjectMeta(name="test-secret"),
             type="Opaque",
-            data={"key": b64encode("value".encode()).decode()},
+            data={"key": b64encode(b"value").decode()},
         ),
     )
 
 
 def test_get_secret(secret_manager, mocker):
-    mock_secret = V1Secret(data={"key": b64encode("value".encode()).decode()})
+    mock_secret = V1Secret(data={"key": b64encode(b"value").decode()})
     mocker.patch.object(secret_manager.core_api, "read_namespaced_secret", return_value=mock_secret)
 
     secret_data = secret_manager.get_secret(name="test-secret")
