@@ -60,7 +60,7 @@ def check_if_store_is_enabled(
 
 @router.get("/check/api_key")
 async def check_if_store_has_api_key(
-    api_key: Optional[str] = Depends(get_optional_user_store_api_key),
+    api_key: str | None = Depends(get_optional_user_store_api_key),
     store_service: StoreService = Depends(get_store_service),
 ):
     if api_key is None:
@@ -105,19 +105,19 @@ async def update_shared_component(
 
 @router.get("/components/", response_model=ListComponentResponseModel)
 async def get_components(
-    component_id: Annotated[Optional[str], Query()] = None,
-    search: Annotated[Optional[str], Query()] = None,
-    private: Annotated[Optional[bool], Query()] = None,
-    is_component: Annotated[Optional[bool], Query()] = None,
-    tags: Annotated[Optional[list[str]], Query()] = None,
-    sort: Annotated[Union[list[str], None], Query()] = None,
+    component_id: Annotated[str | None, Query()] = None,
+    search: Annotated[str | None, Query()] = None,
+    private: Annotated[bool | None, Query()] = None,
+    is_component: Annotated[bool | None, Query()] = None,
+    tags: Annotated[list[str] | None, Query()] = None,
+    sort: Annotated[list[str] | None, Query()] = None,
     liked: Annotated[bool, Query()] = False,
     filter_by_user: Annotated[bool, Query()] = False,
-    fields: Annotated[Optional[list[str]], Query()] = None,
+    fields: Annotated[list[str] | None, Query()] = None,
     page: int = 1,
     limit: int = 10,
     store_service: StoreService = Depends(get_store_service),
-    store_api_key: Optional[str] = Depends(get_optional_user_store_api_key),
+    store_api_key: str | None = Depends(get_optional_user_store_api_key),
 ):
     try:
         return await store_service.get_list_component_response_model(
@@ -159,7 +159,7 @@ async def download_component(
     return component
 
 
-@router.get("/tags", response_model=List[TagResponse])
+@router.get("/tags", response_model=list[TagResponse])
 async def get_tags(
     store_service: StoreService = Depends(get_store_service),
 ):
@@ -171,7 +171,7 @@ async def get_tags(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/users/likes", response_model=List[UsersLikesResponse])
+@router.get("/users/likes", response_model=list[UsersLikesResponse])
 async def get_list_of_components_liked_by_user(
     store_service: StoreService = Depends(get_store_service),
     store_api_key: str = Depends(get_user_store_api_key),

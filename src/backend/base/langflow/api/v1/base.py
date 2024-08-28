@@ -26,8 +26,8 @@ class FrontendNodeRequest(FrontendNode):
 class ValidatePromptRequest(BaseModel):
     name: str
     template: str
-    custom_fields: Optional[dict] = None
-    frontend_node: Optional[FrontendNodeRequest] = None
+    custom_fields: dict | None = None
+    frontend_node: FrontendNodeRequest | None = None
 
 
 # Build ValidationResponse class for {"imports": {"errors": []}, "function": {"errors": []}}
@@ -49,4 +49,4 @@ class CodeValidationResponse(BaseModel):
 class PromptValidationResponse(BaseModel):
     input_variables: list
     # object return for tweak call
-    frontend_node: Optional[FrontendNodeRequest] = None
+    frontend_node: FrontendNodeRequest | None = None

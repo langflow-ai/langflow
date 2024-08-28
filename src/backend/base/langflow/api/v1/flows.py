@@ -273,7 +273,7 @@ def delete_flow(
     return {"message": "Flow deleted successfully"}
 
 
-@router.post("/batch/", response_model=List[FlowRead], status_code=201)
+@router.post("/batch/", response_model=list[FlowRead], status_code=201)
 def create_flows(
     *,
     session: Session = Depends(get_session),
@@ -293,7 +293,7 @@ def create_flows(
     return db_flows
 
 
-@router.post("/upload/", response_model=List[FlowRead], status_code=201)
+@router.post("/upload/", response_model=list[FlowRead], status_code=201)
 async def upload_file(
     *,
     session: Session = Depends(get_session),
@@ -322,7 +322,7 @@ async def upload_file(
 
 @router.delete("/")
 async def delete_multiple_flows(
-    flow_ids: List[UUID], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
+    flow_ids: list[UUID], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
 ):
     """
     Delete multiple flows by their IDs.
@@ -357,7 +357,7 @@ async def delete_multiple_flows(
 
 @router.post("/download/", status_code=200)
 async def download_multiple_file(
-    flow_ids: List[UUID],
+    flow_ids: list[UUID],
     user: User = Depends(get_current_active_user),
     db: Session = Depends(get_session),
 ):

@@ -15,7 +15,7 @@ async def event_generator(request: Request):
     last_read_item = None
     current_not_sent = 0
     while not await request.is_disconnected():
-        to_write: List[Any] = []
+        to_write: list[Any] = []
         with log_buffer.get_write_lock():
             if last_read_item is None:
                 last_read_item = log_buffer.buffer[len(log_buffer.buffer) - 1]
