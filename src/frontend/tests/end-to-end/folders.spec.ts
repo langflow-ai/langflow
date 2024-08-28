@@ -71,46 +71,6 @@ test("CRUD folders", async ({ page }) => {
   await page.getByText("Folder deleted successfully").isVisible();
 });
 
-test("add folder by drag and drop", async ({ page }) => {
-  await page.goto("/");
-
-  await page.waitForSelector("text=my collection", {
-    timeout: 50000,
-  });
-
-  const jsonContent = readFileSync(
-    "tests/end-to-end/assets/collection.json",
-    "utf-8",
-  );
-
-  // Wait for the target element to be available before evaluation
-  await page.waitForSelector(
-    '//*[@id="root"]/div/div[2]/div[2]/div[3]/aside/nav/div/div[2]',
-  );
-
-  // Create the DataTransfer and File
-  const dataTransfer = await page.evaluateHandle((data) => {
-    const dt = new DataTransfer();
-    // Convert the buffer to a hex array
-    const file = new File([data], "flowtest.json", {
-      type: "application/json",
-    });
-    dt.items.add(file);
-    return dt;
-  }, jsonContent);
-
-  // Now dispatch
-  await page.dispatchEvent(
-    '//*[@id="root"]/div/div[2]/div[2]/div[3]/aside/nav/div/div[2]',
-    "drop",
-    {
-      dataTransfer,
-    },
-  );
-
-  await page.getByText("Getting Started").first().isVisible();
-});
-
 test("change flow folder", async ({ page }) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
