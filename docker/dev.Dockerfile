@@ -1,6 +1,5 @@
 FROM python:3.12-bookworm
-ENV TZ=UTC \
-    NO_FRONTEND=true
+ENV TZ=UTC
 WORKDIR /app
 
 RUN apt update -y
@@ -19,4 +18,4 @@ RUN poetry install --no-interaction --no-ansi --extras deploy
 EXPOSE 7860
 EXPOSE 3000
 
-CMD ["bash", "-c", "./docker/dev.start.sh", "${NO_FRONTEND}"]
+CMD ["bash", "-c", "./docker/dev.start.sh"]

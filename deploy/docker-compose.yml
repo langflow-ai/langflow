@@ -83,7 +83,6 @@ services:
         result_backend:
           condition: service_healthy
     environment:
-      - NO_FRONTEND=no-frontend
       - LANGFLOW_CELERY_ENABLED=true
     env_file:
       - .env

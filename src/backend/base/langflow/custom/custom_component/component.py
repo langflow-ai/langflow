@@ -302,7 +302,8 @@ class Component(CustomComponent):
             raise ValueError(f"Output with method {method_name} not found")
         return output
 
-    def _inherits_from_component(self, method: Callable):
+    @staticmethod
+    def _inherits_from_component(method: Callable):
         # check if the method is a method from a class that inherits from Component
         # and that it is an output of that class
         inherits_from_component = hasattr(method, "__self__") and isinstance(method.__self__, Component)
