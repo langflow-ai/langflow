@@ -4,5 +4,6 @@
   "ENABLE_LANGFLOW_STORE": true,
   "ENABLE_PROFILE_ICONS": true,
   "ENABLE_SOCIAL_LINKS": true,
-  "ENABLE_BRANDING": true
+  "ENABLE_BRANDING": true,
+  "ENABLE_MVPS": false
 }

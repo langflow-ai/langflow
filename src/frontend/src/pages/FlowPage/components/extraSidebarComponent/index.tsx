@@ -1,3 +1,4 @@
+import FeatureFlags from "@/../feature-config.json";
 import { cloneDeep } from "lodash";
 import { LinkIcon, SparklesIcon } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
@@ -5,7 +6,10 @@ import IconComponent from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
-import { PRIORITY_SIDEBAR_ORDER } from "../../../../constants/constants";
+import {
+  BUNDLES_SIDEBAR_FOLDER_NAMES,
+  PRIORITY_SIDEBAR_ORDER,
+} from "../../../../constants/constants";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -408,6 +412,132 @@ export default function ExtraSidebar(): JSX.Element {
               ),
             )}
         </ParentDisclosureComponent>
+        {FeatureFlags.ENABLE_MVPS && (
+          <>
+            <Separator />
+
+            <ParentDisclosureComponent
+              defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
+              key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
+              button={{
+                title: "Bundles",
+                Icon: nodeIconsLucide.unknown,
+              }}
+              testId="extended-disclosure"
+            >
+              {Object.keys(dataFilter)
+                .sort(sortKeys)
+                .filter((x) => BUNDLES_SIDEBAR_FOLDER_NAMES.includes(x))
+                .map((SBSectionName: keyof APIObjectType, index) =>
+                  Object.keys(dataFilter[SBSectionName]).length > 0 ? (
+                    <Fragment
+                      key={`DisclosureComponent${index + search + JSON.stringify(getFilterEdge)}`}
+                    >
+                      <DisclosureComponent
+                        isChild={false}
+                        defaultOpen={
+                          getFilterEdge.length !== 0 || search.length !== 0
+                            ? true
+                            : false
+                        }
+                        button={{
+                          title: nodeNames[SBSectionName] ?? nodeNames.unknown,
+                          Icon:
+                            nodeIconsLucide[SBSectionName] ??
+                            nodeIconsLucide.unknown,
+                        }}
+                      >
+                        <div className="side-bar-components-gap">
+                          {Object.keys(dataFilter[SBSectionName])
+                            .sort((a, b) =>
+                              sensitiveSort(
+                                dataFilter[SBSectionName][a].display_name,
+                                dataFilter[SBSectionName][b].display_name,
+                              ),
+                            )
+                            .map((SBItemName: string, index) => (
+                              <ShadTooltip
+                                content={
+                                  dataFilter[SBSectionName][SBItemName]
+                                    .display_name
+                                }
+                                side="right"
+                                key={index}
+                              >
+                                <SidebarDraggableComponent
+                                  sectionName={SBSectionName as string}
+                                  apiClass={
+                                    dataFilter[SBSectionName][SBItemName]
+                                  }
+                                  key={index}
+                                  onDragStart={(event) =>
+                                    onDragStart(event, {
+                                      //split type to remove type in nodes saved with same name removing it's
+                                      type: removeCountFromString(SBItemName),
+                                      node: dataFilter[SBSectionName][
+                                        SBItemName
+                                      ],
+                                    })
+                                  }
+                                  color={nodeColors[SBSectionName]}
+                                  itemName={SBItemName}
+                                  //convert error to boolean
+                                  error={
+                                    !!dataFilter[SBSectionName][SBItemName]
+                                      .error
+                                  }
+                                  display_name={
+                                    dataFilter[SBSectionName][SBItemName]
+                                      .display_name
+                                  }
+                                  official={
+                                    dataFilter[SBSectionName][SBItemName]
+                                      .official === false
+                                      ? false
+                                      : true
+                                  }
+                                />
+                              </ShadTooltip>
+                            ))}
+                        </div>
+                      </DisclosureComponent>
+                      {index ===
+                        Object.keys(dataFilter).length -
+                          PRIORITY_SIDEBAR_ORDER.length +
+                          1 && (
+                        <>
+                          <a
+                            target={"_blank"}
+                            href="https://langflow.store"
+                            className="components-disclosure-arrangement"
+                          >
+                            <div className="flex gap-4">
+                              {/* BUG ON THIS ICON */}
+                              <SparklesIcon
+                                strokeWidth={1.5}
+                                className="w-[22px] text-primary"
+                              />
+
+                              <span className="components-disclosure-title">
+                                Discover More
+                              </span>
+                            </div>
+                            <div className="components-disclosure-div">
+                              <div>
+                                <LinkIcon className="h-4 w-4 text-foreground" />
+                              </div>
+                            </div>
+                          </a>
+                        </>
+                      )}
+                    </Fragment>
+                  ) : (
+                    <div key={index}></div>
+                  ),
+                )}
+            </ParentDisclosureComponent>
+          </>
+        )}
       </div>
     </div>
   );
