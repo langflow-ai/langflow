@@ -70,17 +70,12 @@ class ChatInput(ChatComponent):
             files=self.files,
         )
 
-        if (
-            self.session_id
-            and isinstance(message, Message)
-            and isinstance(message.text, str)
-            and self.should_store_message
-        ):
-            store_message(
-                message,
-                flow_id=self.graph.flow_id,
-            )
-            self.message.value = message
+
+        self.store_message(
+            message,
+            flow_id=self.graph.flow_id,
+        )
+        self.message.value = message
 
         self.status = message
         return message
