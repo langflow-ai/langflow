@@ -157,7 +157,7 @@ class Settings(BaseSettings):
     # Config
     auto_saving: bool = True
     """If set to True, Langflow will auto save flows."""
-    auto_saving_interval: int = 300
+    auto_saving_interval: int = 1000
     """The interval in ms at which Langflow will auto save flows."""
     health_check_max_retries: int = 5
     """The maximum number of retries for the health check."""
