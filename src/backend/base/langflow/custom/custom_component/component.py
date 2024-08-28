@@ -1,6 +1,7 @@
 import inspect
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Union, get_type_hints
+from typing import TYPE_CHECKING, Any, ClassVar, List, Optional, Union, get_type_hints
+from collections.abc import Callable
 from uuid import UUID
 
 import nanoid  # type: ignore
@@ -30,8 +31,8 @@ CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name"]
 
 
 class Component(CustomComponent):
-    inputs: List["InputTypes"] = []
-    outputs: List[Output] = []
+    inputs: list["InputTypes"] = []
+    outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
 
@@ -228,7 +229,7 @@ class Component(CustomComponent):
         else:
             raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
 
-    def map_outputs(self, outputs: List[Output]):
+    def map_outputs(self, outputs: list[Output]):
         """
         Maps the given list of outputs to the component.
 
@@ -247,7 +248,7 @@ class Component(CustomComponent):
                 raise ValueError("Output name cannot be None.")
             self._outputs[output.name] = output
 
-    def map_inputs(self, inputs: List["InputTypes"]):
+    def map_inputs(self, inputs: list["InputTypes"]):
         """
         Maps the given inputs to the component.
 
@@ -449,7 +450,7 @@ class Component(CustomComponent):
                     )
                 raise ValueError(f"Parameter {name} not found in {self.__class__.__name__}. ")
 
-    def _get_method_return_type(self, method_name: str) -> List[str]:
+    def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
         return_type = get_type_hints(method)["return"]
         extracted_return_types = self._extract_return_type(return_type)
@@ -530,7 +531,7 @@ class Component(CustomComponent):
                 _attributes[key] = input_obj.value or None
         self._attributes = _attributes
 
-    def _set_outputs(self, outputs: List[dict]):
+    def _set_outputs(self, outputs: list[dict]):
         self.outputs = [Output(**output) for output in outputs]
         for output in self.outputs:
             setattr(self, output.name, output)
@@ -646,7 +647,7 @@ class Component(CustomComponent):
             return str(self.repr_value)
         return self.repr_value
 
-    def build_inputs(self, user_id: Optional[Union[str, UUID]] = None):
+    def build_inputs(self, user_id: str | UUID | None = None):
         """
         Builds the inputs for the custom component.
 

@@ -9,11 +9,11 @@ class ClassCodeDetails(BaseModel):
     """
 
     name: str
-    doc: Optional[str] = None
+    doc: str | None = None
     bases: list
     attributes: list
     methods: list
-    init: Optional[dict] = Field(default_factory=dict)
+    init: dict | None = Field(default_factory=dict)
 
 
 class CallableCodeDetails(BaseModel):
@@ -22,10 +22,10 @@ class CallableCodeDetails(BaseModel):
     """
 
     name: str
-    doc: Optional[str] = None
+    doc: str | None = None
     args: list
     body: list
-    return_type: Optional[Any] = None
+    return_type: Any | None = None
     has_return: bool = False
 
 

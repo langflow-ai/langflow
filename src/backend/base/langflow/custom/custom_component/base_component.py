@@ -24,11 +24,11 @@ class BaseComponent:
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
     ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
 
-    _code: Optional[str] = None
+    _code: str | None = None
     """The code of the component. Defaults to None."""
     _function_entrypoint_name: str = "build"
     field_config: dict = {}
-    _user_id: Optional[str | UUID] = None
+    _user_id: str | UUID | None = None
     _template_config: dict = {}
 
     def __init__(self, **data):
