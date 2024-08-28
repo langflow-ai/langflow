@@ -2,8 +2,6 @@ import { create } from "zustand";
 import { FoldersStoreType } from "../types/zustand/folders";
 
 export const useFolderStore = create<FoldersStoreType>((set, get) => ({
-  selectedFolder: null,
-  setSelectedFolder: (folder) => set(() => ({ selectedFolder: folder })),
   loadingById: false,
   setMyCollectionId: (myCollectionId) => {
     set({ myCollectionId });
