@@ -1,6 +1,9 @@
 const { test, expect } = require("@playwright/test");
 
-test("Drag and Drop Test", async ({ page, request }) => {
+test("vector store from starter projects should have its connections and nodes on the flow", async ({
+  page,
+  request,
+}) => {
   const response = await request.get("/api/v1/starter-projects");
   expect(response.status()).toBe(200);
   const responseBody = await response.json();
