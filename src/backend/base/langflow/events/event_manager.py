@@ -5,11 +5,19 @@ import uuid
 from collections.abc import Callable
 from functools import partial
 
+from typing_extensions import Protocol
+
+from langflow.schema.log import LoggableType
+
+
+class EventCallback(Protocol):
+    def __call__(self, event_type: str, data: LoggableType): ...
+
 
 class EventManager:
     def __init__(self, queue: asyncio.Queue):
         self.queue = queue
-        self.events: dict[str, Callable] = {}
+        self.events: dict[str, EventCallback] = {}
 
     def register_event(self, name: str, event_type: str):
         self.events[name] = partial(self.send_event, event_type)
