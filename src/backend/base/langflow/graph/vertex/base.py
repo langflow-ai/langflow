@@ -6,7 +6,8 @@ import traceback
 import types
 import json
 from enum import Enum
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional, Set
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
+from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 
 import pandas as pd
 from loguru import logger
@@ -46,9 +47,9 @@ class Vertex:
         self,
         data: NodeData,
         graph: "Graph",
-        base_type: Optional[str] = None,
+        base_type: str | None = None,
         is_task: bool = False,
-        params: Optional[Dict] = None,
+        params: dict | None = None,
     ) -> None:
         # is_external means that the Vertex send or receives data from
         # an external source (e.g the chat)
@@ -66,36 +67,36 @@ class Vertex:
         self.has_external_output = False
         self.graph = graph
         self._data = data.copy()
-        self.base_type: Optional[str] = base_type
-        self.outputs: List[Dict] = []
+        self.base_type: str | None = base_type
+        self.outputs: list[dict] = []
         self._parse_data()
         self._built_object = UnbuiltObject()
         self._built_result = None
         self._built = False
-        self._successors_ids: Optional[List[str]] = None
-        self.artifacts: Dict[str, Any] = {}
-        self.artifacts_raw: Dict[str, Any] = {}
-        self.artifacts_type: Dict[str, str] = {}
-        self.steps: List[Callable] = [self._build]
-        self.steps_ran: List[Callable] = []
-        self.task_id: Optional[str] = None
+        self._successors_ids: list[str] | None = None
+        self.artifacts: dict[str, Any] = {}
+        self.artifacts_raw: dict[str, Any] = {}
+        self.artifacts_type: dict[str, str] = {}
+        self.steps: list[Callable] = [self._build]
+        self.steps_ran: list[Callable] = []
+        self.task_id: str | None = None
         self.is_task = is_task
         self.params = params or {}
-        self.parent_node_id: Optional[str] = self._data.get("parent_node_id")
-        self.load_from_db_fields: List[str] = []
+        self.parent_node_id: str | None = self._data.get("parent_node_id")
+        self.load_from_db_fields: list[str] = []
         self.parent_is_top_level = False
         self.layer = None
-        self.result: Optional[ResultData] = None
-        self.results: Dict[str, Any] = {}
-        self.outputs_logs: Dict[str, OutputValue] = {}
-        self.logs: Dict[str, Log] = {}
+        self.result: ResultData | None = None
+        self.results: dict[str, Any] = {}
+        self.outputs_logs: dict[str, OutputValue] = {}
+        self.logs: dict[str, Log] = {}
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
         except ValueError:
             self.is_interface_component = False
 
         self.use_result = False
-        self.build_times: List[float] = []
+        self.build_times: list[float] = []
         self.state = VertexStates.ACTIVE
 
     def set_input_value(self, name: str, value: Any):
@@ -168,31 +169,31 @@ class Vertex:
         pass
 
     @property
-    def edges(self) -> List["CycleEdge"]:
+    def edges(self) -> list["CycleEdge"]:
         return self.graph.get_vertex_edges(self.id)
 
     @property
-    def outgoing_edges(self) -> List["CycleEdge"]:
+    def outgoing_edges(self) -> list["CycleEdge"]:
         return [edge for edge in self.edges if edge.source_id == self.id]
 
     @property
-    def incoming_edges(self) -> List["CycleEdge"]:
+    def incoming_edges(self) -> list["CycleEdge"]:
         return [edge for edge in self.edges if edge.target_id == self.id]
 
     @property
-    def edges_source_names(self) -> Set[str | None]:
+    def edges_source_names(self) -> set[str | None]:
         return {edge.source_handle.name for edge in self.edges}
 
     @property
-    def predecessors(self) -> List["Vertex"]:
+    def predecessors(self) -> list["Vertex"]:
         return self.graph.get_predecessors(self)
 
     @property
-    def successors(self) -> List["Vertex"]:
+    def successors(self) -> list["Vertex"]:
         return self.graph.get_successors(self)
 
     @property
-    def successors_ids(self) -> List[str]:
+    def successors_ids(self) -> list[str]:
         return self.graph.successor_map.get(self.id, [])
 
     def __getstate__(self):
@@ -208,7 +209,7 @@ class Vertex:
         self._built_object = state.get("_built_object") or UnbuiltObject()
         self._built_result = state.get("_built_result") or UnbuiltResult()
 
-    def set_top_level(self, top_level_vertices: List[str]) -> None:
+    def set_top_level(self, top_level_vertices: list[str]) -> None:
         self.parent_is_top_level = self.parent_node_id in top_level_vertices
 
     def _parse_data(self) -> None:
@@ -478,7 +479,7 @@ class Vertex:
 
         self._built = True
 
-    def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[dict]:
+    def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:
         """
         Extracts messages from the artifacts.
 
@@ -565,7 +566,7 @@ class Vertex:
     async def _build_dict_and_update_params(
         self,
         key,
-        vertices_dict: Dict[str, "Vertex"],
+        vertices_dict: dict[str, "Vertex"],
     ):
         """
         Iterates over a dictionary of vertices, builds each and updates the params dictionary.
@@ -589,7 +590,7 @@ class Vertex:
         """
         return all(self._is_vertex(vertex) for vertex in value)
 
-    async def get_result(self, requester: "Vertex", target_handle_name: Optional[str] = None) -> Any:
+    async def get_result(self, requester: "Vertex", target_handle_name: str | None = None) -> Any:
         """
         Retrieves the result of the vertex.
 
@@ -601,7 +602,7 @@ class Vertex:
         async with self._lock:
             return await self._get_result(requester, target_handle_name)
 
-    async def _get_result(self, requester: "Vertex", target_handle_name: Optional[str] = None) -> Any:
+    async def _get_result(self, requester: "Vertex", target_handle_name: str | None = None) -> Any:
         """
         Retrieves the result of the built component.
 
@@ -635,7 +636,7 @@ class Vertex:
     async def _build_list_of_vertices_and_update_params(
         self,
         key,
-        vertices: List["Vertex"],
+        vertices: list["Vertex"],
     ):
         """
         Iterates over a list of vertices, builds each and updates the params dictionary.
@@ -737,7 +738,7 @@ class Vertex:
             if self.display_name in ["Text Output"]:
                 raise ValueError(f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead.")
 
-    def _reset(self, params_update: Optional[Dict[str, Any]] = None):
+    def _reset(self, params_update: dict[str, Any] | None = None):
         self._built = False
         self._built_object = UnbuiltObject()
         self._built_result = UnbuiltResult()
@@ -757,8 +758,8 @@ class Vertex:
     async def build(
         self,
         user_id=None,
-        inputs: Optional[Dict[str, Any]] = None,
-        files: Optional[list[str]] = None,
+        inputs: dict[str, Any] | None = None,
+        files: list[str] | None = None,
         requester: Optional["Vertex"] = None,
         **kwargs,
     ) -> Any:

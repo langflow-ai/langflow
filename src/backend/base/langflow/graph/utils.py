@@ -1,6 +1,7 @@
 import json
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generator, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
+from collections.abc import Generator
 from uuid import UUID
 
 from langchain_core.documents import Document
@@ -54,7 +55,7 @@ def fix_prompt(prompt: str):
     return prompt + " {input}"
 
 
-def flatten_list(list_of_lists: list[Union[list, Any]]) -> list:
+def flatten_list(list_of_lists: list[list | Any]) -> list:
     """Flatten list of lists."""
     new_list = []
     for item in list_of_lists:
@@ -135,7 +136,7 @@ def _vertex_to_primitive_dict(target: "Vertex") -> dict:
 
 
 async def log_transaction(
-    flow_id: Union[str, UUID], source: "Vertex", status, target: Optional["Vertex"] = None, error=None
+    flow_id: str | UUID, source: "Vertex", status, target: Optional["Vertex"] = None, error=None
 ) -> None:
     try:
         if not get_settings_service().settings.transactions_storage_enabled:
@@ -164,7 +165,7 @@ def log_vertex_build(
     valid: bool,
     params: Any,
     data: "ResultDataResponse",
-    artifacts: Optional[dict] = None,
+    artifacts: dict | None = None,
 ):
     try:
         if not get_settings_service().settings.vertex_builds_storage_enabled:

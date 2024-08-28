@@ -238,7 +238,7 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
     return updated_edges
 
 
-def get_successors(graph: Dict[str, Dict[str, List[str]]], vertex_id: str) -> List[str]:
+def get_successors(graph: dict[str, dict[str, list[str]]], vertex_id: str) -> list[str]:
     successors_result = []
     stack = [vertex_id]
     visited = set()
@@ -252,7 +252,7 @@ def get_successors(graph: Dict[str, Dict[str, List[str]]], vertex_id: str) -> Li
     return successors_result
 
 
-def sort_up_to_vertex(graph: Dict[str, Dict[str, List[str]]], vertex_id: str, is_start: bool = False) -> List[str]:
+def sort_up_to_vertex(graph: dict[str, dict[str, list[str]]], vertex_id: str, is_start: bool = False) -> list[str]:
     """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
     try:
         stop_or_start_vertex = graph[vertex_id]

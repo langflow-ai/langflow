@@ -10,7 +10,7 @@ class Position(TypedDict):
 
 class NodeData(TypedDict):
     id: str
-    data: Dict
+    data: dict
     dragging: NotRequired[bool]
     height: NotRequired[int]
     width: NotRequired[int]

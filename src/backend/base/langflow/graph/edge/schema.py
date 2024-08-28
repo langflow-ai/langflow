@@ -12,12 +12,12 @@ class ResultPair(BaseModel):
 
 
 class Payload(BaseModel):
-    result_pairs: List[ResultPair] = []
+    result_pairs: list[ResultPair] = []
 
     def __iter__(self):
         return iter(self.result_pairs)
 
-    def add_result_pair(self, result: Any, extra: Optional[Any] = None) -> None:
+    def add_result_pair(self, result: Any, extra: Any | None = None) -> None:
         self.result_pairs.append(ResultPair(result=result, extra=extra))
 
     def get_last_result_pair(self) -> ResultPair:
@@ -42,7 +42,7 @@ class TargetHandle(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     field_name: str = Field(..., alias="fieldName", description="Field name for the target handle.")
     id: str = Field(..., description="Unique identifier for the target handle.")
-    input_types: List[str] = Field(
+    input_types: list[str] = Field(
         default_factory=list, alias="inputTypes", description="List of input types for the target handle."
     )
     type: str = Field(..., description="Type of the target handle.")
@@ -55,8 +55,8 @@ class SourceHandle(BaseModel):
     )
     data_type: str = Field(..., alias="dataType", description="Data type for the source handle.")
     id: str = Field(..., description="Unique identifier for the source handle.")
-    name: Optional[str] = Field(None, description="Name of the source handle.")
-    output_types: List[str] = Field(default_factory=list, description="List of output types for the source handle.")
+    name: str | None = Field(None, description="Name of the source handle.")
+    output_types: list[str] = Field(default_factory=list, description="List of output types for the source handle.")
 
     @field_validator("name", mode="before")
     @classmethod
@@ -74,14 +74,14 @@ class SourceHandleDict(TypedDict, total=False):
     baseClasses: list[str]
     dataType: str
     id: str
-    name: Optional[str]
-    output_types: List[str]
+    name: str | None
+    output_types: list[str]
 
 
 class TargetHandleDict(TypedDict):
     fieldName: str
     id: str
-    inputTypes: Optional[List[str]]
+    inputTypes: list[str] | None
     type: str
 
 
