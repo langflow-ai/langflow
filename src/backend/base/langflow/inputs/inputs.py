@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Optional, Union, get_args
+from typing import Any, Union, get_args
 from collections.abc import AsyncIterator, Iterator
 
 from pydantic import Field, field_validator
