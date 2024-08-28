@@ -73,7 +73,6 @@ class ChatInput(ChatComponent):
 
         self.store_message(
             message,
-            flow_id=self.graph.flow_id,
         )
         self.message.value = message
 
