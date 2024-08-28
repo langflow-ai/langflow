@@ -15,7 +15,6 @@ import { useLogout } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
-import { useLocationStore } from "../../stores/locationStore";
 import { useStoreStore } from "../../stores/storeStore";
 import IconComponent, { ForwardedIconComponent } from "../genericIconComponent";
 import { Button } from "../ui/button";
@@ -48,29 +47,22 @@ export default function Header(): JSX.Element {
   const setDark = useDarkStore((state) => state.setDark);
   const stars = useDarkStore((state) => state.stars);
 
-  const routeHistory = useLocationStore((state) => state.routeHistory);
-
   const profileImageUrl = `${BASE_URL_API}files/profile_pictures/${
     userData?.profile_image ?? "Space/046-rocket.svg"
   }`;
 
   const redirectToLastLocation = () => {
-    const lastVisitedIndex = routeHistory
-      .reverse()
-      .findIndex((path) => path !== location.pathname);
-
-    const lastFlowVisited = routeHistory[lastVisitedIndex];
-    lastFlowVisited ? navigate(lastFlowVisited) : navigate("/all");
+    const canGoBack = location.key !== "default";
+    if (canGoBack) {
+      navigate(-1);
+    } else {
+      navigate("/", { replace: true });
+    }
   };
 
-  const visitedFlowPathBefore = () => {
-    const last100VisitedPaths = routeHistory.slice(-99);
-    return last100VisitedPaths.some((path) => path.includes("/flow/"));
-  };
-
-  const showArrowReturnIcon =
-    LOCATIONS_TO_RETURN.some((path) => location.pathname.includes(path)) &&
-    visitedFlowPathBefore();
+  const showArrowReturnIcon = LOCATIONS_TO_RETURN.some((path) =>
+    location.pathname.includes(path),
+  );
 
   const handleLogout = () => {
     mutationLogout(undefined, {

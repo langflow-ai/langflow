@@ -34,11 +34,6 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const addFlow = useAddFlow();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setLockChat = useFlowStore((state) => state.setLockChat);
-  const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
-  const revertBuiltStatusFromBuilding = useFlowStore(
-    (state) => state.revertBuiltStatusFromBuilding,
-  );
   const undo = useFlowsManagerStore((state) => state.undo);
   const redo = useFlowsManagerStore((state) => state.redo);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);

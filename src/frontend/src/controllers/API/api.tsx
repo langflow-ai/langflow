@@ -1,6 +1,5 @@
 import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
@@ -89,13 +88,13 @@ function ApiInterceptor() {
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
-        const checkRequest = checkDuplicateRequestAndStoreRequest(config);
-
         const controller = new AbortController();
-
-        if (!checkRequest) {
-          controller.abort("Duplicate Request");
-          console.error("Duplicate Request");
+        try {
+          checkDuplicateRequestAndStoreRequest(config);
+        } catch (e) {
+          const error = e as Error;
+          controller.abort(error.message);
+          console.error(error.message);
         }
 
         const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);

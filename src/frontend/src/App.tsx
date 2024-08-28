@@ -3,10 +3,6 @@ import { Cookies } from "react-cookie";
 import { RouterProvider } from "react-router-dom";
 import "reactflow/dist/style.css";
 import LoadingComponent from "./components/loadingComponent";
-import {
-  LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS,
-  LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV,
-} from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
 import {
   useAutoLogin,
@@ -33,8 +29,6 @@ export default function App() {
   const refreshToken = cookies.get("refresh_token");
 
   const { mutate: mutateAutoLogin } = useAutoLogin();
-
-  useGetVersionQuery();
 
   const { mutate: mutateRefresh } = useRefreshAccessToken();
 
@@ -79,23 +73,7 @@ export default function App() {
     });
   }, []);
 
-  useEffect(() => {
-    const envRefreshTime = LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV;
-    const automaticRefreshTime = LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS;
-
-    const accessTokenTimer = isNaN(envRefreshTime)
-      ? automaticRefreshTime
-      : envRefreshTime;
-
-    const intervalId = setInterval(() => {
-      if (isAuthenticated && !isLoginPage) {
-        mutateRefresh({ refresh_token: refreshToken });
-      }
-    }, accessTokenTimer * 1000);
-
-    return () => clearInterval(intervalId);
-  }, [isLoginPage]);
-
+  useGetVersionQuery();
   useSaveConfig();
 
   return (

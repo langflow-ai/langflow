@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -69,6 +69,8 @@ test("should delete rows from table message", async ({ page }) => {
   await page.getByText("built successfully").last().click({
     timeout: 30000,
   });
+
+  await page.waitForTimeout(2000);
 
   await page.getByTestId("user-profile-settings").last().click();
   await page.getByText("Settings").last().click();
