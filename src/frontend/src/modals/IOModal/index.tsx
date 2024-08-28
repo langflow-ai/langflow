@@ -142,7 +142,7 @@ export default function IOModal({
         setLockChat(false);
       });
     }
-    refetch();
+    // refetch();
     setLockChat(false);
     if (chatInput) {
       setNode(chatInput.id, (node: NodeType) => {

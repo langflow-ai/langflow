@@ -273,7 +273,7 @@ export async function buildFlowVertices({
         return true;
       }
       case "token": {
-        console.log(data.id);
+        console.log(data.text);
         useMessagesStore.getState().updateMessagePartial(data);
         return true;
       }
