@@ -4,7 +4,7 @@ import time
 import traceback
 import typing
 import uuid
-from typing import TYPE_CHECKING, Annotated, Optional
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -68,9 +68,9 @@ async def try_running_celery_task(vertex, user_id):
 async def retrieve_vertices_order(
     flow_id: uuid.UUID,
     background_tasks: BackgroundTasks,
-    data: Optional[Annotated[Optional[FlowDataRequest], Body(embed=True)]] = None,
-    stop_component_id: Optional[str] = None,
-    start_component_id: Optional[str] = None,
+    data: Annotated[FlowDataRequest | None, Body(embed=True)] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     session=Depends(get_session),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
@@ -141,12 +141,12 @@ async def retrieve_vertices_order(
 async def build_flow(
     background_tasks: BackgroundTasks,
     flow_id: uuid.UUID,
-    inputs: Annotated[Optional[InputValueRequest], Body(embed=True)] = None,
-    data: Annotated[Optional[FlowDataRequest], Body(embed=True)] = None,
-    files: Optional[list[str]] = None,
-    stop_component_id: Optional[str] = None,
-    start_component_id: Optional[str] = None,
-    log_builds: Optional[bool] = True,
+    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
+    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
+    files: list[str] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
+    log_builds: bool | None = True,
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
@@ -434,7 +434,7 @@ class DisconnectHandlerStreamingResponse(StreamingResponse):
         headers: typing.Mapping[str, str] | None = None,
         media_type: str | None = None,
         background: BackgroundTask | None = None,
-        on_disconnect: Optional[typing.Callable] = None,
+        on_disconnect: typing.Callable | None = None,
     ):
         super().__init__(content, status_code, headers, media_type, background)
         self.on_disconnect = on_disconnect
@@ -453,8 +453,8 @@ async def build_vertex(
     flow_id: uuid.UUID,
     vertex_id: str,
     background_tasks: BackgroundTasks,
-    inputs: Annotated[Optional[InputValueRequest], Body(embed=True)] = None,
-    files: Optional[list[str]] = None,
+    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
+    files: list[str] | None = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
@@ -606,7 +606,7 @@ async def build_vertex(
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
-    session_id: Optional[str] = None,
+    session_id: str | None = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     session_service: "SessionService" = Depends(get_session_service),
 ):

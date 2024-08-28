@@ -1,5 +1,3 @@
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
@@ -10,7 +8,7 @@ from langflow.services.database.models.user.model import User
 router = APIRouter(prefix="/starter-projects", tags=["Flows"])
 
 
-@router.get("/", response_model=List[GraphDump], status_code=200)
+@router.get("/", response_model=list[GraphDump], status_code=200)
 def get_starter_projects(
     *,
     current_user: User = Depends(get_current_active_user),

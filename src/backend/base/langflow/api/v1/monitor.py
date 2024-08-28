@@ -1,4 +1,3 @@
-from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -44,13 +43,13 @@ async def delete_vertex_builds(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/messages", response_model=List[MessageModelResponse])
+@router.get("/messages", response_model=list[MessageModelResponse])
 async def get_messages(
-    flow_id: Optional[str] = Query(None),
-    session_id: Optional[str] = Query(None),
-    sender: Optional[str] = Query(None),
-    sender_name: Optional[str] = Query(None),
-    order_by: Optional[str] = Query("timestamp"),
+    flow_id: str | None = Query(None),
+    session_id: str | None = Query(None),
+    sender: str | None = Query(None),
+    sender_name: str | None = Query(None),
+    order_by: str | None = Query("timestamp"),
     session: Session = Depends(get_session),
 ):
     try:
@@ -74,7 +73,7 @@ async def get_messages(
 
 @router.delete("/messages", status_code=204)
 async def delete_messages(
-    message_ids: List[UUID],
+    message_ids: list[UUID],
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -125,7 +124,7 @@ async def delete_messages_session(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/transactions", response_model=List[TransactionReadResponse])
+@router.get("/transactions", response_model=list[TransactionReadResponse])
 async def get_transactions(
     flow_id: UUID = Query(),
     session: Session = Depends(get_session),
