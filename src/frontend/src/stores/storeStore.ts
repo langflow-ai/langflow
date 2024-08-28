@@ -4,7 +4,7 @@ import { checkHasApiKey, checkHasStore } from "../controllers/API";
 import { StoreStoreType } from "../types/zustand/store";
 
 export const useStoreStore = create<StoreStoreType>((set) => ({
-  hasStore: true,
+  hasStore: ENABLE_LANGFLOW_STORE,
   validApiKey: false,
   hasApiKey: false,
   loadingApiKey: true,
