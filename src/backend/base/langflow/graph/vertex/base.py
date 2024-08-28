@@ -5,15 +5,15 @@ import json
 import os
 import traceback
 import types
+from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional
-from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 
 import pandas as pd
 from loguru import logger
 
+from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildException
-from langflow.graph.graph.schema import LogCallbackFunction
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from langflow.graph.vertex.schema import NodeData
@@ -458,7 +458,7 @@ class Vertex:
         self,
         fallback_to_env_vars,
         user_id=None,
-        log_callback: LogCallbackFunction | None = None,
+        event_manager: EventManager | None = None,
     ):
         """
         Initiate the build process.
@@ -471,7 +471,7 @@ class Vertex:
 
         if not self._custom_component:
             custom_component, custom_params = await initialize.loading.instantiate_class(
-                user_id=user_id, vertex=self, log_callback=log_callback
+                user_id=user_id, vertex=self, event_manager=event_manager
             )
         else:
             custom_component = self._custom_component
@@ -770,7 +770,7 @@ class Vertex:
         inputs: dict[str, Any] | None = None,
         files: list[str] | None = None,
         requester: Optional["Vertex"] = None,
-        log_callback: LogCallbackFunction | None = None,
+        event_manager: EventManager | None = None,
         **kwargs,
     ) -> Any:
         async with self._lock:
@@ -800,9 +800,9 @@ class Vertex:
             for step in self.steps:
                 if step not in self.steps_ran:
                     if inspect.iscoroutinefunction(step):
-                        await step(user_id=user_id, log_callback=log_callback, **kwargs)
+                        await step(user_id=user_id, event_manager=event_manager, **kwargs)
                     else:
-                        step(user_id=user_id, log_callback=log_callback, **kwargs)
+                        step(user_id=user_id, event_manager=event_manager, **kwargs)
                     self.steps_ran.append(step)
 
             self._finalize_build()
