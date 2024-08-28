@@ -1,7 +1,7 @@
 import ast
 import inspect
 import traceback
-from typing import Any, Dict, List, Type, Union
+from typing import Any
 
 from cachetools import TTLCache, keys
 from fastapi import HTTPException
@@ -29,7 +29,7 @@ def find_class_ast_node(class_obj):
         return None, []
 
     # Read the source code from the file
-    with open(source_file, "r") as file:
+    with open(source_file) as file:
         source_code = file.read()
 
     # Parse the source code into an AST
@@ -59,7 +59,7 @@ class CodeParser:
     A parser for Python source code, extracting code details.
     """
 
-    def __init__(self, code: Union[str, Type]) -> None:
+    def __init__(self, code: str | type) -> None:
         """
         Initializes the parser with the provided code.
         """
@@ -70,7 +70,7 @@ class CodeParser:
             # If the code is a class, get its source code
             code = inspect.getsource(code)
         self.code = code
-        self.data: Dict[str, Any] = {
+        self.data: dict[str, Any] = {
             "imports": [],
             "functions": [],
             "classes": [],
@@ -99,7 +99,7 @@ class CodeParser:
 
         return tree
 
-    def parse_node(self, node: Union[ast.stmt, ast.AST]) -> None:
+    def parse_node(self, node: ast.stmt | ast.AST) -> None:
         """
         Parses an AST node and updates the data
         dictionary with the relevant information.
@@ -107,7 +107,7 @@ class CodeParser:
         if handler := self.handlers.get(type(node)):  # type: ignore
             handler(node)  # type: ignore
 
-    def parse_imports(self, node: Union[ast.Import, ast.ImportFrom]) -> None:
+    def parse_imports(self, node: ast.Import | ast.ImportFrom) -> None:
         """
         Extracts "imports" from the code, including aliases.
         """
@@ -161,7 +161,7 @@ class CodeParser:
                     exec(f"import {module} as {alias if alias else module}", eval_env)
         return eval_env
 
-    def parse_callable_details(self, node: ast.FunctionDef) -> Dict[str, Any]:
+    def parse_callable_details(self, node: ast.FunctionDef) -> dict[str, Any]:
         """
         Extracts details from a single function or method node.
         """
@@ -187,7 +187,7 @@ class CodeParser:
 
         return func.model_dump()
 
-    def parse_function_args(self, node: ast.FunctionDef) -> List[Dict[str, Any]]:
+    def parse_function_args(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
         Parses the arguments of a function or method node.
         """
@@ -202,7 +202,7 @@ class CodeParser:
 
         return args
 
-    def parse_positional_args(self, node: ast.FunctionDef) -> List[Dict[str, Any]]:
+    def parse_positional_args(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
         Parses the positional arguments of a function or method node.
         """
@@ -220,7 +220,7 @@ class CodeParser:
         args = [self.parse_arg(arg, default) for arg, default in zip(node.args.args, defaults)]
         return args
 
-    def parse_varargs(self, node: ast.FunctionDef) -> List[Dict[str, Any]]:
+    def parse_varargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
         Parses the *args argument of a function or method node.
         """
@@ -231,7 +231,7 @@ class CodeParser:
 
         return args
 
-    def parse_keyword_args(self, node: ast.FunctionDef) -> List[Dict[str, Any]]:
+    def parse_keyword_args(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
         Parses the keyword-only arguments of a function or method node.
         """
@@ -242,7 +242,7 @@ class CodeParser:
         args = [self.parse_arg(arg, default) for arg, default in zip(node.args.kwonlyargs, kw_defaults)]
         return args
 
-    def parse_kwargs(self, node: ast.FunctionDef) -> List[Dict[str, Any]]:
+    def parse_kwargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
         Parses the **kwargs argument of a function or method node.
         """
@@ -253,7 +253,7 @@ class CodeParser:
 
         return args
 
-    def parse_function_body(self, node: ast.FunctionDef) -> List[str]:
+    def parse_function_body(self, node: ast.FunctionDef) -> list[str]:
         """
         Parses the body of a function or method node.
         """
@@ -394,7 +394,7 @@ class CodeParser:
                 bases.append(bases_base)
         return bases
 
-    def parse_code(self) -> Dict[str, Any]:
+    def parse_code(self) -> dict[str, Any]:
         """
         Runs all parsing operations and returns the resulting data.
         """

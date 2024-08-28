@@ -1,5 +1,3 @@
-from typing import Dict
-
 from typing_extensions import NotRequired, TypedDict
 
 
@@ -10,7 +8,7 @@ class Position(TypedDict):
 
 class NodeData(TypedDict):
     id: str
-    data: Dict
+    data: dict
     dragging: NotRequired[bool]
     height: NotRequired[int]
     width: NotRequired[int]
