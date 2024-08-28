@@ -96,6 +96,10 @@ const config = {
         "status-gray": "var(--status-gray)",
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
+        filter: {
+          foreground: "var(--filter-foreground)",
+          background: "var(--filter-background)",
+        },
         beta: {
           background: "var(--beta-background)",
           foreground: "var(--beta-foreground)",
