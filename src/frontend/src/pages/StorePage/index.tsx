@@ -127,7 +127,7 @@ export default function StorePage(): JSX.Element {
           setTotalRowsCount(
             filteredCategories?.length === 0
               ? Number(res?.count ?? 0)
-              : (res?.results?.length ?? 0),
+              : res?.results?.length ?? 0,
           );
         }
       })

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, List, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 from collections.abc import Callable, Sequence
 
 import yaml

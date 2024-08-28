@@ -1,5 +1,5 @@
 import operator
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 from uuid import UUID
 import warnings
 
