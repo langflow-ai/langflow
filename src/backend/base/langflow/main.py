@@ -111,9 +111,9 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
 
 def create_app():
     """Create the FastAPI app and include the router."""
-    from langflow.version import get_version
+    from langflow.utils.version import get_version_info
 
-    __version__ = get_version()
+    __version__ = get_version_info()["version"]
 
     configure()
     lifespan = get_lifespan(version=__version__)

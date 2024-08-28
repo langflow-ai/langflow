@@ -1,3 +1,9 @@
+import httpx
+
+from typing import Optional
+from langflow.logging.logger import logger
+
+
 def _compute_non_prerelease_version(prerelease_version: str) -> str:
     prerelease_keywords = ["a", "b", "rc"]
     for keyword in prerelease_keywords:
@@ -52,6 +58,36 @@ def is_pre_release(v: str) -> bool:
     as per the definition of a pre-release segment from PEP 440.
     """
     return any(label in v for label in ["a", "b", "rc"])
+
+
+def is_nightly(v: str) -> bool:
+    """
+    Returns a boolean indicating whether the version is a dev (nightly) version,
+    as per the definition of a dev segment from PEP 440.
+    """
+    return "dev" in v
+
+
+def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optional[str]:
+    from packaging import version as pkg_version
+
+    valid_versions = []
+    try:
+        response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
+        versions = response.json()["releases"].keys()
+        valid_versions = [
+            v for v in versions if include_prerelease or not is_pre_release(v)
+        ]
+
+    except Exception as e:
+        logger.exception(e)
+
+    finally:
+        if not valid_versions:
+            return None  # Handle case where no valid versions are found
+        return max(valid_versions, key=lambda v: pkg_version.parse(v))
+
+
 
 def get_version_info():
     return VERSION_INFO
