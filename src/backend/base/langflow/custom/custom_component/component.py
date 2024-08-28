@@ -332,6 +332,8 @@ class Component(CustomComponent):
                 f"There are multiple outputs from {value.__class__.__name__} that can connect to inputs in {self.__class__.__name__}: {matching_pairs_str}"
             )
         output, input_ = matching_pairs[0]
+        if not isinstance(output.method, str):
+            raise ValueError(f"Method {output.method} is not a valid output of {value.__class__.__name__}")
         return getattr(value, output.method)
 
     def _process_connection_or_parameter(self, key, value):
