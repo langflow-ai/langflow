@@ -92,6 +92,7 @@ clean_python_cache:
 	find . -type f -name '*.py[cod]' -exec rm -f {} +
 	find . -type f -name '*~' -exec rm -f {} +
 	find . -type f -name '.*~' -exec rm -f {} +
+	find . -type d -empty -delete
 	@echo "$(GREEN)Python cache cleaned.$(NC)"
 
 clean_npm_cache:
