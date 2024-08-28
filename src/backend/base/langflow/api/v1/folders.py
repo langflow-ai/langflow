@@ -1,5 +1,3 @@
-from typing import List
-
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy import or_, update

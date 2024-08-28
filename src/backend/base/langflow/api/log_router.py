@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import List, Any
+from typing import Any
 
 from fastapi import APIRouter, Query, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
