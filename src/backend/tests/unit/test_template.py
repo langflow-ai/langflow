@@ -27,14 +27,14 @@ class Child(Parent):
 class ExampleClass1(BaseModel):
     """Example class 1."""
 
-    def __init__(self, data: Optional[List[int]] = None):
+    def __init__(self, data: list[int] | None = None):
         self.data = data or [1, 2, 3]
 
 
 class ExampleClass2(BaseModel):
     """Example class 2."""
 
-    def __init__(self, data: Optional[Dict[str, int]] = None):
+    def __init__(self, data: dict[str, int] | None = None):
         self.data = data or {"a": 1, "b": 2, "c": 3}
 
 

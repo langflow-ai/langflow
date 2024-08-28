@@ -62,7 +62,7 @@ def sample_nodes():
     ]
 
 
-def get_node_by_type(graph, node_type: Type[Vertex]) -> Union[Vertex, None]:
+def get_node_by_type(graph, node_type: type[Vertex]) -> Vertex | None:
     """Get a node by type"""
     return next((node for node in graph.vertices if isinstance(node, node_type)), None)
 
