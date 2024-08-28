@@ -746,9 +746,9 @@ class Component(CustomComponent):
         self._logs.append(log)
         if self._tracing_service and self._vertex:
             self._tracing_service.add_log(trace_name=self.trace_name, log=log)
-        if self._log_callback is not None and self._current_output:
+        if self._event_manager is not None and self._current_output:
             event_name = "log"
             data = log.model_dump()
             data["output"] = self._current_output
             data["component_id"] = self._id
-            self._log_callback(event_name, data)
+            self._event_manager.on_log(event_name, data)
