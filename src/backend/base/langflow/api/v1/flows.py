@@ -3,7 +3,6 @@ import json
 import re
 import zipfile
 from datetime import datetime, timezone
-from typing import List
 from uuid import UUID
 
 import orjson

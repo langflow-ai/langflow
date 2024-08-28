@@ -1,7 +1,7 @@
 import time
 from asyncio import Lock
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated, List, Optional, Union
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 import sqlalchemy as sa
