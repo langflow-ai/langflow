@@ -197,7 +197,7 @@ class Graph:
         self.initialize()
 
 
-    async def add_component(self, component: "Component", component_id: Optional[str] = None) -> str:
+    def add_component(self, component: "Component", component_id: Optional[str] = None) -> str:
         component_id = component_id or str(component.name + "-" + str(uuid.uuid4()))
         if component_id in self.vertex_map:
             raise ValueError(f"Component ID {component_id} already exists")
@@ -1376,7 +1376,7 @@ class Graph:
                 tasks.append(task)
                 vertex_task_run_count[vertex_id] = vertex_task_run_count.get(vertex_id, 0) + 1
 
-            logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks")
+            logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks, {current_batch}")
             try:
                 next_runnable_vertices = await self._execute_tasks(tasks, lock=lock)
             except Exception as e:
@@ -1441,6 +1441,8 @@ class Graph:
             # they could be calculated as predecessor or successors of parallel vertices
             # This could usually happen with input vertices like ChatInput
             self.run_manager.remove_vertex_from_runnables(v.id)
+
+            logger.debug(f"Vertex {v.id}, result: {v._built_result}, object: {v._built_object}")
 
         for v in vertices:
             next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
@@ -1670,6 +1672,7 @@ class Graph:
         """Performs a layered topological sort of the vertices in the graph."""
         vertices_ids = {vertex.id for vertex in vertices}
         # Queue for vertices with no incoming edges
+        logger.debug(f"starting point {str(vertices_ids)}")
         queue = deque(
             vertex.id
             for vertex in vertices
@@ -1678,7 +1681,9 @@ class Graph:
         )
         layers: list[list[str]] = []
         visited = set(queue)
+        logger.debug(f"starting layers {str(queue)}")
 
+        modifiable_in_degree_map = dict(self.in_degree_map)
         current_layer = 0
         while queue:
             layers.append([])  # Start a new layer
@@ -1696,18 +1701,19 @@ class Graph:
                     if neighbor not in vertices_ids:
                         continue
 
-                    self.in_degree_map[neighbor] -= 1  # 'remove' edge
-                    if self.in_degree_map[neighbor] == 0 and neighbor not in visited:
+                    modifiable_in_degree_map[neighbor] -= 1  # 'remove' edge
+                    if modifiable_in_degree_map[neighbor] == 0 and neighbor not in visited:
                         queue.append(neighbor)
 
                     # if > 0 it might mean not all predecessors have added to the queue
                     # so we should process the neighbors predecessors
-                    elif self.in_degree_map[neighbor] > 0:
+                    elif modifiable_in_degree_map[neighbor] > 0:
                         for predecessor in self.predecessor_map[neighbor]:
                             if predecessor not in queue and predecessor not in visited:
                                 queue.append(predecessor)
 
             current_layer += 1  # Next layer
+        logger.debug(f"before refine {str(layers)}")
         new_layers = self.refine_layers(layers)
         return new_layers
 

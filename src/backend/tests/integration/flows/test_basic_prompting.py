@@ -11,10 +11,10 @@ from tests.integration.utils import run_flow
 @pytest.mark.asyncio
 async def test_simple_no_llm():
     graph = Graph()
-    input = await graph.add_component(ChatInput())
-    output = await graph.add_component(ChatOutput())
+    input = graph.add_component(ChatInput())
+    output = graph.add_component(ChatOutput())
     component = PromptComponent(template="This is the message: {var1}", var1="")
-    prompt = await graph.add_component(component)
+    prompt = graph.add_component(component)
     graph.add_component_edge(input, ("message", "var1"), prompt)
     graph.add_component_edge(prompt, ("prompt", "input_value"), output)
     outputs = await run_flow(graph, run_input="hello!")

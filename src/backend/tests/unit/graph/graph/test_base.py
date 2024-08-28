@@ -47,6 +47,8 @@ async def test_graph_with_edge():
     output_id = graph.add_component(chat_output)
     graph.add_component_edge(input_id, (chat_input.outputs[0].name, chat_input.inputs[0].name), output_id)
     graph.prepare()
+    # ensure prepare is idempotent
+    graph.prepare()
     assert graph._run_queue == deque([input_id])
     await graph.astep()
     assert graph._run_queue == deque([output_id])

@@ -133,7 +133,7 @@ async def run_single_component(clazz: type, inputs: dict = None, run_input: Opti
 
     flow_id = str(uuid.uuid4())
     graph = Graph(user_id=str(uuid.uuid4()), flow_id=flow_id)
-    component_id = await graph.add_component(component)
+    component_id = graph.add_component(component)
     graph.prepare()
     if run_input:
         graph_run_inputs = [InputValueRequest(input_value=run_input, type="chat")]
