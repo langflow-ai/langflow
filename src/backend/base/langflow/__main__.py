@@ -125,7 +125,7 @@ def run(
         help="Defines if the auto save is enabled.",
         envvar="LANGFLOW_AUTO_SAVING",
     ),
-    auto_saving_interval: bool = typer.Option(
+    auto_saving_interval: int = typer.Option(
         True,
         help="Defines the debounce time for the auto save.",
         envvar="LANGFLOW_AUTO_SAVING_INTERVAL",
