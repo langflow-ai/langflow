@@ -624,7 +624,7 @@ export const FETCH_ERROR_DESCRIPION =
   "Check if everything is working properly and try again.";
 
 export const TIMEOUT_ERROR_MESSAGE =
-  "Please wait a few seconds to server process your request.";
+  "Please wait a few moments while the server processes your request.";
 export const TIMEOUT_ERROR_DESCRIPION = "Server is busy.";
 
 export const SIGN_UP_SUCCESS = "Account created! Await admin activation. ";
