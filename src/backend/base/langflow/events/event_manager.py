@@ -19,8 +19,11 @@ class EventManager:
         self.queue = queue
         self.events: dict[str, EventCallback] = {}
 
-    def register_event(self, name: str, event_type: str):
-        self.events[name] = partial(self.send_event, event_type)
+    def register_event(self, name: str, event_type: str | None = None):
+        if event_type is None:
+            self.events[name] = self.send_event
+        else:
+            self.events[name] = partial(self.send_event, event_type)
 
     def send_event(self, event_type: str, data: dict):
         json_data = {"event": event_type, "data": data}
