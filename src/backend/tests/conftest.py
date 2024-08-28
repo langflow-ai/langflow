@@ -27,6 +27,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from tests.api_keys import get_openai_api_key
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -463,6 +464,9 @@ def get_starter_project(active_user):
         if not flow:
             raise ValueError("No starter project found")
 
+
+        # ensure openai api key is set
+        get_openai_api_key()
         new_flow_create = FlowCreate(
             name=flow.name,
             description=flow.description,

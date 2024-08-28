@@ -263,7 +263,7 @@ class Component(CustomComponent):
         for input_ in inputs:
             if input_.name is None:
                 raise ValueError("Input name cannot be None.")
-            self._inputs[input_.name] = input_
+            self._inputs[input_.name] = deepcopy(input_)
 
     def validate(self, params: dict):
         """
@@ -473,6 +473,8 @@ class Component(CustomComponent):
         for name, value in self._parameters.items():
             try:
                 template[name]["value"] = value
+                if value and "load_from_db" in template[name]:
+                    template[name]["load_from_db"] = False
             except KeyError:
                 close_match = find_closest_match(name, list(template.keys()))
                 if close_match:

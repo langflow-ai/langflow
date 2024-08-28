@@ -62,6 +62,7 @@ class ChatInput(ChatComponent):
     ]
 
     def message_response(self) -> Message:
+        print("running", self.input_value)
         message = Message(
             text=self.input_value,
             sender=self.sender,

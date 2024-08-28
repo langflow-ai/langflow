@@ -1,13 +1,17 @@
 import os
 
 import pytest
-from integration.utils import MockEmbeddings, check_env_vars, valid_nvidia_vectorize_region
+
+from tests.api_keys import get_astradb_application_token, get_astradb_api_endpoint
+from tests.integration.utils import MockEmbeddings, check_env_vars, valid_nvidia_vectorize_region
 from langchain_core.documents import Document
 
 # from langflow.components.memories.AstraDBMessageReader import AstraDBMessageReaderComponent
 # from langflow.components.memories.AstraDBMessageWriter import AstraDBMessageWriterComponent
 from langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent
+from langflow.graph import Graph
 from langflow.schema.data import Data
+from tests.integration.utils import run_single_component
 
 COLLECTION = "test_basic"
 SEARCH_COLLECTION = "test_search"
@@ -17,58 +21,25 @@ VECTORIZE_COLLECTION_OPENAI = "test_vectorize_openai"
 VECTORIZE_COLLECTION_OPENAI_WITH_AUTH = "test_vectorize_openai_auth"
 
 
-@pytest.fixture()
-def astra_fixture(request):
-    """
-    Sets up the astra collection and cleans up after
-    """
-    try:
-        from langchain_astradb import AstraDBVectorStore
-    except ImportError:
-        raise ImportError(
-            "Could not import langchain Astra DB integration package. Please install it with `pip install langchain-astradb`."
-        )
 
-    store = AstraDBVectorStore(
-        collection_name=request.param,
-        embedding=MockEmbeddings(),
-        api_endpoint=os.getenv("ASTRA_DB_API_ENDPOINT"),
-        token=os.getenv("ASTRA_DB_APPLICATION_TOKEN"),
-    )
-
-    yield
-
-    store.delete_collection()
-
-
-@pytest.mark.skipif(
-    not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT"),
-    reason="missing astra env vars",
-)
-@pytest.mark.parametrize("astra_fixture", [COLLECTION], indirect=True)
-def test_astra_setup(astra_fixture):
-    application_token = os.getenv("ASTRA_DB_APPLICATION_TOKEN")
-    api_endpoint = os.getenv("ASTRA_DB_API_ENDPOINT")
+@pytest.mark.api_key_required
+@pytest.mark.asyncio
+async def test_astra_setup():
+    application_token = get_astradb_application_token()
+    api_endpoint = get_astradb_api_endpoint()
     embedding = MockEmbeddings()
+    results = await run_single_component(AstraVectorStoreComponent, inputs={
+        "token": application_token,
+        "api_endpoint": api_endpoint,
+        "collection_name": COLLECTION,
+        "embedding": embedding,
+    })
+    print(results)
 
-    component = AstraVectorStoreComponent()
-    component.build(
-        token=application_token,
-        api_endpoint=api_endpoint,
-        collection_name=COLLECTION,
-        embedding=embedding,
-    )
-    component.build_vector_store()
-
-
-@pytest.mark.skipif(
-    not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT"),
-    reason="missing astra env vars",
-)
-@pytest.mark.parametrize("astra_fixture", [SEARCH_COLLECTION], indirect=True)
-def test_astra_embeds_and_search(astra_fixture):
-    application_token = os.getenv("ASTRA_DB_APPLICATION_TOKEN")
-    api_endpoint = os.getenv("ASTRA_DB_API_ENDPOINT")
+@pytest.mark.api_key_required
+def test_astra_embeds_and_search():
+    application_token = get_astradb_application_token()
+    api_endpoint = get_astradb_api_endpoint()
     embedding = MockEmbeddings()
 
     documents = [Document(page_content="test1"), Document(page_content="test2")]
@@ -90,28 +61,25 @@ def test_astra_embeds_and_search(astra_fixture):
     assert len(records) == 1
 
 
-@pytest.mark.skipif(
-    not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT")
-    or not valid_nvidia_vectorize_region(os.getenv("ASTRA_DB_API_ENDPOINT")),
-    reason="missing env vars or invalid region for nvidia vectorize",
-)
+
+@pytest.mark.api_key_required
 def test_astra_vectorize():
     from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
 
     from langflow.components.embeddings.AstraVectorize import AstraVectorizeComponent
+    application_token = get_astradb_application_token()
+    api_endpoint = get_astradb_api_endpoint()
 
     store = None
     try:
         options = {"provider": "nvidia", "modelName": "NV-Embed-QA"}
         store = AstraDBVectorStore(
             collection_name=VECTORIZE_COLLECTION,
-            api_endpoint=os.getenv("ASTRA_DB_API_ENDPOINT"),
-            token=os.getenv("ASTRA_DB_APPLICATION_TOKEN"),
+            api_endpoint=api_endpoint,
+            token=application_token,
             collection_vector_service_options=CollectionVectorServiceOptions.from_dict(options),
         )
 
-        application_token = os.getenv("ASTRA_DB_APPLICATION_TOKEN")
-        api_endpoint = os.getenv("ASTRA_DB_API_ENDPOINT")
 
         documents = [Document(page_content="test1"), Document(page_content="test2")]
         records = [Data.from_document(d) for d in documents]
@@ -139,20 +107,18 @@ def test_astra_vectorize():
             store.delete_collection()
 
 
-@pytest.mark.skipif(
-    not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT", "OPENAI_API_KEY"),
-    reason="missing env vars",
-)
+@pytest.mark.api_key_required
 def test_astra_vectorize_with_provider_api_key():
     """tests vectorize using an openai api key"""
     from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
 
     from langflow.components.embeddings.AstraVectorize import AstraVectorizeComponent
 
+    application_token = get_astradb_application_token()
+    api_endpoint = get_astradb_api_endpoint()
+
     store = None
     try:
-        application_token = os.getenv("ASTRA_DB_APPLICATION_TOKEN")
-        api_endpoint = os.getenv("ASTRA_DB_API_ENDPOINT")
         options = {"provider": "openai", "modelName": "text-embedding-3-small", "parameters": {}, "authentication": {}}
         store = AstraDBVectorStore(
             collection_name=VECTORIZE_COLLECTION_OPENAI,
@@ -188,10 +154,7 @@ def test_astra_vectorize_with_provider_api_key():
             store.delete_collection()
 
 
-@pytest.mark.skipif(
-    not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT"),
-    reason="missing env vars",
-)
+@pytest.mark.api_key_required
 def test_astra_vectorize_passes_authentication():
     """tests vectorize using the authentication parameter"""
     from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
@@ -200,8 +163,8 @@ def test_astra_vectorize_passes_authentication():
 
     store = None
     try:
-        application_token = os.getenv("ASTRA_DB_APPLICATION_TOKEN")
-        api_endpoint = os.getenv("ASTRA_DB_API_ENDPOINT")
+        application_token = get_astradb_application_token()
+        api_endpoint = get_astradb_api_endpoint()
         options = {
             "provider": "openai",
             "modelName": "text-embedding-3-small",
