@@ -1,7 +1,6 @@
 import copy
 import json
 import pickle
-from typing import Type, Union
 
 import pytest
 

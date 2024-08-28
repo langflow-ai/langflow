@@ -1,5 +1,4 @@
 import os
-from typing import List
 
 from astrapy.admin import parse_api_endpoint
 from langflow.field_typing import Embeddings

@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import Literal
 
 import pytest
 from pydantic.fields import FieldInfo
