@@ -1672,7 +1672,6 @@ class Graph:
         """Performs a layered topological sort of the vertices in the graph."""
         vertices_ids = {vertex.id for vertex in vertices}
         # Queue for vertices with no incoming edges
-        logger.debug(f"starting point {str(vertices_ids)}")
         queue = deque(
             vertex.id
             for vertex in vertices
@@ -1681,7 +1680,6 @@ class Graph:
         )
         layers: list[list[str]] = []
         visited = set(queue)
-        logger.debug(f"starting layers {str(queue)}")
 
         modifiable_in_degree_map = dict(self.in_degree_map)
         current_layer = 0
