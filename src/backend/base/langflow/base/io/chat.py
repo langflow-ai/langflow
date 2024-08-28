@@ -24,7 +24,7 @@ class ChatComponent(Component):
         if len(messages) > 1:
             raise ValueError("Only one message can be stored at a time.")
         stored_message = messages[0]
-        if hasattr(self, "_log_callback") and self._log_callback and stored_message.id:
+        if hasattr(self, "_event_manager") and self._event_manager and stored_message.id:
             if not isinstance(message.text, str):
                 complete_message = self._stream_message(message, stored_message.id)
                 message_table = update_message(message_id=stored_message.id, message=dict(text=complete_message))
@@ -49,7 +49,7 @@ class ChatComponent(Component):
                 "sender_name": message.sender_name,
                 "id": str(message_id),
             }
-            self._log_callback("token", data)
+            self._event_manager.on_token(data)
         return complete_message
 
     def build_with_data(
