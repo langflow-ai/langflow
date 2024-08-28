@@ -2,6 +2,7 @@ import {
   REFETCH_SERVER_HEALTH_INTERVAL,
   SERVER_HEALTH_INTERVAL,
 } from "@/constants/constants";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { createNewError503 } from "@/types/factory/axios-error-503";
@@ -31,6 +32,7 @@ export const useGetHealthQuery: useQueryFunctionType<
     (state) => state.healthCheckTimeout,
   );
   const isBuilding = useFlowStore((state) => state.isBuilding);
+  const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
   /**
    * Fetches the health status of the API.
@@ -52,9 +54,13 @@ export const useGetHealthQuery: useQueryFunctionType<
         healthCheckTimeout === null &&
         (error as AxiosError)?.response?.status === 503;
 
-      if (isServerBusy && !isBuilding) {
+      const isServerTimeout = isServerBusy && !isBuilding && !isLoading;
+      const isServerDown =
+        healthCheckTimeout === null && !isBuilding && !isLoading;
+
+      if (isServerTimeout) {
         setHealthCheckTimeout("timeout");
-      } else if (healthCheckTimeout === null && !isBuilding) {
+      } else if (isServerDown) {
         setHealthCheckTimeout("serverDown");
       }
       throw error;

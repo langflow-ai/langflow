@@ -1,5 +1,6 @@
 import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
@@ -25,6 +26,7 @@ function ApiInterceptor() {
   const logout = useAuthStore((state) => state.logout);
   const isLoginPage = location.pathname.includes("login");
   const isBuilding = useFlowStore((state) => state.isBuilding);
+  const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
@@ -91,7 +93,7 @@ function ApiInterceptor() {
       (config) => {
         const controller = new AbortController();
         try {
-          if (isBuilding) {
+          if (isBuilding || isLoading) {
             controller.abort("Request aborted because a build is in progress");
             return Promise.reject(null);
           }
@@ -123,7 +125,7 @@ function ApiInterceptor() {
       api.interceptors.response.eject(interceptor);
       api.interceptors.request.eject(requestInterceptor);
     };
-  }, [accessToken, setErrorData, isBuilding]);
+  }, [accessToken, setErrorData, isBuilding, isLoading]);
 
   function checkErrorCount() {
     if (isLoginPage) return;
