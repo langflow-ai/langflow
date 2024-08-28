@@ -313,7 +313,7 @@ class Component(CustomComponent):
     def _build_error_string_from_matching_pairs(self, matching_pairs: list[tuple[Output, Input]]):
         text = ""
         for output, input_ in matching_pairs:
-            text += f"{output.name}[{','.join(output.types)}]->{input_.name}[{','.join(input_.input_types)}]\n"
+            text += f"{output.name}[{','.join(output.types)}]->{input_.name}[{','.join(input_.input_types or [])}]\n"
         return text
 
     def _find_matching_output_method(self, value: "Component"):
