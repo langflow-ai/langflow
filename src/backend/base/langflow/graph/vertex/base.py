@@ -469,7 +469,7 @@ class Vertex:
             )
         else:
             custom_component = self._custom_component
-            self._custom_component.set_log_callback(log_callback)
+            self._custom_component.set_event_manager(event_manager)
             custom_params = initialize.loading.get_params(self.params)
 
         await self._build_results(

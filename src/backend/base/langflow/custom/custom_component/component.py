@@ -6,7 +6,9 @@ from uuid import UUID
 
 import nanoid  # type: ignore
 import yaml
-from langflow.graph.graph.schema import LogCallbackFunction
+from pydantic import BaseModel
+
+from langflow.events.event_manager import EventManager
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -18,7 +20,6 @@ from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
 from langflow.utils.async_helpers import run_until_complete
 from langflow.utils.util import find_closest_match
-from pydantic import BaseModel
 
 from .custom_component import CustomComponent
 
@@ -59,7 +60,7 @@ class Component(CustomComponent):
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
         self._current_output = ""
-        self._log_callback: LogCallbackFunction | None = None
+        self._event_manager: EventManager | None = None
         self._state_model = None
         self.set_attributes(self._parameters)
         self._output_logs = {}
@@ -81,8 +82,8 @@ class Component(CustomComponent):
         self._set_output_types()
         self.set_class_code()
 
-    def set_log_callback(self, callback: LogCallbackFunction | None = None):
-        self._log_callback = callback
+    def set_event_manager(self, event_manager: EventManager | None = None):
+        self._event_manager = event_manager
 
     def _reset_all_output_values(self):
         for output in self.outputs:
