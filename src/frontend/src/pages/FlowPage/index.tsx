@@ -80,7 +80,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       }
     };
     awaitgetTypes();
-  }, [id, flows]);
+  }, [id, flows, currentFlowId]);
 
   useEffect(() => {
     setOnFlowPage(true);
