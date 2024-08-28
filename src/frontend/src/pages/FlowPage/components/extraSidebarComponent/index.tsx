@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { cloneDeep } from "lodash";
 import { LinkIcon, SparklesIcon } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
@@ -20,6 +19,7 @@ import { removeCountFromString } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
+import { SidebarFilterComponent } from "./sidebarFilterComponent";
 import { sortKeys } from "./utils";
 import sensitiveSort from "./utils/sensitive-sort";
 
@@ -227,35 +227,14 @@ export default function ExtraSidebar(): JSX.Element {
           <div className="flex w-full flex-col items-start justify-between gap-2.5">
             <span className="text-sm font-medium">Components</span>
             {filterType && (
-              <div className="bg-filter-background text-filter-foreground mb-0.5 flex w-full items-center justify-between rounded p-1 px-2 text-xs font-medium">
-                <div className="flex items-center gap-1">
-                  <IconComponent
-                    name="ListFilter"
-                    className="h-4 w-4 stroke-2"
-                  />
-                  {!!filterType.source ? "Input" : "Output"}: {filterType.type}
-                </div>
-                <ShadTooltip
-                  side="right"
-                  styleClasses="max-w-full"
-                  content="Remove filter"
-                >
-                  <Button
-                    unstyled
-                    className=""
-                    onClick={() => {
-                      setFilterEdge([]);
-                      setFilterData(data);
-                    }}
-                  >
-                    <IconComponent
-                      name="X"
-                      className="h-4 w-4 stroke-2"
-                      aria-hidden="true"
-                    />
-                  </Button>
-                </ShadTooltip>
-              </div>
+              <SidebarFilterComponent
+                isInput={!!filterType.source}
+                type={filterType.type}
+                resetFilters={() => {
+                  setFilterEdge([]);
+                  setFilterData(data);
+                }}
+              />
             )}
           </div>
         </div>
