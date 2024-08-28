@@ -108,12 +108,12 @@ async def simple_run_flow(
     flow: Flow,
     input_request: SimplifiedAPIRequest,
     stream: bool = False,
-    api_key_user: Optional[User] = None,
+    api_key_user: User | None = None,
 ):
     if input_request.input_value is not None and input_request.tweaks is not None:
         validate_input_and_tweaks(input_request)
     try:
-        task_result: List[RunOutputs] = []
+        task_result: list[RunOutputs] = []
         user_id = api_key_user.id if api_key_user else None
         flow_id_str = str(flow.id)
         if flow.data is None:
@@ -155,7 +155,7 @@ async def simple_run_flow_task(
     flow: Flow,
     input_request: SimplifiedAPIRequest,
     stream: bool = False,
-    api_key_user: Optional[User] = None,
+    api_key_user: User | None = None,
 ):
     """
     Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
@@ -362,11 +362,11 @@ async def webhook_run_flow(
 async def experimental_run_flow(
     session: Annotated[Session, Depends(get_session)],
     flow_id: UUID,
-    inputs: Optional[List[InputValueRequest]] = [InputValueRequest(components=[], input_value="")],
-    outputs: Optional[List[str]] = [],
-    tweaks: Annotated[Optional[Tweaks], Body(embed=True)] = None,  # noqa: F821
+    inputs: list[InputValueRequest] | None = [InputValueRequest(components=[], input_value="")],
+    outputs: list[str] | None = [],
+    tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,  # noqa: F821
     stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
-    session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
+    session_id: Annotated[None | str, Body(embed=True)] = None,  # noqa: F821
     api_key_user: UserRead = Depends(api_key_security),
     session_service: SessionService = Depends(get_session_service),
 ):
@@ -476,10 +476,10 @@ async def experimental_run_flow(
 async def process(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
-    inputs: Optional[Union[List[dict], dict]] = None,
-    tweaks: Optional[dict] = None,
+    inputs: list[dict] | dict | None = None,
+    tweaks: dict | None = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
-    session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
+    session_id: Annotated[None | str, Body(embed=True)] = None,  # noqa: F821
     task_service: "TaskService" = Depends(get_task_service),
     api_key_user: UserRead = Depends(api_key_security),
     sync: Annotated[bool, Body(embed=True)] = True,  # noqa: F821

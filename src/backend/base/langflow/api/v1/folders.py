@@ -78,7 +78,7 @@ def create_folder(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/", response_model=List[FolderRead], status_code=200)
+@router.get("/", response_model=list[FolderRead], status_code=200)
 def read_folders(
     *,
     session: Session = Depends(get_session),
@@ -211,7 +211,7 @@ async def download_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/upload/", response_model=List[FlowRead], status_code=201)
+@router.post("/upload/", response_model=list[FlowRead], status_code=201)
 async def upload_file(
     *,
     session: Session = Depends(get_session),
