@@ -8,6 +8,8 @@ import {
   useAutoLogin,
   useRefreshAccessToken,
 } from "./controllers/API/queries/auth";
+import { useGetVersionQuery } from "./controllers/API/queries/version";
+import useSaveConfig from "./hooks/use-save-config";
 import router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import useAuthStore from "./stores/authStore";
@@ -70,6 +72,9 @@ export default function App() {
       },
     });
   }, []);
+
+  useGetVersionQuery();
+  useSaveConfig();
 
   return (
     //need parent component with width and height
