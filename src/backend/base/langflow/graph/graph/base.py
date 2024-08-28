@@ -33,6 +33,7 @@ from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
+from langflow.interface import initialize
 from langflow.logging.logger import LogConfig, configure
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
@@ -202,33 +203,26 @@ class Graph:
         self._edges = self._graph_data["edges"]
         self.initialize()
 
-    def add_component(self, _id: str, component: "Component"):
-        if _id in self.vertex_map:
-            return
+
+    def add_component(self, component: "Component", component_id: Optional[str] = None) -> str:
+        component_id = component_id or component._id
+        component._id = component_id
+        if component_id in self.vertex_map:
+            raise ValueError(f"Component ID {component_id} already exists")
         frontend_node = component.to_frontend_node()
-        frontend_node["data"]["id"] = _id
-        frontend_node["id"] = _id
         self._vertices.append(frontend_node)
         vertex = self._create_vertex(frontend_node)
         vertex.add_component_instance(component)
-        self.vertices.append(vertex)
-        self.vertex_map[_id] = vertex
-
-        if component._edges:
-            for edge in component._edges:
-                self._add_edge(edge)
-
-        if component._components:
-            for _component in component._components:
-                self.add_component(_component._id, _component)
+        self._add_vertex(vertex)
+        return component_id
 
     def _set_start_and_end(self, start: "Component", end: "Component"):
         if not hasattr(start, "to_frontend_node"):
             raise TypeError(f"start must be a Component. Got {type(start)}")
         if not hasattr(end, "to_frontend_node"):
             raise TypeError(f"end must be a Component. Got {type(end)}")
-        self.add_component(start._id, start)
-        self.add_component(end._id, end)
+        self.add_component(start, start._id)
+        self.add_component(end, end._id)
 
     def add_component_edge(self, source_id: str, output_input_tuple: tuple[str, str], target_id: str):
         source_vertex = self.get_vertex(source_id)
@@ -242,6 +236,20 @@ class Graph:
             raise ValueError(f"Source vertex {source_id} does not have a custom component.")
         if target_vertex._custom_component is None:
             raise ValueError(f"Target vertex {target_id} does not have a custom component.")
+
+        try:
+            input_field = target_vertex.get_input(input_name)
+            input_types = input_field.input_types
+            input_field_type = str(input_field.field_type)
+        except ValueError:
+            input_field = target_vertex.data.get("node", {}).get("template", {}).get(input_name)
+            if not input_field:
+                raise ValueError(f"Input field {input_name} not found in target vertex {target_id}")
+            input_types = input_field.get("input_types", [])
+            input_field_type = input_field.get("type", "")
+
+
+
         edge_data: EdgeData = {
             "source": source_id,
             "target": target_id,
@@ -256,8 +264,8 @@ class Graph:
                 "targetHandle": {
                     "fieldName": input_name,
                     "id": target_vertex.id,
-                    "inputTypes": target_vertex.get_input(input_name).input_types,
-                    "type": str(target_vertex.get_input(input_name).field_type),
+                    "inputTypes": input_types,
+                    "type": input_field_type,
                 },
             },
         }
@@ -1397,7 +1405,7 @@ class Graph:
                 tasks.append(task)
                 vertex_task_run_count[vertex_id] = vertex_task_run_count.get(vertex_id, 0) + 1
 
-            logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks")
+            logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks, {current_batch}")
             try:
                 next_runnable_vertices = await self._execute_tasks(tasks, lock=lock)
             except Exception as e:
@@ -1462,6 +1470,8 @@ class Graph:
             # they could be calculated as predecessor or successors of parallel vertices
             # This could usually happen with input vertices like ChatInput
             self.run_manager.remove_vertex_from_runnables(v.id)
+
+            logger.debug(f"Vertex {v.id}, result: {v._built_result}, object: {v._built_object}")
 
         for v in vertices:
             next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
