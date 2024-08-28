@@ -49,8 +49,6 @@ export function AppWrapperPage() {
 
   const [retryCount, setRetryCount] = useState(0);
 
-  console.log(healthCheckMaxRetries);
-
   useEffect(() => {
     const isServerBusy =
       (error as AxiosError)?.response?.status === 503 ||

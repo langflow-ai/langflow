@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Textarea } from "../../../../../../../components/ui/textarea";
 import { classNames } from "../../../../../../../utils/utils";
 
@@ -42,6 +43,12 @@ const TextAreaWrapper = ({
       : "rounded-md border-t border-border focus:ring-0 focus:border-2 focus:border-ring";
 
   const additionalClassNames = "form-modal-lockchat pl-14";
+
+  useEffect(() => {
+    if (!lockChat && !noInput && !saveLoading) {
+      inputRef.current?.focus();
+    }
+  }, [lockChat, noInput, saveLoading]);
 
   return (
     <Textarea
