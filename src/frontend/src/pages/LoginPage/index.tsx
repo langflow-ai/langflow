@@ -1,5 +1,4 @@
 import { useLoginUser } from "@/controllers/API/queries/auth";
-import { useFolderStore } from "@/stores/foldersStore";
 import * as Form from "@radix-ui/react-form";
 import { useContext, useState } from "react";
 import { Link } from "react-router-dom";
@@ -23,7 +22,6 @@ export default function LoginPage(): JSX.Element {
   const { password, username } = inputState;
   const { login } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
 
   function handleInput({
     target: { name, value },
@@ -41,8 +39,6 @@ export default function LoginPage(): JSX.Element {
 
     mutate(user, {
       onSuccess: (data) => {
-        setSelectedFolder(null);
-
         login(data.access_token, "login", data.refresh_token);
       },
       onError: (error) => {
