@@ -2,6 +2,7 @@ import {
   REFETCH_SERVER_HEALTH_INTERVAL,
   SERVER_HEALTH_INTERVAL,
 } from "@/constants/constants";
+import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { createNewError503 } from "@/types/factory/axios-error-503";
 import { keepPreviousData } from "@tanstack/react-query";
@@ -29,6 +30,8 @@ export const useGetHealthQuery: useQueryFunctionType<
   const healthCheckTimeout = useUtilityStore(
     (state) => state.healthCheckTimeout,
   );
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+
   /**
    * Fetches the health status of the API.
    *
@@ -49,9 +52,9 @@ export const useGetHealthQuery: useQueryFunctionType<
         healthCheckTimeout === null &&
         (error as AxiosError)?.response?.status === 503;
 
-      if (isServerBusy) {
+      if (isServerBusy && !isBuilding) {
         setHealthCheckTimeout("timeout");
-      } else if (healthCheckTimeout === null) {
+      } else if (healthCheckTimeout === null && !isBuilding) {
         setHealthCheckTimeout("serverDown");
       }
       throw error;

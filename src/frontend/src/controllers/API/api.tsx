@@ -24,6 +24,7 @@ function ApiInterceptor() {
   const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
   const logout = useAuthStore((state) => state.logout);
   const isLoginPage = location.pathname.includes("login");
+  const isBuilding = useFlowStore((state) => state.isBuilding);
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
@@ -90,6 +91,11 @@ function ApiInterceptor() {
       (config) => {
         const controller = new AbortController();
         try {
+          if (isBuilding) {
+            controller.abort("Request aborted because a build is in progress");
+            return Promise.reject(null);
+          }
+
           checkDuplicateRequestAndStoreRequest(config);
         } catch (e) {
           const error = e as Error;
@@ -117,7 +123,7 @@ function ApiInterceptor() {
       api.interceptors.response.eject(interceptor);
       api.interceptors.request.eject(requestInterceptor);
     };
-  }, [accessToken, setErrorData]);
+  }, [accessToken, setErrorData, isBuilding]);
 
   function checkErrorCount() {
     if (isLoginPage) return;
