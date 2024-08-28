@@ -137,6 +137,7 @@ export default function HandleRenderComponent({
         delayDuration={1000}
         content={
           <HandleTooltipComponent
+            isInput={left}
             color={colors[0]}
             tooltipTitle={tooltipTitle}
           />
@@ -194,9 +195,10 @@ export default function HandleRenderComponent({
           >
             <ForwardedIconComponent
               iconColor={colors[0]}
-              name="Plus"
+              name="ArrowRight"
               className={cn(
-                "h-4 w-4 scale-0 transition-all",
+                "h-4 w-4 scale-0 stroke-2 transition-all",
+                left && "rotate-180 transform",
                 filterPresent
                   ? openHandle || ownHandle
                     ? cn(
