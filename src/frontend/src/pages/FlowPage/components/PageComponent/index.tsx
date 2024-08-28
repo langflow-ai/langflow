@@ -143,7 +143,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
-  const { isFetching, refetch } = useGetBuildsQuery({});
+  const { isFetching } = useGetBuildsQuery({ flowId: currentFlowId });
 
   const showCanvas =
     Object.keys(templates).length > 0 &&
@@ -151,8 +151,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     !isFetching;
 
   useEffect(() => {
-    refetch();
-    useFlowStore.setState({ autoSaveFlow });
     if (checkOldComponents({ nodes })) {
       setNoticeData({
         title:
@@ -160,6 +158,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
       });
     }
   }, [currentFlowId]);
+
+  useEffect(() => {
+    useFlowStore.setState({ autoSaveFlow });
+  });
 
   function handleUndo(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {

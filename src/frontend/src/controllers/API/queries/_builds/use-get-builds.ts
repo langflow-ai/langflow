@@ -9,35 +9,22 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 interface BuildsQueryParams {
   flowId?: string;
-  nodeId?: string;
 }
 
 export const useGetBuildsQuery: useQueryFunctionType<
   BuildsQueryParams,
   AxiosResponse<{ vertex_builds: FlowPoolType }>
-> = ({}) => {
+> = (params) => {
   const { query } = UseRequestProcessor();
 
   const setFlowPool = useFlowStore((state) => state.setFlowPool);
   const currentFlow = useFlowStore((state) => state.currentFlow);
 
-  const getBuildsFn = async (
-    params: BuildsQueryParams,
-  ): Promise<AxiosResponse<{ vertex_builds: FlowPoolType }>> => {
+  const responseFn = async () => {
     const config = {};
     config["params"] = { flow_id: params.flowId };
 
-    if (params.nodeId) {
-      config["params"] = { nodeId: params.nodeId };
-    }
-
-    return await api.get<any>(`${getURL("BUILDS")}`, config);
-  };
-
-  const responseFn = async () => {
-    const response = await getBuildsFn({
-      flowId: currentFlow!.id,
-    });
+    const response = await api.get<any>(`${getURL("BUILDS")}`, config);
 
     if (currentFlow) {
       const flowPool = response.data.vertex_builds;
@@ -47,10 +34,14 @@ export const useGetBuildsQuery: useQueryFunctionType<
     return response;
   };
 
-  const queryResult = query(["useGetBuildsQuery"], responseFn, {
-    placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
-  });
+  const queryResult = query(
+    ["useGetBuildsQuery", { key: params.flowId }],
+    responseFn,
+    {
+      placeholderData: keepPreviousData,
+      refetchOnWindowFocus: false,
+    },
+  );
 
   return queryResult;
 };
