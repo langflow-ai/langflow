@@ -310,9 +310,40 @@ class Component(CustomComponent):
         )
         return method_is_output
 
+    def _build_error_string_from_matching_pairs(self, matching_pairs: list[tuple[Output, Input]]):
+        text = ""
+        for output, input_ in matching_pairs:
+            text += f"{output.name}[{','.join(output.types)}]->{input_.name}[{','.join(input_.input_types or [])}]\n"
+        return text
+
+    def _find_matching_output_method(self, value: "Component"):
+        # get all outputs of the value component
+        outputs = value.outputs
+        # check if the any of the types in the output.types matches ONLY one input in the current component
+        matching_pairs = []
+        for output in outputs:
+            for input_ in self.inputs:
+                for output_type in output.types:
+                    if input_.input_types and output_type in input_.input_types:
+                        matching_pairs.append((output, input_))
+        if len(matching_pairs) > 1:
+            matching_pairs_str = self._build_error_string_from_matching_pairs(matching_pairs)
+            raise ValueError(
+                f"There are multiple outputs from {value.__class__.__name__} that can connect to inputs in {self.__class__.__name__}: {matching_pairs_str}"
+            )
+        output, input_ = matching_pairs[0]
+        if not isinstance(output.method, str):
+            raise ValueError(f"Method {output.method} is not a valid output of {value.__class__.__name__}")
+        return getattr(value, output.method)
+
     def _process_connection_or_parameter(self, key, value):
         _input = self._get_or_create_input(key)
         # We need to check if callable AND if it is a method from a class that inherits from Component
+        if isinstance(value, Component):
+            # We need to find the Output that can connect to an input of the current component
+            # if there's more than one output that matches, we need to raise an error
+            # because we don't know which one to connect to
+            value = self._find_matching_output_method(value)
         if callable(value) and self._inherits_from_component(value):
             try:
                 self._method_is_valid_output(value)
