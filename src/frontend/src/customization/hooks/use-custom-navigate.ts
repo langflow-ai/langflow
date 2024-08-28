@@ -16,7 +16,10 @@ export function useCustomNavigate(): NavigateFunction {
     if (typeof to === "number") {
       domNavigate(to);
     } else {
-      domNavigate(ENABLE_CUSTOM_PARAM ? `${customParam}/${to}` : to, options);
+      domNavigate(
+        ENABLE_CUSTOM_PARAM && to[0] === "/" ? `/${customParam}${to}` : to,
+        options,
+      );
     }
   }
 
