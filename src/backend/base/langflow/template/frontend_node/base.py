@@ -1,5 +1,4 @@
 from collections import defaultdict
-from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, field_serializer, model_serializer
 
@@ -11,46 +10,46 @@ class FrontendNode(BaseModel):
     _format_template: bool = True
     template: Template
     """Template for the frontend node."""
-    description: Optional[str] = None
+    description: str | None = None
     """Description of the frontend node."""
-    icon: Optional[str] = None
+    icon: str | None = None
     """Icon of the frontend node."""
-    is_input: Optional[bool] = None
+    is_input: bool | None = None
     """Whether the frontend node is used as an input when processing the Graph.
     If True, there should be a field named 'input_value'."""
-    is_output: Optional[bool] = None
+    is_output: bool | None = None
     """Whether the frontend node is used as an output when processing the Graph.
     If True, there should be a field named 'input_value'."""
-    is_composition: Optional[bool] = None
+    is_composition: bool | None = None
     """Whether the frontend node is used for composition."""
-    base_classes: List[str]
+    base_classes: list[str]
     """List of base classes for the frontend node."""
     name: str = ""
     """Name of the frontend node."""
-    display_name: Optional[str] = ""
+    display_name: str | None = ""
     """Display name of the frontend node."""
     documentation: str = ""
     """Documentation of the frontend node."""
-    custom_fields: Optional[Dict] = defaultdict(list)
+    custom_fields: dict | None = defaultdict(list)
     """Custom fields of the frontend node."""
-    output_types: List[str] = []
+    output_types: list[str] = []
     """List of output types for the frontend node."""
-    full_path: Optional[str] = None
+    full_path: str | None = None
     """Full path of the frontend node."""
     pinned: bool = False
     """Whether the frontend node is pinned."""
-    conditional_paths: List[str] = []
+    conditional_paths: list[str] = []
     """List of conditional paths for the frontend node."""
     frozen: bool = False
     """Whether the frontend node is frozen."""
-    outputs: List[Output] = []
+    outputs: list[Output] = []
     """List of output fields for the frontend node."""
 
     field_order: list[str] = []
     """Order of the fields in the frontend node."""
     beta: bool = False
     """Whether the frontend node is in beta."""
-    error: Optional[str] = None
+    error: str | None = None
     """Error message for the frontend node."""
     edited: bool = False
     """Whether the frontend node has been edited."""
@@ -60,7 +59,7 @@ class FrontendNode(BaseModel):
         self.documentation = documentation
 
     @field_serializer("base_classes")
-    def process_base_classes(self, base_classes: List[str]) -> List[str]:
+    def process_base_classes(self, base_classes: list[str]) -> list[str]:
         """Removes unwanted base classes from the list of base classes."""
 
         sorted_base_classes = sorted(list(set(base_classes)), key=lambda x: x.lower())
@@ -156,14 +155,14 @@ class FrontendNode(BaseModel):
             input_overlap_str = ", ".join(map(lambda x: f"'{x}'", input_overlap))
             error_message += f"Input names {input_overlap_str} are reserved attributes."
 
-    def add_base_class(self, base_class: Union[str, List[str]]) -> None:
+    def add_base_class(self, base_class: str | list[str]) -> None:
         """Adds a base class to the frontend node."""
         if isinstance(base_class, str):
             self.base_classes.append(base_class)
         elif isinstance(base_class, list):
             self.base_classes.extend(base_class)
 
-    def add_output_type(self, output_type: Union[str, List[str]]) -> None:
+    def add_output_type(self, output_type: str | list[str]) -> None:
         """Adds an output type to the frontend node."""
         if isinstance(output_type, str):
             self.output_types.append(output_type)
