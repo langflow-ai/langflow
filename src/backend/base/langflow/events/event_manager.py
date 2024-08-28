@@ -2,7 +2,6 @@ import asyncio
 import json
 import time
 import uuid
-from collections.abc import Callable
 from functools import partial
 
 from typing_extensions import Protocol
@@ -25,16 +24,19 @@ class EventManager:
         else:
             self.events[name] = partial(self.send_event, event_type)
 
+    def register_event_function(self, name: str, event_function: EventCallback):
+        self.events[name] = event_function
+
     def send_event(self, event_type: str, data: dict):
         json_data = {"event": event_type, "data": data}
         event_id = uuid.uuid4()
         str_data = json.dumps(json_data) + "\n\n"
         self.queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
 
-    def noop(self, data: dict):
+    def noop(self, event_type: str, data: dict):
         pass
 
-    def __getattr__(self, name: str) -> Callable[[dict], None]:
+    def __getattr__(self, name: str) -> EventCallback:
         return self.events.get(name, self.noop)
 
 
