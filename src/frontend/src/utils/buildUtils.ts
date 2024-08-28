@@ -188,7 +188,6 @@ export async function buildFlowVertices({
         onBuildStart(ids.map((id) => ({ id: id, reference: id })));
       ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
     };
-    console.log(type, data);
     switch (type) {
       case "vertices_sorted": {
         const verticesToRun = data.to_run;
@@ -271,6 +270,11 @@ export async function buildFlowVertices({
         //adds a message to the messsage table
         console.log(data);
         useMessagesStore.getState().addMessage(data);
+        return true;
+      }
+      case "token": {
+        // console.log(data.text);
+        useMessagesStore.getState().updateMessagePartial(data);
         return true;
       }
       case "end": {
