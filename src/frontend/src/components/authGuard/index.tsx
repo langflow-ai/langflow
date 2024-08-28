@@ -25,14 +25,17 @@ export const ProtectedRoute = ({ children }) => {
       ? automaticRefreshTime
       : envRefreshTime;
 
-    const intervalId = setInterval(() => {
+    const intervalFunction = () => {
       if (isAuthenticated) {
         mutateRefresh({ refresh_token: refreshToken });
       }
-    }, accessTokenTimer * 1000);
+    };
+
+    const intervalId = setInterval(intervalFunction, accessTokenTimer * 1000);
+    intervalFunction();
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [isAuthenticated]);
 
   if (!isAuthenticated && hasToken) {
     logout();
