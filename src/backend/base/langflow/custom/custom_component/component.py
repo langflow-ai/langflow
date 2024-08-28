@@ -341,9 +341,8 @@ class Component(CustomComponent):
             # We need to find the Output that can connect to an input of the current component
             # if there's more than one output that matches, we need to raise an error
             # because we don't know which one to connect to
-            method = self._find_matching_output_method(value)
-            self._connect_to_component(key, method, _input)
-        elif callable(value) and self._inherits_from_component(value):
+            value = self._find_matching_output_method(value)
+        if callable(value) and self._inherits_from_component(value):
             try:
                 self._method_is_valid_output(value)
             except ValueError:
