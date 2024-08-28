@@ -116,7 +116,7 @@ class TestCreateInputSchema:
         input_instance = FileInput(name="file_field")
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["file_field"]
-        assert field_info.annotation == str
+        assert field_info.annotation is str
 
     # Inputs with mixed required and optional fields are processed correctly
     def test_mixed_required_optional_fields_processing(self):
@@ -184,7 +184,7 @@ class TestCreateInputSchema:
         input_instance = StrInput(name="test_field", is_list=True)
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["test_field"]
-        assert field_info.annotation == list[str]
+        assert field_info.annotation is list[str]
 
     # Converting FieldTypes to corresponding Python types
     def test_field_types_conversion(self):
@@ -194,7 +194,7 @@ class TestCreateInputSchema:
         input_instance = IntInput(name="int_field")
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["int_field"]
-        assert field_info.annotation == int
+        assert field_info.annotation is int  # Use 'is' for type comparison
 
     # Setting default values for non-required fields
     def test_default_values_for_non_required_fields(self):
