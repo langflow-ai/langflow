@@ -197,13 +197,8 @@ else
 	@cd src/frontend && npx playwright test --project=chromium
 endif
 
-run_cli:
+run_cli: install_frontend install_backend build_frontend ## run the CLI
 	@echo 'Running the CLI'
-	@make install_frontend > /dev/null
-	@echo 'Install backend dependencies'
-	@make install_backend > /dev/null
-	@echo 'Building the frontend'
-	@make build_frontend > /dev/null
 ifdef env
 	@make start env=$(env) host=$(host) port=$(port) log_level=$(log_level)
 else
