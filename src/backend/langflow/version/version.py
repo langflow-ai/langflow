@@ -1,16 +1,3 @@
-# from importlib import metadata
-#
-# try:
-#     __version__ = metadata.version("langflow")
-#     print(f"__version__ = {__version__}")
-#     # Check if the version is a pre-release version
-#     is_pre_release = any(label in __version__ for label in ["a", "b", "rc", "dev", "post"])
-# except metadata.PackageNotFoundError:
-#     __version__ = ""
-#     is_pre_release = False
-# del metadata
-
-
 def get_version() -> str:
     """
     Retrieves the version of the package from a possible list of package names.
@@ -23,6 +10,7 @@ def get_version() -> str:
         ValueError: If the package is not found from the list of package names.
     """
     from importlib import metadata
+
     pkg_names = [
         "langflow",
         "langflow-base",
@@ -41,5 +29,10 @@ def get_version() -> str:
 
     return _version
 
+
 def is_pre_release(v: str) -> bool:
+    """
+    Returns a boolean indicating whether the version is a pre-release version,
+    as per the definition of a pre-release segment from PEP 440.
+    """
     return any(label in v for label in ["a", "b", "rc"])
