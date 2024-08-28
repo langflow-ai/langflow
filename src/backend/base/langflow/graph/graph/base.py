@@ -13,12 +13,13 @@ from typing import TYPE_CHECKING, Any, Optional
 import nest_asyncio
 from loguru import logger
 
+from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.edge.base import CycleEdge
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
-from langflow.graph.graph.schema import GraphData, GraphDump, LogCallbackFunction, StartConfigDict, VertexBuildResult
+from langflow.graph.graph.schema import GraphData, GraphDump, StartConfigDict, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.state_model import create_state_model_from_graph
 from langflow.graph.graph.utils import find_start_component_id, process_flow, should_continue, sort_up_to_vertex
@@ -260,7 +261,7 @@ class Graph:
         self,
         inputs: list[dict] | None = None,
         max_iterations: int | None = None,
-        log_callback: LogCallbackFunction | None = None,
+        event_manager: EventManager | None = None,
     ):
         if not self._prepared:
             raise ValueError("Graph not prepared. Call prepare() first.")
@@ -275,7 +276,7 @@ class Graph:
         yielded_counts: dict[str, int] = defaultdict(int)
 
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(log_callback=log_callback)
+            result = await self.astep(event_manager=event_manager)
             yield result
             if hasattr(result, "vertex"):
                 yielded_counts[result.vertex.id] += 1
@@ -297,14 +298,14 @@ class Graph:
         inputs: list[dict] | None = None,
         max_iterations: int | None = None,
         config: StartConfigDict | None = None,
-        log_callback: LogCallbackFunction | None = None,
+        event_manager: EventManager | None = None,
     ) -> Generator:
         if config is not None:
             self.__apply_config(config)
         #! Change this ASAP
         nest_asyncio.apply()
         loop = asyncio.get_event_loop()
-        async_gen = self.async_start(inputs, max_iterations, log_callback)
+        async_gen = self.async_start(inputs, max_iterations, event_manager)
         async_gen_task = asyncio.ensure_future(async_gen.__anext__())
 
         while True:
@@ -1159,7 +1160,7 @@ class Graph:
         inputs: Optional["InputValueRequest"] = None,
         files: list[str] | None = None,
         user_id: str | None = None,
-        log_callback: LogCallbackFunction | None = None,
+        event_manager: EventManager | None = None,
     ):
         if not self._prepared:
             raise ValueError("Graph not prepared. Call prepare() first.")
@@ -1175,7 +1176,7 @@ class Graph:
             files=files,
             get_cache=chat_service.get_cache,
             set_cache=chat_service.set_cache,
-            log_callback=log_callback,
+            event_manager=event_manager,
         )
 
         next_runnable_vertices = await self.get_next_runnable_vertices(
@@ -1227,7 +1228,7 @@ class Graph:
         files: list[str] | None = None,
         user_id: str | None = None,
         fallback_to_env_vars: bool = False,
-        log_callback: LogCallbackFunction | None = None,
+        event_manager: EventManager | None = None,
     ) -> VertexBuildResult:
         """
         Builds a vertex in the graph.
@@ -1286,7 +1287,7 @@ class Graph:
                     inputs=inputs_dict,
                     fallback_to_env_vars=fallback_to_env_vars,
                     files=files,
-                    log_callback=log_callback,
+                    event_manager=event_manager,
                 )
                 if set_cache is not None:
                     vertex_dict = {

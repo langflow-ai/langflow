@@ -29,7 +29,7 @@ def test_callback_graph():
     chat_output.set(sender_name=log_component.call_log_method)
     graph = Graph(start=log_component, end=chat_output)
 
-    results = list(graph.start(log_callback=mock_callback))
+    results = list(graph.start(event_manager=mock_callback))
     assert len(results) == 3
     assert len(logs) == 3
     assert all(isinstance(log, tuple) for log in logs)
