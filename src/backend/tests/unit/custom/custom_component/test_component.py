@@ -18,11 +18,9 @@ def test_set_invalid_output():
         chatoutput.set(input_value=chatinput.build_config)
 
 
-def test_set_invalid_input():
+def test_set_component():
     crewai_agent = CrewAIAgentComponent()
     task = SequentialTaskComponent()
-    with pytest.raises(
-        ValueError,
-        match="You set CrewAI Agent as value for `agent`. You should pass one of the following: 'build_output'",
-    ):
-        task.set(agent=crewai_agent)
+    task.set(agent=crewai_agent)
+    assert task._edges[0]["source"] == crewai_agent._id
+    assert crewai_agent in task._components

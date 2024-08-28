@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -70,14 +70,30 @@ test("should delete rows from table message", async ({ page }) => {
     timeout: 30000,
   });
 
+  await page.waitForTimeout(2000);
+
   await page.getByTestId("user-profile-settings").last().click();
+  await page.waitForSelector(
+    '[data-testid="user-profile-settings"]:last-child',
+  );
+
+  await page.waitForTimeout(500);
+
+  await page.waitForSelector('text="Settings"');
   await page.getByText("Settings").last().click();
+
+  await page.waitForSelector('text="Messages"');
   await page.getByText("Messages").last().click();
 
-  const label = "Press Space to toggle all rows selection (unchecked)";
-  await page.getByLabel(label).first().click();
+  await page.waitForSelector(".ag-checkbox-input");
+  await page.locator(".ag-checkbox-input").first().click();
 
+  await page.waitForTimeout(500);
+
+  await page.waitForSelector('[data-testid="icon-Trash2"]:first-child');
   await page.getByTestId("icon-Trash2").first().click();
+
+  await page.waitForTimeout(500);
 
   await page.waitForSelector("text=No Data Available", { timeout: 30000 });
   await page.getByText("No Data Available").isVisible();

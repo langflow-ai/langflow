@@ -8,7 +8,6 @@ import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect } from "react";
 import { useBlocker, useNavigate, useParams } from "react-router-dom";
 import FlowToolbar from "../../components/chatComponent";
-import Header from "../../components/headerComponent";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -81,7 +80,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       }
     };
     awaitgetTypes();
-  }, [id, flows]);
+  }, [id, flows, currentFlowId]);
 
   useEffect(() => {
     setOnFlowPage(true);
@@ -94,7 +93,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   return (
     <>
-      <Header />
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">

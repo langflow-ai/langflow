@@ -21,13 +21,11 @@ export function checkDuplicateRequestAndStoreRequest(config) {
     currentTime - parseInt(lastRequestTime, 10) < 300 &&
     lastCurrentUrl === currentUrl
   ) {
-    return false;
+    throw new Error("Duplicate request: " + lastUrl);
   }
 
   localStorage.setItem("lastUrlCalled", config.url ?? "");
   localStorage.setItem("lastMethodCalled", config.method ?? "");
   localStorage.setItem("lastRequestTime", currentTime.toString());
   localStorage.setItem("lastCurrentUrl", currentUrl);
-
-  return true;
 }
