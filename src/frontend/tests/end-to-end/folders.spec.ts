@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 
 test("CRUD folders", async ({ page }) => {
@@ -69,6 +69,65 @@ test("CRUD folders", async ({ page }) => {
   await page.getByText("Delete").last().click();
   await page.waitForTimeout(1000);
   await page.getByText("Folder deleted successfully").isVisible();
+});
+
+test("add folder by drag and drop", async ({ page }) => {
+  await page.goto("/");
+
+  await page.waitForSelector("text=my collection", {
+    timeout: 50000,
+  });
+
+  const jsonContent = readFileSync(
+    "tests/end-to-end/assets/collection.json",
+    "utf-8",
+  );
+
+  // Wait for the target element to be available before evaluation
+
+  await page.waitForSelector('[data-testid="sidebar-nav-My Projects"]', {
+    timeout: 100000,
+  });
+  // Create the DataTransfer and File
+  const dataTransfer = await page.evaluateHandle((data) => {
+    const dt = new DataTransfer();
+    // Convert the buffer to a hex array
+    const file = new File([data], "flowtest.json", {
+      type: "application/json",
+    });
+    dt.items.add(file);
+    return dt;
+  }, jsonContent);
+
+  // Now dispatch
+  await page.getByTestId("sidebar-nav-My Projects").dispatchEvent("drop", {
+    dataTransfer,
+  });
+
+  await page.waitForTimeout(3000);
+
+  const genericNode = page.getByTestId("div-generic-node");
+  const elementCount = await genericNode?.count();
+  if (elementCount > 0) {
+    expect(true).toBeTruthy();
+  }
+
+  await page.getByTestId("sidebar-nav-My Projects").click();
+
+  await page.waitForTimeout(1000);
+
+  expect(
+    await page.locator("text=Getting Started:").last().isVisible(),
+  ).toBeTruthy();
+  expect(
+    await page.locator("text=Inquisitive Pike").last().isVisible(),
+  ).toBeTruthy();
+  expect(
+    await page.locator("text=Dreamy Bassi").last().isVisible(),
+  ).toBeTruthy();
+  expect(
+    await page.locator("text=Furious Faraday").last().isVisible(),
+  ).toBeTruthy();
 });
 
 test("change flow folder", async ({ page }) => {

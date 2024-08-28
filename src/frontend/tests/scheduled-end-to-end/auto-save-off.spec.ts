@@ -150,6 +150,7 @@ test("user should be able to manually save a flow when the auto_save is off", as
   await page.getByTestId("save-flow-button").click();
   await page.getByTestId("icon-ChevronLeft").last().click();
 
+  await page.getByText("Save And Exit", { exact: true }).click();
   await page.getByText("Untitled document").first().click();
 
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
