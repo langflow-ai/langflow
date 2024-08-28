@@ -101,6 +101,13 @@ jobs:
           else
             echo "Server terminated successfully"
           fi
+      - name: Check Poetry Environment
+        run: |
+          echo "Checking Poetry Environment"
+          poetry env info
+          poetry env list
+          poetry run env
+
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
