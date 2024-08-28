@@ -177,8 +177,8 @@ format: ## run code formatters
 	poetry run ruff format .
 	cd src/frontend && npm run format
 
-lint: ## run linters
-	poetry run mypy --namespace-packages -p "langflow"
+lint: install_backend ## run linters
+	@poetry run mypy --namespace-packages -p "langflow"
 
 install_frontendci:
 	cd src/frontend && npm ci
@@ -252,20 +252,15 @@ setup_devcontainer: ## set up the development container
 setup_env: ## set up the environment
 	@sh ./scripts/setup/setup_env.sh
 
-frontend: ## run the frontend in development mode
-	make install_frontend
+frontend: install_frontend ## run the frontend in development mode
 	make run_frontend
 
-frontendc:
-	make install_frontendc
+frontendc: install_frontendc
 	make run_frontend
 
 
 
-backend: ## run the backend in development mode
-	@echo 'Setting up the environment'
-	@make setup_env
-	make install_backend
+backend: setup_env install_backend ## run the backend in development mode
 	@-kill -9 $$(lsof -t -i:7860)
 ifdef login
 	@echo "Running backend autologin is $(login)";
@@ -289,9 +284,7 @@ else
 		--workers $(workers)
 endif
 
-build_and_run: ## build the project and run it
-	@echo 'Removing dist folder'
-	@make setup_env
+build_and_run: setup_env ## build the project and run it
 	rm -rf dist
 	rm -rf src/backend/base/dist
 	make build
@@ -304,9 +297,7 @@ build_and_install: ## build the project and install it
 	rm -rf src/backend/base/dist
 	make build && poetry run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
 
-build: ## build the frontend static files and package the project
-	@echo 'Building the project'
-	@make setup_env
+build: setup_env ## build the frontend static files and package the project
 ifdef base
 	make install_frontendci
 	make build_frontend
