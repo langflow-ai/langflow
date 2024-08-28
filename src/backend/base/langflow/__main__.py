@@ -22,7 +22,9 @@ from sqlmodel import select
 
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
-from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
+from langflow.services.database.models.folder.utils import (
+    create_default_folder_if_it_doesnt_exist,
+)
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
@@ -76,9 +78,15 @@ def set_var_for_macos_issue():
 
 @app.command()
 def run(
-    host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"),
-    workers: int = typer.Option(1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"),
-    timeout: int = typer.Option(300, help="Worker timeout in seconds.", envvar="LANGFLOW_WORKER_TIMEOUT"),
+    host: str = typer.Option(
+        "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
+    ),
+    workers: int = typer.Option(
+        1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
+    ),
+    timeout: int = typer.Option(
+        300, help="Worker timeout in seconds.", envvar="LANGFLOW_WORKER_TIMEOUT"
+    ),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
     components_path: Optional[Path] = typer.Option(
         Path(__file__).parent / "components",
@@ -86,9 +94,15 @@ def run(
         envvar="LANGFLOW_COMPONENTS_PATH",
     ),
     # .env file param
-    env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
-    log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
-    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"),
+    env_file: Path = typer.Option(
+        None, help="Path to the .env file containing environment variables."
+    ),
+    log_level: str = typer.Option(
+        "critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
+    ),
+    log_file: Path = typer.Option(
+        "logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"
+    ),
     cache: Optional[str] = typer.Option(
         envvar="LANGFLOW_LANGCHAIN_CACHE",
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
@@ -212,7 +226,9 @@ def wait_for_server_ready(host, port):
 
 
 def run_on_mac_or_linux(host, port, log_level, options, app):
-    webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
+    webapp_process = Process(
+        target=run_langflow, args=(host, port, log_level, options, app)
+    )
     webapp_process.start()
     wait_for_server_ready(host, port)
 
@@ -283,12 +299,21 @@ def is_prerelease(version: str) -> bool:
     return "a" in version or "b" in version or "rc" in version
 
 
+def is_nightly(version: str) -> bool:
+    import re
+
+    pattern = re.compile(r'(?<=^version = ")[^"]+(?=")', re.MULTILINE)
+    return pattern.search(version)
+
+
 def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optional[str]:
     valid_versions = []
     try:
         response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
         versions = response.json()["releases"].keys()
-        valid_versions = [v for v in versions if include_prerelease or not is_prerelease(v)]
+        valid_versions = [
+            v for v in versions if include_prerelease or not is_prerelease(v)
+        ]
 
     except Exception as e:
         logger.exception(e)
@@ -301,7 +326,9 @@ def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optiona
 
 def build_version_notice(current_version: str, package_name: str) -> str:
     latest_version = fetch_latest_version(package_name, is_prerelease(current_version))
-    if latest_version and pkg_version.parse(current_version) < pkg_version.parse(latest_version):
+    if latest_version and pkg_version.parse(current_version) < pkg_version.parse(
+        latest_version
+    ):
         release_type = "pre-release" if is_prerelease(latest_version) else "version"
         return f"A new {release_type} of {package_name} is available: {latest_version}"
     return ""
@@ -326,40 +353,36 @@ def stylize_text(text: str, to_style: str, is_prerelease: bool) -> str:
 
 
 def print_banner(host: str, port: int):
+    from importlib import metadata
+
     notices = []
     package_names = []  # Track package names for pip install instructions
     is_pre_release = False  # Track if any package is a pre-release
     package_name = ""
 
-    try:
-        from langflow.version import __version__ as langflow_version  # type: ignore
+    package_options = [
+        ("langflow", "Langflow"),
+        ("langflow-base", "Langflow Base"),
+        ("langflow-nightly", "Langflow Nightly"),
+        ("langflow-base-nightly", "Langflow Base Nightly"),
+    ]
 
-        is_pre_release |= is_prerelease(langflow_version)  # Update pre-release status
-        notice = build_version_notice(langflow_version, "langflow")
-        notice = stylize_text(notice, "langflow", is_pre_release)
-        if notice:
-            notices.append(notice)
-        package_names.append("langflow")
-        package_name = "Langflow"
-    except ImportError:
-        langflow_version = None
-
-    # Attempt to handle langflow-base similarly
-    if langflow_version is None:  # This means langflow.version was not imported
+    for pkg_name, display_name in package_options:
         try:
-            from importlib import metadata
-
-            langflow_base_version = metadata.version("langflow-base")
-            is_pre_release |= is_prerelease(langflow_base_version)  # Update pre-release status
-            notice = build_version_notice(langflow_base_version, "langflow-base")
-            notice = stylize_text(notice, "langflow-base", is_pre_release)
+            langflow_version = metadata.version(pkg_name)
+            is_pre_release |= is_prerelease(langflow_version)  # Update pre-release status
+            notice = build_version_notice(langflow_version, pkg_name)
+            notice = stylize_text(notice, pkg_name, is_pre_release)
             if notice:
                 notices.append(notice)
-            package_names.append("langflow-base")
-            package_name = "Langflow Base"
-        except ImportError as e:
-            logger.exception(e)
-            raise e
+            package_names.append(pkg_name)
+            package_name = display_name
+            break # exit once we find a valid package
+        except (ImportError, metadata.PackageNotFoundError):
+            langflow_version = None
+
+    if langflow_version is None:
+        raise ValueError(f"Package not found from options {package_options}")
 
     # Generate pip command based on the collected data
     pip_command = generate_pip_command(package_names, is_pre_release)
@@ -369,14 +392,19 @@ def print_banner(host: str, port: int):
         notices.append(f"Run '{pip_command}' to update.")
 
     styled_notices = [f"[bold]{notice}[/bold]" for notice in notices if notice]
-    styled_package_name = stylize_text(package_name, package_name, any("pre-release" in notice for notice in notices))
+    styled_package_name = stylize_text(
+        package_name, package_name, any("pre-release" in notice for notice in notices)
+    )
 
+    # TODO: update description for nightly builds?
     title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
     info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
     telemetry_text = "We collect anonymous usage data to improve Langflow.\nYou can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
     access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
 
-    panel_content = "\n\n".join([title, *styled_notices, info_text, telemetry_text, access_link])
+    panel_content = "\n\n".join(
+        [title, *styled_notices, info_text, telemetry_text, access_link]
+    )
     panel = Panel(panel_content, box=box.ROUNDED, border_style="blue", expand=False)
     rprint(panel)
 
@@ -408,8 +436,12 @@ def run_langflow(host, port, log_level, options, app):
 @app.command()
 def superuser(
     username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
-    password: str = typer.Option(..., prompt=True, hide_input=True, help="Password for the superuser."),
-    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    password: str = typer.Option(
+        ..., prompt=True, hide_input=True, help="Password for the superuser."
+    ),
+    log_level: str = typer.Option(
+        "error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
+    ),
 ):
     """
     Create a superuser.
@@ -424,7 +456,9 @@ def superuser(
             # Verify that the superuser was created
             from langflow.services.database.models.user.model import User
 
-            user: User = session.exec(select(User).where(User.username == username)).first()
+            user: User = session.exec(
+                select(User).where(User.username == username)
+            ).first()
             if user is None or not user.is_superuser:
                 typer.echo("Superuser creation failed.")
                 return
@@ -502,7 +536,9 @@ def migration(
 
 @app.command()
 def api_key(
-    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    log_level: str = typer.Option(
+        "error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
+    ),
 ):
     """
     Creates an API key for the default superuser if AUTO_LOGIN is enabled.
@@ -518,19 +554,30 @@ def api_key(
     settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
     if not auth_settings.AUTO_LOGIN:
-        typer.echo("Auto login is disabled. API keys cannot be created through the CLI.")
+        typer.echo(
+            "Auto login is disabled. API keys cannot be created through the CLI."
+        )
         return
     with session_scope() as session:
         from langflow.services.database.models.user.model import User
 
-        superuser = session.exec(select(User).where(User.username == DEFAULT_SUPERUSER)).first()
+        superuser = session.exec(
+            select(User).where(User.username == DEFAULT_SUPERUSER)
+        ).first()
         if not superuser:
-            typer.echo("Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled.")
+            typer.echo(
+                "Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
+            )
             return
         from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
-        from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
+        from langflow.services.database.models.api_key.crud import (
+            create_api_key,
+            delete_api_key,
+        )
 
-        api_key = session.exec(select(ApiKey).where(ApiKey.user_id == superuser.id)).first()
+        api_key = session.exec(
+            select(ApiKey).where(ApiKey.user_id == superuser.id)
+        ).first()
         if api_key:
             delete_api_key(session, api_key.id)
 

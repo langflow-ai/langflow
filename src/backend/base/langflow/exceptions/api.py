@@ -27,6 +27,8 @@ class APIException(HTTPException):
     def build_exception_body(exc: str | list[str] | Exception, flow: Flow | None) -> ExceptionBody:
         body = {"message": str(exc)}
         if flow:
+            # TODO: FRAZ - what updates should happen here for nightly builds?
+            # Possible in a follow up, though.
             outdated_components = get_outdated_components(flow)
             if outdated_components:
                 body["suggestion"] = get_suggestion_message(outdated_components)

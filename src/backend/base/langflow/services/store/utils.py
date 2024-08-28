@@ -42,6 +42,7 @@ async def update_components_with_user_data(
 
 # Get the latest released version of langflow (https://pypi.org/project/langflow/)
 def get_lf_version_from_pypi():
+    # TODO: What about langflow base orlbangflow nightly?
     try:
         response = httpx.get("https://pypi.org/pypi/langflow/json")
         if response.status_code != 200:
