@@ -1,5 +1,3 @@
-from typing import Dict
-
 from typing_extensions import NotRequired, TypedDict
 
 

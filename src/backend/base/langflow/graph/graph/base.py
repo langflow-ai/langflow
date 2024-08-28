@@ -7,7 +7,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Optional
 from collections.abc import Generator
 
 import nest_asyncio
@@ -789,9 +789,7 @@ class Graph:
         if state == VertexStates.INACTIVE:
             self.run_manager.remove_from_predecessors(vertex_id)
 
-    def _mark_branch(
-        self, vertex_id: str, state: str, visited: set | None = None, output_name: str | None = None
-    ):
+    def _mark_branch(self, vertex_id: str, state: str, visited: set | None = None, output_name: str | None = None):
         """Marks a branch of the graph."""
         if visited is None:
             visited = set()

@@ -1,6 +1,5 @@
 import copy
 from collections import defaultdict, deque
-from typing import Dict, List
 
 PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
 
