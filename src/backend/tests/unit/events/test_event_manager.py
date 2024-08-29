@@ -186,7 +186,7 @@ class TestValidateEventFunction:
         "event_function",
         [
             lambda param1, param2: None,
-            (lambda param1, param2: None).__call__,
+            (lambda param1, param2: None).__call__,  # type: ignore
             lambda param1, param2: param1 + str(param2),
             lambda param1, _: param1.upper(),
         ],
