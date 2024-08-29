@@ -1,24 +1,58 @@
-import { UseMutationResult } from "@tanstack/react-query";
-import { useMutationFunctionType } from "../../../../types/api";
+import { AuthContext } from "@/contexts/authContext";
+import useAuthStore from "@/stores/authStore";
+import { AxiosError } from "axios";
+import { useContext } from "react";
+import { useQueryFunctionType, Users } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { useLogout } from "./use-post-logout";
 
-export const useAutoLogin: useMutationFunctionType<undefined, any> = (
-  options?,
+export interface AutoLoginResponse {
+  frontend_timeout: number;
+  auto_saving: boolean;
+  auto_saving_interval: number;
+  health_check_max_retries: number;
+}
+
+export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
+  options,
 ) => {
-  const { mutate } = UseRequestProcessor();
+  const { query } = UseRequestProcessor();
+  const { login, setUserData, getUser } = useContext(AuthContext);
+  const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoginPage = location.pathname.includes("login");
+  const { mutate: mutationLogout } = useLogout();
 
-  const autoLoginFn = async (): Promise<any> => {
-    const res = await api.get(`${getURL("AUTOLOGIN")}`);
-    return res.data;
-  };
+  async function getAutoLoginFn(): Promise<null> {
+    try {
+      const response = await api.get<Users>(`${getURL("AUTOLOGIN")}`);
+      const user = response.data;
+      if (user && user["access_token"]) {
+        user["refresh_token"] = "auto";
+        login(user["access_token"], "auto");
+        setUserData(user);
+        setAutoLogin(true);
+      }
+    } catch (e) {
+      const error = e as AxiosError;
+      if (error.name !== "CanceledError") {
+        setAutoLogin(false);
+        if (!isLoginPage) {
+          if (!isAuthenticated) {
+            mutationLogout();
+            throw new Error("Unauthorized");
+          } else {
+            getUser();
+          }
+        }
+      }
+    }
+    return null;
+  }
 
-  const mutation: UseMutationResult = mutate(
-    ["useAutoLogin"],
-    autoLoginFn,
-    options,
-  );
+  const queryResult = query(["useGetAutoLogin"], getAutoLoginFn, options);
 
-  return mutation;
+  return queryResult;
 };

@@ -1,7 +1,6 @@
 import AlertDisplayArea from "@/alerts/displayArea";
 import CrashErrorComponent from "@/components/crashErrorComponent";
 import FetchErrorComponent from "@/components/fetchErrorComponent";
-import LoadingComponent from "@/components/loadingComponent";
 import TimeoutErrorComponent from "@/components/timeoutErrorComponent";
 import {
   FETCH_ERROR_DESCRIPION,
@@ -10,17 +9,15 @@ import {
   TIMEOUT_ERROR_MESSAGE,
 } from "@/constants/constants";
 import { useGetHealthQuery } from "@/controllers/API/queries/health";
+import { CustomHeader } from "@/customization/components/custom-header";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { cn } from "@/utils/utils";
 import { AxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { Outlet } from "react-router-dom";
 
 export function AppWrapperPage() {
-  const isLoading = useFlowsManagerStore((state) => state.isLoading);
-
   const healthCheckMaxRetries = useFlowsManagerStore(
     (state) => state.healthCheckMaxRetries,
   );
@@ -100,6 +97,7 @@ export function AppWrapperPage() {
 
   return (
     <div className="flex h-full flex-col">
+      <CustomHeader />
       <ErrorBoundary
         onReset={() => {
           // any reset function
@@ -108,19 +106,9 @@ export function AppWrapperPage() {
       >
         <>
           {modalErrorComponent}
-
-          <div
-            className={cn(
-              "loading-page-panel absolute left-0 top-0 z-[999]",
-              isLoading ? "" : "hidden",
-            )}
-          >
-            <LoadingComponent remSize={50} />
-          </div>
           <Outlet />
         </>
       </ErrorBoundary>
-      <div></div>
       <div className="app-div">
         <AlertDisplayArea />
       </div>

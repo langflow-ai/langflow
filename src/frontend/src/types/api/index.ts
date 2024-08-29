@@ -248,7 +248,6 @@ export type ResponseErrorDetailAPI = {
 };
 export type useQueryFunctionType<T = undefined, R = any> = T extends undefined
   ? (
-      params?: T,
       options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
     ) => UseQueryResult<R>
   : (

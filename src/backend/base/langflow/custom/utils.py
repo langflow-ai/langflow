@@ -44,7 +44,7 @@ def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: l
                     "traceback": traceback.format_exc(),
                 },
             )
-        if return_type == str:
+        if return_type is str:
             return_type = "Text"
         elif hasattr(return_type, "__name__"):
             return_type = return_type.__name__
@@ -85,7 +85,7 @@ def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: l
             )
 
         base_classes = get_base_classes(return_type_instance)
-        if return_type_instance == str:
+        if return_type_instance is str:
             base_classes.append("Text")
 
         for base_class in base_classes:

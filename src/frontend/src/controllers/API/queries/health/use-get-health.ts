@@ -7,7 +7,7 @@ import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { createNewError503 } from "@/types/factory/axios-error-503";
 import { keepPreviousData } from "@tanstack/react-query";
-import { AxiosError, AxiosHeaders } from "axios";
+import { AxiosError } from "axios";
 import { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -23,7 +23,7 @@ interface getHealthResponse {
 export const useGetHealthQuery: useQueryFunctionType<
   undefined,
   getHealthResponse
-> = (_, options) => {
+> = (options) => {
   const { query } = UseRequestProcessor();
   const setHealthCheckTimeout = useUtilityStore(
     (state) => state.setHealthCheckTimeout,
