@@ -238,8 +238,8 @@ AIML_CHAT_MODELS = [
     "wavymulder/Analog-Diffusion",
     "zero-one-ai/Yi-34B",
     "zero-one-ai/Yi-34B-Chat",
-    "zero-one-ai/Yi-6B"
-    ]
+    "zero-one-ai/Yi-6B",
+]
 
 AIML_EMBEDDING_MODELS = [
     "text-embedding-3-large",
@@ -249,4 +249,4 @@ AIML_EMBEDDING_MODELS = [
     "textembedding-gecko-multilingual@001",
     "textembedding-gecko@001",
     "textembedding-gecko@003",
-    ]
+]
