@@ -7,7 +7,6 @@ const TextAreaWrapper = ({
   send,
   lockChat,
   noInput,
-  saveLoading,
   chatValue,
   setChatValue,
   CHAT_INPUT_PLACEHOLDER,
@@ -30,12 +29,11 @@ const TextAreaWrapper = ({
     }
   };
 
-  const lockClass =
-    lockChat || saveLoading
-      ? "form-modal-lock-true bg-input"
-      : noInput
-        ? "form-modal-no-input bg-input"
-        : "form-modal-lock-false bg-background";
+  const lockClass = lockChat
+    ? "form-modal-lock-true bg-input"
+    : noInput
+      ? "form-modal-no-input bg-input"
+      : "form-modal-lock-false bg-background";
 
   const fileClass =
     files.length > 0
@@ -45,10 +43,10 @@ const TextAreaWrapper = ({
   const additionalClassNames = "form-modal-lockchat pl-14";
 
   useEffect(() => {
-    if (!lockChat && !noInput && !saveLoading) {
+    if (!lockChat && !noInput) {
       inputRef.current?.focus();
     }
-  }, [lockChat, noInput, saveLoading]);
+  }, [lockChat, noInput]);
 
   return (
     <Textarea
@@ -65,7 +63,7 @@ const TextAreaWrapper = ({
       }}
       rows={1}
       ref={inputRef}
-      disabled={lockChat || noInput || saveLoading}
+      disabled={lockChat || noInput}
       style={{
         resize: "none",
         bottom: `${inputRef?.current?.scrollHeight}px`,
@@ -76,7 +74,7 @@ const TextAreaWrapper = ({
             : "hidden"
         }`,
       }}
-      value={lockChat ? "Thinking..." : saveLoading ? "Saving..." : chatValue}
+      value={lockChat ? "Thinking..." : chatValue}
       onChange={(event): void => {
         setChatValue(event.target.value);
       }}

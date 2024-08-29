@@ -1,4 +1,3 @@
-import { useDarkStore } from "@/stores/darkStore";
 import { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -24,7 +23,7 @@ interface IApiQueryResponse {
 export const useGetApiKeysQuery: useQueryFunctionType<
   undefined,
   IApiQueryResponse
-> = (_, options) => {
+> = (options) => {
   const { query } = UseRequestProcessor();
 
   const getApiKeysFn = async () => {
