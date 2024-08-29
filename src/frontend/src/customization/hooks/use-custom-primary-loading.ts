@@ -1,7 +1,7 @@
 import { UseRequestProcessor } from "@/controllers/API/services/request-processor";
 import { useQueryFunctionType } from "@/types/api";
 
-export const usePrimaryLoading: useQueryFunctionType<undefined, null> = (
+export const useCustomPrimaryLoading: useQueryFunctionType<undefined, null> = (
   options,
 ) => {
   const { query } = UseRequestProcessor();

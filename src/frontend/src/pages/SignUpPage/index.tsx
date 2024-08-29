@@ -1,6 +1,7 @@
 import { useAddUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
 import * as Form from "@radix-ui/react-form";
 import { FormEvent, useEffect, useState } from "react";
 import InputComponent from "../../components/inputComponent";
@@ -52,7 +53,8 @@ export default function SignUp(): JSX.Element {
     };
 
     mutateAddUser(newUser, {
-      onSuccess: () => {
+      onSuccess: (user) => {
+        track("User Signed Up", user);
         setSuccessData({
           title: SIGN_UP_SUCCESS,
         });
