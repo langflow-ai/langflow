@@ -63,13 +63,13 @@ def create_tag(build_type: str):
     # Check if the latest PyPI version already includes today's date
     if version_with_date in latest_pypi_version:
         # Extract the build number from the latest version, if present
-        last_part = latest_pypi_version.split("-")[-1]
+        cur_build_num = latest_pypi_version.split("+")[-1]
         # TODO: Note - only need this check due to previous releases without build number
         # TODO: REMOVE
-        if last_part.isdigit():
-            build_number = str(int(last_part) + 1)
-            version_with_date += "-" + build_number
+        if cur_build_num.isdigit():
+            build_number = str(int(cur_build_num) + 1)
 
+    version_with_date += f"+{build_number}"
 
 
     # Verify if version is PEP440 compliant.
