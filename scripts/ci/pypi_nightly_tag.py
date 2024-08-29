@@ -43,7 +43,6 @@ def get_latest_langflow_version(build_type: str) -> Version:
 
 def create_tag(build_type: str):
     current_version = get_latest_langflow_version(build_type)
-    build_number = "0"
 
     if build_type == "base":
         latest_pypi_version = get_version_from_pypi(PYPI_LANGFLOW_BASE_NIGHTLY_URL)
@@ -52,25 +51,20 @@ def create_tag(build_type: str):
     else:
         raise ValueError(f"Invalid build type: {build_type}")
 
+    # X.Y.Z.dev.YYYYMMDD
     version_with_date = (
         ".".join([str(x) for x in current_version.release])
         + ".dev"
         + datetime.now(pytz.timezone("UTC")).strftime("%Y%m%d")
     )
 
-    # Builds numbers append such that we can publish multiple builds in a day if necessary.
-    # X.Y.Z.dev.YYYYMMDD-N
-    # Check if the latest PyPI version already includes today's date
-    if version_with_date in latest_pypi_version:
-        # Extract the build number from the latest version, if present
-        cur_build_num = latest_pypi_version.split("+")[-1]
-        # TODO: Note - only need this check due to previous releases without build number
-        # TODO: REMOVE
-        if cur_build_num.isdigit():
-            build_number = str(int(cur_build_num) + 1)
-
-    version_with_date += f"+{build_number}"
-
+    # If the latest version published is already on pypi, we must fail,
+    # as pypi does not allow overwriting the same version.
+    # We could use a different versioning scheme, such as just incrementing
+    # an integer.
+    if version_with_date == latest_pypi_version:
+        pass
+        # raise Exception("Version {version_with_date} already published on PyPI")
 
     # Verify if version is PEP440 compliant.
     packaging.version.Version(version_with_date)
