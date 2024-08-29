@@ -15,8 +15,6 @@ import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import { nodeIconsLucide } from "../../../../utils/styleUtils";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
-import SidebarDraggableComponent from "./sideBarDraggableComponent";
-import NoteDraggableComponent from "./sideBarNoteComponent";
 import { SidebarCategoryComponent } from "./SidebarCategoryComponent";
 
 import { sortKeys } from "./utils";
@@ -303,8 +301,7 @@ export default function ExtraSidebar(): JSX.Element {
             </a>
           )}
         </ParentDisclosureComponent>
-        {FeatureFlags.ENABLE_MVPS && (
-
+        {ENABLE_MVPS && (
           <>
             <Separator />
 

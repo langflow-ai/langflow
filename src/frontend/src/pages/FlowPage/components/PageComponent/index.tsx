@@ -1,4 +1,3 @@
-import FeatureFlags from "@/../feature-config.json";
 import NoteNode from "@/CustomNodes/NoteNode";
 import IconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
@@ -8,6 +7,7 @@ import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
 
+import { ENABLE_MVPS } from "@/customization/feature-flags";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -480,7 +480,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             <Background className="" />
             {!view && (
               <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border">
-                {FeatureFlags.ENABLE_MVPS && (
+                {ENABLE_MVPS && (
                   <ControlButton
                     data-testid="add_note"
                     onClick={() => {

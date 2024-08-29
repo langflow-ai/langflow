@@ -1,10 +1,10 @@
-import FeatureFlags from "@/../../feature-config.json";
+import { ENABLE_MVPS } from "@/../../src/customization/feature-flags";
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
 test("user should be able to interact with sticky notes", async ({ page }) => {
   // prevent test from failing if feature flag is disabled
-  if (!FeatureFlags.ENABLE_MVPS) {
+  if (!ENABLE_MVPS) {
     return;
   }
   await page.goto("/");
