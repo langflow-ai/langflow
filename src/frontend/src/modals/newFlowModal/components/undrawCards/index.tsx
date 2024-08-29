@@ -93,7 +93,7 @@ export default function UndrawCardComponent({
             preserveAspectRatio="xMidYMid meet"
           />
         );
-      case "Sequential Tasks Agent":
+      case "Simple Agent":
         return (
           <SequentialTasks
             style={{
@@ -103,7 +103,7 @@ export default function UndrawCardComponent({
             preserveAspectRatio="xMidYMid meet"
           />
         );
-      case "Hierarchical Tasks Agent":
+      case "Travel Planning Agents":
         return (
           <HierarchicalTasks
             style={{
