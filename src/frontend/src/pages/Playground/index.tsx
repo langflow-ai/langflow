@@ -1,10 +1,10 @@
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useStoreStore } from "@/stores/storeStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import LoadingComponent from "../../components/loadingComponent";
+import { useParams } from "react-router-dom";
 import { getComponent } from "../../controllers/API";
 import IOModal from "../../modals/IOModal";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -23,7 +23,7 @@ export default function PlaygroundPage() {
     return newFlow;
   }
 
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   useGetGlobalVariables();
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -59,11 +59,7 @@ export default function PlaygroundPage() {
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
-      {!currentSavedFlow ? (
-        <div>
-          <LoadingComponent remSize={24}></LoadingComponent>
-        </div>
-      ) : (
+      {currentSavedFlow && (
         <IOModal open={true} setOpen={() => {}} isPlayground>
           <></>
         </IOModal>

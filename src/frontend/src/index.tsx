@@ -1,5 +1,4 @@
 import ReactDOM from "react-dom/client";
-import ContextWrapper from "./contexts";
 import reportWebVitals from "./reportWebVitals";
 
 import "./style/classes.css";
@@ -16,9 +15,5 @@ const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement,
 );
 
-root.render(
-  <ContextWrapper>
-    <App />
-  </ContextWrapper>,
-);
+root.render(<App />);
 reportWebVitals();

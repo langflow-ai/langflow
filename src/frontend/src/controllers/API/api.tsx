@@ -1,4 +1,5 @@
 import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
+import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
 import useAuthStore from "@/stores/authStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import pako from "pako";
@@ -23,8 +24,8 @@ function ApiInterceptor() {
   let { accessToken, authenticationErrorCount } = useContext(AuthContext);
   const { mutate: mutationLogout } = useLogout();
   const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
-  const logout = useAuthStore((state) => state.logout);
   const isLoginPage = location.pathname.includes("login");
+  const customHeaders = useCustomApiHeaders();
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
@@ -103,6 +104,10 @@ function ApiInterceptor() {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
+        for (const [key, value] of Object.entries(customHeaders)) {
+          config.headers[key] = value;
+        }
+
         return {
           ...config,
           signal: controller.signal,
@@ -118,7 +123,7 @@ function ApiInterceptor() {
       api.interceptors.response.eject(interceptor);
       api.interceptors.request.eject(requestInterceptor);
     };
-  }, [accessToken, setErrorData]);
+  }, [accessToken, setErrorData, customHeaders]);
 
   function checkErrorCount() {
     if (isLoginPage) return;
@@ -127,14 +132,7 @@ function ApiInterceptor() {
 
     if (authenticationErrorCount > 3) {
       authenticationErrorCount = 0;
-      mutationLogout(undefined, {
-        onSuccess: () => {
-          logout();
-        },
-        onError: (error) => {
-          console.error(error);
-        },
-      });
+      mutationLogout();
       return false;
     }
 
@@ -143,6 +141,11 @@ function ApiInterceptor() {
 
   async function tryToRenewAccessToken(error: AxiosError) {
     if (isLoginPage) return;
+    if (error.config?.headers) {
+      for (const [key, value] of Object.entries(customHeaders)) {
+        error.config.headers[key] = value;
+      }
+    }
     mutationRenewAccessToken(
       {},
       {
@@ -153,14 +156,7 @@ function ApiInterceptor() {
         },
         onError: (error) => {
           console.error(error);
-          mutationLogout(undefined, {
-            onSuccess: () => {
-              logout();
-            },
-            onError: (error) => {
-              console.error(error);
-            },
-          });
+          mutationLogout();
           return Promise.reject("Authentication error");
         },
       },

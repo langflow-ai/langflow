@@ -19,12 +19,12 @@ const useFileDrop = (folderId: string) => {
   const flows = useFlowsManagerStore((state) => state.flows);
   const saveFlow = useSaveFlow();
   const { mutate: uploadFlowToFolder } = usePostUploadFlowToFolder();
-  const handleFileDrop = async (e) => {
+  const handleFileDrop = async (e, folderId) => {
     if (e.dataTransfer.types.some((type) => type === "Files")) {
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         const firstFile = e.dataTransfer.files[0];
         if (firstFile.type === "application/json") {
-          uploadFormData(firstFile);
+          uploadFormData(firstFile, folderId);
         } else {
           setErrorData({
             title: WRONG_FILE_ERROR_ALERT,
@@ -94,7 +94,7 @@ const useFileDrop = (folderId: string) => {
     }
 
     e.preventDefault();
-    handleFileDrop(e);
+    handleFileDrop(e, folderId);
   };
 
   const uploadFromDragCard = (flowId, folderId) => {
@@ -115,7 +115,7 @@ const useFileDrop = (folderId: string) => {
     saveFlow(updatedFlow);
   };
 
-  const uploadFormData = (data) => {
+  const uploadFormData = (data, folderId) => {
     const formData = new FormData();
     formData.append("file", data);
     setFolderDragging(false);
