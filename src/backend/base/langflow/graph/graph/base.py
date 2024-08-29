@@ -198,19 +198,15 @@ class Graph:
 
 
     def add_component(self, component: "Component", component_id: Optional[str] = None) -> str:
-        component_id = component_id or str(component.name + "-" + str(uuid.uuid4()))
+        component_id = component_id or component._id
+        component._id = component_id
         if component_id in self.vertex_map:
             raise ValueError(f"Component ID {component_id} already exists")
-        if not component_id.startswith(component.name):
-            raise ValueError(f"Component ID {component_id} does not match component name {component.name}")
         frontend_node = component.to_frontend_node()
-        frontend_node["data"]["id"] = component_id
-        frontend_node["id"] = component_id
         self._vertices.append(frontend_node)
         vertex = self._create_vertex(frontend_node)
         vertex.add_component_instance(component)
-        self.vertices.append(vertex)
-        self.vertex_map[component_id] = vertex
+        self._add_vertex(vertex)
         return component_id
 
     def _set_start_and_end(self, start: "Component", end: "Component"):

@@ -83,7 +83,7 @@ jobs:
           poetry env use ${{ matrix.python-version }}
           poetry install
       - name: Run integration tests
-        run: make integration_tests
+        run: make integration_tests_no_api_keys
 
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}

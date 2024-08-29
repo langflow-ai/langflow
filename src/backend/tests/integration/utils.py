@@ -6,6 +6,8 @@ from typing import Optional, Any
 from astrapy.admin import parse_api_endpoint
 
 from langflow.api.v1.schemas import InputValueRequest
+from langflow.custom import Component
+from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.field_typing import Embeddings
 from langflow.graph import Graph
 from langflow.processing.process import run_graph_internal
@@ -127,13 +129,23 @@ async def run_flow(graph: Graph, run_input: Optional[Any] = None,
 
 async def run_single_component(clazz: type, inputs: dict = None, run_input: Optional[Any] = None,
                                session_id: Optional[str] = None) -> dict[str, Any]:
+
+    raw_inputs = {}
+    for key, value in inputs.items():
+        if not isinstance(value, BaseComponent):
+            raw_inputs[key] = value
     component = clazz(
-        **(inputs or {})
+        **raw_inputs
     )
 
     flow_id = str(uuid.uuid4())
     graph = Graph(user_id=str(uuid.uuid4()), flow_id=flow_id)
     component_id = graph.add_component(component)
+    for input_name, input_value in inputs.items():
+        if isinstance(input_value, Component):
+            graph.add_component(input_value)
+            graph.add_component_edge(input_value._id, (input_value.outputs[0].name, input_name), component._id)
+            print("added edge")
     graph.prepare()
     if run_input:
         graph_run_inputs = [InputValueRequest(input_value=run_input, type="chat")]

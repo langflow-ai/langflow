@@ -61,6 +61,7 @@ class Component(CustomComponent):
         self._output_logs = {}
         config = config or {}
         if "_id" not in config:
+            print("generating id" + self.__class__.__name__)
             config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
         self.__inputs = inputs
         self.__config = config
@@ -534,7 +535,9 @@ class Component(CustomComponent):
             "data": {
                 "node": frontend_node.to_dict(keep_name=False),
                 "type": self.name or self.__class__.__name__,
-            }
+                "id": self._id
+            },
+            "id": self._id
         }
         return data
 

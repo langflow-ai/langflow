@@ -1,40 +1,59 @@
 import os
 
+from astrapy.db import AstraDB
 import pytest
 
-from tests.api_keys import get_astradb_application_token, get_astradb_api_endpoint
+from tests.api_keys import get_astradb_application_token, get_astradb_api_endpoint, get_openai_api_key
 from tests.integration.utils import MockEmbeddings, check_env_vars, valid_nvidia_vectorize_region
 from langchain_core.documents import Document
 
-# from langflow.components.memories.AstraDBMessageReader import AstraDBMessageReaderComponent
-# from langflow.components.memories.AstraDBMessageWriter import AstraDBMessageWriterComponent
+
 from langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent
-from langflow.graph import Graph
 from langflow.schema.data import Data
 from tests.integration.utils import run_single_component
 
-COLLECTION = "test_basic"
+BASIC_COLLECTION = "test_basic"
 SEARCH_COLLECTION = "test_search"
 # MEMORY_COLLECTION = "test_memory"
 VECTORIZE_COLLECTION = "test_vectorize"
 VECTORIZE_COLLECTION_OPENAI = "test_vectorize_openai"
 VECTORIZE_COLLECTION_OPENAI_WITH_AUTH = "test_vectorize_openai_auth"
+ALL_COLLECTIONS = [
+    BASIC_COLLECTION,
+    SEARCH_COLLECTION,
+    # MEMORY_COLLECTION,
+    VECTORIZE_COLLECTION,
+    VECTORIZE_COLLECTION_OPENAI,
+    VECTORIZE_COLLECTION_OPENAI_WITH_AUTH,
+]
 
-
+@pytest.fixture()
+def astradb_client(request):
+    client = AstraDB(
+        api_endpoint=get_astradb_api_endpoint(),
+        token=get_astradb_application_token())
+    yield client
+    for collection in ALL_COLLECTIONS:
+        client.delete_collection(collection)
 
 @pytest.mark.api_key_required
 @pytest.mark.asyncio
-async def test_astra_setup():
+async def test_astra_setup(astradb_client: AstraDB):
+    from langflow.components.embeddings import OpenAIEmbeddingsComponent
+    open_ai_embeddings = OpenAIEmbeddingsComponent(openai_api_key=get_openai_api_key())
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()
-    embedding = MockEmbeddings()
+    #embedding = MockEmbeddings()
+
+
     results = await run_single_component(AstraVectorStoreComponent, inputs={
         "token": application_token,
         "api_endpoint": api_endpoint,
-        "collection_name": COLLECTION,
-        "embedding": embedding,
+        "collection_name": BASIC_COLLECTION,
+        "embedding": open_ai_embeddings,
     })
     print(results)
+    assert astradb_client.collection(BASIC_COLLECTION)
 
 @pytest.mark.api_key_required
 def test_astra_embeds_and_search():

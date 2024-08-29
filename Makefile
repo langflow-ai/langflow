@@ -148,18 +148,17 @@ else
 		$(args)
 endif
 
-unit_tests_api_keys: ## run unit tests only with api key tests
-	poetry run pytest src/backend/tests \
-		--ignore=src/backend/tests/integration \
-		--instafail -n auto -ra -m "api_key_required" \
+integration_tests:
+	poetry run pytest src/backend/tests/integration \
+		--instafail -ra \
 		$(args)
 
-integration_tests: ## run integration tests
+integration_tests_no_api_keys:
 	poetry run pytest src/backend/tests/integration \
 		--instafail -ra -m "not api_key_required" \
 		$(args)
 
-integration_tests_api_keys: ## run integration tests only with api key tests
+integration_tests_api_keys:
 	poetry run pytest src/backend/tests/integration \
 		--instafail -ra -m "api_key_required" \
 		$(args)
