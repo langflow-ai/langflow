@@ -36,8 +36,8 @@ def is_list_of_any(field: FieldInfo) -> bool:
         else:
             union_args = []
 
-        return field.annotation.__origin__ == list or any(
-            arg.__origin__ == list for arg in union_args if hasattr(arg, "__origin__")
+        return field.annotation.__origin__ is list or any(
+            arg.__origin__ is list for arg in union_args if hasattr(arg, "__origin__")
         )
     except AttributeError:
         return False

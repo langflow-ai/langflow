@@ -119,7 +119,7 @@ class Input(BaseModel):
 
     @field_serializer("field_type")
     def serialize_field_type(self, value, _info):
-        if value == float and self.range_spec is None:
+        if value is float and self.range_spec is None:
             self.range_spec = RangeSpec()
         return value
 
