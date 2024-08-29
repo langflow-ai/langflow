@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 
 test("CRUD folders", async ({ page }) => {
@@ -71,7 +71,7 @@ test("CRUD folders", async ({ page }) => {
   await page.getByText("Folder deleted successfully").isVisible();
 });
 
-test("add folder by drag and drop", async ({ page }) => {
+test("add a flow into a folder by drag and drop", async ({ page }) => {
   await page.goto("/");
 
   await page.waitForSelector("text=my collection", {
@@ -84,10 +84,10 @@ test("add folder by drag and drop", async ({ page }) => {
   );
 
   // Wait for the target element to be available before evaluation
-  await page.waitForSelector(
-    '//*[@id="root"]/div/div[2]/div[2]/div[3]/aside/nav/div/div[2]',
-  );
 
+  await page.waitForSelector('[data-testid="sidebar-nav-My Projects"]', {
+    timeout: 100000,
+  });
   // Create the DataTransfer and File
   const dataTransfer = await page.evaluateHandle((data) => {
     const dt = new DataTransfer();
@@ -100,15 +100,34 @@ test("add folder by drag and drop", async ({ page }) => {
   }, jsonContent);
 
   // Now dispatch
-  await page.dispatchEvent(
-    '//*[@id="root"]/div/div[2]/div[2]/div[3]/aside/nav/div/div[2]',
-    "drop",
-    {
-      dataTransfer,
-    },
-  );
+  await page.getByTestId("sidebar-nav-My Projects").dispatchEvent("drop", {
+    dataTransfer,
+  });
 
-  await page.getByText("Getting Started").first().isVisible();
+  await page.waitForTimeout(3000);
+
+  const genericNode = page.getByTestId("div-generic-node");
+  const elementCount = await genericNode?.count();
+  if (elementCount > 0) {
+    expect(true).toBeTruthy();
+  }
+
+  await page.getByTestId("sidebar-nav-My Projects").click();
+
+  await page.waitForTimeout(1000);
+
+  expect(
+    await page.locator("text=Getting Started:").last().isVisible(),
+  ).toBeTruthy();
+  expect(
+    await page.locator("text=Inquisitive Pike").last().isVisible(),
+  ).toBeTruthy();
+  expect(
+    await page.locator("text=Dreamy Bassi").last().isVisible(),
+  ).toBeTruthy();
+  expect(
+    await page.locator("text=Furious Faraday").last().isVisible(),
+  ).toBeTruthy();
 });
 
 test("change flow folder", async ({ page }) => {

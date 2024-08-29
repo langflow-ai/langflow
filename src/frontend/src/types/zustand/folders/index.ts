@@ -1,8 +1,6 @@
 import { FolderType } from "../../../pages/MainPage/entities";
 
 export type FoldersStoreType = {
-  selectedFolder: FolderType | null;
-  setSelectedFolder: (folder: FolderType | null) => void;
   myCollectionId: string | null;
   setMyCollectionId: (value: string) => void;
   folderToEdit: FolderType | null;

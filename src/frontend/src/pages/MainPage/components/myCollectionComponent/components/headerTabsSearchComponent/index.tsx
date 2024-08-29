@@ -3,10 +3,13 @@ import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
 import InputSearchComponent from "../inputSearchComponent";
 import TabsSearchComponent from "../tabsComponent";
 
-type HeaderTabsSearchComponentProps = {};
+type HeaderTabsSearchComponentProps = {
+  loading: boolean;
+};
 
-const HeaderTabsSearchComponent = ({}: HeaderTabsSearchComponentProps) => {
-  const isLoading = useFlowsManagerStore((state) => state.isLoading);
+const HeaderTabsSearchComponent = ({
+  loading,
+}: HeaderTabsSearchComponentProps) => {
   const [tabActive, setTabActive] = useState("Flows");
   const [inputValue, setInputValue] = useState("");
 
@@ -18,7 +21,7 @@ const HeaderTabsSearchComponent = ({}: HeaderTabsSearchComponentProps) => {
     <>
       <div className="relative flex items-end gap-4">
         <InputSearchComponent
-          loading={isLoading}
+          loading={loading}
           value={inputValue}
           onChange={(e) => {
             setSearchFlowsComponents(e.target.value);
@@ -33,7 +36,7 @@ const HeaderTabsSearchComponent = ({}: HeaderTabsSearchComponentProps) => {
         <TabsSearchComponent
           tabsOptions={["All", "Flows", "Components"]}
           setActiveTab={setTabActive}
-          loading={isLoading}
+          loading={loading}
           tabActive={tabActive}
         />
       </div>

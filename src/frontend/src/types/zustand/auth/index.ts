@@ -5,7 +5,7 @@ export interface AuthStoreType {
   isAuthenticated: boolean;
   accessToken: string | null;
   userData: Users | null;
-  autoLogin: boolean;
+  autoLogin: boolean | null;
   apiKey: string | null;
   authenticationErrorCount: number;
 

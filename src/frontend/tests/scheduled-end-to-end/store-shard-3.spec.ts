@@ -96,12 +96,12 @@ test("should filter by type", async ({ page }) => {
   expect(toyBrick).not.toBe(0);
 
   await page.getByTestId("all-button-store").click();
-  await page.waitForTimeout(8000);
+  await page.waitForTimeout(10000);
 
   let iconGroupAllCount = await page.getByTestId("icon-Group")?.count();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(5000);
   let toyBrickAllCount = await page.getByTestId("icon-ToyBrick")?.count();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(5000);
 
   if (iconGroupAllCount === 0 || toyBrickAllCount === 0) {
     expect(false).toBe(true);

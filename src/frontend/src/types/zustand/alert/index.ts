@@ -15,6 +15,4 @@ export type AlertStoreType = {
   removeFromTempNotificationList: (index: string) => void;
   clearNotificationList: () => void;
   removeFromNotificationList: (index: string) => void;
-  loading: boolean;
-  setLoading: (newState: boolean) => void;
 };

@@ -4,7 +4,6 @@ import { useStoreStore } from "@/stores/storeStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import LoadingComponent from "../../components/loadingComponent";
 import { getComponent } from "../../controllers/API";
 import IOModal from "../../modals/IOModal";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -59,11 +58,7 @@ export default function PlaygroundPage() {
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
-      {!currentSavedFlow ? (
-        <div>
-          <LoadingComponent remSize={24}></LoadingComponent>
-        </div>
-      ) : (
+      {currentSavedFlow && (
         <IOModal open={true} setOpen={() => {}} isPlayground>
           <></>
         </IOModal>

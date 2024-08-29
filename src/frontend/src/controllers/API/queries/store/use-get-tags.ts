@@ -13,7 +13,7 @@ type tagsQueryResponse = Array<ITagsDataArray>;
 export const useGetTagsQuery: useQueryFunctionType<
   undefined,
   tagsQueryResponse
-> = (_, options) => {
+> = (options) => {
   const { query } = UseRequestProcessor();
 
   const getTagsFn = async () => {

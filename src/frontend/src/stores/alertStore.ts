@@ -19,7 +19,6 @@ const useAlertStore = create<AlertStoreType>((set, get) => ({
   notificationCenter: false,
   notificationList: [],
   tempNotificationList: [],
-  loading: true,
   setErrorData: (newState: { title: string; list?: Array<string> }) => {
     if (newState.title && newState.title !== "") {
       set({
@@ -150,9 +149,6 @@ const useAlertStore = create<AlertStoreType>((set, get) => ({
         (item) => item.id !== index,
       ),
     });
-  },
-  setLoading: (newState: boolean) => {
-    set({ loading: newState });
   },
   clearTempNotificationList: () => {
     set({ tempNotificationList: [] });
