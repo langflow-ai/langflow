@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test("Hierarchical Tasks Agent", async ({ page }) => {
+test("Dynamic Agent", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
@@ -42,7 +42,7 @@ test("Hierarchical Tasks Agent", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Hierarchical Tasks Agent" }).click();
+  await page.getByRole("heading", { name: "Dynamic Agent" }).click();
 
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
@@ -63,30 +63,24 @@ test("Hierarchical Tasks Agent", async ({ page }) => {
 
   await page
     .getByTestId("popover-anchor-input-api_key")
-    .first()
-    .fill(process.env.OPENAI_API_KEY ?? "");
-
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .nth(1)
-    .fill(process.env.OPENAI_API_KEY ?? "");
-
-  await page.getByTestId("dropdown_str_model_name").first().click();
-  await page.getByTestId("gpt-4o-1-option").first().click();
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("dropdown_str_model_name").last().click();
-  await page.getByTestId("gpt-4o-1-option").last().click();
-
-  await page.waitForTimeout(1000);
-
-  await page
-    .getByTestId("popover-anchor-input-api_key")
     .last()
     .fill(process.env.BRAVE_SEARCH_API_KEY ?? "");
 
   await page.waitForTimeout(1000);
+
+  let openAiLlms = await page.getByText("OpenAI", { exact: true }).count();
+
+  for (let i = 0; i < openAiLlms; i++) {
+    await page
+      .getByTestId("popover-anchor-input-api_key")
+      .nth(i)
+      .fill(process.env.OPENAI_API_KEY ?? "");
+
+    await page.getByTestId("dropdown_str_model_name").nth(i).click();
+    await page.getByTestId("gpt-4o-1-option").last().click();
+
+    await page.waitForTimeout(1000);
+  }
 
   await page.getByTestId("button_run_chat output").click();
   await page.waitForSelector("text=built successfully", { timeout: 60000 * 3 });
@@ -97,14 +91,18 @@ test("Hierarchical Tasks Agent", async ({ page }) => {
 
   await page.getByText("Playground", { exact: true }).click();
 
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(1000);
+
+  expect(
+    page.getByText("Could you search info about AAPL?", { exact: true }).last(),
+  ).toBeVisible();
 
   const textContents = await page
     .getByTestId("div-chat-message")
     .allTextContents();
 
   const concatAllText = textContents.join(" ");
-  expect(concatAllText.toLocaleLowerCase()).toContain("langflow");
+  expect(concatAllText.toLocaleLowerCase()).toContain("apple");
   const allTextLength = concatAllText.length;
-  expect(allTextLength).toBeGreaterThan(500);
+  expect(allTextLength).toBeGreaterThan(100);
 });
