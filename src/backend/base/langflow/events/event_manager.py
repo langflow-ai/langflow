@@ -11,7 +11,7 @@ from langflow.schema.log import LoggableType
 
 
 class EventCallback(Protocol):
-    def __call__(self, *, event_type: str, data: LoggableType): ...
+    def __call__(self, *, manager: "EventManager", event_type: str, data: LoggableType): ...
 
 
 class PartialEventCallback(Protocol):
