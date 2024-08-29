@@ -93,7 +93,7 @@ function ApiInterceptor() {
       (config) => {
         const controller = new AbortController();
         try {
-          if (isBuilding || isLoading) {
+          if (isBuilding) {
             controller.abort("Request aborted because a build is in progress");
             return Promise.reject(null);
           }
