@@ -1,3 +1,4 @@
+import { useCustomAPICode } from "@/customization/hooks/use-custom-api-code";
 import useAuthStore from "@/stores/authStore";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
@@ -33,8 +34,10 @@ export default function ApiModal({
   const tabs = useTweaksStore((state) => state.tabs);
   const initialSetup = useTweaksStore((state) => state.initialSetup);
 
+  const getCodes = useCustomAPICode();
+
   useEffect(() => {
-    if (open) initialSetup(autoLogin ?? false, flow);
+    if (open) initialSetup(autoLogin ?? false, flow, getCodes);
     setActiveTab("0");
   }, [open]);
 
