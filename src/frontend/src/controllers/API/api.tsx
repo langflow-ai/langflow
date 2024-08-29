@@ -26,7 +26,6 @@ function ApiInterceptor() {
   const logout = useAuthStore((state) => state.logout);
   const isLoginPage = location.pathname.includes("login");
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
@@ -125,7 +124,7 @@ function ApiInterceptor() {
       api.interceptors.response.eject(interceptor);
       api.interceptors.request.eject(requestInterceptor);
     };
-  }, [accessToken, setErrorData, isBuilding, isLoading]);
+  }, [accessToken, setErrorData, isBuilding]);
 
   function checkErrorCount() {
     if (isLoginPage) return;
