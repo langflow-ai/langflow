@@ -111,7 +111,13 @@ jobs:
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-        run: make publish base=true
+        run: |
+          echo "Checking Poetry Environment"
+          poetry env info
+          poetry env list
+          poetry run env
+
+          make publish base=true
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
