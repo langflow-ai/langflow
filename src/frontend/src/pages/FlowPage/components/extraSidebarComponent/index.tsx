@@ -200,6 +200,7 @@ export default function ExtraSidebar(): JSX.Element {
             setSearch(event.target.value);
           }}
           autoComplete="off"
+          readOnly
           onClick={() =>
             document?.getElementById("search")?.removeAttribute("readonly")
           }
