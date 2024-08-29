@@ -115,6 +115,8 @@ jobs:
           POETRY_TEST_PYPI_TOKEN_PYPI: ${{ secrets.TEST_PYPI_API_TOKEN }}
         run: |
           # make publish base=true
+          poetry config repositories.test-pypi https://test.pypi.org/legacy/
+          poetry config pypi-token.test-pypi ${{ secrets.TEST_PYPI_API_TOKEN }}
           make publish_testpypi base=true
 
       - name: Upload Artifact
@@ -188,6 +190,8 @@ jobs:
           POETRY_TEST_PYPI_TOKEN_PYPI: ${{ secrets.TEST_PYPI_API_TOKEN }}
         run: |
           # make publish main=true
+          poetry config repositories.test-pypi https://test.pypi.org/legacy/
+          poetry config pypi-token.test-pypi ${{ secrets.TEST_PYPI_API_TOKEN }}
           make publish_testpypi main=true
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
