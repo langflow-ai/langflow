@@ -2,15 +2,15 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test("Dynamic Agent", async ({ page }) => {
+test("Travel Planning Agent", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
   );
 
   test.skip(
-    !process?.env?.BRAVE_SEARCH_API_KEY,
-    "BRAVE_SEARCH_API_KEY required to run this test",
+    !process?.env?.SEARCH_API_KEY,
+    "SEARCH_API_KEY required to run this test",
   );
 
   if (!process.env.CI) {
@@ -42,7 +42,7 @@ test("Dynamic Agent", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Dynamic Agent" }).click();
+  await page.getByRole("heading", { name: "Travel Planning Agents" }).click();
 
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
@@ -63,24 +63,18 @@ test("Dynamic Agent", async ({ page }) => {
 
   await page
     .getByTestId("popover-anchor-input-api_key")
-    .last()
-    .fill(process.env.BRAVE_SEARCH_API_KEY ?? "");
+    .first()
+    .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("dropdown_str_model_name").click();
+  await page.getByTestId("gpt-4o-1-option").click();
 
   await page.waitForTimeout(1000);
 
-  let openAiLlms = await page.getByText("OpenAI", { exact: true }).count();
-
-  for (let i = 0; i < openAiLlms; i++) {
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .nth(i)
-      .fill(process.env.OPENAI_API_KEY ?? "");
-
-    await page.getByTestId("dropdown_str_model_name").nth(i).click();
-    await page.getByTestId("gpt-4o-1-option").last().click();
-
-    await page.waitForTimeout(1000);
-  }
+  await page
+    .getByTestId("popover-anchor-input-api_key")
+    .last()
+    .fill(process.env.BRAVE_SEARCH_API_KEY ?? "");
 
   await page.getByTestId("button_run_chat output").click();
   await page.waitForSelector("text=built successfully", { timeout: 60000 * 3 });
@@ -91,18 +85,18 @@ test("Dynamic Agent", async ({ page }) => {
 
   await page.getByText("Playground", { exact: true }).click();
 
+  await page.waitForSelector("text=default session", {
+    timeout: 30000,
+  });
+
   await page.waitForTimeout(1000);
 
-  expect(
-    page.getByText("Could you search info about AAPL?", { exact: true }).last(),
-  ).toBeVisible();
+  const output = await page.getByTestId("div-chat-message").allTextContents();
+  const outputText = output.join("\n");
 
-  const textContents = await page
-    .getByTestId("div-chat-message")
-    .allTextContents();
+  expect(outputText.toLowerCase()).toContain("weather");
+  expect(outputText.toLowerCase()).toContain("budget");
 
-  const concatAllText = textContents.join(" ");
-  expect(concatAllText.toLocaleLowerCase()).toContain("apple");
-  const allTextLength = concatAllText.length;
-  expect(allTextLength).toBeGreaterThan(500);
+  expect(outputText.toLowerCase()).toContain("uberlândia");
+  expect(outputText.toLowerCase()).toContain("pão de queijo");
 });

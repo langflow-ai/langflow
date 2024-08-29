@@ -2,15 +2,10 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test("Sequential Tasks Agent", async ({ page }) => {
+test("Simple Agent", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
-  );
-
-  test.skip(
-    !process?.env?.BRAVE_SEARCH_API_KEY,
-    "BRAVE_SEARCH_API_KEY required to run this test",
   );
 
   if (!process.env.CI) {
@@ -42,7 +37,7 @@ test("Sequential Tasks Agent", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Sequential Tasks Agent" }).click();
+  await page.getByRole("heading", { name: "Simple Agent" }).click();
 
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
@@ -63,7 +58,6 @@ test("Sequential Tasks Agent", async ({ page }) => {
 
   await page
     .getByTestId("popover-anchor-input-api_key")
-    .first()
     .fill(process.env.OPENAI_API_KEY ?? "");
 
   await page.getByTestId("dropdown_str_model_name").click();
@@ -71,15 +65,8 @@ test("Sequential Tasks Agent", async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .last()
-    .fill(process.env.BRAVE_SEARCH_API_KEY ?? "");
-
-  await page.waitForTimeout(1000);
-
   await page.getByTestId("button_run_chat output").click();
-  await page.waitForSelector("text=built successfully", { timeout: 60000 * 3 });
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
   await page.getByText("built successfully").last().click({
     timeout: 15000,
@@ -87,26 +74,33 @@ test("Sequential Tasks Agent", async ({ page }) => {
 
   await page.getByText("Playground", { exact: true }).click();
 
-  await page.waitForTimeout(1000);
-
-  expect(
-    page
-      .getByPlaceholder("No chat input variables found. Click to run your flow")
-      .last(),
-  ).toBeVisible();
-
-  await page.getByText("Topic", { exact: true }).nth(1).isVisible();
-  await page.getByText("Topic", { exact: true }).nth(1).click();
-  expect(await page.getByPlaceholder("Enter text...").inputValue()).toBe(
-    "Agile",
+  await page.waitForSelector(
+    "text=write short python scsript to say hello world",
+    {
+      timeout: 30000,
+    },
   );
 
-  const textContents = await page
-    .getByTestId("div-chat-message")
-    .allTextContents();
+  await page.waitForTimeout(1000);
 
-  const concatAllText = textContents.join(" ");
-  expect(concatAllText.toLocaleLowerCase()).toContain("agile");
-  const allTextLength = concatAllText.length;
-  expect(allTextLength).toBeGreaterThan(500);
+  expect(await page.getByText("User")).toBeVisible();
+
+  expect(await page.locator(".language-python")).toBeVisible();
+
+  let pythonWords = await page.getByText("Hello, World!").count();
+
+  expect(pythonWords).toBe(2);
+
+  await page.getByTestId("icon-Copy").last().click();
+
+  await page.waitForTimeout(500);
+
+  await page.getByPlaceholder("Send a message...").click();
+  await page.keyboard.press("Control+V");
+
+  await page.waitForTimeout(500);
+
+  pythonWords = await page.getByText("Hello, World!").count();
+
+  expect(pythonWords).toBe(3);
 });
