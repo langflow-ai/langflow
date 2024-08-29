@@ -162,6 +162,12 @@ test("user should be able to duplicate a flow or a component", async ({
     await page.getByText("Exit", { exact: true }).click();
   }
 
+  const replaceButton = await page.getByTestId("replace-button").isVisible();
+
+  if (replaceButton) {
+    await page.getByTestId("replace-button").click();
+  }
+
   await page.getByTestId("icon-ChevronLeft").last().click();
   await page.getByRole("checkbox").nth(1).click();
 
