@@ -4,24 +4,30 @@ import json
 import uuid
 import warnings
 from collections import defaultdict, deque
+from collections.abc import Generator
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Optional
-from collections.abc import Generator
+from typing import TYPE_CHECKING, Any, Iterable, Optional, Set, cast
 
 import nest_asyncio
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
-from langflow.graph.edge.base import CycleEdge
+from langflow.graph.edge.base import CycleEdge, Edge
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.schema import GraphData, GraphDump, StartConfigDict, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.state_model import create_state_model_from_graph
-from langflow.graph.graph.utils import find_start_component_id, process_flow, should_continue, sort_up_to_vertex
+from langflow.graph.graph.utils import (
+    find_all_cycle_edges,
+    find_start_component_id,
+    process_flow,
+    should_continue,
+    sort_up_to_vertex,
+)
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData
@@ -1536,21 +1542,31 @@ class Graph:
                 neighbors[neighbor] += 1
         return neighbors
 
+    @property
+    def cycles(self):
+        if self._cycles is None:
+            if self._start is None:
+                self._cycles = []
+            else:
+                entry_vertex = self._start._id
+                edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
+                self._cycles = find_all_cycle_edges(entry_vertex, edges)
+        return self._cycles
+
     def _build_edges(self) -> list[CycleEdge]:
         """Builds the edges of the graph."""
         # Edge takes two vertices as arguments, so we need to build the vertices first
         # and then build the edges
         # if we can't find a vertex, we raise an error
-
-        edges: set[CycleEdge] = set()
+        edges: Set[CycleEdge | Edge] = set()
         for edge in self._edges:
             new_edge = self.build_edge(edge)
             edges.add(new_edge)
         if self.vertices and not edges:
             warnings.warn("Graph has vertices but no edges")
-        return list(edges)
+        return list(cast(Iterable[CycleEdge], edges))
 
-    def build_edge(self, edge: EdgeData) -> CycleEdge:
+    def build_edge(self, edge: EdgeData) -> CycleEdge | Edge:
         source = self.get_vertex(edge["source"])
         target = self.get_vertex(edge["target"])
 
@@ -1558,7 +1574,10 @@ class Graph:
             raise ValueError(f"Source vertex {edge['source']} not found")
         if target is None:
             raise ValueError(f"Target vertex {edge['target']} not found")
-        new_edge = CycleEdge(source, target, edge)
+        if (source.id, target.id) in self.cycles:
+            new_edge: CycleEdge | Edge = CycleEdge(source, target, edge)
+        else:
+            new_edge = Edge(source, target, edge)
         return new_edge
 
     def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> type["Vertex"]:
