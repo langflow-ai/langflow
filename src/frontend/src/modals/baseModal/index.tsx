@@ -89,9 +89,16 @@ const Footer: React.FC<{
     onClick?: () => void;
   };
   close?: boolean;
-}> = ({ children, submit, close }) => {
+  centered?: boolean;
+}> = ({ children, submit, close, centered }) => {
   return (
-    <div className="flex flex-shrink-0 flex-row-reverse">
+    <div
+      className={
+        centered
+          ? "flex flex-shrink-0 justify-center"
+          : "flex flex-shrink-0 flex-row-reverse"
+      }
+    >
       {submit ? (
         <div className="flex w-full items-center justify-between">
           {children ?? <div />}

@@ -1,16 +1,16 @@
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
-import { ParameterRenderComponent } from "@/components/parameterRenderComponent";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import {
+  CustomParameterComponent,
+  getCustomParameterTitle,
+} from "@/customization/components/custom-parameter";
+import { useEffect, useRef } from "react";
 import { default as IconComponent } from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../../../constants/constants";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import {
-  NodeInputFieldComponentType,
-  ParameterComponentType,
-} from "../../../../types/components";
+import { NodeInputFieldComponentType } from "../../../../types/components";
 import { scapedJSONStringfy } from "../../../../utils/reactflowUtils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
@@ -105,11 +105,21 @@ export default function NodeInputField({
         <div className="flex w-full items-center truncate text-sm">
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
-              {<span>{title}</span>}
+              {
+                <span>
+                  {getCustomParameterTitle({ title, nodeId: data.id })}
+                </span>
+              }
             </ShadTooltip>
           ) : (
             <div className="flex gap-2">
-              <span>{<span>{title}</span>}</span>
+              <span>
+                {
+                  <span>
+                    {getCustomParameterTitle({ title, nodeId: data.id })}
+                  </span>
+                }
+              </span>
             </div>
           )}
           <span className={(required ? "ml-2 " : "") + "text-status-red"}>
@@ -133,7 +143,7 @@ export default function NodeInputField({
         {displayHandle && Handle}
         {data.node?.template[name] !== undefined && (
           <div className="mt-2 w-full">
-            <ParameterRenderComponent
+            <CustomParameterComponent
               handleOnNewValue={handleOnNewValue}
               name={name}
               nodeId={data.id}

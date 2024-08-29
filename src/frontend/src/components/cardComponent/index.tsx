@@ -1,3 +1,4 @@
+import { track } from "@/customization/utils/analytics";
 import { useState } from "react";
 import { Control } from "react-hook-form";
 import IOModal from "../../modals/IOModal";
@@ -137,6 +138,7 @@ export default function CollectionCardComponent({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    track("Playground Button Clicked", { flowId: data.id });
                     setLoadingPlayground(true);
                     const flow = getFlowById(data.id);
                     if (flow) {

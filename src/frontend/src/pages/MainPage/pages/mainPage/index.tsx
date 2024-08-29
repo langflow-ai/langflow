@@ -1,6 +1,7 @@
 import FolderSidebarNav from "@/components/folderSidebarComponent";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
@@ -65,7 +66,10 @@ export default function HomePage(): JSX.Element {
           <div className="flex gap-2">
             <DropdownButton
               firstButtonName="New Project"
-              onFirstBtnClick={() => setOpenModal(true)}
+              onFirstBtnClick={() => {
+                setOpenModal(true);
+                track("New Project Button Clicked");
+              }}
               options={dropdownOptions}
               plusButton={true}
               dropdownOptions={false}
