@@ -9,6 +9,7 @@ import {
   TIMEOUT_ERROR_MESSAGE,
 } from "@/constants/constants";
 import { useGetHealthQuery } from "@/controllers/API/queries/health";
+import { CustomHeader } from "@/customization/components/custom-header";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { AxiosError } from "axios";
@@ -96,6 +97,7 @@ export function AppWrapperPage() {
 
   return (
     <div className="flex h-full flex-col">
+      <CustomHeader />
       <ErrorBoundary
         onReset={() => {
           // any reset function
@@ -107,7 +109,6 @@ export function AppWrapperPage() {
           <Outlet />
         </>
       </ErrorBoundary>
-      <div></div>
       <div className="app-div">
         <AlertDisplayArea />
       </div>

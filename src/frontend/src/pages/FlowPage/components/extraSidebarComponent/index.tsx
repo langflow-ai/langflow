@@ -1,4 +1,4 @@
-import FeatureFlags from "@/../feature-config.json";
+import { ENABLE_MVPS } from "@/customization/feature-flags";
 import { useStoreStore } from "@/stores/storeStore";
 import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
@@ -193,10 +193,10 @@ export default function ExtraSidebar(): JSX.Element {
             // Set search input state
             setSearch(event.target.value);
           }}
-          autocomplete="off"
-          readonly="readonly"
+          autoComplete="off"
+          readOnly
           onClick={() =>
-            document.getElementById("search").removeAttribute("readonly")
+            document?.getElementById("search")?.removeAttribute("readonly")
           }
         />
         <div
@@ -298,7 +298,7 @@ export default function ExtraSidebar(): JSX.Element {
             </a>
           )}
         </ParentDisclosureComponent>
-        {FeatureFlags.ENABLE_MVPS && (
+        {ENABLE_MVPS && (
           <>
             <Separator />
 
