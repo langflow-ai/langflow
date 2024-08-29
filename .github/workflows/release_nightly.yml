@@ -60,27 +60,19 @@ jobs:
         with:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
-
       - name: Install poetry
         run: |
-          echo "test delete me"
-          echo $TEST_DELETE_ME3
-          echo "test delete me: ${{ secrets.TEST_DELETE_ME }}"
-          echo ${{ secrets.TEST_DELETE_ME }}
-          echo "test env var"
-          echo ${{ inputs.test_env_var }}
           pipx install poetry==${{ env.POETRY_VERSION }}
-
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "poetry"
-
       - name: Set up Nodejs 20
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+
       - name: Verify Nightly Name and Version
         working-directory: src/backend/base
         run: |
@@ -102,6 +94,7 @@ jobs:
 
       - name: Build project for distribution
         run: make build base=true
+
       - name: Test CLI
         if: false # SKIP ON PURPOSE NOW
         run: |
@@ -120,39 +113,14 @@ jobs:
           else
             echo "Server terminated successfully"
           fi
-      - name: Check Poetry Environment
-        run: |
-          echo "Checking Poetry Environment"
-          poetry env info
-          poetry env list
-          poetry run env
 
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
           TEST_DELETE_ME: ${{ secrets.TEST_DELETE_ME }}
         run: |
-          echo "Checking Poetry Environment"
-          poetry env info
-          poetry env list
-          poetry run env
-          echo "which poetry: "
-          which poetry
-          poetry about
-
-
-          echo "env var:"
-          echo "-------"
-          echo $TEST_DELETE_ME
-          echo "------1"
-          echo $TEST_DELETE_ME2
-          echo "------2"
-          echo ${{ inputs.test_env_var}}
-          echo "------test_env_var"
-          echo ${{ secrets.TEST_DELETE_ME }}
-          echo "------secrets directly"
-
           make publish base=true
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:

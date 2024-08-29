@@ -57,6 +57,9 @@ jobs:
           poetry run python ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
           poetry run python ./scripts/ci/update_pyproject_version.py $BASE_TAG base
 
+          # This updates the dependency of langflow-base to langflow-base-nightly in {project_root}/pyproject.toml
+          poetry run python ./scripts/ci/update_lf_base_dependency.py $BASE_TAG
+
           MAIN_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py main)"
           echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
           poetry run python ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
