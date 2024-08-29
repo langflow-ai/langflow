@@ -1,6 +1,8 @@
 import { useGetHealthQuery } from "@/controllers/API/queries/health";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 
@@ -13,15 +15,20 @@ export function useHealthCheck() {
     (state) => state.healthCheckTimeout,
   );
 
-  const disabled = false;
+  const isMutating = useIsMutating();
+  const isFetching = useIsFetching({
+    predicate: (query) => query.queryKey[0] !== "useGetHealthQuery",
+  });
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+
+  const disabled = isMutating || isFetching || isBuilding;
 
   const {
     isFetching: fetchingHealth,
     isError: isErrorHealth,
     error,
     refetch,
-  } = useGetHealthQuery({ enabled: !disabled });
-
+  } = useGetHealthQuery({ enableInterval: !disabled });
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
@@ -43,7 +50,7 @@ export function useHealthCheck() {
     } else {
       setRetryCount(0);
     }
-  }, [isErrorHealth, retryCount, refetch, disabled]);
+  }, [isErrorHealth, retryCount, refetch]);
 
   return { healthCheckTimeout, refetch, fetchingHealth };
 }

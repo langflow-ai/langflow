@@ -18,10 +18,14 @@ interface getHealthResponse {
   variables: string;
 }
 
+interface getHealthParams {
+  enableInterval?: boolean;
+}
+
 export const useGetHealthQuery: useQueryFunctionType<
-  undefined,
+  getHealthParams,
   getHealthResponse
-> = (options) => {
+> = (params, options) => {
   const { query } = UseRequestProcessor();
   const setHealthCheckTimeout = useUtilityStore(
     (state) => state.setHealthCheckTimeout,
@@ -64,7 +68,9 @@ export const useGetHealthQuery: useQueryFunctionType<
 
   const queryResult = query(["useGetHealthQuery"], getHealthFn, {
     placeholderData: keepPreviousData,
-    refetchInterval: REFETCH_SERVER_HEALTH_INTERVAL,
+    refetchInterval: params.enableInterval
+      ? REFETCH_SERVER_HEALTH_INTERVAL
+      : false,
     retry: false,
     ...options,
   });
