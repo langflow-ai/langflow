@@ -1,17 +1,13 @@
 import AlertDisplayArea from "@/alerts/displayArea";
 import CrashErrorComponent from "@/components/crashErrorComponent";
 import { CustomHeader } from "@/customization/components/custom-header";
-import { useCustomHealthCheck } from "@/customization/hooks/use-custom-health-check";
 import { ErrorBoundary } from "react-error-boundary";
 import { Outlet } from "react-router-dom";
 import { GenericErrorComponent } from "./components/GenericErrorComponent";
 import { useHealthCheck } from "./hooks/use-health-check";
 
 export function AppWrapperPage() {
-  const { message, description, isFetching, isError } = useCustomHealthCheck();
-  const { healthCheckTimeout, fetchingHealth, refetch } = useHealthCheck({
-    disabled: isFetching || isError,
-  });
+  const { healthCheckTimeout, fetchingHealth, refetch } = useHealthCheck();
 
   return (
     <div className="flex h-full flex-col">
@@ -24,10 +20,8 @@ export function AppWrapperPage() {
       >
         <>
           <GenericErrorComponent
-            healthCheckTimeout={isError ? "custom" : healthCheckTimeout}
-            fetching={isFetching || fetchingHealth}
-            description={description}
-            message={message}
+            healthCheckTimeout={healthCheckTimeout}
+            fetching={fetchingHealth}
             retry={refetch}
           />
           <Outlet />

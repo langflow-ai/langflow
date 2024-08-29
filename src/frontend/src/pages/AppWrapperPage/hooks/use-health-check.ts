@@ -4,7 +4,7 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 
-export function useHealthCheck({ disabled }) {
+export function useHealthCheck() {
   const healthCheckMaxRetries = useFlowsManagerStore(
     (state) => state.healthCheckMaxRetries,
   );
@@ -12,6 +12,8 @@ export function useHealthCheck({ disabled }) {
   const healthCheckTimeout = useUtilityStore(
     (state) => state.healthCheckTimeout,
   );
+
+  const disabled = false;
 
   const {
     isFetching: fetchingHealth,

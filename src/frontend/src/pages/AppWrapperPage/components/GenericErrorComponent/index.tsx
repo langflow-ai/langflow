@@ -7,13 +7,7 @@ import {
   TIMEOUT_ERROR_MESSAGE,
 } from "@/constants/constants";
 
-export function GenericErrorComponent({
-  healthCheckTimeout,
-  fetching,
-  retry,
-  description,
-  message,
-}) {
+export function GenericErrorComponent({ healthCheckTimeout, fetching, retry }) {
   switch (healthCheckTimeout) {
     case "serverDown":
       return (
@@ -34,16 +28,6 @@ export function GenericErrorComponent({
           setRetry={retry}
           isLoadingHealth={fetching}
         ></TimeoutErrorComponent>
-      );
-    case "custom":
-      return (
-        <FetchErrorComponent
-          description={description}
-          message={message}
-          openModal={true}
-          setRetry={retry}
-          isLoadingHealth={fetching}
-        ></FetchErrorComponent>
       );
     default:
       return <></>;
