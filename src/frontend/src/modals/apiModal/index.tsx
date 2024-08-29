@@ -1,3 +1,4 @@
+import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
 import { useCustomAPICode } from "@/customization/hooks/use-custom-api-code";
 import useAuthStore from "@/stores/authStore";
 import "ace-builds/src-noconflict/ext-language_tools";
@@ -53,6 +54,7 @@ export default function ApiModal({
         />
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
+        <CustomAPIGenerator />
         <CodeTabsComponent
           open={open}
           tabs={tabs!}
