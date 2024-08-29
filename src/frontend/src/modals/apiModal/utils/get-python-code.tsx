@@ -1,13 +1,15 @@
+import { GetCodeType } from "@/types/tweaks";
+
 /**
  * Function to get the python code for the API
  * @param {string} flow - The current flow
  * @param {any[]} tweaksBuildedObject - The tweaks
  * @returns {string} - The python code
  */
-export default function getPythonCode(
-  flowName: string,
-  tweaksBuildedObject: {},
-): string {
+export default function getPythonCode({
+  flowName,
+  tweaksBuildedObject,
+}: GetCodeType): string {
   let tweaksString = "{}";
   if (tweaksBuildedObject)
     tweaksString = JSON.stringify(tweaksBuildedObject, null, 2)

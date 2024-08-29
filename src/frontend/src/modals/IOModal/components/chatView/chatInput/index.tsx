@@ -32,8 +32,6 @@ export default function ChatInput({
   setFiles,
   isDragging,
 }: ChatInputType): JSX.Element {
-  const [repeat, setRepeat] = useState(1);
-  const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [inputFocus, setInputFocus] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -128,7 +126,7 @@ export default function ChatInput({
 
   const send = () => {
     sendMessage({
-      repeat,
+      repeat: 1,
       files: files.map((file) => file.path ?? "").filter((file) => file !== ""),
     });
     setFiles([]);
@@ -138,7 +136,6 @@ export default function ChatInput({
     return (
       event.key === "Enter" &&
       !lockChat &&
-      !saveLoading &&
       !event.shiftKey &&
       !event.nativeEvent.isComposing
     );
@@ -158,7 +155,6 @@ export default function ChatInput({
           send={send}
           lockChat={lockChat}
           noInput={noInput}
-          saveLoading={saveLoading}
           chatValue={chatValue}
           setChatValue={setChatValue}
           CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
@@ -173,7 +169,6 @@ export default function ChatInput({
             send={send}
             lockChat={lockChat}
             noInput={noInput}
-            saveLoading={saveLoading}
             chatValue={chatValue}
             files={files}
           />
@@ -181,11 +176,11 @@ export default function ChatInput({
 
         <div
           className={`absolute bottom-2 left-4 ${
-            lockChat || saveLoading ? "cursor-not-allowed" : ""
+            lockChat ? "cursor-not-allowed" : ""
           }`}
         >
           <UploadFileButton
-            lockChat={lockChat || saveLoading}
+            lockChat={lockChat}
             fileInputRef={fileInputRef}
             handleFileChange={handleFileChange}
             handleButtonClick={handleButtonClick}
