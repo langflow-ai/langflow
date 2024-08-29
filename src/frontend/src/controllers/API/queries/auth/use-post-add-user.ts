@@ -19,10 +19,7 @@ export const useAddUser: useMutationFunctionType<undefined, UserInputType> = (
 
   const mutation: UseMutationResult<Array<Users>, any, UserInputType> = mutate(
     ["useAddUser"],
-    async (payload: UserInputType) => {
-      const res = await addUserFunction(payload);
-      return res;
-    },
+    addUserFunction,
     options,
   );
 
