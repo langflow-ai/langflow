@@ -87,11 +87,6 @@ jobs:
             exit 1
           fi
 
-      - name: Install dependencies
-        run: |
-          poetry env use ${{ env.PYTHON_VERSION }}
-          poetry install
-
       - name: Build project for distribution
         run: make build base=true
 
