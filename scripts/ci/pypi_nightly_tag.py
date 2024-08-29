@@ -52,23 +52,25 @@ def create_tag(build_type: str):
     else:
         raise ValueError(f"Invalid build type: {build_type}")
 
-    # Builds numbers append such that we can publish multiple builds in a day if necessary.
-    # X.Y.Z.dev.YYYYMMDD-N
-    if current_version in latest_pypi_version:
-        n = latest_pypi_version.split("-")[-1]
-        if not n.isdigit():
-            # TODO: Remove this - this is only a temporary hack
-            # for the first nightly build
-            pass
-        else:
-            build_number = str(int(n) + 1)
-
     version_with_date = (
         ".".join([str(x) for x in current_version.release])
         + ".dev"
         + datetime.now(pytz.timezone("UTC")).strftime("%Y%m%d")
-        + f"-{build_number}"
     )
+
+    # Builds numbers append such that we can publish multiple builds in a day if necessary.
+    # X.Y.Z.dev.YYYYMMDD-N
+    # Check if the latest PyPI version already includes today's date
+    if version_with_date in latest_pypi_version:
+        # Extract the build number from the latest version, if present
+        last_part = latest_pypi_version.split("-")[-1]
+        # TODO: Note - only need this check due to previous releases without build number
+        # TODO: REMOVE
+        if last_part.isdigit():
+            build_number = str(int(last_part) + 1)
+            version_with_date += "-" + build_number
+
+
 
     # Verify if version is PEP440 compliant.
     packaging.version.Version(version_with_date)
