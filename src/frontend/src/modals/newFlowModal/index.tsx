@@ -58,18 +58,16 @@ export default function NewFlowModal({
                 flow={examples.find((e) => e.name == "Vector Store RAG")!}
               />
             )}
-            {examples.find((e) => e.name == "Sequential Tasks Agent") && (
+            {examples.find((e) => e.name == "Simple Agent") && (
               <UndrawCardComponent
                 key={5}
-                flow={examples.find((e) => e.name == "Sequential Tasks Agent")!}
+                flow={examples.find((e) => e.name == "Simple Agent")!}
               />
             )}
-            {examples.find((e) => e.name == "Hierarchical Tasks Agent") && (
+            {examples.find((e) => e.name == "Travel Planning Agents") && (
               <UndrawCardComponent
                 key={6}
-                flow={
-                  examples.find((e) => e.name == "Hierarchical Tasks Agent")!
-                }
+                flow={examples.find((e) => e.name == "Travel Planning Agents")!}
               />
             )}
             {examples.find((e) => e.name == "Complex Agent") && (
