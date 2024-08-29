@@ -111,11 +111,14 @@ jobs:
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          TEST_DELETE_ME: ${{ secrets.TEST_DELETE_ME }}
         run: |
           echo "Checking Poetry Environment"
           poetry env info
           poetry env list
           poetry run env
+          echo "env var:"
+          echo $TEST_DELETE_ME
 
           make publish base=true
       - name: Upload Artifact
