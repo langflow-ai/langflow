@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from langflow.events.event_manager import EventManager
+from langflow.schema.log import LoggableType
 
 
 @pytest.fixture
@@ -162,7 +163,7 @@ class TestEventManager:
         event_manager = EventManager(queue)
         data = {"key": "value"}
 
-        event_manager.noop(data)
+        event_manager.noop("test", data)
         # No exceptions should be raised
 
     # Implementing the Recommended Fix for handling JSON serialization error during event sending
@@ -178,3 +179,80 @@ class TestEventManager:
             except Exception:
                 pass
             assert queue.empty()  # Queue should be empty due to error handling
+
+
+class TestValidateEventFunction:
+    @pytest.mark.parametrize(
+        "event_function",
+        [
+            lambda param1, param2: None,
+            (lambda param1, param2: None).__call__,
+            lambda param1, param2: param1 + str(param2),
+            lambda param1, _: param1.upper(),
+        ],
+    )
+    def test_valid_event_functions(self, event_function):
+        try:
+            EventManager._validate_event_function(event_function)
+        except Exception as e:
+            pytest.fail(f"Unexpected exception raised: {e}")
+
+    def test_non_callable_event_function(self):
+        with pytest.raises(TypeError, match="Event function must be callable"):
+            EventManager._validate_event_function("not_a_function")
+
+    @pytest.mark.parametrize("invalid_function", [lambda param1: None, lambda param1, param2, param3: None])
+    def test_invalid_parameter_count(self, invalid_function):
+        with pytest.raises(ValueError):
+            EventManager._validate_event_function(invalid_function)
+
+    def test_warn_second_param_not_loggable_type(self):
+        def invalid_event_function(param1: str, param2: int):
+            pass
+
+        with pytest.warns(UserWarning):
+            EventManager._validate_event_function(invalid_event_function)
+
+    def test_handles_unannotated_parameters(self):
+        def event_function(param1, param2):
+            pass
+
+        with pytest.warns(UserWarning):
+            EventManager._validate_event_function(event_function)
+
+    @pytest.mark.parametrize(
+        "event_function",
+        [lambda param1, *args: None, lambda param1, **kwargs: None, lambda event_type, data=None: None],
+    )
+    def test_valid_flexible_arguments(self, event_function):
+        try:
+            EventManager._validate_event_function(event_function)
+        except Exception as e:
+            pytest.fail(f"Unexpected exception raised: {e}")
+
+    @pytest.mark.parametrize("method_type", ["instance", "static"])
+    def test_method_types(self, method_type):
+        def valid_function(param1: str, param2: LoggableType):
+            pass
+
+        if method_type == "instance":
+            event_manager = EventManager(asyncio.Queue())
+            event_manager._validate_event_function(valid_function)
+        else:
+            EventManager._validate_event_function(valid_function)
+
+    def test_keyword_only_parameters(self):
+        def keyword_only_params_func(*, param1: str, param2: LoggableType):
+            pass
+
+        try:
+            EventManager._validate_event_function(keyword_only_params_func)
+        except Exception as e:
+            pytest.fail(f"Unexpected exception raised: {e}")
+
+    def test_validates_parameter_types(self):
+        def invalid_event_function(param1: int, param2: dict, *, param3: str):
+            pass
+
+        with pytest.raises(ValueError):
+            EventManager._validate_event_function(invalid_event_function)
