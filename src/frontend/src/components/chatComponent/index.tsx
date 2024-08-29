@@ -1,6 +1,7 @@
 import { ENABLE_API } from "@/customization/feature-flags";
+import { track } from "@/customization/utils/analytics";
 import { Transition } from "@headlessui/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IOModal from "../../modals/IOModal";
 import ApiModal from "../../modals/apiModal";
@@ -47,6 +48,12 @@ export default function FlowToolbar(): JSX.Element {
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const currentFlow = useFlowStore((state) => state.currentFlow);
+
+  useEffect(() => {
+    if (open) {
+      track("Playground Button Clicked");
+    }
+  }, [open]);
 
   const ModalMemo = useMemo(
     () => (
