@@ -1,7 +1,10 @@
 import asyncio
+import inspect
 import json
 import time
 import uuid
+import warnings
+from collections.abc import Callable
 from functools import partial
 
 from typing_extensions import Protocol
@@ -24,7 +27,23 @@ class EventManager:
         else:
             self.events[name] = partial(self.send_event, event_type)
 
+    @staticmethod
+    def _validate_event_function(event_function: Callable):
+        if not callable(event_function):
+            raise TypeError("Event function must be callable")
+
+        signature = inspect.signature(event_function)
+        parameters = signature.parameters
+
+        if len(parameters) != 2:
+            raise ValueError("Event function must have exactly two parameters")
+
+        param_types = [param.annotation for param in parameters.values()]
+        if param_types[0] is not str or param_types[1] is not LoggableType:
+            warnings.warn("Event function parameters must be (str, LoggableType)")
+
     def register_event_function(self, name: str, event_function: EventCallback):
+        self._validate_event_function(event_function)
         self.events[name] = event_function
 
     def send_event(self, event_type: str, data: dict):
