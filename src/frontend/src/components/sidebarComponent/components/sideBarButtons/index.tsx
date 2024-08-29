@@ -24,7 +24,7 @@ const SideBarButtonsComponent = ({
             data-testid={`sidebar-nav-${item.title}`}
             className={cn(
               buttonVariants({ variant: "ghost" }),
-              pathname === item.href
+              item.href && pathname.endsWith(item.href)
                 ? "border border-border bg-muted hover:bg-muted"
                 : "border border-transparent hover:border-border hover:bg-transparent",
               "flex w-full shrink-0 justify-start gap-4",

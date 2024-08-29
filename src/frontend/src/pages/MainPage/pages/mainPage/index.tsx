@@ -19,7 +19,7 @@ export default function HomePage(): JSX.Element {
   const pathname = location.pathname;
   const [openModal, setOpenModal] = useState(false);
   const [openDeleteFolderModal, setOpenDeleteFolderModal] = useState(false);
-  const is_component = pathname === "/components";
+  const is_component = pathname.includes("/components");
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
   const navigate = useCustomNavigate();
 

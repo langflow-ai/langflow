@@ -98,8 +98,8 @@ export default function Header(): JSX.Element {
           <Button
             className="gap-2"
             variant={
-              location.pathname === "/all" ||
-              location.pathname === "/components"
+              location.pathname.includes("/all") ||
+              location.pathname.includes("/components")
                 ? "primary"
                 : "secondary"
             }
@@ -114,7 +114,9 @@ export default function Header(): JSX.Element {
           <CustomLink to="/store">
             <Button
               className="gap-2"
-              variant={location.pathname === "/store" ? "primary" : "secondary"}
+              variant={
+                location.pathname.includes("/store") ? "primary" : "secondary"
+              }
               size="sm"
               data-testid="button-store"
             >
