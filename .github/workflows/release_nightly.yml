@@ -46,6 +46,7 @@ on:
         description: "Test environment variable"
         required: true
         type: string
+        default: "did not pass correctly"
 
 env:
   POETRY_VERSION: "1.8.3"
@@ -73,6 +74,8 @@ jobs:
           echo $TEST_DELETE_ME3
           echo "test delete me: ${{ secrets.TEST_DELETE_ME }}"
           echo ${{ secrets.TEST_DELETE_ME }}
+          echo "test env var"
+          echo ${{ inputs.test_env_var }}
           pipx install poetry==${{ env.POETRY_VERSION }}
 
       - name: Set up Python 3.12
@@ -139,8 +142,8 @@ jobs:
           echo "------1"
           echo $TEST_DELETE_ME2
           echo "------2"
-          echo $TEST_DELETE_ME3
-          echo "------3"
+          echo ${{ inputs.test_env_var}}
+          echo "------test_env_var"
           echo ${{ secrets.TEST_DELETE_ME }}
           echo "------secrets directly"
 
