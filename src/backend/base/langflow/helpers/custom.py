@@ -2,7 +2,7 @@ from typing import Any
 
 
 def format_type(type_: Any) -> str:
-    if type_ == str:
+    if type_ is str:
         type_ = "Text"
     elif hasattr(type_, "__name__"):
         type_ = type_.__name__

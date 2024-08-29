@@ -36,8 +36,8 @@ def is_list_of_any(field: FieldInfo) -> bool:
         else:
             union_args = []
 
-        return field.annotation.__origin__ == list or any(
-            arg.__origin__ == list for arg in union_args if hasattr(arg, "__origin__")
+        return field.annotation.__origin__ is list or any(
+            arg.__origin__ is list for arg in union_args if hasattr(arg, "__origin__")
         )
     except AttributeError:
         return False
@@ -157,7 +157,7 @@ class Settings(BaseSettings):
     # Config
     auto_saving: bool = True
     """If set to True, Langflow will auto save flows."""
-    auto_saving_interval: int = 300
+    auto_saving_interval: int = 1000
     """The interval in ms at which Langflow will auto save flows."""
     health_check_max_retries: int = 5
     """The maximum number of retries for the health check."""

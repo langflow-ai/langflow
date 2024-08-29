@@ -1,5 +1,3 @@
-from typing import Optional
-
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
@@ -47,7 +45,7 @@ class Component(CustomComponent):
 class CustomComponentFrontendNode(FrontendNode):
     _format_template: bool = False
     name: str = "CustomComponent"
-    display_name: Optional[str] = "CustomComponent"
+    display_name: str | None = "CustomComponent"
     beta: bool = False
     template: Template = Template(
         type_name="CustomComponent",
@@ -65,14 +63,14 @@ class CustomComponentFrontendNode(FrontendNode):
             )
         ],
     )
-    description: Optional[str] = None
+    description: str | None = None
     base_classes: list[str] = []
 
 
 class ComponentFrontendNode(FrontendNode):
     _format_template: bool = False
     name: str = "Component"
-    display_name: Optional[str] = "Component"
+    display_name: str | None = "Component"
     beta: bool = False
     template: Template = Template(
         type_name="Component",
@@ -90,5 +88,5 @@ class ComponentFrontendNode(FrontendNode):
             )
         ],
     )
-    description: Optional[str] = None
+    description: str | None = None
     base_classes: list[str] = []

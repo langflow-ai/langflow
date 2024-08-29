@@ -1,5 +1,6 @@
 // src/constants/constants.ts
 
+import custom from "../customization/config-constants";
 import { languageMap } from "../types/components";
 
 /**
@@ -567,9 +568,7 @@ export const ADMIN_HEADER_TITLE = "Admin Page";
 export const ADMIN_HEADER_DESCRIPTION =
   "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
 
-export const BASE_URL_API = "/api/v1/";
-
-export const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:7860/";
+export const BASE_URL_API = custom.BASE_URL_API || "/api/v1/";
 
 /**
  * URLs excluded from error retries.
@@ -580,7 +579,7 @@ export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
   `${BASE_URL_API}validate/code`,
   `${BASE_URL_API}custom_component`,
   `${BASE_URL_API}validate/prompt`,
-  `http://localhost:7860/login`,
+  `${BASE_URL_API}/login`,
   `${BASE_URL_API}api_key/store`,
 ];
 
@@ -728,6 +727,8 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "vectorstores",
   "embeddings",
 ];
+
+export const BUNDLES_SIDEBAR_FOLDER_NAMES = ["notion"];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
   "/health",

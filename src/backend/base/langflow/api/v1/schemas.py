@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
@@ -28,7 +28,7 @@ class BuildStatus(Enum):
 
 
 class TweaksRequest(BaseModel):
-    tweaks: Optional[Dict[str, Dict[str, Any]]] = Field(default_factory=dict)
+    tweaks: dict[str, dict[str, Any]] | None = Field(default_factory=dict)
 
 
 class UpdateTemplateRequest(BaseModel):
@@ -38,25 +38,25 @@ class UpdateTemplateRequest(BaseModel):
 class TaskResponse(BaseModel):
     """Task response schema."""
 
-    id: Optional[str] = Field(None)
-    href: Optional[str] = Field(None)
+    id: str | None = Field(None)
+    href: str | None = Field(None)
 
 
 class ProcessResponse(BaseModel):
     """Process response schema."""
 
     result: Any
-    status: Optional[str] = None
-    task: Optional[TaskResponse] = None
-    session_id: Optional[str] = None
-    backend: Optional[str] = None
+    status: str | None = None
+    task: TaskResponse | None = None
+    session_id: str | None = None
+    backend: str | None = None
 
 
 class RunResponse(BaseModel):
     """Run response schema."""
 
-    outputs: Optional[List[RunOutputs]] = []
-    session_id: Optional[str] = None
+    outputs: list[RunOutputs] | None = []
+    session_id: str | None = None
 
     @model_serializer(mode="plain")
     def serialize(self):
@@ -76,23 +76,23 @@ class RunResponse(BaseModel):
 class PreloadResponse(BaseModel):
     """Preload response schema."""
 
-    session_id: Optional[str] = None
-    is_clear: Optional[bool] = None
+    session_id: str | None = None
+    is_clear: bool | None = None
 
 
 class TaskStatusResponse(BaseModel):
     """Task status response schema."""
 
     status: str
-    result: Optional[Any] = None
+    result: Any | None = None
 
 
 class ChatMessage(BaseModel):
     """Chat message schema."""
 
     is_bot: bool = False
-    message: Union[str, None, dict] = None
-    chatKey: Optional[str] = None
+    message: str | None | dict = None
+    chatKey: str | None = None
     type: str = "human"
 
 
@@ -138,19 +138,19 @@ class FileResponse(ChatMessage):
 
 
 class FlowListCreate(BaseModel):
-    flows: List[FlowCreate]
+    flows: list[FlowCreate]
 
 
 class FlowListIds(BaseModel):
-    flow_ids: List[str]
+    flow_ids: list[str]
 
 
 class FlowListRead(BaseModel):
-    flows: List[FlowRead]
+    flows: list[FlowRead]
 
 
 class FlowListReadWithFolderName(BaseModel):
-    flows: List[FlowRead]
+    flows: list[FlowRead]
     name: str
     description: str
 
@@ -181,7 +181,7 @@ class StreamData(BaseModel):
 class CustomComponentRequest(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     code: str
-    frontend_node: Optional[dict] = None
+    frontend_node: dict | None = None
 
 
 class CustomComponentResponse(BaseModel):
@@ -191,7 +191,7 @@ class CustomComponentResponse(BaseModel):
 
 class UpdateCustomComponentRequest(CustomComponentRequest):
     field: str
-    field_value: Optional[Union[str, int, float, bool, dict, list]] = None
+    field_value: str | int | float | bool | dict | list | None = None
     template: dict
 
     def get_template(self):
@@ -204,16 +204,16 @@ class CustomComponentResponseError(BaseModel):
 
 
 class ComponentListCreate(BaseModel):
-    flows: List[FlowCreate]
+    flows: list[FlowCreate]
 
 
 class ComponentListRead(BaseModel):
-    flows: List[FlowRead]
+    flows: list[FlowRead]
 
 
 class UsersResponse(BaseModel):
     total_count: int
-    users: List[UserRead]
+    users: list[UserRead]
 
 
 class ApiKeyResponse(BaseModel):
@@ -227,7 +227,7 @@ class ApiKeyResponse(BaseModel):
 class ApiKeysResponse(BaseModel):
     total_count: int
     user_id: UUID
-    api_keys: List[ApiKeyRead]
+    api_keys: list[ApiKeyRead]
 
 
 class CreateApiKeyRequest(BaseModel):
@@ -245,20 +245,20 @@ class ApiKeyCreateRequest(BaseModel):
 
 
 class VerticesOrderResponse(BaseModel):
-    ids: List[str]
+    ids: list[str]
     run_id: UUID
-    vertices_to_run: List[str]
+    vertices_to_run: list[str]
 
 
 class ResultDataResponse(BaseModel):
-    results: Optional[Any] = Field(default_factory=dict)
+    results: Any | None = Field(default_factory=dict)
     outputs: dict[str, OutputValue] = Field(default_factory=dict)
     logs: dict[str, list[Log]] = Field(default_factory=dict)
-    message: Optional[Any] = Field(default_factory=dict)
-    artifacts: Optional[Any] = Field(default_factory=dict)
-    timedelta: Optional[float] = None
-    duration: Optional[str] = None
-    used_frozen_result: Optional[bool] = False
+    message: Any | None = Field(default_factory=dict)
+    artifacts: Any | None = Field(default_factory=dict)
+    timedelta: float | None = None
+    duration: str | None = None
+    used_frozen_result: bool | None = False
 
     @field_serializer("results")
     @classmethod
@@ -269,27 +269,27 @@ class ResultDataResponse(BaseModel):
 
 
 class VertexBuildResponse(BaseModel):
-    id: Optional[str] = None
-    inactivated_vertices: Optional[List[str]] = None
-    next_vertices_ids: Optional[List[str]] = None
-    top_level_vertices: Optional[List[str]] = None
+    id: str | None = None
+    inactivated_vertices: list[str] | None = None
+    next_vertices_ids: list[str] | None = None
+    top_level_vertices: list[str] | None = None
     valid: bool
-    params: Optional[Any] = Field(default_factory=dict)
+    params: Any | None = Field(default_factory=dict)
     """JSON string of the params."""
     data: ResultDataResponse
     """Mapping of vertex ids to result dict containing the param name and result value."""
-    timestamp: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
     """Timestamp of the build."""
 
 
 class VerticesBuiltResponse(BaseModel):
-    vertices: List[VertexBuildResponse]
+    vertices: list[VertexBuildResponse]
 
 
 class InputValueRequest(BaseModel):
-    components: Optional[List[str]] = []
-    input_value: Optional[str] = None
-    type: Optional[InputType] = Field(
+    components: list[str] | None = []
+    input_value: str | None = None
+    type: InputType | None = Field(
         "any",
         description="Defines on which components the input value should be applied. 'any' applies to all input components.",
     )
@@ -313,15 +313,15 @@ class InputValueRequest(BaseModel):
 
 
 class SimplifiedAPIRequest(BaseModel):
-    input_value: Optional[str] = Field(default=None, description="The input value")
-    input_type: Optional[InputType] = Field(default="chat", description="The input type")
-    output_type: Optional[OutputType] = Field(default="chat", description="The output type")
-    output_component: Optional[str] = Field(
+    input_value: str | None = Field(default=None, description="The input value")
+    input_type: InputType | None = Field(default="chat", description="The input type")
+    output_type: OutputType | None = Field(default="chat", description="The output type")
+    output_component: str | None = Field(
         default="",
         description="If there are multiple output components, you can specify the component to get the output from.",
     )
-    tweaks: Optional[Tweaks] = Field(default=None, description="The tweaks")
-    session_id: Optional[str] = Field(default=None, description="The session id")
+    tweaks: Tweaks | None = Field(default=None, description="The tweaks")
+    session_id: str | None = Field(default=None, description="The session id")
 
 
 # (alias) type ReactFlowJsonObject<NodeData = any, EdgeData = any> = {
@@ -331,9 +331,9 @@ class SimplifiedAPIRequest(BaseModel):
 # }
 # import ReactFlowJsonObject
 class FlowDataRequest(BaseModel):
-    nodes: List[dict]
-    edges: List[dict]
-    viewport: Optional[dict] = None
+    nodes: list[dict]
+    edges: list[dict]
+    viewport: dict | None = None
 
 
 class ConfigResponse(BaseModel):

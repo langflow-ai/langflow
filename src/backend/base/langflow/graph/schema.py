@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, field_serializer, model_validator
 
@@ -9,16 +9,16 @@ from langflow.utils.schemas import ChatOutputResponse, ContainsEnumMeta
 
 
 class ResultData(BaseModel):
-    results: Optional[Any] = Field(default_factory=dict)
-    artifacts: Optional[Any] = Field(default_factory=dict)
-    outputs: Optional[dict] = Field(default_factory=dict)
-    logs: Optional[dict] = Field(default_factory=dict)
-    messages: Optional[list[ChatOutputResponse]] = Field(default_factory=list)
-    timedelta: Optional[float] = None
-    duration: Optional[str] = None
-    component_display_name: Optional[str] = None
-    component_id: Optional[str] = None
-    used_frozen_result: Optional[bool] = False
+    results: Any | None = Field(default_factory=dict)
+    artifacts: Any | None = Field(default_factory=dict)
+    outputs: dict | None = Field(default_factory=dict)
+    logs: dict | None = Field(default_factory=dict)
+    messages: list[ChatOutputResponse] | None = Field(default_factory=list)
+    timedelta: float | None = None
+    duration: str | None = None
+    component_display_name: str | None = None
+    component_id: str | None = None
+    used_frozen_result: bool | None = False
 
     @field_serializer("results")
     def serialize_results(self, value):
@@ -82,4 +82,4 @@ OUTPUT_COMPONENTS = [
 
 class RunOutputs(BaseModel):
     inputs: dict = Field(default_factory=dict)
-    outputs: List[Optional[ResultData]] = Field(default_factory=list)
+    outputs: list[ResultData | None] = Field(default_factory=list)

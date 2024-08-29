@@ -10,7 +10,7 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
   isAuthenticated: !!cookies.get(LANGFLOW_ACCESS_TOKEN),
   accessToken: cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
   userData: null,
-  autoLogin: false,
+  autoLogin: null,
   apiKey: cookies.get("apikey_tkn_lflw"),
   authenticationErrorCount: 0,
 
@@ -35,8 +35,6 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
       autoLogin: false,
       apiKey: null,
     });
-
-    window.location.href = "/login";
   },
 }));
 

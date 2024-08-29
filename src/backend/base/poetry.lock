@@ -6316,6 +6316,17 @@ files = [
 ]
 
 [[package]]
+name = "types-markdown"
+version = "3.7.0.20240822"
+description = "Typing stubs for Markdown"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-Markdown-3.7.0.20240822.tar.gz", hash = "sha256:183557c9f4f865bdefd8f5f96a38145c31819271cde111d35557c3bd2069e78d"},
+    {file = "types_Markdown-3.7.0.20240822-py3-none-any.whl", hash = "sha256:bec91c410aaf2470ffdb103e38438fbcc53689b00133f19e64869eb138432ad7"},
+]
+
+[[package]]
 name = "types-passlib"
 version = "1.7.7.20240327"
 description = "Typing stubs for passlib"
@@ -7049,4 +7060,4 @@ local = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "6835a0ed4266b0aae88f40359616174b45cd79515c1d726935060bbb18a106ce"
+content-hash = "075141462d7ef6e4aff0d55e5fe902e46faec28139556804f1dc3c7ee011d5c9"

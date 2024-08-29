@@ -429,7 +429,7 @@ def update_settings(
     components_path: Optional[Path] = None,
     store: bool = True,
     auto_saving: bool = True,
-    auto_saving_interval: int = 300,
+    auto_saving_interval: int = 1000,
     health_check_max_retries: int = 5,
 ):
     """Update the settings from a config file."""
