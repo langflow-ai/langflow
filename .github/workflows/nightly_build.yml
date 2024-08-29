@@ -109,6 +109,7 @@ jobs:
       build_docker_main: false
       nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
+    secrets: inherit
 
   # slack-notification:
   #   name: Send Slack Notification

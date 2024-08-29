@@ -61,12 +61,6 @@ jobs:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          # cache: "poetry"
-
       - name: Install poetry
         run: |
           echo "test delete me"
@@ -76,6 +70,12 @@ jobs:
           echo "test env var"
           echo ${{ inputs.test_env_var }}
           pipx install poetry==${{ env.POETRY_VERSION }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "poetry"
 
       - name: Set up Nodejs 20
         uses: actions/setup-node@v4
