@@ -34,7 +34,7 @@ export default function ApiModal({
   const initialSetup = useTweaksStore((state) => state.initialSetup);
 
   useEffect(() => {
-    if (open) initialSetup(autoLogin, flow);
+    if (open) initialSetup(autoLogin ?? false, flow);
     setActiveTab("0");
   }, [open]);
 
