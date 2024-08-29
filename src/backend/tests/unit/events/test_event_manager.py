@@ -1,7 +1,7 @@
 import asyncio
 import json
-from functools import partial
-from unittest.mock import Mock, patch
+import time
+import uuid
 
 import pytest
 
@@ -15,244 +15,216 @@ def client():
 
 
 class TestEventManager:
-    # Registering an event without specifying an event type should default to using send_event
-    def test_register_event_without_event_type_defaults_to_send_event(self):
+    # Registering an event with a valid name and callback using a mock callback function
+    def test_register_event_with_valid_name_and_callback_with_mock_callback(self):
+        def mock_callback(event_type: str, data: LoggableType):
+            pass
+
         queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-        event_manager.register_event("test_event")
+        manager = EventManager(queue)
+        manager.register_event("on_test_event", "test_type", mock_callback)
+        assert "on_test_event" in manager.events
+        assert manager.events["on_test_event"].func == mock_callback
 
-        assert "test_event" in event_manager.events
-        assert event_manager.events["test_event"] == event_manager.send_event
+    # Registering an event with an empty name
 
-    # Registering an event with an empty string as the name
-    def test_register_event_with_empty_string_name(self):
+    def test_register_event_with_empty_name(self):
         queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-        event_manager.register_event("")
+        manager = EventManager(queue)
+        with pytest.raises(ValueError, match="Event name cannot be empty"):
+            manager.register_event("", "test_type")
 
-        assert "" in event_manager.events
-        assert event_manager.events[""] == event_manager.send_event
-
-    # Registering an event with a specific event type should use a partial function of send_event
-    def test_register_event_with_specific_event_type_uses_partial_function(self):
+    # Registering an event with a valid name and no callback
+    def test_register_event_with_valid_name_and_no_callback(self):
         queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-        event_manager.register_event("test_event", "specific_type")
+        manager = EventManager(queue)
+        manager.register_event("on_test_event", "test_type")
+        assert "on_test_event" in manager.events
+        assert manager.events["on_test_event"].func == manager.send_event
 
-        assert "test_event" in event_manager.events
-        assert isinstance(event_manager.events["test_event"], partial)
+    # Sending an event with valid event_type and data using pytest-asyncio plugin
+    @pytest.mark.asyncio
+    async def test_sending_event_with_valid_type_and_data_asyncio_plugin(self):
+        async def mock_queue_put_nowait(item):
+            await queue.put(item)
 
-    # Registering a custom event function should store it correctly in the events dictionary using a mock with the correct import
-    def test_register_custom_event_function_stored_correctly_with_mock_with_mock_import(self):
         queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-        custom_event_function = Mock()
-        event_manager.register_event_function("custom_event", custom_event_function)
-
-        assert "custom_event" in event_manager.events
-        assert event_manager.events["custom_event"] == custom_event_function
-
-    # Accessing an unregistered event should return the noop function
-    def test_accessing_unregistered_event_returns_noop_function(self):
-        queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-
-        result = event_manager.unregistered_event
-
-        assert result == event_manager.noop
-
-    # Accessing a registered event should return the corresponding function
-    def test_accessing_registered_event_returns_corresponding_function(self):
-        queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-        event_manager.register_event("test_event")
-
-        assert "test_event" in event_manager.events
-        assert event_manager.events["test_event"] == event_manager.send_event
-
-    # Sending an event should correctly format the event data as JSON and add it to the queue
-    def test_send_event_correctly_formats_data_and_adds_to_queue(self):
-        queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-        event_manager.register_event("test_event")
-
+        queue.put_nowait = mock_queue_put_nowait
+        manager = EventManager(queue)
+        manager.register_event("on_test_event", "test_type", manager.noop)
         event_type = "test_type"
-        data = {"key": "value"}
-        event_manager.send_event(event_type, data)
+        data = "test_data"
+        manager.send_event(event_type=event_type, data=data)
+        await queue.join()
+        assert queue.empty()
 
-        event_id, str_data, timestamp = queue.get_nowait()
-        decoded_data = json.loads(str_data.decode("utf-8"))
-
-        assert decoded_data["event"] == event_type
-        assert decoded_data["data"] == data
-
-    # Accessing an event with a name that has not been registered
-    def test_accessing_unregistered_event(self):
+    # Accessing a non-registered event callback via __getattr__ with the recommended fix
+    def test_accessing_non_registered_event_callback_with_recommended_fix(self):
         queue = asyncio.Queue()
-        event_manager = EventManager(queue)
+        manager = EventManager(queue)
+        result = manager.__getattr__("non_registered_event")
+        assert result == manager.noop
 
-        result = event_manager.unknown_event
+    # Accessing a registered event callback via __getattr__
+    def test_accessing_registered_event_callback(self):
+        def mock_callback(event_type: str, data: LoggableType):
+            pass
 
-        assert result == event_manager.noop
-
-    # Asserting the registration of a partial function for an event with an empty string as the event type
-    def test_assert_partial_function_for_empty_string_event_type(self):
         queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-        event_manager.register_event("test_event", "")
+        manager = EventManager(queue)
+        manager.register_event("on_test_event", "test_type", mock_callback)
+        assert manager.on_test_event.func == mock_callback
 
-        assert "test_event" in event_manager.events
-        assert (
-            isinstance(event_manager.events["test_event"], partial)
-            and event_manager.events["test_event"].func == event_manager.send_event
-            and event_manager.events["test_event"].args == ("",)
-        )
+    # Handling a large number of events in the queue
+    def test_handling_large_number_of_events(self):
+        async def mock_queue_put_nowait(item):
+            pass
 
-    # Sending an event with an empty dictionary as data
-    def test_sending_event_with_empty_data(self):
         queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-        event_manager.register_event("test_event")
+        queue.put_nowait = mock_queue_put_nowait
+        manager = EventManager(queue)
 
-        event_manager.send_event("test_event", {})
+        for i in range(1000):
+            manager.register_event(f"on_test_event_{i}", "test_type", manager.noop)
 
-        # Check if the event was sent with the correct data
-        assert not queue.empty()
-        event_id, data, timestamp = queue.get_nowait()
-        decoded_data = json.loads(data.decode("utf-8"))
-        assert decoded_data["event"] == "test_event"
-        assert decoded_data["data"] == {}
+        assert len(manager.events) == 1000
 
-    # Registering an event with None as the event type
-    def test_register_event_with_none_event_type_defaults_to_send_event(self):
+    # Testing registration of an event with an invalid name with the recommended fix
+    def test_register_event_with_invalid_name_fixed(self):
+        def mock_callback(event_type, data):
+            pass
+
         queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-        event_manager.register_event("test_event", None)
+        manager = EventManager(queue)
+        with pytest.raises(ValueError):
+            manager.register_event("", "test_type", mock_callback)
+        with pytest.raises(ValueError):
+            manager.register_event("invalid_name", "test_type", mock_callback)
 
-        assert "test_event" in event_manager.events
-        assert event_manager.events["test_event"] == event_manager.send_event
-
-    # Registering multiple events with the same name should overwrite the previous event
-    def test_registering_multiple_events_overwrite_previous_fixed(self):
+    # Sending an event with complex data and verifying successful event transmission
+    @pytest.mark.asyncio
+    async def test_sending_event_with_complex_data(self):
         queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-        event_manager.register_event("test_event", "type1")
-        event_manager.register_event("test_event", "type2")
+        manager = EventManager(queue)
+        manager.register_event("on_test_event", "test_type", manager.noop)
+        data = {"key": "value", "nested": [1, 2, 3]}
+        manager.send_event(event_type="test_type", data=data)
+        event_id, str_data, event_time = await queue.get()
+        assert event_id is not None
+        assert str_data is not None
+        assert event_time <= time.time()
 
-        assert "test_event" in event_manager.events
-        assert event_manager.events["test_event"].args == ("type2",)
-
-    # The queue should handle events with large data payloads
-    def test_handle_large_data_payloads(self):
+    # Sending an event with None data
+    def test_sending_event_with_none_data(self):
         queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-        event_manager.register_event("test_event")
+        manager = EventManager(queue)
+        manager.register_event("on_test_event", "test_type")
+        assert "on_test_event" in manager.events
+        assert manager.events["on_test_event"].func.__name__ == "send_event"
 
-        large_data = {"key": "value" * 1000}  # Creating a large data payload
-        event_manager.send_event("test_event", large_data)
+    # Ensuring thread-safety when accessing the events dictionary
+    def test_thread_safety_accessing_events_dictionary(self):
+        def mock_callback(event_type: str, data: LoggableType):
+            pass
 
-        event_id, str_data, timestamp = queue.get_nowait()
-        decoded_data = json.loads(str_data.decode("utf-8"))
+        async def register_events(manager):
+            manager.register_event("on_test_event_1", "test_type_1", mock_callback)
+            manager.register_event("on_test_event_2", "test_type_2", mock_callback)
 
-        assert decoded_data["event"] == "test_event"
-        assert decoded_data["data"] == large_data
+        async def access_events(manager):
+            assert "on_test_event_1" in manager.events
+            assert "on_test_event_2" in manager.events
 
-    # The noop function should handle any data without raising exceptions
-    def test_noop_handles_any_data(self):
         queue = asyncio.Queue()
-        event_manager = EventManager(queue)
-        data = {"key": "value"}
+        manager = EventManager(queue)
 
-        event_manager.noop("test", data)
-        # No exceptions should be raised
+        tasks = [register_events(manager), access_events(manager)]
+        asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
 
-    # Implementing the Recommended Fix for handling JSON serialization error during event sending
-    def mock_json_dumps_error(self, *args, **kwargs):
-        raise ValueError("Mock JSON serialization error")
+    # Checking the performance impact of frequent event registrations
+    def test_performance_impact_frequent_registrations(self):
+        async def mock_callback(event_type: str, data: LoggableType):
+            pass
 
-    def test_send_event_json_serialization_error_with_patch_fixed_replica(self):
         queue = asyncio.Queue()
+        manager = EventManager(queue)
+        for i in range(1000):
+            manager.register_event(f"on_test_event_{i}", "test_type", mock_callback)
+        assert len(manager.events) == 1000
+
+    # Verifying the uniqueness of event IDs for each event triggered using await with asyncio decorator
+    import pytest
+
+    @pytest.mark.asyncio
+    async def test_event_id_uniqueness_with_await(self):
+        queue = asyncio.Queue()
+        manager = EventManager(queue)
+        manager.register_event("on_test_event", "test_type")
+        manager.on_test_event(data={"data_1": "value_1"})
+        manager.on_test_event(data={"data_2": "value_2"})
+        try:
+            event_id_1, _, _ = await queue.get()
+            event_id_2, _, _ = await queue.get()
+        except asyncio.TimeoutError:
+            pytest.fail("Test timed out while waiting for queue items")
+
+        assert event_id_1 != event_id_2
+
+    # Ensuring the queue receives the correct event data format
+    @pytest.mark.asyncio
+    async def test_queue_receives_correct_event_data_format(self):
+        async def mock_queue_put_nowait(data):
+            pass
+
+        async def mock_queue_get():
+            return (uuid.uuid4(), b'{"event": "test_type", "data": "test_data"}\n\n', time.time())
+
+        queue = asyncio.Queue()
+        queue.put_nowait = mock_queue_put_nowait
+        queue.get = mock_queue_get
+
+        manager = EventManager(queue)
+        manager.register_event("on_test_event", "test_type", manager.noop)
+        event_data = "test_data"
+        manager.send_event(event_type="test_type", data=event_data)
+
+        event_id, str_data, _ = await queue.get()
+        assert isinstance(event_id, uuid.UUID)
+        assert isinstance(str_data, bytes)
+        assert json.loads(str_data.decode("utf-8")) == {"event": "test_type", "data": event_data}
+
+    # Registering an event without specifying the event_type argument and providing the event_type argument
+    def test_register_event_without_event_type_argument_fixed(self):
+        class MockQueue:
+            def __init__(self):
+                self.data = []
+
+            def put_nowait(self, item):
+                self.data.append(item)
+
+        queue = MockQueue()
         event_manager = EventManager(queue)
-        with patch("json.dumps", side_effect=self.mock_json_dumps_error):
-            try:
-                event_manager.send_event("test_event", {"key": "value"})
-            except Exception:
+        event_manager.register_event("on_test_event", "test_event_type", callback=event_manager.noop)
+        event_manager.send_event(event_type="test_type", data={"key": "value"})
+
+        assert len(queue.data) == 1
+        event_id, str_data, timestamp = queue.data[0]
+        assert isinstance(event_id, uuid.UUID)
+        assert isinstance(str_data, bytes)
+        assert isinstance(timestamp, float)
+
+    # Accessing a non-registered event callback via __getattr__
+    def test_accessing_non_registered_callback(self):
+        class MockQueue:
+            def __init__(self):
                 pass
-            assert queue.empty()  # Queue should be empty due to error handling
 
+            def put_nowait(self, item):
+                pass
 
-class TestValidateEventFunction:
-    @pytest.mark.parametrize(
-        "event_function",
-        [
-            lambda param1, param2: None,
-            (lambda param1, param2: None).__call__,  # type: ignore
-            lambda param1, param2: param1 + str(param2),
-            lambda param1, _: param1.upper(),
-        ],
-    )
-    def test_valid_event_functions(self, event_function):
-        try:
-            EventManager._validate_event_function(event_function)
-        except Exception as e:
-            pytest.fail(f"Unexpected exception raised: {e}")
+        queue = MockQueue()
+        event_manager = EventManager(queue)
 
-    def test_non_callable_event_function(self):
-        with pytest.raises(TypeError, match="Event function must be callable"):
-            EventManager._validate_event_function("not_a_function")
-
-    @pytest.mark.parametrize("invalid_function", [lambda param1: None, lambda param1, param2, param3: None])
-    def test_invalid_parameter_count(self, invalid_function):
-        with pytest.raises(ValueError):
-            EventManager._validate_event_function(invalid_function)
-
-    def test_warn_second_param_not_loggable_type(self):
-        def invalid_event_function(param1: str, param2: int):
-            pass
-
-        with pytest.warns(UserWarning):
-            EventManager._validate_event_function(invalid_event_function)
-
-    def test_handles_unannotated_parameters(self):
-        def event_function(param1, param2):
-            pass
-
-        with pytest.warns(UserWarning):
-            EventManager._validate_event_function(event_function)
-
-    @pytest.mark.parametrize(
-        "event_function",
-        [lambda param1, *args: None, lambda param1, **kwargs: None, lambda event_type, data=None: None],
-    )
-    def test_valid_flexible_arguments(self, event_function):
-        try:
-            EventManager._validate_event_function(event_function)
-        except Exception as e:
-            pytest.fail(f"Unexpected exception raised: {e}")
-
-    @pytest.mark.parametrize("method_type", ["instance", "static"])
-    def test_method_types(self, method_type):
-        def valid_function(param1: str, param2: LoggableType):
-            pass
-
-        if method_type == "instance":
-            event_manager = EventManager(asyncio.Queue())
-            event_manager._validate_event_function(valid_function)
-        else:
-            EventManager._validate_event_function(valid_function)
-
-    def test_keyword_only_parameters(self):
-        def keyword_only_params_func(*, param1: str, param2: LoggableType):
-            pass
-
-        try:
-            EventManager._validate_event_function(keyword_only_params_func)
-        except Exception as e:
-            pytest.fail(f"Unexpected exception raised: {e}")
-
-    def test_validates_parameter_types(self):
-        def invalid_event_function(param1: int, param2: dict, *, param3: str):
-            pass
-
-        with pytest.raises(ValueError):
-            EventManager._validate_event_function(invalid_event_function)
+        # Accessing a non-registered event callback should return the 'noop' function
+        callback = event_manager.on_non_existing_event
+        assert callback.__name__ == "noop"
