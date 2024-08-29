@@ -264,20 +264,20 @@ ifdef login
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
-		--reload \
+		$(if $(workers),,--reload) \
 		--env-file $(env) \
 		--loop asyncio \
-		--workers $(workers)
+		$(if $(workers),--workers $(workers),)
 else
 	@echo "Running backend respecting the $(env) file";
 	poetry run uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
-		--reload \
+		$(if $(workers),,--reload) \
 		--env-file $(env) \
 		--loop asyncio \
-		--workers $(workers)
+		$(if $(workers),--workers $(workers),)
 endif
 
 build_and_run: setup_env ## build the project and run it
