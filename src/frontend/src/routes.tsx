@@ -2,7 +2,6 @@ import { lazy } from "react";
 import {
   createBrowserRouter,
   createRoutesFromElements,
-  Navigate,
   Outlet,
   Route,
 } from "react-router-dom";
@@ -12,6 +11,9 @@ import { ProtectedLoginRoute } from "./components/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authSettingsGuard";
 import { StoreGuard } from "./components/storeGuard";
 import ContextWrapper from "./contexts";
+import { CustomNavigate } from "./customization/components/custom-navigate";
+import { BASENAME } from "./customization/config-constants";
+import { ENABLE_CUSTOM_PARAM } from "./customization/feature-flags";
 import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
 import { DashboardWrapperPage } from "./pages/DashboardWrapperPage";
@@ -38,7 +40,7 @@ const SignUp = lazy(() => import("./pages/SignUpPage"));
 const router = createBrowserRouter(
   createRoutesFromElements([
     <Route
-      path="/"
+      path={ENABLE_CUSTOM_PARAM ? "/:customParam" : "/"}
       element={
         <ContextWrapper>
           <Outlet />
@@ -57,7 +59,7 @@ const router = createBrowserRouter(
           >
             <Route path="" element={<DashboardWrapperPage />}>
               <Route path="" element={<HomePage />}>
-                <Route index element={<Navigate replace to={"all"} />} />
+                <Route index element={<CustomNavigate replace to={"all"} />} />
                 <Route
                   path="flows/"
                   element={<MyCollectionComponent key="flows" type="flow" />}
@@ -93,8 +95,11 @@ const router = createBrowserRouter(
                   />
                 </Route>
               </Route>
-              <Route path="/settings" element={<SettingsPage />}>
-                <Route index element={<Navigate replace to={"general"} />} />
+              <Route path="settings" element={<SettingsPage />}>
+                <Route
+                  index
+                  element={<CustomNavigate replace to={"general"} />}
+                />
                 <Route
                   path="global-variables"
                   element={<GlobalVariablesPage />}
@@ -112,7 +117,7 @@ const router = createBrowserRouter(
                 <Route path="messages" element={<MessagesPage />} />
               </Route>
               <Route
-                path="/store"
+                path="store"
                 element={
                   <StoreGuard>
                     <StorePage />
@@ -120,18 +125,18 @@ const router = createBrowserRouter(
                 }
               />
               <Route
-                path="/store/:id/"
+                path="store/:id/"
                 element={
                   <StoreGuard>
                     <StorePage />
                   </StoreGuard>
                 }
               />
-              <Route path="/account">
+              <Route path="account">
                 <Route path="delete" element={<DeleteAccountPage />}></Route>
               </Route>
               <Route
-                path="/admin"
+                path="admin"
                 element={
                   <ProtectedAdminRoute>
                     <AdminPage />
@@ -139,19 +144,19 @@ const router = createBrowserRouter(
                 }
               />
             </Route>
-            <Route path="/flow/:id/">
+            <Route path="flow/:id/">
               <Route path="" element={<DashboardWrapperPage />}>
                 <Route path="folder/:folderId/" element={<FlowPage />} />
                 <Route path="" element={<FlowPage />} />
               </Route>
               <Route path="view" element={<ViewPage />} />
             </Route>
-            <Route path="/playground/:id/">
+            <Route path="playground/:id/">
               <Route path="" element={<PlaygroundPage />} />
             </Route>
           </Route>
           <Route
-            path="/login"
+            path="login"
             element={
               <ProtectedLoginRoute>
                 <LoginPage />
@@ -159,7 +164,7 @@ const router = createBrowserRouter(
             }
           />
           <Route
-            path="/signup"
+            path="signup"
             element={
               <ProtectedLoginRoute>
                 <SignUp />
@@ -167,18 +172,19 @@ const router = createBrowserRouter(
             }
           />
           <Route
-            path="/login/admin"
+            path="login/admin"
             element={
               <ProtectedLoginRoute>
                 <LoginAdminPage />
               </ProtectedLoginRoute>
             }
           />
-          <Route path="*" element={<Navigate replace to="/" />} />
         </Route>
       </Route>
+      <Route path="*" element={<CustomNavigate replace to="/" />} />
     </Route>,
   ]),
+  { basename: BASENAME || undefined },
 );
 
 export default router;

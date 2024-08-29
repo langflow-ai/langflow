@@ -1,6 +1,5 @@
 import { uniqueId } from "lodash";
 import { useContext, useEffect, useState } from "react";
-import CollectionCardComponent from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import ShadTooltip from "../../components/shadTooltipComponent";
@@ -9,7 +8,9 @@ import { Button } from "../../components/ui/button";
 
 import StoreCardComponent from "@/components/storeCardComponent";
 import { useGetTagsQuery } from "@/controllers/API/queries/store";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { CustomLink } from "@/customization/components/custom-link";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useParams } from "react-router-dom";
 import PaginatorComponent from "../../components/paginatorComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
 import { Badge } from "../../components/ui/badge";
@@ -62,7 +63,7 @@ export default function StorePage(): JSX.Element {
   const [selectFilter, setSelectFilter] = useState("all");
   const { isFetching, data } = useGetTagsQuery();
 
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
 
   useEffect(() => {
     if (!loadingApiKey) {
@@ -289,9 +290,9 @@ export default function StorePage(): JSX.Element {
                 size="sq"
                 className="gap-2 bg-beta-foreground text-background hover:bg-beta-foreground"
               >
-                <Link to={"/store"} className="cursor-pointer">
+                <CustomLink to={"/store"} className="cursor-pointer">
                   <IconComponent name="X" className="h-4 w-4" />
-                </Link>
+                </CustomLink>
                 {id}
               </Badge>
             )}

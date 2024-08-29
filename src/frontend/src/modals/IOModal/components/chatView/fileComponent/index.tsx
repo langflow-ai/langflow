@@ -1,8 +1,7 @@
 import { useGetDownloadFileMutation } from "@/controllers/API/queries/files";
 import { useState } from "react";
 import { ForwardedIconComponent } from "../../../../../components/genericIconComponent";
-import { BACKEND_URL, BASE_URL_API } from "../../../../../constants/constants";
-import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
+import { BASE_URL_API } from "../../../../../constants/constants";
 import { fileCardPropsType } from "../../../../../types/components";
 import formatFileName from "../filePreviewChat/utils/format-file-name";
 import DownloadButton from "./components/downloadButton/downloadButton";

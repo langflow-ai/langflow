@@ -1,7 +1,7 @@
 import { useLoginUser } from "@/controllers/API/queries/auth";
+import { CustomLink } from "@/customization/components/custom-link";
 import * as Form from "@radix-ui/react-form";
 import { useContext, useState } from "react";
-import { Link } from "react-router-dom";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -124,11 +124,11 @@ export default function LoginPage(): JSX.Element {
             </Form.Submit>
           </div>
           <div className="w-full">
-            <Link to="/signup">
+            <CustomLink to="/signup">
               <Button className="w-full" variant="outline" type="button">
                 Don't have an account?&nbsp;<b>Sign Up</b>
               </Button>
-            </Link>
+            </CustomLink>
           </div>
         </div>
       </div>

@@ -1,7 +1,8 @@
 import { useAddUser } from "@/controllers/API/queries/auth";
+import { CustomLink } from "@/customization/components/custom-link";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import * as Form from "@radix-ui/react-form";
 import { FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -26,7 +27,7 @@ export default function SignUp(): JSX.Element {
   const { password, cnfPassword, username } = inputState;
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
 
   const { mutate: mutateAddUser } = useAddUser();
 
@@ -184,11 +185,11 @@ export default function SignUp(): JSX.Element {
             </Form.Submit>
           </div>
           <div className="w-full">
-            <Link to="/login">
+            <CustomLink to="/login">
               <Button className="w-full" variant="outline">
                 Already have an account?&nbsp;<b>Sign in</b>
               </Button>
-            </Link>
+            </CustomLink>
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -9,7 +10,7 @@ import {
 
 export default function NewFlowCardComponent() {
   const addFlow = useAddFlow();
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   const { folderId } = useParams();
 
   return (

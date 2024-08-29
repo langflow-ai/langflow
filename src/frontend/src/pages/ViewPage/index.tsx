@@ -1,8 +1,9 @@
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useTypesStore } from "@/stores/typesStore";
 import { useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "../FlowPage/components/PageComponent";
 
@@ -10,7 +11,7 @@ export default function ViewPage() {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
 
   const { id } = useParams();
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   useGetGlobalVariables();
 
   const flows = useFlowsManagerStore((state) => state.flows);

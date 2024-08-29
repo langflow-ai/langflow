@@ -1,9 +1,8 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useParams } from "react-router-dom";
 import CollectionCardComponent from "../../../../../../components/cardComponent";
-import IconComponent from "../../../../../../components/genericIconComponent";
-import { Button } from "../../../../../../components/ui/button";
 const CollectionCard = ({ item, type, isLoading, control }) => {
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   const isComponent = item.is_component ?? false;
   const editFlowButtonTestId = `edit-flow-button-${item.id}`;
 
