@@ -8,9 +8,10 @@ interface IDeleteApiKey {
 }
 
 // add types for error handling and success
-export const useDeleteApiKey: useMutationFunctionType<IDeleteApiKey> = (
-  options,
-) => {
+export const useDeleteApiKey: useMutationFunctionType<
+  undefined,
+  IDeleteApiKey
+> = (options) => {
   const { mutate } = UseRequestProcessor();
 
   const deleteApiKeyFn = async (payload: IDeleteApiKey): Promise<any> => {

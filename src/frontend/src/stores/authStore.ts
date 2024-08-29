@@ -35,8 +35,6 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
       autoLogin: false,
       apiKey: null,
     });
-
-    window.location.href = "/login";
   },
 }));
 

@@ -58,6 +58,5 @@
     "tests/scheduled-end-to-end/twoEdges.spec.ts",
     "tests/scheduled-end-to-end/userSettings.spec.ts",
     "tests/end-to-end/store.spec.ts",
-    "tests/end-to-end/logs.spec.ts"
-  ]
+    "tests/end-to-end/logs.spec.ts"  ]
 }
