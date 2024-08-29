@@ -42,6 +42,10 @@ on:
         description: "Tag for the nightly base build"
         required: true
         type: string
+      test_env_var:
+        description: "Test environment variable"
+        required: true
+        type: string
 
 env:
   POETRY_VERSION: "1.8.3"
@@ -65,7 +69,7 @@ jobs:
           persist-credentials: true
       - name: Install poetry
         run: |
-          echo "test delete me: $TEST_DELETE_ME3"
+          echo "test delete me"
           echo $TEST_DELETE_ME3
           echo "test delete me: ${{ secrets.TEST_DELETE_ME }}"
           echo ${{ secrets.TEST_DELETE_ME }}

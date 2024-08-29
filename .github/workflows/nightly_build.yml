@@ -109,6 +109,7 @@ jobs:
       build_docker_main: false
       nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
+      test_env_var: ${{ secerts.TEST_DELETE_ME }}
 
   # slack-notification:
   #   name: Send Slack Notification
