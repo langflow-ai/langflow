@@ -92,6 +92,12 @@ jobs:
             echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_base }}. Exiting the workflow."
             exit 1
           fi
+
+      - name: Install dependencies
+        run: |
+          poetry env use ${{ env.PYTHON_VERSION }}
+          poetry install
+
       - name: Build project for distribution
         run: make build base=true
       - name: Test CLI
