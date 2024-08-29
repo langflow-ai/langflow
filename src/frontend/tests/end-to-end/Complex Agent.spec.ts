@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test("Complex Agent", async ({ page }) => {
+test("Dynamic Agent", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
@@ -42,7 +42,7 @@ test("Complex Agent", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Complex Agent" }).click();
+  await page.getByRole("heading", { name: "Dynamic Agent" }).click();
 
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,

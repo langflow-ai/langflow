@@ -113,7 +113,7 @@ export default function UndrawCardComponent({
             preserveAspectRatio="xMidYMid meet"
           />
         );
-      case "Complex Agent":
+      case "Dynamic Agent":
         return (
           <ComplexAgent
             style={{

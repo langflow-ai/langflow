@@ -70,10 +70,10 @@ export default function NewFlowModal({
                 flow={examples.find((e) => e.name == "Travel Planning Agents")!}
               />
             )}
-            {examples.find((e) => e.name == "Complex Agent") && (
+            {examples.find((e) => e.name == "Dynamic Agent") && (
               <UndrawCardComponent
                 key={7}
-                flow={examples.find((e) => e.name == "Complex Agent")!}
+                flow={examples.find((e) => e.name == "Dynamic Agent")!}
               />
             )}
           </div>
