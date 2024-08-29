@@ -1,6 +1,7 @@
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
 import { useStoreStore } from "@/stores/storeStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { useEffect } from "react";
@@ -56,6 +57,10 @@ export default function PlaygroundPage() {
     };
     awaitgetTypes();
   }, [id, flows, validApiKey]);
+
+  useEffect(() => {
+    if (id) track("Playground Page Loaded", { flowId: id });
+  }, []);
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
