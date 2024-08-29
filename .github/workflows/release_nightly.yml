@@ -44,7 +44,8 @@ on:
         type: string
 
 env:
-  POETRY_VERSION: "1.8.2"
+  POETRY_VERSION: "1.8.3"
+  PYTHON_VERSION: "3.12"
   TEST_DELETE_ME2: ${{ secrets.TEST_DELETE_ME }}
 
 jobs:
@@ -61,6 +62,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.nightly_tag_main }}
+          persist-credentials: true
       - name: Install poetry
         run: |
           echo "test delete me: $TEST_DELETE_ME3"
