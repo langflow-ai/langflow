@@ -42,21 +42,13 @@ on:
         description: "Tag for the nightly base build"
         required: true
         type: string
-      test_env_var:
-        description: "Test environment variable"
-        required: true
-        type: string
-        default: "did not pass correctly"
 
 env:
   POETRY_VERSION: "1.8.3"
   PYTHON_VERSION: "3.12"
-  TEST_DELETE_ME2: ${{ secrets.TEST_DELETE_ME }}
 
 jobs:
   release-nightly-base:
-    env:
-      TEST_DELETE_ME3: ${{ secrets.TEST_DELETE_ME }}
     name: Release Langflow Nightly Base
     runs-on: ubuntu-latest
     defaults:
@@ -136,6 +128,11 @@ jobs:
           poetry env info
           poetry env list
           poetry run env
+          echo "which poetry: "
+          which poetry
+          poetry about
+
+
           echo "env var:"
           echo "-------"
           echo $TEST_DELETE_ME
