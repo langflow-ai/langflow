@@ -127,25 +127,38 @@ async def run_flow(graph: Graph, run_input: Optional[Any] = None,
     return outputs
 
 
+
+@dataclasses.dataclass
+class ComponentInputHandle:
+    clazz: type
+    inputs: dict
+    output_name: str
+
 async def run_single_component(clazz: type, inputs: dict = None, run_input: Optional[Any] = None,
                                session_id: Optional[str] = None) -> dict[str, Any]:
-
-    raw_inputs = {}
-    for key, value in inputs.items():
-        if not isinstance(value, BaseComponent):
-            raw_inputs[key] = value
-    component = clazz(
-        **raw_inputs
-    )
-
+    user_id = str(uuid.uuid4())
     flow_id = str(uuid.uuid4())
-    graph = Graph(user_id=str(uuid.uuid4()), flow_id=flow_id)
-    component_id = graph.add_component(component)
-    for input_name, input_value in inputs.items():
-        if isinstance(input_value, Component):
-            graph.add_component(input_value)
-            graph.add_component_edge(input_value._id, (input_value.outputs[0].name, input_name), component._id)
-            print("added edge")
+    graph = Graph(user_id=user_id, flow_id=flow_id)
+
+    def _add_component(clazz: type, inputs: dict = None) -> str:
+        raw_inputs = {}
+        for key, value in inputs.items():
+            if not isinstance(value, ComponentInputHandle):
+                raw_inputs[key] = value
+            if isinstance(value, Component):
+                raise ValueError("Component inputs must be wrapped in ComponentInputHandle")
+        component = clazz(
+            **raw_inputs,
+            _user_id=user_id
+        )
+        component_id = graph.add_component(component)
+        for input_name, handle in inputs.items():
+            if isinstance(handle, ComponentInputHandle):
+                handle_component_id = _add_component(handle.clazz, handle.inputs)
+                graph.add_component_edge(handle_component_id, (handle.output_name, input_name), component_id)
+        return component_id
+
+    component_id = _add_component(clazz, inputs)
     graph.prepare()
     if run_input:
         graph_run_inputs = [InputValueRequest(input_value=run_input, type="chat")]

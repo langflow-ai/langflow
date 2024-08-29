@@ -474,8 +474,6 @@ class Component(CustomComponent):
         for name, value in self._parameters.items():
             try:
                 template[name]["value"] = value
-                if value and "load_from_db" in template[name]:
-                    template[name]["load_from_db"] = False
             except KeyError:
                 close_match = find_closest_match(name, list(template.keys()))
                 if close_match:
@@ -499,6 +497,8 @@ class Component(CustomComponent):
         #! works and then update this later
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
+        for key, value in self._inputs.items():
+            frontend_node.set_field_load_from_db_in_template(key, False)
         self._map_parameters_on_frontend_node(frontend_node)
 
         frontend_node_dict = frontend_node.to_dict(keep_name=False)
