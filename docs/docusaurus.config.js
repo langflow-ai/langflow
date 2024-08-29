@@ -28,7 +28,7 @@ const config = {
 
   presets: [
     [
-      "classic",
+      "@docusaurus/preset-classic",
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
         docs: {
@@ -49,6 +49,9 @@ const config = {
         gtag: {
           trackingID: "G-XHC7G628ZP",
           anonymizeIP: true,
+        },
+        googleTagManager: {
+          containerId: "GTM-NK5M4ZT8",
         },
         blog: false,
         theme: {
