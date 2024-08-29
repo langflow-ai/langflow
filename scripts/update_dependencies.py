@@ -69,7 +69,7 @@ if __name__ == "__main__":
     version = read_version_from_pyproject(langflow_base_path)
     if version:
         # Nightly versions contain "dev"
-        is_nightly = is_pre_release(version)
+        is_nightly = is_development_release(version)
         update_pyproject_dependency(pyproject_path, version, is_nightly)
     else:
         print("Error: Version not found.")
