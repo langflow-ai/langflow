@@ -1,4 +1,5 @@
 import { FlowType, NodeType } from "@/types/flow";
+import { GetCodesType } from "@/types/tweaks";
 import { tabsArrayType } from "../../components";
 
 export type TweaksStoreType = {
@@ -13,9 +14,14 @@ export type TweaksStoreType = {
     id: string,
     update: NodeType | ((oldState: NodeType) => NodeType),
   ) => void;
+  getCodes: GetCodesType;
   getNode: (id: string) => NodeType | undefined;
   tabs: tabsArrayType[];
-  initialSetup: (autoLogin: boolean, flow: FlowType) => void;
+  initialSetup: (
+    autoLogin: boolean,
+    flow: FlowType,
+    getCodes: GetCodesType,
+  ) => void;
   refreshTabs: () => void;
   autoLogin: boolean;
   flow: FlowType | null;
