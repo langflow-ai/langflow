@@ -258,6 +258,7 @@ export type DisclosureComponentType = {
       title: string;
       onClick: (event?: React.MouseEvent) => void;
     }[];
+    beta?: boolean;
   };
   testId?: string;
 };
