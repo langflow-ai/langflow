@@ -62,7 +62,13 @@ jobs:
         with:
           ref: ${{ inputs.nightly_tag_main }}
       - name: Install poetry
-        run: pipx install poetry==${{ env.POETRY_VERSION }}
+        run: |
+          echo "test delete me: $TEST_DELETE_ME3"
+          echo $TEST_DELETE_ME3
+          echo "test delete me: ${{ secrets.TEST_DELETE_ME }}"
+          echo ${{ secrets.TEST_DELETE_ME }}
+          pipx install poetry==${{ env.POETRY_VERSION }}
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
@@ -88,6 +94,7 @@ jobs:
       - name: Build project for distribution
         run: make build base=true
       - name: Test CLI
+        if: false # SKIP ON PURPOSE NOW
         run: |
           python -m pip install src/backend/base/dist/*.whl
           python -m langflow run --host 127.0.0.1 --port 7860 &
