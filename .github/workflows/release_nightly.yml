@@ -112,9 +112,10 @@ jobs:
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-          TEST_DELETE_ME: ${{ secrets.TEST_DELETE_ME }}
+          POETRY_TEST_PYPI_TOKEN_PYPI: ${{ secrets.TEST_PYPI_API_TOKEN }}
         run: |
-          make publish base=true
+          # make publish base=true
+          make publish_testpypi base=true
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -184,7 +185,10 @@ jobs:
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-        run: make publish main=true
+          POETRY_TEST_PYPI_TOKEN_PYPI: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          # make publish main=true
+          make publish_testpypi main=true
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
