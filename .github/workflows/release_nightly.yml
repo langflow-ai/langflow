@@ -45,9 +45,12 @@ on:
 
 env:
   POETRY_VERSION: "1.8.2"
+  TEST_DELETE_ME2: ${{ secrets.TEST_DELETE_ME }}
 
 jobs:
   release-nightly-base:
+    env:
+      TEST_DELETE_ME3: ${{ secrets.TEST_DELETE_ME }}
     name: Release Langflow Nightly Base
     runs-on: ubuntu-latest
     defaults:
@@ -118,7 +121,15 @@ jobs:
           poetry env list
           poetry run env
           echo "env var:"
+          echo "-------"
           echo $TEST_DELETE_ME
+          echo "------1"
+          echo $TEST_DELETE_ME2
+          echo "------2"
+          echo $TEST_DELETE_ME3
+          echo "------3"
+          echo ${{ secrets.TEST_DELETE_ME }}
+          echo "------secrets directly"
 
           make publish base=true
       - name: Upload Artifact
