@@ -626,7 +626,7 @@ def download_nltk_resources():
         for package in packages:
             try:
                 nltk.data.find(f"{category}/{package}")
-                print(f"{package} ({category}) already exists.")
+                logger.info(f"{package} ({category}) already exists.")
             except LookupError:
-                print(f"Downloading {package} ({category})...")
+                logger.info(f"Downloading {package} ({category})...")
                 nltk.download(package)
