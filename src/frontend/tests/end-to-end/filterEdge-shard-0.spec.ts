@@ -54,46 +54,25 @@ test("user must see on handle hover a tooltip with possibility connections", asy
   }
 
   await visibleElementHandle.hover().then(async () => {
-    await expect(
-      page.getByTestId("available-output-inputs").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-chains").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-textsplitters").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-retrievers").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-prototypes").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-embeddings").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-data").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-vectorstores").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-memories").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-models").first(),
-    ).toBeVisible();
+    const testIds = [
+      "available-output-inputs",
+      "available-output-chains",
+      "available-output-textsplitters",
+      "available-output-retrievers",
+      "available-output-prototypes",
+      "available-output-embeddings",
+      "available-output-data",
+      "available-output-vectorstores",
+      "available-output-memories",
+      "available-output-models",
+      "available-output-outputs",
+      "available-output-agents",
+      "available-output-helpers",
+    ];
 
-    await expect(
-      page.getByTestId("available-output-outputs").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-agents").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-helpers").first(),
-    ).toBeVisible();
+    await Promise.all(
+      testIds.map((id) => expect(page.getByTestId(id).first()).toBeVisible()),
+    );
 
     await page.getByTestId("icon-X").click();
     await page.waitForTimeout(500);
