@@ -54,9 +54,9 @@ def create_tag(build_type: str):
     # )
     # Alright, hardcoding the first release.
     if build_type == "main":
-        version_with_date = "1.0.17.dev0"
+        version_with_date = "1.0.17.dev1"
     else:
-        version_with_date = "0.0.95.dev0"
+        version_with_date = "0.0.95.dev1"
 
    # if version_with_date == latest_pypi_version:
     #     n = version_with_date.split("-")[-1]

@@ -42,7 +42,7 @@ def update_pyproject_dependency(pyproject_path, version, is_nightly):
     pattern = re.compile(r'langflow-base = \{ path = "\./src/backend/base", develop = true \}')
     if is_nightly:
         # NOTE: This process can be simplified; see the note in update_lf_base_dependency.py
-        replacement = f'langflow-base-nightly = "^{version}"'
+        replacement = f'langflow-base-nightly = "{version}"'
     else:
         replacement = f'langflow-base = "^{version}"'
     with open(pyproject_path, "r") as file:
