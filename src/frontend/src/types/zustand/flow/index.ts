@@ -182,4 +182,5 @@ export type FlowStoreType = {
   }) => void;
   stopBuilding: () => void;
   buildController: AbortController;
+  setBuildController: (controller: AbortController) => void;
 };
