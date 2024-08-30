@@ -13,6 +13,6 @@ export const AuthSettingsGuard = ({ children }) => {
   if (showGeneralSettings) {
     return children;
   } else {
-    return <CustomNavigate replace to="global-variables" />;
+    return <CustomNavigate replace to="/settings/global-variables" />;
   }
 };

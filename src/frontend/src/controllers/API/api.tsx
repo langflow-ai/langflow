@@ -104,8 +104,14 @@ function ApiInterceptor() {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
-        for (const [key, value] of Object.entries(customHeaders)) {
-          config.headers[key] = value;
+        const currentOrigin = window.location.origin;
+        const requestUrl = new URL(config?.url as string, currentOrigin);
+
+        const urlIsFromCurrentOrigin = requestUrl.origin === currentOrigin;
+        if (urlIsFromCurrentOrigin) {
+          for (const [key, value] of Object.entries(customHeaders)) {
+            config.headers[key] = value;
+          }
         }
 
         return {
@@ -146,21 +152,18 @@ function ApiInterceptor() {
         error.config.headers[key] = value;
       }
     }
-    mutationRenewAccessToken(
-      {},
-      {
-        onSuccess: async (data) => {
-          authenticationErrorCount = 0;
-          await remakeRequest(error);
-          authenticationErrorCount = 0;
-        },
-        onError: (error) => {
-          console.error(error);
-          mutationLogout();
-          return Promise.reject("Authentication error");
-        },
+    mutationRenewAccessToken(undefined, {
+      onSuccess: async () => {
+        authenticationErrorCount = 0;
+        await remakeRequest(error);
+        authenticationErrorCount = 0;
       },
-    );
+      onError: (error) => {
+        console.error(error);
+        mutationLogout();
+        return Promise.reject("Authentication error");
+      },
+    });
   }
 
   async function clearBuildVerticesState(error) {
