@@ -8,7 +8,8 @@ from typing import Optional
 
 import click
 import httpx
-from langflow.utils.version import get_version_info, fetch_latest_version, is_pre_release
+from langflow.utils.version import get_version_info, fetch_latest_version
+from langflow.utils.version import is_pre_release as langflow_is_pre_release
 import typer
 from dotenv import load_dotenv
 from multiprocess import cpu_count  # type: ignore
@@ -290,11 +291,11 @@ def get_letter_from_version(version: str):
 
 
 def build_version_notice(current_version: str, package_name: str) -> str:
-    latest_version = fetch_latest_version(package_name, is_pre_release(current_version))
+    latest_version = fetch_latest_version(package_name, langflow_is_pre_release(current_version))
     if latest_version and pkg_version.parse(current_version) < pkg_version.parse(
         latest_version
     ):
-        release_type = "pre-release" if is_pre_release(latest_version) else "version"
+        release_type = "pre-release" if langflow_is_pre_release(latest_version) else "version"
         return f"A new {release_type} of {package_name} is available: {latest_version}"
     return ""
 
@@ -327,7 +328,7 @@ def print_banner(host: str, port: int):
     version_info = get_version_info()
     langflow_version = version_info["version"]
     package_name = version_info["package"]
-    is_pre_release |= is_pre_release(langflow_version)  # Update pre-release status
+    is_pre_release |= langflow_is_pre_release(langflow_version)  # Update pre-release status
 
     notice = build_version_notice(langflow_version, package_name)
     notice = stylize_text(notice, package_name, is_pre_release)
