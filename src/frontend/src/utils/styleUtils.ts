@@ -1,5 +1,6 @@
 import { AIMLIcon } from "@/icons/AIML";
 import Perplexity from "@/icons/Perplexity/Perplexity";
+import { UnstructuredIcon } from "@/icons/Unstructured";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import {
@@ -393,6 +394,7 @@ export const nodeIconsLucide: iconsType = {
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
   Groq: GroqIcon,
   HNLoader: HackerNewsIcon,
+  Unstructured: UnstructuredIcon,
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
   HuggingFaceEmbeddings: HuggingFaceIcon,
