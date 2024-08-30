@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import warnings
+import nltk
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
