@@ -1,4 +1,5 @@
 import { AuthContext } from "@/contexts/authContext";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { AxiosError } from "axios";
 import { useContext } from "react";
@@ -23,7 +24,8 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoginPage = location.pathname.includes("login");
-  const { mutate: mutationLogout } = useLogout();
+  const navigate = useCustomNavigate();
+  const { mutateAsync: mutationLogout } = useLogout();
 
   async function getAutoLoginFn(): Promise<null> {
     try {
@@ -41,8 +43,8 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
         setAutoLogin(false);
         if (!isLoginPage) {
           if (!isAuthenticated) {
-            mutationLogout();
-            throw new Error("Unauthorized");
+            await mutationLogout();
+            navigate("/login");
           } else {
             getUser();
           }
