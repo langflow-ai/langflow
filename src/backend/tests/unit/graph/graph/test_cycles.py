@@ -56,7 +56,7 @@ def test_cycle_in_graph():
     results = []
     max_iterations = 20
     snapshots = [graph._snapshot()]
-    for result in graph.start(max_iterations=max_iterations):
+    for result in graph.start(max_iterations=max_iterations, config={"output": {"cache": False}}):
         snapshots.append(graph._snapshot())
         results.append(result)
     results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
@@ -107,5 +107,5 @@ def test_cycle_in_graph_max_iterations():
     results = []
 
     with pytest.raises(ValueError, match="Max iterations reached"):
-        for result in graph.start(max_iterations=1):
+        for result in graph.start(max_iterations=2, config={"output": {"cache": False}}):
             results.append(result)
