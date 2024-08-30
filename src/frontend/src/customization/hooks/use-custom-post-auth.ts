@@ -1,16 +1,16 @@
 import { UseRequestProcessor } from "@/controllers/API/services/request-processor";
 import { useQueryFunctionType } from "@/types/api";
 
-export const useCustomPostLoading: useQueryFunctionType<undefined, null> = (
+export const useCustomPostAuth: useQueryFunctionType<undefined, null> = (
   options,
 ) => {
   const { query } = UseRequestProcessor();
 
-  const getPostLoadingFn = async () => {
+  const getPostAuthFn = async () => {
     return null;
   };
 
-  const queryResult = query(["usePostLoading"], getPostLoadingFn, options);
+  const queryResult = query(["usePostAuth"], getPostAuthFn, options);
 
   return queryResult;
 };
