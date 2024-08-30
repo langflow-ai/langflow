@@ -1,7 +1,8 @@
 import { useGetAutoLogin } from "@/controllers/API/queries/auth";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetVersionQuery } from "@/controllers/API/queries/version";
-import { usePrimaryLoading } from "@/customization/hooks/use-primary-loading";
+import { CustomLoadingPage } from "@/customization/components/custom-loading-page";
+import { useCustomPrimaryLoading } from "@/customization/hooks/use-custom-primary-loading";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useEffect } from "react";
@@ -13,7 +14,8 @@ export function AppInitPage() {
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
-  const { isFetched: isLoaded } = usePrimaryLoading();
+  const { isFetched: isLoaded } = useCustomPrimaryLoading();
+
   const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
   useGetVersionQuery({ enabled: isFetched });
   useGetConfig({ enabled: isFetched });
@@ -35,7 +37,11 @@ export function AppInitPage() {
   return (
     //need parent component with width and height
     <>
-      {(isLoading || !isFetched) && <LoadingPage overlay />}
+      {isLoaded ? (
+        (isLoading || !isFetched) && <LoadingPage overlay />
+      ) : (
+        <CustomLoadingPage />
+      )}
       {isFetched && <Outlet />}
     </>
   );

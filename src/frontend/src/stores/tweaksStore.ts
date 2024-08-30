@@ -1,15 +1,8 @@
 import { getChangesType } from "@/modals/apiModal/utils/get-changes-types";
-import {
-  getCurlRunCode,
-  getCurlWebhookCode,
-} from "@/modals/apiModal/utils/get-curl-code";
-import getJsApiCode from "@/modals/apiModal/utils/get-js-api-code";
 import { getNodesWithDefaultValue } from "@/modals/apiModal/utils/get-nodes-with-default-value";
-import getPythonApiCode from "@/modals/apiModal/utils/get-python-api-code";
-import getPythonCode from "@/modals/apiModal/utils/get-python-code";
-import getWidgetCode from "@/modals/apiModal/utils/get-widget-code";
 import { createTabsArray } from "@/modals/apiModal/utils/tabs-array";
 import { FlowType, NodeDataType } from "@/types/flow";
+import { GetCodesType } from "@/types/tweaks";
 import { customStringify } from "@/utils/reactflowUtils";
 import { create } from "zustand";
 import { TweaksStoreType } from "../types/zustand/tweaks";
@@ -51,12 +44,18 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
   },
   autoLogin: false,
   flow: null,
-  initialSetup: (autoLogin: boolean, flow: FlowType) => {
+  getCodes: {},
+  initialSetup: (
+    autoLogin: boolean,
+    flow: FlowType,
+    getCodes: GetCodesType,
+  ) => {
     useFlowStore.getState().unselectAll();
     set({
       nodes: getNodesWithDefaultValue(flow?.data?.nodes ?? []),
       autoLogin,
       flow,
+      getCodes,
     });
     get().refreshTabs();
   },
@@ -90,38 +89,40 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
         tweak[node.id] = currentTweak;
       }
     });
+    const codesObj = {};
+    const getCodes = get().getCodes;
 
-    const pythonApiCode = getPythonApiCode(flow?.id, autoLogin, tweak);
-    const runCurlCode = getCurlRunCode(
-      flow?.id,
-      autoLogin,
-      tweak,
-      flow?.endpoint_name,
-    );
-    const jsApiCode = getJsApiCode(
-      flow?.id,
-      autoLogin,
-      tweak,
-      flow?.endpoint_name,
-    );
-    const webhookCurlCode = getCurlWebhookCode(
-      flow?.id,
-      autoLogin,
-      flow?.endpoint_name,
-    );
-    const pythonCode = getPythonCode(flow?.name, tweak);
-    const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
+    const props = {
+      flowId: flow?.id,
+      flowName: flow?.name,
+      isAuth: autoLogin,
+      tweaksBuildedObject: tweak,
+      endpointName: flow?.endpoint_name,
+    };
 
-    const codesArray = [
-      runCurlCode,
-      webhookCurlCode,
-      pythonApiCode,
-      jsApiCode,
-      pythonCode,
-      widgetCode,
-    ];
+    if (getCodes) {
+      if (getCodes.getCurlRunCode) {
+        codesObj["runCurlCode"] = getCodes.getCurlRunCode(props);
+      }
+      if (getCodes.getCurlWebhookCode && !!flow.webhook) {
+        codesObj["webhookCurlCode"] = getCodes.getCurlWebhookCode(props);
+      }
+      if (getCodes.getJsApiCode) {
+        codesObj["jsApiCode"] = getCodes.getJsApiCode(props);
+      }
+      if (getCodes.getPythonApiCode) {
+        codesObj["pythonApiCode"] = getCodes.getPythonApiCode(props);
+      }
+      if (getCodes.getPythonCode) {
+        codesObj["pythonCode"] = getCodes.getPythonCode(props);
+      }
+      if (getCodes.getWidgetCode) {
+        codesObj["widgetCode"] = getCodes.getWidgetCode(props);
+      }
+    }
+
     set({
-      tabs: createTabsArray(codesArray, !!flow.webhook, nodes.length > 0),
+      tabs: createTabsArray(codesObj, nodes.length > 0),
     });
   },
 }));

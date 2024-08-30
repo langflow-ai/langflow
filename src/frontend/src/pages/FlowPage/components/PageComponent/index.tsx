@@ -1,5 +1,6 @@
 import LoadingComponent from "@/components/loadingComponent";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
+import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import _, { cloneDeep } from "lodash";
@@ -333,6 +334,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
         const data: { type: string; node?: APIClassType } = JSON.parse(
           event.dataTransfer.getData("nodedata"),
         );
+
+        track(`Component Added: ${data.node?.display_name}`);
 
         const newId = getNodeId(data.type);
 
