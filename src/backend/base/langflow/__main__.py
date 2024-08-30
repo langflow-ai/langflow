@@ -9,7 +9,6 @@ from typing import Optional
 import click
 import httpx
 import typer
-import nltk
 from dotenv import load_dotenv
 from multiprocess import cpu_count  # type: ignore
 from multiprocess.context import Process  # type: ignore
