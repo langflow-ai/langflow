@@ -9,6 +9,7 @@ from typing import Optional
 import click
 import httpx
 import typer
+import nltk
 from dotenv import load_dotenv
 from multiprocess import cpu_count  # type: ignore
 from multiprocess.context import Process  # type: ignore
@@ -20,7 +21,6 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
-from langflow.initial_setup.setup import download_nltk_resources
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
@@ -73,6 +73,23 @@ def set_var_for_macos_issue():
         # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
+
+# Function to download NLTK packages if not already downloaded
+def download_nltk_resources():
+    nltk_resources = {
+        "corpora": ["wordnet"],
+        "taggers": ["averaged_perceptron_tagger"],
+        "tokenizers": ["punkt", "punkt_tab"],
+    }
+
+    for category, packages in nltk_resources.items():
+        for package in packages:
+            try:
+                nltk.data.find(f"{category}/{package}")
+                logger.info(f"{package} ({category}) already exists.")
+            except LookupError:
+                logger.info(f"Downloading {package} ({category})...")
+                nltk.download(package)
 
 
 @app.command()
