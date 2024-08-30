@@ -11,8 +11,8 @@ from langchain_community.document_loaders.unstructured import UnstructuredFileLo
 
 
 class UnstructuredComponent(Component):
-    display_name = "Unstructured"
-    description = "Unstructured data loader"
+    display_name = "Unstructured.io Loader"
+    description = "Extract clean text from raw source documents. Supports: PDF, DOCX, TXT"
     documentation = "https://python.langchain.com/v0.2/docs/integrations/providers/unstructured/"
     trace_type = "tool"
     icon = "Unstructured"
@@ -23,12 +23,12 @@ class UnstructuredComponent(Component):
             name="file",
             display_name="File",
             required=True,
-            info="The path to the file with which you want to use Unstructured to parse",
+            info="The path to the file with which you want to use Unstructured to parse. Supports: PDF, DOCX, TXT",
             file_types=["pdf", "docx", "txt"],  # TODO: Support all unstructured file types
         ),
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="Unstructured.io API Key",
             required=False,
             info="Unstructured API Key. Create at: https://unstructured.io/ - If not provided, open source library will be used",
         ),
