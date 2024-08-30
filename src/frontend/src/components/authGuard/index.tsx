@@ -19,6 +19,7 @@ export const ProtectedRoute = ({ children }) => {
   const refreshToken = cookies.get("refresh_token");
   const { mutate: mutateRefresh } = useRefreshAccessToken();
   const { mutate: mutationLogout } = useLogout();
+  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   useEffect(() => {
     const envRefreshTime = LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV;
@@ -34,10 +35,11 @@ export const ProtectedRoute = ({ children }) => {
       }
     };
 
-    const intervalId = setInterval(intervalFunction, accessTokenTimer * 1000);
-    intervalFunction();
-
-    return () => clearInterval(intervalId);
+    if (!autoLogin) {
+      const intervalId = setInterval(intervalFunction, accessTokenTimer * 1000);
+      intervalFunction();
+      return () => clearInterval(intervalId);
+    }
   }, [isAuthenticated]);
 
   if (!isAuthenticated && hasToken) {
