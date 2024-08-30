@@ -622,7 +622,7 @@ def initialize_super_user_if_needed():
 def download_nltk_resources():
     nltk_resources = {
         "corpora": ["wordnet"],
-        "taggers": ["averaged_perceptron_tagger"],
+        "taggers": ["averaged_perceptron_tagger", "averaged_perceptron_tagger_eng"],
         "tokenizers": ["punkt", "punkt_tab"],
     }
 
