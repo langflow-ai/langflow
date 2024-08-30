@@ -11,4 +11,5 @@ export default {
   PROXY_TARGET,
   API_ROUTES,
   BASE_URL_API,
+  HEALTH_CHECK_URL,
 };
