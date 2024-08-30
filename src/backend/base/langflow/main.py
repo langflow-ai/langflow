@@ -78,7 +78,7 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         if "files/" not in request.url.path and request.url.path.endswith(".js") and response.status_code == 200:
             response.headers["Content-Type"] = "text/javascript"
         return response
-    
+
 
 # Function to download NLTK packages if not already downloaded
 def download_nltk_resources():
