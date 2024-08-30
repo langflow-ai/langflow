@@ -19,11 +19,11 @@ import numpy as np
 
 
 class GoogleGenerativeAIEmbeddingsComponent(Component):
-    display_name = "Custom Component"
-    description = "Use as a template to create your own component."
-    documentation: str = "http://docs.langflow.org/components/custom"
-    icon = "custom_components"
-    name = "CustomComponent"
+    display_name = "Google GenerativeAI Embeddings"
+    description = "Connect to Google's generative AI embeddings service using the GoogleGenerativeAIEmbeddings class, found in the langchain-google-genai package."
+    documentation: str = "https://python.langchain.com/v0.2/docs/integrations/text_embedding/google_generative_ai/"
+    icon = "Google"
+    name = "Google GenerativeAI Embeddings"
 
     inputs = [
         SecretStrInput(name="api_key", display_name="API Key"),

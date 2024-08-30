@@ -1,14 +1,14 @@
-import FeatureFlags from "@/../feature-config.json";
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import { ENABLE_BRANDING } from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect } from "react";
-import { useBlocker, useNavigate, useParams } from "react-router-dom";
+import { useBlocker, useParams } from "react-router-dom";
 import FlowToolbar from "../../components/chatComponent";
-import Header from "../../components/headerComponent";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -28,7 +28,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const version = useDarkStore((state) => state.version);
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id } = useParams();
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   useGetGlobalVariables();
   const saveFlow = useSaveFlow();
 
@@ -81,7 +81,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       }
     };
     awaitgetTypes();
-  }, [id, flows]);
+  }, [id, flows, currentFlowId]);
 
   useEffect(() => {
     setOnFlowPage(true);
@@ -94,7 +94,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   return (
     <>
-      <Header />
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
@@ -108,16 +107,17 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
             </main>
           </div>
         )}
-        <a
-          target={"_blank"}
-          href="https://medium.com/logspace/langflow-datastax-better-together-1b7462cebc4d"
-          className="langflow-page-icon"
-        >
-          {FeatureFlags.ENABLE_BRANDING && version && (
+        {ENABLE_BRANDING && version && (
+          <a
+            target={"_blank"}
+            href="https://medium.com/logspace/langflow-datastax-better-together-1b7462cebc4d"
+            className="langflow-page-icon"
+          >
             <div className="mt-1">Langflow 🤝 DataStax</div>
-          )}
-          <div className={version ? "mt-2" : "mt-1"}>⛓️ v{version}</div>
-        </a>
+
+            <div className={version ? "mt-2" : "mt-1"}>⛓️ v{version}</div>
+          </a>
+        )}
       </div>
       {blocker.state === "blocked" && currentSavedFlow && (
         <SaveChangesModal

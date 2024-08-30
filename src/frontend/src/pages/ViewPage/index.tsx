@@ -1,18 +1,17 @@
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
-import useFlowStore from "@/stores/flowStore";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useTypesStore } from "@/stores/typesStore";
 import { useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "../FlowPage/components/PageComponent";
 
 export default function ViewPage() {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
 
-  const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id } = useParams();
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   useGetGlobalVariables();
 
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -42,15 +41,6 @@ export default function ViewPage() {
     };
     awaitgetTypes();
   }, [id, flows]);
-
-  useEffect(() => {
-    setOnFlowPage(true);
-
-    return () => {
-      setOnFlowPage(false);
-      setCurrentFlow(undefined);
-    };
-  }, [id]);
 
   return (
     <div className="flow-page-positioning">

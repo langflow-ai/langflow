@@ -42,18 +42,29 @@ test.describe("drag and drop test", () => {
     }, jsonContent);
 
     // Now dispatch
-    await page.dispatchEvent(
-      '//*[@id="root"]/div/div[2]/div[2]/div[3]/div',
-      "drop",
-      {
-        dataTransfer,
-      },
-    );
+    await page.getByTestId("cards-wrapper").dispatchEvent("drop", {
+      dataTransfer,
+    });
+
+    await page.waitForTimeout(3000);
 
     const genericNode = page.getByTestId("div-generic-node");
     const elementCount = await genericNode?.count();
     if (elementCount > 0) {
       expect(true).toBeTruthy();
     }
+
+    expect(
+      await page.locator("text=Getting Started:").last().isVisible(),
+    ).toBeTruthy();
+    expect(
+      await page.locator("text=Inquisitive Pike").last().isVisible(),
+    ).toBeTruthy();
+    expect(
+      await page.locator("text=Dreamy Bassi").last().isVisible(),
+    ).toBeTruthy();
+    expect(
+      await page.locator("text=Furious Faraday").last().isVisible(),
+    ).toBeTruthy();
   });
 });

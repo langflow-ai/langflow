@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import {
   BASE_URL_API,
@@ -10,12 +10,17 @@ import {
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
-import FeatureFlags from "@/../feature-config.json";
 import { useLogout } from "@/controllers/API/queries/auth";
+import { CustomLink } from "@/customization/components/custom-link";
+import {
+  ENABLE_DARK_MODE,
+  ENABLE_PROFILE_ICONS,
+  ENABLE_SOCIAL_LINKS,
+} from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
-import { useLocationStore } from "../../stores/locationStore";
 import { useStoreStore } from "../../stores/storeStore";
 import IconComponent, { ForwardedIconComponent } from "../genericIconComponent";
 import { Button } from "../ui/button";
@@ -39,56 +44,41 @@ export default function Header(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { mutate: mutationLogout } = useLogout();
-  const logout = useAuthStore((state) => state.logout);
 
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   const hasStore = useStoreStore((state) => state.hasStore);
 
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.setDark);
   const stars = useDarkStore((state) => state.stars);
 
-  const routeHistory = useLocationStore((state) => state.routeHistory);
-
   const profileImageUrl = `${BASE_URL_API}files/profile_pictures/${
     userData?.profile_image ?? "Space/046-rocket.svg"
   }`;
 
   const redirectToLastLocation = () => {
-    const lastVisitedIndex = routeHistory
-      .reverse()
-      .findIndex((path) => path !== location.pathname);
-
-    const lastFlowVisited = routeHistory[lastVisitedIndex];
-    lastFlowVisited ? navigate(lastFlowVisited) : navigate("/all");
+    const canGoBack = location.key !== "default";
+    if (canGoBack) {
+      navigate(-1);
+    } else {
+      navigate("/", { replace: true });
+    }
   };
 
-  const visitedFlowPathBefore = () => {
-    const last100VisitedPaths = routeHistory.slice(-99);
-    return last100VisitedPaths.some((path) => path.includes("/flow/"));
-  };
-
-  const showArrowReturnIcon =
-    LOCATIONS_TO_RETURN.some((path) => location.pathname.includes(path)) &&
-    visitedFlowPathBefore();
+  const showArrowReturnIcon = LOCATIONS_TO_RETURN.some((path) =>
+    location.pathname.includes(path),
+  );
 
   const handleLogout = () => {
-    mutationLogout(undefined, {
-      onSuccess: () => {
-        logout();
-      },
-      onError: (error) => {
-        console.error(error);
-      },
-    });
+    mutationLogout();
   };
 
   return (
     <div className="header-arrangement relative">
       <div className="header-start-display">
-        <Link to="/all" className="cursor-pointer">
+        <CustomLink to="/all" className="cursor-pointer">
           <span className="ml-4 text-2xl">⛓️</span>
-        </Link>
+        </CustomLink>
         {showArrowReturnIcon && (
           <Button
             unstyled
@@ -104,12 +94,12 @@ export default function Header(): JSX.Element {
       </div>
 
       <div className="flex items-center xl:absolute xl:left-1/2 xl:-translate-x-1/2">
-        <Link to="/all">
+        <CustomLink to="/all">
           <Button
             className="gap-2"
             variant={
-              location.pathname === "/all" ||
-              location.pathname === "/components"
+              location.pathname.includes("/all") ||
+              location.pathname.includes("/components")
                 ? "primary"
                 : "secondary"
             }
@@ -118,25 +108,27 @@ export default function Header(): JSX.Element {
             <IconComponent name="Home" className="h-4 w-4" />
             <div className="hidden flex-1 lg:block">{USER_PROJECTS_HEADER}</div>
           </Button>
-        </Link>
+        </CustomLink>
 
         {hasStore && (
-          <Link to="/store">
+          <CustomLink to="/store">
             <Button
               className="gap-2"
-              variant={location.pathname === "/store" ? "primary" : "secondary"}
+              variant={
+                location.pathname.includes("/store") ? "primary" : "secondary"
+              }
               size="sm"
               data-testid="button-store"
             >
               <IconComponent name="Store" className="h-4 w-4" />
               <div className="hidden flex-1 lg:block">Store</div>
             </Button>
-          </Link>
+          </CustomLink>
         )}
       </div>
       <div className="header-end-division">
         <div className="header-end-display">
-          {FeatureFlags.ENABLE_SOCIAL_LINKS && (
+          {ENABLE_SOCIAL_LINKS && (
             <>
               <a
                 href="https://github.com/langflow-ai/langflow"
@@ -168,7 +160,7 @@ export default function Header(): JSX.Element {
               <Separator orientation="vertical" />
             </>
           )}
-          {FeatureFlags.ENABLE_DARK_MODE && (
+          {ENABLE_DARK_MODE && (
             <button
               className="extra-side-bar-save-disable"
               onClick={() => {
@@ -210,7 +202,7 @@ export default function Header(): JSX.Element {
                   data-testid="user-profile-settings"
                   className="shrink-0"
                 >
-                  {FeatureFlags.ENABLE_PROFILE_ICONS ? (
+                  {ENABLE_PROFILE_ICONS ? (
                     <img
                       src={profileImageUrl}
                       className="h-7 w-7 shrink-0 focus-visible:outline-0"

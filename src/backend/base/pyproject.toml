@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.94"
+version = "0.0.95"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -119,6 +119,7 @@ dictdiffer = "^0.9.0"
 pytest-split = "^0.9.0"
 devtools = "^0.12.2"
 pytest-flakefinder = "^1.1.0"
+types-markdown = "^3.7.0.20240822"
 
 
 [tool.pytest.ini_options]
