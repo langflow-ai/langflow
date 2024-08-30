@@ -124,7 +124,6 @@ test("user must see on handle click the possibility connections - LLMChain", asy
     "prototypesSub Flow",
     "retrieversSelf Query Retriever",
     "textsplittersCharacterTextSplitter",
-    "toolsSearch API", // Note: Duplicate ID
   ];
 
   await Promise.all(
@@ -145,7 +144,6 @@ test("user must see on handle click the possibility connections - LLMChain", asy
     "prototypesSub Flow",
     "retrieversSelf Query Retriever",
     "textsplittersCharacterTextSplitter",
-    "toolsSearch API", // Note: Duplicate ID
   ];
 
   await Promise.all(

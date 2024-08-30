@@ -181,7 +181,6 @@ class CustomComponent(Component):
   const visibleTexts = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
   const notVisibleTexts = ["X1", "thirdRandomText"];
 
-  // Check visibility in parallel
   await Promise.all(
     visibleTexts.map((text) => expect(page.getByText(text)).toBeVisible()),
   );
