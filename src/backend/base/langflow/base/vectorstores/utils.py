@@ -17,7 +17,7 @@ def chroma_collection_to_data(collection_dict: dict):
             "id": collection_dict["ids"][i],
             "text": doc,
         }
-        if "metadatas" in collection_dict:
+        if ("metadatas" in collection_dict) and collection_dict["metadatas"][i]:
             for key, value in collection_dict["metadatas"][i].items():
                 data_dict[key] = value
         data.append(Data(**data_dict))

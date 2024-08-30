@@ -1,4 +1,3 @@
-import { useState } from "react";
 import IconComponent from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
@@ -13,6 +12,7 @@ type HeaderComponentProps = {
   disableFunctions: boolean;
   setShouldSelectAll: (select) => void;
   shouldSelectAll: boolean;
+  disabled: boolean;
 };
 
 const HeaderComponent = ({
@@ -23,6 +23,7 @@ const HeaderComponent = ({
   disableFunctions,
   setShouldSelectAll,
   shouldSelectAll,
+  disabled,
 }: HeaderComponentProps) => {
   const handleClick = () => {
     handleSelectAll(shouldSelectAll);
@@ -31,7 +32,12 @@ const HeaderComponent = ({
 
   return (
     <>
-      <div className="flex w-full items-center justify-between gap-4">
+      <div
+        className={cn(
+          "flex w-full items-center justify-between gap-4",
+          disabled ? "pointer-events-none opacity-50" : "",
+        )}
+      >
         <div className="flex items-center justify-self-start">
           <a onClick={handleClick} className="cursor-pointer text-sm">
             <div className="flex items-center space-x-2">

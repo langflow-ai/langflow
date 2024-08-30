@@ -16,7 +16,7 @@ from starlette.websockets import WebSocket
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
-from langflow.services.database.models.user.model import User
+from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session, get_settings_service
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
@@ -32,7 +32,7 @@ async def api_key_security(
     query_param: str = Security(api_key_query),
     header_param: str = Security(api_key_header),
     db: Session = Depends(get_session),
-) -> Optional[User]:
+) -> Optional[UserRead]:
     settings_service = get_settings_service()
     result: Optional[Union[ApiKey, User]] = None
     if settings_service.auth_settings.AUTO_LOGIN:
@@ -63,9 +63,10 @@ async def api_key_security(
             detail="Invalid or missing API key",
         )
     if isinstance(result, ApiKey):
-        return result.user
+        return UserRead.model_validate(result.user, from_attributes=True)
     elif isinstance(result, User):
-        return result
+        return UserRead.model_validate(result, from_attributes=True)
+    raise ValueError("Invalid result type")
 
 
 async def get_current_user(
@@ -305,7 +306,13 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
             )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
-        if user_id is None or token_type is None:
+
+        if user_id is None or token_type == "":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+        user_exists = get_user_by_id(db, user_id)
+
+        if user_exists is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
         return create_user_tokens(user_id, db)

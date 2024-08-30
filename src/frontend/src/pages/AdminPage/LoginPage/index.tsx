@@ -1,11 +1,10 @@
+import { useLoginUser } from "@/controllers/API/queries/auth";
 import { useContext, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { SIGNIN_ERROR_ALERT } from "../../../constants/alerts_constants";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
 import { AuthContext } from "../../../contexts/authContext";
-import { onLogin } from "../../../controllers/API";
 import useAlertStore from "../../../stores/alertStore";
 import { LoginType } from "../../../types/api";
 import {
@@ -14,12 +13,9 @@ import {
 } from "../../../types/components";
 
 export default function LoginAdminPage() {
-  const navigate = useNavigate();
-
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
   const { login } = useContext(AuthContext);
-  const setLoading = useAlertStore((state) => state.setLoading);
 
   const { password, username } = inputState;
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -29,26 +25,25 @@ export default function LoginAdminPage() {
     setInputState((prev) => ({ ...prev, [name]: value }));
   }
 
+  const { mutate } = useLoginUser();
+
   function signIn() {
     const user: LoginType = {
       username: username,
       password: password,
     };
-    onLogin(user)
-      .then((user) => {
-        console.log("admin page");
 
-        setLoading(true);
-
-        login(user.access_token, "login");
-        navigate("/admin/");
-      })
-      .catch((error) => {
+    mutate(user, {
+      onSuccess: (res) => {
+        login(res.access_token, "login", res.refresh_token);
+      },
+      onError: (error) => {
         setErrorData({
           title: SIGNIN_ERROR_ALERT,
           list: [error["response"]["data"]["detail"]],
         });
-      });
+      },
+    });
   }
 
   return (

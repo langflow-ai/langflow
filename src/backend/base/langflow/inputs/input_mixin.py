@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator, model_serializer
 
@@ -26,10 +26,14 @@ SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value
 
 
 # Base mixin for common input field attributes and methods
-class BaseInputMixin(BaseModel, validate_assignment=True):
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        extra="forbid",
+        populate_by_name=True,
+    )
 
-    field_type: Optional[SerializableFieldTypes] = Field(default=FieldTypes.TEXT)
+    field_type: SerializableFieldTypes = Field(default=FieldTypes.TEXT, alias="type")
 
     required: bool = False
     """Specifies if the field is required. Defaults to False."""
@@ -40,33 +44,33 @@ class BaseInputMixin(BaseModel, validate_assignment=True):
     show: bool = True
     """Should the field be shown. Defaults to True."""
 
+    name: str = Field(description="Name of the field.")
+    """Name of the field. Default is an empty string."""
+
     value: Any = ""
     """The value of the field. Default is an empty string."""
 
-    name: Optional[str] = None
-    """Name of the field. Default is an empty string."""
-
-    display_name: Optional[str] = None
+    display_name: str | None = None
     """Display name of the field. Defaults to None."""
 
     advanced: bool = False
     """Specifies if the field will an advanced parameter (hidden). Defaults to False."""
 
-    input_types: Optional[list[str]] = None
+    input_types: list[str] | None = None
     """List of input types for the handle when the field has more than one type. Default is an empty list."""
 
     dynamic: bool = False
     """Specifies if the field is dynamic. Defaults to False."""
 
-    info: Optional[str] = ""
+    info: str | None = ""
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
 
-    real_time_refresh: Optional[bool] = None
+    real_time_refresh: bool | None = None
     """Specifies if the field should have real time refresh. `refresh_button` must be False. Defaults to None."""
 
-    refresh_button: Optional[bool] = None
+    refresh_button: bool | None = None
     """Specifies if the field should have a refresh button. Defaults to False."""
-    refresh_button_text: Optional[str] = None
+    refresh_button_text: str | None = None
     """Specifies the text for the refresh button. Defaults to None."""
 
     title_case: bool = False
@@ -78,9 +82,10 @@ class BaseInputMixin(BaseModel, validate_assignment=True):
     @field_validator("field_type", mode="before")
     @classmethod
     def validate_field_type(cls, v):
-        if v not in FieldTypes:
+        try:
+            return FieldTypes(v)
+        except ValueError:
             return FieldTypes.OTHER
-        return FieldTypes(v)
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -101,7 +106,7 @@ class MetadataTraceMixin(BaseModel):
 
 # Mixin for input fields that can be listable
 class ListableInputMixin(BaseModel):
-    is_list: bool = Field(default=False, serialization_alias="list")
+    is_list: bool = Field(default=False, alias="list")
 
 
 # Specific mixin for fields needing database interaction
@@ -111,8 +116,8 @@ class DatabaseLoadMixin(BaseModel):
 
 # Specific mixin for fields needing file interaction
 class FileMixin(BaseModel):
-    file_path: Optional[str] = Field(default="")
-    file_types: list[str] = Field(default=[], serialization_alias="fileTypes")
+    file_path: str | None = Field(default="")
+    file_types: list[str] = Field(default=[], alias="fileTypes")
 
     @field_validator("file_types")
     @classmethod
@@ -129,11 +134,11 @@ class FileMixin(BaseModel):
 
 
 class RangeMixin(BaseModel):
-    range_spec: Optional[RangeSpec] = None
+    range_spec: RangeSpec | None = None
 
 
 class DropDownMixin(BaseModel):
-    options: Optional[list[str]] = None
+    options: list[str] | None = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
     combobox: CoalesceBool = False
     """Variable that defines if the user can insert custom values in the dropdown."""
@@ -144,7 +149,7 @@ class MultilineMixin(BaseModel):
 
 
 class TableMixin(BaseModel):
-    table_schema: Optional[TableSchema | list[Column]] = None
+    table_schema: TableSchema | list[Column] | None = None
 
     @field_validator("table_schema")
     @classmethod

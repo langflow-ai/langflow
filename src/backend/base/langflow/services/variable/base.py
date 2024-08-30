@@ -69,7 +69,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def delete_variable(self, user_id: Union[UUID, str], name: str, session: Session) -> Variable:
+    def delete_variable(self, user_id: Union[UUID, str], name: str, session: Session) -> None:
         """
         Delete a variable.
 
@@ -80,6 +80,17 @@ class VariableService(Service):
 
         Returns:
             The deleted variable.
+        """
+
+    @abc.abstractmethod
+    def delete_variable_by_id(self, user_id: Union[UUID, str], variable_id: UUID, session: Session) -> None:
+        """
+        Delete a variable by ID.
+
+        Args:
+            user_id: The user ID.
+            variable_id: The ID of the variable.
+            session: The database session.
         """
 
     @abc.abstractmethod

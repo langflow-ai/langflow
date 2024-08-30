@@ -1,15 +1,23 @@
+import asyncio
+import json
 import time
 import traceback
+import typing
 import uuid
-from typing import TYPE_CHECKING, Annotated, Optional
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from loguru import logger
+from starlette.background import BackgroundTask
+from starlette.responses import ContentStream
+from starlette.types import Receive
 
 from langflow.api.utils import (
     build_and_cache_graph_from_data,
+    build_graph_from_data,
     build_graph_from_db,
+    build_graph_from_db_no_cache,
     format_elapsed_time,
     format_exception_message,
     get_top_level_vertices,
@@ -60,9 +68,9 @@ async def try_running_celery_task(vertex, user_id):
 async def retrieve_vertices_order(
     flow_id: uuid.UUID,
     background_tasks: BackgroundTasks,
-    data: Optional[Annotated[Optional[FlowDataRequest], Body(embed=True)]] = None,
-    stop_component_id: Optional[str] = None,
-    start_component_id: Optional[str] = None,
+    data: Annotated[FlowDataRequest | None, Body(embed=True)] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     session=Depends(get_session),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
@@ -95,18 +103,7 @@ async def retrieve_vertices_order(
             graph = await build_and_cache_graph_from_data(
                 flow_id=flow_id_str, graph_data=data.model_dump(), chat_service=chat_service
             )
-        graph.validate_stream()
-        if stop_component_id or start_component_id:
-            try:
-                first_layer = graph.sort_vertices(stop_component_id, start_component_id)
-            except Exception as exc:
-                logger.error(exc)
-                first_layer = graph.sort_vertices()
-        else:
-            first_layer = graph.sort_vertices()
-
-        for vertex_id in first_layer:
-            graph.run_manager.add_to_vertices_being_run(vertex_id)
+        graph = graph.prepare(stop_component_id, start_component_id)
 
         # Now vertices is a list of lists
         # We need to get the id of each vertex
@@ -122,7 +119,7 @@ async def retrieve_vertices_order(
                 playgroundSuccess=True,
             ),
         )
-        return VerticesOrderResponse(ids=first_layer, run_id=graph._run_id, vertices_to_run=vertices_to_run)
+        return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_playground,
@@ -140,13 +137,324 @@ async def retrieve_vertices_order(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+@router.post("/build/{flow_id}/flow")
+async def build_flow(
+    background_tasks: BackgroundTasks,
+    flow_id: uuid.UUID,
+    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
+    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
+    files: list[str] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
+    log_builds: bool | None = True,
+    chat_service: "ChatService" = Depends(get_chat_service),
+    current_user=Depends(get_current_active_user),
+    telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
+    session=Depends(get_session),
+):
+    async def build_graph_and_get_order() -> tuple[list[str], list[str], "Graph"]:
+        start_time = time.perf_counter()
+        components_count = None
+        try:
+            flow_id_str = str(flow_id)
+            if not data:
+                graph = await build_graph_from_db_no_cache(flow_id=flow_id_str, session=session)
+            else:
+                graph = await build_graph_from_data(flow_id_str, data.model_dump())
+            graph.validate_stream()
+            if stop_component_id or start_component_id:
+                try:
+                    first_layer = graph.sort_vertices(stop_component_id, start_component_id)
+                except Exception as exc:
+                    logger.error(exc)
+                    first_layer = graph.sort_vertices()
+            else:
+                first_layer = graph.sort_vertices()
+
+            for vertex_id in first_layer:
+                graph.run_manager.add_to_vertices_being_run(vertex_id)
+
+            # Now vertices is a list of lists
+            # We need to get the id of each vertex
+            # and return the same structure but only with the ids
+            components_count = len(graph.vertices)
+            vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
+            background_tasks.add_task(
+                telemetry_service.log_package_playground,
+                PlaygroundPayload(
+                    playgroundSeconds=int(time.perf_counter() - start_time),
+                    playgroundComponentCount=components_count,
+                    playgroundSuccess=True,
+                ),
+            )
+            return first_layer, vertices_to_run, graph
+        except Exception as exc:
+            background_tasks.add_task(
+                telemetry_service.log_package_playground,
+                PlaygroundPayload(
+                    playgroundSeconds=int(time.perf_counter() - start_time),
+                    playgroundComponentCount=components_count,
+                    playgroundSuccess=False,
+                    playgroundErrorMessage=str(exc),
+                ),
+            )
+            if "stream or streaming set to True" in str(exc):
+                raise HTTPException(status_code=400, detail=str(exc))
+            logger.error(f"Error checking build status: {exc}")
+            logger.exception(exc)
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    async def _build_vertex(vertex_id: str, graph: "Graph") -> VertexBuildResponse:
+        flow_id_str = str(flow_id)
+
+        next_runnable_vertices = []
+        top_level_vertices = []
+        start_time = time.perf_counter()
+        error_message = None
+        try:
+            vertex = graph.get_vertex(vertex_id)
+            try:
+                lock = chat_service._async_cache_locks[flow_id_str]
+                vertex_build_result = await graph.build_vertex(
+                    vertex_id=vertex_id,
+                    user_id=current_user.id,
+                    inputs_dict=inputs.model_dump() if inputs else {},
+                    files=files,
+                    get_cache=chat_service.get_cache,
+                    set_cache=chat_service.set_cache,
+                )
+                result_dict = vertex_build_result.result_dict
+                params = vertex_build_result.params
+                valid = vertex_build_result.valid
+                artifacts = vertex_build_result.artifacts
+                next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
+                top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
+
+                result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
+            except Exception as exc:
+                if isinstance(exc, ComponentBuildException):
+                    params = exc.message
+                    tb = exc.formatted_traceback
+                else:
+                    tb = traceback.format_exc()
+                    logger.exception(f"Error building Component: {exc}")
+                    params = format_exception_message(exc)
+                message = {"errorMessage": params, "stackTrace": tb}
+                valid = False
+                error_message = params
+                output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
+                outputs = {output_label: OutputValue(message=message, type="error")}
+                result_data_response = ResultDataResponse(results={}, outputs=outputs)
+                artifacts = {}
+                background_tasks.add_task(graph.end_all_traces, error=exc)
+
+            result_data_response.message = artifacts
+
+            # Log the vertex build
+            if not vertex.will_stream and log_builds:
+                background_tasks.add_task(
+                    log_vertex_build,
+                    flow_id=flow_id_str,
+                    vertex_id=vertex_id,
+                    valid=valid,
+                    params=params,
+                    data=result_data_response,
+                    artifacts=artifacts,
+                )
+            else:
+                await chat_service.set_cache(flow_id_str, graph)
+
+            timedelta = time.perf_counter() - start_time
+            duration = format_elapsed_time(timedelta)
+            result_data_response.duration = duration
+            result_data_response.timedelta = timedelta
+            vertex.add_build_time(timedelta)
+            inactivated_vertices = list(graph.inactivated_vertices)
+            graph.reset_inactivated_vertices()
+            graph.reset_activated_vertices()
+            # graph.stop_vertex tells us if the user asked
+            # to stop the build of the graph at a certain vertex
+            # if it is in next_vertices_ids, we need to remove other
+            # vertices from next_vertices_ids
+            if graph.stop_vertex and graph.stop_vertex in next_runnable_vertices:
+                next_runnable_vertices = [graph.stop_vertex]
+
+            if not graph.run_manager.vertices_being_run and not next_runnable_vertices:
+                background_tasks.add_task(graph.end_all_traces)
+
+            build_response = VertexBuildResponse(
+                inactivated_vertices=list(set(inactivated_vertices)),
+                next_vertices_ids=list(set(next_runnable_vertices)),
+                top_level_vertices=list(set(top_level_vertices)),
+                valid=valid,
+                params=params,
+                id=vertex.id,
+                data=result_data_response,
+            )
+            background_tasks.add_task(
+                telemetry_service.log_package_component,
+                ComponentPayload(
+                    componentName=vertex_id.split("-")[0],
+                    componentSeconds=int(time.perf_counter() - start_time),
+                    componentSuccess=valid,
+                    componentErrorMessage=error_message,
+                ),
+            )
+            return build_response
+        except Exception as exc:
+            background_tasks.add_task(
+                telemetry_service.log_package_component,
+                ComponentPayload(
+                    componentName=vertex_id.split("-")[0],
+                    componentSeconds=int(time.perf_counter() - start_time),
+                    componentSuccess=False,
+                    componentErrorMessage=str(exc),
+                ),
+            )
+            logger.error(f"Error building Component: \n\n{exc}")
+            logger.exception(exc)
+            message = parse_exception(exc)
+            raise HTTPException(status_code=500, detail=message) from exc
+
+    def send_event(event_type: str, value: dict, queue: asyncio.Queue) -> None:
+        json_data = {"event": event_type, "data": value}
+        event_id = uuid.uuid4()
+        logger.debug(f"sending event {event_id}: {event_type}")
+        str_data = json.dumps(json_data) + "\n\n"
+        queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
+
+    async def build_vertices(
+        vertex_id: str, graph: "Graph", queue: asyncio.Queue, client_consumed_queue: asyncio.Queue
+    ) -> None:
+        build_task = asyncio.create_task(await asyncio.to_thread(_build_vertex, vertex_id, graph))
+        try:
+            await build_task
+        except asyncio.CancelledError:
+            build_task.cancel()
+            return
+
+        vertex_build_response: VertexBuildResponse = build_task.result()
+        # send built event or error event
+        try:
+            vertex_build_response_json = vertex_build_response.model_dump_json()
+            build_data = json.loads(vertex_build_response_json)
+        except Exception as exc:
+            raise ValueError(f"Error serializing vertex build response: {exc}") from exc
+        send_event("end_vertex", {"build_data": build_data}, queue)
+        await client_consumed_queue.get()
+        if vertex_build_response.valid:
+            if vertex_build_response.next_vertices_ids:
+                tasks = []
+                for next_vertex_id in vertex_build_response.next_vertices_ids:
+                    task = asyncio.create_task(build_vertices(next_vertex_id, graph, queue, client_consumed_queue))
+                    tasks.append(task)
+                try:
+                    await asyncio.gather(*tasks)
+                except asyncio.CancelledError:
+                    for task in tasks:
+                        task.cancel()
+                    return
+
+    async def event_generator(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> None:
+        if not data:
+            # using another thread since the DB query is I/O bound
+            vertices_task = asyncio.create_task(await asyncio.to_thread(build_graph_and_get_order))
+            try:
+                await vertices_task
+            except asyncio.CancelledError:
+                vertices_task.cancel()
+                return
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    send_event("error", {"error": str(e.detail), "statusCode": e.status_code}, queue)
+                    raise e
+                send_event("error", {"error": str(e)}, queue)
+                raise e
+
+            ids, vertices_to_run, graph = vertices_task.result()
+        else:
+            try:
+                ids, vertices_to_run, graph = await build_graph_and_get_order()
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    send_event("error", {"error": str(e.detail), "statusCode": e.status_code}, queue)
+                    raise e
+                send_event("error", {"error": str(e)}, queue)
+                raise e
+        send_event("vertices_sorted", {"ids": ids, "to_run": vertices_to_run}, queue)
+        await client_consumed_queue.get()
+
+        tasks = []
+        for vertex_id in ids:
+            task = asyncio.create_task(build_vertices(vertex_id, graph, queue, client_consumed_queue))
+            tasks.append(task)
+        try:
+            await asyncio.gather(*tasks)
+        except asyncio.CancelledError:
+            background_tasks.add_task(graph.end_all_traces)
+            for task in tasks:
+                task.cancel()
+            return
+        send_event("end", {}, queue)
+        await queue.put((None, None, time.time))
+
+    async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> typing.AsyncGenerator:
+        while True:
+            event_id, value, put_time = await queue.get()
+            if value is None:
+                break
+            get_time = time.time()
+            yield value
+            get_time_yield = time.time()
+            client_consumed_queue.put_nowait(event_id)
+            logger.debug(
+                f"consumed event {str(event_id)} (time in queue, {get_time - put_time:.4f}, client {get_time_yield - get_time:.4f})"
+            )
+
+    asyncio_queue: asyncio.Queue = asyncio.Queue()
+    asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
+    main_task = asyncio.create_task(event_generator(asyncio_queue, asyncio_queue_client_consumed))
+
+    def on_disconnect():
+        logger.debug("Client disconnected, closing tasks")
+        main_task.cancel()
+
+    return DisconnectHandlerStreamingResponse(
+        consume_and_yield(asyncio_queue, asyncio_queue_client_consumed),
+        media_type="application/x-ndjson",
+        on_disconnect=on_disconnect,
+    )
+
+
+class DisconnectHandlerStreamingResponse(StreamingResponse):
+    def __init__(
+        self,
+        content: ContentStream,
+        status_code: int = 200,
+        headers: typing.Mapping[str, str] | None = None,
+        media_type: str | None = None,
+        background: BackgroundTask | None = None,
+        on_disconnect: typing.Callable | None = None,
+    ):
+        super().__init__(content, status_code, headers, media_type, background)
+        self.on_disconnect = on_disconnect
+
+    async def listen_for_disconnect(self, receive: Receive) -> None:
+        while True:
+            message = await receive()
+            if message["type"] == "http.disconnect":
+                if self.on_disconnect:
+                    await self.on_disconnect()
+                break
+
+
 @router.post("/build/{flow_id}/vertices/{vertex_id}")
 async def build_vertex(
     flow_id: uuid.UUID,
     vertex_id: str,
     background_tasks: BackgroundTasks,
-    inputs: Annotated[Optional[InputValueRequest], Body(embed=True)] = None,
-    files: Optional[list[str]] = None,
+    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
+    files: list[str] | None = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
@@ -189,22 +497,20 @@ async def build_vertex(
 
         try:
             lock = chat_service._async_cache_locks[flow_id_str]
-            (
-                result_dict,
-                params,
-                valid,
-                artifacts,
-                vertex,
-            ) = await graph.build_vertex(
-                chat_service=chat_service,
+            vertex_build_result = await graph.build_vertex(
                 vertex_id=vertex_id,
                 user_id=current_user.id,
                 inputs_dict=inputs.model_dump() if inputs else {},
                 files=files,
+                get_cache=chat_service.get_cache,
+                set_cache=chat_service.set_cache,
             )
+            result_dict = vertex_build_result.result_dict
+            params = vertex_build_result.params
+            valid = vertex_build_result.valid
+            artifacts = vertex_build_result.artifacts
             next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
             top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
-
             result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
         except Exception as exc:
             if isinstance(exc, ComponentBuildException):
@@ -300,7 +606,7 @@ async def build_vertex(
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
-    session_id: Optional[str] = None,
+    session_id: str | None = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     session_service: "SessionService" = Depends(get_session_service),
 ):

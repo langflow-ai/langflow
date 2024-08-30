@@ -3,7 +3,7 @@ from typing import List
 from langchain_community.vectorstores import Cassandra
 from loguru import logger
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.inputs import BoolInput, DictInput, FloatInput
 from langflow.io import (
@@ -24,8 +24,6 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/cassandra"
     name = "Cassandra"
     icon = "Cassandra"
-
-    _cached_vectorstore: Cassandra | None = None
 
     inputs = [
         MessageTextInput(
@@ -134,12 +132,8 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> Cassandra:
-        return self._build_cassandra()
-
-    def _build_cassandra(self) -> Cassandra:
-        if self._cached_vectorstore:
-            return self._cached_vectorstore
         try:
             import cassio
             from langchain_community.utilities.cassandra import SetupMode
@@ -215,7 +209,6 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 body_index_options=body_index_options,
                 setup_mode=setup_mode,
             )
-        self._cached_vectorstore = table
         return table
 
     def _map_search_type(self):
@@ -227,7 +220,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             return "similarity"
 
     def search_documents(self) -> List[Data]:
-        vector_store = self._build_cassandra()
+        vector_store = self.build_vector_store()
 
         logger.debug(f"Search input: {self.search_query}")
         logger.debug(f"Search type: {self.search_type}")

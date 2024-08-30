@@ -94,6 +94,36 @@ export type ParameterComponentType = {
   outputName?: string;
   outputProxy?: OutputFieldProxyType;
 };
+
+export type NodeOutputFieldComponentType = {
+  selected: boolean;
+  data: NodeDataType;
+  title: string;
+  id: sourceHandleType;
+  colors: string[];
+  tooltipTitle: string | undefined;
+  showNode: boolean;
+  index: number;
+  type: string | undefined;
+  outputName?: string;
+  outputProxy?: OutputFieldProxyType;
+};
+
+export type NodeInputFieldComponentType = {
+  id: targetHandleType;
+  data: NodeDataType;
+  tooltipTitle: string | undefined;
+  title: string;
+  colors: string[];
+  type: string | undefined;
+  name: string;
+  required: boolean;
+  optionalHandle: Array<String> | undefined | null;
+  info: string;
+  proxy: { field: string; id: string } | undefined;
+  showNode: boolean;
+};
+
 export type InputListComponentType = {
   value: string[];
   onChange: (value: string[], dbValue?: boolean, snapshot?: boolean) => void;
@@ -228,6 +258,7 @@ export type DisclosureComponentType = {
       title: string;
       onClick: (event?: React.MouseEvent) => void;
     }[];
+    beta?: boolean;
   };
   testId?: string;
 };
@@ -239,10 +270,10 @@ export type RangeSpecType = {
 };
 
 export type IntComponentType = {
-  value: string;
+  value: number;
   disabled?: boolean;
   rangeSpec: RangeSpecType;
-  onChange: (value: string, dbValue?: boolean, skipSnapshot?: boolean) => void;
+  onChange: (value: number, dbValue?: boolean, skipSnapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
 };
@@ -387,7 +418,7 @@ export type signUpInputStateType = {
 
 export type inputHandlerEventType = {
   target: {
-    value: string;
+    value: string | boolean;
     name: string;
   };
 };
@@ -405,18 +436,20 @@ export type ConfirmationModalType = {
   title: string;
   titleHeader?: string;
   destructive?: boolean;
+  destructiveCancel?: boolean;
   modalContentTitle?: string;
-  cancelText: string;
+  loading?: boolean;
+  cancelText?: string;
   confirmationText: string;
   children:
     | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
     | React.ReactElement<ContentProps>;
-  icon: string;
+  icon?: string;
   data?: any;
   index?: number;
   onConfirm: (index, data) => void;
   open?: boolean;
-  onClose?: (close: boolean) => void;
+  onClose?: () => void;
   size?:
     | "x-small"
     | "smaller"
@@ -426,6 +459,7 @@ export type ConfirmationModalType = {
     | "large-h-full"
     | "small-h-full"
     | "medium-h-full";
+  onEscapeKeyDown?: (e: KeyboardEvent) => void;
 };
 
 export type UserManagementType = {
@@ -584,18 +618,15 @@ export interface Props {
 
 export type fileCardPropsType = {
   fileName: string;
-  content: string;
+  path: string;
   fileType: string;
   showFile?: boolean;
 };
 
 export type nodeToolbarPropsType = {
-  //  openWDoubleClick: boolean;
-  //  setOpenWDoubleClick: (open: boolean) => void;
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setShowNode: (boolean: any) => void;
-  numberOfHandles: number;
   numberOfOutputHandles: number;
   showNode: boolean;
   name?: string;
@@ -666,6 +697,28 @@ export type genericModalPropsType = {
   setNodeClass?: (Class: APIClassType, type?: string) => void;
   children: ReactNode;
   id?: string;
+  readonly?: boolean;
+  password?: boolean;
+  changeVisibility?: () => void;
+};
+
+export type PromptModalType = {
+  field_name?: string;
+  setValue: (value: string) => void;
+  value: string;
+  disabled?: boolean;
+  nodeClass?: APIClassType;
+  setNodeClass?: (Class: APIClassType, type?: string) => void;
+  children: ReactNode;
+  id?: string;
+  readonly?: boolean;
+};
+
+export type textModalPropsType = {
+  setValue: (value: string) => void;
+  value: string;
+  disabled?: boolean;
+  children: ReactNode;
   readonly?: boolean;
   password?: boolean;
   changeVisibility?: () => void;

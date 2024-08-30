@@ -1,6 +1,4 @@
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useFolderStore } from "@/stores/foldersStore";
-import { Users, useMutationFunctionType } from "@/types/api";
+import { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -13,7 +11,7 @@ export const usePostUploadFolders: useMutationFunctionType<
   undefined,
   IPostAddUploadFolders
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const uploadFoldersFn = async (
     payload: IPostAddUploadFolders,
@@ -22,11 +20,15 @@ export const usePostUploadFolders: useMutationFunctionType<
       `${getURL("FOLDERS")}/upload/`,
       payload.formData,
     );
-    await useFolderStore.getState().getFoldersApi(true);
     return res.data;
   };
 
-  const mutation = mutate(["usePostUploadFolders"], uploadFoldersFn, options);
+  const mutation = mutate(["usePostUploadFolders"], uploadFoldersFn, {
+    ...options,
+    onSettled: () => {
+      queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+    },
+  });
 
   return mutation;
 };

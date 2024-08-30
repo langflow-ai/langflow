@@ -6,7 +6,7 @@ DOCKERFILE=docker/build_and_push.Dockerfile
 DOCKERFILE_BACKEND=docker/build_and_push_backend.Dockerfile
 DOCKERFILE_FRONTEND=docker/frontend/build_and_push_frontend.Dockerfile
 DOCKER_COMPOSE=docker_example/docker-compose.yml
-PYTHON_REQUIRED=$(shell grep "^python" pyproject.toml | sed -n 's/.*"\(.*\)"$$/\1/p')
+PYTHON_REQUIRED=$(shell grep '^python[[:space:]]*=' pyproject.toml | sed -n 's/.*"\([^"]*\)".*/\1/p')
 RED=\033[0;31m
 NC=\033[0m # No Color
 GREEN=\033[0;32m
@@ -18,7 +18,7 @@ env ?= .env
 open_browser ?= true
 path = src/backend/base/langflow/frontend
 workers ?= 1
-
+async ?= true
 all: help
 
 ######################
@@ -63,23 +63,24 @@ help: ## show this help message
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@poetry install
+	@poetry install > /dev/null 2>&1
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
-	cd src/frontend && npm install
+	@cd src/frontend && npm install > /dev/null 2>&1
 
 build_frontend: ## build the frontend static files
-	cd src/frontend && CI='' npm run build
-	rm -rf src/backend/base/langflow/frontend
-	cp -r src/frontend/build src/backend/base/langflow/frontend
+	@echo 'Building frontend static files'
+	@cd src/frontend && CI='' npm run build > /dev/null 2>&1
+	@rm -rf src/backend/base/langflow/frontend
+	@cp -r src/frontend/build src/backend/base/langflow/frontend
 
 init: check_tools clean_python_cache clean_npm_cache ## initialize the project
-	make install_backend
-	make install_frontend
-	make build_frontend
+	@make install_backend
+	@make install_frontend
+	@make build_frontend
 	@echo "$(GREEN)All requirements are installed.$(NC)"
-	python -m langflow run
+	@python -m langflow run
 
 ######################
 # CLEAN PROJECT
@@ -91,6 +92,7 @@ clean_python_cache:
 	find . -type f -name '*.py[cod]' -exec rm -f {} +
 	find . -type f -name '*~' -exec rm -f {} +
 	find . -type f -name '.*~' -exec rm -f {} +
+	find . -type d -empty -delete
 	@echo "$(GREEN)Python cache cleaned.$(NC)"
 
 clean_npm_cache:
@@ -108,15 +110,15 @@ setup_poetry: ## install poetry using pipx
 add:
 	@echo 'Adding dependencies'
 ifdef devel
-	cd src/backend/base && poetry add --group dev $(devel)
+	@cd src/backend/base && poetry add --group dev $(devel)
 endif
 
 ifdef main
-	poetry add $(main)
+	@poetry add $(main)
 endif
 
 ifdef base
-	cd src/backend/base && poetry add $(base)
+	@cd src/backend/base && poetry add $(base)
 endif
 
 
@@ -130,14 +132,25 @@ coverage: ## run the tests and generate a coverage report
 	@poetry run coverage erase
 
 unit_tests: ## run unit tests
+ifeq ($(async), true)
 	poetry run pytest src/backend/tests \
 		--ignore=src/backend/tests/integration \
-		--instafail -ra -n auto -m "not api_key_required" \
+		--instafail -n auto -ra -m "not api_key_required" \
+		--durations-path src/backend/tests/.test_durations \
+		--splitting-algorithm least_duration \
 		$(args)
+else
+	poetry run pytest src/backend/tests \
+		--ignore=src/backend/tests/integration \
+		--instafail -ra -m "not api_key_required" \
+		--durations-path src/backend/tests/.test_durations \
+		--splitting-algorithm least_duration \
+		$(args)
+endif
 
 integration_tests: ## run integration tests
 	poetry run pytest src/backend/tests/integration \
-		--instafail -ra -n auto \
+		--instafail -ra \
 		$(args)
 
 tests: ## run unit, integration, coverage tests
@@ -161,37 +174,32 @@ fix_codespell: ## run codespell to fix spelling errors
 	poetry run codespell --toml pyproject.toml --write
 
 format: ## run code formatters
-	poetry run ruff check . --fix
-	poetry run ruff format .
-	cd src/frontend && npm run format
+	@poetry run ruff check . --fix
+	@poetry run ruff format .
+	@cd src/frontend && npm run format
 
-lint: ## run linters
-	poetry run mypy --namespace-packages -p "langflow"
+lint: install_backend ## run linters
+	@poetry run mypy --namespace-packages -p "langflow"
 
 install_frontendci:
-	cd src/frontend && npm ci
+	@cd src/frontend && npm ci > /dev/null 2>&1
 
 install_frontendc:
-	cd src/frontend && rm -rf node_modules package-lock.json && npm install
+	@cd src/frontend && rm -rf node_modules package-lock.json && npm install > /dev/null 2>&1
 
 run_frontend: ## run the frontend
 	@-kill -9 `lsof -t -i:3000`
-	cd src/frontend && npm start
+	@cd src/frontend && npm start
 
 tests_frontend: ## run frontend tests
 ifeq ($(UI), true)
-	cd src/frontend && npx playwright test --ui --project=chromium
+	@cd src/frontend && npx playwright test --ui --project=chromium
 else
-	cd src/frontend && npx playwright test --project=chromium
+	@cd src/frontend && npx playwright test --project=chromium
 endif
 
-run_cli:
+run_cli: install_frontend install_backend build_frontend ## run the CLI
 	@echo 'Running the CLI'
-	@make install_frontend > /dev/null
-	@echo 'Install backend dependencies'
-	@make install_backend > /dev/null
-	@echo 'Building the frontend'
-	@make build_frontend > /dev/null
 ifdef env
 	@make start env=$(env) host=$(host) port=$(port) log_level=$(log_level)
 else
@@ -238,23 +246,17 @@ setup_devcontainer: ## set up the development container
 	poetry run langflow --path src/frontend/build
 
 setup_env: ## set up the environment
-	@sh ./scripts/setup/update_poetry.sh 1.8.2
 	@sh ./scripts/setup/setup_env.sh
 
-frontend: ## run the frontend in development mode
-	make install_frontend
+frontend: install_frontend ## run the frontend in development mode
 	make run_frontend
 
-frontendc:
-	make install_frontendc
+frontendc: install_frontendc
 	make run_frontend
 
 
 
-backend: ## run the backend in development mode
-	@echo 'Setting up the environment'
-	@make setup_env
-	make install_backend
+backend: setup_env install_backend ## run the backend in development mode
 	@-kill -9 $$(lsof -t -i:7860)
 ifdef login
 	@echo "Running backend autologin is $(login)";
@@ -278,9 +280,7 @@ else
 		--workers $(workers)
 endif
 
-build_and_run: ## build the project and run it
-	@echo 'Removing dist folder'
-	@make setup_env
+build_and_run: setup_env ## build the project and run it
 	rm -rf dist
 	rm -rf src/backend/base/dist
 	make build
@@ -293,9 +293,7 @@ build_and_install: ## build the project and install it
 	rm -rf src/backend/base/dist
 	make build && poetry run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
 
-build: ## build the frontend static files and package the project
-	@echo 'Building the project'
-	@make setup_env
+build: setup_env ## build the frontend static files and package the project
 ifdef base
 	make install_frontendci
 	make build_frontend
@@ -374,6 +372,11 @@ docker_compose_up: docker_build docker_compose_down
 docker_compose_down:
 	@echo 'Running docker compose down'
 	docker compose -f $(DOCKER_COMPOSE) down || true
+
+dcdev_up:
+	@echo 'Running docker compose up'
+	docker compose -f docker/dev.docker-compose.yml down || true
+	docker compose -f docker/dev.docker-compose.yml up --remove-orphans
 
 lock_base:
 	cd src/backend/base && poetry lock

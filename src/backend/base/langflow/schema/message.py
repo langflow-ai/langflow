@@ -23,7 +23,14 @@ from langflow.utils.constants import (
 )
 
 
-def _timestamp_to_str(timestamp: datetime) -> str:
+def _timestamp_to_str(timestamp: datetime | str) -> str:
+    if isinstance(timestamp, str):
+        # Just check if the string is a valid datetime
+        try:
+            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            return timestamp
+        except ValueError:
+            raise ValueError(f"Invalid timestamp: {timestamp}")
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -101,7 +108,7 @@ class Message(Data):
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": text}]
-                contents.extend(self.get_file_content_dicts())
+                contents.extend(self.sync_get_file_content_dicts())
                 human_message = HumanMessage(content=contents)  # type: ignore
             else:
                 human_message = HumanMessage(content=text)
@@ -156,6 +163,12 @@ class Message(Data):
             return ""
         return value
 
+    def sync_get_file_content_dicts(self):
+        coro = self.get_file_content_dicts()
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(coro)
+
+    # Keep this async method for backwards compatibility
     async def get_file_content_dicts(self):
         content_dicts = []
         files = await get_file_paths(self.files)
@@ -165,7 +178,7 @@ class Message(Data):
                 content_dicts.append(file.to_content_dict())
             else:
                 image_template = ImagePromptTemplate()
-                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})
+                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})  # type: ignore
                 content_dicts.append({"type": "image_url", "image_url": image_prompt_value.image_url})
         return content_dicts
 

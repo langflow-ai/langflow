@@ -1,4 +1,10 @@
 from langflow.components import prototypes
+import pytest
+
+
+@pytest.fixture
+def client():
+    pass
 
 
 def test_python_function_component():

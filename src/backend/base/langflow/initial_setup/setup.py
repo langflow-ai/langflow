@@ -2,6 +2,8 @@ import copy
 import json
 import os
 import shutil
+import time
+import nltk
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -23,6 +25,7 @@ from langflow.services.database.models.folder.utils import create_default_folder
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
+from langflow.utils.util import escape_json_dump
 
 STARTER_FOLDER_NAME = "Starter Projects"
 STARTER_FOLDER_DESCRIPTION = "Starter projects to help you get started in Langflow."
@@ -319,10 +322,6 @@ def update_edges_with_latest_component_versions(project_data):
     return project_data_copy
 
 
-def escape_json_dump(edge_dict):
-    return json.dumps(edge_dict).replace('"', "œ")
-
-
 def log_node_changes(node_changes_log):
     # The idea here is to log the changes that were made to the nodes in debug
     # Something like:
@@ -339,13 +338,23 @@ def log_node_changes(node_changes_log):
         logger.debug("\n".join(formatted_messages))
 
 
-def load_starter_projects() -> list[tuple[Path, dict]]:
+def load_starter_projects(retries=3, delay=1) -> list[tuple[Path, dict]]:
     starter_projects = []
     folder = Path(__file__).parent / "starter_projects"
     for file in folder.glob("*.json"):
-        project = orjson.loads(file.read_text(encoding="utf-8"))
-        starter_projects.append((file, project))
-        logger.info(f"Loaded starter project {file}")
+        attempt = 0
+        while attempt < retries:
+            with open(file, "r", encoding="utf-8") as f:
+                try:
+                    project = orjson.loads(f.read())
+                    starter_projects.append((file, project))
+                    logger.info(f"Loaded starter project {file}")
+                    break  # Break if load is successful
+                except orjson.JSONDecodeError as e:
+                    attempt += 1
+                    if attempt >= retries:
+                        raise ValueError(f"Error loading starter project {file}: {e}")
+                    time.sleep(delay)  # Wait before retrying
     return starter_projects
 
 
@@ -604,3 +613,19 @@ def initialize_super_user_if_needed():
         get_variable_service().initialize_user_variables(super_user.id, session)
         create_default_folder_if_it_doesnt_exist(session, super_user.id)
         logger.info("Super user initialized")
+
+
+# Function to download NLTK packages if not already downloaded
+def download_nltk_resources():
+    nltk_resources = {
+        "corpora": ["wordnet"],
+        "taggers": ["averaged_perceptron_tagger"],
+        "tokenizers": ["punkt", "punkt_tab"],
+    }
+
+    for category, packages in nltk_resources.items():
+        for package in packages:
+            try:
+                nltk.data.find(f"{category}/{package}")
+            except LookupError:
+                nltk.download(package)

@@ -8,7 +8,7 @@ from loguru import logger
 from langflow.graph import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.processing.process import process_tweaks, run_graph
-from langflow.utils.logger import configure
+from langflow.logging.logger import configure
 from langflow.utils.util import update_settings
 
 

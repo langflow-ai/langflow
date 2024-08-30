@@ -1,14 +1,15 @@
+import threading
+import warnings
 from enum import Enum
-from opentelemetry import metrics
-from opentelemetry.exporter.prometheus import PrometheusMetricReader
-from opentelemetry.metrics import Observation, CallbackOptions
-from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.resources import Resource
 from typing import Any, Dict, Mapping, Tuple, Union
 from weakref import WeakValueDictionary
 
-import threading
+from opentelemetry import metrics
+from opentelemetry.exporter.prometheus import PrometheusMetricReader
+from opentelemetry.metrics import CallbackOptions, Observation
+from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.resources import Resource
 
 # a default OpenTelelmetry meter name
 langflow_meter_name = "langflow"
@@ -141,52 +142,52 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         self._register_metric()
 
         resource = Resource.create({"service.name": "langflow"})
-        meter_provider = MeterProvider(resource=resource)
+        metric_readers = []
 
         # configure prometheus exporter
         self.prometheus_enabled = prometheus_enabled
         if prometheus_enabled:
-            reader = PrometheusMetricReader()
-            meter_provider = MeterProvider(resource=resource, metric_readers=[reader])
+            metric_readers.append(PrometheusMetricReader())
 
+        meter_provider = MeterProvider(resource=resource, metric_readers=metric_readers)
         metrics.set_meter_provider(meter_provider)
         self.meter = meter_provider.get_meter(langflow_meter_name)
 
         for name, metric in self._metrics_registry.items():
-            # enforce the key in the mapping and metric's name are the same
-            # this error can get caught at unit test
             if name != metric.name:
                 raise ValueError(f"Key '{name}' does not match metric name '{metric.name}'")
-            if metric.type == MetricType.COUNTER:
-                counter = self.meter.create_counter(
-                    name=metric.name,
-                    unit=metric.unit,
-                    description=metric.description,
-                )
-                self._metrics[metric.name] = counter
-            elif metric.type == MetricType.OBSERVABLE_GAUGE:
-                gauge = ObservableGaugeWrapper(
-                    name=metric.name,
-                    description=metric.description,
-                    unit=metric.unit,
-                )
-                self._metrics[metric.name] = gauge
-            elif metric.type == MetricType.UP_DOWN_COUNTER:
-                up_down_counter = self.meter.create_up_down_counter(
-                    name=metric.name,
-                    unit=metric.unit,
-                    description=metric.description,
-                )
-                self._metrics[metric.name] = up_down_counter
-            elif metric.type == MetricType.HISTOGRAM:
-                histogram = self.meter.create_histogram(
-                    name=metric.name,
-                    unit=metric.unit,
-                    description=metric.description,
-                )
-                self._metrics[metric.name] = histogram
-            else:
-                raise ValueError(f"Unknown metric type: {metric.type}")
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+
+                self._metrics[metric.name] = self._create_metric(metric)
+
+    def _create_metric(self, metric):
+        if metric.type == MetricType.COUNTER:
+            return self.meter.create_counter(
+                name=metric.name,
+                unit=metric.unit,
+                description=metric.description,
+            )
+        elif metric.type == MetricType.OBSERVABLE_GAUGE:
+            return ObservableGaugeWrapper(
+                name=metric.name,
+                description=metric.description,
+                unit=metric.unit,
+            )
+        elif metric.type == MetricType.UP_DOWN_COUNTER:
+            return self.meter.create_up_down_counter(
+                name=metric.name,
+                unit=metric.unit,
+                description=metric.description,
+            )
+        elif metric.type == MetricType.HISTOGRAM:
+            return self.meter.create_histogram(
+                name=metric.name,
+                unit=metric.unit,
+                description=metric.description,
+            )
+        else:
+            raise ValueError(f"Unknown metric type: {metric.type}")
 
     def validate_labels(self, metric_name: str, labels: Mapping[str, str]):
         reg = self._metrics_registry.get(metric_name)

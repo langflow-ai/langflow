@@ -20,13 +20,13 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
-from langflow.utils.logger import configure, logger
 from langflow.utils.util import update_settings
 
 console = Console()
@@ -120,6 +120,21 @@ def run(
         help="Enables the store features.",
         envvar="LANGFLOW_STORE",
     ),
+    auto_saving: bool = typer.Option(
+        True,
+        help="Defines if the auto save is enabled.",
+        envvar="LANGFLOW_AUTO_SAVING",
+    ),
+    auto_saving_interval: int = typer.Option(
+        1000,
+        help="Defines the debounce time for the auto save.",
+        envvar="LANGFLOW_AUTO_SAVING_INTERVAL",
+    ),
+    health_check_max_retries: bool = typer.Option(
+        True,
+        help="Defines the number of retries for the health check.",
+        envvar="LANGFLOW_HEALTH_CHECK_MAX_RETRIES",
+    ),
 ):
     """
     Run Langflow.
@@ -137,6 +152,9 @@ def run(
         cache=cache,
         components_path=components_path,
         store=store,
+        auto_saving=auto_saving,
+        auto_saving_interval=auto_saving_interval,
+        health_check_max_retries=health_check_max_retries,
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
@@ -261,57 +279,24 @@ def get_letter_from_version(version: str):
     return None
 
 
-def build_new_version_notice(current_version: str, package_name: str):
-    """
-    Build a new version notice.
-    """
-    # The idea here is that we want to show a notice to the user
-    # when a new version of Langflow is available.
-    # The key is that if the version the user has is a pre-release
-    # e.g 0.0.0a1, then we find the latest version that is pre-release
-    # otherwise we find the latest stable version.
-    # we will show the notice either way, but only if the version
-    # the user has is not the latest version.
-    if version_is_prerelease(current_version):
-        # curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1
-        # this command will give us the latest pre-release version
-        package_info = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()
-        # 4.0.0a1 or 4.0.0b1 or 4.0.0rc1
-        # find which type of pre-release version we have
-        # could be a1, b1, rc1
-        # we want the a, b, or rc and the number
-        suffix_letter = get_letter_from_version(current_version)
-        number_version = current_version.split(suffix_letter)[0]
-        latest_version = sorted(
-            package_info["releases"].keys(),
-            key=lambda x: x.split(suffix_letter)[-1] and number_version in x,
-        )[-1]
-        if version_is_prerelease(latest_version) and latest_version != current_version:
-            return (
-                True,
-                f"A new pre-release version of {package_name} is available: {latest_version}",
-            )
-    else:
-        latest_version = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()["info"]["version"]
-        if not version_is_prerelease(latest_version):
-            return (
-                False,
-                f"A new version of {package_name} is available: {latest_version}",
-            )
-    return False, ""
-
-
 def is_prerelease(version: str) -> bool:
     return "a" in version or "b" in version or "rc" in version
 
 
 def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optional[str]:
-    response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
-    versions = response.json()["releases"].keys()
-    valid_versions = [v for v in versions if include_prerelease or not is_prerelease(v)]
-    if not valid_versions:
-        return None  # Handle case where no valid versions are found
-    return max(valid_versions, key=lambda v: pkg_version.parse(v))
+    valid_versions = []
+    try:
+        response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
+        versions = response.json()["releases"].keys()
+        valid_versions = [v for v in versions if include_prerelease or not is_prerelease(v)]
+
+    except Exception as e:
+        logger.exception(e)
+
+    finally:
+        if not valid_versions:
+            return None  # Handle case where no valid versions are found
+        return max(valid_versions, key=lambda v: pkg_version.parse(v))
 
 
 def build_version_notice(current_version: str, package_name: str) -> str:

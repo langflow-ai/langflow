@@ -10,7 +10,7 @@ import emoji
 from emoji import purely_emoji  # type: ignore
 from fastapi import HTTPException, status
 from pydantic import field_serializer, field_validator
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema import Data
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 class FlowBase(SQLModel):
     name: str = Field(index=True)
-    description: Optional[str] = Field(index=True, nullable=True, default=None)
+    description: Optional[str] = Field(default=None, sa_column=Column(Text, index=True, nullable=True))
     icon: Optional[str] = Field(default=None, nullable=True)
     icon_bg_color: Optional[str] = Field(default=None, nullable=True)
     data: Optional[Dict] = Field(default=None, nullable=True)
@@ -137,7 +137,7 @@ class FlowBase(SQLModel):
         return datetime.fromisoformat(v)
 
 
-class Flow(FlowBase, table=True):
+class Flow(FlowBase, table=True):  # type: ignore
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     data: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
     user_id: Optional[UUID] = Field(index=True, foreign_key="user.id", nullable=True)

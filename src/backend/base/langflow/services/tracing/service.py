@@ -2,7 +2,7 @@ import asyncio
 import os
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import UUID
 
 from loguru import logger
@@ -12,6 +12,8 @@ from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
+    from langchain.callbacks.base import BaseCallbackHandler
+
     from langflow.custom.custom_component.component import Component
     from langflow.graph.vertex.base import Vertex
     from langflow.services.monitor.service import MonitorService
@@ -28,6 +30,12 @@ def _get_langwatch_tracer():
     from langflow.services.tracing.langwatch import LangWatchTracer
 
     return LangWatchTracer
+
+
+def _get_langfuse_tracer():
+    from langflow.services.tracing.langfuse import LangFuseTracer
+
+    return LangFuseTracer
 
 
 class TracingService(Service):
@@ -99,6 +107,7 @@ class TracingService(Service):
             await self.start()
             self._initialize_langsmith_tracer()
             self._initialize_langwatch_tracer()
+            self._initialize_langfuse_tracer()
         except Exception as e:
             logger.debug(f"Error initializing tracers: {e}")
 
@@ -115,9 +124,7 @@ class TracingService(Service):
 
     def _initialize_langwatch_tracer(self):
         if (
-            os.getenv("LANGWATCH_API_KEY")
-            and "langwatch" not in self._tracers
-            or self._tracers["langwatch"].trace_id != self.run_id  # type: ignore
+            "langwatch" not in self._tracers or self._tracers["langwatch"].trace_id != self.run_id  # type: ignore
         ):
             langwatch_tracer = _get_langwatch_tracer()
             self._tracers["langwatch"] = langwatch_tracer(
@@ -126,6 +133,16 @@ class TracingService(Service):
                 project_name=self.project_name,
                 trace_id=self.run_id,
             )
+
+    def _initialize_langfuse_tracer(self):
+        self.project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
+        langfuse_tracer = _get_langfuse_tracer()
+        self._tracers["langfuse"] = langfuse_tracer(
+            trace_name=self.run_name,
+            trace_type="chain",
+            project_name=self.project_name,
+            trace_id=self.run_id,
+        )
 
     def set_run_name(self, name: str):
         self.run_name = name
@@ -194,8 +211,8 @@ class TracingService(Service):
         metadata: Optional[Dict[str, Any]] = None,
     ):
         trace_id = trace_name
-        if component.vertex:
-            trace_id = component.vertex.id
+        if component._vertex:
+            trace_id = component._vertex.id
         trace_type = component.trace_type
         self._start_traces(
             trace_id,
@@ -203,7 +220,7 @@ class TracingService(Service):
             trace_type,
             self._cleanup_inputs(inputs),
             metadata,
-            component.vertex,
+            component._vertex,
         )
         try:
             yield self
@@ -211,8 +228,11 @@ class TracingService(Service):
             self._end_traces(trace_id, trace_name, e)
             raise e
         finally:
-            self._end_traces(trace_id, trace_name, None)
-            self._reset_io()
+            asyncio.create_task(await asyncio.to_thread(self._end_and_reset, trace_id, trace_name, None))
+
+    async def _end_and_reset(self, trace_id: str, trace_name: str, error: Exception | None = None):
+        self._end_traces(trace_id, trace_name, error)
+        self._reset_io()
 
     def set_outputs(
         self,
@@ -229,3 +249,13 @@ class TracingService(Service):
             if "api_key" in key:
                 inputs[key] = "*****"  # avoid logging api_keys for security reasons
         return inputs
+
+    def get_langchain_callbacks(self) -> List["BaseCallbackHandler"]:
+        callbacks = []
+        for tracer in self._tracers.values():
+            if not tracer.ready:  # type: ignore
+                continue
+            langchain_callback = tracer.get_langchain_callback()
+            if langchain_callback:
+                callbacks.append(langchain_callback)
+        return callbacks

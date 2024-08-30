@@ -1,9 +1,8 @@
 import { useContext } from "react";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
-import profileCircle from "../../assets/profile-circle.png";
 import {
   BASE_URL_API,
   LOCATIONS_TO_RETURN,
@@ -11,14 +10,17 @@ import {
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
-import FeatureFlags from "@/../feature-config.json";
 import { useLogout } from "@/controllers/API/queries/auth";
+import { CustomLink } from "@/customization/components/custom-link";
+import {
+  ENABLE_DARK_MODE,
+  ENABLE_PROFILE_ICONS,
+  ENABLE_SOCIAL_LINKS,
+} from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
-import useFlowStore from "../../stores/flowStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { useLocationStore } from "../../stores/locationStore";
 import { useStoreStore } from "../../stores/storeStore";
 import IconComponent, { ForwardedIconComponent } from "../genericIconComponent";
 import { Button } from "../ui/button";
@@ -42,74 +44,45 @@ export default function Header(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { mutate: mutationLogout } = useLogout();
-  const logout = useAuthStore((state) => state.logout);
 
-  const navigate = useNavigate();
-  const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
+  const navigate = useCustomNavigate();
   const hasStore = useStoreStore((state) => state.hasStore);
-  const { id } = useParams();
-  const nodes = useFlowStore((state) => state.nodes);
 
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.setDark);
   const stars = useDarkStore((state) => state.stars);
 
-  const routeHistory = useLocationStore((state) => state.routeHistory);
-
-  const profileImageUrl =
-    `${BASE_URL_API}files/profile_pictures/${
-      userData?.profile_image ?? "Space/046-rocket.svg"
-    }` ?? profileCircle;
-  async function checkForChanges(): Promise<void> {
-    if (nodes.length === 0) {
-      await removeFlow(id!);
-    }
-  }
+  const profileImageUrl = `${BASE_URL_API}files/profile_pictures/${
+    userData?.profile_image ?? "Space/046-rocket.svg"
+  }`;
 
   const redirectToLastLocation = () => {
-    const lastFlowVisitedIndex = routeHistory
-      .reverse()
-      .findIndex(
-        (path) => path.includes("/flow/") && path !== location.pathname,
-      );
-
-    const lastFlowVisited = routeHistory[lastFlowVisitedIndex];
-    lastFlowVisited && !location.pathname.includes("/flow")
-      ? navigate(lastFlowVisited)
-      : navigate("/all");
+    const canGoBack = location.key !== "default";
+    if (canGoBack) {
+      navigate(-1);
+    } else {
+      navigate("/", { replace: true });
+    }
   };
 
-  const visitedFlowPathBefore = () => {
-    const last100VisitedPaths = routeHistory.slice(-99);
-    return last100VisitedPaths.some((path) => path.includes("/flow/"));
-  };
-
-  const showArrowReturnIcon =
-    LOCATIONS_TO_RETURN.some((path) => location.pathname.includes(path)) &&
-    visitedFlowPathBefore();
+  const showArrowReturnIcon = LOCATIONS_TO_RETURN.some((path) =>
+    location.pathname.includes(path),
+  );
 
   const handleLogout = () => {
-    mutationLogout(undefined, {
-      onSuccess: () => {
-        logout();
-      },
-      onError: (error) => {
-        console.error(error);
-      },
-    });
+    mutationLogout();
   };
 
   return (
-    <div className="header-arrangement">
-      <div className="header-start-display lg:w-[407px]">
-        <Link to="/all" className="cursor-pointer" onClick={checkForChanges}>
+    <div className="header-arrangement relative">
+      <div className="header-start-display">
+        <CustomLink to="/all" className="cursor-pointer">
           <span className="ml-4 text-2xl">⛓️</span>
-        </Link>
+        </CustomLink>
         {showArrowReturnIcon && (
           <Button
             unstyled
             onClick={() => {
-              checkForChanges();
               redirectToLastLocation();
             }}
           >
@@ -120,70 +93,74 @@ export default function Header(): JSX.Element {
         <MenuBar />
       </div>
 
-      <div className="round-button-div">
-        <Link to="/">
+      <div className="flex items-center xl:absolute xl:left-1/2 xl:-translate-x-1/2">
+        <CustomLink to="/all">
           <Button
             className="gap-2"
             variant={
-              location.pathname === "/all" ||
-              location.pathname === "/components"
+              location.pathname.includes("/all") ||
+              location.pathname.includes("/components")
                 ? "primary"
                 : "secondary"
             }
             size="sm"
-            onClick={checkForChanges}
           >
             <IconComponent name="Home" className="h-4 w-4" />
-            <div className="hidden flex-1 md:block">{USER_PROJECTS_HEADER}</div>
+            <div className="hidden flex-1 lg:block">{USER_PROJECTS_HEADER}</div>
           </Button>
-        </Link>
+        </CustomLink>
 
         {hasStore && (
-          <Link to="/store">
+          <CustomLink to="/store">
             <Button
               className="gap-2"
-              variant={location.pathname === "/store" ? "primary" : "secondary"}
+              variant={
+                location.pathname.includes("/store") ? "primary" : "secondary"
+              }
               size="sm"
-              onClick={checkForChanges}
               data-testid="button-store"
             >
               <IconComponent name="Store" className="h-4 w-4" />
-              <div className="flex-1">Store</div>
+              <div className="hidden flex-1 lg:block">Store</div>
             </Button>
-          </Link>
+          </CustomLink>
         )}
       </div>
       <div className="header-end-division">
         <div className="header-end-display">
-          <a
-            href="https://github.com/langflow-ai/langflow"
-            target="_blank"
-            rel="noreferrer"
-            className="header-github-link gap-2"
-          >
-            <FaGithub className="h-5 w-5" />
-            <div className="hidden lg:block">Star</div>
-            <div className="header-github-display">{stars ?? 0}</div>
-          </a>
-          <a
-            href="https://twitter.com/langflow_ai"
-            target="_blank"
-            rel="noreferrer"
-            className="text-muted-foreground"
-          >
-            <RiTwitterXFill className="side-bar-button-size" />
-          </a>
-          <a
-            href="https://discord.gg/EqksyE2EX9"
-            target="_blank"
-            rel="noreferrer"
-            className="text-muted-foreground"
-          >
-            <FaDiscord className="side-bar-button-size" />
-          </a>
+          {ENABLE_SOCIAL_LINKS && (
+            <>
+              <a
+                href="https://github.com/langflow-ai/langflow"
+                target="_blank"
+                rel="noreferrer"
+                className="header-github-link gap-2"
+              >
+                <FaGithub className="h-5 w-5" />
+                <div className="hidden lg:block">Star</div>
+                <div className="header-github-display">{stars ?? 0}</div>
+              </a>
+              <a
+                href="https://twitter.com/langflow_ai"
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground"
+              >
+                <RiTwitterXFill className="side-bar-button-size" />
+              </a>
+              <a
+                href="https://discord.gg/EqksyE2EX9"
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground"
+              >
+                <FaDiscord className="side-bar-button-size" />
+              </a>
 
-          <Separator orientation="vertical" />
-          {FeatureFlags.ENABLE_DARK_MODE && (
+              <Separator orientation="vertical" />
+            </>
+          )}
+          {ENABLE_DARK_MODE && (
             <button
               className="extra-side-bar-save-disable"
               onClick={() => {
@@ -225,7 +202,7 @@ export default function Header(): JSX.Element {
                   data-testid="user-profile-settings"
                   className="shrink-0"
                 >
-                  {FeatureFlags.ENABLE_PROFILE_ICONS ? (
+                  {ENABLE_PROFILE_ICONS ? (
                     <img
                       src={profileImageUrl}
                       className="h-7 w-7 shrink-0 focus-visible:outline-0"

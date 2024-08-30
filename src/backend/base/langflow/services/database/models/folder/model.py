@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import UniqueConstraint
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import UniqueConstraint, Text
+from sqlmodel import Field, Relationship, SQLModel, Column
 
 from langflow.services.database.models.flow.model import FlowRead
 
@@ -13,10 +13,10 @@ if TYPE_CHECKING:
 
 class FolderBase(SQLModel):
     name: str = Field(index=True)
-    description: Optional[str] = Field(default=None)
+    description: Optional[str] = Field(default=None, sa_column=Column(Text))
 
 
-class Folder(FolderBase, table=True):
+class Folder(FolderBase, table=True):  # type: ignore
     id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True)
     parent_id: Optional[UUID] = Field(default=None, foreign_key="folder.id")
 

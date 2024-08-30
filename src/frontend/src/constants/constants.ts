@@ -1,7 +1,7 @@
 // src/constants/constants.ts
 
+import custom from "../customization/config-constants";
 import { languageMap } from "../types/components";
-import { nodeNames } from "../utils/styleUtils";
 
 /**
  * invalid characters for flow name
@@ -568,9 +568,7 @@ export const ADMIN_HEADER_TITLE = "Admin Page";
 export const ADMIN_HEADER_DESCRIPTION =
   "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
 
-export const BASE_URL_API = "/api/v1/";
-
-export const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:7860/";
+export const BASE_URL_API = custom.BASE_URL_API || "/api/v1/";
 
 /**
  * URLs excluded from error retries.
@@ -581,7 +579,7 @@ export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
   `${BASE_URL_API}validate/code`,
   `${BASE_URL_API}custom_component`,
   `${BASE_URL_API}validate/prompt`,
-  `http://localhost:7860/login`,
+  `${BASE_URL_API}/login`,
   `${BASE_URL_API}api_key/store`,
 ];
 
@@ -624,6 +622,10 @@ export const FETCH_ERROR_MESSAGE = "Couldn't establish a connection.";
 export const FETCH_ERROR_DESCRIPION =
   "Check if everything is working properly and try again.";
 
+export const TIMEOUT_ERROR_MESSAGE =
+  "Please wait a few moments while the server processes your request.";
+export const TIMEOUT_ERROR_DESCRIPION = "Server is busy.";
+
 export const SIGN_UP_SUCCESS = "Account created! Await admin activation. ";
 
 export const API_PAGE_PARAGRAPH =
@@ -647,6 +649,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "int",
   "dict",
   "NestedDict",
+  "table",
 ]);
 
 export const priorityFields = new Set(["code", "template"]);
@@ -709,7 +712,7 @@ export const CREATE_API_KEY = `Don’t have an API key? Sign up at`;
 export const STATUS_BUILD = "Build to validate status.";
 export const STATUS_INACTIVE = "Execution blocked";
 export const STATUS_BUILDING = "Building...";
-export const SAVED_HOVER = "Last saved at ";
+export const SAVED_HOVER = "Last saved: ";
 export const RUN_TIMESTAMP_PREFIX = "Last Run: ";
 export const STARTER_FOLDER_NAME = "Starter Projects";
 export const PRIORITY_SIDEBAR_ORDER = [
@@ -724,6 +727,8 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "vectorstores",
   "embeddings",
 ];
+
+export const BUNDLES_SIDEBAR_FOLDER_NAMES = ["notion"];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
   "/health",
@@ -771,8 +776,12 @@ export const defaultShortcuts = [
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + D`,
   },
   {
-    name: "Save",
+    name: "Changes Save",
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + S`,
+  },
+  {
+    name: "Save Component",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Alt + S`,
   },
   {
     name: "Delete",
@@ -875,3 +884,17 @@ export const TABS_ORDER = [
 export const LANGFLOW_ACCESS_TOKEN = "access_token_lf";
 export const LANGFLOW_API_TOKEN = "apikey_tkn_lflw";
 export const LANGFLOW_AUTO_LOGIN_OPTION = "auto_login_lf";
+export const LANGFLOW_REFRESH_TOKEN = "refresh_token_lf";
+
+export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 - 60 * 60 * 0.1;
+export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV =
+  Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) -
+  Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) * 0.1;
+export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
+export const NODE_WIDTH = 400;
+export const NODE_HEIGHT = NODE_WIDTH * 3;
+
+export const SHORTCUT_KEYS = ["cmd", "ctrl", "alt", "shift"];
+
+export const SERVER_HEALTH_INTERVAL = 10000;
+export const REFETCH_SERVER_HEALTH_INTERVAL = 20000;

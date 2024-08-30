@@ -1,11 +1,11 @@
 import asyncio
 import json
-from typing import List, Any
+from typing import Any
 
 from fastapi import APIRouter, Query, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from http import HTTPStatus
-from langflow.utils.logger import log_buffer
+from langflow.logging.logger import log_buffer
 
 log_router = APIRouter(tags=["Log"])
 
@@ -15,7 +15,7 @@ async def event_generator(request: Request):
     last_read_item = None
     current_not_sent = 0
     while not await request.is_disconnected():
-        to_write: List[Any] = []
+        to_write: list[Any] = []
         with log_buffer.get_write_lock():
             if last_read_item is None:
                 last_read_item = log_buffer.buffer[len(log_buffer.buffer) - 1]

@@ -1,7 +1,7 @@
 import json
 import warnings
 from abc import abstractmethod
-from typing import Optional, Union, List
+from typing import List, Optional, Union
 
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -10,7 +10,7 @@ from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.custom import Component
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageInput, MessageTextInput
-from langflow.inputs.inputs import InputTypes, BoolInput
+from langflow.inputs.inputs import BoolInput, InputTypes
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
 
@@ -164,7 +164,11 @@ class LCModelComponent(Component):
         inputs: Union[list, dict] = messages or {}
         try:
             runnable = runnable.with_config(  # type: ignore
-                {"run_name": self.display_name, "project_name": self.tracing_service.project_name}  # type: ignore
+                {
+                    "run_name": self.display_name,
+                    "project_name": self.get_project_name(),
+                    "callbacks": self.get_langchain_callbacks(),
+                }
             )
             if stream:
                 return runnable.stream(inputs)  # type: ignore

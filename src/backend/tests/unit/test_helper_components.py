@@ -1,6 +1,13 @@
 from langflow.components import helpers
 from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Data
+import pytest
+
+
+@pytest.fixture
+def client():
+    pass
+
 
 # def test_update_data_component():
 #     # Arrange
@@ -32,7 +39,7 @@ from langflow.schema import Data
 def test_uuid_generator_component():
     # Arrange
     uuid_generator_component = helpers.IDGeneratorComponent()
-    uuid_generator_component.code = open(helpers.IDGenerator.__file__, "r").read()
+    uuid_generator_component._code = open(helpers.IDGenerator.__file__).read()
 
     frontend_node, _ = build_custom_component_template(uuid_generator_component)
 

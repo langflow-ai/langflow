@@ -1,3 +1,7 @@
+import {
+  getLeftHandleId,
+  getRightHandleId,
+} from "@/CustomNodes/utils/get-handle-id";
 import { cloneDeep } from "lodash";
 import {
   Connection,
@@ -34,11 +38,13 @@ import {
   targetHandleType,
 } from "../types/flow";
 import {
+  addEscapedHandleIdsToEdgesType,
   findLastNodeType,
   generateFlowType,
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
+import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 const uid = new ShortUniqueId();
 
@@ -274,7 +280,7 @@ export function updateTemplate(
 
 export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
   let savedComponents: { [key: string]: APIClassType } = {};
-  DbData.forEach((flow: FlowType) => {
+  DbData.forEach(async (flow: FlowType) => {
     try {
       if (!flow.data) {
         return;
@@ -290,15 +296,24 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
         ] = cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
         return;
       }
-      processDataFromFlow(flow, !skipUpdate);
+      await processDataFromFlow(flow, !skipUpdate).catch((e) => {
+        console.error(e);
+      });
     } catch (e) {
-      console.log(e);
+      console.error(e);
     }
   });
   return { data: savedComponents, flows: DbData };
 };
 
-export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
+export const needsLayout = (nodes: NodeType[]) => {
+  return nodes.some((node) => !node.position);
+};
+
+export async function processDataFromFlow(
+  flow: FlowType,
+  refreshIds = true,
+): Promise<ReactFlowJsonObject | null> {
   let data = flow?.data ? flow.data : null;
   if (data) {
     processFlowEdges(flow);
@@ -308,9 +323,14 @@ export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
     updateEdges(data.edges);
     // updateNodes(data.nodes, data.edges);
     if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
+    // add layout to nodes if not present
+    if (needsLayout(data.nodes)) {
+      const layoutedNodes = await getLayoutedNodes(data.nodes, data.edges);
+      data.nodes = layoutedNodes;
+    }
   }
   return data;
-};
+}
 
 export function updateIds(
   { edges, nodes }: { edges: Edge[]; nodes: Node[] },
@@ -341,6 +361,7 @@ export function updateIds(
     concatedEdges.forEach((edge: Edge) => {
       edge.source = idsMap[edge.source];
       edge.target = idsMap[edge.target];
+
       const sourceHandleObject: sourceHandleType = scapeJSONParse(
         edge.sourceHandle!,
       );
@@ -475,6 +496,26 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
   return newName;
 }
 
+export function addEscapedHandleIdsToEdges({
+  edges,
+}: addEscapedHandleIdsToEdgesType): Edge[] {
+  let newEdges = cloneDeep(edges);
+  newEdges.forEach((edge) => {
+    let escapedSourceHandle = edge.sourceHandle;
+    let escapedTargetHandle = edge.targetHandle;
+    if (!escapedSourceHandle) {
+      let sourceHandle = edge.data?.sourceHandle;
+      escapedSourceHandle = getRightHandleId(sourceHandle);
+      edge.sourceHandle = escapedSourceHandle;
+    }
+    if (!escapedTargetHandle) {
+      let targetHandle = edge.data?.targetHandle;
+      escapedTargetHandle = getLeftHandleId(targetHandle);
+      edge.targetHandle = escapedTargetHandle;
+    }
+  });
+  return newEdges;
+}
 export function updateEdgesHandleIds({
   edges,
   nodes,
@@ -595,7 +636,7 @@ export function handleKeyDown(
   e:
     | React.KeyboardEvent<HTMLInputElement>
     | React.KeyboardEvent<HTMLTextAreaElement>,
-  inputValue: string | string[] | null,
+  inputValue: string | number | string[] | null | undefined,
   block: string,
 ) {
   //condition to fix bug control+backspace on Windows/Linux
@@ -737,6 +778,13 @@ export function checkOldEdgesHandles(edges: Edge[]): boolean {
       !edge.targetHandle ||
       !edge.sourceHandle.includes("{") ||
       !edge.targetHandle.includes("{"),
+  );
+}
+
+export function checkEdgeWithoutEscapedHandleIds(edges: Edge[]): boolean {
+  return edges.some(
+    (edge) =>
+      (!edge.sourceHandle || !edge.targetHandle) && edge.data?.sourceHandle,
   );
 }
 
@@ -1231,7 +1279,10 @@ export function updateEdgesIds(
 
 export function processFlowEdges(flow: FlowType) {
   if (!flow.data || !flow.data.edges) return;
-  if (checkOldEdgesHandles(flow.data.edges)) {
+  if (checkEdgeWithoutEscapedHandleIds(flow.data.edges)) {
+    const newEdges = addEscapedHandleIdsToEdges({ edges: flow.data.edges });
+    flow.data.edges = newEdges;
+  } else if (checkOldEdgesHandles(flow.data.edges)) {
     const newEdges = updateEdgesHandleIds(flow.data);
     flow.data.edges = newEdges;
   }
@@ -1527,8 +1578,8 @@ export function getRandomDescription(): string {
 
 export const createNewFlow = (
   flowData: ReactFlowJsonObject,
-  flow: FlowType,
   folderId: string,
+  flow?: FlowType,
 ) => {
   return {
     description: flow?.description ?? getRandomDescription(),

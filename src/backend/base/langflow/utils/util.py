@@ -1,5 +1,7 @@
+import difflib
 import importlib
 import inspect
+import json
 import re
 from functools import wraps
 from pathlib import Path
@@ -7,11 +9,11 @@ from typing import Any, Dict, List, Optional, Union
 
 from docstring_parser import parse
 
+from langflow.logging.logger import logger
 from langflow.schema import Data
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
-from langflow.utils.logger import logger
 
 
 def unescape_string(s: str):
@@ -426,6 +428,9 @@ def update_settings(
     remove_api_keys: bool = False,
     components_path: Optional[Path] = None,
     store: bool = True,
+    auto_saving: bool = True,
+    auto_saving_interval: int = 1000,
+    health_check_max_retries: int = 5,
 ):
     """Update the settings from a config file."""
     from langflow.services.utils import initialize_settings_service
@@ -449,6 +454,15 @@ def update_settings(
     if not store:
         logger.debug("Setting store to False")
         settings_service.settings.update_settings(store=False)
+    if not auto_saving:
+        logger.debug("Setting auto_saving to False")
+        settings_service.settings.update_settings(auto_saving=False)
+    if auto_saving_interval is not None:
+        logger.debug(f"Setting auto_saving_interval to {auto_saving_interval}")
+        settings_service.settings.update_settings(auto_saving_interval=auto_saving_interval)
+    if health_check_max_retries is not None:
+        logger.debug(f"Setting health_check_max_retries to {health_check_max_retries}")
+        settings_service.settings.update_settings(health_check_max_retries=health_check_max_retries)
 
 
 def is_class_method(func, cls):
@@ -456,3 +470,17 @@ def is_class_method(func, cls):
     Check if a function is a class method.
     """
     return inspect.ismethod(func) and func.__self__ is cls.__class__
+
+
+def escape_json_dump(edge_dict):
+    return json.dumps(edge_dict).replace('"', "œ")
+
+
+def find_closest_match(string: str, list_of_strings: list[str]) -> str | None:
+    """
+    Find the closest match in a list of strings.
+    """
+    closest_match = difflib.get_close_matches(string, list_of_strings, n=1, cutoff=0.2)
+    if closest_match:
+        return closest_match[0]
+    return None
