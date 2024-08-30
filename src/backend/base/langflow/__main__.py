@@ -75,24 +75,6 @@ def set_var_for_macos_issue():
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
-# Function to download NLTK packages if not already downloaded
-def download_nltk_resources():
-    nltk_resources = {
-        "corpora": ["wordnet"],
-        "taggers": ["averaged_perceptron_tagger"],
-        "tokenizers": ["punkt", "punkt_tab"],
-    }
-
-    for category, packages in nltk_resources.items():
-        for package in packages:
-            try:
-                nltk.data.find(f"{category}/{package}")
-                logger.info(f"{package} ({category}) already exists.")
-            except LookupError:
-                logger.info(f"Downloading {package} ({category})...")
-                nltk.download(package)
-
-
 @app.command()
 def run(
     host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"),
@@ -158,9 +140,6 @@ def run(
     """
     Run Langflow.
     """
-
-    # Get necessary NLTK packages (PDF parsing support)
-    download_nltk_resources()
 
     configure(log_level=log_level, log_file=log_file)
     set_var_for_macos_issue()

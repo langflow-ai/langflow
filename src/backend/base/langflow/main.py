@@ -77,6 +77,24 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         if "files/" not in request.url.path and request.url.path.endswith(".js") and response.status_code == 200:
             response.headers["Content-Type"] = "text/javascript"
         return response
+    
+
+# Function to download NLTK packages if not already downloaded
+def download_nltk_resources():
+    nltk_resources = {
+        "corpora": ["wordnet"],
+        "taggers": ["averaged_perceptron_tagger"],
+        "tokenizers": ["punkt", "punkt_tab"],
+    }
+
+    for category, packages in nltk_resources.items():
+        for package in packages:
+            try:
+                nltk.data.find(f"{category}/{package}")
+                logger.info(f"{package} ({category}) already exists.")
+            except LookupError:
+                logger.info(f"Downloading {package} ({category})...")
+                nltk.download(package)
 
 
 def get_lifespan(fix_migration=False, socketio_server=None, version=None):
@@ -181,6 +199,9 @@ def create_app():
             )
 
     FastAPIInstrumentor.instrument_app(app)
+
+    # Get necessary NLTK packages (PDF parsing support)
+    download_nltk_resources()
 
     return app
 
