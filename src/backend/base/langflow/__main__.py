@@ -74,6 +74,7 @@ def set_var_for_macos_issue():
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
+
 # Function to download NLTK packages if not already downloaded
 def download_nltk_resources():
     nltk_resources = {
