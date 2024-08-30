@@ -145,21 +145,18 @@ function ApiInterceptor() {
         error.config.headers[key] = value;
       }
     }
-    mutationRenewAccessToken(
-      {},
-      {
-        onSuccess: async (data) => {
-          authenticationErrorCount = 0;
-          await remakeRequest(error);
-          authenticationErrorCount = 0;
-        },
-        onError: (error) => {
-          console.error(error);
-          mutationLogout();
-          return Promise.reject("Authentication error");
-        },
+    mutationRenewAccessToken(undefined, {
+      onSuccess: async () => {
+        authenticationErrorCount = 0;
+        await remakeRequest(error);
+        authenticationErrorCount = 0;
       },
-    );
+      onError: (error) => {
+        console.error(error);
+        mutationLogout();
+        return Promise.reject("Authentication error");
+      },
+    });
   }
 
   async function clearBuildVerticesState(error) {

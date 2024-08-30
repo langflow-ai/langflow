@@ -1,9 +1,5 @@
-import { keepPreviousData, UseMutationResult } from "@tanstack/react-query";
-import {
-  useMutationFunctionType,
-  useQueryFunctionType,
-  Users,
-} from "../../../../types/api";
+import { UseMutationResult } from "@tanstack/react-query";
+import { useMutationFunctionType, Users } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -35,7 +31,7 @@ export const useGetUsers: useMutationFunctionType<any, getUsersQueryParams> = (
     getUsersQueryParams,
     any,
     getUsersQueryParams
-  > = mutate(["useRefreshAccessToken"], getUsers, options);
+  > = mutate(["useGetUsers"], getUsers, options);
 
   return mutation;
 };

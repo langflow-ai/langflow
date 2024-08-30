@@ -42,7 +42,6 @@ export default function UserManagementModal({
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
   }
-  console.log(data);
 
   useEffect(() => {
     if (open) {
