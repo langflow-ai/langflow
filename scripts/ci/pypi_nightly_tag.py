@@ -10,16 +10,21 @@ import packaging.version
 import pytz
 from packaging.version import Version
 
+PYPI_LANGFLOW_URL = "https://pypi.org/pypi/langflow/json"
 PYPI_LANGFLOW_NIGHTLY_URL = "https://pypi.org/pypi/langflow-nightly/json"
+
+PYPI_LANGFLOW_BASE_URL = "https://pypi.org/pypi/langflow-base/json"
 PYPI_LANGFLOW_BASE_NIGHTLY_URL = "https://pypi.org/pypi/langflow-base-nightly/json"
 
-def get_latest_published_version(build_type: str) -> Version:
+
+def get_latest_published_version(build_type: str, is_nightly: bool) -> Version:
     import requests
 
+    url = ""
     if build_type == "base":
-        url = PYPI_LANGFLOW_BASE_NIGHTLY_URL
+        url = PYPI_LANGFLOW_BASE_NIGHTLY_URL if is_nightly else PYPI_LANGFLOW_BASE_URL
     elif build_type == "main":
-        url = PYPI_LANGFLOW_NIGHTLY_URL
+        url = PYPI_LANGFLOW_NIGHTLY_URL if is_nightly else PYPI_LANGFLOW_URL
     else:
         raise ValueError(f"Invalid build type: {build_type}")
 
@@ -32,15 +37,20 @@ def get_latest_published_version(build_type: str) -> Version:
 
 
 def create_tag(build_type: str):
-    # current_version = get_latest_published_version(build_type)
+    current_version = get_latest_published_version(build_type, is_nightly=False)
+    current_nightly_version = get_latest_published_version(build_type, is_nightly=True)
+
+    build_number = "0"
+    latest_base_version = current_version.base_version
+    nightly_base_version = current_nightly_version.base_version
+
+    if latest_base_version == nightly_base_version:
+        # If the latest version is the same as the nightly version, increment the build number
+        build_number = str(current_nightly_version.dev + 1)
+
+    new_nightly_version = latest_base_version + ".dev" + build_number
 
     # X.Y.Z.dev.YYYYMMDD
-    # version_with_date = (
-    #     ".".join([str(x) for x in current_version.release])
-    #     + ".dev"
-    #     + datetime.now(pytz.timezone("UTC")).strftime("%Y%m%d")
-    # )
-
     # This takes the base version of the current version and appends the
     # current date. If the last release was on the same day, we exit, as
     # pypi does not allow for overwriting the same version.
@@ -51,27 +61,13 @@ def create_tag(build_type: str):
     #     ".".join([str(x) for x in current_version.release])
     #     + ".dev"
     #     + "0"
+    #     + datetime.now(pytz.timezone("UTC")).strftime("%Y%m%d")
     # )
-    # Alright, hardcoding the first release.
-    if build_type == "main":
-        version_with_date = "1.0.17.dev1"
-    else:
-        version_with_date = "0.0.95.dev1"
-
-   # if version_with_date == latest_pypi_version:
-    #     n = version_with_date.split("-")[-1]
-    #     if isinstance(n, int):
-    #         b_n = str(int(n) + 1)
-    #         version_with_date += b_n
-    #     else:
-    #         version_with_date += "0"
-    #     # raise Exception("Version {version_with_date} already published on PyPI")
-
 
     # Verify if version is PEP440 compliant.
-    packaging.version.Version(version_with_date)
+    packaging.version.Version(new_nightly_version)
 
-    return version_with_date
+    return new_nightly_version
 
 
 if __name__ == "__main__":
