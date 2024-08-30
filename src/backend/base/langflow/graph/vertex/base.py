@@ -4,10 +4,9 @@ import inspect
 import os
 import traceback
 import types
-import json
+from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional
-from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 
 import pandas as pd
 from loguru import logger
@@ -37,9 +36,9 @@ if TYPE_CHECKING:
 class VertexStates(str, Enum):
     """Vertex are related to it being active, inactive, or in an error state."""
 
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    ERROR = "error"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    ERROR = "ERROR"
 
 
 class Vertex:
