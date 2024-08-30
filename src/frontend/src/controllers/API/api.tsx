@@ -103,8 +103,14 @@ function ApiInterceptor() {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
-        for (const [key, value] of Object.entries(customHeaders)) {
-          config.headers[key] = value;
+        const currentOrigin = window.location.origin;
+        const requestUrl = new URL(config?.url as string, currentOrigin);
+
+        const urlIsFromCurrentOrigin = requestUrl.origin === currentOrigin;
+        if (urlIsFromCurrentOrigin) {
+          for (const [key, value] of Object.entries(customHeaders)) {
+            config.headers[key] = value;
+          }
         }
 
         return {

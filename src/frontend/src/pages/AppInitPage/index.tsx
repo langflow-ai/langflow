@@ -1,5 +1,6 @@
 import { useGetAutoLogin } from "@/controllers/API/queries/auth";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useGetVersionQuery } from "@/controllers/API/queries/version";
 import { CustomLoadingPage } from "@/customization/components/custom-loading-page";
 import { useCustomPrimaryLoading } from "@/customization/hooks/use-custom-primary-loading";
@@ -19,6 +20,7 @@ export function AppInitPage() {
   const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
   useGetVersionQuery({ enabled: isFetched });
   useGetConfig({ enabled: isFetched });
+  useGetGlobalVariables({ enabled: isFetched });
 
   useEffect(() => {
     if (isFetched) {
