@@ -180,4 +180,6 @@ export type FlowStoreType = {
     edges?: Edge[];
     viewport?: Viewport;
   }) => void;
+  stopBuilding: () => void;
+  buildController: AbortController;
 };
