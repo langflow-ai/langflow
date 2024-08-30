@@ -183,7 +183,7 @@ def create_app():
 
     FastAPIInstrumentor.instrument_app(app)
 
-    # Get necessary NLTK packages (PDF parsing support)
+    # Get necessary NLTK packages
     download_nltk_resources()
 
     return app
