@@ -108,8 +108,8 @@ jobs:
     needs: [create-nightly-tag]
     uses: ./.github/workflows/release_nightly.yml
     with:
-      build_docker_base: false
-      build_docker_main: false
+      build_docker_base: true
+      build_docker_main: true
       nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
     secrets: inherit
