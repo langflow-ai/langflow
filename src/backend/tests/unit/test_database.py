@@ -407,7 +407,7 @@ def test_migrate_transactions_no_duckdb(client: TestClient):
 def test_sqlite_pragmas():
     db_service = get_db_service()
 
-    with db_service as session:
+    with db_service.with_session() as session:
         from sqlalchemy import text
 
         assert "wal" == session.execute(text("PRAGMA journal_mode;")).fetchone()[0]
