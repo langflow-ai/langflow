@@ -2,6 +2,7 @@ import { useGetAutoLogin } from "@/controllers/API/queries/auth";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetVersionQuery } from "@/controllers/API/queries/version";
 import { CustomLoadingPage } from "@/customization/components/custom-loading-page";
+import { useCustomPostLoading } from "@/customization/hooks/use-custom-post-loading";
 import { useCustomPrimaryLoading } from "@/customization/hooks/use-custom-primary-loading";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -19,6 +20,7 @@ export function AppInitPage() {
   const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
   useGetVersionQuery({ enabled: isFetched });
   useGetConfig({ enabled: isFetched });
+  useCustomPostLoading({ enabled: isFetched });
 
   useEffect(() => {
     if (isFetched) {
