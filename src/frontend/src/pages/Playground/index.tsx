@@ -1,5 +1,4 @@
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
-import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import { useStoreStore } from "@/stores/storeStore";
@@ -25,7 +24,6 @@ export default function PlaygroundPage() {
   }
 
   const navigate = useCustomNavigate();
-  useGetGlobalVariables();
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const { mutateAsync: refreshFlows } = useGetRefreshFlows();
