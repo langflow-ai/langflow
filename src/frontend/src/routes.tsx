@@ -14,6 +14,7 @@ import ContextWrapper from "./contexts";
 import { CustomNavigate } from "./customization/components/custom-navigate";
 import { BASENAME } from "./customization/config-constants";
 import { ENABLE_CUSTOM_PARAM } from "./customization/feature-flags";
+import { AppAuthenticatedPage } from "./pages/AppAuthenticatedPage";
 import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
 import { DashboardWrapperPage } from "./pages/DashboardWrapperPage";
@@ -57,102 +58,112 @@ const router = createBrowserRouter(
               </ProtectedRoute>
             }
           >
-            <Route path="" element={<DashboardWrapperPage />}>
-              <Route path="" element={<HomePage />}>
-                <Route index element={<CustomNavigate replace to={"all"} />} />
-                <Route
-                  path="flows/"
-                  element={<MyCollectionComponent key="flows" type="flow" />}
-                >
+            <Route path="" element={<AppAuthenticatedPage />}>
+              <Route path="" element={<DashboardWrapperPage />}>
+                <Route path="" element={<HomePage />}>
                   <Route
-                    path="folder/:folderId"
-                    element={<MyCollectionComponent key="flows" type="flow" />}
+                    index
+                    element={<CustomNavigate replace to={"all"} />}
                   />
-                </Route>
-                <Route
-                  path="components/"
-                  element={
-                    <MyCollectionComponent key="components" type="component" />
-                  }
-                >
                   <Route
-                    path="folder/:folderId"
+                    path="flows/"
+                    element={<MyCollectionComponent key="flows" type="flow" />}
+                  >
+                    <Route
+                      path="folder/:folderId"
+                      element={
+                        <MyCollectionComponent key="flows" type="flow" />
+                      }
+                    />
+                  </Route>
+                  <Route
+                    path="components/"
                     element={
                       <MyCollectionComponent
                         key="components"
                         type="component"
                       />
                     }
-                  />
-                </Route>
-                <Route
-                  path="all/"
-                  element={<MyCollectionComponent key="all" type="all" />}
-                >
+                  >
+                    <Route
+                      path="folder/:folderId"
+                      element={
+                        <MyCollectionComponent
+                          key="components"
+                          type="component"
+                        />
+                      }
+                    />
+                  </Route>
                   <Route
-                    path="folder/:folderId"
+                    path="all/"
                     element={<MyCollectionComponent key="all" type="all" />}
-                  />
+                  >
+                    <Route
+                      path="folder/:folderId"
+                      element={<MyCollectionComponent key="all" type="all" />}
+                    />
+                  </Route>
                 </Route>
-              </Route>
-              <Route path="settings" element={<SettingsPage />}>
+                <Route path="settings" element={<SettingsPage />}>
+                  <Route
+                    index
+                    element={<CustomNavigate replace to={"general"} />}
+                  />
+                  <Route
+                    path="global-variables"
+                    element={<GlobalVariablesPage />}
+                  />
+                  <Route path="api-keys" element={<ApiKeysPage />} />
+                  <Route
+                    path="general/:scrollId?"
+                    element={
+                      <AuthSettingsGuard>
+                        <GeneralPage />
+                      </AuthSettingsGuard>
+                    }
+                  />
+                  <Route path="shortcuts" element={<ShortcutsPage />} />
+                  <Route path="messages" element={<MessagesPage />} />
+                </Route>
                 <Route
-                  index
-                  element={<CustomNavigate replace to={"general"} />}
-                />
-                <Route
-                  path="global-variables"
-                  element={<GlobalVariablesPage />}
-                />
-                <Route path="api-keys" element={<ApiKeysPage />} />
-                <Route
-                  path="general/:scrollId?"
+                  path="store"
                   element={
-                    <AuthSettingsGuard>
-                      <GeneralPage />
-                    </AuthSettingsGuard>
+                    <StoreGuard>
+                      <StorePage />
+                    </StoreGuard>
                   }
                 />
-                <Route path="shortcuts" element={<ShortcutsPage />} />
-                <Route path="messages" element={<MessagesPage />} />
+                <Route
+                  path="store/:id/"
+                  element={
+                    <StoreGuard>
+                      <StorePage />
+                    </StoreGuard>
+                  }
+                />
+                <Route path="account">
+                  <Route path="delete" element={<DeleteAccountPage />}></Route>
+                </Route>
+                <Route
+                  path="admin"
+                  element={
+                    <ProtectedAdminRoute>
+                      <AdminPage />
+                    </ProtectedAdminRoute>
+                  }
+                />
               </Route>
-              <Route
-                path="store"
-                element={
-                  <StoreGuard>
-                    <StorePage />
-                  </StoreGuard>
-                }
-              />
-              <Route
-                path="store/:id/"
-                element={
-                  <StoreGuard>
-                    <StorePage />
-                  </StoreGuard>
-                }
-              />
-              <Route path="account">
-                <Route path="delete" element={<DeleteAccountPage />}></Route>
+              <Route path="flow/:id/">
+                <Route path="" element={<DashboardWrapperPage />}>
+                  <Route path="folder/:folderId/" element={<FlowPage />} />
+                  <Route path="" element={<FlowPage />} />
+                </Route>
+                <Route path="view" element={<ViewPage />} />
               </Route>
-              <Route
-                path="admin"
-                element={
-                  <ProtectedAdminRoute>
-                    <AdminPage />
-                  </ProtectedAdminRoute>
-                }
-              />
-            </Route>
-            <Route path="flow/:id/">
-              <Route path="" element={<DashboardWrapperPage />}>
-                <Route path="folder/:folderId/" element={<FlowPage />} />
-                <Route path="" element={<FlowPage />} />
+              <Route path="playground/:id/">
+                <Route path="" element={<PlaygroundPage />} />
               </Route>
-              <Route path="view" element={<ViewPage />} />
-            </Route>
-            <Route path="playground/:id/">
-              <Route path="" element={<PlaygroundPage />} />
             </Route>
           </Route>
           <Route
