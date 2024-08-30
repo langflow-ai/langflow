@@ -13,16 +13,6 @@ from packaging.version import Version
 PYPI_LANGFLOW_NIGHTLY_URL = "https://pypi.org/pypi/langflow-nightly/json"
 PYPI_LANGFLOW_BASE_NIGHTLY_URL = "https://pypi.org/pypi/langflow-base-nightly/json"
 
-
-def get_version_from_pypi(url):
-    import json
-    import urllib.request
-
-    response = urllib.request.urlopen(url)
-    if response.getcode() == 200:
-        return json.loads(response.read())["info"]["version"]
-
-
 def get_latest_langflow_version(build_type: str) -> Version:
     import requests
 
@@ -44,27 +34,34 @@ def get_latest_langflow_version(build_type: str) -> Version:
 def create_tag(build_type: str):
     current_version = get_latest_langflow_version(build_type)
 
-    if build_type == "base":
-        latest_pypi_version = get_version_from_pypi(PYPI_LANGFLOW_BASE_NIGHTLY_URL)
-    elif build_type == "main":
-        latest_pypi_version = get_version_from_pypi(PYPI_LANGFLOW_NIGHTLY_URL)
-    else:
-        raise ValueError(f"Invalid build type: {build_type}")
-
     # X.Y.Z.dev.YYYYMMDD
+    # version_with_date = (
+    #     ".".join([str(x) for x in current_version.release])
+    #     + ".dev"
+    #     + datetime.now(pytz.timezone("UTC")).strftime("%Y%m%d")
+    # )
+
+    # This takes the base version of the current version and appends the
+    # current date. If the last release was on the same day, we exit, as
+    # pypi does not allow for overwriting the same version.
+    #
+    # We could use a different versioning scheme, such as just incrementing
+    # an integer.
     version_with_date = (
         ".".join([str(x) for x in current_version.release])
         + ".dev"
-        + datetime.now(pytz.timezone("UTC")).strftime("%Y%m%d")
+        + "0"
     )
 
-    # If the latest version published is already on pypi, we must fail,
-    # as pypi does not allow overwriting the same version.
-    # We could use a different versioning scheme, such as just incrementing
-    # an integer.
-    if version_with_date == latest_pypi_version:
-        pass
-        # raise Exception("Version {version_with_date} already published on PyPI")
+   # if version_with_date == latest_pypi_version:
+    #     n = version_with_date.split("-")[-1]
+    #     if isinstance(n, int):
+    #         b_n = str(int(n) + 1)
+    #         version_with_date += b_n
+    #     else:
+    #         version_with_date += "0"
+    #     # raise Exception("Version {version_with_date} already published on PyPI")
+
 
     # Verify if version is PEP440 compliant.
     packaging.version.Version(version_with_date)
