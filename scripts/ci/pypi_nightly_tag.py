@@ -13,7 +13,7 @@ from packaging.version import Version
 PYPI_LANGFLOW_NIGHTLY_URL = "https://pypi.org/pypi/langflow-nightly/json"
 PYPI_LANGFLOW_BASE_NIGHTLY_URL = "https://pypi.org/pypi/langflow-base-nightly/json"
 
-def get_latest_langflow_version(build_type: str) -> Version:
+def get_latest_published_version(build_type: str) -> Version:
     import requests
 
     if build_type == "base":
@@ -32,7 +32,7 @@ def get_latest_langflow_version(build_type: str) -> Version:
 
 
 def create_tag(build_type: str):
-    current_version = get_latest_langflow_version(build_type)
+    # current_version = get_latest_published_version(build_type)
 
     # X.Y.Z.dev.YYYYMMDD
     # version_with_date = (
@@ -47,11 +47,16 @@ def create_tag(build_type: str):
     #
     # We could use a different versioning scheme, such as just incrementing
     # an integer.
-    version_with_date = (
-        ".".join([str(x) for x in current_version.release])
-        + ".dev"
-        + "0"
-    )
+    # version_with_date = (
+    #     ".".join([str(x) for x in current_version.release])
+    #     + ".dev"
+    #     + "0"
+    # )
+    # Alright, hardcoding the first release.
+    if build_type == "main":
+        version_with_date = "1.0.17.dev0"
+    else:
+        version_with_date = "0.0.95.dev0"
 
    # if version_with_date == latest_pypi_version:
     #     n = version_with_date.split("-")[-1]
