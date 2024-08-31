@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
+    from langflow.services.task_orchestration.service import TaskOrchestrationService
     from langflow.services.telemetry.service import TelemetryService
     from langflow.services.tracing.service import TracingService
     from langflow.services.variable.service import VariableService
@@ -238,4 +239,16 @@ def get_store_service() -> StoreService:
     Returns:
         StoreService: The StoreService instance.
     """
-    return get_service(ServiceType.STORE_SERVICE)
+    return get_service(ServiceType.STORE_SERVICE)  # type: ignore
+
+
+def get_task_orchestration_service() -> "TaskOrchestrationService":
+    """
+    Retrieves the TaskOrchestrationService instance from the service manager.
+
+    Returns:
+        The TaskOrchestrationService instance.
+
+    """
+
+    return get_service(ServiceType.TASK_ORCHESTRATION_SERVICE)  # type: ignore
