@@ -4,7 +4,7 @@ import time
 import traceback
 import typing
 import uuid
-from typing import TYPE_CHECKING, Annotated, Optional
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -68,9 +68,9 @@ async def try_running_celery_task(vertex, user_id):
 async def retrieve_vertices_order(
     flow_id: uuid.UUID,
     background_tasks: BackgroundTasks,
-    data: Optional[Annotated[Optional[FlowDataRequest], Body(embed=True)]] = None,
-    stop_component_id: Optional[str] = None,
-    start_component_id: Optional[str] = None,
+    data: Annotated[FlowDataRequest | None, Body(embed=True)] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     session=Depends(get_session),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
@@ -141,11 +141,12 @@ async def retrieve_vertices_order(
 async def build_flow(
     background_tasks: BackgroundTasks,
     flow_id: uuid.UUID,
-    inputs: Annotated[Optional[InputValueRequest], Body(embed=True)] = None,
-    data: Annotated[Optional[FlowDataRequest], Body(embed=True)] = None,
-    files: Optional[list[str]] = None,
-    stop_component_id: Optional[str] = None,
-    start_component_id: Optional[str] = None,
+    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
+    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
+    files: list[str] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
+    log_builds: bool | None = True,
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
@@ -250,7 +251,7 @@ async def build_flow(
             result_data_response.message = artifacts
 
             # Log the vertex build
-            if not vertex.will_stream:
+            if not vertex.will_stream and log_builds:
                 background_tasks.add_task(
                     log_vertex_build,
                     flow_id=flow_id_str,
@@ -260,6 +261,8 @@ async def build_flow(
                     data=result_data_response,
                     artifacts=artifacts,
                 )
+            else:
+                await chat_service.set_cache(flow_id_str, graph)
 
             timedelta = time.perf_counter() - start_time
             duration = format_elapsed_time(timedelta)
@@ -332,7 +335,12 @@ async def build_flow(
 
         vertex_build_response: VertexBuildResponse = build_task.result()
         # send built event or error event
-        send_event("end_vertex", {"build_data": json.loads(vertex_build_response.model_dump_json())}, queue)
+        try:
+            vertex_build_response_json = vertex_build_response.model_dump_json()
+            build_data = json.loads(vertex_build_response_json)
+        except Exception as exc:
+            raise ValueError(f"Error serializing vertex build response: {exc}") from exc
+        send_event("end_vertex", {"build_data": build_data}, queue)
         await client_consumed_queue.get()
         if vertex_build_response.valid:
             if vertex_build_response.next_vertices_ids:
@@ -356,10 +364,23 @@ async def build_flow(
             except asyncio.CancelledError:
                 vertices_task.cancel()
                 return
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    send_event("error", {"error": str(e.detail), "statusCode": e.status_code}, queue)
+                    raise e
+                send_event("error", {"error": str(e)}, queue)
+                raise e
 
             ids, vertices_to_run, graph = vertices_task.result()
         else:
-            ids, vertices_to_run, graph = await build_graph_and_get_order()
+            try:
+                ids, vertices_to_run, graph = await build_graph_and_get_order()
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    send_event("error", {"error": str(e.detail), "statusCode": e.status_code}, queue)
+                    raise e
+                send_event("error", {"error": str(e)}, queue)
+                raise e
         send_event("vertices_sorted", {"ids": ids, "to_run": vertices_to_run}, queue)
         await client_consumed_queue.get()
 
@@ -370,6 +391,7 @@ async def build_flow(
         try:
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
+            background_tasks.add_task(graph.end_all_traces)
             for task in tasks:
                 task.cancel()
             return
@@ -412,7 +434,7 @@ class DisconnectHandlerStreamingResponse(StreamingResponse):
         headers: typing.Mapping[str, str] | None = None,
         media_type: str | None = None,
         background: BackgroundTask | None = None,
-        on_disconnect: Optional[typing.Callable] = None,
+        on_disconnect: typing.Callable | None = None,
     ):
         super().__init__(content, status_code, headers, media_type, background)
         self.on_disconnect = on_disconnect
@@ -431,8 +453,8 @@ async def build_vertex(
     flow_id: uuid.UUID,
     vertex_id: str,
     background_tasks: BackgroundTasks,
-    inputs: Annotated[Optional[InputValueRequest], Body(embed=True)] = None,
-    files: Optional[list[str]] = None,
+    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
+    files: list[str] | None = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
@@ -584,7 +606,7 @@ async def build_vertex(
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
-    session_id: Optional[str] = None,
+    session_id: str | None = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     session_service: "SessionService" = Depends(get_session_service),
 ):

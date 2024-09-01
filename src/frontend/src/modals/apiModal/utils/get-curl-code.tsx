@@ -1,4 +1,5 @@
 import useFlowStore from "@/stores/flowStore";
+import { GetCodeType } from "@/types/tweaks";
 
 /**
  * Function to get the curl code for the API
@@ -6,12 +7,12 @@ import useFlowStore from "@/stores/flowStore";
  * @param {boolean} isAuth - If the API is authenticated
  * @returns {string} - The curl code
  */
-export function getCurlRunCode(
-  flowId: string,
-  isAuth: boolean,
-  tweaksBuildedObject?: {},
-  endpointName?: string | null,
-): string {
+export function getCurlRunCode({
+  flowId,
+  isAuth,
+  tweaksBuildedObject,
+  endpointName,
+}: GetCodeType): string {
   let tweaksString = "{}";
   const inputs = useFlowStore.getState().inputs;
   const outputs = useFlowStore.getState().outputs;
@@ -28,8 +29,8 @@ export function getCurlRunCode(
       !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
     }
     -d '{"input_value": "message",
-    "output_type": ${hasChatOutput ? "chat" : "text"},
-    "input_type": ${hasChatInput ? "chat" : "text"},
+    "output_type": ${hasChatOutput ? '"chat"' : '"text"'},
+    "input_type": ${hasChatInput ? '"chat"' : '"text"'},
     "tweaks": ${tweaksString}}'
     `;
 }
@@ -43,11 +44,11 @@ export function getCurlRunCode(
  * @param {string} options.endpointName - The name of the webhook endpoint.
  * @returns {string} The cURL command.
  */
-export function getCurlWebhookCode(
+export function getCurlWebhookCode({
   flowId,
   isAuth,
-  endpointName?: string | null,
-) {
+  endpointName,
+}: GetCodeType) {
   return `curl -X POST \\
   "${window.location.protocol}//${window.location.host}/api/v1/webhook/${
     endpointName || flowId

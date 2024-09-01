@@ -26,10 +26,12 @@ type BuildVerticesParams = {
   ) => void; // Replace any with the actual type if it's not any
   onBuildComplete?: (allNodesValid: boolean) => void;
   onBuildError?: (title, list, idList: VertexLayerElementType[]) => void;
+  onBuildStopped?: () => void;
   onBuildStart?: (idList: VertexLayerElementType[]) => void;
   onValidateNodes?: (nodes: string[]) => void;
   nodes?: Node[];
   edges?: Edge[];
+  logBuilds?: boolean;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -142,10 +144,12 @@ export async function buildFlowVertices({
   onBuildUpdate,
   onBuildComplete,
   onBuildError,
+  onBuildStopped,
   onBuildStart,
   onValidateNodes,
   nodes,
   edges,
+  logBuilds,
   setLockChat,
 }: BuildVerticesParams) {
   let url = `${BASE_URL_API}build/${flowId}/flow?`;
@@ -154,6 +158,9 @@ export async function buildFlowVertices({
   }
   if (stopNodeId) {
     url = `${url}&stop_component_id=${stopNodeId}`;
+  }
+  if (logBuilds !== undefined) {
+    url = `${url}&log_builds=${logBuilds}`;
   }
   const postData = {};
   if (typeof input_value !== "undefined") {
@@ -264,6 +271,14 @@ export async function buildFlowVertices({
         useFlowStore.getState().setIsBuilding(false);
         return true;
       }
+      case "error": {
+        const errorMessage = data.error;
+        console.log(data);
+        onBuildError!("Error Running Flow", [errorMessage], []);
+        buildResults.push(false);
+        useFlowStore.getState().setIsBuilding(false);
+        return true;
+      }
       default:
         return true;
     }
@@ -284,6 +299,8 @@ export async function buildFlowVertices({
       }
       throw new Error("error in streaming request");
     },
+    // network error are likely caused by the window.stop() called in the stopBuild function
+    onNetworkError: onBuildStopped,
   });
 }
 

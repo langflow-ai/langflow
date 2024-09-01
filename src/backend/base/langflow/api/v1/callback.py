@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from loguru import logger
@@ -32,7 +32,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
         resp = ChatResponse(message=token, type="stream", intermediate_steps="")
         await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
 
-    async def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs: Any) -> Any:
+    async def on_tool_start(self, serialized: dict[str, Any], input_str: str, **kwargs: Any) -> Any:
         """Run when tool starts running."""
         resp = ChatResponse(
             message="",
@@ -79,8 +79,8 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
         error: BaseException,
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
-        tags: Optional[List[str]] = None,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
         **kwargs: Any,
     ) -> None:
         """Run when tool errors."""

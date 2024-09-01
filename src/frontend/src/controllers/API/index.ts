@@ -1,10 +1,9 @@
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { Edge, Node, ReactFlowJsonObject } from "reactflow";
-import { BASE_URL_API, MAX_BATCH_SIZE } from "../../constants/constants";
+import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
-  APITemplateType,
   Component,
   CustomComponentRequest,
   Users,
@@ -19,9 +18,7 @@ import {
   APIClassType,
   BuildStatusTypeAPI,
   InitTypeAPI,
-  PromptTypeAPI,
   UploadFileTypeAPI,
-  errorsTypeAPI,
 } from "./../../types/api/index";
 
 /**
@@ -56,210 +53,6 @@ export async function getRepoStars(owner: string, repo: string) {
  */
 export async function sendAll(data: sendAllProps) {
   return await api.post(`${BASE_URL_API}predict`, data);
-}
-
-export async function postValidateCode(
-  code: string,
-): Promise<AxiosResponse<errorsTypeAPI>> {
-  return await api.post(`${BASE_URL_API}validate/code`, { code });
-}
-
-/**
- * Checks the prompt for the code block by sending it to an API endpoint.
- * @param {string} name - The name of the field to check.
- * @param {string} template - The template string of the prompt to check.
- * @param {APIClassType} frontend_node - The frontend node to check.
- * @returns {Promise<AxiosResponse<PromptTypeAPI>>} A promise that resolves to an AxiosResponse containing the validation results.
- */
-export async function postValidatePrompt(
-  name: string,
-  template: string,
-  frontend_node: APIClassType,
-): Promise<AxiosResponse<PromptTypeAPI>> {
-  return api.post(`${BASE_URL_API}validate/prompt`, {
-    name,
-    template,
-    frontend_node,
-  });
-}
-
-/**
- * Fetches a list of JSON files from a GitHub repository and returns their contents as an array of FlowType objects.
- *
- * @returns {Promise<FlowType[]>} A promise that resolves to an array of FlowType objects.
- */
-export async function getExamples(): Promise<FlowType[]> {
-  const url =
-    "https://api.github.com/repos/langflow-ai/langflow_examples/contents/examples?ref=main";
-  const response = await api.get(url);
-
-  const jsonFiles = response?.data.filter((file: any) => {
-    return file.name.endsWith(".json");
-  });
-
-  const contentsPromises = jsonFiles.map(async (file: any) => {
-    const contentResponse = await api.get(file.download_url);
-    return contentResponse.data;
-  });
-
-  return await Promise.all(contentsPromises);
-}
-
-/**
- * Saves a new flow to the database.
- *
- * @param {FlowType} newFlow - The flow data to save.
- * @returns {Promise<any>} The saved flow data.
- * @throws Will throw an error if saving fails.
- */
-export async function saveFlowToDatabase(newFlow: {
-  name: string;
-  id: string;
-  data: ReactFlowJsonObject | null;
-  description: string;
-  style?: FlowStyleType;
-  is_component?: boolean;
-  folder_id?: string;
-  endpoint_name?: string;
-}): Promise<FlowType> {
-  try {
-    const response = await api.post(`${BASE_URL_API}flows/`, {
-      name: newFlow.name,
-      data: newFlow.data,
-      description: newFlow.description,
-      is_component: newFlow.is_component,
-      folder_id: newFlow.folder_id === "" ? null : newFlow.folder_id,
-      endpoint_name: newFlow.endpoint_name,
-    });
-
-    if (response?.status !== 201) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-/**
- * Updates an existing flow in the database.
- *
- * @param {FlowType} updatedFlow - The updated flow data.
- * @returns {Promise<any>} The updated flow data.
- * @throws Will throw an error if the update fails.
- */
-export async function updateFlowInDatabase(
-  updatedFlow: FlowType,
-): Promise<FlowType> {
-  try {
-    const response = await api.patch(`${BASE_URL_API}flows/${updatedFlow.id}`, {
-      name: updatedFlow.name,
-      data: updatedFlow.data,
-      description: updatedFlow.description,
-      folder_id: updatedFlow.folder_id === "" ? null : updatedFlow.folder_id,
-      endpoint_name: updatedFlow.endpoint_name,
-    });
-
-    if (response && response?.status !== 200) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-/**
- * Reads all flows from the database.
- *
- * @returns {Promise<any>} The flows data.
- * @throws Will throw an error if reading fails.
- */
-export async function readFlowsFromDatabase() {
-  try {
-    const response = await api.get(`${BASE_URL_API}flows/`);
-    if (response && response?.status !== 200) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-export async function uploadFlowsToDatabase(flows: FormData) {
-  try {
-    const response = await api.post(`${BASE_URL_API}flows/upload/`, flows);
-
-    if (response?.status !== 201) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-/**
- * Deletes a flow from the database.
- *
- * @param {string} flowId - The ID of the flow to delete.
- * @returns {Promise<any>} The deleted flow data.
- * @throws Will throw an error if deletion fails.
- */
-export async function deleteFlowFromDatabase(flowId: string) {
-  try {
-    const response = await api.delete(`${BASE_URL_API}flows/${flowId}`);
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-/**
- * Fetches a flow from the database by ID.
- *
- * @param {number} flowId - The ID of the flow to fetch.
- * @returns {Promise<any>} The flow data.
- * @throws Will throw an error if fetching fails.
- */
-export async function getFlowFromDatabase(flowId: number) {
-  try {
-    const response = await api.get(`${BASE_URL_API}flows/${flowId}`);
-    if (response && response?.status !== 200) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-/**
- * Fetches flow styles from the database.
- *
- * @returns {Promise<any>} The flow styles data.
- * @throws Will throw an error if fetching fails.
- */
-export async function getFlowStylesFromDatabase() {
-  try {
-    const response = await api.get(`${BASE_URL_API}flow_styles/`);
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
 }
 
 /**
@@ -323,20 +116,6 @@ export async function postCustomComponent(
   return await api.post(`${BASE_URL_API}custom_component`, {
     code,
     frontend_node: apiClass,
-  });
-}
-
-export async function postCustomComponentUpdate(
-  code: string,
-  template: APITemplateType,
-  field: string,
-  field_value: any,
-): Promise<AxiosResponse<APIClassType>> {
-  return await api.post(`${BASE_URL_API}custom_component/update`, {
-    code,
-    template,
-    field,
-    field_value,
   });
 }
 
@@ -801,41 +580,4 @@ export async function deleteFlowPool(
   const config = {};
   config["params"] = { flow_id: flowId };
   return await api.delete(`${BASE_URL_API}monitor/builds`, config);
-}
-
-/**
- * Deletes multiple flow components by their IDs.
- * @param flowIds - An array of flow IDs to be deleted.
- * @param token - The authorization token for the API request.
- * @returns A promise that resolves to an array of AxiosResponse objects representing the delete responses.
- */
-export async function multipleDeleteFlowsComponents(
-  flowIds: string[],
-): Promise<AxiosResponse<any>[]> {
-  const batches: string[][] = [];
-
-  // Split the flowIds into batches
-  for (let i = 0; i < flowIds.length; i += MAX_BATCH_SIZE) {
-    batches.push(flowIds.slice(i, i + MAX_BATCH_SIZE));
-  }
-
-  // Function to delete a batch of flow IDs
-  const deleteBatch = async (batch: string[]): Promise<AxiosResponse<any>> => {
-    try {
-      return await api.delete(`${BASE_URL_API}flows/`, {
-        data: batch,
-      });
-    } catch (error) {
-      console.error("Error deleting flows:", error);
-      throw error;
-    }
-  };
-
-  // Execute all delete requests
-  const responses: Promise<AxiosResponse<any>>[] = batches.map((batch) =>
-    deleteBatch(batch),
-  );
-
-  // Return the responses after all requests are completed
-  return Promise.all(responses);
 }

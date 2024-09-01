@@ -13,16 +13,13 @@ export const useAddUser: useMutationFunctionType<undefined, UserInputType> = (
   const addUserFunction = async (
     user: UserInputType,
   ): Promise<Array<Users>> => {
-    const res = await api.post(`${getURL("USERS")}`, user);
+    const res = await api.post(`${getURL("USERS")}/`, user);
     return res.data;
   };
 
   const mutation: UseMutationResult<Array<Users>, any, UserInputType> = mutate(
     ["useAddUser"],
-    async (payload: UserInputType) => {
-      const res = await addUserFunction(payload);
-      return res;
-    },
+    addUserFunction,
     options,
   );
 

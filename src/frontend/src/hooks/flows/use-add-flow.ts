@@ -14,6 +14,8 @@ import {
   updateGroupRecursion,
 } from "@/utils/reactflowUtils";
 import { cloneDeep } from "lodash";
+import { useParams } from "react-router-dom";
+import useDeleteFlow from "./use-delete-flow";
 
 const useAddFlow = () => {
   const unavaliableFields = useGlobalVariablesStore(
@@ -24,10 +26,11 @@ const useAddFlow = () => {
   );
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
-  const deleteComponent = useFlowsManagerStore(
-    (state) => state.deleteComponent,
-  );
-  const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
+  const deleteFlow = useDeleteFlow();
+
+  const { folderId } = useParams();
+
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const { mutate: postAddFlow } = usePostAddFlow();
 
@@ -35,7 +38,7 @@ const useAddFlow = () => {
     return new Promise(async (resolve, reject) => {
       const flow = cloneDeep(params?.flow) ?? undefined;
       let flowData = flow
-        ? processDataFromFlow(flow)
+        ? await processDataFromFlow(flow)
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
       flowData?.nodes.forEach((node) => {
         updateGroupRecursion(
@@ -46,27 +49,27 @@ const useAddFlow = () => {
         );
       });
       // Create a new flow with a default name if no flow is provided.
-      const folder_id = useFolderStore.getState().folderUrl;
-      const my_collection_id = useFolderStore.getState().myCollectionId;
+      const folder_id = folderId ?? myCollectionId ?? "";
 
       if (params?.override && flow) {
-        await deleteComponent(flow.name);
+        const flowId = flows?.find((f) => f.name === flow.name);
+        if (flowId) {
+          await deleteFlow({ id: flowId.id });
+        }
       }
-      const newFlow = createNewFlow(
-        flowData!,
-        folder_id || my_collection_id!,
-        flow,
-      );
+      const newFlow = createNewFlow(flowData!, folder_id, flow);
 
-      const newName = addVersionToDuplicates(newFlow, flows);
+      const newName = addVersionToDuplicates(newFlow, flows ?? []);
       newFlow.name = newName;
-      newFlow.folder_id = useFolderStore.getState().folderUrl;
+      newFlow.folder_id = folder_id;
 
       postAddFlow(newFlow, {
-        onSuccess: ({ id }) => {
-          newFlow.id = id;
+        onSuccess: (createdFlow) => {
           // Add the new flow to the list of flows.
-          const { data, flows: myFlows } = processFlows([newFlow, ...flows]);
+          const { data, flows: myFlows } = processFlows([
+            createdFlow,
+            ...(flows ?? []),
+          ]);
           setFlows(myFlows);
           useTypesStore.setState((state) => ({
             data: { ...state.data, ["saved_components"]: data },
@@ -75,8 +78,7 @@ const useAddFlow = () => {
               ["saved_components"]: data,
             }),
           }));
-          setIsLoading(false);
-          resolve(id);
+          resolve(createdFlow.id);
         },
         onError: (error) => {
           if (error.response?.data?.detail) {
@@ -93,7 +95,6 @@ const useAddFlow = () => {
               ],
             });
           }
-          setIsLoading(false);
           reject(error); // Re-throw the error so the caller can handle it if needed},
         },
       });

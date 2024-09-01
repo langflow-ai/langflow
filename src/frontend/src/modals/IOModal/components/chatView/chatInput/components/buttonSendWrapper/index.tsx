@@ -8,7 +8,6 @@ type ButtonSendWrapperProps = {
   send: () => void;
   lockChat: boolean;
   noInput: boolean;
-  saveLoading: boolean;
   chatValue: string;
   files: FilePreviewType[];
 };
@@ -17,7 +16,6 @@ const ButtonSendWrapper = ({
   send,
   lockChat,
   noInput,
-  saveLoading,
   chatValue,
   files,
 }: ButtonSendWrapperProps) => {
@@ -31,15 +29,11 @@ const ButtonSendWrapper = ({
             ? "text-primary"
             : "bg-chat-send text-background",
       )}
-      disabled={lockChat || saveLoading}
+      disabled={lockChat}
       onClick={(): void => send()}
       unstyled
     >
-      <Case
-        condition={
-          lockChat || saveLoading || files.some((file) => file.loading)
-        }
-      >
+      <Case condition={lockChat || files.some((file) => file.loading)}>
         <IconComponent
           name="Lock"
           className="form-modal-lock-icon"
@@ -57,8 +51,7 @@ const ButtonSendWrapper = ({
 
       <Case
         condition={
-          !(lockChat || saveLoading || files.some((file) => file.loading)) &&
-          !noInput
+          !(lockChat || files.some((file) => file.loading)) && !noInput
         }
       >
         <IconComponent

@@ -7,7 +7,7 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
     setUnavailableFields: (fields) => {
       set({ unavailableFields: fields });
     },
-    globalVariablesEntries: [],
+    globalVariablesEntries: undefined,
     setGlobalVariablesEntries: (entries) => {
       set({ globalVariablesEntries: entries });
     },

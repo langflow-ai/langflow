@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useFolderStore } from "../../../../../../stores/foldersStore";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useEffect } from "react";
 
 type TabsSearchComponentProps = {
   tabsOptions: string[];
@@ -15,29 +14,24 @@ const TabsSearchComponent = ({
   loading,
   tabActive,
 }: TabsSearchComponentProps) => {
-  const navigate = useNavigate();
-  const folderUrl = useFolderStore((state) => state.folderUrl);
-  const myCollectionIdFolder = useFolderStore((state) => state.myCollectionId);
-
-  const hasFolderUrl = folderUrl != null && folderUrl !== "";
-  const currentFolderUrl = hasFolderUrl ? folderUrl : myCollectionIdFolder;
+  const navigate = useCustomNavigate();
 
   const changeLocation = (tabOption) => {
     const location = window.location.pathname;
     let newLocation = "";
     switch (tabOption) {
       case "Flows":
-        newLocation = location.replace(/components|all/, "flows");
+        newLocation = location.replace(/.*\/(?:all|components)/, "/flows");
         break;
       case "Components":
-        newLocation = location.replace(/flows|all/, "components");
+        newLocation = location.replace(/.*\/(?:flows|all)/, "/components");
         break;
       default:
-        newLocation = location.replace(/flows|components/, "all");
+        newLocation = location.replace(/.*\/(?:flows|components)/, "/all");
         break;
     }
-
-    navigate(newLocation, { state: { folderId: currentFolderUrl } });
+    console.log(newLocation);
+    navigate(newLocation);
   };
 
   useEffect(() => {

@@ -18,7 +18,7 @@ export const usePostAddFlow: useMutationFunctionType<
   undefined,
   IPostAddFlow
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const postAddFlowFn = async (payload: IPostAddFlow): Promise<any> => {
     const response = await api.post(`${getURL("FLOWS")}/`, {
@@ -36,7 +36,12 @@ export const usePostAddFlow: useMutationFunctionType<
   const mutation: UseMutationResult<IPostAddFlow, any, IPostAddFlow> = mutate(
     ["usePostAddFlow"],
     postAddFlowFn,
-    options,
+    {
+      ...options,
+      onSettled: () => {
+        queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
+      },
+    },
   );
 
   return mutation;

@@ -1,6 +1,6 @@
 import uuid
 import warnings
-from typing import TYPE_CHECKING, Optional, Dict
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 from sqlmodel import Session
@@ -122,7 +122,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_graph_from_data(flow_id: str, payload: Dict, **kwargs):
+async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
     """Build and cache the graph."""
     graph = Graph.from_payload(payload, flow_id, **kwargs)
     for vertex_id in graph._has_session_id_vertices:
@@ -141,7 +141,7 @@ async def build_graph_from_data(flow_id: str, payload: Dict, **kwargs):
 
 async def build_graph_from_db_no_cache(flow_id: str, session: Session):
     """Build and cache the graph."""
-    flow: Optional[Flow] = session.get(Flow, flow_id)
+    flow: Flow | None = session.get(Flow, flow_id)
     if not flow or not flow.data:
         raise ValueError("Invalid flow ID")
     return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
@@ -215,3 +215,27 @@ def parse_exception(exc):
     if hasattr(exc, "body"):
         return exc.body["message"]
     return str(exc)
+
+
+def get_suggestion_message(outdated_components: list[str]) -> str:
+    """Get the suggestion message for the outdated components."""
+    count = len(outdated_components)
+    if count == 0:
+        return "The flow contains no outdated components."
+    elif count == 1:
+        return f"The flow contains 1 outdated component. We recommend updating the following component: {outdated_components[0]}."
+    else:
+        components = ", ".join(outdated_components)
+        return f"The flow contains {count} outdated components. We recommend updating the following components: {components}."
+
+
+def parse_value(value: Any, input_type: str) -> Any:
+    """Helper function to parse the value based on input type."""
+    if value == "":
+        return value
+    elif input_type == "IntInput":
+        return int(value) if value is not None else None
+    elif input_type == "FloatInput":
+        return float(value) if value is not None else None
+    else:
+        return value

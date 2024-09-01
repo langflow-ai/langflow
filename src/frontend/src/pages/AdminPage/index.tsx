@@ -7,7 +7,6 @@ import {
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
-import Header from "../../components/headerComponent";
 import LoadingComponent from "../../components/loadingComponent";
 import PaginatorComponent from "../../components/paginatorComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
@@ -38,7 +37,6 @@ import { AuthContext } from "../../contexts/authContext";
 import ConfirmationModal from "../../modals/confirmationModal";
 import UserManagementModal from "../../modals/userManagementModal";
 import useAlertStore from "../../stores/alertStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { Users } from "../../types/api";
 import { UserInputType } from "../../types/components";
 
@@ -51,18 +49,10 @@ export default function AdminPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData } = useContext(AuthContext);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
-  );
 
   const { mutate: mutateDeleteUser } = useDeleteUsers();
   const { mutate: mutateUpdateUser } = useUpdateUser();
   const { mutate: mutateAddUser } = useAddUser();
-
-  // set null id
-  useEffect(() => {
-    setCurrentFlowId("");
-  }, []);
 
   const userList = useRef([]);
 
@@ -255,7 +245,6 @@ export default function AdminPage() {
 
   return (
     <>
-      <Header />
       {userData && (
         <div className="admin-page-panel flex h-full flex-col pb-8">
           <div className="main-page-nav-arrangement">

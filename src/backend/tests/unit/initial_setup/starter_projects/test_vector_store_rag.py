@@ -1,3 +1,5 @@
+import copy
+from collections import Counter, defaultdict
 from textwrap import dedent
 
 import pytest
@@ -13,6 +15,7 @@ from langflow.components.prompts.Prompt import PromptComponent
 from langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
+from langflow.graph.graph.schema import VertexBuildResult
 from langflow.schema.data import Data
 
 
@@ -26,7 +29,7 @@ def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent(_id="file-123")
     file_component.set(path="test.txt")
-    file_component.set_output_value("data", Data(text="This is a test file."))
+    file_component.set_on_output("data", value=Data(text="This is a test file."))
     text_splitter = SplitTextComponent(_id="text-splitter-123")
     text_splitter.set(data_inputs=file_component.load_file)
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-123")
@@ -40,10 +43,9 @@ def ingestion_graph():
         api_endpoint="https://astra.example.com",
         token="token",
     )
-    vector_store.set_output_value("vector_store", "mock_vector_store")
-    vector_store.set_output_value("base_retriever", "mock_retriever")
-    vector_store.set_output_value("search_results", [Data(text="This is a test file.")])
-
+    vector_store.set_on_output("vector_store", value="mock_vector_store")
+    vector_store.set_on_output("base_retriever", value="mock_retriever")
+    vector_store.set_on_output("search_results", value=[Data(text="This is a test file.")])
     ingestion_graph = Graph(file_component, vector_store)
     return ingestion_graph
 
@@ -62,10 +64,15 @@ def rag_graph():
         embedding=openai_embeddings.build_embeddings,
     )
     # Mock search_documents
-    rag_vector_store.get_output("search_results").value = [
-        Data(data={"text": "Hello, world!"}),
-        Data(data={"text": "Goodbye, world!"}),
-    ]
+    rag_vector_store.set_on_output(
+        "search_results",
+        value=[
+            Data(data={"text": "Hello, world!"}),
+            Data(data={"text": "Goodbye, world!"}),
+        ],
+    )
+    rag_vector_store.set_on_output("base_retriever", value="mock_retriever")
+    rag_vector_store.set_on_output("vector_store", value="mock_vector_store")
     parse_data = ParseDataComponent(_id="parse-data-123")
     parse_data.set(data=rag_vector_store.search_documents)
     prompt_component = PromptComponent(_id="prompt-123")
@@ -81,7 +88,7 @@ def rag_graph():
 
     openai_component = OpenAIModelComponent(_id="openai-123")
     openai_component.set(api_key="sk-123", openai_api_base="https://api.openai.com/v1")
-    openai_component.set_output_value("text_output", "Hello, world!")
+    openai_component.set_on_output("text_output", value="Hello, world!")
     openai_component.set(input_value=prompt_component.build_prompt)
 
     chat_output = ChatOutput(_id="chatoutput-123")
@@ -91,7 +98,7 @@ def rag_graph():
     return graph
 
 
-def test_vector_store_rag(ingestion_graph, rag_graph):
+def test_vector_store_rag(ingestion_graph: Graph, rag_graph: Graph):
     assert ingestion_graph is not None
     ingestion_ids = [
         "file-123",
@@ -110,11 +117,17 @@ def test_vector_store_rag(ingestion_graph, rag_graph):
         "openai-embeddings-124",
     ]
     for ids, graph, len_results in zip([ingestion_ids, rag_ids], [ingestion_graph, rag_graph], [5, 8]):
-        results = []
-        for result in graph.start():
+        results: list[VertexBuildResult] = []
+        ids_count = Counter(ids)
+        results_id_count: dict[str, int] = defaultdict(int)
+        for result in graph.start(config={"output": {"cache": True}}):
             results.append(result)
+            if hasattr(result, "vertex"):
+                results_id_count[result.vertex.id] += 1
 
-        assert len(results) == len_results
+        assert (
+            len(results) == len_results
+        ), f"Counts: {ids_count} != {results_id_count}, Diff: {set(ids_count.keys()) - set(results_id_count.keys())}"
         vids = [result.vertex.id for result in results if hasattr(result, "vertex")]
         assert all(vid in ids for vid in vids), f"Diff: {set(vids) - set(ids)}"
         assert results[-1] == Finish()
@@ -134,16 +147,16 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     ingestion_nodes = sorted(ingestion_nodes, key=lambda x: x["id"])
 
     # Check components in the ingestion graph
-    assert ingestion_nodes[0]["data"]["type"] == "FileComponent"
+    assert ingestion_nodes[0]["data"]["type"] == "File"
     assert ingestion_nodes[0]["id"] == "file-123"
 
-    assert ingestion_nodes[1]["data"]["type"] == "OpenAIEmbeddingsComponent"
+    assert ingestion_nodes[1]["data"]["type"] == "OpenAIEmbeddings"
     assert ingestion_nodes[1]["id"] == "openai-embeddings-123"
 
-    assert ingestion_nodes[2]["data"]["type"] == "SplitTextComponent"
+    assert ingestion_nodes[2]["data"]["type"] == "SplitText"
     assert ingestion_nodes[2]["id"] == "text-splitter-123"
 
-    assert ingestion_nodes[3]["data"]["type"] == "AstraVectorStoreComponent"
+    assert ingestion_nodes[3]["data"]["type"] == "AstraDB"
     assert ingestion_nodes[3]["id"] == "vector-store-123"
 
     # Check edges in the ingestion graph
@@ -178,19 +191,19 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     assert rag_nodes[1]["data"]["type"] == "ChatOutput"
     assert rag_nodes[1]["id"] == "chatoutput-123"
 
-    assert rag_nodes[2]["data"]["type"] == "OpenAIModelComponent"
+    assert rag_nodes[2]["data"]["type"] == "OpenAIModel"
     assert rag_nodes[2]["id"] == "openai-123"
 
-    assert rag_nodes[3]["data"]["type"] == "OpenAIEmbeddingsComponent"
+    assert rag_nodes[3]["data"]["type"] == "OpenAIEmbeddings"
     assert rag_nodes[3]["id"] == "openai-embeddings-124"
 
-    assert rag_nodes[4]["data"]["type"] == "ParseDataComponent"
+    assert rag_nodes[4]["data"]["type"] == "ParseData"
     assert rag_nodes[4]["id"] == "parse-data-123"
 
-    assert rag_nodes[5]["data"]["type"] == "PromptComponent"
+    assert rag_nodes[5]["data"]["type"] == "Prompt"
     assert rag_nodes[5]["id"] == "prompt-123"
 
-    assert rag_nodes[6]["data"]["type"] == "AstraVectorStoreComponent"
+    assert rag_nodes[6]["data"]["type"] == "AstraDB"
     assert rag_nodes[6]["id"] == "rag-vector-store-123"
 
     # Check edges in the RAG graph
@@ -209,6 +222,73 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
         source = edge["source"]
         target = edge["target"]
         assert (source, target) in expected_rag_edges, f"Edge {source} -> {target} not found"
+
+
+def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
+    ingestion_graph_copy = copy.deepcopy(ingestion_graph)
+    rag_graph_copy = copy.deepcopy(rag_graph)
+    ingestion_graph_copy += rag_graph_copy
+
+    assert (
+        len(ingestion_graph_copy.vertices) == len(ingestion_graph.vertices) + len(rag_graph.vertices)
+    ), f"Vertices mismatch: {len(ingestion_graph_copy.vertices)} != {len(ingestion_graph.vertices)} + {len(rag_graph.vertices)}"
+    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(
+        rag_graph.edges
+    ), f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
+
+    combined_graph_dump = ingestion_graph_copy.dump(
+        name="Combined Graph", description="Graph for data ingestion and RAG", endpoint_name="combined"
+    )
+
+    combined_data = combined_graph_dump["data"]
+    combined_nodes = combined_data["nodes"]
+    combined_edges = combined_data["edges"]
+
+    # Sort nodes by id to check components
+    combined_nodes = sorted(combined_nodes, key=lambda x: x["id"])
+
+    # Expected components in the combined graph (both ingestion and RAG nodes)
+    expected_nodes = sorted(
+        [
+            {"id": "file-123", "type": "File"},
+            {"id": "openai-embeddings-123", "type": "OpenAIEmbeddings"},
+            {"id": "text-splitter-123", "type": "SplitText"},
+            {"id": "vector-store-123", "type": "AstraDB"},
+            {"id": "chatinput-123", "type": "ChatInput"},
+            {"id": "chatoutput-123", "type": "ChatOutput"},
+            {"id": "openai-123", "type": "OpenAIModel"},
+            {"id": "openai-embeddings-124", "type": "OpenAIEmbeddings"},
+            {"id": "parse-data-123", "type": "ParseData"},
+            {"id": "prompt-123", "type": "Prompt"},
+            {"id": "rag-vector-store-123", "type": "AstraDB"},
+        ],
+        key=lambda x: x["id"],
+    )
+
+    for expected_node, combined_node in zip(expected_nodes, combined_nodes):
+        assert combined_node["data"]["type"] == expected_node["type"]
+        assert combined_node["id"] == expected_node["id"]
+
+    # Expected edges in the combined graph (both ingestion and RAG edges)
+    expected_combined_edges = [
+        ("file-123", "text-splitter-123"),
+        ("text-splitter-123", "vector-store-123"),
+        ("openai-embeddings-123", "vector-store-123"),
+        ("chatinput-123", "rag-vector-store-123"),
+        ("openai-embeddings-124", "rag-vector-store-123"),
+        ("chatinput-123", "prompt-123"),
+        ("rag-vector-store-123", "parse-data-123"),
+        ("parse-data-123", "prompt-123"),
+        ("prompt-123", "openai-123"),
+        ("openai-123", "chatoutput-123"),
+    ]
+
+    assert len(combined_edges) == len(expected_combined_edges), combined_edges
+
+    for edge in combined_edges:
+        source = edge["source"]
+        target = edge["target"]
+        assert (source, target) in expected_combined_edges, f"Edge {source} -> {target} not found"
 
 
 def test_vector_store_rag_dump(ingestion_graph, rag_graph):

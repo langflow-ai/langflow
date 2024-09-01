@@ -1,8 +1,5 @@
 import { useLoginUser } from "@/controllers/API/queries/auth";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useFolderStore } from "@/stores/foldersStore";
 import { useContext, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { SIGNIN_ERROR_ALERT } from "../../../constants/alerts_constants";
@@ -16,15 +13,9 @@ import {
 } from "../../../types/components";
 
 export default function LoginAdminPage() {
-  const navigate = useNavigate();
-
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
   const { login } = useContext(AuthContext);
-  const setLoading = useAlertStore((state) => state.setLoading);
-
-  const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
-  const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
 
   const { password, username } = inputState;
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -44,11 +35,7 @@ export default function LoginAdminPage() {
 
     mutate(user, {
       onSuccess: (res) => {
-        setAllFlows([]);
-        setSelectedFolder(null);
-
-        setLoading(true);
-        login(res.access_token, "login");
+        login(res.access_token, "login", res.refresh_token);
       },
       onError: (error) => {
         setErrorData({

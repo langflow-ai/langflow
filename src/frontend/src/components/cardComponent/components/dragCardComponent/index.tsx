@@ -1,9 +1,10 @@
+import { FlowType } from "@/types/flow";
 import { storeComponent } from "../../../../types/store";
 import { cn } from "../../../../utils/utils";
 import ForwardedIconComponent from "../../../genericIconComponent";
 import { Card, CardHeader, CardTitle } from "../../../ui/card";
 
-export default function DragCardComponent({ data }: { data: storeComponent }) {
+export default function DragCardComponent({ data }: { data: FlowType }) {
   return (
     <>
       <Card

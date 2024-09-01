@@ -1,4 +1,5 @@
 import time
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Type
@@ -50,7 +51,10 @@ class DatabaseService(Service):
         if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
             "sqlite"
         ):
-            connect_args = {"check_same_thread": False}
+            connect_args = {
+                "check_same_thread": False,
+                "timeout": self.settings_service.settings.db_connect_timeout,
+            }
         else:
             connect_args = {}
         try:
@@ -94,19 +98,8 @@ class DatabaseService(Service):
                 finally:
                     cursor.close()
 
-    def __enter__(self):
-        self._session = Session(self.engine)
-        return self._session
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_type is not None:  # If an exception has been raised
-            logger.error(f"Session rollback because of exception: {exc_type.__name__} {exc_value}")
-            self._session.rollback()
-        else:
-            self._session.commit()
-        self._session.close()
-
-    def get_session(self):
+    @contextmanager
+    def with_session(self):
         with Session(self.engine) as session:
             yield session
 
@@ -116,7 +109,7 @@ class DatabaseService(Service):
         # associated with them
         settings_service = get_settings_service()
         if settings_service.auth_settings.AUTO_LOGIN:
-            with Session(self.engine) as session:
+            with self.with_session() as session:
                 flows = session.exec(select(models.Flow).where(models.Flow.user_id is None)).all()
                 if flows:
                     logger.debug("Migrating flows to default superuser")
@@ -187,7 +180,7 @@ class DatabaseService(Service):
             alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
 
             should_initialize_alembic = False
-            with Session(self.engine) as session:
+            with self.with_session() as session:
                 # If the table does not exist it throws an error
                 # so we need to catch it
                 try:
@@ -319,11 +312,10 @@ class DatabaseService(Service):
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
             # using the SUPERUSER to get the user
-            with Session(self.engine) as session:
+            with self.with_session() as session:
                 teardown_superuser(settings_service, session)
 
         except Exception as exc:
             logger.error(f"Error tearing down database: {exc}")
 
-        self.engine.dispose()
         self.engine.dispose()

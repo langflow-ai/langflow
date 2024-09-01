@@ -1,12 +1,12 @@
-import FeatureFlags from "@/../feature-config.json";
+import { ENABLE_API } from "@/customization/feature-flags";
+import { track } from "@/customization/utils/analytics";
 import { Transition } from "@headlessui/react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IOModal from "../../modals/IOModal";
 import ApiModal from "../../modals/apiModal";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
@@ -47,9 +47,13 @@ export default function FlowToolbar(): JSX.Element {
   const hasStore = useStoreStore((state) => state.hasStore);
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
 
-  const prevNodesRef = useRef<any[] | undefined>();
+  useEffect(() => {
+    if (open) {
+      track("Playground Button Clicked");
+    }
+  }, [open]);
 
   const ModalMemo = useMemo(
     () => (
@@ -141,7 +145,7 @@ export default function FlowToolbar(): JSX.Element {
             <div>
               <Separator orientation="vertical" />
             </div>
-            {FeatureFlags.ENABLE_API && (
+            {ENABLE_API && (
               <>
                 <div className="flex cursor-pointer items-center gap-2">
                   {currentFlow && currentFlow.data && (
