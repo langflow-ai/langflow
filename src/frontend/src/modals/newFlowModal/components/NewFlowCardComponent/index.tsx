@@ -1,25 +1,22 @@
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   Card,
   CardContent,
   CardDescription,
   CardTitle,
 } from "../../../../components/ui/card";
-import { useFolderStore } from "../../../../stores/foldersStore";
 
 export default function NewFlowCardComponent() {
   const addFlow = useAddFlow();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const folderId = location?.state?.folderId;
-  const setFolderUrl = useFolderStore((state) => state.setFolderUrl);
+  const navigate = useCustomNavigate();
+  const { folderId } = useParams();
 
   return (
     <Card
       onClick={() => {
         addFlow().then((id) => {
-          setFolderUrl(folderId ?? "");
           navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
         });
       }}

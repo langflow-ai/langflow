@@ -24,7 +24,7 @@ export default function HandleRenderComponent({
   left: boolean;
   nodes: any;
   tooltipTitle?: string;
-  proxy: any;
+  proxy?: any;
   id: any;
   title: string;
   edges: any;

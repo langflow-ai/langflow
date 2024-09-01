@@ -2,7 +2,12 @@ import pytest
 import os
 import json
 from unittest.mock import patch
-from langflow.utils.logger import SizedLogBuffer
+from langflow.logging.logger import SizedLogBuffer
+
+
+@pytest.fixture
+def client():
+    pass
 
 
 @pytest.fixture

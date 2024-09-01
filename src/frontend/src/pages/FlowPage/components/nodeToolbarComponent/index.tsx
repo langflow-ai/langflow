@@ -1,3 +1,4 @@
+import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
@@ -5,11 +6,9 @@ import useAddFlow from "@/hooks/flows/use-add-flow";
 import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
 import { useUpdateNodeInternals } from "reactflow";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import IconComponent from "../../../../components/genericIconComponent";
-import RenderIcons from "../../../../components/renderIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
   Select,
@@ -34,15 +33,20 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames, cn } from "../../../../utils/utils";
-import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
+import {
+  classNames,
+  cn,
+  getNodeLength,
+  openInNewTab,
+} from "../../../../utils/utils";
+import useShortcuts from "./hooks/use-shortcuts";
+import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
 
 export default function NodeToolbarComponent({
   data,
   deleteNode,
   setShowNode,
-  numberOfHandles,
   numberOfOutputHandles,
   showNode,
   name = "code",
@@ -58,39 +62,26 @@ export default function NodeToolbarComponent({
   const [flowComponent, setFlowComponent] = useState<FlowType>(
     createFlowComponent(cloneDeep(data), version),
   );
-  const preventDefault = true;
-  const isMac = navigator.platform.toUpperCase().includes("MAC");
-  const nodeLength = Object.keys(data.node!.template).filter(
-    (templateField) =>
-      templateField.charAt(0) !== "_" &&
-      data.node?.template[templateField]?.show &&
-      (data.node.template[templateField]?.type === "str" ||
-        data.node.template[templateField]?.type === "bool" ||
-        data.node.template[templateField]?.type === "float" ||
-        data.node.template[templateField]?.type === "code" ||
-        data.node.template[templateField]?.type === "prompt" ||
-        data.node.template[templateField]?.type === "file" ||
-        data.node.template[templateField]?.type === "Any" ||
-        data.node.template[templateField]?.type === "int" ||
-        data.node.template[templateField]?.type === "dict" ||
-        data.node.template[templateField]?.type === "NestedDict"),
-  ).length;
+  const nodeLength = getNodeLength(data);
   const updateFreezeStatus = useFlowStore((state) => state.updateFreezeStatus);
-
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const unselectAll = useFlowStore((state) => state.unselectAll);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const [openModal, setOpenModal] = useState(false);
+  const isGroup = data.node?.flow ? true : false;
+  const frozen = data.node?.frozen ?? false;
+
   const addFlow = useAddFlow();
 
-  function handleMinimizeWShortcut(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow")) return;
-    e.preventDefault();
+  const isMinimal = countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1;
+
+  function minimize() {
     if (isMinimal) {
       setShowState((show) => !show);
-      setShowNode(data.showNode ?? true ? false : true);
+      setShowNode((data.showNode ?? true) ? false : true);
       return;
     }
     setNoticeData({
@@ -100,54 +91,48 @@ export default function NodeToolbarComponent({
     return;
   }
 
-  function handleGroupWShortcut(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow")) return;
-    e.preventDefault();
+  function handleungroup() {
     if (isGroup) {
-      handleSelectChange("ungroup");
+      takeSnapshot();
+      expandGroupNode(
+        data.id,
+        updateFlowPosition(getNodePosition(data.id), data.node?.flow!),
+        data.node!.template,
+        nodes,
+        edges,
+        setNodes,
+        setEdges,
+        data.node?.outputs,
+      );
     }
   }
 
-  function handleShareWShortcut(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow") && !showconfirmShare) return;
-    e.preventDefault();
+  function shareComponent() {
     if (hasApiKey || hasStore) {
       setShowconfirmShare((state) => !state);
     }
   }
 
-  function handleCodeWShortcut(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow") && !openModal) return;
-    e.preventDefault();
-    if (hasCode) return setOpenModal((state) => !state);
-    setNoticeData({ title: `You can not access ${data.id} code` });
+  function handleCodeModal() {
+    if (!hasCode)
+      setNoticeData({ title: `You can not access ${data.id} code` });
+    setOpenModal((state) => !state);
   }
 
-  function handleAdvancedWShortcut(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow") && !showModalAdvanced) return;
-    e.preventDefault();
-    setShowModalAdvanced((state) => !state);
-  }
-
-  function handleSaveWShortcut(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow") && !showOverrideModal) return;
-    e.preventDefault();
+  function saveComponent() {
     if (isSaved) {
       setShowOverrideModal((state) => !state);
       return;
     }
-    if (hasCode && !isSaved) {
-      addFlow({
-        flow: flowComponent,
-        override: false,
-      });
-      setSuccessData({ title: `${data.id} saved successfully` });
-      return;
-    }
+    addFlow({
+      flow: flowComponent,
+      override: false,
+    });
+    setSuccessData({ title: `${data.id} saved successfully` });
+    return;
   }
 
-  function handleDocsWShortcut(e: KeyboardEvent) {
-    e.preventDefault();
+  function openDocs() {
     if (data.node?.documentation) {
       return openInNewTab(data.node?.documentation);
     }
@@ -156,14 +141,7 @@ export default function NodeToolbarComponent({
     });
   }
 
-  function handleDownloadWShortcut(e: KeyboardEvent) {
-    e.preventDefault();
-    downloadNode(flowComponent!);
-  }
-
-  function handleFreeze(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow")) return;
-    e.preventDefault();
+  const freezeFunction = () => {
     setNode(data.id, (old) => ({
       ...old,
       data: {
@@ -174,45 +152,31 @@ export default function NodeToolbarComponent({
         },
       },
     }));
-  }
+  };
 
-  function handleFreezeAll(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow")) return;
-    e.preventDefault();
-    FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id });
-  }
+  useShortcuts({
+    showOverrideModal,
+    showModalAdvanced,
+    openModal,
+    showconfirmShare,
+    FreezeAllVertices: () => {
+      FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
+    },
+    Freeze: freezeFunction,
+    downloadFunction: () => downloadNode(flowComponent!),
+    displayDocs: openDocs,
+    saveComponent,
+    showAdvance: () => setShowModalAdvanced((state) => !state),
+    handleCodeModal,
+    shareComponent,
+    ungroup: handleungroup,
+    minimizeFunction: minimize,
+  });
 
-  const advanced = useShortcutsStore((state) => state.advanced);
-  const minimize = useShortcutsStore((state) => state.minimize);
-  const component = useShortcutsStore((state) => state.component);
-  const save = useShortcutsStore((state) => state.save);
-  const docs = useShortcutsStore((state) => state.docs);
-  const code = useShortcutsStore((state) => state.code);
-  const group = useShortcutsStore((state) => state.group);
-  const download = useShortcutsStore((state) => state.download);
-  const freeze = useShortcutsStore((state) => state.freeze);
-  const freezeAll = useShortcutsStore((state) => state.FreezePath);
-
-  useHotkeys(minimize, handleMinimizeWShortcut, { preventDefault });
-  useHotkeys(group, handleGroupWShortcut, { preventDefault });
-  useHotkeys(component, handleShareWShortcut, { preventDefault });
-  useHotkeys(code, handleCodeWShortcut, { preventDefault });
-  useHotkeys(advanced, handleAdvancedWShortcut, { preventDefault });
-  useHotkeys(save, handleSaveWShortcut, { preventDefault });
-  useHotkeys(docs, handleDocsWShortcut, { preventDefault });
-  useHotkeys(download, handleDownloadWShortcut, { preventDefault });
-  useHotkeys(freeze, handleFreeze);
-  useHotkeys(freezeAll, handleFreezeAll);
-
-  const isMinimal = numberOfHandles <= 1 && numberOfOutputHandles <= 1;
-  const isGroup = data.node?.flow ? true : false;
-
-  const frozen = data.node?.frozen ?? false;
   const paste = useFlowStore((state) => state.paste);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNodes = useFlowStore((state) => state.setNodes);
-
   const setEdges = useFlowStore((state) => state.setEdges);
   const getNodePosition = useFlowStore((state) => state.getNodePosition);
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -225,10 +189,6 @@ export default function NodeToolbarComponent({
       });
     },
   });
-
-  const openInNewTab = (url) => {
-    window.open(url, "_blank", "noreferrer");
-  };
 
   useEffect(() => {
     if (!showModalAdvanced) {
@@ -259,28 +219,13 @@ export default function NodeToolbarComponent({
   const handleSelectChange = (event) => {
     switch (event) {
       case "save":
-        if (isSaved) {
-          return setShowOverrideModal(true);
-        }
-        addFlow({
-          flow: flowComponent,
-          override: false,
-        });
+        saveComponent();
         break;
       case "freeze":
-        setNode(data.id, (old) => ({
-          ...old,
-          data: {
-            ...old.data,
-            node: {
-              ...old.data.node,
-              frozen: old.data?.node?.frozen ? false : true,
-            },
-          },
-        }));
+        freezeFunction();
         break;
       case "freezeAll":
-        FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id });
+        FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
         break;
       case "code":
         setOpenModal(!openModal);
@@ -290,10 +235,10 @@ export default function NodeToolbarComponent({
         break;
       case "show":
         takeSnapshot();
-        setShowNode(data.showNode ?? true ? false : true);
+        minimize();
         break;
       case "Share":
-        if (hasApiKey || hasStore) setShowconfirmShare(true);
+        shareComponent();
         break;
       case "Download":
         downloadNode(flowComponent!);
@@ -305,7 +250,7 @@ export default function NodeToolbarComponent({
         });
         break;
       case "documentation":
-        if (data.node?.documentation) openInNewTab(data.node?.documentation);
+        openDocs();
         break;
       case "disabled":
         break;
@@ -313,17 +258,7 @@ export default function NodeToolbarComponent({
         unselectAll();
         break;
       case "ungroup":
-        takeSnapshot();
-        expandGroupNode(
-          data.id,
-          updateFlowPosition(getNodePosition(data.id), data.node?.flow!),
-          data.node!.template,
-          nodes,
-          edges,
-          setNodes,
-          setEdges,
-          data.node?.outputs,
-        );
+        handleungroup();
         break;
       case "override":
         setShowOverrideModal(true);
@@ -355,45 +290,9 @@ export default function NodeToolbarComponent({
     }
   };
 
-  const isSaved = flows.some((flow) =>
+  const isSaved = flows?.some((flow) =>
     Object.values(flow).includes(data.node?.display_name!),
   );
-
-  function displayShortcut({
-    name,
-    shortcut,
-  }: {
-    name: string;
-    shortcut: string;
-  }): JSX.Element {
-    let hasShift: boolean = false;
-    const fixedShortcut = shortcut?.split("+");
-    fixedShortcut.forEach((key) => {
-      if (key.toLowerCase().includes("shift")) {
-        hasShift = true;
-      }
-    });
-    const filteredShortcut = fixedShortcut.filter(
-      (key) => !key.toLowerCase().includes("shift"),
-    );
-    let shortcutWPlus: string[] = [];
-    if (!hasShift) shortcutWPlus = filteredShortcut.join("+").split(" ");
-    return (
-      <div className="flex justify-center">
-        <span> {name} </span>
-        <span
-          className={`ml-3 flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-lg text-muted-foreground`}
-        >
-          <RenderIcons
-            isMac={isMac}
-            hasShift={hasShift}
-            filteredShortcut={filteredShortcut}
-            shortcutWPlus={shortcutWPlus}
-          />
-        </span>
-      </div>
-    );
-  }
 
   const setNode = useFlowStore((state) => state.setNode);
 
@@ -413,7 +312,6 @@ export default function NodeToolbarComponent({
     handleNodeClassHook(newNodeClass, type);
   };
 
-  const [openModal, setOpenModal] = useState(false);
   const hasCode = Object.keys(data.node!.template).includes("code");
   const [deleteIsFocus, setDeleteIsFocus] = useState(false);
 
@@ -423,11 +321,13 @@ export default function NodeToolbarComponent({
         <span className="isolate inline-flex rounded-md shadow-sm">
           {hasCode && (
             <ShadTooltip
-              content={displayShortcut(
-                shortcuts.find(
-                  ({ name }) => name.split(" ")[0].toLowerCase() === "code",
-                )!,
-              )}
+              content={
+                <ShortcutDisplay
+                  {...shortcuts.find(
+                    ({ name }) => name.split(" ")[0].toLowerCase() === "code",
+                  )!}
+                />
+              }
               side="top"
             >
               <button
@@ -443,11 +343,14 @@ export default function NodeToolbarComponent({
           )}
           {nodeLength > 0 && (
             <ShadTooltip
-              content={displayShortcut(
-                shortcuts.find(
-                  ({ name }) => name.split(" ")[0].toLowerCase() === "advanced",
-                )!,
-              )}
+              content={
+                <ShortcutDisplay
+                  {...shortcuts.find(
+                    ({ name }) =>
+                      name.split(" ")[0].toLowerCase() === "advanced",
+                  )!}
+                />
+              }
               side="top"
             >
               <button
@@ -465,11 +368,13 @@ export default function NodeToolbarComponent({
           )}
 
           <ShadTooltip
-            content={displayShortcut(
-              shortcuts.find(
-                ({ name }) => name.toLowerCase() === "freeze path",
-              )!,
-            )}
+            content={
+              <ShortcutDisplay
+                {...shortcuts.find(
+                  ({ name }) => name.toLowerCase() === "freeze path",
+                )!}
+              />
+            }
             side="top"
           >
             <button
@@ -480,7 +385,7 @@ export default function NodeToolbarComponent({
                 event.preventDefault();
                 takeSnapshot();
                 FreezeAllVertices({
-                  flowId: currentFlow!.id,
+                  flowId: currentFlowId,
                   stopNodeId: data.id,
                 });
               }}
@@ -543,7 +448,8 @@ export default function NodeToolbarComponent({
               <SelectItem value={"save"}>
                 <ToolbarSelectItem
                   shortcut={
-                    shortcuts.find((obj) => obj.name === "Save")?.shortcut!
+                    shortcuts.find((obj) => obj.name === "Save Component")
+                      ?.shortcut!
                   }
                   value={"Save"}
                   icon={"SaveAll"}
@@ -712,7 +618,7 @@ export default function NodeToolbarComponent({
               });
               setSuccessData({ title: `${data.id} successfully overridden!` });
             }}
-            onClose={setShowOverrideModal}
+            onClose={() => setShowOverrideModal(false)}
             onCancel={() => {
               addFlow({
                 flow: flowComponent,

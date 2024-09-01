@@ -1,7 +1,8 @@
 import LoadingComponent from "@/components/loadingComponent";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
+import { track } from "@/customization/utils/analytics";
+import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { getInputsAndOutputs } from "@/utils/storeUtils";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -36,10 +37,9 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
-import { FlowType, NodeType } from "../../../../types/flow";
+import { NodeType } from "../../../../types/flow";
 import {
   checkOldComponents,
-  cleanEdges,
   generateFlow,
   generateNodeFromFlow,
   getNodeId,
@@ -57,17 +57,9 @@ const nodeTypes = {
   genericNode: GenericNode,
 };
 
-export default function Page({
-  flow,
-  view,
-}: {
-  flow: FlowType;
-  view?: boolean;
-}): JSX.Element {
+export default function Page({ view }: { view?: boolean }): JSX.Element {
   const uploadFlow = useUploadFlow();
-  const autoSaveCurrentFlow = useFlowsManagerStore(
-    (state) => state.autoSaveCurrentFlow,
-  );
+  const autoSaveFlow = useAutoSaveFlow();
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
@@ -83,7 +75,6 @@ export default function Page({
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
-  const cleanFlow = useFlowStore((state) => state.cleanFlow);
   const deleteNode = useFlowStore((state) => state.deleteNode);
   const deleteEdge = useFlowStore((state) => state.deleteEdge);
   const undo = useFlowsManagerStore((state) => state.undo);
@@ -97,22 +88,16 @@ export default function Page({
     (state) => state.setLastCopiedSelection,
   );
   const onConnect = useFlowStore((state) => state.onConnect);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
   const edgeUpdateSuccessful = useRef(true);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
-
-  const setFlowState = useFlowStore((state) => state.setFlowState);
-  const setInputs = useFlowStore((state) => state.setInputs);
-  const setOutputs = useFlowStore((state) => state.setOutputs);
-  const setHasIO = useFlowStore((state) => state.setHasIO);
-  const { inputs, outputs } = getInputsAndOutputs(flow.data!.nodes);
-  const viewport = flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 };
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   function handleGroupNode() {
     takeSnapshot();
@@ -159,13 +144,7 @@ export default function Page({
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
-  useEffect(() => {
-    if (reactFlowInstance && currentFlowId) {
-      reactFlowInstance!.setViewport(viewport);
-    }
-  }, [currentFlowId, reactFlowInstance]);
-
-  const { isFetching, refetch } = useGetBuildsQuery({});
+  const { isFetching } = useGetBuildsQuery({ flowId: currentFlowId });
 
   const showCanvas =
     Object.keys(templates).length > 0 &&
@@ -173,19 +152,7 @@ export default function Page({
     !isFetching;
 
   useEffect(() => {
-    if (!isFetching) {
-      let newEdges = cleanEdges(flow.data!.nodes, flow.data!.edges);
-      setNodes(flow.data!.nodes);
-      setEdges(newEdges);
-      setFlowState(undefined);
-      setInputs(inputs);
-      setOutputs(outputs);
-      setHasIO(inputs.length > 0 || outputs.length > 0);
-    }
-  }, [isFetching]);
-
-  useEffect(() => {
-    if (checkOldComponents({ nodes: flow?.data?.nodes ?? [] })) {
+    if (checkOldComponents({ nodes })) {
       setNoticeData({
         title:
           "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
@@ -194,11 +161,8 @@ export default function Page({
   }, [currentFlowId]);
 
   useEffect(() => {
-    refetch();
-    return () => {
-      cleanFlow();
-    };
-  }, [currentFlowId]);
+    useFlowStore.setState({ autoSaveFlow });
+  });
 
   function handleUndo(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {
@@ -334,15 +298,17 @@ export default function Page({
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
 
-  const onNodeDragStop: NodeDragHandler = useCallback(() => {
-    autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
-    // 👉 you can place your event handlers here
-  }, [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
-
   const onMoveEnd: OnMove = useCallback(() => {
     // 👇 make moving the canvas undoable
-    autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
-  }, [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
+    autoSaveFlow();
+    updateCurrentFlow({ viewport: reactFlowInstance?.getViewport() });
+  }, [takeSnapshot, autoSaveFlow, nodes, edges, reactFlowInstance]);
+
+  const onNodeDragStop: NodeDragHandler = useCallback(() => {
+    // 👇 make moving the canvas undoable
+    autoSaveFlow();
+    updateCurrentFlow({ nodes });
+  }, [takeSnapshot, autoSaveFlow, nodes, edges, reactFlowInstance]);
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
@@ -368,6 +334,8 @@ export default function Page({
         const data: { type: string; node?: APIClassType } = JSON.parse(
           event.dataTransfer.getData("nodedata"),
         );
+
+        track(`Component Added: ${data.node?.display_name}`);
 
         const newId = getNodeId(data.type);
 
@@ -459,22 +427,9 @@ export default function Page({
     [],
   );
 
-  const onPaneClick = useCallback((flow) => {
+  const onPaneClick = useCallback(() => {
     setFilterEdge([]);
   }, []);
-
-  function onMouseAction(edge: Edge, color: string): void {
-    const edges = useFlowStore.getState().edges;
-    const newEdges = _.cloneDeep(edges);
-    const style = { stroke: color, transition: "stroke 0.25s" };
-    const updatedEdges = newEdges.map((obj) => {
-      if (obj.id === edge.id) {
-        return { ...obj, style };
-      }
-      return obj;
-    });
-    setEdges(updatedEdges);
-  }
 
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
@@ -493,13 +448,13 @@ export default function Page({
             onEdgeUpdateStart={onEdgeUpdateStart}
             onEdgeUpdateEnd={onEdgeUpdateEnd}
             onNodeDragStart={onNodeDragStart}
-            onNodeDragStop={onNodeDragStop}
             onSelectionDragStart={onSelectionDragStart}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
             onMoveEnd={onMoveEnd}
+            onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}

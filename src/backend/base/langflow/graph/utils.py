@@ -1,25 +1,27 @@
 import json
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generator, Union, Optional
+from typing import TYPE_CHECKING, Any, Optional
+from collections.abc import Generator
 from uuid import UUID
 
 from langchain_core.documents import Document
+from loguru import logger
 from pydantic import BaseModel
+from pydantic.v1 import BaseModel as V1BaseModel
 
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema.data import Data
 from langflow.schema.message import Message
-from langflow.services.database.models.transactions.model import TransactionBase
 from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
+from langflow.services.database.models.transactions.model import TransactionBase
 from langflow.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
-from loguru import logger
+from langflow.services.deps import get_db_service, get_settings_service
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
     from langflow.api.v1.schemas import ResultDataResponse
+    from langflow.graph.vertex.base import Vertex
 
 
 class UnbuiltObject:
@@ -53,7 +55,7 @@ def fix_prompt(prompt: str):
     return prompt + " {input}"
 
 
-def flatten_list(list_of_lists: list[Union[list, Any]]) -> list:
+def flatten_list(list_of_lists: list[list | Any]) -> list:
     """Flatten list of lists."""
     new_list = []
     for item in list_of_lists:
@@ -74,6 +76,11 @@ def serialize_field(value):
         return value.to_json()
     elif isinstance(value, BaseModel):
         return value.model_dump()
+    elif isinstance(value, V1BaseModel):
+        if hasattr(value, "to_json"):
+            return value.to_json()
+        else:
+            return value.dict()
     elif isinstance(value, str):
         return {"result": value}
     return value
@@ -129,9 +136,11 @@ def _vertex_to_primitive_dict(target: "Vertex") -> dict:
 
 
 async def log_transaction(
-    flow_id: Union[str, UUID], source: "Vertex", status, target: Optional["Vertex"] = None, error=None
+    flow_id: str | UUID, source: "Vertex", status, target: Optional["Vertex"] = None, error=None
 ) -> None:
     try:
+        if not get_settings_service().settings.transactions_storage_enabled:
+            return
         inputs = _vertex_to_primitive_dict(source)
         transaction = TransactionBase(
             vertex_id=source.id,
@@ -156,9 +165,11 @@ def log_vertex_build(
     valid: bool,
     params: Any,
     data: "ResultDataResponse",
-    artifacts: Optional[dict] = None,
+    artifacts: dict | None = None,
 ):
     try:
+        if not get_settings_service().settings.vertex_builds_storage_enabled:
+            return
         vertex_build = VertexBuildBase(
             flow_id=flow_id,
             id=vertex_id,
@@ -166,7 +177,8 @@ def log_vertex_build(
             params=str(params) if params else None,
             # ugly hack to get the model dump with weird datatypes
             data=json.loads(data.model_dump_json()),
-            artifacts=artifacts,
+            # ugly hack to get the model dump with weird datatypes
+            artifacts=json.loads(json.dumps(artifacts, default=str)),
         )
         with session_getter(get_db_service()) as session:
             inserted = crud_log_vertex_build(session, vertex_build)

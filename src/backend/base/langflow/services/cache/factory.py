@@ -1,8 +1,9 @@
 from typing import TYPE_CHECKING
 
+from langflow.services.cache.disk import AsyncDiskCache
 from langflow.services.cache.service import AsyncInMemoryCache, CacheService, RedisCache, ThreadingInMemoryCache
 from langflow.services.factory import ServiceFactory
-from langflow.utils.logger import logger
+from langflow.logging.logger import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -36,3 +37,8 @@ class CacheServiceFactory(ServiceFactory):
             return ThreadingInMemoryCache(expiration_time=settings_service.settings.cache_expire)
         elif settings_service.settings.cache_type == "async":
             return AsyncInMemoryCache(expiration_time=settings_service.settings.cache_expire)
+        elif settings_service.settings.cache_type == "disk":
+            return AsyncDiskCache(
+                cache_dir=settings_service.settings.config_dir,
+                expiration_time=settings_service.settings.cache_expire,
+            )

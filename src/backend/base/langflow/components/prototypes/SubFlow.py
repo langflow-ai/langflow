@@ -89,10 +89,10 @@ class SubFlowComponent(Component):
                 if node not in tweaks.keys():
                     tweaks[node] = {}
                 tweaks[node][name] = self._attributes[field]
-
+        flow_name = self._attributes.get("flow_name")
         run_outputs = await self.run_flow(
             tweaks=tweaks,
-            flow_name=self.flow_name,
+            flow_name=flow_name,
             output_type="all",
         )
         data: list[Data] = []

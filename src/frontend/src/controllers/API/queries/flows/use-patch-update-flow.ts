@@ -6,41 +6,41 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IPatchUpdateFlow {
+  id: string;
   name: string;
   data: ReactFlowJsonObject;
   description: string;
-  folder_id: string;
-  endpoint_name: string;
-}
-
-interface IPatchUpdateFlowParams {
-  id: string;
+  folder_id: string | null | undefined;
+  endpoint_name: string | null | undefined;
 }
 
 export const usePatchUpdateFlow: useMutationFunctionType<
-  IPatchUpdateFlowParams,
+  undefined,
   IPatchUpdateFlow
-> = (params, options?) => {
-  const { mutate } = UseRequestProcessor();
+> = (options?) => {
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const PatchUpdateFlowFn = async (payload: IPatchUpdateFlow): Promise<any> => {
-    const response = await api.patch(`${getURL("FLOWS")}/${params}`, {
+    const response = await api.patch(`${getURL("FLOWS")}/${payload.id}`, {
       name: payload.name,
       data: payload.data,
       description: payload.description,
-      folder_id: payload.folder_id === "" ? null : payload.folder_id,
-      endpoint_name: payload.endpoint_name,
+      folder_id: payload.folder_id || null,
+      endpoint_name: payload.endpoint_name || null,
     });
 
     return response.data;
   };
 
   const mutation: UseMutationResult<IPatchUpdateFlow, any, IPatchUpdateFlow> =
-    mutate(
-      ["usePatchUpdateFlow", { id: params.id }],
-      PatchUpdateFlowFn,
-      options,
-    );
+    mutate(["usePatchUpdateFlow"], PatchUpdateFlowFn, {
+      ...options,
+      onSettled: () => {
+        queryClient.refetchQueries({
+          queryKey: ["useGetFolder"],
+        });
+      },
+    });
 
   return mutation;
 };

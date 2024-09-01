@@ -1,3 +1,5 @@
+import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
+import { useCustomAPICode } from "@/customization/hooks/use-custom-api-code";
 import useAuthStore from "@/stores/authStore";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
@@ -33,11 +35,10 @@ export default function ApiModal({
   const tabs = useTweaksStore((state) => state.tabs);
   const initialSetup = useTweaksStore((state) => state.initialSetup);
 
-  useEffect(() => {
-    if (open) initialSetup(autoLogin, flow);
-  }, [open, flow?.data?.nodes]);
+  const getCodes = useCustomAPICode();
 
   useEffect(() => {
+    if (open) initialSetup(autoLogin ?? false, flow, getCodes);
     setActiveTab("0");
   }, [open]);
 
@@ -53,6 +54,7 @@ export default function ApiModal({
         />
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
+        <CustomAPIGenerator isOpen={open} />
         <CodeTabsComponent
           open={open}
           tabs={tabs!}

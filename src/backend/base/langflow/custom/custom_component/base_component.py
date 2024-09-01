@@ -1,5 +1,5 @@
 import operator
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 from uuid import UUID
 import warnings
 
@@ -24,11 +24,11 @@ class BaseComponent:
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
     ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
 
-    _code: Optional[str] = None
+    _code: str | None = None
     """The code of the component. Defaults to None."""
     _function_entrypoint_name: str = "build"
     field_config: dict = {}
-    _user_id: Optional[str | UUID] = None
+    _user_id: str | UUID | None = None
     _template_config: dict = {}
 
     def __init__(self, **data):
@@ -97,7 +97,7 @@ class BaseComponent:
             return {}
 
         cc_class = eval_custom_component_code(self._code)
-        component_instance = cc_class()
+        component_instance = cc_class(_code=self._code)
         template_config = self.get_template_config(component_instance)
         return template_config
 

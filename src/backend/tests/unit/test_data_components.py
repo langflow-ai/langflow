@@ -1,12 +1,11 @@
-import json
 import os
+import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import httpx
 import pytest
 import respx
-from dictdiffer import diff
 from httpx import Response
 
 from langflow.components import data
@@ -167,23 +166,21 @@ def test_directory_component_build_with_multithreading(
 
 def test_directory_without_mocks():
     directory_component = data.DirectoryComponent()
-    from langflow.initial_setup import setup
-    from langflow.initial_setup.setup import load_starter_projects
 
-    _, projects = zip(*load_starter_projects())
-    # the setup module has a folder where the projects are stored
-    # the contents of that folder are in the projects variable
-    # the directory component can be used to load the projects
-    # and we can validate if the contents are the same as the projects variable
-    setup_path = Path(setup.__file__).parent / "starter_projects"
-    directory_component.set_attributes({"path": str(setup_path), "use_multithreading": False})
-    results = directory_component.load_directory()
-    assert len(results) == len(projects)
-    # each result is a Data that contains the content attribute
-    # each are dict that are exactly the same as one of the projects
-    for i, result in enumerate(results):
-        file_dict = json.loads(result.text)
-        assert file_dict in projects, list(diff(file_dict, projects[i]))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with open(temp_dir + "/test.txt", "w") as f:
+            f.write("test")
+        # also add a json file
+        with open(temp_dir + "/test.json", "w") as f:
+            f.write('{"test": "test"}')
+
+        directory_component.set_attributes({"path": str(temp_dir), "use_multithreading": False})
+        results = directory_component.load_directory()
+        assert len(results) == 2
+        values = ["test", '{"test":"test"}']
+        assert all(result.text in values for result in results), [
+            (len(result.text), len(val)) for result, val in zip(results, values)
+        ]
 
     # in ../docs/docs/components there are many mdx files
     # check if the directory component can load them

@@ -17,7 +17,7 @@ test.describe("save component tests", () => {
 
     while (modalCount === 0) {
       await page.getByText("New Project", { exact: true }).click();
-      await page.waitForTimeout(5000);
+      await page.waitForTimeout(3000);
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -59,6 +59,7 @@ test.describe("save component tests", () => {
     if (elementCount > 0) {
       expect(true).toBeTruthy();
     }
+
     await page
       .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[3]')
       .click();
@@ -72,6 +73,11 @@ test.describe("save component tests", () => {
     });
 
     await page.getByRole("button", { name: "Group" }).click();
+
+    await page
+      .locator('//*[@id="react-flow-id"]')
+      .first()
+      .click({ button: "left" });
 
     let textArea = page.getByTestId("div-textarea-description");
     let elementCountText = await textArea?.count();
@@ -90,21 +96,23 @@ test.describe("save component tests", () => {
 
     await page.getByTestId("icon-SaveAll").click();
 
+    await page.waitForTimeout(1000);
+
     const replaceButton = await page.getByTestId("replace-button").isVisible();
 
     if (replaceButton) {
       await page.getByTestId("replace-button").click();
     }
+
     await page.waitForSelector('[data-testid="extended-disclosure"]', {
       timeout: 30000,
     });
-    await page.getByTestId("extended-disclosure").click();
     await page.getByPlaceholder("Search").click();
     await page.getByPlaceholder("Search").fill("group");
     await page.waitForTimeout(1000);
 
     await page
-      .getByTestId("saved_componentsGroup")
+      .getByText("Group")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();

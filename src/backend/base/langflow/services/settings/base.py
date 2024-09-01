@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 from shutil import copy2
-from typing import Any, List, Optional, Tuple, Type
+from typing import Any, List, Literal, Optional, Tuple, Type
 
 import orjson
 import yaml
@@ -36,8 +36,8 @@ def is_list_of_any(field: FieldInfo) -> bool:
         else:
             union_args = []
 
-        return field.annotation.__origin__ == list or any(
-            arg.__origin__ == list for arg in union_args if hasattr(arg, "__origin__")
+        return field.annotation.__origin__ is list or any(
+            arg.__origin__ is list for arg in union_args if hasattr(arg, "__origin__")
         )
     except AttributeError:
         return False
@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory (i.e. in the package directory)."""
 
     dev: bool = False
+    """If True, Langflow will run in development mode."""
     database_url: Optional[str] = None
     """Database URL for Langflow. If not provided, Langflow will use a SQLite database."""
     pool_size: int = 10
@@ -73,13 +74,15 @@ class Settings(BaseSettings):
     max_overflow: int = 20
     """The number of connections to allow that can be opened beyond the pool size.
     If not provided, the default is 20."""
+    db_connect_timeout: int = 20
+    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the database."""
 
     # sqlite configuration
     sqlite_pragmas: Optional[dict] = {"synchronous": "NORMAL", "journal_mode": "WAL"}
     """SQLite pragmas to use when connecting to the database."""
 
     # cache configuration
-    cache_type: str = "async"
+    cache_type: Literal["async", "redis", "memory", "disk"] = "async"
     """The cache type can be 'async' or 'redis'."""
     cache_expire: int = 3600
     """The cache expire in seconds."""
@@ -146,6 +149,26 @@ class Settings(BaseSettings):
     do_not_track: bool = False
     """If set to True, Langflow will not track telemetry."""
     telemetry_base_url: str = "https://langflow.gateway.scarf.sh"
+    transactions_storage_enabled: bool = True
+    """If set to True, Langflow will track transactions between flows."""
+    vertex_builds_storage_enabled: bool = True
+    """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
+
+    # Config
+    auto_saving: bool = True
+    """If set to True, Langflow will auto save flows."""
+    auto_saving_interval: int = 1000
+    """The interval in ms at which Langflow will auto save flows."""
+    health_check_max_retries: int = 5
+    """The maximum number of retries for the health check."""
+
+    @field_validator("dev")
+    @classmethod
+    def set_dev(cls, value):
+        from langflow.settings import set_dev
+
+        set_dev(value)
+        return value
 
     @field_validator("user_agent", mode="after")
     @classmethod

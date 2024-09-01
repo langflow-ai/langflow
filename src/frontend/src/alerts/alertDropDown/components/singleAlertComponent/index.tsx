@@ -1,6 +1,6 @@
+import { CustomLink } from "@/customization/components/custom-link";
 import { Transition } from "@headlessui/react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import IconComponent from "../../../../components/genericIconComponent";
 import { SingleAlertComponentType } from "../../../../types/alerts";
 
@@ -93,12 +93,12 @@ export default function SingleAlert({
             </p>
             <p className="mt-3 text-sm md:ml-6 md:mt-0">
               {dropItem.link ? (
-                <Link
+                <CustomLink
                   to={dropItem.link}
                   className="whitespace-nowrap font-medium text-info-foreground hover:text-accent-foreground"
                 >
                   Details
-                </Link>
+                </CustomLink>
               ) : (
                 <></>
               )}

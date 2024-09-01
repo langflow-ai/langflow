@@ -88,9 +88,17 @@ const Footer: React.FC<{
     dataTestId?: string;
     onClick?: () => void;
   };
-}> = ({ children, submit }) => {
+  close?: boolean;
+  centered?: boolean;
+}> = ({ children, submit, close, centered }) => {
   return (
-    <div className="flex flex-shrink-0 flex-row-reverse">
+    <div
+      className={
+        centered
+          ? "flex flex-shrink-0 justify-center"
+          : "flex flex-shrink-0 flex-row-reverse"
+      }
+    >
       {submit ? (
         <div className="flex w-full items-center justify-between">
           {children ?? <div />}
@@ -114,6 +122,11 @@ const Footer: React.FC<{
         </div>
       ) : (
         <>{children && children}</>
+      )}
+      {close && (
+        <DialogClose asChild>
+          <Button type="button">Close</Button>
+        </DialogClose>
       )}
     </div>
   );
@@ -148,6 +161,7 @@ interface BaseModalProps {
   onChangeOpenModal?: (open?: boolean) => void;
   type?: "modal" | "dialog";
   onSubmit?: () => void;
+  onEscapeKeyDown?: (e: KeyboardEvent) => void;
 }
 function BaseModal({
   open,
@@ -157,6 +171,7 @@ function BaseModal({
   onChangeOpenModal,
   type = "dialog",
   onSubmit,
+  onEscapeKeyDown,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -204,7 +219,10 @@ function BaseModal({
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent className={contentClasses}>
+          <DialogContent
+            onEscapeKeyDown={onEscapeKeyDown}
+            className={contentClasses}
+          >
             {onSubmit ? (
               <Form.Root
                 onSubmit={(event) => {

@@ -1,14 +1,15 @@
 import inspect
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Union, get_type_hints
+from copy import deepcopy
+from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
+from collections.abc import Callable
 from uuid import UUID
 
 import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
-from langflow.graph.edge.schema import EdgeData
+from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
-from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
@@ -16,43 +17,53 @@ from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
 from langflow.utils.async_helpers import run_until_complete
+from langflow.utils.util import find_closest_match
 
 from .custom_component import CustomComponent
 
 if TYPE_CHECKING:
+    from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
+    from langflow.inputs.inputs import InputTypes
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
+CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name"]
 
 
 class Component(CustomComponent):
-    inputs: List[InputTypes] = []
-    outputs: List[Output] = []
+    inputs: list["InputTypes"] = []
+    outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
 
     def __init__(self, **kwargs):
         # if key starts with _ it is a config
         # else it is an input
+        self._reset_all_output_values()
         inputs = {}
         config = {}
         for key, value in kwargs.items():
             if key.startswith("_"):
                 config[key] = value
+            elif key in CONFIG_ATTRIBUTES:
+                config[key[1:]] = value
             else:
                 inputs[key] = value
-        self._inputs: dict[str, InputTypes] = {}
+        self._inputs: dict[str, "InputTypes"] = {}
         self._outputs: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
         self._parameters = inputs or {}
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
+        self._state_model = None
         self.set_attributes(self._parameters)
         self._output_logs = {}
         config = config or {}
         if "_id" not in config:
             config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
+        self.__inputs = inputs
+        self.__config = config
         super().__init__(**config)
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
@@ -64,6 +75,62 @@ class Component(CustomComponent):
             self.map_outputs(self.outputs)
         # Set output types
         self._set_output_types()
+        self.set_class_code()
+
+    def _reset_all_output_values(self):
+        for output in self.outputs:
+            setattr(output, "value", UNDEFINED)
+
+    def _build_state_model(self):
+        if self._state_model:
+            return self._state_model
+        name = self.name or self.__class__.__name__
+        model_name = f"{name}StateModel"
+        fields = {}
+        for output in self.outputs:
+            fields[output.name] = getattr(self, output.method)
+        self._state_model = create_state_model(model_name=model_name, **fields)
+        return self._state_model
+
+    def get_state_model_instance_getter(self):
+        state_model = self._build_state_model()
+
+        def _instance_getter(_):
+            return state_model()
+
+        _instance_getter.__annotations__["return"] = state_model
+        return _instance_getter
+
+    def __deepcopy__(self, memo):
+        if id(self) in memo:
+            return memo[id(self)]
+        kwargs = deepcopy(self.__config)
+        kwargs["inputs"] = deepcopy(self.__inputs)
+        new_component = type(self)(**kwargs)
+        new_component._code = self._code
+        new_component._outputs = self._outputs
+        new_component._inputs = self._inputs
+        new_component._edges = self._edges
+        new_component._components = self._components
+        new_component._parameters = self._parameters
+        new_component._attributes = self._attributes
+        new_component._output_logs = self._output_logs
+        new_component._logs = self._logs
+        memo[id(self)] = new_component
+        return new_component
+
+    def set_class_code(self):
+        # Get the source code of the calling class
+        if self._code:
+            return
+        try:
+            module = inspect.getmodule(self.__class__)
+            if module is None:
+                raise ValueError("Could not find module for class")
+            class_code = inspect.getsource(module)
+            self._code = class_code
+        except OSError:
+            raise ValueError(f"Could not find source code for {self.__class__.__name__}")
 
     def set(self, **kwargs):
         """
@@ -79,7 +146,7 @@ class Component(CustomComponent):
             KeyError: If the specified input name does not exist.
         """
         for key, value in kwargs.items():
-            self._process_connection_or_parameter(key, value)
+            self._process_connection_or_parameters(key, value)
         return self
 
     def list_inputs(self):
@@ -149,13 +216,20 @@ class Component(CustomComponent):
             return self._outputs[name]
         raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
 
+    def set_on_output(self, name: str, **kwargs):
+        output = self.get_output(name)
+        for key, value in kwargs.items():
+            if not hasattr(output, key):
+                raise ValueError(f"Output {name} does not have a method {key}")
+            setattr(output, key, value)
+
     def set_output_value(self, name: str, value: Any):
         if name in self._outputs:
             self._outputs[name].value = value
         else:
             raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
 
-    def map_outputs(self, outputs: List[Output]):
+    def map_outputs(self, outputs: list[Output]):
         """
         Maps the given list of outputs to the component.
 
@@ -174,7 +248,7 @@ class Component(CustomComponent):
                 raise ValueError("Output name cannot be None.")
             self._outputs[output.name] = output
 
-    def map_inputs(self, inputs: List[InputTypes]):
+    def map_inputs(self, inputs: list["InputTypes"]):
         """
         Maps the given inputs to the component.
 
@@ -211,7 +285,7 @@ class Component(CustomComponent):
             output.add_types(return_types)
             output.set_selected()
 
-    def _get_output_by_method(self, method: Callable):
+    def get_output_by_method(self, method: Callable):
         # method is a callable and output.method is a string
         # we need to find the output that has the same method
         output = next((output for output in self.outputs if output.method == method.__name__), None)
@@ -232,13 +306,44 @@ class Component(CustomComponent):
         method_is_output = (
             hasattr(method, "__self__")
             and isinstance(method.__self__, Component)
-            and method.__self__._get_output_by_method(method)
+            and method.__self__.get_output_by_method(method)
         )
         return method_is_output
+
+    def _build_error_string_from_matching_pairs(self, matching_pairs: list[tuple[Output, Input]]):
+        text = ""
+        for output, input_ in matching_pairs:
+            text += f"{output.name}[{','.join(output.types)}]->{input_.name}[{','.join(input_.input_types or [])}]\n"
+        return text
+
+    def _find_matching_output_method(self, value: "Component"):
+        # get all outputs of the value component
+        outputs = value.outputs
+        # check if the any of the types in the output.types matches ONLY one input in the current component
+        matching_pairs = []
+        for output in outputs:
+            for input_ in self.inputs:
+                for output_type in output.types:
+                    if input_.input_types and output_type in input_.input_types:
+                        matching_pairs.append((output, input_))
+        if len(matching_pairs) > 1:
+            matching_pairs_str = self._build_error_string_from_matching_pairs(matching_pairs)
+            raise ValueError(
+                f"There are multiple outputs from {value.__class__.__name__} that can connect to inputs in {self.__class__.__name__}: {matching_pairs_str}"
+            )
+        output, input_ = matching_pairs[0]
+        if not isinstance(output.method, str):
+            raise ValueError(f"Method {output.method} is not a valid output of {value.__class__.__name__}")
+        return getattr(value, output.method)
 
     def _process_connection_or_parameter(self, key, value):
         _input = self._get_or_create_input(key)
         # We need to check if callable AND if it is a method from a class that inherits from Component
+        if isinstance(value, Component):
+            # We need to find the Output that can connect to an input of the current component
+            # if there's more than one output that matches, we need to raise an error
+            # because we don't know which one to connect to
+            value = self._find_matching_output_method(value)
         if callable(value) and self._inherits_from_component(value):
             try:
                 self._method_is_valid_output(value)
@@ -249,6 +354,14 @@ class Component(CustomComponent):
             self._connect_to_component(key, value, _input)
         else:
             self._set_parameter_or_attribute(key, value)
+
+    def _process_connection_or_parameters(self, key, value):
+        # if value is a list of components, we need to process each component
+        if isinstance(value, list):
+            for val in value:
+                self._process_connection_or_parameter(key, val)
+        else:
+            self._process_connection_or_parameter(key, value)
 
     def _get_or_create_input(self, key):
         try:
@@ -262,7 +375,7 @@ class Component(CustomComponent):
     def _connect_to_component(self, key, value, _input):
         component = value.__self__
         self._components.append(component)
-        output = component._get_output_by_method(value)
+        output = component.get_output_by_method(value)
         self._add_edge(component, key, output, _input)
 
     def _add_edge(self, component, key, output, _input):
@@ -272,7 +385,7 @@ class Component(CustomComponent):
                 "target": self._id,
                 "data": {
                     "sourceHandle": {
-                        "dataType": self.name,
+                        "dataType": component.name or component.__class__.__name__,
                         "id": component._id,
                         "name": output.name,
                         "output_types": output.types,
@@ -288,6 +401,12 @@ class Component(CustomComponent):
         )
 
     def _set_parameter_or_attribute(self, key, value):
+        if isinstance(value, Component):
+            methods = ", ".join([f"'{output.method}'" for output in value.outputs])
+            raise ValueError(
+                f"You set {value.display_name} as value for `{key}`. "
+                f"You should pass one of the following: {methods}"
+            )
         self._set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
@@ -315,13 +434,23 @@ class Component(CustomComponent):
             return self.__dict__["_attributes"][name]
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
             return self.__dict__["_inputs"][name].value
+        if "_outputs" in self.__dict__ and name in self.__dict__["_outputs"]:
+            return self.__dict__["_outputs"][name]
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[f"_{name}"]
+        if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
+            return self.__dict__[name]
         raise AttributeError(f"{name} not found in {self.__class__.__name__}")
 
     def _set_input_value(self, name: str, value: Any):
         if name in self._inputs:
             input_value = self._inputs[name].value
+            if isinstance(input_value, Component):
+                methods = ", ".join([f"'{output.method}'" for output in input_value.outputs])
+                raise ValueError(
+                    f"You set {input_value.display_name} as value for `{name}`. "
+                    f"You should pass one of the following: {methods}"
+                )
             if callable(input_value):
                 raise ValueError(
                     f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
@@ -342,9 +471,17 @@ class Component(CustomComponent):
 
     def _map_parameters_on_template(self, template: dict):
         for name, value in self._parameters.items():
-            template[name]["value"] = value
+            try:
+                template[name]["value"] = value
+            except KeyError:
+                close_match = find_closest_match(name, list(template.keys()))
+                if close_match:
+                    raise ValueError(
+                        f"Parameter '{name}' not found in {self.__class__.__name__}. " f"Did you mean '{close_match}'?"
+                    )
+                raise ValueError(f"Parameter {name} not found in {self.__class__.__name__}. ")
 
-    def _get_method_return_type(self, method_name: str) -> List[str]:
+    def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
         return_type = get_type_hints(method)["return"]
         extracted_return_types = self._extract_return_type(return_type)
@@ -366,6 +503,21 @@ class Component(CustomComponent):
         self._map_parameters_on_template(frontend_node_dict["template"])
 
         frontend_node = ComponentFrontendNode.from_dict(frontend_node_dict)
+        if not self._code:
+            self.set_class_code()
+        code_field = Input(
+            dynamic=True,
+            required=True,
+            placeholder="",
+            multiline=True,
+            value=self._code,
+            password=False,
+            name="code",
+            advanced=True,
+            field_type="code",
+            is_list=False,
+        )
+        frontend_node.template.add_field(code_field)
 
         for output in frontend_node.outputs:
             if output.types:
@@ -379,7 +531,7 @@ class Component(CustomComponent):
         data = {
             "data": {
                 "node": frontend_node.to_dict(keep_name=False),
-                "type": self.__class__.__name__,
+                "type": self.name or self.__class__.__name__,
             }
         }
         return data
@@ -410,10 +562,11 @@ class Component(CustomComponent):
                 _attributes[key] = input_obj.value or None
         self._attributes = _attributes
 
-    def _set_outputs(self, outputs: List[dict]):
+    def _set_outputs(self, outputs: list[dict]):
         self.outputs = [Output(**output) for output in outputs]
         for output in self.outputs:
             setattr(self, output.name, output)
+            self._outputs[output.name] = output
 
     def get_trace_as_inputs(self):
         predefined_inputs = {
@@ -453,8 +606,6 @@ class Component(CustomComponent):
         _results = {}
         _artifacts = {}
         if hasattr(self, "outputs"):
-            if self._vertex:
-                self._set_outputs(self._vertex.outputs)
             for output in self.outputs:
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
@@ -468,6 +619,7 @@ class Component(CustomComponent):
                     method: Callable = getattr(self, output.method)
                     if output.cache and output.value != UNDEFINED:
                         _results[output.name] = output.value
+                        result = output.value
                     else:
                         result = method()
                         # If the method is asynchronous, we need to await it
@@ -482,33 +634,33 @@ class Component(CustomComponent):
                             result.set_flow_id(self._vertex.graph.flow_id)
                         _results[output.name] = result
                         output.value = result
-                        custom_repr = self.custom_repr()
-                        if custom_repr is None and isinstance(result, (dict, Data, str)):
-                            custom_repr = result
-                        if not isinstance(custom_repr, str):
-                            custom_repr = str(custom_repr)
-                        raw = result
-                        if self.status is None:
-                            artifact_value = raw
-                        else:
-                            artifact_value = self.status
-                            raw = self.status
+                    custom_repr = self.custom_repr()
+                    if custom_repr is None and isinstance(result, (dict, Data, str)):
+                        custom_repr = result
+                    if not isinstance(custom_repr, str):
+                        custom_repr = str(custom_repr)
+                    raw = result
+                    if self.status is None:
+                        artifact_value = raw
+                    else:
+                        artifact_value = self.status
+                        raw = self.status
 
-                        if hasattr(raw, "data") and raw is not None:
-                            raw = raw.data
-                        if raw is None:
-                            raw = custom_repr
+                    if hasattr(raw, "data") and raw is not None:
+                        raw = raw.data
+                    if raw is None:
+                        raw = custom_repr
 
-                        elif hasattr(raw, "model_dump") and raw is not None:
-                            raw = raw.model_dump()
-                        if raw is None and isinstance(result, (dict, Data, str)):
-                            raw = result.data if isinstance(result, Data) else result
-                        artifact_type = get_artifact_type(artifact_value, result)
-                        raw, artifact_type = post_process_raw(raw, artifact_type)
-                        artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
-                        _artifacts[output.name] = artifact
-                        self._output_logs[output.name] = self._logs
-                        self._logs = []
+                    elif hasattr(raw, "model_dump") and raw is not None:
+                        raw = raw.model_dump()
+                    if raw is None and isinstance(result, (dict, Data, str)):
+                        raw = result.data if isinstance(result, Data) else result
+                    artifact_type = get_artifact_type(artifact_value, result)
+                    raw, artifact_type = post_process_raw(raw, artifact_type)
+                    artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
+                    _artifacts[output.name] = artifact
+                    self._output_logs[output.name] = self._logs
+                    self._logs = []
         self._artifacts = _artifacts
         self._results = _results
         if self._tracing_service:
@@ -526,7 +678,7 @@ class Component(CustomComponent):
             return str(self.repr_value)
         return self.repr_value
 
-    def build_inputs(self, user_id: Optional[Union[str, UUID]] = None):
+    def build_inputs(self, user_id: str | UUID | None = None):
         """
         Builds the inputs for the custom component.
 
@@ -556,3 +708,14 @@ class Component(CustomComponent):
 
     def _get_fallback_input(self, **kwargs):
         return Input(**kwargs)
+
+    def to_tool(self):
+        # TODO: This is a temporary solution to avoid circular imports
+        from langflow.base.tools.component_tool import ComponentTool
+
+        return ComponentTool(component=self)
+
+    def get_project_name(self):
+        if hasattr(self, "_tracing_service"):
+            return self._tracing_service.project_name
+        return "Langflow"

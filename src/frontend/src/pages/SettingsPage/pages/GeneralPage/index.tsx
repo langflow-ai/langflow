@@ -1,4 +1,3 @@
-import FeatureFlags from "@/../feature-config.json";
 import {
   EDIT_PASSWORD_ALERT_LIST,
   EDIT_PASSWORD_ERROR_ALERT,
@@ -11,6 +10,7 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
+import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import { cloneDeep } from "lodash";
 import { useContext, useState } from "react";
@@ -18,7 +18,6 @@ import { useParams } from "react-router-dom";
 import { CONTROL_PATCH_USER_STATE } from "../../../../constants/constants";
 import { AuthContext } from "../../../../contexts/authContext";
 import useAlertStore from "../../../../stores/alertStore";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
 import {
   inputHandlerEventType,
@@ -31,10 +30,6 @@ import ProfilePictureFormComponent from "./components/ProfilePictureForm";
 import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
 
 export const GeneralPage = () => {
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
-  );
-
   const { scrollId } = useParams();
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
@@ -112,7 +107,7 @@ export const GeneralPage = () => {
     }
   };
 
-  useScrollToElement(scrollId, setCurrentFlowId);
+  useScrollToElement(scrollId);
 
   const { mutate } = usePostAddApiKey({
     onSuccess: () => {
@@ -151,7 +146,7 @@ export const GeneralPage = () => {
       <GeneralPageHeaderComponent />
 
       <div className="grid gap-6">
-        {FeatureFlags.ENABLE_PROFILE_ICONS && (
+        {ENABLE_PROFILE_ICONS && (
           <ProfilePictureFormComponent
             profilePicture={profilePicture}
             handleInput={handleInput}

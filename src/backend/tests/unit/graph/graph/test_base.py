@@ -2,9 +2,11 @@ from collections import deque
 
 import pytest
 
+from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
 from langflow.components.inputs.ChatInput import ChatInput
 from langflow.components.outputs.ChatOutput import ChatOutput
 from langflow.components.outputs.TextOutput import TextOutputComponent
+from langflow.components.tools.YfinanceTool import YfinanceToolComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
 
@@ -21,13 +23,23 @@ async def test_graph_not_prepared():
     graph = Graph()
     graph.add_component("chat_input", chat_input)
     graph.add_component("chat_output", chat_output)
-    graph.add_component_edge("chat_input", (chat_input.outputs[0].name, chat_input.inputs[0].name), "chat_output")
     with pytest.raises(ValueError):
         await graph.astep()
 
 
 @pytest.mark.asyncio
 async def test_graph():
+    chat_input = ChatInput()
+    chat_output = ChatOutput()
+    graph = Graph()
+    graph.add_component("chat_input", chat_input)
+    graph.add_component("chat_output", chat_output)
+    with pytest.warns(UserWarning, match="Graph has vertices but no edges"):
+        graph.prepare()
+
+
+@pytest.mark.asyncio
+async def test_graph_with_edge():
     chat_input = ChatInput()
     chat_output = ChatOutput()
     graph = Graph()
@@ -129,3 +141,16 @@ def test_graph_functional_start_end():
     assert len(results) == len(ids) + 1
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
     assert results[-1] == Finish()
+
+
+def test_graph_set_with_invalid_component():
+    chat_input = ChatInput(_id="chat_input")
+    chat_output = ChatOutput(input_value="test", _id="chat_output")
+    with pytest.raises(ValueError, match="There are multiple outputs"):
+        chat_output.set(sender_name=chat_input)
+
+
+def test_graph_set_with_valid_component():
+    tool = YfinanceToolComponent()
+    tool_calling_agent = ToolCallingAgentComponent()
+    tool_calling_agent.set(tools=[tool])
