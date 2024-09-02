@@ -10,10 +10,20 @@ export default function NodeDescription({
   description,
   selected,
   nodeId,
+  emptyPlaceholder = "Double Click to Edit Description",
+  charLimit,
+  inputClassName,
+  mdClassName,
+  style,
 }: {
   description?: string;
   selected: boolean;
   nodeId: string;
+  emptyPlaceholder?: string;
+  charLimit?: number;
+  inputClassName?: string;
+  mdClassName?: string;
+  style?: React.CSSProperties;
 }) {
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(description);
@@ -31,35 +41,20 @@ export default function NodeDescription({
   }, [description]);
 
   return (
-    <div className="generic-node-desc">
+    <div
+      className={cn(
+        "generic-node-desc",
+        !inputDescription ? "overflow-auto" : "",
+      )}
+    >
       {inputDescription ? (
-        <Textarea
-          className="nowheel min-h-40"
-          autoFocus
-          onBlur={() => {
-            setInputDescription(false);
-            setNodeDescription(nodeDescription);
-            setNode(nodeId, (old) => ({
-              ...old,
-              data: {
-                ...old.data,
-                node: {
-                  ...old.data.node,
-                  description: nodeDescription,
-                },
-              },
-            }));
-          }}
-          value={nodeDescription}
-          onChange={(e) => setNodeDescription(e.target.value)}
-          onKeyDown={(e) => {
-            handleKeyDown(e, nodeDescription, "");
-            if (
-              e.key === "Enter" &&
-              e.shiftKey === false &&
-              e.ctrlKey === false &&
-              e.altKey === false
-            ) {
+        <>
+          <Textarea
+            maxLength={charLimit}
+            className={cn("nowheel h-full", inputClassName)}
+            autoFocus
+            style={style}
+            onBlur={() => {
               setInputDescription(false);
               setNodeDescription(nodeDescription);
               setNode(nodeId, (old) => ({
@@ -72,13 +67,50 @@ export default function NodeDescription({
                   },
                 },
               }));
-            }
-          }}
-        />
+            }}
+            value={nodeDescription}
+            onChange={(e) => setNodeDescription(e.target.value)}
+            onKeyDown={(e) => {
+              handleKeyDown(e, nodeDescription, "");
+              if (
+                e.key === "Enter" &&
+                e.shiftKey === false &&
+                e.ctrlKey === false &&
+                e.altKey === false
+              ) {
+                setInputDescription(false);
+                setNodeDescription(nodeDescription);
+                setNode(nodeId, (old) => ({
+                  ...old,
+                  data: {
+                    ...old.data,
+                    node: {
+                      ...old.data.node,
+                      description: nodeDescription,
+                    },
+                  },
+                }));
+              }
+            }}
+          />
+          {charLimit && (
+            <div
+              className={cn(
+                "text-left text-xs",
+                (nodeDescription?.length ?? 0) >= charLimit
+                  ? "text-error"
+                  : "text-primary",
+              )}
+              data-testid="note_char_limit"
+            >
+              {nodeDescription?.length ?? 0}/{charLimit}
+            </div>
+          )}
+        </>
       ) : (
         <div
           className={cn(
-            "nodoubleclick generic-node-desc-text cursor-text word-break-break-word",
+            "nodoubleclick generic-node-desc-text h-full cursor-text word-break-break-word dark:text-note-placeholder",
             description === "" || !description ? "font-light italic" : "",
           )}
           onDoubleClick={(e) => {
@@ -87,9 +119,14 @@ export default function NodeDescription({
           }}
         >
           {description === "" || !description ? (
-            "Double Click to Edit Description"
+            emptyPlaceholder
           ) : (
-            <Markdown className="markdown prose flex flex-col text-primary word-break-break-word dark:prose-invert">
+            <Markdown
+              className={cn(
+                "markdown prose flex h-full w-full flex-col text-primary word-break-break-word dark:prose-invert",
+                mdClassName,
+              )}
+            >
               {String(description)}
             </Markdown>
           )}

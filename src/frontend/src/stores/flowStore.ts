@@ -342,7 +342,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       // Create a new node object
       const newNode: NodeType = {
         id: newId,
-        type: "genericNode",
+        type: node.type,
         position: {
           x: insidePosition.x + node.position!.x - minimumX,
           y: insidePosition.y + node.position!.y - minimumY,
