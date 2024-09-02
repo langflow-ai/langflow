@@ -67,14 +67,16 @@ const SideBarFoldersButtonsComponent = ({
 
   const handleUploadFlowsToFolder = () => {
     createFileUpload().then((files: File[]) => {
+      if (files?.length === 0) {
+        return;
+      }
+
       getObjectsFromFilelist<any>(files).then((objects) => {
         if (objects.every((flow) => flow.data?.nodes)) {
           uploadFlow({ files }).then(() => {
-            if (files?.length > 0) {
-              setSuccessData({
-                title: "Uploaded successfully",
-              });
-            }
+            setSuccessData({
+              title: "Uploaded successfully",
+            });
           });
         } else {
           files.forEach((folder) => {
