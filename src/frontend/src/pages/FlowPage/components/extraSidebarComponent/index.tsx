@@ -256,7 +256,11 @@ export default function ExtraSidebar(): JSX.Element {
         >
           {Object.keys(dataFilter)
             .sort(sortKeys)
-            .filter((x) => !PRIORITY_SIDEBAR_ORDER.includes(x) && !BUNDLES_SIDEBAR_FOLDER_NAMES.includes(x))
+            .filter(
+              (x) =>
+                !PRIORITY_SIDEBAR_ORDER.includes(x) &&
+                !BUNDLES_SIDEBAR_FOLDER_NAMES.includes(x),
+            )
             .map((SBSectionName: keyof APIObjectType, index) =>
               Object.keys(dataFilter[SBSectionName]).length > 0 ? (
                 <SidebarCategoryComponent
