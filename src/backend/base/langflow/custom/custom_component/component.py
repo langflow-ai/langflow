@@ -781,3 +781,9 @@ class Component(CustomComponent):
             data["output"] = self._current_output
             data["component_id"] = self._id
             self._event_manager.on_log(data=data)
+
+    def _append_tool_output(self):
+        if next((output for output in self.outputs if output.name == "component_as_tool"), None) is None:
+            self.outputs.append(
+                Output(name="component_as_tool", display_name="Tool", method="to_toolkit", types=["Tool"])
+            )
