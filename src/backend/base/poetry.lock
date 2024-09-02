@@ -7332,4 +7332,4 @@ local = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "f99e3d293234870d0332712ae14bb4e0984266353a47991a603b4a5dee85082d"
+content-hash = "618367d857d9d92f8b939b80fe9e39323676e9b07106cb5d9408c8650503b385"
