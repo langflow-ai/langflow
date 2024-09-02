@@ -729,11 +729,11 @@ class Component(CustomComponent):
     def _get_fallback_input(self, **kwargs):
         return Input(**kwargs)
 
-    def to_tool(self):
+    def to_toolkit(self):
         # TODO: This is a temporary solution to avoid circular imports
-        from langflow.base.tools.component_tool import ComponentTool
+        from langflow.base.tools.component_tool import ComponentToolkit
 
-        return ComponentTool(component=self)
+        return ComponentToolkit(component=self)
 
     def get_project_name(self):
         if hasattr(self, "_tracing_service") and self._tracing_service:
