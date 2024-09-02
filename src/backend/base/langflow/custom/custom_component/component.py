@@ -263,7 +263,7 @@ class Component(CustomComponent):
         for input_ in inputs:
             if input_.name is None:
                 raise ValueError("Input name cannot be None.")
-            self._inputs[input_.name] = input_
+            self._inputs[input_.name] = deepcopy(input_)
 
     def validate(self, params: dict):
         """
@@ -496,6 +496,8 @@ class Component(CustomComponent):
         #! works and then update this later
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
+        for key, value in self._inputs.items():
+            frontend_node.set_field_load_from_db_in_template(key, False)
         self._map_parameters_on_frontend_node(frontend_node)
 
         frontend_node_dict = frontend_node.to_dict(keep_name=False)
@@ -532,7 +534,9 @@ class Component(CustomComponent):
             "data": {
                 "node": frontend_node.to_dict(keep_name=False),
                 "type": self.name or self.__class__.__name__,
-            }
+                "id": self._id,
+            },
+            "id": self._id,
         }
         return data
 

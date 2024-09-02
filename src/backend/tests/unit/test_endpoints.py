@@ -427,7 +427,6 @@ def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_histo
     assert response.status_code == 500
 
 
-@pytest.mark.api_key_required
 def test_successful_run_no_payload(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]

@@ -148,9 +148,19 @@ else
 		$(args)
 endif
 
-integration_tests: ## run integration tests
+integration_tests:
 	poetry run pytest src/backend/tests/integration \
 		--instafail -ra \
+		$(args)
+
+integration_tests_no_api_keys:
+	poetry run pytest src/backend/tests/integration \
+		--instafail -ra -m "not api_key_required" \
+		$(args)
+
+integration_tests_api_keys:
+	poetry run pytest src/backend/tests/integration \
+		--instafail -ra -m "api_key_required" \
 		$(args)
 
 tests: ## run unit, integration, coverage tests

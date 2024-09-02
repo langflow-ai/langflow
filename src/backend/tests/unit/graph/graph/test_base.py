@@ -21,8 +21,8 @@ async def test_graph_not_prepared():
     chat_input = ChatInput()
     chat_output = ChatOutput()
     graph = Graph()
-    graph.add_component("chat_input", chat_input)
-    graph.add_component("chat_output", chat_output)
+    graph.add_component(chat_input)
+    graph.add_component(chat_output)
     with pytest.raises(ValueError):
         await graph.astep()
 
@@ -32,8 +32,8 @@ async def test_graph():
     chat_input = ChatInput()
     chat_output = ChatOutput()
     graph = Graph()
-    graph.add_component("chat_input", chat_input)
-    graph.add_component("chat_output", chat_output)
+    graph.add_component(chat_input)
+    graph.add_component(chat_output)
     with pytest.warns(UserWarning, match="Graph has vertices but no edges"):
         graph.prepare()
 
@@ -43,18 +43,20 @@ async def test_graph_with_edge():
     chat_input = ChatInput()
     chat_output = ChatOutput()
     graph = Graph()
-    graph.add_component("chat_input", chat_input)
-    graph.add_component("chat_output", chat_output)
-    graph.add_component_edge("chat_input", (chat_input.outputs[0].name, chat_input.inputs[0].name), "chat_output")
+    input_id = graph.add_component(chat_input)
+    output_id = graph.add_component(chat_output)
+    graph.add_component_edge(input_id, (chat_input.outputs[0].name, chat_input.inputs[0].name), output_id)
     graph.prepare()
-    assert graph._run_queue == deque(["chat_input"])
+    # ensure prepare is idempotent
+    graph.prepare()
+    assert graph._run_queue == deque([input_id])
     await graph.astep()
-    assert graph._run_queue == deque(["chat_output"])
+    assert graph._run_queue == deque([output_id])
 
-    assert graph.vertices[0].id == "chat_input"
-    assert graph.vertices[1].id == "chat_output"
-    assert graph.edges[0].source_id == "chat_input"
-    assert graph.edges[0].target_id == "chat_output"
+    assert graph.vertices[0].id == input_id
+    assert graph.vertices[1].id == output_id
+    assert graph.edges[0].source_id == input_id
+    assert graph.edges[0].target_id == output_id
 
 
 @pytest.mark.asyncio

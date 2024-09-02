@@ -135,6 +135,7 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
 
     ingestion_data = ingestion_graph_dump["data"]
     ingestion_nodes = ingestion_data["nodes"]
+    assert len(ingestion_nodes) == 4
     ingestion_edges = ingestion_data["edges"]
 
     # Sort nodes by id to check components
