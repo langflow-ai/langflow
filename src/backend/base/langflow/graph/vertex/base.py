@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Optional
 import pandas as pd
 from loguru import logger
 
+from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
@@ -451,6 +452,7 @@ class Vertex:
         self,
         fallback_to_env_vars,
         user_id=None,
+        event_manager: EventManager | None = None,
     ):
         """
         Initiate the build process.
@@ -462,12 +464,19 @@ class Vertex:
             raise ValueError(f"Base type for vertex {self.display_name} not found")
 
         if not self._custom_component:
-            custom_component, custom_params = await initialize.loading.instantiate_class(user_id=user_id, vertex=self)
+            custom_component, custom_params = await initialize.loading.instantiate_class(
+                user_id=user_id, vertex=self, event_manager=event_manager
+            )
         else:
             custom_component = self._custom_component
+            self._custom_component.set_event_manager(event_manager)
             custom_params = initialize.loading.get_params(self.params)
 
-        await self._build_results(custom_component, custom_params, fallback_to_env_vars)
+        await self._build_results(
+            custom_component=custom_component,
+            custom_params=custom_params,
+            fallback_to_env_vars=fallback_to_env_vars,
+        )
 
         self._validate_built_object()
 
@@ -755,6 +764,7 @@ class Vertex:
         inputs: dict[str, Any] | None = None,
         files: list[str] | None = None,
         requester: Optional["Vertex"] = None,
+        event_manager: EventManager | None = None,
         **kwargs,
     ) -> Any:
         async with self._lock:
@@ -784,9 +794,9 @@ class Vertex:
             for step in self.steps:
                 if step not in self.steps_ran:
                     if inspect.iscoroutinefunction(step):
-                        await step(user_id=user_id, **kwargs)
+                        await step(user_id=user_id, event_manager=event_manager, **kwargs)
                     else:
-                        step(user_id=user_id, **kwargs)
+                        step(user_id=user_id, event_manager=event_manager, **kwargs)
                     self.steps_ran.append(step)
 
             self._finalize_build()
