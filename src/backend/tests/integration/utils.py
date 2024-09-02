@@ -140,22 +140,24 @@ async def run_single_component(clazz: type, inputs: dict = None, run_input: Opti
     flow_id = str(uuid.uuid4())
     graph = Graph(user_id=user_id, flow_id=flow_id)
 
-    def _add_component(clazz: type, inputs: dict = None) -> str:
+    def _add_component(clazz: type, inputs: Optional[dict] = None) -> str:
         raw_inputs = {}
-        for key, value in inputs.items():
-            if not isinstance(value, ComponentInputHandle):
-                raw_inputs[key] = value
-            if isinstance(value, Component):
-                raise ValueError("Component inputs must be wrapped in ComponentInputHandle")
+        if inputs:
+            for key, value in inputs.items():
+                if not isinstance(value, ComponentInputHandle):
+                    raw_inputs[key] = value
+                if isinstance(value, Component):
+                    raise ValueError("Component inputs must be wrapped in ComponentInputHandle")
         component = clazz(
             **raw_inputs,
             _user_id=user_id
         )
         component_id = graph.add_component(component)
-        for input_name, handle in inputs.items():
-            if isinstance(handle, ComponentInputHandle):
-                handle_component_id = _add_component(handle.clazz, handle.inputs)
-                graph.add_component_edge(handle_component_id, (handle.output_name, input_name), component_id)
+        if inputs:
+            for input_name, handle in inputs.items():
+                if isinstance(handle, ComponentInputHandle):
+                    handle_component_id = _add_component(handle.clazz, handle.inputs)
+                    graph.add_component_edge(handle_component_id, (handle.output_name, input_name), component_id)
         return component_id
 
     component_id = _add_component(clazz, inputs)

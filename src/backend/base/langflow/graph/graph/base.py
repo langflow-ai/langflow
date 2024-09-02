@@ -206,6 +206,8 @@ class Graph:
 
     def add_component(self, component: "Component", component_id: Optional[str] = None) -> str:
         component_id = component_id or component._id
+        if component_id in self.vertex_map:
+            return component_id
         component._id = component_id
         if component_id in self.vertex_map:
             raise ValueError(f"Component ID {component_id} already exists")
@@ -214,6 +216,14 @@ class Graph:
         vertex = self._create_vertex(frontend_node)
         vertex.add_component_instance(component)
         self._add_vertex(vertex)
+        if component._edges:
+            for edge in component._edges:
+                self._add_edge(edge)
+
+        if component._components:
+            for _component in component._components:
+                self.add_component(_component)
+
         return component_id
 
     def _set_start_and_end(self, start: "Component", end: "Component"):
