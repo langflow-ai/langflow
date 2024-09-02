@@ -22,6 +22,7 @@ from langflow.custom.schema import MissingDefault
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.custom import format_type
 from langflow.schema import dotdict
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
 from langflow.type_extraction.type_extraction import extract_inner_type
@@ -362,6 +363,8 @@ def build_custom_component_template_from_inputs(
 ):
     # The List of Inputs fills the role of the build_config and the entrypoint_args
     cc_instance = get_component_instance(custom_component, user_id=user_id)
+    if FEATURE_FLAGS.add_toolkit_output and hasattr(cc_instance, "_append_tool_output"):
+        cc_instance._append_tool_output()
     field_config = cc_instance.get_template_config(cc_instance)
     frontend_node = ComponentFrontendNode.from_inputs(**field_config)
     frontend_node = add_code_field(frontend_node, custom_component._code)
