@@ -1,16 +1,11 @@
 from collections.abc import Callable
 from enum import Enum
-from typing import Any, GenericAlias, _GenericAlias, _UnionGenericAlias  # type: ignore
+from typing import GenericAlias  # type: ignore
+from typing import _GenericAlias  # type: ignore
+from typing import _UnionGenericAlias  # type: ignore
+from typing import Any
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    field_serializer,
-    field_validator,
-    model_serializer,
-    model_validator,
-)
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
 from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
@@ -186,6 +181,9 @@ class Output(BaseModel):
     """The result of the Output. Dynamically updated as execution occurs."""
 
     cache: bool = Field(default=True)
+
+    required_inputs: list[str] | None = Field(default=None)
+    """List of required inputs for this output."""
 
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
