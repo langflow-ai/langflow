@@ -8,6 +8,7 @@ from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
+from langflow.events.event_manager import EventManager
 from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.services.deps import get_tracing_service
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
 async def instantiate_class(
     vertex: "Vertex",
     user_id=None,
+    event_manager: EventManager | None = None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
 
@@ -39,6 +41,8 @@ async def instantiate_class(
         _vertex=vertex,
         _tracing_service=get_tracing_service(),
     )
+    if hasattr(custom_component, "set_event_manager"):
+        custom_component.set_event_manager(event_manager)
     return custom_component, custom_params
 
 
@@ -112,8 +116,8 @@ def update_params_with_load_from_db_fields(
                 try:
                     key = custom_component.variables(params[field], field)
                 except ValueError as e:
-                    # check if "User id is not set" is in the error message
-                    if "User id is not set" in str(e) and not fallback_to_env_vars:
+                    # check if "User id is not set" is in the error message, this is an internal bug
+                    if "User id is not set" in str(e):
                         raise e
                     logger.debug(str(e))
                 if fallback_to_env_vars and key is None:
