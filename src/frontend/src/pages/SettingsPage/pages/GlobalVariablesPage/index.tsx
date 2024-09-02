@@ -62,6 +62,9 @@ export default function GlobalVariablesPage() {
     {
       headerName: "Apply To Fields",
       field: "default_fields",
+      valueFormatter: (params) => {
+        return params.value.join(", ");
+      },
       flex: 1,
       editable: false,
       resizable: false,
@@ -92,7 +95,7 @@ export default function GlobalVariablesPage() {
 
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
-      <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
+      <div className="flex w-full items-start justify-between gap-6">
         <div className="flex w-full flex-col">
           <h2 className="flex items-center text-lg font-semibold tracking-tight">
             Global Variables

@@ -30,7 +30,6 @@ const TabsSearchComponent = ({
         newLocation = location.replace(/.*\/(?:flows|components)/, "/all");
         break;
     }
-    console.log(newLocation);
     navigate(newLocation);
   };
 

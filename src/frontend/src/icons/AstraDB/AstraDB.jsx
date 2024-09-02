@@ -7,7 +7,7 @@ const AstraSVG = (props) => (
     xmlns="http://www.w3.org/2000/svg"
     {...props}
   >
-    <g clip-path="url(#clip0_702_1449)">
+    <g clipPath="url(#clip0_702_1449)">
       {/* <rect width="96" height="96" rx="6" fill="white"/> */}
       <path
         d="M38.0469 33H12V62.1892H38.0469L44.5902 57.1406V38.0485L38.0469 33ZM17.0478 38.0485H39.5424V57.1459H17.0478V38.0485Z"

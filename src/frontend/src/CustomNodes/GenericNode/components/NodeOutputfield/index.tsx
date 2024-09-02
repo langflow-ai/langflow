@@ -5,14 +5,10 @@ import { useUpdateNodeInternals } from "reactflow";
 import { default as IconComponent } from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
-import { Case } from "../../../../shared/components/caseComponent";
 import useFlowStore from "../../../../stores/flowStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
-import {
-  NodeOutputFieldComponentType,
-  ParameterComponentType,
-} from "../../../../types/components";
+import { NodeOutputFieldComponentType } from "../../../../types/components";
 import {
   getGroupOutputNodeId,
   scapedJSONStringfy,
@@ -20,7 +16,6 @@ import {
 import {
   classNames,
   cn,
-  isThereModal,
   logHasMessage,
   logTypeIsError,
   logTypeIsUnknown,
@@ -194,36 +189,38 @@ export default function NodeOutputField({
                   : "Please build the component first"
               }
             >
-              <OutputModal
-                disabled={!displayOutputPreview || unknownOutput}
-                nodeId={flowPoolId}
-                outputName={internalOutputName}
-              >
-                <Button
-                  unstyled
+              <div>
+                <OutputModal
                   disabled={!displayOutputPreview || unknownOutput}
-                  data-testid={`output-inspection-${title.toLowerCase()}`}
+                  nodeId={flowPoolId}
+                  outputName={internalOutputName}
                 >
-                  {errorOutput ? (
-                    <IconComponent
-                      className={classNames(
-                        "h-5 w-5 rounded-md text-status-red",
-                      )}
-                      name={"X"}
-                    />
-                  ) : (
-                    <IconComponent
-                      className={classNames(
-                        "h-5 w-5 rounded-md",
-                        displayOutputPreview && !unknownOutput
-                          ? "hover:text-medium-indigo"
-                          : "cursor-not-allowed text-muted-foreground",
-                      )}
-                      name={"ScanEye"}
-                    />
-                  )}
-                </Button>
-              </OutputModal>
+                  <Button
+                    unstyled
+                    disabled={!displayOutputPreview || unknownOutput}
+                    data-testid={`output-inspection-${title.toLowerCase()}`}
+                  >
+                    {errorOutput ? (
+                      <IconComponent
+                        className={classNames(
+                          "h-5 w-5 rounded-md text-status-red",
+                        )}
+                        name={"X"}
+                      />
+                    ) : (
+                      <IconComponent
+                        className={classNames(
+                          "h-5 w-5 rounded-md",
+                          displayOutputPreview && !unknownOutput
+                            ? "hover:text-medium-indigo"
+                            : "cursor-not-allowed text-muted-foreground",
+                        )}
+                        name={"ScanEye"}
+                      />
+                    )}
+                  </Button>
+                </OutputModal>
+              </div>
             </ShadTooltip>
           </div>
         </div>

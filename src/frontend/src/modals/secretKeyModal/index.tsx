@@ -76,7 +76,7 @@ export default function SecretKeyModal({
       open={open}
       setOpen={setOpen}
     >
-      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={
           renderKey ? (

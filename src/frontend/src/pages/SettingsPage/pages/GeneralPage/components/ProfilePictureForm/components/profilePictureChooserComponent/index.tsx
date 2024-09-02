@@ -37,8 +37,8 @@ export default function ProfilePictureChooserComponent({
       {loading || !imagesLoaded ? (
         <Loading />
       ) : (
-        Object.keys(profilePictures!).map((folder, idx) => (
-          <div className="flex flex-col gap-2">
+        Object.keys(profilePictures!).map((folder, index) => (
+          <div className="flex flex-col gap-2" key={index}>
             <div className="edit-flow-arrangement">
               <span className="font-normal">{folder}</span>
             </div>
@@ -46,6 +46,7 @@ export default function ProfilePictureChooserComponent({
               <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-muted px-1 custom-scroll">
                 {profilePictures![folder].map((path, idx) => (
                   <Button
+                    key={idx}
                     ref={value === folder + "/" + path ? ref : undefined}
                     unstyled
                     onClick={() => onChange(folder + "/" + path)}
