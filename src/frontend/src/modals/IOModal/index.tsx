@@ -1,5 +1,7 @@
-import { useDeleteMessages } from "@/controllers/API/queries/messages";
-import { useQueryClient } from "@tanstack/react-query";
+import {
+  useDeleteMessages,
+  useGetMessagesQuery,
+} from "@/controllers/API/queries/messages";
 import { useEffect, useState } from "react";
 import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -111,13 +113,14 @@ export default function IOModal({
   const [sessions, setSessions] = useState<string[]>([]);
   const messages = useMessagesStore((state) => state.messages);
   const flowPool = useFlowStore((state) => state.flowPool);
-  const queryClient = useQueryClient();
 
-  function refetch() {
-    queryClient.invalidateQueries({
-      queryKey: ["useGetMessagesQuery", { id: currentFlowId }],
-    });
-  }
+  const { refetch } = useGetMessagesQuery(
+    {
+      mode: "union",
+      id: currentFlowId,
+    },
+    { enabled: open },
+  );
 
   async function sendMessage({
     repeat = 1,
@@ -157,10 +160,6 @@ export default function IOModal({
   useEffect(() => {
     setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
   }, [allNodes.length]);
-
-  useEffect(() => {
-    refetch();
-  }, [open]);
 
   useEffect(() => {
     const sessions = new Set<string>();
