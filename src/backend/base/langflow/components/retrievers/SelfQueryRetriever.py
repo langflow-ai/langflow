@@ -48,7 +48,7 @@ class SelfQueryRetrieverComponent(CustomComponent):
         query: Message,
         vectorstore: VectorStore,
         attribute_infos: list[Data],
-        document_content_description: Text | Message,
+        document_content_description: Text,
         llm: LanguageModel,
     ) -> Data:
         metadata_field_infos = [AttributeInfo(**value.data) for value in attribute_infos]
