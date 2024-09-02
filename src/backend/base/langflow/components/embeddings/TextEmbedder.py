@@ -1,8 +1,8 @@
 from typing import List
-from langchain_openai.embeddings.base import OpenAIEmbeddings
 from langflow.custom import Component
 from langflow.io import HandleInput, MessageInput, Output
 from langflow.field_typing import Embeddings, Message
+
 
 class TextEmbedderComponent(Component):
     display_name: str = "Text Embedder"
