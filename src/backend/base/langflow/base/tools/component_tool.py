@@ -1,41 +1,45 @@
-from typing import Any
+from typing import Callable
 
-from langchain_core.tools import BaseTool, ToolException
+from langchain_core.tools import BaseTool
+from langchain_core.tools.base import BaseToolkit
+from langchain_core.tools.structured import StructuredTool
 
 from langflow.custom.custom_component.component import Component
+from langflow.io import Output
+from langflow.io.schema import create_input_schema
 
 
-class ComponentTool(BaseTool):
-    name: str
-    description: str
-    component: "Component"
-
-    def __init__(self, component: "Component") -> None:
-        """Initialize the tool."""
-        from langflow.io.schema import create_input_schema
-
-        name = component.name or component.__class__.__name__
-        description = component.description or ""
-        args_schema = create_input_schema(component.inputs)
-        super().__init__(name=name, description=description, args_schema=args_schema, component=component)
-        # self.component = component
-
-    @property
-    def args(self) -> dict:
-        schema = self.get_input_schema()
-        return schema.schema()["properties"]
-
-    def _run(
-        self,
-        *args: Any,
-        **kwargs: Any,
-    ) -> dict:
-        """Use the tool."""
-        try:
-            results, _ = self.component(**kwargs)
-            return results
-        except Exception as e:
-            raise ToolException(f"Error running {self.name}: {e}")
+def build_description(component: Component, output: Output):
+    return f"Description: {component.description}\nOutput Types: {output.types}"
 
 
-ComponentTool.update_forward_refs()
+def _build_output_function(component: Component, output_method: Callable):
+    def output_function(*args, **kwargs):
+        component.set(*args, **kwargs)
+        return output_method()
+
+    return output_function
+
+
+class ComponentToolkit(BaseToolkit, arbitrary_types_allowed=True):  # type: ignore
+    component: Component
+
+    def get_tools(self) -> list[BaseTool]:
+        tools = []
+        for output in self.component.outputs:
+            output_method: Callable = getattr(self.component, output.method)
+            args_schema = None
+            if output.required_inputs:
+                inputs = [self.component._inputs[input_name] for input_name in output.required_inputs]
+                args_schema = create_input_schema(inputs)
+            else:
+                args_schema = create_input_schema(self.component.inputs)
+            tools.append(
+                StructuredTool(
+                    name=f"{self.component.name}.{output.method}",
+                    description=build_description(self.component, output),
+                    func=_build_output_function(self.component, output_method),
+                    args_schema=args_schema,
+                )
+            )
+        return tools
