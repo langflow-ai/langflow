@@ -57,7 +57,7 @@ export default function ShortcutsPage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
-      <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
+      <div className="flex w-full items-start justify-between gap-6">
         <div className="flex w-full flex-col">
           <h2 className="flex items-center text-lg font-semibold tracking-tight">
             Shortcuts
@@ -71,7 +71,7 @@ export default function ShortcutsPage() {
           </p>
         </div>
         <div>
-          <div className="align-end mb-4 flex w-full justify-end">
+          <div className="align-end flex w-full justify-end">
             <div className="justify center flex items-center">
               {open && (
                 <EditShortcutButton

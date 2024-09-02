@@ -1,6 +1,5 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
-import { Button } from "../../../../components/ui/button";
 import BaseModal from "../../../../modals/baseModal";
 import SwitchOutputView from "./components/switchOutputView";
 
@@ -38,7 +37,7 @@ export default function OutputModal({
         />
       </BaseModal.Content>
       <BaseModal.Footer close></BaseModal.Footer>
-      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
     </BaseModal>
   );
 }
