@@ -1,9 +1,10 @@
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, Protocol
 
 from typing_extensions import NotRequired, TypedDict
 
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.vertex.schema import NodeData
+from langflow.schema.log import LoggableType
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
@@ -44,3 +45,7 @@ class OutputConfigDict(TypedDict):
 
 class StartConfigDict(TypedDict):
     output: OutputConfigDict
+
+
+class LogCallbackFunction(Protocol):
+    def __call__(self, event_name: str, log: LoggableType) -> None: ...

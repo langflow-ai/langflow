@@ -1,17 +1,19 @@
 import inspect
+from collections.abc import Callable
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
-from collections.abc import Callable
 from uuid import UUID
 
 import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
+from langflow.events.event_manager import EventManager
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
+from langflow.schema.log import LoggableType
 from langflow.schema.message import Message
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
@@ -35,6 +37,7 @@ class Component(CustomComponent):
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
+    _current_output: str = ""
 
     def __init__(self, **kwargs):
         # if key starts with _ it is a config
@@ -56,6 +59,8 @@ class Component(CustomComponent):
         self._parameters = inputs or {}
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
+        self._current_output = ""
+        self._event_manager: EventManager | None = None
         self._state_model = None
         self.set_attributes(self._parameters)
         self._output_logs = {}
@@ -76,6 +81,9 @@ class Component(CustomComponent):
         # Set output types
         self._set_output_types()
         self.set_class_code()
+
+    def set_event_manager(self, event_manager: EventManager | None = None):
+        self._event_manager = event_manager
 
     def _reset_all_output_values(self):
         for output in self.outputs:
@@ -601,7 +609,9 @@ class Component(CustomComponent):
     async def _build_without_tracing(self):
         return await self._build_results()
 
-    async def build_results(self):
+    async def build_results(
+        self,
+    ):
         if self._tracing_service:
             return await self._build_with_tracing()
         return await self._build_without_tracing()
@@ -620,6 +630,7 @@ class Component(CustomComponent):
                 ):
                     if output.method is None:
                         raise ValueError(f"Output {output.name} does not have a method defined.")
+                    self._current_output = output.name
                     method: Callable = getattr(self, output.method)
                     if output.cache and output.value != UNDEFINED:
                         _results[output.name] = output.value
@@ -638,6 +649,7 @@ class Component(CustomComponent):
                             result.set_flow_id(self._vertex.graph.flow_id)
                         _results[output.name] = result
                         output.value = result
+
                     custom_repr = self.custom_repr()
                     if custom_repr is None and isinstance(result, (dict, Data, str)):
                         custom_repr = result
@@ -665,6 +677,7 @@ class Component(CustomComponent):
                     _artifacts[output.name] = artifact
                     self._output_logs[output.name] = self._logs
                     self._logs = []
+                    self._current_output = ""
         self._artifacts = _artifacts
         self._results = _results
         if self._tracing_service:
@@ -720,6 +733,25 @@ class Component(CustomComponent):
         return ComponentTool(component=self)
 
     def get_project_name(self):
-        if hasattr(self, "_tracing_service"):
+        if hasattr(self, "_tracing_service") and self._tracing_service:
             return self._tracing_service.project_name
         return "Langflow"
+
+    def log(self, message: LoggableType | list[LoggableType], name: str | None = None):
+        """
+        Logs a message.
+
+        Args:
+            message (LoggableType | list[LoggableType]): The message to log.
+        """
+        if name is None:
+            name = f"Log {len(self._logs) + 1}"
+        log = Log(message=message, type=get_artifact_type(message), name=name)
+        self._logs.append(log)
+        if self._tracing_service and self._vertex:
+            self._tracing_service.add_log(trace_name=self.trace_name, log=log)
+        if self._event_manager is not None and self._current_output:
+            data = log.model_dump()
+            data["output"] = self._current_output
+            data["component_id"] = self._id
+            self._event_manager.on_log(data=data)
