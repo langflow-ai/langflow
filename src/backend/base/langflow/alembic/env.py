@@ -1,12 +1,8 @@
-import os
-import warnings
 from logging.config import fileConfig
 
 from alembic import context
-from loguru import logger
 from sqlalchemy import engine_from_config, pool
 
-from langflow.services.database.models import *  # noqa
 from langflow.services.database.service import SQLModel
 
 # this is the Alembic Config object, which provides
@@ -42,8 +38,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = os.getenv("LANGFLOW_DATABASE_URL")
-    url = url or config.get_main_option("sqlalchemy.url")
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -63,32 +58,17 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
 
-    try:
-        from langflow.services.database.factory import DatabaseServiceFactory
-        from langflow.services.deps import get_db_service
-        from langflow.services.manager import initialize_settings_service, service_manager
+    with connectable.connect() as connection:
+        context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
 
-        initialize_settings_service()
-        service_manager.register_factory(DatabaseServiceFactory())
-        connectable = get_db_service().engine
-    except Exception as e:
-        logger.error(f"Error getting database engine: {e}")
-        url = os.getenv("LANGFLOW_DATABASE_URL")
-        url = url or config.get_main_option("sqlalchemy.url")
-        if url:
-            config.set_main_option("sqlalchemy.url", url)
-        connectable = engine_from_config(
-            config.get_section(config.config_ini_section, {}),
-            prefix="sqlalchemy.",
-            poolclass=pool.NullPool,
-        )
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        with connectable.connect() as connection:
-            context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
-            with context.begin_transaction():
-                context.run_migrations()
+        with context.begin_transaction():
+            context.run_migrations()
 
 
 if context.is_offline_mode():
