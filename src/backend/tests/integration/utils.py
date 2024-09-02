@@ -7,12 +7,10 @@ from astrapy.admin import parse_api_endpoint
 
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.custom import Component
-from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.field_typing import Embeddings
 from langflow.graph import Graph
 from langflow.processing.process import run_graph_internal
 import requests
-
 
 
 def check_env_vars(*vars):
@@ -61,6 +59,7 @@ class MockEmbeddings(Embeddings):
         self.embedded_query = text
         return self.mock_embedding(text)
 
+
 @dataclasses.dataclass
 class JSONFlow:
     json: dict
@@ -72,7 +71,8 @@ class JSONFlow:
                 result.append(node["id"])
         if not result:
             raise ValueError(
-                f"Component of type {component_type} not found, available types: {', '.join(set(node['data']['type'] for node in self.json['data']['nodes']))}")
+                f"Component of type {component_type} not found, available types: {', '.join(set(node['data']['type'] for node in self.json['data']['nodes']))}"
+            )
         return result
 
     def get_component_by_type(self, component_type):
@@ -97,19 +97,21 @@ class JSONFlow:
 
 def download_flow_from_github(name: str, version: str) -> JSONFlow:
     response = requests.get(
-        f"https://raw.githubusercontent.com/langflow-ai/langflow/v{version}/src/backend/base/langflow/initial_setup/starter_projects/{name}.json")
+        f"https://raw.githubusercontent.com/langflow-ai/langflow/v{version}/src/backend/base/langflow/initial_setup/starter_projects/{name}.json"
+    )
     response.raise_for_status()
     as_json = response.json()
     return JSONFlow(json=as_json)
 
 
-async def run_json_flow(json_flow: JSONFlow, run_input: Optional[Any] = None,
-                   session_id: Optional[str] = None) -> dict[str, Any]:
+async def run_json_flow(
+    json_flow: JSONFlow, run_input: Optional[Any] = None, session_id: Optional[str] = None
+) -> dict[str, Any]:
     graph = Graph.from_payload(json_flow.json)
     return await run_flow(graph, run_input, session_id)
 
-async def run_flow(graph: Graph, run_input: Optional[Any] = None,
-                   session_id: Optional[str] = None) -> dict[str, Any]:
+
+async def run_flow(graph: Graph, run_input: Optional[Any] = None, session_id: Optional[str] = None) -> dict[str, Any]:
     graph.prepare()
     if run_input:
         graph_run_inputs = [InputValueRequest(input_value=run_input, type="chat")]
@@ -118,14 +120,12 @@ async def run_flow(graph: Graph, run_input: Optional[Any] = None,
 
     flow_id = str(uuid.uuid4())
 
-    results, _ = await run_graph_internal(graph, flow_id, session_id=session_id,
-                                          inputs=graph_run_inputs)
+    results, _ = await run_graph_internal(graph, flow_id, session_id=session_id, inputs=graph_run_inputs)
     outputs = {}
     for r in results:
         for out in r.outputs:
             outputs |= out.results
     return outputs
-
 
 
 @dataclasses.dataclass
@@ -134,8 +134,10 @@ class ComponentInputHandle:
     inputs: dict
     output_name: str
 
-async def run_single_component(clazz: type, inputs: dict = None, run_input: Optional[Any] = None,
-                               session_id: Optional[str] = None) -> dict[str, Any]:
+
+async def run_single_component(
+    clazz: type, inputs: dict = None, run_input: Optional[Any] = None, session_id: Optional[str] = None
+) -> dict[str, Any]:
     user_id = str(uuid.uuid4())
     flow_id = str(uuid.uuid4())
     graph = Graph(user_id=user_id, flow_id=flow_id)
@@ -148,10 +150,7 @@ async def run_single_component(clazz: type, inputs: dict = None, run_input: Opti
                     raw_inputs[key] = value
                 if isinstance(value, Component):
                     raise ValueError("Component inputs must be wrapped in ComponentInputHandle")
-        component = clazz(
-            **raw_inputs,
-            _user_id=user_id
-        )
+        component = clazz(**raw_inputs, _user_id=user_id)
         component_id = graph.add_component(component)
         if inputs:
             for input_name, handle in inputs.items():
@@ -167,7 +166,7 @@ async def run_single_component(clazz: type, inputs: dict = None, run_input: Opti
     else:
         graph_run_inputs = []
 
-    _, _ = await run_graph_internal(graph, flow_id, session_id=session_id,
-                                    inputs=graph_run_inputs,
-                                    outputs=[component_id])
+    _, _ = await run_graph_internal(
+        graph, flow_id, session_id=session_id, inputs=graph_run_inputs, outputs=[component_id]
+    )
     return graph.get_vertex(component_id)._built_object

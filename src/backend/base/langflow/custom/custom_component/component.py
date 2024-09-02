@@ -534,9 +534,9 @@ class Component(CustomComponent):
             "data": {
                 "node": frontend_node.to_dict(keep_name=False),
                 "type": self.name or self.__class__.__name__,
-                "id": self._id
+                "id": self._id,
             },
-            "id": self._id
+            "id": self._id,
         }
         return data
 

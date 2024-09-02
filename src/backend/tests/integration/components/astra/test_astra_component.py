@@ -9,7 +9,7 @@ from langflow.custom import Component
 from langflow.inputs import StrInput
 from langflow.template import Output
 from tests.api_keys import get_astradb_application_token, get_astradb_api_endpoint, get_openai_api_key
-from tests.integration.utils import MockEmbeddings, check_env_vars, valid_nvidia_vectorize_region, ComponentInputHandle
+from tests.integration.utils import ComponentInputHandle
 from langchain_core.documents import Document
 
 
@@ -32,30 +32,38 @@ ALL_COLLECTIONS = [
     VECTORIZE_COLLECTION_OPENAI_WITH_AUTH,
 ]
 
+
 @pytest.fixture()
 def astradb_client(request):
-    client = AstraDB(
-        api_endpoint=get_astradb_api_endpoint(),
-        token=get_astradb_application_token())
+    client = AstraDB(api_endpoint=get_astradb_api_endpoint(), token=get_astradb_application_token())
     yield client
     for collection in ALL_COLLECTIONS:
         client.delete_collection(collection)
+
 
 @pytest.mark.api_key_required
 @pytest.mark.asyncio
 async def test_base(astradb_client: AstraDB):
     from langflow.components.embeddings import OpenAIEmbeddingsComponent
+
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()
 
-
-    results = await run_single_component(AstraVectorStoreComponent, inputs={
-        "token": application_token,
-        "api_endpoint": api_endpoint,
-        "collection_name": BASIC_COLLECTION,
-        "embedding": ComponentInputHandle(clazz=OpenAIEmbeddingsComponent, inputs={"openai_api_key": get_openai_api_key()}, output_name="embeddings"),
-    })
+    results = await run_single_component(
+        AstraVectorStoreComponent,
+        inputs={
+            "token": application_token,
+            "api_endpoint": api_endpoint,
+            "collection_name": BASIC_COLLECTION,
+            "embedding": ComponentInputHandle(
+                clazz=OpenAIEmbeddingsComponent,
+                inputs={"openai_api_key": get_openai_api_key()},
+                output_name="embeddings",
+            ),
+        },
+    )
     from langchain_core.vectorstores import VectorStoreRetriever
+
     assert isinstance(results["base_retriever"], VectorStoreRetriever)
     assert results["vector_store"] is not None
     assert results["search_results"] == []
@@ -63,32 +71,38 @@ async def test_base(astradb_client: AstraDB):
 
 
 class TextToData(Component):
-    inputs = [
-        StrInput(name="text_data",is_list=True)
-    ]
-    outputs = [
-        Output(name="data", display_name="Data", method="create_data")
-    ]
+    inputs = [StrInput(name="text_data", is_list=True)]
+    outputs = [Output(name="data", display_name="Data", method="create_data")]
+
     def create_data(self) -> List[Data]:
         return [Data(text=t) for t in self.text_data]
+
+
 @pytest.mark.api_key_required
 @pytest.mark.asyncio
 async def test_astra_embeds_and_search():
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()
 
-    results = await run_single_component(AstraVectorStoreComponent, inputs={
-        "token": application_token,
-        "api_endpoint": api_endpoint,
-        "collection_name": BASIC_COLLECTION,
-        "number_of_results": 1,
-        "search_input":"test1",
-        "ingest_data": ComponentInputHandle(clazz=TextToData, inputs={"text_data": ["test1", "test2"]}, output_name="data"),
-        "embedding": ComponentInputHandle(clazz=OpenAIEmbeddingsComponent,
-                                          inputs={"openai_api_key": get_openai_api_key()}, output_name="embeddings"),
-    })
+    results = await run_single_component(
+        AstraVectorStoreComponent,
+        inputs={
+            "token": application_token,
+            "api_endpoint": api_endpoint,
+            "collection_name": BASIC_COLLECTION,
+            "number_of_results": 1,
+            "search_input": "test1",
+            "ingest_data": ComponentInputHandle(
+                clazz=TextToData, inputs={"text_data": ["test1", "test2"]}, output_name="data"
+            ),
+            "embedding": ComponentInputHandle(
+                clazz=OpenAIEmbeddingsComponent,
+                inputs={"openai_api_key": get_openai_api_key()},
+                output_name="embeddings",
+            ),
+        },
+    )
     assert len(results["search_results"]) == 1
-
 
 
 @pytest.mark.api_key_required
@@ -96,6 +110,7 @@ def test_astra_vectorize():
     from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
 
     from langflow.components.embeddings.AstraVectorize import AstraVectorizeComponent
+
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()
 
@@ -108,7 +123,6 @@ def test_astra_vectorize():
             token=application_token,
             collection_vector_service_options=CollectionVectorServiceOptions.from_dict(options),
         )
-
 
         documents = [Document(page_content="test1"), Document(page_content="test2")]
         records = [Data.from_document(d) for d in documents]

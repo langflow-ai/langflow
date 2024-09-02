@@ -33,7 +33,6 @@ from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
-from langflow.interface import initialize
 from langflow.logging.logger import LogConfig, configure
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
@@ -203,7 +202,6 @@ class Graph:
         self._edges = self._graph_data["edges"]
         self.initialize()
 
-
     def add_component(self, component: "Component", component_id: Optional[str] = None) -> str:
         component_id = component_id or component._id
         if component_id in self.vertex_map:
@@ -257,8 +255,6 @@ class Graph:
                 raise ValueError(f"Input field {input_name} not found in target vertex {target_id}")
             input_types = input_field.get("input_types", [])
             input_field_type = input_field.get("type", "")
-
-
 
         edge_data: EdgeData = {
             "source": source_id,

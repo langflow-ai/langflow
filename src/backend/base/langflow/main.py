@@ -25,7 +25,6 @@ from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
     load_flows_from_directory,
-    download_nltk_resources,
 )
 from langflow.interface.types import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
@@ -182,7 +181,7 @@ def create_app():
     FastAPIInstrumentor.instrument_app(app)
 
     # Get necessary NLTK packages
-    #download_nltk_resources()
+    # download_nltk_resources()
 
     return app
 

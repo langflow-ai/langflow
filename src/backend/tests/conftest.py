@@ -464,7 +464,6 @@ def get_starter_project(active_user):
         if not flow:
             raise ValueError("No starter project found")
 
-
         # ensure openai api key is set
         get_openai_api_key()
         new_flow_create = FlowCreate(
