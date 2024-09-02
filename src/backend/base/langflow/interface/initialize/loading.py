@@ -8,6 +8,7 @@ from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
+from langflow.events.event_manager import EventManager
 from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.services.deps import get_tracing_service
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
 async def instantiate_class(
     vertex: "Vertex",
     user_id=None,
+    event_manager: EventManager | None = None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
 
@@ -39,6 +41,8 @@ async def instantiate_class(
         _vertex=vertex,
         _tracing_service=get_tracing_service(),
     )
+    if hasattr(custom_component, "set_event_manager"):
+        custom_component.set_event_manager(event_manager)
     return custom_component, custom_params
 
 
