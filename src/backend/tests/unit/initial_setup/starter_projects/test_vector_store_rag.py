@@ -1,5 +1,4 @@
 import copy
-from collections import Counter, defaultdict
 from textwrap import dedent
 
 import pytest
@@ -15,7 +14,6 @@ from langflow.components.prompts.Prompt import PromptComponent
 from langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
-from langflow.graph.graph.schema import VertexBuildResult
 from langflow.schema.data import Data
 
 
@@ -29,7 +27,7 @@ def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent(_id="file-123")
     file_component.set(path="test.txt")
-    file_component.set_on_output("data", value=Data(text="This is a test file."))
+    file_component.set_on_output(name="data", value=Data(text="This is a test file."), cache=True)
     text_splitter = SplitTextComponent(_id="text-splitter-123")
     text_splitter.set(data_inputs=file_component.load_file)
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-123")
@@ -43,9 +41,10 @@ def ingestion_graph():
         api_endpoint="https://astra.example.com",
         token="token",
     )
-    vector_store.set_on_output("vector_store", value="mock_vector_store")
-    vector_store.set_on_output("base_retriever", value="mock_retriever")
-    vector_store.set_on_output("search_results", value=[Data(text="This is a test file.")])
+    vector_store.set_on_output(name="vector_store", value="mock_vector_store", cache=True)
+    vector_store.set_on_output(name="base_retriever", value="mock_retriever", cache=True)
+    vector_store.set_on_output(name="search_results", value=[Data(text="This is a test file.")], cache=True)
+
     ingestion_graph = Graph(file_component, vector_store)
     return ingestion_graph
 
@@ -65,14 +64,15 @@ def rag_graph():
     )
     # Mock search_documents
     rag_vector_store.set_on_output(
-        "search_results",
+        name="search_results",
         value=[
             Data(data={"text": "Hello, world!"}),
             Data(data={"text": "Goodbye, world!"}),
         ],
+        cache=True,
     )
-    rag_vector_store.set_on_output("base_retriever", value="mock_retriever")
-    rag_vector_store.set_on_output("vector_store", value="mock_vector_store")
+    rag_vector_store.set_on_output(name="vector_store", value="mock_vector_store", cache=True)
+    rag_vector_store.set_on_output(name="base_retriever", value="mock_retriever", cache=True)
     parse_data = ParseDataComponent(_id="parse-data-123")
     parse_data.set(data=rag_vector_store.search_documents)
     prompt_component = PromptComponent(_id="prompt-123")
@@ -88,7 +88,7 @@ def rag_graph():
 
     openai_component = OpenAIModelComponent(_id="openai-123")
     openai_component.set(api_key="sk-123", openai_api_base="https://api.openai.com/v1")
-    openai_component.set_on_output("text_output", value="Hello, world!")
+    openai_component.set_on_output(name="text_output", value="Hello, world!", cache=True)
     openai_component.set(input_value=prompt_component.build_prompt)
 
     chat_output = ChatOutput(_id="chatoutput-123")
@@ -98,7 +98,7 @@ def rag_graph():
     return graph
 
 
-def test_vector_store_rag(ingestion_graph: Graph, rag_graph: Graph):
+def test_vector_store_rag(ingestion_graph, rag_graph):
     assert ingestion_graph is not None
     ingestion_ids = [
         "file-123",
@@ -117,17 +117,11 @@ def test_vector_store_rag(ingestion_graph: Graph, rag_graph: Graph):
         "openai-embeddings-124",
     ]
     for ids, graph, len_results in zip([ingestion_ids, rag_ids], [ingestion_graph, rag_graph], [5, 8]):
-        results: list[VertexBuildResult] = []
-        ids_count = Counter(ids)
-        results_id_count: dict[str, int] = defaultdict(int)
-        for result in graph.start(config={"output": {"cache": True}}):
+        results = []
+        for result in graph.start():
             results.append(result)
-            if hasattr(result, "vertex"):
-                results_id_count[result.vertex.id] += 1
 
-        assert (
-            len(results) == len_results
-        ), f"Counts: {ids_count} != {results_id_count}, Diff: {set(ids_count.keys()) - set(results_id_count.keys())}"
+        assert len(results) == len_results
         vids = [result.vertex.id for result in results if hasattr(result, "vertex")]
         assert all(vid in ids for vid in vids), f"Diff: {set(vids) - set(ids)}"
         assert results[-1] == Finish()
