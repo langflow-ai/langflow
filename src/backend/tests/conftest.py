@@ -4,10 +4,11 @@ import shutil
 
 # we need to import tmpdir
 import tempfile
-from contextlib import contextmanager, suppress
+import uuid
+from collections.abc import AsyncGenerator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
-from collections.abc import AsyncGenerator
 
 import orjson
 import pytest
@@ -16,6 +17,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
+from tests.api_keys import get_openai_api_key
 from typer.testing import CliRunner
 
 from langflow.graph.graph.base import Graph
@@ -27,7 +29,6 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-from tests.api_keys import get_openai_api_key
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -248,29 +249,26 @@ def client_fixture(session: Session, monkeypatch, request, load_flows_dir):
     if "noclient" in request.keywords:
         yield
     else:
-        db_dir = tempfile.mkdtemp()
-        db_path = Path(db_dir) / "test.db"
-        monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
-        monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
-        if "load_flows" in request.keywords:
-            shutil.copyfile(
-                pytest.BASIC_EXAMPLE_PATH, os.path.join(load_flows_dir, "c54f9130-f2fa-4a3e-b22a-3856d946351b.json")
-            )
-            monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
-            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / f"{uuid.uuid4()}.db"
+            if "load_flows" in request.keywords:
+                shutil.copyfile(
+                    pytest.BASIC_EXAMPLE_PATH, os.path.join(load_flows_dir, "c54f9130-f2fa-4a3e-b22a-3856d946351b.json")
+                )
+                monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
+                monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
 
-        from langflow.main import create_app
+            from langflow.main import create_app
 
-        app = create_app()
+            app = create_app()
 
-        # app.dependency_overrides[get_session] = get_session_override
-        with TestClient(app) as client:
-            yield client
-        # app.dependency_overrides.clear()
-        monkeypatch.undo()
-        # clear the temp db
-        with suppress(FileNotFoundError):
-            db_path.unlink()
+            # app.dependency_overrides[get_session] = get_session_override
+            db_service = get_db_service()
+            db_service.database_url = f"sqlite:///{db_path}"
+            with TestClient(app) as client:
+                yield client
+            # app.dependency_overrides.clear()
+            monkeypatch.undo()
 
 
 # create a fixture for session_getter above
