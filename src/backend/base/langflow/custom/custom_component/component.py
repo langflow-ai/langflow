@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import ast
 import inspect
 from collections.abc import Callable
 from copy import deepcopy
+from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
 from uuid import UUID
 
@@ -83,6 +85,7 @@ class Component(CustomComponent):
             self.map_outputs(self.outputs)
         # Set output types
         self._set_output_types()
+        self._set_output_required_inputs()
         self.set_class_code()
 
     def set_event_manager(self, event_manager: EventManager | None = None):
@@ -296,6 +299,25 @@ class Component(CustomComponent):
             return_types = self._get_method_return_type(output.method)
             output.add_types(return_types)
             output.set_selected()
+
+    def _set_output_required_inputs(self):
+        for output in self.outputs:
+            if not output.method:
+                continue
+            method = getattr(self, output.method, None)
+            if not method or not callable(method):
+                continue
+
+            source_code = inspect.getsource(method)
+            ast_tree = ast.parse(dedent(source_code))
+
+            required_inputs = []
+            for node in ast.walk(ast_tree):
+                if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+                    if node.value.id == "self" and node.attr in self._inputs:
+                        required_inputs.append(node.attr)
+
+            output.required_inputs = list(set(required_inputs))
 
     def get_output_by_method(self, method: Callable):
         # method is a callable and output.method is a string
