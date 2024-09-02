@@ -22,7 +22,9 @@ def test_component_to_tool():
     tool = tools[0]
 
     assert tool.name == "ChatInput.message_response"
-    assert tool.description.startswith("Description: Get chat inputs from the Playground.")
-    assert "Output Types:" in tool.description
+    assert (
+        tool.description
+        == "message_response(files: file, input_value: Message, sender: str, sender_name: Message, session_id: Message, should_store_message: bool) - Get chat inputs from the Playground."
+    )
     assert isinstance(tool.func, Callable)
     assert tool.args_schema is not None
