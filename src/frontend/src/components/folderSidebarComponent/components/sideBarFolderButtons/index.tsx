@@ -70,9 +70,11 @@ const SideBarFoldersButtonsComponent = ({
       getObjectsFromFilelist<any>(files).then((objects) => {
         if (objects.every((flow) => flow.data?.nodes)) {
           uploadFlow({ files }).then(() => {
-            setSuccessData({
-              title: "Uploaded successfully",
-            });
+            if (files?.length > 0) {
+              setSuccessData({
+                title: "Uploaded successfully",
+              });
+            }
           });
         } else {
           files.forEach((folder) => {
