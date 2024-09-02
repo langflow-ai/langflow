@@ -13,20 +13,20 @@ const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
-  const { data, isLoading } = useGetFolderQuery({
+  const { data, isFetching } = useGetFolderQuery({
     id: folderId ?? myCollectionId ?? "",
   });
-  const { isLoading: isLoadingFolders } = useGetFoldersQuery();
+  const { isFetching: isLoadingFolders } = useGetFoldersQuery();
 
   return (
     <>
-      <HeaderTabsSearchComponent loading={isLoading || isLoadingFolders} />
+      <HeaderTabsSearchComponent loading={isFetching || isLoadingFolders} />
       <div className="mt-5 flex h-full flex-col">
         <ComponentsComponent
           key={type}
           type={type}
           currentFolder={data}
-          isLoading={isLoading || isLoadingFolders}
+          isLoading={isFetching || isLoadingFolders}
         />
       </div>
     </>
