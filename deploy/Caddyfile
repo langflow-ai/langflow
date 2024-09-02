@@ -1,0 +1,39 @@
+{
+    email langflow@langflow.org
+}
+
+localhost {
+
+    @api {
+        path /api/v1*
+        path /docs*
+        path /health*
+    }
+    reverse_proxy @api backend:7860
+
+    @pgadmin {
+        host pgadmin.{env.DOMAIN}
+    }
+    reverse_proxy @pgadmin pgadmin:5050
+
+    @prometheus {
+        path /metrics*
+    }
+    reverse_proxy @prometheus prometheus:9090
+
+    @grafana {
+        path /grafana*
+    }
+    reverse_proxy @grafana grafana:3000
+
+    @frontend {
+        not path /api/v1*
+        not path /docs*
+        not path /health*
+        not path /metrics*
+        not path /grafana*
+        not host pgadmin.{env.DOMAIN}
+        path /*
+    }
+    reverse_proxy @frontend frontend:80
+}
