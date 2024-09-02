@@ -5112,6 +5112,23 @@ litellm = ["litellm (>=1.40.15,<2.0.0)"]
 openai = ["openai (>=1.42.0,<2.0.0)"]
 
 [[package]]
+name = "lark"
+version = "1.2.2"
+description = "a modern parsing library"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "lark-1.2.2-py3-none-any.whl", hash = "sha256:c2276486b02f0f1b90be155f2c8ba4a8e194d42775786db622faccd652d8e80c"},
+    {file = "lark-1.2.2.tar.gz", hash = "sha256:ca807d0162cd16cef15a8feecb862d7319e7a09bdb13aef927968e45040fed80"},
+]
+
+[package.extras]
+atomic-cache = ["atomicwrites"]
+interegular = ["interegular (>=0.3.1,<0.4.0)"]
+nearley = ["js2py"]
+regex = ["regex"]
+
+[[package]]
 name = "litellm"
 version = "1.44.8"
 description = "Library to easily interface with LLM API providers"
@@ -11826,4 +11843,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "d6fd6b327ba3ded7e8eefd2505c0cc6f15d4a5a9f1fd34020dc25324e9f13be1"
+content-hash = "0be9d1ea13484a0ccf92511c188edaab862ab3b883813efaca2f9bfbbfccd2a8"
