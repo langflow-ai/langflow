@@ -1,41 +1,28 @@
-from typing import TYPE_CHECKING
+import asyncio
 
-from langflow.api.run_utils import simple_run_flow
-from langflow.api.v1.schemas import SimplifiedAPIRequest
-from langflow.core.celery_app import celery_app
-from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.user.model import UserRead
-from langflow.utils.async_helpers import run_until_complete
+from temporalio.client import Client
+from temporalio.worker import Worker
 
-if TYPE_CHECKING:
-    pass
+from langflow.services.deps import get_settings_service
+from langflow.tasks.activities.flow_activities import run_flow_activity
+from langflow.tasks.workflows.flow_workflows import RunFlowWorkflow
 
 
-@celery_app.task(acks_late=True)
-def test_celery(word: str) -> str:
-    return f"test task return {word}"
+async def run_worker():
+    settings_service = get_settings_service()
+    TEMPORAL_SERVER_URL = settings_service.settings.temporal_server_url
+    TASK_QUEUE_NAME = settings_service.settings.temporal_task_queue_name
+    client = await Client.connect(TEMPORAL_SERVER_URL)
+
+    async with Worker(
+        client,
+        task_queue=TASK_QUEUE_NAME,
+        workflows=[RunFlowWorkflow],
+        activities=[run_flow_activity],
+    ):
+        print("Worker started, ctrl+c to exit")
+        await asyncio.Future()  # run forever
 
 
-@celery_app.task(bind=True, max_retries=3)
-def run_flow_task(
-    self,
-    flow: dict,
-    input_request: dict,
-    stream: bool = False,
-    api_key_user: dict | None = None,
-):
-    try:
-        flow_read = FlowRead(**flow)
-        input_request_object = SimplifiedAPIRequest(**input_request)
-        user_read = UserRead(**api_key_user)
-        result = run_until_complete(
-            simple_run_flow(
-                flow=flow_read,
-                input_request=input_request_object,
-                stream=stream,
-                api_key_user=user_read,
-            )
-        )
-        return result
-    except Exception as e:
-        raise self.retry(exc=e)
+if __name__ == "__main__":
+    asyncio.run(run_worker())
