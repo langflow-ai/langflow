@@ -12,6 +12,7 @@ import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
+from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.events.event_manager import EventManager
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
@@ -306,17 +307,16 @@ class Component(CustomComponent):
             method = getattr(self, output.method, None)
             if not method or not callable(method):
                 continue
+            try:
+                source_code = inspect.getsource(method)
+                ast_tree = ast.parse(dedent(source_code))
+            except Exception:
+                source_code = self._code
+                ast_tree = ast.parse(dedent(source_code))
 
-            source_code = inspect.getsource(method)
-            ast_tree = ast.parse(dedent(source_code))
-
-            required_inputs = []
-            for node in ast.walk(ast_tree):
-                if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
-                    if node.value.id == "self" and node.attr in self._inputs:
-                        required_inputs.append(node.attr)
-
-            output.required_inputs = list(set(required_inputs))
+            visitor = RequiredInputsVisitor(self._inputs)
+            visitor.visit(ast_tree)
+            output.required_inputs = list(visitor.required_inputs)
 
     def get_output_by_method(self, method: Callable):
         # method is a callable and output.method is a string
