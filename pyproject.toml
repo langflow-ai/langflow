@@ -106,7 +106,7 @@ composio-langchain = "^0.5.8"
 spider-client = "^0.0.27"
 nltk = "^3.9.1"
 bson = "^0.5.10"
-clickhouse-connect = "0.7.19"
+lark = "^1.2.2"
 
 
 [tool.poetry.group.dev.dependencies]
