@@ -222,6 +222,8 @@ test("user must be able to stop a building", async ({ page }) => {
 
   await page.getByTestId("stop_building_button").click();
 
+  await page.waitForTimeout(1000);
+
   expect(await page.getByTestId("loading_icon").isHidden()).toBeTruthy();
   expect(
     await page.getByTestId("stop_building_button").isEnabled(),
