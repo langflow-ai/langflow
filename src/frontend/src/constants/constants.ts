@@ -898,3 +898,19 @@ export const SHORTCUT_KEYS = ["cmd", "ctrl", "alt", "shift"];
 
 export const SERVER_HEALTH_INTERVAL = 10000;
 export const REFETCH_SERVER_HEALTH_INTERVAL = 20000;
+export const DRAG_EVENTS_CUSTOM_TYPESS = {
+  genericnode: "genericNode",
+  notenode: "noteNode",
+};
+
+export const NOTE_NODE_MIN_WIDTH = 324;
+export const NOTE_NODE_MIN_HEIGHT = 324;
+export const NOTE_NODE_MAX_HEIGHT = 800;
+export const NOTE_NODE_MAX_WIDTH = 600;
+
+export const COLOR_OPTIONS = {
+  indigo: "var(--note-indigo)",
+  emerald: "var(--note-emerald)",
+  amber: "var(--note-amber)",
+  red: "var(--note-red)",
+};

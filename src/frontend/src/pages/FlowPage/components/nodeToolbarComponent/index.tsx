@@ -68,7 +68,6 @@ export default function NodeToolbarComponent({
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
-  const unselectAll = useFlowStore((state) => state.unselectAll);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [openModal, setOpenModal] = useState(false);
   const isGroup = data.node?.flow ? true : false;
@@ -254,9 +253,6 @@ export default function NodeToolbarComponent({
         break;
       case "disabled":
         break;
-      case "unselect":
-        unselectAll();
-        break;
       case "ungroup":
         handleungroup();
         break;
@@ -313,7 +309,6 @@ export default function NodeToolbarComponent({
   };
 
   const hasCode = Object.keys(data.node!.template).includes("code");
-  const [deleteIsFocus, setDeleteIsFocus] = useState(false);
 
   return (
     <>
@@ -576,12 +571,7 @@ export default function NodeToolbarComponent({
                   dataTestId="download-button-modal"
                 />
               </SelectItem>
-              <SelectItem
-                value={"delete"}
-                className="focus:bg-red-400/[.20]"
-                onFocus={() => setDeleteIsFocus(true)}
-                onBlur={() => setDeleteIsFocus(false)}
-              >
+              <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
                 <div className="font-red flex text-status-red">
                   <IconComponent
                     name="Trash2"
@@ -589,9 +579,7 @@ export default function NodeToolbarComponent({
                   />{" "}
                   <span className="">Delete</span>{" "}
                   <span
-                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${
-                      deleteIsFocus ? " " : "bg-muted"
-                    }`}
+                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2]`}
                   >
                     <IconComponent
                       name="Delete"

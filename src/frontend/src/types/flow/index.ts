@@ -30,6 +30,21 @@ export type NodeType = {
   selected?: boolean;
 };
 
+export interface noteClassType
+  extends Pick<APIClassType, "description" | "display_name" | "documentation"> {
+  template: {
+    backgroundColor: string;
+    [key: string]: any;
+  };
+}
+
+export interface noteDataType
+  extends Pick<NodeDataType, "showNode" | "type" | "id"> {
+  showNode?: boolean;
+  type: string;
+  node?: noteClassType;
+  id: string;
+}
 export type NodeDataType = {
   showNode?: boolean;
   type: string;
