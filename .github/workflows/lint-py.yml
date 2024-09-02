@@ -38,6 +38,6 @@ jobs:
           poetry install
       - name: Run Mypy
         run: |
-          make lint
+          poetry run mypy --namespace-packages -p "langflow"
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}

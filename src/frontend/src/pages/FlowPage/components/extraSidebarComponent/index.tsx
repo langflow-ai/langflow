@@ -16,6 +16,7 @@ import { APIClassType, APIObjectType } from "../../../../types/api";
 import { nodeIconsLucide } from "../../../../utils/styleUtils";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import { SidebarCategoryComponent } from "./SidebarCategoryComponent";
+
 import { sortKeys } from "./utils";
 
 export default function ExtraSidebar(): JSX.Element {
@@ -41,7 +42,7 @@ export default function ExtraSidebar(): JSX.Element {
     crt.classList.add("cursor-grabbing");
     document.body.appendChild(crt);
     event.dataTransfer.setDragImage(crt, 0, 0);
-    event.dataTransfer.setData("nodedata", JSON.stringify(data));
+    event.dataTransfer.setData("genericNode", JSON.stringify(data));
   }
 
   // Handle showing components after use search input
@@ -218,12 +219,14 @@ export default function ExtraSidebar(): JSX.Element {
         </div>
       </div>
       <Separator />
+
       <div className="side-bar-components-div-arrangement">
         <div className="parent-disclosure-arrangement">
           <div className="flex items-center gap-4 align-middle">
             <span className="parent-disclosure-title">Components</span>
           </div>
         </div>
+        <Separator />
         {Object.keys(dataFilter)
           .sort(sortKeys)
           .filter((x) => PRIORITY_SIDEBAR_ORDER.includes(x))
@@ -253,7 +256,11 @@ export default function ExtraSidebar(): JSX.Element {
         >
           {Object.keys(dataFilter)
             .sort(sortKeys)
-            .filter((x) => !PRIORITY_SIDEBAR_ORDER.includes(x))
+            .filter(
+              (x) =>
+                !PRIORITY_SIDEBAR_ORDER.includes(x) &&
+                !BUNDLES_SIDEBAR_FOLDER_NAMES.includes(x),
+            )
             .map((SBSectionName: keyof APIObjectType, index) =>
               Object.keys(dataFilter[SBSectionName]).length > 0 ? (
                 <SidebarCategoryComponent

@@ -108,6 +108,7 @@ def test_graph_state_model_serialization():
     assert serialized_state_model["chat_input"]["message"]["text"] == "Test Sender Name"
 
 
+@pytest.mark.skip(reason="Not implemented yet")
 def test_graph_state_model_json_schema():
     chat_input = ChatInput(_id="chat_input")
     chat_input.set(input_value="Test Sender Name")

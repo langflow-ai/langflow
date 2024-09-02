@@ -54,7 +54,7 @@ export default function ApiModal({
         />
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
-        <CustomAPIGenerator />
+        <CustomAPIGenerator isOpen={open} />
         <CodeTabsComponent
           open={open}
           tabs={tabs!}

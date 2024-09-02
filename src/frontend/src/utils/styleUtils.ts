@@ -1,5 +1,6 @@
 import { AIMLIcon } from "@/icons/AIML";
 import Perplexity from "@/icons/Perplexity/Perplexity";
+import { UnstructuredIcon } from "@/icons/Unstructured";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import {
@@ -25,6 +26,7 @@ import {
   ChevronRight,
   ChevronRightSquare,
   ChevronUp,
+  ChevronsDownUp,
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
@@ -136,6 +138,7 @@ import {
   Sparkles,
   Square,
   SquarePen,
+  StickyNote,
   Store,
   SunIcon,
   Table,
@@ -285,6 +288,7 @@ export const nodeColors: { [char: string]: string } = {
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
   notion: "#000000",
+  Notion: "#000000",
   helpers: "#31A3CC",
   prototypes: "#E6277A",
   astra_assistants: "#272541",
@@ -312,6 +316,7 @@ export const nodeNames: { [char: string]: string } = {
   prompts: "Prompts",
   models: "Models",
   notion: "Notion",
+  Notion: "Notion",
   model_specs: "Model Specs",
   chains: "Chains",
   agents: "Agents",
@@ -395,6 +400,7 @@ export const nodeIconsLucide: iconsType = {
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
   Groq: GroqIcon,
   HNLoader: HackerNewsIcon,
+  Unstructured: UnstructuredIcon,
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
   HuggingFaceEmbeddings: HuggingFaceIcon,
@@ -408,6 +414,7 @@ export const nodeIconsLucide: iconsType = {
   MongoDB: MongoDBIcon,
   MongoDBChatMessageHistory: MongoDBIcon,
   notion: NotionIcon,
+  Notion: NotionIcon,
   NotionDirectoryLoader: NotionIcon,
   NVIDIA: NvidiaIcon,
   ChatOpenAI: OpenAiIcon,
@@ -585,6 +592,8 @@ export const nodeIconsLucide: iconsType = {
   Command,
   ArrowBigUp,
   Dot,
+  StickyNote,
+  note: StickyNote,
   RotateCcw,
   Wrench,
   FolderPlusIcon,
@@ -596,6 +605,7 @@ export const nodeIconsLucide: iconsType = {
   MistralAI: MistralIcon,
   Upstash: UpstashSvgIcon,
   PGVector: CpuIcon,
+  ChevronsDownUp,
   Confluence: ConfluenceIcon,
   FreezeAll: freezeAllIcon,
   Table: Table,

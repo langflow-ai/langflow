@@ -1,6 +1,6 @@
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
-from collections.abc import Callable, Sequence
 
 import yaml
 from cachetools import TTLCache
@@ -10,9 +10,7 @@ from pydantic import BaseModel
 from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Data
-from langflow.schema.artifact import get_artifact_type
 from langflow.schema.dotdict import dotdict
-from langflow.schema.log import LoggableType
 from langflow.schema.schema import OutputValue
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
@@ -508,20 +506,6 @@ class CustomComponent(BaseComponent):
             Any: The result of the build process.
         """
         raise NotImplementedError
-
-    def log(self, message: LoggableType | list[LoggableType], name: str | None = None):
-        """
-        Logs a message.
-
-        Args:
-            message (LoggableType | list[LoggableType]): The message to log.
-        """
-        if name is None:
-            name = f"Log {len(self._logs) + 1}"
-        log = Log(message=message, type=get_artifact_type(message), name=name)
-        self._logs.append(log)
-        if self._tracing_service and self._vertex:
-            self._tracing_service.add_log(trace_name=self.trace_name, log=log)
 
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """
