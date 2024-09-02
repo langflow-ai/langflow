@@ -228,6 +228,7 @@ async function performStreamingRequest({
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
   const controller = new AbortController();
+  useFlowStore.getState().setBuildController(controller);
   const params = {
     method: method,
     headers: headers,

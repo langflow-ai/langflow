@@ -79,6 +79,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
+  stopBuilding: () => {
+    get().buildController.abort();
+  },
   isPending: true,
   setHasIO: (hasIO) => {
     set({ hasIO });
@@ -765,6 +768,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         },
       },
     });
+  },
+  buildController: new AbortController(),
+  setBuildController: (controller) => {
+    set({ buildController: controller });
   },
 }));
 
