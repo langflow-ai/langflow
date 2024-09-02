@@ -1,4 +1,3 @@
-# from langflow.field_typing import Data
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.vectorstores import VectorStore
@@ -25,18 +24,22 @@ class SelfQueryRetrieverComponent(CustomComponent):
             "vectorstore": {
                 "display_name": "Vector Store",
                 "info": "Vector Store to be passed as input.",
+                "input_types": ["VectorStore"],
             },
             "attribute_infos": {
                 "display_name": "Metadata Field Info",
                 "info": "Metadata Field Info to be passed as input.",
+                "input_types": ["Data"],
             },
             "document_content_description": {
                 "display_name": "Document Content Description",
                 "info": "Document Content Description to be passed as input.",
+                "input_types": ["Message", "Text"],
             },
             "llm": {
                 "display_name": "LLM",
                 "info": "LLM to be passed as input.",
+                "input_types": ["LanguageModel"],
             },
         }
 
@@ -62,8 +65,9 @@ class SelfQueryRetrieverComponent(CustomComponent):
         elif isinstance(query, str):
             input_text = query
 
-        if not isinstance(query, str):
+        if not isinstance(input_text, str):
             raise ValueError(f"Query type {type(query)} not supported.")
+
         documents = self_query_retriever.invoke(input=input_text, config={"callbacks": self.get_langchain_callbacks()})
         data = [Data.from_document(document) for document in documents]
         self.status = data
