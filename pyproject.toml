@@ -51,9 +51,7 @@ supabase = "^2.3.0"
 certifi = ">=2023.11.17,<2025.0.0"
 psycopg = "3.1.9" # https://github.com/psycopg/psycopg/issues/858
 fastavro = "^1.8.0"
-celery = { extras = ["redis"], version = "^5.3.6", optional = true }
 redis = "^5.0.1"
-flower = { version = "^2.0.0", optional = true }
 metaphor-python = "^0.1.11"
 pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
 langfuse = "^2.33.0"
@@ -140,8 +138,11 @@ pytest-split = "^0.9.0"
 pytest-flakefinder = "^1.1.0"
 types-markdown = "^3.7.0.20240822"
 
+
+[tool.poetry.group.deploy.dependencies]
+temporalio = "^1.7.0"
+
 [tool.poetry.extras]
-deploy = ["celery", "redis", "flower"]
 couchbase = ["couchbase"]
 cassio = ["cassio"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]

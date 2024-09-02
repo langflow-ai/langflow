@@ -6118,6 +6118,31 @@ files = [
 widechars = ["wcwidth"]
 
 [[package]]
+name = "temporalio"
+version = "1.7.0"
+description = "Temporal.io Python SDK"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "temporalio-1.7.0-cp38-abi3-macosx_10_9_x86_64.whl", hash = "sha256:92ec0a1af8d4b41245df339a422f1f87367742d9638d2dba7bb7d3ab934e7f5d"},
+    {file = "temporalio-1.7.0-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:8b4bb77d766a2ac1d85f3e9b682658fee67d77e87f73bd256d46cd79ecf767f6"},
+    {file = "temporalio-1.7.0-cp38-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:a38dd43061666700500d5808c18ec0b0f569504a2f22b99d7c38dc4dc50b21fd"},
+    {file = "temporalio-1.7.0-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:e0087fb6cdb9e9b8aa62c1705526947cb00a91159435d294f3da0d92b501ed56"},
+    {file = "temporalio-1.7.0-cp38-abi3-win_amd64.whl", hash = "sha256:eb45b751c6f7946dccba29260922f0e7192b28b8fb9e2aa5afc2aaf5157891d9"},
+    {file = "temporalio-1.7.0.tar.gz", hash = "sha256:5057b74df644bd4f5f4eb0e95e730a0a36a16f7ee926d36fcd479c223a7c63cd"},
+]
+
+[package.dependencies]
+protobuf = ">=3.20"
+python-dateutil = {version = ">=2.8.2,<3.0.0", markers = "python_version < \"3.11\""}
+types-protobuf = ">=3.20"
+typing-extensions = ">=4.2.0,<5.0.0"
+
+[package.extras]
+grpc = ["grpcio (>=1.59.0,<2.0.0)"]
+opentelemetry = ["opentelemetry-api (>=1.11.1,<2.0.0)", "opentelemetry-sdk (>=1.11.1,<2.0.0)"]
+
+[[package]]
 name = "tenacity"
 version = "8.5.0"
 description = "Retry code until it succeeds"
@@ -6454,6 +6479,17 @@ python-versions = ">=3.8"
 files = [
     {file = "types-Pillow-10.2.0.20240520.tar.gz", hash = "sha256:130b979195465fa1e1676d8e81c9c7c30319e8e95b12fae945e8f0d525213107"},
     {file = "types_Pillow-10.2.0.20240520-py3-none-any.whl", hash = "sha256:33c36494b380e2a269bb742181bea5d9b00820367822dbd3760f07210a1da23d"},
+]
+
+[[package]]
+name = "types-protobuf"
+version = "5.27.0.20240626"
+description = "Typing stubs for protobuf"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-protobuf-5.27.0.20240626.tar.gz", hash = "sha256:683ba14043bade6785e3f937a7498f243b37881a91ac8d81b9202ecf8b191e9c"},
+    {file = "types_protobuf-5.27.0.20240626-py3-none-any.whl", hash = "sha256:688e8f7e8d9295db26bc560df01fb731b27a25b77cbe4c1ce945647f7024f5c1"},
 ]
 
 [[package]]
@@ -7291,10 +7327,9 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [extras]
 all = []
-deploy = []
 local = []
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "075141462d7ef6e4aff0d55e5fe902e46faec28139556804f1dc3c7ee011d5c9"
+content-hash = "f99e3d293234870d0332712ae14bb4e0984266353a47991a603b4a5dee85082d"
