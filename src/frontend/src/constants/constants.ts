@@ -728,7 +728,7 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "embeddings",
 ];
 
-export const BUNDLES_SIDEBAR_FOLDER_NAMES = ["notion"];
+export const BUNDLES_SIDEBAR_FOLDER_NAMES = ["notion", "Notion"];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
   "/health",
