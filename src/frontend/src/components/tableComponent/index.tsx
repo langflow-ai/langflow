@@ -122,7 +122,9 @@ const TableComponent = forwardRef<
         }
       }, 50);
       setTimeout(() => {
-        realRef?.current?.api?.hideOverlay();
+        if (!realRef?.current?.api?.isDestroyed) {
+          realRef?.current?.api?.hideOverlay();
+        }
       }, 1000);
       if (props.onGridReady) props.onGridReady(params);
     };
