@@ -59,7 +59,11 @@ class Message(Data):
     def serialize_flow_id(value):
         if isinstance(value, str):
             return UUID(value)
-        return value
+        return str(value)
+
+    @field_serializer("timestamp")
+    def serialize_timestamp(value):
+        return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
 
     @field_validator("files", mode="before")
     @classmethod

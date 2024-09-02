@@ -5,7 +5,7 @@ import uuid
 from functools import partial
 
 from typing_extensions import Protocol
-
+from langflow.schema.message import Message
 from langflow.schema.log import LoggableType
 
 
@@ -28,9 +28,17 @@ class EventManager:
         self.events[name] = event_function
 
     def send_event(self, event_type: str, data: dict):
+
+        if isinstance(data, Message):
+            data = data.model_dump()
+
         json_data = {"event": event_type, "data": data}
-        event_id = uuid.uuid4()
-        str_data = json.dumps(json_data) + "\n\n"
+        event_id = str(uuid.uuid4())
+        try:
+            str_data = json.dumps(json_data, default=str) + "\n\n"
+        except:
+            import pdb; pdb.set_trace()
+            print('-')
         self.queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
 
     def noop(self, event_type: str, data: dict):
