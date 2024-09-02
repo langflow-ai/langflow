@@ -1,7 +1,8 @@
 import pytest
 
-from langflow.base.tools.component_tool import ComponentTool
+from langflow.base.tools.component_tool import ComponentToolkit
 from langflow.components.inputs.ChatInput import ChatInput
+from langflow.schema.message import Message
 
 
 @pytest.fixture
@@ -11,9 +12,10 @@ def client():
 
 def test_component_tool():
     chat_input = ChatInput()
-    component_tool = ComponentTool(component=chat_input)
-    assert component_tool.name == "ChatInput"
-    assert component_tool.description == chat_input.description
+    component_toolkit = ComponentToolkit(component=chat_input)
+    component_tool = component_toolkit.get_tools()[0]
+    assert component_tool.name == "ChatInput.message_response"
+    assert component_tool.description == "Description: Get chat inputs from the Playground.\nOutput Types: ['Message']"
     assert component_tool.args == {
         "input_value": {
             "default": "",
@@ -54,9 +56,8 @@ def test_component_tool():
             "type": "array",
         },
     }
-    assert component_tool.component == chat_input
+    assert component_toolkit.component == chat_input
 
     result = component_tool.invoke(input=dict(input_value="test"))
-    assert isinstance(result, dict)
-    assert hasattr(result["message"], "get_text")
-    assert result["message"].get_text() == "test"
+    assert isinstance(result, Message)
+    assert result.get_text() == "test"
