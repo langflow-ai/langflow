@@ -62,6 +62,9 @@ export default function GlobalVariablesPage() {
     {
       headerName: "Apply To Fields",
       field: "default_fields",
+      valueFormatter: (params) => {
+        return params.value.join(", ");
+      },
       flex: 1,
       editable: false,
       resizable: false,
