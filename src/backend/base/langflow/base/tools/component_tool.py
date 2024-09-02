@@ -5,12 +5,26 @@ from langchain_core.tools.base import BaseToolkit
 from langchain_core.tools.structured import StructuredTool
 
 from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import InputTypes
 from langflow.io import Output
 from langflow.io.schema import create_input_schema
 
 
+def _get_input_type(input: InputTypes):
+    if input.input_types:
+        if len(input.input_types) == 1:
+            return input.input_types[0]
+        return " | ".join(input.input_types)
+    return input.field_type
+
+
 def build_description(component: Component, output: Output):
-    return f"Description: {component.description}\nOutput Types: {output.types}"
+    args = ", ".join(
+        sorted(
+            [f"{input_name}: {_get_input_type(component._inputs[input_name])}" for input_name in output.required_inputs]
+        )
+    )
+    return f"{output.method}({args}) - {component.description}"
 
 
 def _build_output_function(component: Component, output_method: Callable):
