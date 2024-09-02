@@ -136,7 +136,12 @@ class ComponentInputHandle:
 
 
 async def run_single_component(
-    clazz: type, inputs: dict = None, run_input: Optional[Any] = None, session_id: Optional[str] = None, input_type: Optional[str] = "chat") -> dict[str, Any]:
+    clazz: type,
+    inputs: dict = None,
+    run_input: Optional[Any] = None,
+    session_id: Optional[str] = None,
+    input_type: Optional[str] = "chat",
+) -> dict[str, Any]:
     user_id = str(uuid.uuid4())
     flow_id = str(uuid.uuid4())
     graph = Graph(user_id=user_id, flow_id=flow_id)
