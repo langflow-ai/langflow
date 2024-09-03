@@ -18,6 +18,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -89,6 +90,14 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       setCurrentFlow(undefined);
     };
   }, [id]);
+
+  useEffect(() => {
+    if (blocker.state === "blocked") {
+      if (autoSaving && changesNotSaved && !saveLoading) {
+        saveFlow();
+      }
+    }
+  }, [blocker.state]);
 
   return (
     <>
