@@ -1,5 +1,4 @@
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
-import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { ENABLE_BRANDING } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
@@ -29,7 +28,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id } = useParams();
   const navigate = useCustomNavigate();
-  useGetGlobalVariables();
   const saveFlow = useSaveFlow();
 
   const flows = useFlowsManagerStore((state) => state.flows);

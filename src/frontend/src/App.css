@@ -164,3 +164,11 @@ body {
   width: 100%;
   height: 100%;
 }
+.react-flow__resize-control.handle {
+  width: 0.75rem!important;
+  height: 0.75rem !important;
+  background-color: white !important;
+  border-color: var(--border) !important;
+  z-index: 1000 !important;
+  border-radius: 20% !important;
+}

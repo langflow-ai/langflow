@@ -102,8 +102,6 @@ class ComponentVertex(Vertex):
                 )
             for edge in self.get_edge_with_target(requester.id):
                 # We need to check if the edge is a normal edge
-                # or a contract edge
-
                 if edge.is_cycle and edge.target_param:
                     return requester.get_value_from_template_dict(edge.target_param)
 
@@ -201,6 +199,7 @@ class ComponentVertex(Vertex):
 class InterfaceVertex(ComponentVertex):
     def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph)
+        self._added_message = None
         self.steps = [self._build, self._run]
 
     def build_stream_url(self):

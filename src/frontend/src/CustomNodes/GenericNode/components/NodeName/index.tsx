@@ -17,7 +17,6 @@ export default function NodeName({
   const [nodeName, setNodeName] = useState(display_name);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = useFlowStore((state) => state.setNode);
-
   useEffect(() => {
     if (!selected) {
       setInputName(false);
@@ -29,7 +28,7 @@ export default function NodeName({
   }, [display_name]);
 
   return inputName ? (
-    <div>
+    <div className="w-full">
       <InputComponent
         onBlur={() => {
           setInputName(false);
@@ -58,7 +57,7 @@ export default function NodeName({
       />
     </div>
   ) : (
-    <div className="group flex items-center gap-1">
+    <div className="group flex w-full items-center gap-1">
       <ShadTooltip content={display_name}>
         <div
           onDoubleClick={(event) => {
@@ -68,7 +67,7 @@ export default function NodeName({
             event.preventDefault();
           }}
           data-testid={"title-" + display_name}
-          className="nodoubleclick generic-node-tooltip-div cursor-text text-primary"
+          className="nodoubleclick w-full cursor-text truncate text-primary"
         >
           {display_name}
         </div>
