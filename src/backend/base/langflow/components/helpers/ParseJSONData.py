@@ -38,31 +38,39 @@ class ParseJSONDataComponent(Component):
     ]
 
 
-    def _parse_data(self, input_value):
+    def _parse_data(self, input_value) -> str:
         if isinstance(input_value, Message):
             return input_value.text
         if isinstance(input_value, Data):
-            return input_value.data
-        return input_value
+            return json.dumps(input_value.data)
+        return str(input_value)
 
     def filter_data(self) -> list[Data]:
-
         to_filter = self.input_value
+        if not to_filter:
+            return []
         if isinstance(to_filter, list):
             to_filter = [self._parse_data(f) for f in to_filter]
         else:
             to_filter = [self._parse_data(to_filter)]
 
-        if len(to_filter):
-            try:
-                to_filter = [json.loads(str(f)) for f in to_filter]
-            except json.JSONDecodeError:
-                to_filter = [repair_json(str(f)) for f in to_filter]
-            except Exception:
-                pass
-        to_filter = json.dumps(to_filter)
-        to_filter = str(to_filter)
 
-        results = jq.compile(self.query).input_text(to_filter).all()
-        docs = [Data(data=value) for value in results]
+        to_filter = [repair_json(f) for f in to_filter]
+        to_filter_as_dict = []
+        for f in to_filter:
+            try:
+                to_filter_as_dict.append(json.loads(f))
+            except JSONDecodeError as e:
+                try:
+                    to_filter_as_dict.append(json.loads(repair_json(f)))
+                except JSONDecodeError as e:
+                    raise ValueError(f"Invalid JSON: {e}")
+
+        full_filter_str = json.dumps(to_filter_as_dict)
+
+        print("to_filter: ", to_filter)
+
+        results = jq.compile(self.query).input_text(full_filter_str).all()
+        print("results: ", results)
+        docs = [Data(data=value) if isinstance(value, dict) else Data(text=str(value)) for value in results]
         return docs
