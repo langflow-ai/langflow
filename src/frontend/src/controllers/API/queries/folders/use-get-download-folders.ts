@@ -20,6 +20,10 @@ export const useGetDownloadFolders: useMutationFunctionType<
     return res.data;
   };
 
-  const mutation = mutate(["useGetFolders"], downloadFoldersFn, options);
+  const mutation = mutate(
+    ["useGetDownloadFolders"],
+    downloadFoldersFn,
+    options,
+  );
   return mutation;
 };

@@ -234,7 +234,7 @@ export default function ComponentsComponent({
               <EmptyComponent />
             ) : (
               <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
-                {data?.length > 0 && isLoading === false ? (
+                {data?.length > 0 ? (
                   <>
                     {data?.map((item) => (
                       <FormProvider {...methods} key={item.id}>
