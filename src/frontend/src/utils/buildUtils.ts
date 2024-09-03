@@ -11,6 +11,7 @@ import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import { VertexLayerElementType } from "../types/zustand/flow";
 import { tryParseJson } from "./utils";
 import { useMessagesStore } from "@/stores/messagesStore";
+import { timeStamp } from "console";
 
 type BuildVerticesParams = {
   setLockChat?: (lock: boolean) => void;
@@ -273,8 +274,9 @@ export async function buildFlowVertices({
         return true;
       }
       case "token": {
-        console.log(data);
-        // await one second before sending the next token
+        // console.log(data);
+        // await one milisencond so the streaming can work
+        await new Promise((resolve) => setTimeout(resolve, 1));
         useMessagesStore.getState().updateMessagePartial(data);
         return true;
       }

@@ -33,12 +33,16 @@ export default function ChatMessage({
   const [streamUrl, setStreamUrl] = useState(chat.stream_url);
   // We need to check if message is not undefined because
   // we need to run .toString() on it
-  const chatMessageString = chat.message ? chat.message.toString() : "";
-  const [chatMessage, setChatMessage] = useState(chatMessageString);
+  const [chatMessage, setChatMessage] = useState(chat.message ? chat.message.toString() : "");
   const [isStreaming, setIsStreaming] = useState(false);
   const eventSource = useRef<EventSource | undefined>(undefined);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const chatMessageRef = useRef(chatMessage);
+
+  useEffect(() => {
+    const chatMessageString = chat.message ? chat.message.toString() : "";
+    setChatMessage(chatMessageString);
+  },[chat]);
 
   // Sync ref with state
   useEffect(() => {
