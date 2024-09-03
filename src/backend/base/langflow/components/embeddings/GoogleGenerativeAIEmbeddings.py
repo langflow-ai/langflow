@@ -19,11 +19,11 @@ import numpy as np
 
 
 class GoogleGenerativeAIEmbeddingsComponent(Component):
-    display_name = "Google GenerativeAI Embeddings"
+    display_name = "Google Generative AI Embeddings"
     description = "Connect to Google's generative AI embeddings service using the GoogleGenerativeAIEmbeddings class, found in the langchain-google-genai package."
     documentation: str = "https://python.langchain.com/v0.2/docs/integrations/text_embedding/google_generative_ai/"
     icon = "Google"
-    name = "Google GenerativeAI Embeddings"
+    name = "Google Generative AI Embeddings"
 
     inputs = [
         SecretStrInput(name="api_key", display_name="API Key"),
