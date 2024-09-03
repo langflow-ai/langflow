@@ -43,7 +43,7 @@ jobs:
         run: |
           poetry env use ${{ matrix.python-version }}
           poetry install
-      - name: Run integration tests
-        timeout-minutes: 12
+      - name: Run integration tests with api keys
+        timeout-minutes: 20
         run: |
-          make integration_tests
+          make integration_tests_api_keys

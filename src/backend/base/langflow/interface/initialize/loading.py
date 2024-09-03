@@ -116,8 +116,8 @@ def update_params_with_load_from_db_fields(
                 try:
                     key = custom_component.variables(params[field], field)
                 except ValueError as e:
-                    # check if "User id is not set" is in the error message
-                    if "User id is not set" in str(e) and not fallback_to_env_vars:
+                    # check if "User id is not set" is in the error message, this is an internal bug
+                    if "User id is not set" in str(e):
                         raise e
                     logger.debug(str(e))
                 if fallback_to_env_vars and key is None:

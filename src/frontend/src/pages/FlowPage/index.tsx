@@ -1,12 +1,12 @@
-import FeatureFlags from "@/../feature-config.json";
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
-import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import { ENABLE_BRANDING } from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect } from "react";
-import { useBlocker, useNavigate, useParams } from "react-router-dom";
+import { useBlocker, useParams } from "react-router-dom";
 import FlowToolbar from "../../components/chatComponent";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
@@ -27,8 +27,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const version = useDarkStore((state) => state.version);
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id } = useParams();
-  const navigate = useNavigate();
-  useGetGlobalVariables();
+  const navigate = useCustomNavigate();
   const saveFlow = useSaveFlow();
 
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -106,7 +105,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
             </main>
           </div>
         )}
-        {FeatureFlags.ENABLE_BRANDING && version && (
+        {ENABLE_BRANDING && version && (
           <a
             target={"_blank"}
             href="https://medium.com/logspace/langflow-datastax-better-together-1b7462cebc4d"

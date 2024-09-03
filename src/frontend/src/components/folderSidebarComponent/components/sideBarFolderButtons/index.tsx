@@ -4,6 +4,7 @@ import {
   usePostUploadFolders,
 } from "@/controllers/API/queries/folders";
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
+import { ENABLE_CUSTOM_PARAM } from "@/customization/feature-flags";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
@@ -44,7 +45,8 @@ const SideBarFoldersButtonsComponent = ({
     folders.map((obj) => ({ name: obj.name, edit: false })) ?? [],
   );
   const currentFolder = pathname.split("/");
-  const urlWithoutPath = pathname.split("/").length < 4;
+  const urlWithoutPath =
+    pathname.split("/").length < (ENABLE_CUSTOM_PARAM ? 5 : 4);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folderIdDragging = useFolderStore((state) => state.folderIdDragging);
 
@@ -65,6 +67,10 @@ const SideBarFoldersButtonsComponent = ({
 
   const handleUploadFlowsToFolder = () => {
     createFileUpload().then((files: File[]) => {
+      if (files?.length === 0) {
+        return;
+      }
+
       getObjectsFromFilelist<any>(files).then((objects) => {
         if (objects.every((flow) => flow.data?.nodes)) {
           uploadFlow({ files }).then(() => {

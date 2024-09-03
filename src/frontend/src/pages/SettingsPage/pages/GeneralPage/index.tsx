@@ -1,4 +1,3 @@
-import FeatureFlags from "@/../feature-config.json";
 import {
   EDIT_PASSWORD_ALERT_LIST,
   EDIT_PASSWORD_ERROR_ALERT,
@@ -11,6 +10,7 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
+import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import { cloneDeep } from "lodash";
 import { useContext, useState } from "react";
@@ -146,7 +146,7 @@ export const GeneralPage = () => {
       <GeneralPageHeaderComponent />
 
       <div className="grid gap-6">
-        {FeatureFlags.ENABLE_PROFILE_ICONS && (
+        {ENABLE_PROFILE_ICONS && (
           <ProfilePictureFormComponent
             profilePicture={profilePicture}
             handleInput={handleInput}

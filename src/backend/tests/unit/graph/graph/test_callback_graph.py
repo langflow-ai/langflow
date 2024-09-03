@@ -23,11 +23,11 @@ class LogComponent(Component):
 def test_callback_graph():
     logs: list[tuple[str, dict]] = []
 
-    def mock_callback(event_type: str, data: dict):
+    def mock_callback(manager, event_type: str, data: dict):
         logs.append((event_type, data))
 
     event_manager = EventManager(queue=asyncio.Queue())
-    event_manager.register_event_function("on_log", mock_callback)
+    event_manager.register_event("on_log", "log", callback=mock_callback)
 
     log_component = LogComponent(_id="log_component")
     log_component.set(times=3)

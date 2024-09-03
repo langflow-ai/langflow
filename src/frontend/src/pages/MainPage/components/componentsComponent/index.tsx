@@ -1,6 +1,4 @@
 import { usePostDownloadMultipleFlows } from "@/controllers/API/queries/flows";
-import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
-import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
@@ -13,6 +11,7 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { FlowType } from "../../../../types/flow";
+import { FolderType } from "../../entities";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { getNameByType } from "../../utils/get-name-by-type";
 import { sortFlows } from "../../utils/sort-flows";
@@ -28,11 +27,13 @@ import useSelectedFlows from "./hooks/use-selected-flows";
 
 export default function ComponentsComponent({
   type = "all",
+  currentFolder,
+  isLoading,
 }: {
   type?: string;
+  currentFolder?: FolderType;
+  isLoading: boolean;
 }) {
-  const isLoading = useFlowsManagerStore((state) => state.isLoading);
-
   const { folderId } = useParams();
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -51,10 +52,6 @@ export default function ComponentsComponent({
   );
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
-  const { data: currentFolder, isLoading: isLoadingCurrentFolder } =
-    useGetFolderQuery({
-      id: folderId ?? myCollectionId ?? "",
-    });
   const flowsFromFolder = currentFolder?.flows ?? [];
 
   const [filteredFlows, setFilteredFlows] =
@@ -70,10 +67,6 @@ export default function ComponentsComponent({
   const location = useLocation();
 
   const name = getNameByType(type);
-
-  const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
-
-  const { isLoading: isLoadingFolders } = useGetFoldersQuery();
 
   const [shouldSelectAll, setShouldSelectAll] = useState(true);
 
@@ -188,7 +181,6 @@ export default function ComponentsComponent({
   const handleDeleteMultiple = () => {
     deleteFlow({ id: selectedFlowsComponentsCards })
       .then(() => {
-        setSelectedFolder(null);
         resetFilter();
         setSelectedFlowsComponentsCards([]);
         handleSelectAll(false);
@@ -218,12 +210,7 @@ export default function ComponentsComponent({
     <>
       <div className="flex w-full gap-4 pb-5">
         <HeaderComponent
-          disabled={
-            isLoading ||
-            isLoadingFolders ||
-            isLoadingCurrentFolder ||
-            data?.length === 0
-          }
+          disabled={isLoading || data?.length === 0}
           shouldSelectAll={shouldSelectAll}
           setShouldSelectAll={setShouldSelectAll}
           handleDelete={() => handleSelectOptionsChange("delete")}
@@ -243,16 +230,11 @@ export default function ComponentsComponent({
           data-testid="cards-wrapper"
         >
           <div className="flex w-full flex-col gap-4">
-            {!isLoading &&
-            !isLoadingFolders &&
-            !isLoadingCurrentFolder &&
-            data?.length === 0 ? (
+            {!isLoading && data?.length === 0 ? (
               <EmptyComponent />
             ) : (
               <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
-                {data?.length > 0 &&
-                isLoadingFolders === false &&
-                isLoadingCurrentFolder === false ? (
+                {data?.length > 0 ? (
                   <>
                     {data?.map((item) => (
                       <FormProvider {...methods} key={item.id}>

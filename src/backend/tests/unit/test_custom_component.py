@@ -19,7 +19,7 @@ def client():
 
 @pytest.fixture
 def code_component_with_multiple_outputs():
-    with open("src/backend/tests/data/component_multiple_outputs.py", "r") as f:
+    with open("src/backend/tests/data/component_multiple_outputs.py") as f:
         code = f.read()
         return Component(_code=code)
 

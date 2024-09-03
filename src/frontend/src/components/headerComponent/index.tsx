@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import {
   BASE_URL_API,
@@ -10,8 +10,15 @@ import {
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
-import FeatureFlags from "@/../feature-config.json";
 import { useLogout } from "@/controllers/API/queries/auth";
+import { CustomLink } from "@/customization/components/custom-link";
+import { DOCS_LINK } from "@/customization/config-constants";
+import {
+  ENABLE_DARK_MODE,
+  ENABLE_PROFILE_ICONS,
+  ENABLE_SOCIAL_LINKS,
+} from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
@@ -38,9 +45,8 @@ export default function Header(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { mutate: mutationLogout } = useLogout();
-  const logout = useAuthStore((state) => state.logout);
 
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   const hasStore = useStoreStore((state) => state.hasStore);
 
   const dark = useDarkStore((state) => state.dark);
@@ -65,22 +71,15 @@ export default function Header(): JSX.Element {
   );
 
   const handleLogout = () => {
-    mutationLogout(undefined, {
-      onSuccess: () => {
-        logout();
-      },
-      onError: (error) => {
-        console.error(error);
-      },
-    });
+    mutationLogout();
   };
 
   return (
     <div className="header-arrangement relative">
       <div className="header-start-display">
-        <Link to="/all" className="cursor-pointer">
+        <CustomLink to="/all" className="cursor-pointer">
           <span className="ml-4 text-2xl">⛓️</span>
-        </Link>
+        </CustomLink>
         {showArrowReturnIcon && (
           <Button
             unstyled
@@ -96,12 +95,12 @@ export default function Header(): JSX.Element {
       </div>
 
       <div className="flex items-center xl:absolute xl:left-1/2 xl:-translate-x-1/2">
-        <Link to="/all">
+        <CustomLink to="/all">
           <Button
             className="gap-2"
             variant={
-              location.pathname === "/all" ||
-              location.pathname === "/components"
+              location.pathname.includes("/all") ||
+              location.pathname.includes("/components")
                 ? "primary"
                 : "secondary"
             }
@@ -110,25 +109,27 @@ export default function Header(): JSX.Element {
             <IconComponent name="Home" className="h-4 w-4" />
             <div className="hidden flex-1 lg:block">{USER_PROJECTS_HEADER}</div>
           </Button>
-        </Link>
+        </CustomLink>
 
         {hasStore && (
-          <Link to="/store">
+          <CustomLink to="/store">
             <Button
               className="gap-2"
-              variant={location.pathname === "/store" ? "primary" : "secondary"}
+              variant={
+                location.pathname.includes("/store") ? "primary" : "secondary"
+              }
               size="sm"
               data-testid="button-store"
             >
               <IconComponent name="Store" className="h-4 w-4" />
               <div className="hidden flex-1 lg:block">Store</div>
             </Button>
-          </Link>
+          </CustomLink>
         )}
       </div>
       <div className="header-end-division">
         <div className="header-end-display">
-          {FeatureFlags.ENABLE_SOCIAL_LINKS && (
+          {ENABLE_SOCIAL_LINKS && (
             <>
               <a
                 href="https://github.com/langflow-ai/langflow"
@@ -160,7 +161,7 @@ export default function Header(): JSX.Element {
               <Separator orientation="vertical" />
             </>
           )}
-          {FeatureFlags.ENABLE_DARK_MODE && (
+          {ENABLE_DARK_MODE && (
             <button
               className="extra-side-bar-save-disable"
               onClick={() => {
@@ -202,7 +203,7 @@ export default function Header(): JSX.Element {
                   data-testid="user-profile-settings"
                   className="shrink-0"
                 >
-                  {FeatureFlags.ENABLE_PROFILE_ICONS ? (
+                  {ENABLE_PROFILE_ICONS ? (
                     <img
                       src={profileImageUrl}
                       className="h-7 w-7 shrink-0 focus-visible:outline-0"
@@ -257,7 +258,10 @@ export default function Header(): JSX.Element {
                 <DropdownMenuItem
                   className="cursor-pointer gap-2"
                   onClick={() =>
-                    window.open("https://docs.langflow.org/", "_blank")
+                    window.open(
+                      DOCS_LINK || "https://docs.langflow.org/",
+                      "_blank",
+                    )
                   }
                 >
                   <ForwardedIconComponent name="FileText" className="w-4" />

@@ -69,9 +69,19 @@
     --status-blue: #2563eb;
     --status-gray: #6b7280;
     --connection: #555;
+    --note-indigo: #e0e7ff;
+    --note-emerald: #d1fae5;
+    --note-amber: #fef3c7;
+    --note-red: #fee2e2;
   }
 
   .dark {
+    --note-indigo: #312e81;
+    --note-emerald: #064e3b;
+    --note-amber: #78350f;
+    --note-red: #7f1d1d;
+    --note-placeholder: 216 12% 84%; /* hsl(216 12% 84%) */
+
     --node-selected: 234 89% 74%;
     --background: 224 28% 7.5%; /* hsl(224 10% 7.5%) */
     --foreground: 213 31% 80%; /* hsl(213 31% 91%) */

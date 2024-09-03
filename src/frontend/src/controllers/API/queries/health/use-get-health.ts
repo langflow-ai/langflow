@@ -2,10 +2,11 @@ import {
   REFETCH_SERVER_HEALTH_INTERVAL,
   SERVER_HEALTH_INTERVAL,
 } from "@/constants/constants";
+import { HEALTH_CHECK_URL } from "@/customization/config-constants";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { createNewError503 } from "@/types/factory/axios-error-503";
 import { keepPreviousData } from "@tanstack/react-query";
-import { AxiosError, AxiosHeaders } from "axios";
+import { AxiosError } from "axios";
 import { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -18,10 +19,14 @@ interface getHealthResponse {
   variables: string;
 }
 
+interface getHealthParams {
+  enableInterval?: boolean;
+}
+
 export const useGetHealthQuery: useQueryFunctionType<
-  undefined,
+  getHealthParams,
   getHealthResponse
-> = (_, options) => {
+> = (params, options) => {
   const { query } = UseRequestProcessor();
   const setHealthCheckTimeout = useUtilityStore(
     (state) => state.setHealthCheckTimeout,
@@ -40,9 +45,15 @@ export const useGetHealthQuery: useQueryFunctionType<
         setTimeout(() => reject(createNewError503()), SERVER_HEALTH_INTERVAL),
       );
 
-      const apiPromise = api.get<{ data: getHealthResponse }>("/health");
+      const apiPromise = api.get<getHealthResponse>(
+        HEALTH_CHECK_URL || "/health",
+      );
       const response = await Promise.race([apiPromise, timeoutPromise]);
-      setHealthCheckTimeout(null);
+      setHealthCheckTimeout(
+        Object.values(response.data).some((value) => value !== "ok")
+          ? "serverDown"
+          : null,
+      );
       return response.data;
     } catch (error) {
       const isServerBusy =
@@ -60,7 +71,9 @@ export const useGetHealthQuery: useQueryFunctionType<
 
   const queryResult = query(["useGetHealthQuery"], getHealthFn, {
     placeholderData: keepPreviousData,
-    refetchInterval: REFETCH_SERVER_HEALTH_INTERVAL,
+    refetchInterval: params.enableInterval
+      ? REFETCH_SERVER_HEALTH_INTERVAL
+      : false,
     retry: false,
     ...options,
   });

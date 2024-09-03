@@ -38,9 +38,9 @@ if TYPE_CHECKING:
 class VertexStates(str, Enum):
     """Vertex are related to it being active, inactive, or in an error state."""
 
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    ERROR = "error"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    ERROR = "ERROR"
 
 
 class Vertex:
@@ -106,12 +106,7 @@ class Vertex:
         self._custom_component._set_input_value(name, value)
 
     def to_data(self):
-        try:
-            data = json.loads(json.dumps(self._data, default=str))
-        except TypeError:
-            data = self._data
-
-        return data
+        return self._data
 
     def add_component_instance(self, component_instance: "Component"):
         component_instance.set_vertex(self)

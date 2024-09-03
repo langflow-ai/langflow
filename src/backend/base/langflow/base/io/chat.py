@@ -6,6 +6,7 @@ from langflow.memory import store_message
 from langflow.schema import Data
 from langflow.schema.message import Message
 from langflow.services.database.models.message.crud import update_message
+from langflow.utils.async_helpers import run_until_complete
 
 
 class ChatComponent(Component):
@@ -31,27 +32,40 @@ class ChatComponent(Component):
                 stored_message = Message(**message_table.model_dump())
                 self.vertex._added_message = stored_message
             self._event_manager.on_message(data=stored_message.model_dump())
-
         self.status = stored_message
         return stored_message
 
-    def _stream_message(self, message: Message, message_id: str):
+    def _process_chunk(self, chunk: str, complete_message: str, message: Message, message_id: str) -> str:
+        complete_message += chunk
+        data = {
+            "text": complete_message,
+            "chunk": chunk,
+            "sender": message.sender,
+            "sender_name": message.sender_name,
+            "id": str(message_id),
+        }
+        if self._event_manager:
+            self._event_manager.on_token(data=data)
+        return complete_message
+
+    async def _handle_async_iterator(self, iterator: AsyncIterator, message: Message, message_id: str) -> str:
+        complete_message = ""
+        async for chunk in iterator:
+            complete_message = self._process_chunk(chunk.content, complete_message, message, message_id)
+        return complete_message
+
+    def _stream_message(self, message: Message, message_id: str) -> str:
         iterator = message.text
         if not isinstance(iterator, (AsyncIterator, Iterator)):
             raise ValueError("The message must be an iterator or an async iterator.")
-        complete_message: str = ""
+
         if isinstance(iterator, AsyncIterator):
-            iterator = asyncio.ensure_future(iterator.__anext__())
+            return run_until_complete(self._handle_async_iterator(iterator, message, message_id))
+
+        complete_message = ""
         for chunk in iterator:
-            complete_message += chunk.content
-            data = {
-                "text": complete_message,
-                "chunk": chunk.content,
-                "sender": message.sender,
-                "sender_name": message.sender_name,
-                "id": str(message_id),
-            }
-            self._event_manager.on_token(data)
+            complete_message = self._process_chunk(chunk.content, complete_message, message, message_id)
+
         return complete_message
 
     def build_with_data(

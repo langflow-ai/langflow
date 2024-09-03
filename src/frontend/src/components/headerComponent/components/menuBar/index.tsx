@@ -7,12 +7,12 @@ import {
   DropdownMenuTrigger,
 } from "../../../ui/dropdown-menu";
 
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useNavigate } from "react-router-dom";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import { SAVED_HOVER } from "../../../../constants/constants";
 import ExportModal from "../../../../modals/exportModal";
@@ -40,7 +40,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const [openSettings, setOpenSettings] = useState(false);
   const [openLogs, setOpenLogs] = useState(false);
   const uploadFlow = useUploadFlow();
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const getTypes = useTypesStore((state) => state.getTypes);
   const saveFlow = useSaveFlow();
@@ -50,6 +50,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const updatedAt = currentSavedFlow?.updated_at;
   const onFlowPage = useFlowStore((state) => state.onFlowPage);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+  const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -310,7 +311,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               disabled={!isBuilding}
               onClick={(_) => {
                 if (isBuilding) {
-                  window.stop();
+                  stopBuilding();
                 }
               }}
               className={

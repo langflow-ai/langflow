@@ -1,46 +1,60 @@
 import asyncio
+import inspect
 import json
 import time
 import uuid
 from functools import partial
 
-from fastapi.encoders import jsonable_encoder
 from typing_extensions import Protocol
 
 from langflow.schema.log import LoggableType
 
 
 class EventCallback(Protocol):
-    def __call__(self, event_type: str, data: LoggableType): ...
+    def __call__(self, *, manager: "EventManager", event_type: str, data: LoggableType): ...
+
+
+class PartialEventCallback(Protocol):
+    def __call__(self, *, data: LoggableType): ...
 
 
 class EventManager:
     def __init__(self, queue: asyncio.Queue):
         self.queue = queue
-        self.events: dict[str, EventCallback] = {}
+        self.events: dict[str, PartialEventCallback] = {}
 
-    def register_event(self, name: str, event_type: str | None = None):
-        if event_type is None:
-            self.events[name] = self.send_event
+    @staticmethod
+    def _validate_callback(callback: EventCallback):
+        if not callable(callback):
+            raise ValueError("Callback must be callable")
+        # Check if it has `self, event_type and data`
+        sig = inspect.signature(callback)
+        if len(sig.parameters) != 3:
+            raise ValueError("Callback must have exactly 3 parameters")
+        if not all(param.name in ["manager", "event_type", "data"] for param in sig.parameters.values()):
+            raise ValueError("Callback must have exactly 3 parameters: manager, event_type, and data")
+
+    def register_event(self, name: str, event_type: str, callback: EventCallback | None = None):
+        if not name:
+            raise ValueError("Event name cannot be empty")
+        if not name.startswith("on_"):
+            raise ValueError("Event name must start with 'on_'")
+        if callback is None:
+            _callback = partial(self.send_event, event_type=event_type)
         else:
-            self.events[name] = partial(self.send_event, event_type)
+            _callback = partial(callback, manager=self, event_type=event_type)
+        self.events[name] = _callback
 
-    def register_event_function(self, name: str, event_function: EventCallback):
-        self.events[name] = event_function
-
-    def send_event(self, event_type: str, data: dict):
-        jsonable_data = jsonable_encoder(data)
-
-        json_data = {"event": event_type, "data": jsonable_data}
-        event_id = str(uuid.uuid4())
-        str_data = json.dumps(json_data, default=str) + "\n\n"
-
+    def send_event(self, *, event_type: str, data: LoggableType):
+        json_data = {"event": event_type, "data": data}
+        event_id = uuid.uuid4()
+        str_data = json.dumps(json_data) + "\n\n"
         self.queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
 
-    def noop(self, event_type: str, data: dict):
+    def noop(self, *, data: LoggableType):
         pass
 
-    def __getattr__(self, name: str) -> EventCallback:
+    def __getattr__(self, name: str) -> PartialEventCallback:
         return self.events.get(name, self.noop)
 
 

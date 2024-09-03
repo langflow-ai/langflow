@@ -1,21 +1,16 @@
 import {
   LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS,
   LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV,
-  LANGFLOW_AUTO_LOGIN_OPTION,
 } from "@/constants/constants";
 import { useRefreshAccessToken } from "@/controllers/API/queries/auth";
+import { CustomNavigate } from "@/customization/components/custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useEffect } from "react";
-import { Cookies } from "react-cookie";
 
 export const ProtectedRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const hasToken = !!localStorage.getItem(LANGFLOW_AUTO_LOGIN_OPTION);
-  const logout = useAuthStore((state) => state.logout);
-
-  const cookies = new Cookies();
-  const refreshToken = cookies.get("refresh_token");
   const { mutate: mutateRefresh } = useRefreshAccessToken();
+  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   useEffect(() => {
     const envRefreshTime = LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV;
@@ -25,17 +20,18 @@ export const ProtectedRoute = ({ children }) => {
       ? automaticRefreshTime
       : envRefreshTime;
 
-    const intervalId = setInterval(() => {
-      if (isAuthenticated) {
-        mutateRefresh({ refresh_token: refreshToken });
-      }
-    }, accessTokenTimer * 1000);
+    const intervalFunction = () => {
+      mutateRefresh();
+    };
 
-    return () => clearInterval(intervalId);
-  }, []);
-
-  if (!isAuthenticated && hasToken) {
-    logout();
+    if (!autoLogin && isAuthenticated) {
+      const intervalId = setInterval(intervalFunction, accessTokenTimer * 1000);
+      intervalFunction();
+      return () => clearInterval(intervalId);
+    }
+  }, [isAuthenticated]);
+  if (!isAuthenticated && !autoLogin) {
+    return <CustomNavigate to="/login" replace />;
   } else {
     return children;
   }

@@ -28,10 +28,10 @@ from langflow.initial_setup.setup import (
 )
 from langflow.interface.types import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
+from langflow.logging.logger import configure
 from langflow.services.deps import get_cache_service, get_settings_service, get_telemetry_service
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
-from langflow.logging.logger import configure
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -132,8 +132,6 @@ def create_app():
         allow_headers=["*"],
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
-    # ! Deactivating this until we find a better solution
-    # app.add_middleware(RequestCancelledMiddleware)
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
@@ -181,6 +179,9 @@ def create_app():
             )
 
     FastAPIInstrumentor.instrument_app(app)
+
+    # Get necessary NLTK packages
+    # download_nltk_resources()
 
     return app
 

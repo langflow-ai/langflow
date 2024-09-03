@@ -148,9 +148,19 @@ else
 		$(args)
 endif
 
-integration_tests: ## run integration tests
+integration_tests:
 	poetry run pytest src/backend/tests/integration \
 		--instafail -ra \
+		$(args)
+
+integration_tests_no_api_keys:
+	poetry run pytest src/backend/tests/integration \
+		--instafail -ra -m "not api_key_required" \
+		$(args)
+
+integration_tests_api_keys:
+	poetry run pytest src/backend/tests/integration \
+		--instafail -ra -m "api_key_required" \
 		$(args)
 
 tests: ## run unit, integration, coverage tests
@@ -264,20 +274,20 @@ ifdef login
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
-		--reload \
+		$(if $(workers),,--reload) \
 		--env-file $(env) \
 		--loop asyncio \
-		--workers $(workers)
+		$(if $(workers),--workers $(workers),)
 else
 	@echo "Running backend respecting the $(env) file";
 	poetry run uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
-		--reload \
+		$(if $(workers),,--reload) \
 		--env-file $(env) \
 		--loop asyncio \
-		--workers $(workers)
+		$(if $(workers),--workers $(workers),)
 endif
 
 build_and_run: setup_env ## build the project and run it
