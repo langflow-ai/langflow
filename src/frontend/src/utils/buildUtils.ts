@@ -273,8 +273,7 @@ export async function buildFlowVertices({
         return true;
       }
       case "token": {
-        // console.log(data);
-        // await one milisencond so the streaming can work
+        // await one milisencond so we avoid react batched updates
         await new Promise((resolve) => setTimeout(resolve, 1));
         useMessagesStore.getState().updateMessagePartial(data);
         return true;

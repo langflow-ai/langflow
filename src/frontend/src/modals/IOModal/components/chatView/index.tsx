@@ -267,7 +267,7 @@ export default function ChatView({
                 lockChat={lockChat}
                 chat={chat}
                 lastMessage={chatHistory.length - 1 === index ? true : false}
-                key={`${chat.componentId}-${index}`}
+                key={`${chat.id}-${index}`}
                 updateChat={updateChat}
               />
             ))
