@@ -10,7 +10,7 @@ import re
 
 
 class LangChainHubPromptComponent(Component):
-    display_name: str = "LangChain Hub Prompt Component"
+    display_name: str = "LangChain Hub"
     description: str = "Prompt Component that uses LangChain Hub prompts"
     beta = True
     icon = "prompts"
