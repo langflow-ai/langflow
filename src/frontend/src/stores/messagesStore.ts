@@ -36,17 +36,16 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
   updateMessagePartial: (message) => {
     // search for the message and update it
     // look for the message list backwards to find the message faster
-    for (let i = get().messages.length - 1; i >= 0; i--) {
-      if (get().messages[i].id === message.id) {
-        set((state) => {
-          const updatedMessages = [...state.messages];
+    set((state) => {
+      const updatedMessages = [...state.messages];
+      for (let i = get().messages.length - 1; i >= 0; i--) {
+        if (get().messages[i].id === message.id) {
           updatedMessages[i] = { ...updatedMessages[i], ...message };
-          return { messages: updatedMessages };
-        });
-        break;
+          break;
+        }
       }
-    }
-
+      return { messages: updatedMessages };
+    });
   },
   clearMessages: () => {
     set(() => ({ messages: [] }));
