@@ -511,14 +511,3 @@ InputTypes = (
 )
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
-
-
-def instantiate_input(input_type: str, data: dict) -> InputTypes:
-    input_type_class = InputTypesMap.get(input_type)
-    if "type" in data:
-        # Replate with field_type
-        data["field_type"] = data.pop("type")
-    if input_type_class:
-        return input_type_class(**data)
-    else:
-        raise ValueError(f"Invalid input type: {input_type}")
