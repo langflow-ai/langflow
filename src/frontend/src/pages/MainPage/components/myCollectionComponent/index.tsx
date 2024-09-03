@@ -1,6 +1,6 @@
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
-import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import { useFolderStore } from "@/stores/foldersStore";
+import { useIsFetching } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import ComponentsComponent from "../componentsComponent";
 import HeaderTabsSearchComponent from "./components/headerTabsSearchComponent";
@@ -13,10 +13,17 @@ const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
-  const { data, isFetching } = useGetFolderQuery({
-    id: folderId ?? myCollectionId ?? "",
+  const { data, isFetching } = useGetFolderQuery(
+    {
+      id: folderId ?? myCollectionId ?? "",
+    },
+    { enabled: !!folderId || !!myCollectionId },
+  );
+
+  const isLoadingFolders = !!useIsFetching({
+    queryKey: ["useGetFolders"],
+    exact: false,
   });
-  const { isFetching: isLoadingFolders } = useGetFoldersQuery();
 
   return (
     <>

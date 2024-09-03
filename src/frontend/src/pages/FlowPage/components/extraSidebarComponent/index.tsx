@@ -233,7 +233,7 @@ export default function ExtraSidebar(): JSX.Element {
           .map((SBSectionName: keyof APIObjectType, index) =>
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <SidebarCategoryComponent
-                index={index}
+                key={`DisclosureComponent${index + search + JSON.stringify(getFilterEdge)}`}
                 search={search}
                 getFilterEdge={getFilterEdge}
                 category={dataFilter[SBSectionName]}
@@ -264,7 +264,7 @@ export default function ExtraSidebar(): JSX.Element {
             .map((SBSectionName: keyof APIObjectType, index) =>
               Object.keys(dataFilter[SBSectionName]).length > 0 ? (
                 <SidebarCategoryComponent
-                  index={index}
+                  key={`DisclosureComponent${index + search + JSON.stringify(getFilterEdge)}`}
                   search={search}
                   getFilterEdge={getFilterEdge}
                   category={dataFilter[SBSectionName]}
@@ -324,7 +324,7 @@ export default function ExtraSidebar(): JSX.Element {
                 .map((SBSectionName: keyof APIObjectType, index) =>
                   Object.keys(dataFilter[SBSectionName]).length > 0 ? (
                     <SidebarCategoryComponent
-                      index={index}
+                      key={`DisclosureComponent${index + search + JSON.stringify(getFilterEdge)}`}
                       search={search}
                       getFilterEdge={getFilterEdge}
                       category={dataFilter[SBSectionName]}
