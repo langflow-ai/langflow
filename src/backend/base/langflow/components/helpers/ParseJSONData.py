@@ -3,9 +3,8 @@ import json
 import jq
 from json_repair import repair_json
 from langflow.custom import Component
-from langflow.helpers.data import data_to_text
 from langflow.inputs import HandleInput, MessageTextInput
-from langflow.io import DataInput, MultilineInput, Output, StrInput
+from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.message import Message
 
@@ -16,27 +15,25 @@ class ParseJSONDataComponent(Component):
     icon = "braces"
     name = "ParseJSONData"
 
-
     inputs = [
         HandleInput(
             name="input_value",
             display_name="Input",
             info="Data object to filter.",
             required=True,
-            input_types=["Message", "Data"]
+            input_types=["Message", "Data"],
         ),
         MessageTextInput(
             name="query",
             display_name="JQ Query",
             info="JQ Query to filter the data. The input is always a JSON list.",
-            required=True
+            required=True,
         ),
     ]
 
     outputs = [
         Output(display_name="Filtered Data", name="filtered_data", method="filter_data"),
     ]
-
 
     def _parse_data(self, input_value) -> str:
         if isinstance(input_value, Message):
@@ -54,13 +51,12 @@ class ParseJSONDataComponent(Component):
         else:
             to_filter = [self._parse_data(to_filter)]
 
-
         to_filter = [repair_json(f) for f in to_filter]
         to_filter_as_dict = []
         for f in to_filter:
             try:
                 to_filter_as_dict.append(json.loads(f))
-            except JSONDecodeError as e:
+            except JSONDecodeError:
                 try:
                     to_filter_as_dict.append(json.loads(repair_json(f)))
                 except JSONDecodeError as e:

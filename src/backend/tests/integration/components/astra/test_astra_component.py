@@ -1,13 +1,9 @@
 import os
-from typing import List
 
 from astrapy.db import AstraDB
 import pytest
 
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
-from langflow.custom import Component
-from langflow.inputs import StrInput
-from langflow.template import Output
 from tests.api_keys import get_astradb_application_token, get_astradb_api_endpoint, get_openai_api_key
 from tests.integration.components.mock_components import TextToData
 from tests.integration.utils import ComponentInputHandle
@@ -69,8 +65,6 @@ async def test_base(astradb_client: AstraDB):
     assert results["vector_store"] is not None
     assert results["search_results"] == []
     assert astradb_client.collection(BASIC_COLLECTION)
-
-
 
 
 @pytest.mark.api_key_required
