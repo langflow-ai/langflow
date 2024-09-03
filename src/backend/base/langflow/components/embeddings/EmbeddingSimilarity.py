@@ -4,6 +4,7 @@ from langflow.custom import Component
 from langflow.io import DataInput, DropdownInput, Output
 from langflow.schema import Data
 
+
 class EmbeddingSimilarityComponent(Component):
     display_name: str = "Embedding Similarity"
     description: str = "Compute selected form of similarity between two embedding vectors."
@@ -60,9 +61,9 @@ class EmbeddingSimilarityComponent(Component):
             data={
                 "embedding_1": embedding_vectors[0].data["embeddings"],
                 "embedding_2": embedding_vectors[1].data["embeddings"],
-                "similarity_score": similarity_score
+                "similarity_score": similarity_score,
             },
-            text_key="similarity_score"
+            text_key="similarity_score",
         )
 
         self.status = similarity_data
