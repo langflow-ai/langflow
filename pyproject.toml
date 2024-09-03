@@ -107,6 +107,7 @@ spider-client = "^0.0.27"
 nltk = "^3.9.1"
 bson = "^0.5.10"
 lark = "^1.2.2"
+jq = "^1.8.0"
 
 
 [tool.poetry.group.dev.dependencies]
