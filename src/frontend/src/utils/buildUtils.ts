@@ -268,12 +268,13 @@ export async function buildFlowVertices({
       }
       case "message": {
         //adds a message to the messsage table
-        console.log(data);
-        useMessagesStore.getState().addMessage(data);
+        console.log(data.data);
+        useMessagesStore.getState().addMessage(data.data);
         return true;
       }
       case "token": {
-        console.log(data.text);
+        console.log(data);
+        // await one second before sending the next token
         useMessagesStore.getState().updateMessagePartial(data);
         return true;
       }
