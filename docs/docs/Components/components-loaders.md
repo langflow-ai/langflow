@@ -1,3 +1,9 @@
+---
+title: Loaders
+sidebar_position: 10
+slug: /components-loaders
+---
+
 # Loaders
 
 Loaders are components used to load documents from various sources, such as databases, websites, and local files. They can be used to fetch data from external sources and convert it into a format that can be processed by other components.
@@ -12,7 +18,7 @@ The Confluence component integrates with the Confluence wiki collaboration platf
 
 | Name | Display Name | Info |
 | --- | --- | --- |
-| url | Site URL | The base URL of the Confluence Space (e.g., https://<company>.atlassian.net/wiki) |
+| url | Site URL | The base URL of the Confluence Space (e.g., https://company.atlassian.net/wiki) |
 | username | Username | Atlassian User E-mail (e.g., email@example.com) |
 | api_key | API Key | Atlassian API Key (Create at: https://id.atlassian.com/manage-profile/security/api-tokens) |
 | space_key | Space Key | The key of the Confluence space to access |
