@@ -33,7 +33,6 @@ function NoteNode({
       });
     }
   }, []);
-
   const MemoNoteToolbarComponent = useMemo(
     () => (
       <NodeToolbar>
@@ -69,7 +68,7 @@ function NoteNode({
         ref={nodeDiv}
         className={cn(
           "flex h-full w-full flex-col gap-3 rounded-md border border-b p-5 transition-all",
-          selected ? "" : "shadow-sm",
+          selected ? "" : "shadow-sm -z-50",
         )}
       >
         <div className="flex h-fit w-full items-center align-middle">
@@ -92,7 +91,6 @@ function NoteNode({
             width: size.width,
             height: size.height,
           }}
-          className="nowheel overflow-auto"
         >
           <NodeDescription
             inputClassName="border-0 ring-transparent resize-none rounded-none shadow-none h-full w-full"
