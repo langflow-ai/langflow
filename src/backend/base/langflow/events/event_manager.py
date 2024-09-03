@@ -8,7 +8,7 @@ from functools import partial
 from typing_extensions import Protocol
 
 from langflow.schema.log import LoggableType
-
+from fastapi.encoders import jsonable_encoder
 
 class EventCallback(Protocol):
     def __call__(self, *, manager: "EventManager", event_type: str, data: LoggableType): ...
@@ -46,7 +46,8 @@ class EventManager:
         self.events[name] = _callback
 
     def send_event(self, *, event_type: str, data: LoggableType):
-        json_data = {"event": event_type, "data": data}
+        jsonable_data = jsonable_encoder(data)
+        json_data = {"event": event_type, "data": jsonable_data}
         event_id = uuid.uuid4()
         str_data = json.dumps(json_data) + "\n\n"
         self.queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
