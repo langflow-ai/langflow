@@ -5026,6 +5026,24 @@ files = [
 langchain-core = ">=0.2.10,<0.3.0"
 
 [[package]]
+name = "langchain-unstructured"
+version = "0.1.2"
+description = "An integration package connecting Unstructured and LangChain"
+optional = false
+python-versions = "<4.0,>=3.9"
+files = [
+    {file = "langchain_unstructured-0.1.2-py3-none-any.whl", hash = "sha256:d8212adcbd9c2ca37ada10b65425042f7b609e9b0588279218bc54a8518ef3c3"},
+    {file = "langchain_unstructured-0.1.2.tar.gz", hash = "sha256:55f0a0de7829df37f5bc42f83b495fb879cf55b551e49a4ee4704a40614ed071"},
+]
+
+[package.dependencies]
+langchain-core = ">=0.2.23,<0.3.0"
+unstructured-client = ">=0.24.1,<0.25.0"
+
+[package.extras]
+local = ["unstructured[all-docs] (>=0.15.7,<0.16.0)"]
+
+[[package]]
 name = "langchainhub"
 version = "0.1.21"
 description = "The LangChain Hub API client"
@@ -11040,13 +11058,13 @@ xlsx = ["networkx", "openpyxl", "pandas", "xlrd"]
 
 [[package]]
 name = "unstructured-client"
-version = "0.25.5"
+version = "0.24.1"
 description = "Python Client SDK for Unstructured API"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "unstructured-client-0.25.5.tar.gz", hash = "sha256:adb97ea56ce65f8b277d5b05f093e9d13a3320ac8dea7265ffa71f5e13ed5f84"},
-    {file = "unstructured_client-0.25.5-py3-none-any.whl", hash = "sha256:23537fee984e43d06a75f986a73e420a9659cc92010afb8324fbf67c85962eaf"},
+    {file = "unstructured-client-0.24.1.tar.gz", hash = "sha256:1bd82a532497783dd77b30ed4e56837d6abfae8cc6d61442acac0bcacbd568c8"},
+    {file = "unstructured_client-0.24.1-py3-none-any.whl", hash = "sha256:044dab0c3079f908f6adf7088ad44f0e17476b47e2b04e0de608134a482bd0e3"},
 ]
 
 [package.dependencies]
@@ -12090,4 +12108,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "314d59d48b52557fae6ec8918e6cc6f7f4d3af0ddcdfc5737448eee5d28f9a0a"
+content-hash = "450fcc29d692f64eacd1d20d8365a05ab49f839d3a206fcffbf560efad1b65a7"
