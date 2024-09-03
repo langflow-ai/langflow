@@ -5,6 +5,7 @@ from langflow.inputs import HandleInput, FileInput, DropdownInput, MessageTextIn
 from langflow.io import Output
 from langflow.schema.message import Message
 
+
 class CSVAgentComponent(LCAgentComponent):
     display_name = "CSVAgent"
     description = "Construct a CSV agent from a CSV and tools."
@@ -18,7 +19,7 @@ class CSVAgentComponent(LCAgentComponent):
             display_name="Language Model",
             input_types=["LanguageModel"],
             required=True,
-            info="An LLM Model Object (It can be found in any LLM Component)."
+            info="An LLM Model Object (It can be found in any LLM Component).",
         ),
         FileInput(
             name="path",
@@ -26,7 +27,7 @@ class CSVAgentComponent(LCAgentComponent):
             file_types=["csv"],
             input_types=["str", "Message"],
             required=True,
-            info="A CSV File or File Path."
+            info="A CSV File or File Path.",
         ),
         DropdownInput(
             name="agent_type",
@@ -49,16 +50,12 @@ class CSVAgentComponent(LCAgentComponent):
 
     def create_agent(self) -> AgentExecutor:
         agent_kwargs = {
-            'verbose': self.verbose,
-            'allow_dangerous_code': True,
+            "verbose": self.verbose,
+            "allow_dangerous_code": True,
         }
 
         agent_csv = create_csv_agent(
-            llm=self.llm,
-            path=self.path,
-            agent_type=self.agent_type,
-            handle_parsing_errors=True,
-            **agent_kwargs
+            llm=self.llm, path=self.path, agent_type=self.agent_type, handle_parsing_errors=True, **agent_kwargs
         )
 
         return agent_csv
@@ -69,8 +66,7 @@ class CSVAgentComponent(LCAgentComponent):
         print(f"self.inputs = {agent_csv}")
 
         result = agent_csv.invoke({"input": self.input_value})
-        return Message(text=str(result['output']))
-
+        return Message(text=str(result["output"]))
 
     def build_agent(self) -> AgentExecutor:
         agent_csv = self.create_agent()
