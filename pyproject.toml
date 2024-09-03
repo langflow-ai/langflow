@@ -107,7 +107,7 @@ spider-client = "^0.0.27"
 nltk = "^3.9.1"
 bson = "^0.5.10"
 lark = "^1.2.2"
-clickhouse-connect = "0.7.19"
+clickhouse-connect = {version = "0.7.19", optional = true, extras = ["clickhouse-connect"]}
 
 
 [tool.poetry.group.dev.dependencies]

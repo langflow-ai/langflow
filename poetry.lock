@@ -1190,7 +1190,7 @@ testing = ["pytest (>=7.2.1)", "pytest-cov (>=4.0.0)", "tox (>=4.4.3)"]
 name = "clickhouse-connect"
 version = "0.7.19"
 description = "ClickHouse Database Core Driver for Python, Pandas, and Superset"
-optional = false
+optional = true
 python-versions = "~=3.8"
 files = [
     {file = "clickhouse-connect-0.7.19.tar.gz", hash = "sha256:ce8f21f035781c5ef6ff57dc162e8150779c009b59f14030ba61f8c9c10c06d0"},
@@ -5459,7 +5459,7 @@ source = ["Cython (>=3.0.11)"]
 name = "lz4"
 version = "4.3.3"
 description = "LZ4 Bindings for Python"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "lz4-4.3.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:b891880c187e96339474af2a3b2bfb11a8e4732ff5034be919aa9029484cd201"},
@@ -11973,7 +11973,7 @@ type = ["pytest-mypy"]
 name = "zstandard"
 version = "0.23.0"
 description = "Zstandard bindings for Python"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "zstandard-0.23.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:bf0a05b6059c0528477fba9054d09179beb63744355cab9f38059548fedd46a9"},
@@ -12090,4 +12090,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "2dc2a4ba1704233490b5947078e12ef42c424bd0d51c308a2fbc5f9c1864079b"
+content-hash = "a2be21468eec2f6f34382f1e30927c46ec5b6cdbebd4097a7b10333b8287ce10"
