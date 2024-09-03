@@ -28,3 +28,13 @@ def test_component_to_tool():
     )
     assert isinstance(tool.func, Callable)
     assert tool.args_schema is not None
+
+
+def test_component_to_tool_has_no_component_as_tool():
+    chat_input = ChatInput()
+    toolkit = chat_input.to_toolkit()
+    assert isinstance(toolkit, ComponentToolkit)
+    assert toolkit.component == chat_input
+
+    tools = toolkit.get_tools()
+    assert len(tools) == 1
