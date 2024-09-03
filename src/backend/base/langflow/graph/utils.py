@@ -141,10 +141,11 @@ async def log_transaction(
     try:
         if not get_settings_service().settings.transactions_storage_enabled:
             return
-        if not flow_id and not (source.graph.flow_id):
-            return
-        else:
-            flow_id = source.graph.flow_id
+        if not flow_id:
+            if source.graph.flow_id:
+                flow_id = source.graph.flow_id
+            else:
+                return
         inputs = _vertex_to_primitive_dict(source)
         transaction = TransactionBase(
             vertex_id=source.id,
