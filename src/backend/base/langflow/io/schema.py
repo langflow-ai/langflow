@@ -14,6 +14,7 @@ _convert_field_type_to_type: dict[FieldTypes, type] = {
     FieldTypes.TABLE: dict,
     FieldTypes.FILE: str,
     FieldTypes.PROMPT: str,
+    FieldTypes.OTHER: str,
 }
 
 if TYPE_CHECKING:
