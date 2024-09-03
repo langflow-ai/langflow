@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import warnings
 from typing import TYPE_CHECKING, Callable
 
 from langchain_core.tools import BaseTool
@@ -25,7 +26,7 @@ def _get_input_type(input: "InputTypes"):
 
 def build_description(component: "Component", output: "Output"):
     if not output.required_inputs:
-        raise ValueError(f"Output {output.name} does not have required inputs defined")
+        warnings.warn(f"Output {output.name} does not have required inputs defined")
 
     args = ", ".join(
         sorted(
