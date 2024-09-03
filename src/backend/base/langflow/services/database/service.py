@@ -46,6 +46,9 @@ class DatabaseService(Service):
         self.alembic_cfg_path = langflow_dir / "alembic.ini"
         self.engine = self._create_engine()
 
+    def reload_engine(self):
+        self.engine = self._create_engine()
+
     def _create_engine(self) -> "Engine":
         """Create the engine for the database."""
         if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
