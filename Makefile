@@ -265,9 +265,8 @@ frontendc: install_frontendc
 	make run_frontend
 
 
-
 backend: setup_env install_backend ## run the backend in development mode
-	@-kill -9 $$(lsof -t -i:7860)
+	@-kill -9 $$(lsof -t -i:7860) || true
 ifdef login
 	@echo "Running backend autologin is $(login)";
 	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn \
