@@ -57,9 +57,9 @@ class Message(Data):
 
     @field_serializer("flow_id")
     def serialize_flow_id(value):
-        if isinstance(value, str):
-            return UUID(value)
-        return str(value)
+        if isinstance(value, UUID):
+            return str(value)
+        return value
 
     @field_serializer("timestamp")
     def serialize_timestamp(value):
