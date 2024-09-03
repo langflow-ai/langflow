@@ -151,10 +151,13 @@ body {
 /* selected */
 .react-flow__edge.selected .react-flow__edge-path {
   stroke: var(--selected) !important;
+  stroke-width: 1.5px !important;
 }
 
 .react-flow__edge .react-flow__edge-path {
   stroke: var(--connection) !important;
+  transition: all;
+  transition-duration: 150ms;
 }
 
 .ag-react-container {

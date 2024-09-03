@@ -65,9 +65,9 @@ export default function NodeStatus({
 
   const getBaseBorderClass = (selected) => {
     let className = selected
-      ? "border border-2 border-node-selected hover:shadow-node"
+      ? "border ring ring-[0.5px] ring-selected border-selected hover:shadow-node"
       : "border hover:shadow-node";
-    let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
+    let frozenClass = selected ? "outline-ring-frozen" : "outline-frozen";
     return frozen ? frozenClass : className;
   };
 
