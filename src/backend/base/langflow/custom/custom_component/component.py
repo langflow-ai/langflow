@@ -21,6 +21,7 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.log import LoggableType
 from langflow.schema.message import Message
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -102,6 +103,9 @@ class Component(CustomComponent):
         self._set_output_types()
         self._set_output_required_inputs()
         self.set_class_code()
+
+        if FEATURE_FLAGS.add_toolkit_output and hasattr(self, "_append_tool_output"):
+            self._append_tool_output()
 
     def set_event_manager(self, event_manager: EventManager | None = None):
         self._event_manager = event_manager
