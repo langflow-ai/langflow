@@ -273,7 +273,7 @@ ifdef login
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
-		$(if $(workers),,--reload) \
+		$(if $(filter-out 1,$(workers)),, --reload) \
 		--env-file $(env) \
 		--loop asyncio \
 		$(if $(workers),--workers $(workers),)
@@ -283,7 +283,7 @@ else
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
-		$(if $(workers),,--reload) \
+		$(if $(filter-out 1,$(workers)),, --reload) \
 		--env-file $(env) \
 		--loop asyncio \
 		$(if $(workers),--workers $(workers),)
