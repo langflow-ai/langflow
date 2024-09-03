@@ -2,7 +2,7 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select, col
+from sqlmodel import Session, col, select
 
 from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 
@@ -28,3 +28,11 @@ def log_transaction(db: Session, transaction: TransactionBase) -> TransactionTab
     except IntegrityError as e:
         db.rollback()
         raise e
+
+
+def delete_transactions_by_flow_id(db: Session, flow_id: UUID):
+    stmt = select(TransactionTable).where(TransactionTable.flow_id == flow_id)
+    transactions = db.exec(stmt)
+    for transaction in transactions:
+        db.delete(transaction)
+    db.commit()
