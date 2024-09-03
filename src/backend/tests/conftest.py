@@ -26,7 +26,9 @@ from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.transactions.crud import delete_transactions_by_flow_id
 from langflow.services.database.models.user.model import User, UserCreate
+from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 
@@ -77,6 +79,13 @@ def get_text():
         pytest.MEMORY_CHATBOT_NO_LLM,
     ]:
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
+
+
+def _delete_transactions_and_vertex_builds(session, user: User):
+    flow_ids = [flow.id for flow in user.flows]
+    for flow_id in flow_ids:
+        delete_transactions_by_flow_id(session, flow_id)
+        delete_vertex_builds_by_flow_id(session, flow_id)
 
 
 @pytest.fixture()
@@ -328,7 +337,10 @@ def active_user(client):
         session.refresh(user)
         yield user
         # Clean up
+        # Now cleanup transactions, vertex_build
+        _delete_transactions_and_vertex_builds(session, user)
         session.delete(user)
+
         session.commit()
 
 
