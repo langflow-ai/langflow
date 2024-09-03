@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { before, beforeEach } from "node:test";
 
 test("when auto_login is false, admin can CRUD user's and should see just your own flows", async ({
   page,
@@ -144,7 +143,7 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
-  await page.waitForSelector('[id="new-project-btn"]', {
+  await page.waitForSelector('[data-testid="search-store-input"]:enabled', {
     timeout: 30000,
   });
 
@@ -214,9 +213,14 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
+  await page.waitForSelector('[data-testid="search-store-input"]:enabled', {
+    timeout: 30000,
+  });
+
   expect(
     await page.getByText(secondRandomFlowName, { exact: true }).isVisible(),
   ).toBe(true);
+
   expect(
     await page.getByText(randomFlowName, { exact: true }).isVisible(),
   ).toBe(false);
@@ -236,7 +240,7 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
     timeout: 30000,
   });
 
-  await page.waitForSelector('[id="new-project-btn"]', {
+  await page.waitForSelector('[data-testid="search-store-input"]:enabled', {
     timeout: 30000,
   });
 
