@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.events.event_manager import EventManager
+from langflow.field_typing import Tool
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -89,6 +90,8 @@ class Component(CustomComponent):
         self.__inputs = inputs
         self.__config = config
         self._reset_all_output_values()
+        if FEATURE_FLAGS.add_toolkit_output and hasattr(self, "_append_tool_output"):
+            self._append_tool_output()
         super().__init__(**config)
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
@@ -102,9 +105,6 @@ class Component(CustomComponent):
         self._set_output_types()
         self._set_output_required_inputs()
         self.set_class_code()
-
-        if FEATURE_FLAGS.add_toolkit_output and hasattr(self, "_append_tool_output"):
-            self._append_tool_output()
 
     def set_event_manager(self, event_manager: EventManager | None = None):
         self._event_manager = event_manager
@@ -769,9 +769,9 @@ class Component(CustomComponent):
     def _get_fallback_input(self, **kwargs):
         return Input(**kwargs)
 
-    def to_toolkit(self):
+    def to_toolkit(self) -> list[Tool]:
         ComponentToolkit = _get_component_toolkit()
-        return ComponentToolkit(component=self)
+        return ComponentToolkit(component=self).get_tools()
 
     def get_project_name(self):
         if hasattr(self, "_tracing_service") and self._tracing_service:
