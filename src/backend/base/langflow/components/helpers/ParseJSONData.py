@@ -1,7 +1,9 @@
-from json import JSONDecodeError
 import json
+from json import JSONDecodeError
+
 import jq
 from json_repair import repair_json
+
 from langflow.custom import Component
 from langflow.inputs import HandleInput, MessageTextInput
 from langflow.io import Output
@@ -36,7 +38,7 @@ class ParseJSONDataComponent(Component):
     ]
 
     def _parse_data(self, input_value) -> str:
-        if isinstance(input_value, Message):
+        if isinstance(input_value, Message) and isinstance(input_value.text, str):
             return input_value.text
         if isinstance(input_value, Data):
             return json.dumps(input_value.data)
