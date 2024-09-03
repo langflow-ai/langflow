@@ -1,7 +1,8 @@
-from typing import List
 from langflow.custom import Component
 from langflow.io import HandleInput, MessageInput, Output
-from langflow.field_typing import Embeddings, Message
+from langflow.field_typing import Embeddings
+from langflow.schema.message import Message
+from langflow.schema import Data
 
 
 class TextEmbedderComponent(Component):
@@ -24,10 +25,10 @@ class TextEmbedderComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="generate_embeddings"),
+        Output(display_name="Embedding Data", name="embeddings", method="generate_embeddings"),
     ]
 
-    def generate_embeddings(self) -> List[float]:
+    def generate_embeddings(self) -> Data:
         embedding_model: Embeddings = self.embedding_model
         message: Message = self.message
 
@@ -43,5 +44,8 @@ class TextEmbedderComponent(Component):
         else:
             embedding_vector = []
 
+        # Create a Data object to encapsulate the results
+        result_data = Data(data={"text": text_content, "embeddings": embedding_vector})
+
         self.status = {"text": text_content, "embeddings": embedding_vector}
-        return embedding_vector
+        return result_data
