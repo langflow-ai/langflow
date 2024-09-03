@@ -68,7 +68,7 @@ function NoteNode({
         ref={nodeDiv}
         className={cn(
           "flex h-full w-full flex-col gap-3 rounded-md border border-b p-5 transition-all",
-          selected ? "" : "shadow-sm -z-50",
+          selected ? "" : "-z-50 shadow-sm",
         )}
       >
         <div className="flex h-fit w-full items-center align-middle">

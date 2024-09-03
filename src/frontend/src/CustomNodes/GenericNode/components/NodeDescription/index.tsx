@@ -36,17 +36,20 @@ export default function NodeDescription({
     //timeout to wait for the dom to update
     setTimeout(() => {
       if (overflowRef.current) {
-        console.log(overflowRef.current.clientHeight, overflowRef.current.scrollHeight);
-        if(overflowRef.current.clientHeight < overflowRef.current.scrollHeight){
+        console.log(
+          overflowRef.current.clientHeight,
+          overflowRef.current.scrollHeight,
+        );
+        if (
+          overflowRef.current.clientHeight < overflowRef.current.scrollHeight
+        ) {
           sethasScroll(true);
-        }
-        else{
+        } else {
           sethasScroll(false);
         }
       }
-      }, 200);
+    }, 200);
   }, [inputDescription]);
-
 
   useEffect(() => {
     if (!selected) {
@@ -128,7 +131,7 @@ export default function NodeDescription({
         </>
       ) : (
         <div
-        ref={overflowRef}
+          ref={overflowRef}
           className={cn(
             "nodoubleclick generic-node-desc-text h-full cursor-text word-break-break-word dark:text-note-placeholder",
             description === "" || !description ? "font-light italic" : "",
