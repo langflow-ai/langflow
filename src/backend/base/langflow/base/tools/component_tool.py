@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 
 from langchain_core.tools import BaseTool
-from langchain_core.tools.base import BaseToolkit
 from langchain_core.tools.structured import StructuredTool
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
@@ -40,8 +39,9 @@ def _build_output_function(component: "Component", output_method: Callable):
     return output_function
 
 
-class ComponentToolkit(BaseToolkit, arbitrary_types_allowed=True):  # type: ignore
-    component: "Component"
+class ComponentToolkit:  # type: ignore
+    def __init__(self, component: "Component"):
+        self.component = component
 
     def get_tools(self) -> list[BaseTool]:
         tools = []
