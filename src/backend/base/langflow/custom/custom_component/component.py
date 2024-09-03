@@ -12,6 +12,7 @@ import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
+from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.events.event_manager import EventManager
 from langflow.graph.state.model import create_state_model
@@ -32,6 +33,19 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
+
+
+_ComponentToolkit = None
+
+
+def _get_component_toolkit():
+    global _ComponentToolkit
+    if _ComponentToolkit is None:
+        from langflow.base.tools.component_tool import ComponentToolkit
+
+        _ComponentToolkit = ComponentToolkit
+    return _ComponentToolkit
+
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
 CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name", "_metadata"]
@@ -753,9 +767,7 @@ class Component(CustomComponent):
         return Input(**kwargs)
 
     def to_toolkit(self):
-        # TODO: This is a temporary solution to avoid circular imports
-        from langflow.base.tools.component_tool import ComponentToolkit
-
+        ComponentToolkit = _get_component_toolkit()
         return ComponentToolkit(component=self)
 
     def get_project_name(self):
@@ -783,7 +795,5 @@ class Component(CustomComponent):
             self._event_manager.on_log(data=data)
 
     def _append_tool_output(self):
-        if next((output for output in self.outputs if output.name == "component_as_tool"), None) is None:
-            self.outputs.append(
-                Output(name="component_as_tool", display_name="Tool", method="to_toolkit", types=["Tool"])
-            )
+        if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
+            self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
