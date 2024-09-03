@@ -483,7 +483,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             <Background className="" />
             {!view && (
               <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border">
-                {ENABLE_MVPS && (
                   <ControlButton
                     data-testid="add_note"
                     onClick={() => {
@@ -536,7 +535,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                       </div>
                     </ShadTooltip>
                   </ControlButton>
-                )}
               </Controls>
             )}
             <SelectionMenu
