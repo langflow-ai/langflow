@@ -81,7 +81,7 @@ def test_component_tool_with_api_key(client):
     openai_llm.set(api_key=os.environ["OPENAI_API_KEY"])
     tool_calling_agent = ToolCallingAgentComponent()
     tool_calling_agent.set(
-        llm=openai_llm.build_model, tools=[chat_output.to_toolkit], input_value="Which tools are available?"
+        llm=openai_llm.build_model, tools=[chat_output], input_value="Which tools are available? Please tell its name."
     )
 
     g = Graph(start=tool_calling_agent, end=tool_calling_agent)
