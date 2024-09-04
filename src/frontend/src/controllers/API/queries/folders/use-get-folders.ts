@@ -37,10 +37,10 @@ export const useGetFoldersQuery: useQueryFunctionType<
     const myCollectionId = data?.find((f) => f.name === DEFAULT_FOLDER)?.id;
     setMyCollectionId(myCollectionId);
 
-    const { getTypes } = useTypesStore.getState();
+    const { getTypes, types } = useTypesStore.getState();
 
     await refreshFlows(undefined);
-    await getTypes();
+    if (!types || Object.keys(types).length === 0) await getTypes();
 
     return foldersWithoutStarterProjects;
   };
