@@ -34,14 +34,19 @@ export function DataTableToolbar<TData>({
           <DataTableFacetedFilter
             column={table.getColumn("status")}
             title="Status"
-            options={statuses}
+            options={[
+              { label: "Pending", value: "pending" },
+              { label: "Processing", value: "processing" },
+              { label: "Completed", value: "completed" },
+              { label: "Failed", value: "failed" },
+            ]}
           />
         )}
-        {table.getColumn("priority") && (
+        {table.getColumn("category") && (
           <DataTableFacetedFilter
-            column={table.getColumn("priority")}
-            title="Priority"
-            options={priorities}
+            column={table.getColumn("category")}
+            title="Category"
+            options={[]} // Add category options here
           />
         )}
         {isFiltered && (

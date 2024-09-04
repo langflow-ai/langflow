@@ -1,11 +1,11 @@
 import { useGetTasks } from "@/controllers/API/queries/tasks/use-get-tasks";
+import { Task } from "@/types/Task"; // Update this import path as needed
 import { useEffect, useRef, useState } from "react";
 import { columns } from "./components/columns";
 import { DataTable } from "./components/data-table";
 import { UserNav } from "./components/user-nav";
-import { Task } from "./data/schema";
 
-// Import the mock tasks data
+// Import the mock tasks data (update the path if necessary)
 import mockTasks from "./data/tasks.json";
 
 export default function TaskPage() {
@@ -23,7 +23,7 @@ export default function TaskPage() {
       } catch (error) {
         console.error("Error fetching tasks:", error);
         // If the request fails, fall back to mock tasks
-        setTasks(mockTasks);
+        setTasks(mockTasks as Task[]); // Type assertion here
       } finally {
         tasksLoaded.current = true; // Mark tasks as loaded
       }
@@ -38,7 +38,7 @@ export default function TaskPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Welcome back!</h2>
           <p className="text-muted-foreground">
-            Here&apos;s a list of your tasks for this month!
+            Here&apos;s a list of your tasks!
           </p>
         </div>
         <div className="flex items-center space-x-2">
