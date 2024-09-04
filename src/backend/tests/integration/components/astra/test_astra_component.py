@@ -1,14 +1,11 @@
 import os
-from typing import List
 
 from astrapy.db import AstraDB
 import pytest
 
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
-from langflow.custom import Component
-from langflow.inputs import StrInput
-from langflow.template import Output
 from tests.api_keys import get_astradb_application_token, get_astradb_api_endpoint, get_openai_api_key
+from tests.integration.components.mock_components import TextToData
 from tests.integration.utils import ComponentInputHandle
 from langchain_core.documents import Document
 
@@ -70,14 +67,6 @@ async def test_base(astradb_client: AstraDB):
     assert astradb_client.collection(BASIC_COLLECTION)
 
 
-class TextToData(Component):
-    inputs = [StrInput(name="text_data", is_list=True)]
-    outputs = [Output(name="data", display_name="Data", method="create_data")]
-
-    def create_data(self) -> List[Data]:
-        return [Data(text=t) for t in self.text_data]
-
-
 @pytest.mark.api_key_required
 @pytest.mark.asyncio
 async def test_astra_embeds_and_search():
@@ -93,7 +82,7 @@ async def test_astra_embeds_and_search():
             "number_of_results": 1,
             "search_input": "test1",
             "ingest_data": ComponentInputHandle(
-                clazz=TextToData, inputs={"text_data": ["test1", "test2"]}, output_name="data"
+                clazz=TextToData, inputs={"text_data": ["test1", "test2"]}, output_name="from_text"
             ),
             "embedding": ComponentInputHandle(
                 clazz=OpenAIEmbeddingsComponent,
