@@ -1,5 +1,3 @@
-import os
-
 from typing import List
 
 from langflow.custom import Component
@@ -7,12 +5,12 @@ from langflow.inputs import FileInput, SecretStrInput
 from langflow.template import Output
 from langflow.schema import Data
 
-from langchain_community.document_loaders.unstructured import UnstructuredFileLoader
+from langchain_unstructured import UnstructuredLoader
 
 
 class UnstructuredComponent(Component):
     display_name = "Unstructured"
-    description = "Unstructured data loader"
+    description = "Uses Unstructured.io to extract clean text from raw source documents. Supports: PDF, DOCX, TXT"
     documentation = "https://python.langchain.com/v0.2/docs/integrations/providers/unstructured/"
     trace_type = "tool"
     icon = "Unstructured"
@@ -23,14 +21,14 @@ class UnstructuredComponent(Component):
             name="file",
             display_name="File",
             required=True,
-            info="The path to the file with which you want to use Unstructured to parse",
+            info="The path to the file with which you want to use Unstructured to parse. Supports: PDF, DOCX, TXT",
             file_types=["pdf", "docx", "txt"],  # TODO: Support all unstructured file types
         ),
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
-            required=False,
-            info="Unstructured API Key. Create at: https://unstructured.io/ - If not provided, open source library will be used",
+            display_name="Unstructured.io Serverless API Key",
+            required=True,
+            info="Unstructured API Key. Create at: https://app.unstructured.io/",
         ),
     ]
 
@@ -38,12 +36,14 @@ class UnstructuredComponent(Component):
         Output(name="data", display_name="Data", method="load_documents"),
     ]
 
-    def build_unstructured(self) -> UnstructuredFileLoader:
-        os.environ["UNSTRUCTURED_API_KEY"] = self.api_key
-
+    def build_unstructured(self) -> UnstructuredLoader:
         file_paths = [self.file]
 
-        loader = UnstructuredFileLoader(file_paths)
+        loader = UnstructuredLoader(
+            file_paths,
+            api_key=self.api_key,
+            partition_via_api=True,
+        )
 
         return loader
 
