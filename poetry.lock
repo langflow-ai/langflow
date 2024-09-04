@@ -1190,7 +1190,7 @@ testing = ["pytest (>=7.2.1)", "pytest-cov (>=4.0.0)", "tox (>=4.4.3)"]
 name = "clickhouse-connect"
 version = "0.7.19"
 description = "ClickHouse Database Core Driver for Python, Pandas, and Superset"
-optional = true
+optional = false
 python-versions = "~=3.8"
 files = [
     {file = "clickhouse-connect-0.7.19.tar.gz", hash = "sha256:ce8f21f035781c5ef6ff57dc162e8150779c009b59f14030ba61f8c9c10c06d0"},
@@ -5089,6 +5089,7 @@ asyncer = "^0.0.5"
 bcrypt = "4.0.1"
 cachetools = "^5.3.1"
 chardet = "^5.2.0"
+clickhouse-connect = "0.7.19"
 crewai = "^0.36.0"
 cryptography = "^42.0.5"
 diskcache = "^5.6.3"
@@ -5477,7 +5478,7 @@ source = ["Cython (>=3.0.11)"]
 name = "lz4"
 version = "4.3.3"
 description = "LZ4 Bindings for Python"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "lz4-4.3.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:b891880c187e96339474af2a3b2bfb11a8e4732ff5034be919aa9029484cd201"},
@@ -5751,7 +5752,6 @@ python-versions = ">=3.7"
 files = [
     {file = "milvus_lite-2.4.9-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:d3e617b3d68c09ad656d54bc3d8cc4ef6ef56c54015e1563d4fe4bcec6b7c90a"},
     {file = "milvus_lite-2.4.9-py3-none-macosx_11_0_arm64.whl", hash = "sha256:6e7029282d6829b277ebb92f64e2370be72b938e34770e1eb649346bda5d1d7f"},
-    {file = "milvus_lite-2.4.9-py3-none-manylinux2014_aarch64.whl", hash = "sha256:9b8e991e4e433596f6a399a165c1a506f823ec9133332e03d7f8a114bff4550d"},
     {file = "milvus_lite-2.4.9-py3-none-manylinux2014_x86_64.whl", hash = "sha256:7f53e674602101cfbcf0a4a59d19eaa139dfd5580639f3040ad73d901f24fc0b"},
 ]
 
@@ -10606,6 +10606,11 @@ files = [
     {file = "triton-3.0.0-1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:34e509deb77f1c067d8640725ef00c5cbfcb2052a1a3cb6a6d343841f92624eb"},
     {file = "triton-3.0.0-1-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:bcbf3b1c48af6a28011a5c40a5b3b9b5330530c3827716b5fbf6d7adcc1e53e9"},
     {file = "triton-3.0.0-1-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:6e5727202f7078c56f91ff13ad0c1abab14a0e7f2c87e91b12b6f64f3e8ae609"},
+    {file = "triton-3.0.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:39b052da883351fdf6be3d93cedae6db3b8e3988d3b09ed221bccecfa9612230"},
+    {file = "triton-3.0.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cd34f19a8582af96e6291d4afce25dac08cb2a5d218c599163761e8e0827208e"},
+    {file = "triton-3.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0d5e10de8c011adeb7c878c6ce0dd6073b14367749e34467f1cff2bde1b78253"},
+    {file = "triton-3.0.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e8903767951bf86ec960b4fe4e21bc970055afc65e9d57e916d79ae3c93665e3"},
+    {file = "triton-3.0.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:41004fb1ae9a53fcb3e970745feb87f0e3c94c6ce1ba86e95fa3b8537894bef7"},
 ]
 
 [package.dependencies]
@@ -11991,7 +11996,7 @@ type = ["pytest-mypy"]
 name = "zstandard"
 version = "0.23.0"
 description = "Zstandard bindings for Python"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "zstandard-0.23.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:bf0a05b6059c0528477fba9054d09179beb63744355cab9f38059548fedd46a9"},
@@ -12108,4 +12113,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "450fcc29d692f64eacd1d20d8365a05ab49f839d3a206fcffbf560efad1b65a7"
+content-hash = "5d520ff9f32b297bc10c0823992bfddbe240d2e5d38bb94e2c48fd110b909663"
