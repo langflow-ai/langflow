@@ -244,7 +244,6 @@ export default function ChatMessage({
 
                                 return !inline ? (
                                   <CodeTabsComponent
-                                    open={undefined}
                                     isMessage
                                     tabs={[
                                       {
