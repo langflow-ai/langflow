@@ -1,3 +1,4 @@
+import { useUtilityStore } from "@/stores/utilityStore";
 import Convert from "ansi-to-html";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
@@ -40,6 +41,13 @@ export default function ChatMessage({
   const eventSource = useRef<EventSource | undefined>(undefined);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const chatMessageRef = useRef(chatMessage);
+
+  const playgroundScrollBehaves = useUtilityStore(
+    (state) => state.playgroundScrollBehaves,
+  );
+  const setPlaygroundScrollBehaves = useUtilityStore(
+    (state) => state.setPlaygroundScrollBehaves,
+  );
 
   // Sync ref with state
   useEffect(() => {
@@ -107,9 +115,14 @@ export default function ChatMessage({
   useEffect(() => {
     const element = document.getElementById("last-chat-message");
     if (element) {
-      setTimeout(() => {
-        element.scrollIntoView({ behavior: "smooth" });
-      }, 200);
+      if (playgroundScrollBehaves === "instant") {
+        element.scrollIntoView({ behavior: playgroundScrollBehaves });
+        setPlaygroundScrollBehaves("smooth");
+      } else {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: playgroundScrollBehaves });
+        }, 200);
+      }
     }
   }, [lastMessage]);
 
@@ -231,6 +244,7 @@ export default function ChatMessage({
 
                                 return !inline ? (
                                   <CodeTabsComponent
+                                    open={undefined}
                                     isMessage
                                     tabs={[
                                       {
