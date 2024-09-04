@@ -79,9 +79,9 @@ class OpenAIModelComponent(LCModelComponent):
         HandleInput(
             name="output_parser",
             display_name="Output Parser",
-            info="The output parser to use to parse the output of the model",
-            advanced=False,  # TODO fraz: probably make true
-            input_types=["BaseOutputParser"],
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 

@@ -1,3 +1,4 @@
+from langflow.inputs.inputs import HandleInput
 import requests
 from typing import List
 from langchain_groq import ChatGroq
@@ -51,6 +52,13 @@ class GroqModel(LCModelComponent):
             info="The name of the model to use.",
             options=[],
             refresh_button=True,
+        ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 

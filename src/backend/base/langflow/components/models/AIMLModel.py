@@ -1,5 +1,6 @@
 from langflow.field_typing.range_spec import RangeSpec
 from langchain_openai import ChatOpenAI
+from langflow.inputs.inputs import HandleInput
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.aiml_constants import AIML_CHAT_MODELS
@@ -58,6 +59,13 @@ class AIMLModelComponent(LCModelComponent):
             info="The seed controls the reproducibility of the job.",
             advanced=True,
             value=1,
+        ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 

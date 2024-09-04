@@ -10,7 +10,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseLanguageModel, BaseLLM
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.memory import BaseMemory
-from langchain_core.output_parsers import BaseOutputParser
+from langchain_core.output_parsers import BaseOutputParser, BaseLLMOutputParser
 from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.tools import BaseTool, Tool
@@ -27,6 +27,11 @@ Retriever = TypeVar(
     "Retriever",
     BaseRetriever,
     VectorStoreRetriever,
+)
+OutputParser = TypeVar(
+    "OutputParser",
+    BaseOutputParser,
+    BaseLLMOutputParser,
 )
 
 

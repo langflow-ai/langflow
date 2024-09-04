@@ -1,4 +1,5 @@
 from langchain_community.chat_models import ChatPerplexity
+from langflow.inputs.inputs import HandleInput
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
@@ -58,6 +59,13 @@ class PerplexityComponent(LCModelComponent):
             display_name="Top K",
             info="Decode using top-k sampling: consider the set of top_k most probable tokens. Must be positive.",
             advanced=True,
+        ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 

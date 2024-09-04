@@ -1,4 +1,5 @@
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
+from langflow.inputs.inputs import HandleInput
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
@@ -66,6 +67,13 @@ class QianfanChatEndpointComponent(LCModelComponent):
             name="endpoint",
             display_name="Endpoint",
             info="Endpoint of the Qianfan LLM, required if custom model used.",
+        ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 

@@ -1,3 +1,4 @@
+from langflow.inputs.inputs import HandleInput
 from tenacity import retry, stop_after_attempt, wait_fixed
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 
@@ -27,6 +28,13 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         SecretStrInput(name="huggingfacehub_api_token", display_name="API Token", password=True),
         DictInput(name="model_kwargs", display_name="Model Keyword Arguments", advanced=True),
         IntInput(name="retry_attempts", display_name="Retry Attempts", value=1, advanced=True),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
+        ),
     ]
 
     def create_huggingface_endpoint(

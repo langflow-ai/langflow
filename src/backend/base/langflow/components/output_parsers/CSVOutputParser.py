@@ -1,7 +1,8 @@
 from langflow.custom.custom_component.component import Component
+from langflow.field_typing.constants import OutputParser
 from langflow.io import Output
 from langflow.schema.message import Message
-from langchain_core.output_parsers import CommaSeparatedListOutputParser, BaseOutputParser
+from langchain_core.output_parsers import CommaSeparatedListOutputParser
 
 
 class CSVOutputParserComponent(Component):
@@ -22,7 +23,7 @@ class CSVOutputParserComponent(Component):
         Output(display_name="Output Parser", name="output_parser", method="build_parser"),
     ]
 
-    def build_parser(self) -> BaseOutputParser:
+    def build_parser(self) -> OutputParser:
         return CommaSeparatedListOutputParser()
 
     def format_instructions(self) -> Message:
