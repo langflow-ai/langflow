@@ -183,7 +183,8 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.mouse.up();
 
   await page
-    .getByTestId(/^rf__node-TextInput-[a-zA-Z0-9]+$/).getByTestId('textarea_str_input_value')
+    .getByTestId(/^rf__node-TextInput-[a-zA-Z0-9]+$/)
+    .getByTestId("textarea_str_input_value")
     .fill("This is a test!");
 
   let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
@@ -220,7 +221,8 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.keyboard.press("Escape");
 
   await page
-  .getByTestId(/^rf__node-TextInput-[a-zA-Z0-9]+$/).getByTestId('textarea_str_input_value')
+    .getByTestId(/^rf__node-TextInput-[a-zA-Z0-9]+$/)
+    .getByTestId("textarea_str_input_value")
     .fill("This is a test, again just to be sure!");
   await page.getByText("Playground", { exact: true }).click();
   await page.getByText("Run Flow", { exact: true }).click();
