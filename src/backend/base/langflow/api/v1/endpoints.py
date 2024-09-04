@@ -28,6 +28,7 @@ from langflow.exceptions.api import APIException, InvalidChatInputException
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
@@ -286,6 +287,7 @@ async def simplified_run_flow(
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
 async def webhook_run_flow(
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    user: Annotated[User, Depends(get_user_by_flow_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
@@ -329,11 +331,13 @@ async def webhook_run_flow(
             tweaks=tweaks,
             session_id=None,
         )
+
         logger.debug("Starting background task")
         background_tasks.add_task(  # type: ignore
             simple_run_flow_task,
             flow=flow,
             input_request=input_request,
+            api_key_user=user,
         )
         background_tasks.add_task(
             telemetry_service.log_package_run,
