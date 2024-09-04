@@ -1,5 +1,5 @@
 from langflow.base.io.text import TextComponent
-from langflow.io import MessageTextInput, Output
+from langflow.io import MultilineInput, Output
 from langflow.schema.message import Message
 
 
@@ -10,7 +10,7 @@ class TextOutputComponent(TextComponent):
     name = "TextOutput"
 
     inputs = [
-        MessageTextInput(
+        MultilineInput(
             name="input_value",
             display_name="Text",
             info="Text to be passed as output.",

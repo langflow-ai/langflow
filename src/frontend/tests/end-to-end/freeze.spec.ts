@@ -203,7 +203,7 @@ test("user must be able to freeze a component", async ({ page }) => {
   await page.getByTitle("fit view").click();
 
   await page
-    .getByTestId("popover-anchor-input-input_value")
+    .getByTestId("textarea_str_input_value")
     .first()
     .fill("lorem ipsum");
 
@@ -232,7 +232,7 @@ test("user must be able to freeze a component", async ({ page }) => {
   await page.getByText("Close").last().click();
   await page.getByText("Close").last().click();
 
-  await page.getByTestId("popover-anchor-input-input_value").first().fill(",");
+  await page.getByTestId("textarea_str_input_value").first().fill(",");
 
   await page.getByTestId("button_run_chat output").click();
 
@@ -272,7 +272,7 @@ test("user must be able to freeze a component", async ({ page }) => {
   await page.locator('//*[@id="react-flow-id"]').click();
 
   await page
-    .getByTestId("popover-anchor-input-input_value")
+    .getByTestId("textarea_str_input_value")
     .first()
     .fill("lorem ipsum");
 
