@@ -12,6 +12,9 @@ if TYPE_CHECKING:
 
 
 class TaskBase(SQLModel):
+    title: str
+    description: str
+    attachments: list[str] = Field(default=[])
     author_id: UUID = Field(foreign_key="flow.id", index=True)
     assignee_id: UUID = Field(foreign_key="flow.id", index=True)
     category: str
