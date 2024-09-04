@@ -192,10 +192,7 @@ test("should be able to see output preview from grouped components", async ({
   await elementTextOutputInput.hover();
   await page.mouse.up();
 
-  await page
-    .getByTestId("textarea_str_input_value")
-    .nth(0)
-    .fill(randomName);
+  await page.getByTestId("textarea_str_input_value").nth(0).fill(randomName);
 
   await page.waitForTimeout(1000);
   await page
