@@ -194,7 +194,7 @@ test("user must be able to stop a building", async ({ page }) => {
 
   await page.getByTitle("fit view").click();
 
-  await page.getByTestId("popover-anchor-input-input_value").first().fill(",");
+  await page.getByTestId("textarea_str_input_value").first().fill(",");
 
   await page
     .getByTestId("inputlist_str_urls_0")
