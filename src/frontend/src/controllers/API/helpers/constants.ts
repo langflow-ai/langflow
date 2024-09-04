@@ -23,6 +23,7 @@ export const URLs = {
   STARTER_PROJECTS: `starter-projects`,
   SIDEBAR_CATEGORIES: `sidebar_categories`,
   ALL: `all`,
+  TASKS: `tasks`,
 } as const;
 
 export function getURL(key: keyof typeof URLs, params: any = {}) {
