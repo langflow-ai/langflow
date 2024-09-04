@@ -415,6 +415,7 @@ def test_custom_component_get_function_entrypoint_return_type_no_return_type():
     CustomComponent class with a build method with no return type.
     """
     my_code = """
+from langflow.custom import CustomComponent
 class MyClass(CustomComponent):
     def build():
         pass"""
