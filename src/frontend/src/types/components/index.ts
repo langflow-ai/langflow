@@ -775,7 +775,7 @@ export type tabsArrayType = {
 };
 
 export type codeTabsPropsType = {
-  open: boolean;
+  open: boolean | undefined;
   tabs: Array<tabsArrayType>;
   activeTab: string;
   setActiveTab: (value: string) => void;
