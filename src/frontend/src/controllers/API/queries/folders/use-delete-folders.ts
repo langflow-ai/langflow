@@ -32,7 +32,10 @@ export const useDeleteFolders: useMutationFunctionType<
       queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
     },
     onSuccess: (id) => {
-      queryClient.removeQueries({ queryKey: ["useGetFolder",{ id }],exact: true });
+      queryClient.removeQueries({
+        queryKey: ["useGetFolder", { id }],
+        exact: true,
+      });
     },
   });
 
