@@ -27,7 +27,6 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
       getAll(force_refresh)
         .then((response) => {
           const data = response?.data;
-          useAlertStore.setState({ loading: false });
           set((old) => ({
             types: typesGenerator(data),
             data: { ...old.data, ...data },
