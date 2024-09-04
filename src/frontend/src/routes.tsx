@@ -35,6 +35,7 @@ import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import StoreApiKeyPage from "./pages/SettingsPage/pages/StoreApiKeyPage";
 import StorePage from "./pages/StorePage";
+import TaskPage from "./pages/TasksPage";
 import ViewPage from "./pages/ViewPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
@@ -232,6 +233,7 @@ const router = createBrowserRouter(
               </ProtectedLoginRoute>
             }
           />
+          <Route path="/tasks" element={<TaskPage />} />
         </Route>
       </Route>
       <Route path="*" element={<CustomNavigate replace to="/" />} />
