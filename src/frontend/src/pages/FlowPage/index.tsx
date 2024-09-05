@@ -64,7 +64,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const handleStopBuild = () => {
     stopBuilding();
-    if (blocker.proceed) blocker.proceed();
+    if (blocker.proceed && !changesNotSaved) blocker.proceed();
   };
 
   const handleExit = () => {
@@ -124,12 +124,22 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   }, [id]);
 
   useEffect(() => {
-    if (blocker.state === "blocked") {
-      if (autoSaving && changesNotSaved && !saveLoading) {
-        handleSave();
-      }
+    if (
+      blocker.state === "blocked" &&
+      autoSaving &&
+      changesNotSaved &&
+      !isBuilding
+    ) {
+      console.log("saving");
+      handleSave();
     }
-  }, [blocker.state]);
+  }, [blocker.state, isBuilding]);
+
+  useEffect(() => {
+    if (blocker.state === "blocked" && !isBuilding && !changesNotSaved) {
+      blocker.proceed && blocker.proceed();
+    }
+  }, [blocker.state, isBuilding]);
 
   return (
     <>
