@@ -1,5 +1,6 @@
 import {
   useGetGlobalVariables,
+  usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
@@ -14,24 +15,28 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import sortByName from "./utils/sort-by-name";
+import { GlobalVariable } from "@/types/global_variables";
 
 //TODO IMPLEMENT FORM LOGIC
 
-export default function AddNewVariableButton({
+export default function GlobalVariableModal({
   children,
   asChild,
+  initialData
 }: {
   children: JSX.Element;
   asChild?: boolean;
+  initialData?: GlobalVariable
 }): JSX.Element {
-  const [key, setKey] = useState("");
-  const [value, setValue] = useState("");
-  const [type, setType] = useState("Generic");
-  const [fields, setFields] = useState<string[]>([]);
+  const [key, setKey] = useState(initialData?.name ?? "");
+  const [value, setValue] = useState(initialData?.value ?? "");
+  const [type, setType] = useState(initialData?.type??"Generic");
+  const [fields, setFields] = useState<string[]>(initialData?.default_fields??[]);
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
   const { mutate: mutateAddGlobalVariable } = usePostGlobalVariables();
+  const {mutate:updateVariable} = usePatchGlobalVariables();
   const { data: globalVariables } = useGetGlobalVariables();
   const [availableFields, setAvailableFields] = useState<string[]>([]);
 
@@ -87,12 +92,26 @@ export default function AddNewVariableButton({
     });
   }
 
+  function submitForm() {
+    if(!initialData){
+      handleSaveVariable();
+    }
+    else {
+      updateVariable({
+        id: initialData.id,
+        name: key,
+        value: value,
+        default_fields: fields,
+      });
+    }
+  }
+
   return (
     <BaseModal
       open={open}
       setOpen={setOpen}
       size="x-small"
-      onSubmit={handleSaveVariable}
+      onSubmit={submitForm}
     >
       <BaseModal.Header
         description={

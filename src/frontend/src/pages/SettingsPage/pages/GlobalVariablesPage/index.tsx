@@ -8,7 +8,7 @@ import {
 } from "@/controllers/API/queries/variables";
 import { CellValueChangedEvent, ColDef, ColGroupDef, SelectionChangedEvent } from "ag-grid-community";
 import { useState } from "react";
-import AddNewVariableButton from "../../../../components/addNewVariableButtonComponent/addNewVariableButton";
+import GlobalVariableModal from "../../../../components/GlobalVariableModal/GlobalVariableModal";
 import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
@@ -44,7 +44,6 @@ export default function GlobalVariablesPage() {
       headerName: "Variable Name",
       field: "name",
       flex: 2,
-      cellRenderer:TableAutoCellRender
     }, //This column will be twice as wide as the others
     {
       headerName: "Type",
@@ -116,12 +115,12 @@ export default function GlobalVariablesPage() {
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
-          <AddNewVariableButton asChild>
+          <GlobalVariableModal asChild>
             <Button data-testid="api-key-button-store" variant="primary">
               <IconComponent name="Plus" className="w-4" />
               Add New
             </Button>
-          </AddNewVariableButton>
+          </GlobalVariableModal>
         </div>
       </div>
 
@@ -133,8 +132,9 @@ export default function GlobalVariablesPage() {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
           }}
           rowSelection="multiple"
-          editable={["name", "value","default_fields"]}
-          onCellValueChanged={handleUpdate}
+          onRowDoubleClicked={(event)=>{
+            console.log(event);
+          }}
           suppressRowClickSelection={true}
           pagination={true}
           columnDefs={colDefs}
