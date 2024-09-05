@@ -43,9 +43,6 @@ jobs:
       - name: Create tag
         id: create_tag
         run: |
-          echo "TEST DELETE ME"
-          echo ${{ secrets.TEST_DELETE_ME }}
-
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
 
