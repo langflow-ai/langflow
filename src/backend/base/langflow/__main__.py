@@ -348,7 +348,6 @@ def print_banner(host: str, port: int):
         package_name, package_name, any("pre-release" in notice for notice in notices)
     )
 
-    # TODO: update description for nightly builds?
     title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
     info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
     telemetry_text = "We collect anonymous usage data to improve Langflow.\nYou can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
