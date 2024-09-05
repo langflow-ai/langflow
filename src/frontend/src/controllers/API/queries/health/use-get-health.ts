@@ -75,6 +75,7 @@ export const useGetHealthQuery: useQueryFunctionType<
       ? REFETCH_SERVER_HEALTH_INTERVAL
       : false,
     retry: false,
+    refetchOnWindowFocus: false,
     ...options,
   });
 

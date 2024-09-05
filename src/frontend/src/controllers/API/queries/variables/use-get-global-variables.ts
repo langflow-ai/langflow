@@ -30,7 +30,10 @@ export const useGetGlobalVariables: useQueryFunctionType<
   const queryResult: UseQueryResult<GlobalVariable[], any> = query(
     ["useGetGlobalVariables"],
     getGlobalVariablesFn,
-    options,
+    {
+      refetchOnWindowFocus: false,
+      ...options,
+    },
   );
 
   return queryResult;

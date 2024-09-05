@@ -48,6 +48,7 @@ export const useGetTransactionsQuery: useQueryFunctionType<
 
   const queryResult = query(["useGetTransactionsQuery"], getTransactionsFn, {
     placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
     ...options,
   });
 
