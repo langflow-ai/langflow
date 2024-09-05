@@ -81,6 +81,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   isBuilding: false,
   stopBuilding: () => {
     get().buildController.abort();
+    set({ isBuilding: false });
   },
   isPending: true,
   setHasIO: (hasIO) => {
