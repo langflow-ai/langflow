@@ -22,7 +22,9 @@ const useSaveFlow = () => {
   const { mutate } = usePatchUpdateFlow();
 
   const saveFlow = async (flow?: FlowType): Promise<void> => {
-    if (customStringify(currentFlow) !== customStringify(currentSavedFlow)) {
+    if (
+      customStringify(flow || currentFlow) !== customStringify(currentSavedFlow)
+    ) {
       setSaveLoading(true);
       return new Promise<void>((resolve, reject) => {
         if (currentFlow) {
