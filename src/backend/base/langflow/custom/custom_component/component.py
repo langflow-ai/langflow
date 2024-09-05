@@ -250,11 +250,12 @@ class Component(CustomComponent):
         Returns:
             None
         """
-        self.outputs = outputs
         for output in outputs:
             if output.name is None:
                 raise ValueError("Output name cannot be None.")
-            self._outputs[output.name] = output
+            # Deepcopy is required to avoid modifying the original component;
+            # allows each instance of each component to modify its own output
+            self._outputs[output.name] = deepcopy(output)
 
     def map_inputs(self, inputs: list["InputTypes"]):
         """
@@ -267,7 +268,6 @@ class Component(CustomComponent):
             ValueError: If the input name is None.
 
         """
-        self.inputs = inputs
         for input_ in inputs:
             if input_.name is None:
                 raise ValueError("Input name cannot be None.")
