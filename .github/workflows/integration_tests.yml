@@ -1,20 +1,29 @@
-name: Integration tests
+name: Integration Tests
 
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: "(Optional) Branch to checkout"
+      ref:
+        description: "(Optional) ref to checkout"
         required: false
         type: string
-  schedule:
-    - cron: "0 0 */2 * *" # Run every 2 days
+  workflow_call:
+    inputs:
+      python-versions:
+        description: "(Optional) Python versions to test"
+        required: true
+        type: string
+        default: "['3.10', '3.11', '3.12']"
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
 
 env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
-  test-integration:
+  integration-tests:
     name: Run Integration Tests
     runs-on: ubuntu-latest
     strategy:
@@ -32,7 +41,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.ref || github.ref }}
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:

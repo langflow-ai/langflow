@@ -8,12 +8,17 @@ on:
         required: true
         type: string
         default: "['3.10', '3.11', '3.12']"
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: "(Optional) Branch to checkout"
+      ref:
+        description: "(Optional) ref to checkout"
         required: false
         type: string
+      nightly:
+        description: "Whether run is from the nightly build"
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
       python-versions:
         description: "(Optional) Python versions to test"
         required: true
@@ -35,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.ref || github.ref }}
       - name: Setup Node.js
         uses: actions/setup-node@v4
         id: setup-node
@@ -88,6 +93,9 @@ jobs:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12"]') }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:
@@ -98,7 +106,12 @@ jobs:
         id: check-version
         run: |
           version=$(cd src/backend/base && poetry version --short)
-          last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+          url="https://pypi.org/pypi/langflow-base/json"
+          if [ ${{ inputs.nightly }} == true ]; then
+            url="https://pypi.org/pypi/langflow-base-nightly/json"
+          fi
+
+          last_released_version=$(curl -s $url | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" != "$last_released_version" ]; then
             echo "Version $version has not been released yet. Skipping the rest of the job."
             echo skipped=true >> $GITHUB_OUTPUT
