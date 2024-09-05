@@ -3,6 +3,7 @@ import { ENABLE_BRANDING } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
+import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect } from "react";
@@ -19,7 +20,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
-  const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -54,10 +55,18 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       saving = false;
       if (proceed) {
         blocker.proceed && blocker.proceed();
+        setSuccessData({
+          title: "Flow saved successfully!",
+        });
       }
     }, 1000);
     saveFlow().then(() => {
-      blocker.proceed && (!autoSaving || saving === false) && blocker.proceed();
+      if (!autoSaving || saving === false) {
+        blocker.proceed && blocker.proceed();
+        setSuccessData({
+          title: "Flow saved successfully!",
+        });
+      }
       proceed = true;
     });
   };
