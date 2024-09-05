@@ -94,7 +94,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   useEffect(() => {
     if (blocker.state === "blocked") {
       if (autoSaving && changesNotSaved && !saveLoading) {
-        saveFlow();
+        handleSave();
       }
     }
   }, [blocker.state]);
