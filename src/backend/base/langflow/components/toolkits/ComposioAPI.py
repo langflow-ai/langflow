@@ -168,7 +168,7 @@ class ComposioAPIComponent(LCToolComponent):
 
     def build_tool(self) -> Sequence[Tool]:
         composio_toolset = self._build_wrapper()
-        composio_tools = composio_toolset.get_actions(actions=self.action_names)
+        composio_tools = composio_toolset.get_tools(actions=self.action_names)
         return composio_tools
 
     def _build_wrapper(self) -> ComposioToolSet:

@@ -156,7 +156,7 @@ body {
 
 .react-flow__edge .react-flow__edge-path {
   stroke: var(--connection) !important;
-  transition: all;
+  transition: color;
   transition-duration: 150ms;
 }
 
