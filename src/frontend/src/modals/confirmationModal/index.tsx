@@ -66,6 +66,10 @@ function ConfirmationModal({
     (child) => (child as React.ReactElement).type === Content,
   );
 
+  const shouldShowConfirm = confirmationText && onConfirm;
+  const shouldShowCancel = cancelText;
+  const shouldShowFooter = shouldShowConfirm || shouldShowCancel;
+
   return (
     <BaseModal {...props} open={open} setOpen={setModalOpen}>
       <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
@@ -89,9 +93,9 @@ function ConfirmationModal({
         {ContentChild}
       </BaseModal.Content>
 
-      {(confirmationText && onConfirm) || (cancelText && onCancel) ? (
+      {shouldShowFooter ? (
         <BaseModal.Footer>
-          {confirmationText && onConfirm && (
+          {shouldShowConfirm && (
             <Button
               className="ml-3"
               variant={destructive ? "destructive" : "default"}
@@ -106,14 +110,14 @@ function ConfirmationModal({
               {confirmationText}
             </Button>
           )}
-          {cancelText && onCancel && (
+          {shouldShowCancel && (
             <Button
               className=""
               variant={destructiveCancel ? "destructive" : "outline"}
               onClick={() => {
                 setFlag(true);
-                if (onCancel) onCancel();
                 setModalOpen(false);
+                onCancel?.();
               }}
             >
               {cancelText}
