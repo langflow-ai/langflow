@@ -220,13 +220,12 @@ class Settings(BaseSettings):
                 # if there is a database in that location
                 if not info.data["config_dir"]:
                     raise ValueError("config_dir not set, please set it or provide a database_url")
-                try:
-                    from langflow.version import is_pre_release  # type: ignore
-                except ImportError:
-                    from importlib import metadata
 
-                    version = metadata.version("langflow-base")
-                    is_pre_release = "a" in version or "b" in version or "rc" in version
+                from langflow.utils.version import get_version_info
+                from langflow.utils.version import is_pre_release as langflow_is_pre_release
+
+                version = get_version_info()["version"]
+                is_pre_release = langflow_is_pre_release(version)
 
                 if info.data["save_db_in_config_dir"]:
                     database_dir = info.data["config_dir"]

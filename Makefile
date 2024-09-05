@@ -409,6 +409,12 @@ publish_base:
 publish_langflow:
 	poetry publish
 
+publish_base_testpypi:
+	cd src/backend/base && poetry publish --skip-existing -r test-pypi
+
+publish_langflow_testpypi:
+	poetry publish -r test-pypi
+
 publish: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
 ifdef base
@@ -418,3 +424,17 @@ endif
 ifdef main
 	make publish_langflow
 endif
+
+publish_testpypi: ## build the frontend static files and package the project and publish it to PyPI
+	@echo 'Publishing the project'
+
+ifdef base
+	poetry config repositories.test-pypi https://test.pypi.org/legacy/
+	make publish_base_testpypi
+endif
+
+ifdef main
+	poetry config repositories.test-pypi https://test.pypi.org/legacy/
+	make publish_langflow_testpypi
+endif
+
