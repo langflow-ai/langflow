@@ -860,3 +860,10 @@ class Vertex:
     def _built_object_repr(self):
         # Add a message with an emoji, stars for sucess,
         return "Built successfully ✨" if self._built_object is not None else "Failed to build 😵‍💫"
+
+    def apply_on_outputs(self, func: Callable[[Any], Any]):
+        """Applies a function to the outputs of the vertex."""
+        if not self._custom_component:
+            return
+        for output in self._custom_component.outputs:
+            output.value = func(output)
