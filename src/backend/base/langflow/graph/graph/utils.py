@@ -409,3 +409,58 @@ def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) 
     if max_iterations is None:
         return True
     return max(yielded_counts.values(), default=0) <= max_iterations
+
+
+def find_cycle_vertices(edges: list[tuple[str, str]]) -> list[str]:
+    """
+    Find all vertices that are part of a cycle in a directed graph starting from a given entry point.
+    Example:
+    A -> B
+    B -> C
+    C -> A
+    C -> D
+    D -> E
+    E -> F
+    F -> C
+    F -> G
+    One cycle is C -> A -> B -> C
+    The vertices in the cycle are C, A, B
+    The other cycle is F -> C -> D -> E -> F
+    The vertices in the cycle are F, C, D, E
+    This a list of all vertices in the cycles: C, A, B, D, E, F
+
+    Args:
+        entry_point (str): The vertex ID from which to start the search.
+        edges (list[tuple[str, str]]): A list of tuples representing directed edges between vertices.
+
+    Returns:
+        list[str]: A list of vertices that are part of a cycle in the graph.
+    """
+    graph = defaultdict(list)
+    for u, v in edges:
+        graph[u].append(v)
+
+    def dfs(v, visited, rec_stack, cycle_vertices):
+        visited.add(v)
+        rec_stack.add(v)
+
+        for neighbor in graph[v]:
+            if neighbor not in visited:
+                dfs(neighbor, visited, rec_stack, cycle_vertices)
+            elif neighbor in rec_stack:
+                # Found a cycle
+                cycle_start = list(rec_stack).index(neighbor)
+                cycle = list(rec_stack)[cycle_start:]
+                cycle_vertices.update(cycle)
+
+        rec_stack.remove(v)
+
+    visited: set[str] = set()
+    cycle_vertices: set[str] = set()
+
+    # Run DFS from each vertex to find all cycles
+    for vertex in graph.copy():
+        if vertex not in visited:
+            dfs(vertex, visited, set(), cycle_vertices)
+
+    return list(cycle_vertices)
