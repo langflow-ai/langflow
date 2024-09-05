@@ -4,8 +4,9 @@ import { Button } from "../../../../components/ui/button";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
+  usePatchGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { ColDef, ColGroupDef, SelectionChangedEvent } from "ag-grid-community";
+import { CellValueChangedEvent, ColDef, ColGroupDef, SelectionChangedEvent } from "ag-grid-community";
 import { useState } from "react";
 import AddNewVariableButton from "../../../../components/addNewVariableButtonComponent/addNewVariableButton";
 import Dropdown from "../../../../components/dropdownComponent";
@@ -13,6 +14,8 @@ import ForwardedIconComponent from "../../../../components/genericIconComponent"
 import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
 import useAlertStore from "../../../../stores/alertStore";
+import TableAutoCellRender from "@/components/tableComponent/components/tableAutoCellRender";
+import { GlobalVariable } from "@/types/global_variables";
 
 export default function GlobalVariablesPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -41,6 +44,7 @@ export default function GlobalVariablesPage() {
       headerName: "Variable Name",
       field: "name",
       flex: 2,
+      cellRenderer:TableAutoCellRender
     }, //This column will be twice as wide as the others
     {
       headerName: "Type",
@@ -51,22 +55,18 @@ export default function GlobalVariablesPage() {
         options: ["Generic", "Credential"],
       },
       flex: 1,
-      editable: false,
     },
-    // {
-    //   field: "value",
-    //   cellEditor: "agLargeTextCellEditor",
-    //   flex: 2,
-    //   editable: false,
-    // },
+    {
+      field: "value",
+      cellRenderer:TableAutoCellRender
+    },
     {
       headerName: "Apply To Fields",
       field: "default_fields",
       valueFormatter: (params) => {
-        return params.value.join(", ");
+        return params.value?.join(", ")??"";
       },
       flex: 1,
-      editable: false,
       resizable: false,
     },
   ]);
@@ -91,6 +91,13 @@ export default function GlobalVariablesPage() {
         },
       );
     });
+  }
+  const {mutate:updateVariable} = usePatchGlobalVariables();
+
+  function handleUpdate(event:CellValueChangedEvent<GlobalVariable, any>) {
+    const {data} = event;
+    console.log(data);
+    updateVariable(data);
   }
 
   return (
@@ -126,6 +133,8 @@ export default function GlobalVariablesPage() {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
           }}
           rowSelection="multiple"
+          editable={["name", "value","default_fields"]}
+          onCellValueChanged={handleUpdate}
           suppressRowClickSelection={true}
           pagination={true}
           columnDefs={colDefs}
