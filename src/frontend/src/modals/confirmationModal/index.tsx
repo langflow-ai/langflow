@@ -89,34 +89,40 @@ function ConfirmationModal({
         {ContentChild}
       </BaseModal.Content>
 
-      <BaseModal.Footer>
-        <Button
-          className="ml-3"
-          variant={destructive ? "destructive" : "default"}
-          onClick={() => {
-            setFlag(true);
-            setModalOpen(false);
-            onConfirm(index, data);
-          }}
-          loading={loading}
-          data-testid="replace-button"
-        >
-          {confirmationText}
-        </Button>
-        {cancelText && onCancel && (
-          <Button
-            className=""
-            variant={destructiveCancel ? "destructive" : "outline"}
-            onClick={() => {
-              setFlag(true);
-              if (onCancel) onCancel();
-              setModalOpen(false);
-            }}
-          >
-            {cancelText}
-          </Button>
-        )}
-      </BaseModal.Footer>
+      {(confirmationText && onConfirm) || (cancelText && onCancel) ? (
+        <BaseModal.Footer>
+          {confirmationText && onConfirm && (
+            <Button
+              className="ml-3"
+              variant={destructive ? "destructive" : "default"}
+              onClick={() => {
+                setFlag(true);
+                setModalOpen(false);
+                onConfirm(index, data);
+              }}
+              loading={loading}
+              data-testid="replace-button"
+            >
+              {confirmationText}
+            </Button>
+          )}
+          {cancelText && onCancel && (
+            <Button
+              className=""
+              variant={destructiveCancel ? "destructive" : "outline"}
+              onClick={() => {
+                setFlag(true);
+                if (onCancel) onCancel();
+                setModalOpen(false);
+              }}
+            >
+              {cancelText}
+            </Button>
+          )}
+        </BaseModal.Footer>
+      ) : (
+        <></>
+      )}
     </BaseModal>
   );
 }
