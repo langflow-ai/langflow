@@ -53,8 +53,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const changesNotSaved =
-    customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
-    !autoSaving;
+    customStringify(currentFlow) !== customStringify(currentSavedFlow);
 
   const savedText =
     updatedAt && changesNotSaved

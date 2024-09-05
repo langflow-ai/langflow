@@ -160,7 +160,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   resetFlow: (flow) => {
     const nodes = flow?.data?.nodes ?? [];
     const edges = flow?.data?.edges ?? [];
-    const viewport = flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 };
     let brokenEdges = detectBrokenEdgesEdges(nodes, edges);
     if (brokenEdges.length > 0) {
       useAlertStore.getState().setErrorData({
@@ -181,7 +180,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowPool: {},
       currentFlow: flow,
     });
-    get().reactFlowInstance?.setViewport(viewport);
   },
   setIsBuilding: (isBuilding) => {
     set({ isBuilding });
@@ -198,16 +196,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setReactFlowInstance: (newState) => {
     set({ reactFlowInstance: newState });
-    const viewport = get().currentFlow?.data?.viewport ?? {
-      zoom: 1,
-      x: 0,
-      y: 0,
-    };
-    if (viewport.x == 0 && viewport.y == 0) {
-      newState.fitView();
-    } else {
-      newState.setViewport(viewport);
-    }
+    get().reactFlowInstance?.fitView();
   },
   onNodesChange: (changes: NodeChange[]) => {
     set({
@@ -753,19 +742,18 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setCurrentFlow: (flow) => {
     set({ currentFlow: flow });
   },
-  updateCurrentFlow: ({ nodes, edges, viewport }) => {
+  updateCurrentFlow: ({ nodes, edges }) => {
     set({
       currentFlow: {
         ...get().currentFlow!,
         data: {
           nodes: nodes ?? get().currentFlow?.data?.nodes ?? [],
           edges: edges ?? get().currentFlow?.data?.edges ?? [],
-          viewport: viewport ??
-            get().currentFlow?.data?.viewport ?? {
-              x: 0,
-              y: 0,
-              zoom: 1,
-            },
+          viewport: get().currentFlow?.data?.viewport ?? {
+            x: 0,
+            y: 0,
+            zoom: 1,
+          },
         },
       },
     });
