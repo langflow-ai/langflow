@@ -38,9 +38,10 @@ const ButtonSendWrapper = ({
   const baseClass = "form-modal-send-button";
 
   const getConditionalClasses = () => {
+    if (showStopButton) return BUTTON_STATES.SHOW_STOP;
     if (noInput) return BUTTON_STATES.NO_INPUT;
     if (chatValue) return BUTTON_STATES.HAS_CHAT_VALUE;
-    if (showStopButton) return BUTTON_STATES.SHOW_STOP;
+
     return BUTTON_STATES.DEFAULT;
   };
 
