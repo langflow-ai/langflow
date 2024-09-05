@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/genericIconComponent";
+import Loading from "@/components/ui/loading";
 import { truncate } from "lodash";
 import { useState } from "react";
 import ConfirmationModal from "../confirmationModal";
@@ -24,7 +25,10 @@ export function SaveChangesModal({
       open={true}
       onClose={onCancel}
       destructiveCancel
-      title={truncate(flowName, { length: 32 }) + " has unsaved changes"}
+      title={
+        (autoSave ? "Flow" : truncate(flowName, { length: 32 })) +
+        " has unsaved changes"
+      }
       cancelText={autoSave ? undefined : "Exit anyway"}
       confirmationText={autoSave ? undefined : "Save and Exit"}
       onConfirm={
@@ -41,8 +45,8 @@ export function SaveChangesModal({
     >
       <ConfirmationModal.Content>
         {autoSave ? (
-          <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-yellow-100 px-4 py-2 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-100">
-            <ForwardedIconComponent name="Save" className="h-5 w-5" />
+          <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-gray-100 px-4 py-2 text-gray-800 dark:bg-gray-900/40 dark:text-gray-100">
+            <Loading className="h-5 w-5" />
             Saving your changes...
           </div>
         ) : (
