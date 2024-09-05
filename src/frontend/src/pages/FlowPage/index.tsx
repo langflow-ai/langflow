@@ -8,6 +8,7 @@ import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect } from "react";
 import { useBlocker, useParams } from "react-router-dom";
 import FlowToolbar from "../../components/chatComponent";
+import { BuildInProgressModal } from "../../modals/buildInProgressModal";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -23,7 +24,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
     (currentFlow?.data?.nodes?.length ?? 0) > 0;
 
-  const blocker = useBlocker(changesNotSaved);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const blocker = useBlocker(changesNotSaved || isBuilding);
+
   const version = useDarkStore((state) => state.version);
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id } = useParams();
@@ -35,18 +38,36 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const { mutateAsync: refreshFlows } = useGetRefreshFlows();
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const getTypes = useTypesStore((state) => state.getTypes);
+  const types = useTypesStore((state) => state.types);
 
   const updatedAt = currentSavedFlow?.updated_at;
 
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
 
+  const stopBuilding = useFlowStore((state) => state.stopBuilding);
+
   const handleSave = () => {
     saveFlow().then(() => (blocker.proceed ? blocker.proceed() : null));
   };
 
+  const handleStopBuild = () => {
+    stopBuilding();
+    if (blocker.proceed) blocker.proceed();
+  };
+
+  const handleExit = () => {
+    if (isBuilding) {
+      // Do nothing, let the blocker handle it
+    } else if (changesNotSaved) {
+      if (blocker.proceed) blocker.proceed();
+    } else {
+      navigate("/all");
+    }
+  };
+
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (changesNotSaved) {
+      if (changesNotSaved || isBuilding) {
         event.preventDefault();
         event.returnValue = ""; // Required for Chrome
       }
@@ -57,7 +78,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [changesNotSaved, navigate]);
+  }, [changesNotSaved, isBuilding]);
 
   // Set flow tab id
   useEffect(() => {
@@ -74,7 +95,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       } else if (!flows) {
         setIsLoading(true);
         await refreshFlows(undefined);
-        await getTypes();
+        if (!types || Object.keys(types).length === 0) await getTypes();
         setIsLoading(false);
       }
     };
@@ -117,26 +138,36 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           </a>
         )}
       </div>
-      {blocker.state === "blocked" && currentSavedFlow && (
-        <SaveChangesModal
-          onSave={handleSave}
-          onCancel={() => (blocker.reset ? blocker.reset() : null)}
-          onProceed={() => (blocker.proceed ? blocker.proceed() : null)}
-          flowName={currentSavedFlow.name}
-          unsavedChanges={changesNotSaved}
-          lastSaved={
-            updatedAt
-              ? new Date(updatedAt).toLocaleString("en-US", {
-                  hour: "numeric",
-                  minute: "numeric",
-                  second: "numeric",
-                  month: "numeric",
-                  day: "numeric",
-                })
-              : undefined
-          }
-          autoSave={autoSaving}
-        />
+      {blocker.state === "blocked" && (
+        <>
+          {isBuilding && (
+            <BuildInProgressModal
+              onStopBuild={handleStopBuild}
+              onCancel={() => blocker.reset?.()}
+            />
+          )}
+          {!isBuilding && currentSavedFlow && (
+            <SaveChangesModal
+              onSave={handleSave}
+              onCancel={() => blocker.reset?.()}
+              onProceed={handleExit}
+              flowName={currentSavedFlow.name}
+              unsavedChanges={changesNotSaved}
+              lastSaved={
+                updatedAt
+                  ? new Date(updatedAt).toLocaleString("en-US", {
+                      hour: "numeric",
+                      minute: "numeric",
+                      second: "numeric",
+                      month: "numeric",
+                      day: "numeric",
+                    })
+                  : undefined
+              }
+              autoSave={autoSaving}
+            />
+          )}
+        </>
       )}
     </>
   );
