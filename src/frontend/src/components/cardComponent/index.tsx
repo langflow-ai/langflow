@@ -125,6 +125,26 @@ export default function CollectionCardComponent({
         </div>
         <CardFooter>
           <div className="z-50 flex w-full items-center justify-between gap-2">
+            <div className="flex w-full items-center justify-between gap-2">
+              <div className="flex -space-x-3 overflow-hidden">
+                <img
+                  className="relative inline-block h-8 w-8 rounded-full border-2 border-gray-200"
+                  src="https://images.unsplash.com/photo-1550525811-e5869dd03032?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                  alt=""
+                />
+                <img
+                  className="relative inline-block h-8 w-8 rounded-full border-2 border-gray-200"
+                  src="https://images.unsplash.com/photo-1491528323818-fdd1faba62cc?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                  alt=""
+                />
+                <span className="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-200 bg-gray-200">
+                  <IconComponent
+                    name="users-round"
+                    className="h-4 w-4 text-gray-800"
+                  />
+                </span>
+              </div>
+            </div>
             <div className="flex w-full flex-wrap items-end justify-end gap-2">
               {playground && (
                 <Button

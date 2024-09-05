@@ -11,15 +11,16 @@ export function BuildInProgressModal({
     <ConfirmationModal
       open={true}
       onClose={onCancel}
-      title="Build in Progress"
-      cancelText="Cancel"
-      confirmationText="Stop Build"
+      title="Flow is outdated"
+      cancelText="Create Copy"
+      confirmationText="Overwrite"
       onConfirm={onStopBuild}
       onCancel={onCancel}
       size="x-small"
     >
       <ConfirmationModal.Content>
-        The flow is currently building. Do you want to stop the build and exit?
+        The flow you are trying to save is outdated. Do you want to overwrite
+        the existing flow?
       </ConfirmationModal.Content>
     </ConfirmationModal>
   );
