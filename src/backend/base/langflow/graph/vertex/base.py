@@ -863,7 +863,7 @@ class Vertex:
 
     def apply_on_outputs(self, func: Callable[[Any], Any]):
         """Applies a function to the outputs of the vertex."""
-        if not self._custom_component:
+        if not self._custom_component or not self._custom_component.outputs:
             return
-        for output in self._custom_component.outputs:
-            output.value = func(output)
+        # Apply the function to each output
+        [func(output) for output in self._custom_component.outputs]
