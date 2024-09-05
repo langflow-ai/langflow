@@ -1,14 +1,7 @@
-import "ace-builds/src-noconflict/ace";
-import "ace-builds/src-noconflict/ext-language_tools";
-import "ace-builds/src-noconflict/mode-python";
-import "ace-builds/src-noconflict/theme-github";
-import "ace-builds/src-noconflict/theme-twilight";
-// import "ace-builds/webpack-resolver";
-import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
-import { useEffect, useRef, useState } from "react";
-import AceEditor from "react-ace";
-import ReactAce from "react-ace/lib/ace";
+import Editor, { Monaco } from "@monaco-editor/react";
+import { editor } from "monaco-editor";
+import { useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -23,7 +16,6 @@ import {
   CODE_PROMPT_DIALOG_SUBTITLE,
   EDIT_CODE_TITLE,
 } from "../../constants/constants";
-import { postCustomComponent } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { CodeErrorDataTypeAPI } from "../../types/api";
@@ -52,8 +44,8 @@ export default function CodeAreaModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openConfirmation, setOpenConfirmation] = useState(false);
-  const codeRef = useRef<ReactAce | null>(null);
-  const { mutate, isPending } = usePostValidateCode();
+  const [editorInstance, setEditorInstance] =
+    useState<editor.IStandaloneCodeEditor | null>(null);
   const [error, setError] = useState<{
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
@@ -156,11 +148,19 @@ export default function CodeAreaModal({
     };
   }, [error, setHeight]);
 
+  function handleEditorDidMount(
+    editor: editor.IStandaloneCodeEditor,
+    monaco: Monaco,
+  ) {
+    setEditorInstance(editor);
+    editor.focus();
+  }
+
   useEffect(() => {
     if (!openConfirmation) {
-      codeRef.current?.editor.focus();
+      editorInstance?.focus();
     }
-  }, [openConfirmation]);
+  }, [openConfirmation, editorInstance]);
 
   useEffect(() => {
     setCode(value);
@@ -173,14 +173,7 @@ export default function CodeAreaModal({
         if (code === value) {
           setOpen(false);
         } else {
-          if (
-            !(
-              codeRef.current?.editor.completer.popup &&
-              codeRef.current?.editor.completer.popup.isOpen
-            )
-          ) {
-            setOpenConfirmation(true);
-          }
+          setOpenConfirmation(true);
         }
       }}
       open={open}
@@ -204,23 +197,20 @@ export default function CodeAreaModal({
         />
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-full w-full">
-            <AceEditor
-              ref={codeRef}
-              readOnly={readonly}
-              value={code}
-              mode="python"
-              setOptions={{ fontFamily: "monospace" }}
+            <Editor
               height={height ?? "100%"}
-              highlightActiveLine={true}
-              showPrintMargin={false}
-              fontSize={14}
-              showGutter
-              enableLiveAutocompletion
-              theme={dark ? "twilight" : "github"}
-              name="CodeEditor"
-              onChange={(value) => {
-                setCode(value);
+              defaultLanguage="python"
+              theme={dark ? "vs-dark" : "light"}
+              value={code}
+              options={{
+                readOnly: readonly,
+                minimap: { enabled: false },
+                fontSize: 14,
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
               }}
+              onChange={(value) => setCode(value || "")}
+              onMount={handleEditorDidMount}
               className="h-full w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
             />
           </div>
@@ -257,9 +247,7 @@ export default function CodeAreaModal({
           </div>
         </div>
         <ConfirmationModal
-          onClose={() => {
-            setOpenConfirmation(false);
-          }}
+          onClose={() => setOpenConfirmation(false)}
           onEscapeKeyDown={(e) => {
             e.stopPropagation();
             setOpenConfirmation(false);
