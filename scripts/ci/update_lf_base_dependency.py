@@ -57,5 +57,6 @@ def main() -> None:
     verify_pep440(base_version)
     update_base_dep("pyproject.toml", base_version)
 
+
 if __name__ == "__main__":
     main()

@@ -52,6 +52,7 @@ def _get_version_info():
 
 VERSION_INFO = _get_version_info()
 
+
 def is_pre_release(v: str) -> bool:
     """
     Returns a boolean indicating whether the version is a pre-release version,
@@ -76,9 +77,7 @@ def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optiona
     try:
         response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
         versions = response.json()["releases"].keys()
-        valid_versions = [
-            v for v in versions if include_prerelease or not is_pre_release(v)
-        ]
+        valid_versions = [v for v in versions if include_prerelease or not is_pre_release(v)]
 
     except Exception as e:
         logger.exception(e)
@@ -87,7 +86,6 @@ def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optiona
         if not valid_versions:
             return None  # Handle case where no valid versions are found
         return max(valid_versions, key=lambda v: pkg_version.parse(v))
-
 
 
 def get_version_info():

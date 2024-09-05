@@ -30,6 +30,7 @@ def get_version_from_pypi(package_name):
         return json.loads(response.read())["info"]["version"]
     return None
 
+
 def is_development_release(version):
     """
     Determines if the version is a development version based on PEP 440.
@@ -37,6 +38,7 @@ def is_development_release(version):
     We consider a development version (.devN) as our nightly versions
     """
     return "dev" in version
+
 
 def update_pyproject_dependency(pyproject_path, version, is_nightly):
     pattern = re.compile(r'langflow-base = \{ path = "\./src/backend/base", develop = true \}')
