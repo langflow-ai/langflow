@@ -24,13 +24,13 @@ export const ProtectedRoute = ({ children }) => {
       mutateRefresh();
     };
 
-    if (!autoLogin && isAuthenticated) {
+    if (autoLogin !== undefined && !autoLogin && isAuthenticated) {
       const intervalId = setInterval(intervalFunction, accessTokenTimer * 1000);
       intervalFunction();
       return () => clearInterval(intervalId);
     }
   }, [isAuthenticated]);
-  if (!isAuthenticated && !autoLogin) {
+  if (!isAuthenticated && autoLogin === undefined && !autoLogin) {
     return <CustomNavigate to="/login" replace />;
   } else {
     return children;
