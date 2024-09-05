@@ -221,7 +221,6 @@ class Settings(BaseSettings):
                 if not info.data["config_dir"]:
                     raise ValueError("config_dir not set, please set it or provide a database_url")
 
-
                 from langflow.utils.version import get_version_info
                 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
