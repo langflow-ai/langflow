@@ -9,7 +9,6 @@ import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect } from "react";
 import { useBlocker, useParams } from "react-router-dom";
 import FlowToolbar from "../../components/chatComponent";
-import { BuildInProgressModal } from "../../modals/buildInProgressModal";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -59,7 +58,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           title: "Flow saved successfully!",
         });
       }
-    }, 1000);
+    }, 1200);
     saveFlow().then(() => {
       if (!autoSaving || saving === false) {
         blocker.proceed && blocker.proceed();
@@ -69,11 +68,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       }
       proceed = true;
     });
-  };
-
-  const handleStopBuild = () => {
-    stopBuilding();
-    if (blocker.proceed && !changesNotSaved) blocker.proceed();
   };
 
   const handleExit = () => {
@@ -139,14 +133,17 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       changesNotSaved &&
       !isBuilding
     ) {
-      console.log("saving");
       handleSave();
     }
   }, [blocker.state, isBuilding]);
 
   useEffect(() => {
-    if (blocker.state === "blocked" && !isBuilding && !changesNotSaved) {
-      blocker.proceed && blocker.proceed();
+    if (blocker.state === "blocked") {
+      if (isBuilding) {
+        stopBuilding();
+      } else if (!changesNotSaved) {
+        blocker.proceed && blocker.proceed();
+      }
     }
   }, [blocker.state, isBuilding]);
 
@@ -179,12 +176,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       </div>
       {blocker.state === "blocked" && (
         <>
-          {isBuilding && (
-            <BuildInProgressModal
-              onStopBuild={handleStopBuild}
-              onCancel={() => blocker.reset?.()}
-            />
-          )}
           {!isBuilding && currentSavedFlow && (
             <SaveChangesModal
               onSave={handleSave}
