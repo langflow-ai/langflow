@@ -26,7 +26,7 @@ export function SaveChangesModal({
       destructiveCancel
       title={truncate(flowName, { length: 32 }) + " has unsaved changes"}
       cancelText={autoSave ? undefined : "Exit anyway"}
-      confirmationText={autoSave ? "Exit" : "Save and Exit"}
+      confirmationText={"Save and Exit"}
       onConfirm={autoSave ? onProceed : onSave}
       onCancel={onProceed}
       loading={autoSave ? unsavedChanges : false}
@@ -34,11 +34,7 @@ export function SaveChangesModal({
     >
       <ConfirmationModal.Content>
         {autoSave ? (
-          unsavedChanges ? (
-            "Saving flow automatically..."
-          ) : (
-            "Flow saved! Click 'Exit' to leave the page."
-          )
+          "Saving flow automatically..."
         ) : (
           <>
             <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-yellow-100 px-4 py-2 text-yellow-800">
