@@ -30,7 +30,7 @@ export const ProtectedRoute = ({ children }) => {
       return () => clearInterval(intervalId);
     }
   }, [isAuthenticated]);
-  if (!isAuthenticated && autoLogin === undefined && !autoLogin) {
+  if (!isAuthenticated && autoLogin !== undefined && !autoLogin) {
     return <CustomNavigate to="/login" replace />;
   } else {
     return children;
