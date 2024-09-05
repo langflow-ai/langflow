@@ -145,4 +145,5 @@ class CustomComponent(Component):
   await page.getByTestId("icon-Square").last().click();
 
   await page.waitForSelector("text=build stopped", { timeout: 30000 });
+  expect(await page.getByText("build stopped").isVisible()).toBeTruthy();
 });
