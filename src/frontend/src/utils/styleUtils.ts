@@ -192,6 +192,7 @@ import {
   Sparkles,
   Square,
   SquareArrowOutUpRight,
+  SquareCheckBig,
   SquareCode,
   SquarePen,
   SquarePlay,
@@ -948,4 +949,5 @@ export const nodeIconsLucide: iconsType = {
   ThumbDownIconCustom,
   ThumbUpIconCustom,
   Serper: SerperIcon,
+  SquareCheckBig,
 };

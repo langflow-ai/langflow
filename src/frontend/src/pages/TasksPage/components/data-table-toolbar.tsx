@@ -1,66 +1,22 @@
 "use client";
 
-import { Cross2Icon } from "@radix-ui/react-icons";
-import { Table } from "@tanstack/react-table";
-
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DataTableViewOptions } from "./data-table-view-options";
+import React from "react";
 
-import { priorities, statuses } from "../data/data";
-import { DataTableFacetedFilter } from "./data-table-faceted-filter";
-
-interface DataTableToolbarProps<TData> {
-  table: Table<TData>;
+interface DataTableToolbarProps {
+  value: string;
+  onChange: (value: string) => void;
 }
 
-export function DataTableToolbar<TData>({
-  table,
-}: DataTableToolbarProps<TData>) {
-  const isFiltered = table.getState().columnFilters.length > 0;
-
+export function DataTableToolbar({ value, onChange }: DataTableToolbarProps) {
   return (
     <div className="flex items-center justify-between">
-      <div className="flex flex-1 items-center space-x-2">
-        <Input
-          placeholder="Filter tasks..."
-          value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("title")?.setFilterValue(event.target.value)
-          }
-          className="h-8 w-[150px] lg:w-[250px]"
-        />
-        {table.getColumn("status") && (
-          <DataTableFacetedFilter
-            column={table.getColumn("status")}
-            title="Status"
-            options={[
-              { label: "Pending", value: "pending" },
-              { label: "Processing", value: "processing" },
-              { label: "Completed", value: "completed" },
-              { label: "Failed", value: "failed" },
-            ]}
-          />
-        )}
-        {table.getColumn("category") && (
-          <DataTableFacetedFilter
-            column={table.getColumn("category")}
-            title="Category"
-            options={[]} // Add category options here
-          />
-        )}
-        {isFiltered && (
-          <Button
-            variant="ghost"
-            onClick={() => table.resetColumnFilters()}
-            className="h-8 px-2 lg:px-3"
-          >
-            Reset
-            <Cross2Icon className="ml-2 h-4 w-4" />
-          </Button>
-        )}
-      </div>
-      <DataTableViewOptions table={table} />
+      <Input
+        placeholder="Filter tasks..."
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-8 w-[150px] lg:w-[250px]"
+      />
     </div>
   );
 }
