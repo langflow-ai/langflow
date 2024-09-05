@@ -449,6 +449,19 @@ class Vertex:
         self.params = self._raw_params.copy()
         self.updated_raw_params = True
 
+    def has_cycle_edges(self):
+        """
+        Checks if the vertex has any cycle edges.
+        """
+        return self._has_cycle_edges
+
+    async def instantiate_component(self, user_id=None):
+        if not self._custom_component:
+            self._custom_component, _ = await initialize.loading.instantiate_class(
+                user_id=user_id,
+                vertex=self,
+            )
+
     async def _build(
         self,
         fallback_to_env_vars,
