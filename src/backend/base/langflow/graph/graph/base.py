@@ -1154,13 +1154,17 @@ class Graph:
         self._instantiate_components_in_vertices()
         self._set_cache_to_vertices_in_cycle()
 
+    def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
+        """Returns the edges of the graph as a list of tuples."""
+        return [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
+
     def _set_cache_to_vertices_in_cycle(self) -> None:
         """Sets the cache to the vertices in cycle."""
-        edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
+        edges = self._get_edges_as_list_of_tuples()
         cycle_vertices = set(find_cycle_vertices(edges))
         for vertex in self.vertices:
             if vertex.id in cycle_vertices:
-                vertex.apply_on_outputs(lambda output: setattr(output, "cache", True))
+                vertex.apply_on_outputs(lambda output_object: setattr(output_object, "cache", False))
 
     def _instantiate_components_in_vertices(self) -> None:
         """Instantiates the components in the vertices."""
