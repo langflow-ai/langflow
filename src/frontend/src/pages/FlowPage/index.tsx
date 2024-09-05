@@ -42,7 +42,18 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
 
   const handleSave = () => {
-    saveFlow().then(() => (blocker.proceed ? blocker.proceed() : null));
+    let saving = true;
+    let proceed = false;
+    setTimeout(() => {
+      saving = false;
+      if (proceed) {
+        blocker.proceed && blocker.proceed();
+      }
+    }, 1000);
+    saveFlow().then(() => {
+      blocker.proceed && (!autoSaving || saving === false) && blocker.proceed();
+      proceed = true;
+    });
   };
 
   useEffect(() => {
@@ -132,7 +143,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           onCancel={() => (blocker.reset ? blocker.reset() : null)}
           onProceed={() => (blocker.proceed ? blocker.proceed() : null)}
           flowName={currentSavedFlow.name}
-          unsavedChanges={changesNotSaved}
           lastSaved={
             updatedAt
               ? new Date(updatedAt).toLocaleString("en-US", {
