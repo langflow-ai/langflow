@@ -471,7 +471,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             panActivationKeyCode={""}
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}
-            fitView // Add this prop to make ReactFlow start with a fit view
           >
             <Background className="" />
             {!view && (

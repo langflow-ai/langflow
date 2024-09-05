@@ -196,6 +196,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setReactFlowInstance: (newState) => {
     set({ reactFlowInstance: newState });
+    get().reactFlowInstance?.fitView();
   },
   onNodesChange: (changes: NodeChange[]) => {
     set({
