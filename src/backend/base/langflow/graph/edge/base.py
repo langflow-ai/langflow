@@ -204,6 +204,8 @@ class CycleEdge(Edge):
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
         self.result: Any = None
         self.is_cycle = True
+        source._has_cycle_edges = True
+        target._has_cycle_edges = True
 
     async def honor(self, source: "Vertex", target: "Vertex") -> None:
         """
