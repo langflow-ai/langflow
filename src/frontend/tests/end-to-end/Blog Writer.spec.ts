@@ -73,8 +73,7 @@ test("Blog Writer", async ({ page }) => {
     .fill("https://www.originaldiving.com/blog/top-ten-turtle-facts");
 
   await page
-    .getByTestId("popover-anchor-input-input_value")
-    .nth(0)
+    .getByTestId("textarea_str_input_value")
     .fill(
       "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
     );
