@@ -35,9 +35,7 @@ const ButtonSendWrapper = ({
   const showSendButton =
     !(lockChat || files.some((file) => file.loading)) && !noInput;
 
-  const baseClass = "form-modal-send-button";
-
-  const getConditionalClasses = () => {
+  const getButtonState = () => {
     if (showStopButton) return BUTTON_STATES.SHOW_STOP;
     if (noInput) return BUTTON_STATES.NO_INPUT;
     if (chatValue) return BUTTON_STATES.HAS_CHAT_VALUE;
@@ -45,17 +43,13 @@ const ButtonSendWrapper = ({
     return BUTTON_STATES.DEFAULT;
   };
 
-  const buttonClasses = classNames(baseClass, getConditionalClasses());
+  const buttonClasses = classNames("form-modal-send-button", getButtonState());
 
   const handleClick = () => {
-    if (!showStopButton) {
-      send();
-      return;
-    }
-
     if (showStopButton && isBuilding) {
       stopBuilding();
-      return;
+    } else if (!showStopButton) {
+      send();
     }
   };
 
