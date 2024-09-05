@@ -24,6 +24,7 @@ from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.state_model import create_state_model_from_graph
 from langflow.graph.graph.utils import (
     find_all_cycle_edges,
+    find_cycle_vertices,
     find_start_component_id,
     has_cycle,
     process_flow,
@@ -1150,10 +1151,21 @@ class Graph:
         # This is a hack to make sure that the LLM vertex is sent to
         # the toolkit vertex
         self._build_vertex_params()
+        self._instantiate_components_in_vertices()
+        self._set_cache_to_vertices_in_cycle()
 
-        # Now that we have the vertices and edges
-        # We need to map the vertices that are connected to
-        # to ChatVertex instances
+    def _set_cache_to_vertices_in_cycle(self) -> None:
+        """Sets the cache to the vertices in cycle."""
+        edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
+        cycle_vertices = set(find_cycle_vertices(edges))
+        for vertex in self.vertices:
+            if vertex.id in cycle_vertices:
+                vertex.apply_on_outputs(lambda output: setattr(output, "cache", True))
+
+    def _instantiate_components_in_vertices(self) -> None:
+        """Instantiates the components in the vertices."""
+        for vertex in self.vertices:
+            vertex.instantiate_component(self.user_id)
 
     def remove_vertex(self, vertex_id: str) -> None:
         """Removes a vertex from the graph."""
