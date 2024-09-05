@@ -2,7 +2,6 @@ import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
 import useAuthStore from "@/stores/authStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
-import pako from "pako";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { BuildStatus } from "../../constants/enums";
@@ -35,7 +34,7 @@ function ApiInterceptor() {
           error?.response?.status === 403 || error?.response?.status === 401;
 
         if (isAuthenticationError) {
-          if (!autoLogin) {
+          if (autoLogin !== undefined && !autoLogin) {
             if (error?.config?.url?.includes("github")) {
               return Promise.reject(error);
             }
@@ -129,7 +128,7 @@ function ApiInterceptor() {
       api.interceptors.response.eject(interceptor);
       api.interceptors.request.eject(requestInterceptor);
     };
-  }, [accessToken, setErrorData, customHeaders]);
+  }, [accessToken, setErrorData, customHeaders, autoLogin]);
 
   function checkErrorCount() {
     if (isLoginPage) return;

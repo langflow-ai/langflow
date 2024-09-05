@@ -440,14 +440,14 @@ export type ConfirmationModalType = {
   modalContentTitle?: string;
   loading?: boolean;
   cancelText?: string;
-  confirmationText: string;
+  confirmationText?: string;
   children:
     | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
     | React.ReactElement<ContentProps>;
   icon?: string;
   data?: any;
   index?: number;
-  onConfirm: (index, data) => void;
+  onConfirm?: (index, data) => void;
   open?: boolean;
   onClose?: () => void;
   size?:
