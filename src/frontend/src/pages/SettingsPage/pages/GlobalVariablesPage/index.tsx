@@ -1,11 +1,20 @@
 import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 
+import TableAutoCellRender from "@/components/tableComponent/components/tableAutoCellRender";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { ColDef, ColGroupDef, RowClickedEvent, RowDoubleClickedEvent, SelectionChangedEvent } from "ag-grid-community";
+import { useTypesStore } from "@/stores/typesStore";
+import { GlobalVariable } from "@/types/global_variables";
+import {
+  ColDef,
+  ColGroupDef,
+  RowClickedEvent,
+  RowDoubleClickedEvent,
+  SelectionChangedEvent,
+} from "ag-grid-community";
 import { useEffect, useRef, useState } from "react";
 import GlobalVariableModal from "../../../../components/GlobalVariableModal/GlobalVariableModal";
 import Dropdown from "../../../../components/dropdownComponent";
@@ -13,9 +22,6 @@ import ForwardedIconComponent from "../../../../components/genericIconComponent"
 import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
 import useAlertStore from "../../../../stores/alertStore";
-import TableAutoCellRender from "@/components/tableComponent/components/tableAutoCellRender";
-import { GlobalVariable } from "@/types/global_variables";
-import { useTypesStore } from "@/stores/typesStore";
 
 export default function GlobalVariablesPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -36,7 +42,7 @@ export default function GlobalVariablesPage() {
 
   useEffect(() => {
     //get the components to build the Aplly To Fields dropdown
-    getTypes(true)
+    getTypes(true);
   }, []);
 
   const DropdownEditor = ({ options, value, onValueChange }) => {
@@ -47,7 +53,7 @@ export default function GlobalVariablesPage() {
     );
   };
   // Column Definitions: Defines the columns to be displayed.
-  const colDefs:ColDef[] = [
+  const colDefs: ColDef[] = [
     {
       headerName: "Variable Name",
       field: "name",
@@ -70,7 +76,7 @@ export default function GlobalVariablesPage() {
       headerName: "Apply To Fields",
       field: "default_fields",
       valueFormatter: (params) => {
-        return params.value?.join(", ")??"";
+        return params.value?.join(", ") ?? "";
       },
       flex: 1,
       resizable: false,
@@ -99,7 +105,7 @@ export default function GlobalVariablesPage() {
     });
   }
 
-  function updateVariables(event:RowClickedEvent<GlobalVariable>) {
+  function updateVariables(event: RowClickedEvent<GlobalVariable>) {
     initialData.current = event.data;
     setOpenModal(true);
   }
@@ -144,7 +150,14 @@ export default function GlobalVariablesPage() {
           rowData={globalVariables ?? []}
           onDelete={removeVariables}
         />
-        {initialData.current&&<GlobalVariableModal key={initialData.current.id} initialData={initialData.current} open={openModal} setOpen={setOpenModal}/>}
+        {initialData.current && (
+          <GlobalVariableModal
+            key={initialData.current.id}
+            initialData={initialData.current}
+            open={openModal}
+            setOpen={setOpenModal}
+          />
+        )}
       </div>
     </div>
   );

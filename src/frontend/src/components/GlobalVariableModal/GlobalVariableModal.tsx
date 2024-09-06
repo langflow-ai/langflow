@@ -4,6 +4,7 @@ import {
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
+import { GlobalVariable } from "@/types/global_variables";
 import { useEffect, useState } from "react";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
@@ -15,7 +16,6 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import sortByName from "./utils/sort-by-name";
-import { GlobalVariable } from "@/types/global_variables";
 
 //TODO IMPLEMENT FORM LOGIC
 
@@ -23,26 +23,29 @@ export default function GlobalVariableModal({
   children,
   asChild,
   initialData,
-  open:myOpen,
-  setOpen:mySetOpen,
+  open: myOpen,
+  setOpen: mySetOpen,
 }: {
   children?: JSX.Element;
   asChild?: boolean;
-  initialData?: GlobalVariable,
+  initialData?: GlobalVariable;
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
 }): JSX.Element {
   const [key, setKey] = useState(initialData?.name ?? "");
   const [value, setValue] = useState(initialData?.value ?? "");
-  const [type, setType] = useState(initialData?.type??"Generic");
-  const [fields, setFields] = useState<string[]>(initialData?.default_fields??[]);
+  const [type, setType] = useState(initialData?.type ?? "Generic");
+  const [fields, setFields] = useState<string[]>(
+    initialData?.default_fields ?? [],
+  );
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
       ? [myOpen, mySetOpen]
-      : useState(false);  const setErrorData = useAlertStore((state) => state.setErrorData);
+      : useState(false);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
   const { mutate: mutateAddGlobalVariable } = usePostGlobalVariables();
-  const {mutate:updateVariable} = usePatchGlobalVariables();
+  const { mutate: updateVariable } = usePatchGlobalVariables();
   const { data: globalVariables } = useGetGlobalVariables();
   const [availableFields, setAvailableFields] = useState<string[]>([]);
 
@@ -52,9 +55,11 @@ export default function GlobalVariableModal({
       const fields = Array.from(componentFields).filter(
         (field) => !unavailableFields.hasOwnProperty(field.trim()),
       );
-      setAvailableFields(sortByName(fields.concat(initialData?.default_fields??[])));
+      setAvailableFields(
+        sortByName(fields.concat(initialData?.default_fields ?? [])),
+      );
     }
-  }, [globalVariables, componentFields,initialData]);
+  }, [globalVariables, componentFields, initialData]);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
@@ -81,16 +86,16 @@ export default function GlobalVariableModal({
         setOpen(false);
 
         setSuccessData({
-          title: `Variable ${name} ${initialData?"updated":"created"} successfully`,
+          title: `Variable ${name} ${initialData ? "updated" : "created"} successfully`,
         });
       },
       onError: (error) => {
         let responseError = error as ResponseErrorDetailAPI;
         setErrorData({
-          title: `Error ${initialData?"updating":"creating"} variable`,
+          title: `Error ${initialData ? "updating" : "creating"} variable`,
           list: [
             responseError?.response?.data?.detail ??
-              `An unexpected error occurred while ${initialData?"updating a new":"creating"} variable. Please try again.`,
+              `An unexpected error occurred while ${initialData ? "updating a new" : "creating"} variable. Please try again.`,
           ],
         });
       },
@@ -98,10 +103,9 @@ export default function GlobalVariableModal({
   }
 
   function submitForm() {
-    if(!initialData){
+    if (!initialData) {
       handleSaveVariable();
-    }
-    else {
+    } else {
       updateVariable({
         id: initialData.id,
         name: key,
@@ -124,7 +128,10 @@ export default function GlobalVariableModal({
           "This variable will be encrypted and will be available for you to use in any of your projects."
         }
       >
-        <span className="pr-2"> {initialData?"Update":"Create"} Variable </span>
+        <span className="pr-2">
+          {" "}
+          {initialData ? "Update" : "Create"} Variable{" "}
+        </span>
         <ForwardedIconComponent
           name="Globe"
           className="h-6 w-6 pl-1 text-primary"
@@ -144,7 +151,7 @@ export default function GlobalVariableModal({
           ></Input>
           <Label>Type (optional)</Label>
           <InputComponent
-          disabled={initialData?.type !== undefined}
+            disabled={initialData?.type !== undefined}
             setSelectedOption={(e) => {
               setType(e);
             }}
@@ -187,7 +194,10 @@ export default function GlobalVariableModal({
         </div>
       </BaseModal.Content>
       <BaseModal.Footer
-        submit={{ label: `${initialData?"Update":"Save"} Variable`, dataTestId: "save-variable-btn" }}
+        submit={{
+          label: `${initialData ? "Update" : "Save"} Variable`,
+          dataTestId: "save-variable-btn",
+        }}
       />
     </BaseModal>
   );

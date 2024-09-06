@@ -1,5 +1,5 @@
-import { GlobalVariable } from '@/types/global_variables';
 import { useMutationFunctionType } from "@/types/api";
+import { GlobalVariable } from "@/types/global_variables";
 import { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -18,8 +18,13 @@ export const usePatchGlobalVariables: useMutationFunctionType<
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  async function patchGlobalVariables(GlobalVariable: PatchGlobalVariablesParams): Promise<any> {
-    const res = await api.patch(`${getURL("VARIABLES")}/${GlobalVariable.id}`, GlobalVariable);
+  async function patchGlobalVariables(
+    GlobalVariable: PatchGlobalVariablesParams,
+  ): Promise<any> {
+    const res = await api.patch(
+      `${getURL("VARIABLES")}/${GlobalVariable.id}`,
+      GlobalVariable,
+    );
     return res.data;
   }
 
