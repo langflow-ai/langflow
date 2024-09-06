@@ -42,7 +42,6 @@ class Component(CustomComponent):
     def __init__(self, **kwargs):
         # if key starts with _ it is a config
         # else it is an input
-        self._reset_all_output_values()
         inputs = {}
         config = {}
         for key, value in kwargs.items():
@@ -69,6 +68,7 @@ class Component(CustomComponent):
             config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
         self.__inputs = inputs
         self.__config = config
+        self._reset_all_output_values()
         super().__init__(**config)
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
@@ -443,8 +443,8 @@ class Component(CustomComponent):
             return self.__dict__["_attributes"][name]
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
             return self.__dict__["_inputs"][name].value
-        if "_outputs" in self.__dict__ and name in self.__dict__["_outputs"]:
-            return self.__dict__["_outputs"][name]
+        if "_outputs_map" in self.__dict__ and name in self.__dict__["_outputs_map"]:
+            return self.__dict__["_outputs_map"][name]
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[f"_{name}"]
         if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
