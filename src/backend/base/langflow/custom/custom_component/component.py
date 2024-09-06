@@ -233,7 +233,7 @@ class Component(CustomComponent):
             setattr(output, key, value)
 
     def set_output_value(self, name: str, value: Any):
-        if name in self.outputs:
+        if name in self._outputs:
             self._outputs[name].value = value
         else:
             raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
