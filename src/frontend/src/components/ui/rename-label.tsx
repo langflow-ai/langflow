@@ -1,24 +1,30 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../utils/utils";
 
-export default function RenameLabel(props) {
+export default function RenameLabel({
+  value,
+  setValue,
+  className,
+  rename,
+  setRename,
+}) {
   const [internalState, setInternalState] = useState(false);
-  const [isRename, setIsRename] = props.rename
-    ? [props.rename, props.setRename]
+  const [componentValue, setComponentValue] = useState(value);
+  const [isRename, setIsRename] = rename
+    ? [rename, setRename]
     : [internalState, setInternalState];
 
   useEffect(() => {
-    if (props.value) setComponentValue(props.value);
-  }, [props.value]);
+    if (value) setComponentValue(value);
+  }, [value]);
 
-  const [componentValue, setComponentValue] = useState(props.value);
   useEffect(() => {
     if (isRename) {
-      setComponentValue(props.value);
+      setComponentValue(value);
       document.addEventListener("keydown", (event) => {
         if (event.key === "Escape") {
           setIsRename(false);
-          props.setValue("");
+          setValue("");
         }
       });
       if (inputRef.current) {
@@ -52,41 +58,47 @@ export default function RenameLabel(props) {
       input.style.width = `${textWidth + 16}px`;
     }
   };
-  return (
-    <div>
-      {isRename ? (
-        <input
-          autoFocus
-          ref={inputRef}
-          onInput={resizeInput}
-          className={cn(
-            "nopan nodelete nodrag noflow rounded-md bg-transparent px-2 outline-ring hover:outline focus:border-none focus:outline active:outline",
-            props.className,
-          )}
-          onBlur={() => {
-            setIsRename(false);
-            if (props.value !== "") {
-              props.setValue(componentValue);
-            }
-          }}
-          value={componentValue}
-          onChange={(event) => {
-            setComponentValue(event.target.value);
-          }}
-        />
-      ) : (
-        <div className="flex items-center gap-2">
-          <span
-            className={cn("truncate px-2 text-left", props.className)}
-            onDoubleClick={() => {
-              setIsRename(true);
-              setComponentValue(props.value);
-            }}
-          >
-            {props.value}
-          </span>
-        </div>
+
+  const handleBlur = () => {
+    setIsRename(false);
+    if (componentValue !== "") {
+      setValue(componentValue);
+    }
+  };
+
+  const handleChange = (event) => {
+    setComponentValue(event.target.value);
+  };
+
+  const handleDoubleClick = () => {
+    setIsRename(true);
+    setComponentValue(value);
+  };
+
+  const renderInput = () => (
+    <input
+      ref={inputRef}
+      onInput={resizeInput}
+      className={cn(
+        "nopan nodelete nodrag noflow rounded-md bg-transparent px-2 outline-ring hover:outline focus:border-none focus:outline active:outline",
+        className,
       )}
+      onBlur={handleBlur}
+      value={componentValue}
+      onChange={handleChange}
+    />
+  );
+
+  const renderSpan = () => (
+    <div className="flex items-center gap-2">
+      <span
+        className={cn("truncate px-2 text-left", className)}
+        onDoubleClick={handleDoubleClick}
+      >
+        {value}
+      </span>
     </div>
   );
+
+  return <div>{isRename ? renderInput() : renderSpan()}</div>;
 }
