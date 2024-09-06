@@ -41,7 +41,10 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
     return data;
   };
 
-  const queryResult = query(["useGetConfig"], getConfigFn, options);
+  const queryResult = query(["useGetConfig"], getConfigFn, {
+    refetchOnWindowFocus: false,
+    ...options,
+  });
 
   return queryResult;
 };

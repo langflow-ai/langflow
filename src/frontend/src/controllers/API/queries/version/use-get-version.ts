@@ -26,7 +26,10 @@ export const useGetVersionQuery: useQueryFunctionType<
     return data;
   };
 
-  const queryResult = query(["useGetVersionQuery"], responseFn, { ...options });
+  const queryResult = query(["useGetVersionQuery"], responseFn, {
+    refetchOnWindowFocus: false,
+    ...options,
+  });
 
   return queryResult;
 };
