@@ -4,10 +4,9 @@ import { Button } from "../../../../components/ui/button";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
-  usePatchGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { CellValueChangedEvent, ColDef, ColGroupDef, SelectionChangedEvent } from "ag-grid-community";
-import { useState } from "react";
+import { ColDef, ColGroupDef, RowClickedEvent, RowDoubleClickedEvent, SelectionChangedEvent } from "ag-grid-community";
+import { useEffect, useRef, useState } from "react";
 import GlobalVariableModal from "../../../../components/GlobalVariableModal/GlobalVariableModal";
 import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
@@ -16,9 +15,13 @@ import { Badge } from "../../../../components/ui/badge";
 import useAlertStore from "../../../../stores/alertStore";
 import TableAutoCellRender from "@/components/tableComponent/components/tableAutoCellRender";
 import { GlobalVariable } from "@/types/global_variables";
+import { useTypesStore } from "@/stores/typesStore";
 
 export default function GlobalVariablesPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [openModal, setOpenModal] = useState(false);
+  const initialData = useRef<GlobalVariable | undefined>(undefined);
+  const getTypes = useTypesStore((state) => state.getTypes);
   const BadgeRenderer = (props) => {
     return props.value !== "" ? (
       <div>
@@ -30,6 +33,11 @@ export default function GlobalVariablesPage() {
       <div></div>
     );
   };
+
+  useEffect(() => {
+    //get the components to build the Aplly To Fields dropdown
+    getTypes(true)
+  }, []);
 
   const DropdownEditor = ({ options, value, onValueChange }) => {
     return (
@@ -91,12 +99,10 @@ export default function GlobalVariablesPage() {
       );
     });
   }
-  const {mutate:updateVariable} = usePatchGlobalVariables();
 
-  function handleUpdate(event:CellValueChangedEvent<GlobalVariable, any>) {
-    const {data} = event;
-    console.log(data);
-    updateVariable(data);
+  function updateVariables(event:RowClickedEvent<GlobalVariable>) {
+    initialData.current = event.data;
+    setOpenModal(true);
   }
 
   return (
@@ -132,15 +138,14 @@ export default function GlobalVariablesPage() {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
           }}
           rowSelection="multiple"
-          onRowDoubleClicked={(event)=>{
-            console.log(event);
-          }}
+          onRowClicked={updateVariables}
           suppressRowClickSelection={true}
           pagination={true}
           columnDefs={colDefs}
           rowData={globalVariables ?? []}
           onDelete={removeVariables}
         />
+        {initialData.current&&<GlobalVariableModal key={initialData.current.id} initialData={initialData.current} open={openModal} setOpen={setOpenModal}/>}
       </div>
     </div>
   );
