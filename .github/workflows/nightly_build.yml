@@ -74,7 +74,7 @@ jobs:
     needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
     with:
-      tests_folder: "tests/end-to-end"
+      tests_folder: "tests/scheduled"
       ref: ${{ needs.create-nightly-tag.outputs.tag }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
