@@ -69,131 +69,125 @@ export default function Dropdown({
     }
   }, [open]);
 
-  return (
-    <>
-      {Object.keys(options ?? [])?.length > 0 || combobox ? (
-        <>
-          <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
-            {children ? (
-              <PopoverAnchor>{children}</PopoverAnchor>
-            ) : (
-              <PopoverTrigger asChild>
-                <Button
-                  disabled={disabled}
-                  variant="primary"
-                  size="xs"
-                  role="combobox"
-                  ref={refButton}
-                  aria-expanded={open}
-                  data-testid={`${id ?? ""}`}
-                  className={cn(
-                    editNode
-                      ? "dropdown-component-outline"
-                      : "dropdown-component-false-outline",
-                    "w-full justify-between font-normal",
-                    editNode ? "input-edit-node" : "py-2",
-                  )}
-                >
-                  <span
-                    className="truncate"
-                    data-testid={`value-dropdown-` + id}
-                  >
-                    {value &&
-                    value !== "" &&
-                    filteredOptions.find((option) => option === value)
-                      ? filteredOptions.find((option) => option === value)
-                      : "Choose an option..."}
-                  </span>
+  const renderTriggerButton = () => (
+    <PopoverTrigger asChild>
+      <Button
+        disabled={disabled}
+        variant="primary"
+        size="xs"
+        role="combobox"
+        ref={refButton}
+        aria-expanded={open}
+        data-testid={id}
+        className={cn(
+          editNode
+            ? "dropdown-component-outline input-edit-node"
+            : "dropdown-component-false-outline py-2",
+          "w-full justify-between font-normal",
+        )}
+      >
+        <span className="truncate" data-testid={`value-dropdown-${id}`}>
+          {value &&
+          value !== "" &&
+          filteredOptions.find((option) => option === value)
+            ? filteredOptions.find((option) => option === value)
+            : "Choose an option..."}
+        </span>
+        <ForwardedIconComponent
+          name="ChevronsUpDown"
+          className="ml-2 h-4 w-4 shrink-0 opacity-50"
+        />
+      </Button>
+    </PopoverTrigger>
+  );
 
-                  <ForwardedIconComponent
-                    name="ChevronsUpDown"
-                    className="ml-2 h-4 w-4 shrink-0 opacity-50"
-                  />
-                </Button>
-              </PopoverTrigger>
-            )}
-            <PopoverContentDropdown
-              side="bottom"
-              avoidCollisions={!!children}
-              className="noflow nowheel nopan nodelete nodrag p-0"
-              style={
-                children
-                  ? {}
-                  : { minWidth: refButton?.current?.clientWidth ?? "200px" }
-              }
-            >
-              <Command>
-                <div className="flex items-center border-b px-3">
-                  <ForwardedIconComponent
-                    name="search"
-                    className="mr-2 h-4 w-4 shrink-0 opacity-50"
-                  />
-                  <input
-                    onChange={searchRoleByTerm}
-                    placeholder="Search options..."
-                    className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
-                <CommandList>
-                  <CommandEmpty>No values found.</CommandEmpty>
-                  <CommandGroup defaultChecked={false}>
-                    {filteredOptions?.map((option, id) => (
-                      <ShadTooltip
-                        delayDuration={700}
-                        key={id}
-                        content={option}
-                      >
-                        <div>
-                          <CommandItem
-                            key={id}
-                            value={option}
-                            onSelect={(currentValue) => {
-                              onSelect(currentValue);
-                              setOpen(false);
-                            }}
-                            className="items-center overflow-hidden truncate"
-                            data-testid={`${option}-${id ?? ""}-option`}
-                          >
-                            {customValue === option ? (
-                              <span className="text-muted-foreground">
-                                Text:&nbsp;
-                              </span>
-                            ) : (
-                              <></>
-                            )}
-                            <span className="truncate">{option}</span>
-                            <ForwardedIconComponent
-                              name="Check"
-                              className={cn(
-                                "ml-auto h-4 w-4 shrink-0 text-primary",
-                                value === option ? "opacity-100" : "opacity-0",
-                              )}
-                            />
-                          </CommandItem>
-                        </div>
-                      </ShadTooltip>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContentDropdown>
-          </Popover>
-        </>
+  const renderSearchInput = () => (
+    <div className="flex items-center border-b px-3">
+      <ForwardedIconComponent
+        name="search"
+        className="mr-2 h-4 w-4 shrink-0 opacity-50"
+      />
+      <input
+        onChange={searchRoleByTerm}
+        placeholder="Search options..."
+        className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+      />
+    </div>
+  );
+
+  const renderOptionsList = () => (
+    <CommandList>
+      <CommandEmpty>No values found.</CommandEmpty>
+      <CommandGroup defaultChecked={false}>
+        {filteredOptions?.map((option, index) => (
+          <ShadTooltip key={index} delayDuration={700} content={option}>
+            <div>
+              <CommandItem
+                value={option}
+                onSelect={(currentValue) => {
+                  onSelect(currentValue);
+                  setOpen(false);
+                }}
+                className="items-center overflow-hidden truncate"
+                data-testid={`${option}-${index}-option`}
+              >
+                {customValue === option && (
+                  <span className="text-muted-foreground">Text:&nbsp;</span>
+                )}
+                <span className="truncate">{option}</span>
+                <ForwardedIconComponent
+                  name="Check"
+                  className={cn(
+                    "ml-auto h-4 w-4 shrink-0 text-primary",
+                    value === option ? "opacity-100" : "opacity-0",
+                  )}
+                />
+              </CommandItem>
+            </div>
+          </ShadTooltip>
+        ))}
+      </CommandGroup>
+    </CommandList>
+  );
+
+  const renderPopoverContent = () => (
+    <PopoverContentDropdown
+      side="bottom"
+      avoidCollisions={!!children}
+      className="noflow nowheel nopan nodelete nodrag p-0"
+      style={
+        children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }
+      }
+    >
+      <Command>
+        {renderSearchInput()}
+        {renderOptionsList()}
+      </Command>
+    </PopoverContentDropdown>
+  );
+
+  if (Object.keys(options).length === 0 && !combobox) {
+    return isLoading ? (
+      <div>
+        <span className="text-sm italic">Loading...</span>
+      </div>
+    ) : (
+      <div>
+        <span className="text-sm italic">
+          No parameters are available for display.
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
+      {children ? (
+        <PopoverAnchor>{children}</PopoverAnchor>
       ) : (
-        <>
-          {(!isLoading && (
-            <div>
-              <span className="text-sm italic">
-                No parameters are available for display.
-              </span>
-            </div>
-          )) || (
-            <div>
-              <span className="text-sm italic">Loading...</span>
-            </div>
-          )}
-        </>
+        renderTriggerButton()
       )}
-    </>
+      {renderPopoverContent()}
+    </Popover>
   );
 }

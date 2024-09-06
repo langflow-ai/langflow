@@ -29,6 +29,36 @@ export default function InputListComponent({
 
   if (!value?.length) value = [""];
 
+  const handleInputChange = (index, newValue) => {
+    const newInputList = _.cloneDeep(value);
+    newInputList[index] = newValue;
+    onChange(newInputList);
+  };
+
+  const addNewInput = (e) => {
+    e.preventDefault();
+    const newInputList = _.cloneDeep(value);
+    newInputList.push("");
+    onChange(newInputList);
+  };
+
+  const removeInput = (index, e) => {
+    e.preventDefault();
+    const newInputList = _.cloneDeep(value);
+    newInputList.splice(index, 1);
+    onChange(newInputList);
+  };
+
+  const getButtonClassName = () =>
+    classNames(
+      disabled || playgroundDisabled
+        ? "cursor-not-allowed text-muted-foreground"
+        : "text-primary hover:text-accent-foreground",
+    );
+
+  const getTestId = (type, index) =>
+    `input-list-${type}-btn${editNode ? "-edit" : ""}_${componentName}-${index}`;
+
   return (
     <div
       className={classNames(
@@ -36,72 +66,31 @@ export default function InputListComponent({
         "flex w-full flex-col gap-3",
       )}
     >
-      {value.map((singleValue, idx) => {
-        return (
-          <div key={idx} className="flex w-full gap-3">
-            <Input
-              disabled={disabled || playgroundDisabled}
-              type="text"
-              value={singleValue}
-              className={editNode ? "input-edit-node" : ""}
-              placeholder="Type something..."
-              onChange={(event) => {
-                let newInputList = _.cloneDeep(value);
-                newInputList[idx] = event.target.value;
-                onChange(newInputList);
-              }}
-              data-testid={`${id}_` + idx}
+      {value.map((singleValue, index) => (
+        <div key={index} className="flex w-full gap-3">
+          <Input
+            disabled={disabled || playgroundDisabled}
+            type="text"
+            value={singleValue}
+            className={editNode ? "input-edit-node" : ""}
+            placeholder="Type something..."
+            onChange={(event) => handleInputChange(index, event.target.value)}
+            data-testid={`${id}_${index}`}
+          />
+          <Button
+            unstyled
+            className={getButtonClassName()}
+            onClick={index === 0 ? addNewInput : (e) => removeInput(index, e)}
+            data-testid={getTestId(index === 0 ? "plus" : "minus", index)}
+            disabled={disabled || playgroundDisabled}
+          >
+            <IconComponent
+              name={index === 0 ? "Plus" : "X"}
+              className="h-4 w-4"
             />
-            {idx === 0 ? (
-              <Button
-                unstyled
-                className={cn(
-                  disabled || playgroundDisabled
-                    ? "cursor-not-allowed text-muted-foreground"
-                    : "text-primary hover:text-accent-foreground",
-                )}
-                onClick={(e) => {
-                  let newInputList = _.cloneDeep(value);
-                  newInputList.push("");
-                  onChange(newInputList);
-                  e.preventDefault();
-                }}
-                data-testid={
-                  `input-list-plus-btn${
-                    editNode ? "-edit" : ""
-                  }_${componentName}-` + idx
-                }
-                disabled={disabled || playgroundDisabled}
-              >
-                <IconComponent name="Plus" className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                unstyled
-                className={cn(
-                  disabled || playgroundDisabled
-                    ? "cursor-not-allowed text-muted-foreground"
-                    : "text-primary hover:text-accent-foreground",
-                )}
-                data-testid={
-                  `input-list-minus-btn${
-                    editNode ? "-edit" : ""
-                  }_${componentName}-` + idx
-                }
-                onClick={(e) => {
-                  let newInputList = _.cloneDeep(value);
-                  newInputList.splice(idx, 1);
-                  onChange(newInputList);
-                  e.preventDefault();
-                }}
-                disabled={disabled || playgroundDisabled}
-              >
-                <IconComponent name="X" className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        );
-      })}
+          </Button>
+        </div>
+      ))}
     </div>
   );
 }
