@@ -54,7 +54,10 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
     return null;
   }
 
-  const queryResult = query(["useGetAutoLogin"], getAutoLoginFn, options);
+  const queryResult = query(["useGetAutoLogin"], getAutoLoginFn, {
+    refetchOnWindowFocus: false,
+    ...options,
+  });
 
   return queryResult;
 };

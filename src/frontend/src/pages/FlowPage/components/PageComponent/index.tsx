@@ -26,7 +26,6 @@ import ReactFlow, {
   Controls,
   Edge,
   NodeDragHandler,
-  OnMove,
   OnSelectionChangeParams,
   SelectionDragHandler,
   updateEdge,
@@ -306,12 +305,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
 
-  const onMoveEnd: OnMove = useCallback(() => {
-    // 👇 make moving the canvas undoable
-    autoSaveFlow();
-    updateCurrentFlow({ viewport: reactFlowInstance?.getViewport() });
-  }, [takeSnapshot, autoSaveFlow, nodes, edges, reactFlowInstance]);
-
   const onNodeDragStop: NodeDragHandler = useCallback(() => {
     // 👇 make moving the canvas undoable
     autoSaveFlow();
@@ -465,7 +458,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onSelectionStart={onSelectionStart}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
-            onMoveEnd={onMoveEnd}
             onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}

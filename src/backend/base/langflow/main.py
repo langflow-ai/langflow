@@ -111,12 +111,9 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
 
 def create_app():
     """Create the FastAPI app and include the router."""
-    try:
-        from langflow.version import __version__  # type: ignore
-    except ImportError:
-        from importlib.metadata import version
+    from langflow.utils.version import get_version_info
 
-        __version__ = version("langflow-base")
+    __version__ = get_version_info()["version"]
 
     configure()
     lifespan = get_lifespan(version=__version__)
@@ -179,9 +176,6 @@ def create_app():
             )
 
     FastAPIInstrumentor.instrument_app(app)
-
-    # Get necessary NLTK packages
-    # download_nltk_resources()
 
     return app
 
