@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import uaParser from "ua-parser-js";
 
 test("User must be able to stop building from inside Playground", async ({
   page,
@@ -30,7 +31,7 @@ test("User must be able to stop building from inside Playground", async ({
 
   await page.getByTestId("blank-flow").click();
   await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
+    timeout: 1000,
   });
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
@@ -72,7 +73,7 @@ from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Data
 from time import sleep
-
+from langflow.schema.message import Message
 
 class CustomComponent(Component):
     display_name = "Custom Component"
@@ -95,7 +96,16 @@ class CustomComponent(Component):
         sleep(60)
         return data`;
 
-  await page.locator("textarea").press("Meta+a");
+  const getUA = await page.evaluate(() => navigator.userAgent);
+  const userAgentInfo = uaParser(getUA);
+  let control = "Control";
+
+  if (userAgentInfo.os.name.includes("Mac")) {
+    control = "Meta";
+  }
+
+  await page.locator(".ace_content").click();
+  await page.keyboard.press(`${control}+A`);
   await page.locator("textarea").fill(waitTimeoutCode);
 
   await page.getByText("Check & Save").last().click();
@@ -130,7 +140,7 @@ class CustomComponent(Component):
   await page.waitForTimeout(1000);
 
   await page.waitForSelector('[data-testid="icon-Square"]', {
-    timeout: 100000,
+    timeout: 30000,
   });
 
   const elements = await page.$$('[data-testid="icon-Square"]');
