@@ -50,7 +50,7 @@ export default function GlobalVariableModal({
     if (globalVariables && componentFields.size > 0) {
       const unavailableFields = getUnavailableFields(globalVariables);
       const fields = Array.from(componentFields).filter(
-        (field) => !unavailableFields.hasOwnProperty(field),
+        (field) => !unavailableFields.hasOwnProperty(field.trim()),
       );
       setAvailableFields(sortByName(fields.concat(initialData?.default_fields??[])));
     }

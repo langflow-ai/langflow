@@ -47,7 +47,7 @@ export default function GlobalVariablesPage() {
     );
   };
   // Column Definitions: Defines the columns to be displayed.
-  const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
+  const colDefs:ColDef[] = [
     {
       headerName: "Variable Name",
       field: "name",
@@ -76,7 +76,7 @@ export default function GlobalVariablesPage() {
       flex: 1,
       resizable: false,
     },
-  ]);
+  ];
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
