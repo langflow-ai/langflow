@@ -2,7 +2,10 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID, uuid4
 
+from pydantic import ValidationInfo, field_validator
 from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel, func
+
+from langflow.services.variable.service import CREDENTIAL_TYPE
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
@@ -51,8 +54,16 @@ class VariableCreate(VariableBase):
 class VariableRead(SQLModel):
     id: UUID
     name: Optional[str] = Field(None, description="Name of the variable")
+    value: Optional[str] = Field(None, description="Encrypted value of the variable")
     type: Optional[str] = Field(None, description="Type of the variable")
     default_fields: Optional[List[str]] = Field(None, description="Default fields for the variable")
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, value: str, info: ValidationInfo):
+        if info.data.get("type") == CREDENTIAL_TYPE:
+            return None
+        return value
 
 
 class VariableUpdate(SQLModel):

@@ -61,7 +61,6 @@ def read_variables(
     """Read all variables."""
     try:
         return variable_service.get_all(user_id=current_user.id, session=session)
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
