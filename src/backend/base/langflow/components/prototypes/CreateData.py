@@ -23,7 +23,12 @@ class CreateDataComponent(Component):
             value=0,
             range_spec=RangeSpec(min=1, max=15, step=1, step_type="int"),
         ),
-        MessageTextInput(name="text_key", display_name="Text Key", info="Key to be used as text.", advanced=True),
+        MessageTextInput(
+            name="text_key",
+            display_name="Text Key",
+            info="Key to be used as text.This is useful cause more Parsers/ splitters look into the Text column for processing",
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -65,6 +70,14 @@ class CreateDataComponent(Component):
         return build_config
 
     async def build_data(self) -> Data:
+        data = self.get_data()
+        return_data = Data(data=data, text_key=self.text_key)
+        self.status = return_data
+        self.add_validator()
+        return return_data
+
+    def get_data(self):
+        """Fucntion to get the Data from the attributes"""
         data = {}
         for value_dict in self._attributes.values():
             if isinstance(value_dict, dict):
@@ -73,9 +86,13 @@ class CreateDataComponent(Component):
                     key: value.get_text() if isinstance(value, Data) else value for key, value in value_dict.items()
                 }
                 data.update(value_dict)
-        return_data = Data(data=data, text_key=self.text_key)
-        self.status = return_data
-        return return_data
+        return data
+
+    def add_validator(self):
+        """This fucntion validates that the Text Key is one of the keys in the Data"""
+        data_keys = self.get_data().keys()
+        if self.text_key not in data_keys and self.text_key != "":
+            raise ValueError(f"Text Key: {self.text_key} not found in the Data keys: {",".join(data_keys)}")
 
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """
