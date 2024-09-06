@@ -15,4 +15,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   healthCheckTimeout: null,
   setHealthCheckTimeout: (timeout: string | null) =>
     set({ healthCheckTimeout: timeout }),
+  playgroundScrollBehaves: "instant",
+  setPlaygroundScrollBehaves: (behaves: ScrollBehavior) =>
+    set({ playgroundScrollBehaves: behaves }),
 }));
