@@ -155,7 +155,8 @@ interface BaseModalProps {
     | "md-thin"
     | "sm-thin"
     | "smaller-h-full"
-    | "medium-log";
+    | "medium-log"
+    | "x-large";
 
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;

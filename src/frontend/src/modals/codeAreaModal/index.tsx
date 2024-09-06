@@ -185,6 +185,7 @@ export default function CodeAreaModal({
       }}
       open={open}
       setOpen={setOpen}
+      size="x-large"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>

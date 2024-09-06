@@ -31,7 +31,7 @@ export default function FlowLogsModal({
   }, [data, open, isLoading]);
 
   return (
-    <BaseModal open={open} setOpen={setOpen} size="large">
+    <BaseModal open={open} setOpen={setOpen} size="x-large">
       <BaseModal.Header description="Inspect component executions.">
         <div className="flex w-full justify-between">
           <div className="flex h-fit w-32 items-center">

@@ -43,7 +43,7 @@ export default function ApiModal({
   }, [open]);
 
   return (
-    <BaseModal open={open} setOpen={setOpen}>
+    <BaseModal open={open} setOpen={setOpen} size="x-large">
       <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
       <BaseModal.Header description={EXPORT_CODE_DIALOG}>
         <span className="pr-2">API</span>
