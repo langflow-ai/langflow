@@ -400,6 +400,7 @@ def test_custom_component_get_function_entrypoint_args_no_args():
     the CustomComponent class with a build method with no arguments.
     """
     my_code = """
+from langflow.custom import CustomComponent
 class MyMainClass(CustomComponent):
     def build():
         pass"""

@@ -340,18 +340,6 @@ test("should create a flow with decision", async ({ page }) => {
   await elementPassInput3.hover();
   await page.mouse.up();
 
-  //connection 4
-  const elementPassOutput3 = await page
-    .getByTestId("handle-pass-shownode-output message-right")
-    .nth(4);
-  await elementPassOutput3.hover();
-  await page.mouse.down();
-  const elementConditionalRouterInput = await page
-    .getByTestId("handle-conditionalrouter-shownode-message-left")
-    .first();
-  await elementConditionalRouterInput.hover();
-  await page.mouse.up();
-
   //edit prompt
   await page.getByTestId("promptarea_prompt_template").first().click();
   await page.getByTestId("modal-promptarea_prompt_template").first().fill(`
@@ -374,6 +362,18 @@ AI:
   await page.getByText("Check & Save").last().click();
 
   await page.locator('//*[@id="react-flow-id"]').hover();
+
+  //connection 4
+  const elementPassOutput3 = await page
+    .getByTestId("handle-pass-shownode-output message-right")
+    .nth(4);
+  await elementPassOutput3.hover();
+  await page.mouse.down();
+  const elementPromptInputUserMessage = await page
+    .getByTestId("handle-prompt-shownode-user_message-left")
+    .first();
+  await elementPromptInputUserMessage.hover();
+  await page.mouse.up();
 
   //connection 5
   const elementParseDataOutput0 = await page
@@ -566,7 +566,9 @@ AI:
   });
   await page.getByTestId("input-chat-playground").click();
 
-  await page.getByTestId("input-chat-playground").fill("my dog just dead");
+  await page
+    .getByTestId("input-chat-playground")
+    .fill("my dog is alive and happy!");
 
   await page.waitForSelector('[data-testid="icon-LucideSend"]', {
     timeout: 100000,
@@ -574,9 +576,9 @@ AI:
 
   await page.getByTestId("icon-LucideSend").click();
 
-  await page.waitForSelector("text=🥲", {
+  await page.waitForSelector("text=🤪", {
     timeout: 1200000,
   });
 
-  await page.getByText("🥲").isVisible();
+  await page.getByText("🤪").isVisible();
 });
