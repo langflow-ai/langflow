@@ -4,10 +4,10 @@ import shutil
 
 # we need to import tmpdir
 import tempfile
+from collections.abc import AsyncGenerator
 from contextlib import contextmanager, suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
-from collections.abc import AsyncGenerator
 
 import orjson
 import pytest
@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
+from tests.api_keys import get_openai_api_key
 from typer.testing import CliRunner
 
 from langflow.graph.graph.base import Graph
@@ -27,7 +28,6 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-from tests.api_keys import get_openai_api_key
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -175,7 +175,7 @@ def basic_graph_data():
 
 @pytest.fixture
 def basic_graph():
-    return get_graph()
+    yield get_graph()
 
 
 @pytest.fixture
@@ -416,7 +416,8 @@ def added_webhook_test(client, json_webhook_test, logged_in_headers):
     assert response.status_code == 201
     assert response.json()["name"] == webhook_test.name
     assert response.json()["data"] == webhook_test.data
-    return response.json()
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture
