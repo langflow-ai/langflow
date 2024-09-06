@@ -1,7 +1,7 @@
 from typing import Any
 
 from langflow.custom import Component
-from langflow.inputs.inputs import IntInput, MessageTextInput, DictInput
+from langflow.inputs.inputs import IntInput, MessageTextInput, DictInput, BoolInput
 from langflow.io import Output
 
 from langflow.field_typing.range_spec import RangeSpec
@@ -29,6 +29,12 @@ class CreateDataComponent(Component):
             info="Key to be used as text.This is useful cause more Parsers/ splitters look into the Text column for processing",
             advanced=True,
         ),
+        BoolInput(
+            name="text_key_validator",
+            display_name="Text Key Validator",
+            advanced=True,
+            info="If True, it will turn on the Text Key Validator and will check if the Text Key is one of the keys in the Data",
+        ),
     ]
 
     outputs = [
@@ -37,7 +43,7 @@ class CreateDataComponent(Component):
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "number_of_fields":
-            default_keys = ["code", "_type", "number_of_fields", "text_key"]
+            default_keys = ["code", "_type", "number_of_fields", "text_key", "text_key_validator"]
             try:
                 field_value_int = int(field_value)
             except ValueError:
@@ -73,7 +79,8 @@ class CreateDataComponent(Component):
         data = self.get_data()
         return_data = Data(data=data, text_key=self.text_key)
         self.status = return_data
-        self.add_validator()
+        if self.text_key_validator:
+            self.add_validator()
         return return_data
 
     def get_data(self):
