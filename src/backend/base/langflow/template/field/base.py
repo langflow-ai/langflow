@@ -178,6 +178,7 @@ class Output(BaseModel):
     """The method to use for the output."""
 
     value: Any | None = Field(default=UNDEFINED)
+    """The result of the Output. Dynamically updated as execution occurs."""
 
     cache: bool = Field(default=True)
 
