@@ -92,156 +92,139 @@ export default function MultiselectComponent({
     }
   }, [open]);
 
-  return (
-    <>
-      {Object.keys(options ?? [])?.length > 0 || combobox ? (
-        <>
-          <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
-            {children ? (
-              <PopoverAnchor>{children}</PopoverAnchor>
-            ) : (
-              <PopoverTrigger asChild>
-                <Button
-                  disabled={disabled}
-                  variant="primary"
-                  size="xs"
-                  role="combobox"
-                  ref={refButton}
-                  aria-expanded={open}
-                  data-testid={`${id ?? ""}`}
+  const handleOptionSelect = (currentValue) => {
+    if (value.includes(currentValue)) {
+      onSelect(value.filter((v) => v !== currentValue));
+    } else {
+      onSelect([...value, currentValue]);
+    }
+  };
+
+  const renderDropdownTrigger = () => (
+    <PopoverTrigger asChild>
+      <Button
+        disabled={disabled}
+        variant="primary"
+        size="xs"
+        role="combobox"
+        ref={refButton}
+        aria-expanded={open}
+        data-testid={id}
+        className={cn(
+          editNode
+            ? "dropdown-component-outline input-edit-node"
+            : "dropdown-component-false-outline py-2",
+          "w-full justify-between font-normal",
+        )}
+      >
+        <span className="truncate" data-testid={`value-dropdown-${id}`}>
+          {value.length > 0 && options.find((option) => value.includes(option))
+            ? value.join(", ")
+            : "Choose an option..."}
+        </span>
+        <ForwardedIconComponent
+          name="ChevronsUpDown"
+          className="ml-2 h-4 w-4 shrink-0 opacity-50"
+        />
+      </Button>
+    </PopoverTrigger>
+  );
+
+  const renderSearchInput = () => (
+    <div className="flex items-center border-b px-3">
+      <ForwardedIconComponent
+        name="search"
+        className="mr-2 h-4 w-4 shrink-0 opacity-50"
+      />
+      <input
+        onChange={(event) => {
+          setSearchValue(event.target.value);
+        }}
+        placeholder="Search options..."
+        className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+      />
+      <Button
+        unstyled
+        className="ml-2"
+        onClick={() => setOnlySelected((old) => !old)}
+      >
+        <ForwardedIconComponent
+          className="h-4 w-4"
+          name={onlySelected ? "CheckCheck" : "Check"}
+        />
+      </Button>
+    </div>
+  );
+
+  const renderOptionsList = () => (
+    <CommandList className="overflow-y-scroll">
+      <CommandEmpty>No values found.</CommandEmpty>
+      <CommandGroup>
+        {filteredOptions.map((option, index) => (
+          <ShadTooltip key={index} delayDuration={700} content={option}>
+            <div>
+              <CommandItem
+                value={option}
+                onSelect={handleOptionSelect}
+                className="items-center overflow-hidden truncate"
+                data-testid={`${option}-${id ?? ""}-option`}
+              >
+                {(customValues.includes(option) || searchValue === option) && (
+                  <span className="text-muted-foreground">Text:&nbsp;</span>
+                )}
+                <span className="truncate">{option}</span>
+                <ForwardedIconComponent
+                  name="Check"
                   className={cn(
-                    editNode
-                      ? "dropdown-component-outline"
-                      : "dropdown-component-false-outline",
-                    "w-full justify-between font-normal",
-                    editNode ? "input-edit-node" : "py-2",
+                    "ml-auto h-4 w-4 shrink-0 text-primary",
+                    value.includes(option) ? "opacity-100" : "opacity-0",
                   )}
-                >
-                  <span
-                    className="truncate"
-                    data-testid={`value-dropdown-` + id}
-                  >
-                    {value &&
-                    value.length > 0 &&
-                    options.find((option) => value.includes(option))
-                      ? value.join(", ")
-                      : "Choose an option..."}
-                  </span>
+                />
+              </CommandItem>
+            </div>
+          </ShadTooltip>
+        ))}
+      </CommandGroup>
+    </CommandList>
+  );
 
-                  <ForwardedIconComponent
-                    name="ChevronsUpDown"
-                    className="ml-2 h-4 w-4 shrink-0 opacity-50"
-                  />
-                </Button>
-              </PopoverTrigger>
-            )}
-            <PopoverContentDropdown
-              onOpenAutoFocus={(event) => {
-                event.preventDefault();
-              }}
-              side="bottom"
-              avoidCollisions={!!children}
-              className="noflow nowheel nopan nodelete nodrag p-0"
-              style={
-                children
-                  ? {}
-                  : { minWidth: refButton?.current?.clientWidth ?? "200px" }
-              }
-            >
-              <Command>
-                <div className="flex items-center border-b px-3">
-                  <ForwardedIconComponent
-                    name="search"
-                    className="mr-2 h-4 w-4 shrink-0 opacity-50"
-                  />
-                  <input
-                    onChange={(event) => {
-                      setSearchValue(event.target.value);
-                      searchRoleByTerm(event.target.value);
-                    }}
-                    placeholder="Search options..."
-                    className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                  <Button
-                    unstyled
-                    className="ml-2"
-                    onClick={() => setOnlySelected((old) => !old)}
-                  >
-                    <ForwardedIconComponent
-                      className="h-4 w-4"
-                      name={onlySelected ? "CheckCheck" : "Check"}
-                    />
-                  </Button>
-                </div>
+  if (Object.keys(options).length === 0 && !combobox) {
+    return isLoading ? (
+      <div>
+        <span className="text-sm italic">Loading...</span>
+      </div>
+    ) : (
+      <div>
+        <span className="text-sm italic">
+          No parameters are available for display.
+        </span>
+      </div>
+    );
+  }
 
-                <CommandList className="overflow-y-scroll">
-                  <CommandEmpty>No values found.</CommandEmpty>
-                  <CommandGroup defaultChecked={false}>
-                    {filteredOptions?.map((option, id) => (
-                      <ShadTooltip
-                        delayDuration={700}
-                        key={id}
-                        content={option}
-                      >
-                        <div>
-                          <CommandItem
-                            key={id}
-                            value={option}
-                            onSelect={(currentValue) => {
-                              if (value.includes(currentValue)) {
-                                onSelect(
-                                  value.filter((v) => v !== currentValue),
-                                );
-                              } else {
-                                onSelect([...value, currentValue]);
-                              }
-                            }}
-                            className="items-center overflow-hidden truncate"
-                            data-testid={`${option}-${id ?? ""}-option`}
-                          >
-                            {customValues.includes(option) ||
-                            searchValue === option ? (
-                              <span className="text-muted-foreground">
-                                Text:&nbsp;
-                              </span>
-                            ) : (
-                              <></>
-                            )}
-                            <span className="truncate">{option}</span>
-                            <ForwardedIconComponent
-                              name="Check"
-                              className={cn(
-                                "ml-auto h-4 w-4 shrink-0 text-primary",
-                                value.includes(option)
-                                  ? "opacity-100"
-                                  : "opacity-0",
-                              )}
-                            />
-                          </CommandItem>
-                        </div>
-                      </ShadTooltip>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContentDropdown>
-          </Popover>
-        </>
+  return (
+    <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
+      {children ? (
+        <PopoverAnchor>{children}</PopoverAnchor>
       ) : (
-        <>
-          {(!isLoading && (
-            <div>
-              <span className="text-sm italic">
-                No parameters are available for display.
-              </span>
-            </div>
-          )) || (
-            <div>
-              <span className="text-sm italic">Loading...</span>
-            </div>
-          )}
-        </>
+        renderDropdownTrigger()
       )}
-    </>
+      <PopoverContentDropdown
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        side="bottom"
+        avoidCollisions={!!children}
+        className="noflow nowheel nopan nodelete nodrag p-0"
+        style={
+          children
+            ? {}
+            : { minWidth: refButton?.current?.clientWidth ?? "200px" }
+        }
+      >
+        <Command>
+          {renderSearchInput()}
+          {renderOptionsList()}
+        </Command>
+      </PopoverContentDropdown>
+    </Popover>
   );
 }
