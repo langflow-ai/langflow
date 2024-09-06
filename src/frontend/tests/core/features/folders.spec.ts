@@ -79,7 +79,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
   });
 
   const jsonContent = readFileSync(
-    "tests/end-to-end/assets/collection.json",
+    "tests/core/assets/collection.json",
     "utf-8",
   );
 
