@@ -73,10 +73,11 @@ def test_read_flows(client: TestClient, json_flow: str, active_user, logged_in_h
     assert len(response.json()) > 0
 
 
-def test_read_flow(client: TestClient, json_flow: str, active_user, logged_in_headers):
+def test_read_flow(client: TestClient, json_flow: str, logged_in_headers):
     flow = orjson.loads(json_flow)
     data = flow["data"]
-    flow = FlowCreate(name="Test Flow", description="description", data=data)
+    unique_name = str(uuid4())
+    flow = FlowCreate(name=unique_name, description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     flow_id = response.json()["id"]  # flow_id should be a UUID but is a string
     # turn it into a UUID
