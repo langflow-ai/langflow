@@ -29,7 +29,7 @@ export default function ChatView({
   setChatValue,
   lockChat,
   setLockChat,
-  hiddenSession,
+  hiddenSessions,
 }: chatViewProps): JSX.Element {
   const { flowPool, outputs, inputs, CleanFlowPool } = useFlowStore();
   const { setErrorData } = useAlertStore();
