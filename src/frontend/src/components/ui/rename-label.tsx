@@ -8,13 +8,13 @@ export default function RenameLabel(props) {
     : [internalState, setInternalState];
 
   useEffect(() => {
-    if (props.value) setMyValue(props.value);
+    if (props.value) setComponentValue(props.value);
   }, [props.value]);
 
-  const [myValue, setMyValue] = useState(props.value);
+  const [componentValue, setComponentValue] = useState(props.value);
   useEffect(() => {
     if (isRename) {
-      setMyValue(props.value);
+      setComponentValue(props.value);
       document.addEventListener("keydown", (event) => {
         if (event.key === "Escape") {
           setIsRename(false);
@@ -66,12 +66,12 @@ export default function RenameLabel(props) {
           onBlur={() => {
             setIsRename(false);
             if (props.value !== "") {
-              props.setValue(myValue);
+              props.setValue(componentValue);
             }
           }}
-          value={myValue}
+          value={componentValue}
           onChange={(event) => {
-            setMyValue(event.target.value);
+            setComponentValue(event.target.value);
           }}
         />
       ) : (
@@ -80,7 +80,7 @@ export default function RenameLabel(props) {
             className={cn("truncate px-2 text-left", props.className)}
             onDoubleClick={() => {
               setIsRename(true);
-              setMyValue(props.value);
+              setComponentValue(props.value);
             }}
           >
             {props.value}
