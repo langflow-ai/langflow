@@ -851,6 +851,7 @@ export type chatViewProps = {
   setChatValue: (value: string) => void;
   lockChat: boolean;
   setLockChat: (lock: boolean) => void;
+  hiddenSession?: boolean;
 };
 
 export type IOFileInputProps = {

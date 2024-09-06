@@ -359,14 +359,7 @@ export default function IOModal({
                     return (
                       <div
                         key={index}
-                        className="file-component-accordion-div cursor-pointer"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedViewField({
-                            id: session,
-                            type: "Session",
-                          });
-                        }}
+                        className="file-component-accordion-div"
                       >
                         <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3.5 align-middle">
                           <ShadTooltip styleClasses="z-50" content={session}>
@@ -383,6 +376,48 @@ export default function IOModal({
                             </div>
                           </ShadTooltip>
                           <div className="flex shrink-0 items-center justify-center gap-2 align-middle">
+                          <Button
+                              unstyled
+                              size="icon"
+                              onClick={(e) => {
+
+                              }}
+                            >
+                              <ShadTooltip
+                                styleClasses="z-50"
+                                content={"Table View"}
+                              >
+                                <div>
+                                  <IconComponent
+                                    name="Eye"
+                                    className="h-4 w-4"
+                                  ></IconComponent>
+                                </div>
+                              </ShadTooltip>
+                            </Button>
+                          <Button
+                              unstyled
+                              size="icon"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setSelectedViewField({
+                                  id: session,
+                                  type: "Session",
+                                });
+                              }}
+                            >
+                              <ShadTooltip
+                                styleClasses="z-50"
+                                content={"Table View"}
+                              >
+                                <div>
+                                  <IconComponent
+                                    name="Table"
+                                    className="h-4 w-4"
+                                  ></IconComponent>
+                                </div>
+                              </ShadTooltip>
+                            </Button>
                             <Button
                               unstyled
                               size="icon"
@@ -406,31 +441,6 @@ export default function IOModal({
                                 </div>
                               </ShadTooltip>
                             </Button>
-                            {/* <div>
-                              <ShadTooltip
-                                styleClasses="z-50"
-                                content={
-                                  flow_sessions.some(
-                                    (f_session) =>
-                                      f_session?.session_id === session,
-                                  )
-                                    ? "Active Session"
-                                    : "Inactive Session"
-                                }
-                              >
-                                <div
-                                  className={cn(
-                                    "h-2 w-2 rounded-full",
-                                    flow_sessions.some(
-                                      (f_session) =>
-                                        f_session?.session_id === session,
-                                    )
-                                      ? "bg-status-green"
-                                      : "bg-slate-500",
-                                  )}
-                                ></div>
-                              </ShadTooltip>
-                            </div> */}
                           </div>
                         </div>
                       </div>
