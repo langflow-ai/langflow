@@ -20,7 +20,7 @@ export default function FloatComponent({
     }
   }, [disabled]);
 
-  const handleInput = (event) => {
+  const handleInput = (event: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = Number(event.target.value);
     if (inputValue < min) {
       event.target.value = min.toString();
