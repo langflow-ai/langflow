@@ -13,6 +13,20 @@ class YfinanceToolComponent(LCToolComponent):
     description = "Tool for interacting with Yahoo Finance News."
     name = "YFinanceTool"
 
+    inputs = [
+        MessageTextInput(
+            name="input_value",
+            display_name="Query",
+            info="Input should be a company ticker. For example, AAPL for Apple, MSFT for Microsoft.",
+        )
+    ]
+
+    outputs = [
+        Output(name="api_run_model", display_name="Data", method="run_model"),
+        # Keep this for backwards compatibility
+        Output(name="tool", display_name="Tool", method="build_tool"),
+    ]
+
     def build_tool(self) -> Tool:
         return cast(Tool, YahooFinanceNewsTool())
 
