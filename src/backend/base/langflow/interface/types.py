@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 from loguru import logger
 from langflow.custom.utils import abuild_custom_components, build_custom_components
-from langflow.services.cache.base import AsyncBaseCacheService
 
 if TYPE_CHECKING:
     from langflow.services.cache.base import CacheService
@@ -56,7 +55,9 @@ def get_all_components(components_paths, as_dict=False):
                 components.append(component)
     return components
 
+
 all_types_dict_cache = None
+
 
 async def get_and_cache_all_types_dict(
     settings_service: "SettingsService",
