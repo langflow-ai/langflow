@@ -7,7 +7,7 @@ from langflow.inputs import SecretStrInput
 from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
-
+from langflow.io import Output
 
 class NotionUserList(LCToolComponent):
     display_name = "List Users "
@@ -22,6 +22,13 @@ class NotionUserList(LCToolComponent):
             info="The Notion integration token.",
             required=True,
         ),
+    ]
+
+    outputs = [
+        Output(name="example_output",
+               display_name="Data", method="run_model"),
+        Output(name="example_tool_output",
+               display_name="Tool", method="build_tool"),
     ]
 
     class NotionUserListSchema(BaseModel):

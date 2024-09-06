@@ -7,7 +7,7 @@ from langflow.inputs import SecretStrInput, StrInput, DropdownInput
 from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
-
+from langflow.io import Output
 
 class NotionSearch(LCToolComponent):
     display_name: str = "Search "
@@ -41,6 +41,13 @@ class NotionSearch(LCToolComponent):
             options=["ascending", "descending"],
             value="descending",
         ),
+    ]
+
+    outputs = [
+        Output(name="example_output",
+               display_name="Data", method="run_model"),
+        Output(name="example_tool_output",
+               display_name="Tool", method="build_tool"),
     ]
 
     class NotionSearchSchema(BaseModel):

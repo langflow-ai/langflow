@@ -8,6 +8,7 @@ from langflow.inputs import SecretStrInput, StrInput, MultilineInput
 from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
+from langflow.io import Output
 
 
 class NotionListPages(LCToolComponent):
@@ -38,6 +39,13 @@ class NotionListPages(LCToolComponent):
             display_name="Database query (JSON)",
             info="A JSON string containing the filters and sorts that will be used for querying the database. Leave empty for no filters or sorts.",
         ),
+    ]
+
+    outputs = [
+        Output(name="example_output",
+               display_name="Data", method="run_model"),
+        Output(name="example_tool_output",
+               display_name="Tool", method="build_tool"),
     ]
 
     class NotionListPagesSchema(BaseModel):

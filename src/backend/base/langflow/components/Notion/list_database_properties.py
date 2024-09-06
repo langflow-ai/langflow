@@ -6,7 +6,7 @@ from langflow.inputs import SecretStrInput, StrInput
 from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
-
+from langflow.io import Output
 
 class NotionDatabaseProperties(LCToolComponent):
     display_name: str = "List Database Properties "
@@ -27,7 +27,12 @@ class NotionDatabaseProperties(LCToolComponent):
             required=True,
         ),
     ]
-
+    outputs = [
+        Output(name="example_output",
+               display_name="Data", method="run_model"),
+        Output(name="example_tool_output",
+               display_name="Tool", method="build_tool"),
+    ]
     class NotionDatabasePropertiesSchema(BaseModel):
         database_id: str = Field(..., description="The ID of the Notion database.")
 

@@ -10,6 +10,7 @@ from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
+from langflow.io import Output
 
 
 class AddContentToPage(LCToolComponent):
@@ -35,6 +36,13 @@ class AddContentToPage(LCToolComponent):
             info="The Notion integration token.",
             required=True,
         ),
+    ]
+
+    outputs = [
+        Output(name="example_output",
+               display_name="Data", method="run_model"),
+        Output(name="example_tool_output",
+               display_name="Tool", method="build_tool"),
     ]
 
     class AddContentToPageSchema(BaseModel):
