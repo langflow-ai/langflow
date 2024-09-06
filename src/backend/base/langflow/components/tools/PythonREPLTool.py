@@ -1,12 +1,13 @@
 import importlib
 from typing import cast
 
-from langchain_core.tools import Tool
 from langchain_experimental.utilities import PythonREPL
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.field_typing import Tool as ToolType
+from langflow.field_typing import Tool
 from langflow.io import MessageTextInput, MultiselectInput
+from langflow.schema.data import Data
+from langflow.template.field.base import Output
 
 
 class PythonREPLToolComponent(LCToolComponent):
@@ -15,6 +16,7 @@ class PythonREPLToolComponent(LCToolComponent):
     name = "PythonREPLTool"
 
     inputs = [
+        MessageTextInput(name="input_value", display_name="Input", value=""),
         MessageTextInput(name="name", display_name="Name", value="python_repl"),
         MessageTextInput(
             name="description",
@@ -24,10 +26,16 @@ class PythonREPLToolComponent(LCToolComponent):
         MultiselectInput(
             name="global_imports",
             display_name="Global Imports",
-            description="A list of modules to import globally, e.g. ['math', 'numpy'].",
+            info="A list of modules to import globally, e.g. ['math', 'numpy'].",
             value=["math"],
             combobox=True,
         ),
+    ]
+
+    outputs = [
+        Output(name="api_run_model", display_name="Data", method="run_model"),
+        # Keep this for backwards compatibility
+        Output(name="tool", display_name="Tool", method="build_tool"),
     ]
 
     def get_globals(self, globals: list[str]) -> dict:
@@ -49,20 +57,25 @@ class PythonREPLToolComponent(LCToolComponent):
                 raise ImportError(f"Could not import module {module}")
         return global_dict
 
-    def build_tool(self) -> ToolType:
+    def build_tool(self) -> Tool:
         """
         Builds a Python REPL tool.
 
         Returns:
-            ToolType: The built Python REPL tool.
+            Tool: The built Python REPL tool.
         """
         _globals = self.get_globals(self.global_imports)
         python_repl = PythonREPL(_globals=_globals)
         return cast(
-            ToolType,
+            Tool,
             Tool(
                 name=self.name,
                 description=self.description,
                 func=python_repl.run,
             ),
         )
+
+    def run_model(self) -> Data:
+        tool = self.build_tool()
+        result = tool.invoke(self.input_value)
+        return Data(text=result)
