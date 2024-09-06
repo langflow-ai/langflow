@@ -177,6 +177,7 @@ export default function PromptModal({
       onChangeOpenModal={(open) => {}}
       open={modalOpen}
       setOpen={setModalOpen}
+      size="x-large"
     >
       <BaseModal.Trigger disable={disabled} asChild>
         {children}
