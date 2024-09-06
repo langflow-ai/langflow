@@ -217,6 +217,8 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
     timeout: 30000,
   });
 
+  await page.waitForTimeout(1000);
+
   expect(
     await page.getByText(secondRandomFlowName, { exact: true }).isVisible(),
   ).toBe(true);
