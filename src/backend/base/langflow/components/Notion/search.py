@@ -9,6 +9,7 @@ from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 from langflow.io import Output
 
+
 class NotionSearch(LCToolComponent):
     display_name: str = "Search "
     description: str = "Searches all pages and databases that have been shared with an integration."
@@ -44,10 +45,8 @@ class NotionSearch(LCToolComponent):
     ]
 
     outputs = [
-        Output(name="example_output",
-               display_name="Data", method="run_model"),
-        Output(name="example_tool_output",
-               display_name="Tool", method="build_tool"),
+        Output(name="example_output", display_name="Data", method="run_model"),
+        Output(name="example_tool_output", display_name="Tool", method="build_tool"),
     ]
 
     class NotionSearchSchema(BaseModel):

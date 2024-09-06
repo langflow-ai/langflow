@@ -9,6 +9,7 @@ from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 from langflow.io import Output
 
+
 class NotionUserList(LCToolComponent):
     display_name = "List Users "
     description = "Retrieve users from Notion."
@@ -25,10 +26,8 @@ class NotionUserList(LCToolComponent):
     ]
 
     outputs = [
-        Output(name="example_output",
-               display_name="Data", method="run_model"),
-        Output(name="example_tool_output",
-               display_name="Tool", method="build_tool"),
+        Output(name="example_output", display_name="Data", method="run_model"),
+        Output(name="example_tool_output", display_name="Tool", method="build_tool"),
     ]
 
     class NotionUserListSchema(BaseModel):

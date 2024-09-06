@@ -10,6 +10,7 @@ from langchain.tools import StructuredTool
 from loguru import logger
 from langflow.io import Output
 
+
 class NotionPageUpdate(LCToolComponent):
     display_name: str = "Update Page Property "
     description: str = "Update the properties of a Notion page."
@@ -36,10 +37,8 @@ class NotionPageUpdate(LCToolComponent):
     ]
 
     outputs = [
-        Output(name="example_output",
-               display_name="Data", method="run_model"),
-        Output(name="example_tool_output",
-               display_name="Tool", method="build_tool"),
+        Output(name="example_output", display_name="Data", method="run_model"),
+        Output(name="example_tool_output", display_name="Tool", method="build_tool"),
     ]
 
     class NotionPageUpdateSchema(BaseModel):

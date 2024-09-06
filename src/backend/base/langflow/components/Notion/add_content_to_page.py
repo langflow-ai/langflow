@@ -39,10 +39,8 @@ class AddContentToPage(LCToolComponent):
     ]
 
     outputs = [
-        Output(name="example_output",
-               display_name="Data", method="run_model"),
-        Output(name="example_tool_output",
-               display_name="Tool", method="build_tool"),
+        Output(name="example_output", display_name="Data", method="run_model"),
+        Output(name="example_tool_output", display_name="Tool", method="build_tool"),
     ]
 
     class AddContentToPageSchema(BaseModel):

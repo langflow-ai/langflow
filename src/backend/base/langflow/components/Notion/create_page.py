@@ -9,6 +9,7 @@ from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 from langflow.io import Output
 
+
 class NotionPageCreator(LCToolComponent):
     display_name: str = "Create Page "
     description: str = "A component for creating Notion pages."
@@ -35,11 +36,10 @@ class NotionPageCreator(LCToolComponent):
     ]
 
     outputs = [
-        Output(name="example_output",
-               display_name="Data", method="run_model"),
-        Output(name="example_tool_output",
-               display_name="Tool", method="build_tool"),
+        Output(name="example_output", display_name="Data", method="run_model"),
+        Output(name="example_tool_output", display_name="Tool", method="build_tool"),
     ]
+
     class NotionPageCreatorSchema(BaseModel):
         database_id: str = Field(..., description="The ID of the Notion database.")
         properties_json: str = Field(..., description="The properties of the new page as a JSON string.")
