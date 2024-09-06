@@ -1,8 +1,12 @@
+import os
+
 import pytest
 
 from langflow.components.inputs.ChatInput import ChatInput
+from langflow.components.models.OpenAIModel import OpenAIModelComponent
 from langflow.components.outputs.ChatOutput import ChatOutput
 from langflow.components.outputs.TextOutput import TextOutputComponent
+from langflow.components.prompts.Prompt import PromptComponent
 from langflow.components.prototypes.ConditionalRouter import ConditionalRouterComponent
 from langflow.custom.custom_component.component import Component
 from langflow.graph.graph.base import Graph
@@ -142,3 +146,76 @@ def test_that_outputs_cache_is_set_to_false_in_cycle():
     non_cycle_outputs = [output for outputs in non_cycle_outputs_lists for output in outputs]
     for output in non_cycle_outputs:
         assert output.cache is True
+
+
+def test_updated_graph_with_prompts():
+    # Chat input initialization
+    chat_input = ChatInput(_id="chat_input")
+
+    # First prompt: Guessing game with hints
+    prompt_component_1 = PromptComponent(_id="prompt_component_1")
+    prompt_component_1.set(
+        template="Try to guess a word. I will give you hints if you get it wrong.\nHint: {hint}\nLast try: {last_try}\nAnswer:",
+    )
+
+    # First OpenAI LLM component (Processes the guessing prompt)
+    openai_component_1 = OpenAIModelComponent(_id="openai_1")
+    openai_component_1.set(input_value=prompt_component_1.build_prompt, api_key=os.environ["OPENAI_API_KEY"])
+
+    # Tool calling agent that processes the system's next response
+    openai_component_3 = OpenAIModelComponent(_id="openai_3")
+    openai_component_3.set(input_value=prompt_component_1.build_prompt, api_key=os.environ["OPENAI_API_KEY"])
+
+    # Conditional router based on agent response
+    router = ConditionalRouterComponent(_id="router")
+    router.set(
+        input_text=openai_component_3.text_response,
+        match_text=chat_input.message_response,
+        operator="equals",
+        message=openai_component_3.text_response,
+    )
+
+    # Second prompt: After the last try, provide a new hint
+    prompt_component_2 = PromptComponent(_id="prompt_component_2")
+    prompt_component_2.set(
+        template="Given the following word and the following last try. Give the guesser a new hint.\nLast try: {last_try}\nWord: {word}\nHint:",
+        word=chat_input.message_response,
+        last_try=router.false_response,
+    )
+
+    # Second OpenAI component (handles the router's response)
+    openai_component_2 = OpenAIModelComponent(_id="openai_2")
+    openai_component_2.set(input_value=prompt_component_2.build_prompt, api_key=os.environ["OPENAI_API_KEY"])
+
+    prompt_component_1.set(hint=openai_component_2.text_response)
+
+    # First chat output for OpenAI response from component 1
+    chat_output_1 = ChatOutput(_id="chat_output_1")
+    chat_output_1.set(input_value=openai_component_3.text_response)
+
+    # Second chat output for the final OpenAI response
+    chat_output_2 = ChatOutput(_id="chat_output_2")
+    chat_output_2.set(input_value=router.true_response)
+
+    # Build the graph without concatenate
+    graph = Graph(chat_input, chat_output_2)
+
+    # Assertions for graph cyclicity and correctness
+    assert graph.is_cyclic is True, "Graph should contain cycles."
+
+    # Run and validate the execution of the graph
+    results = []
+    max_iterations = 20
+    snapshots = [graph._snapshot()]
+
+    for result in graph.start(max_iterations=max_iterations, config={"output": {"cache": False}}):
+        snapshots.append(graph._snapshot())
+        results.append(result)
+
+    # Extract the vertex IDs for analysis
+    results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
+    assert (
+        "chat_output" in results_ids and "chat_output" in results_ids
+    ), f"Expected outputs not in results: {results_ids}"
+
+    print(f"Execution completed with results: {results_ids}")
