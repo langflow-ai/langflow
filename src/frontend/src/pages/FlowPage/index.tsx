@@ -3,12 +3,12 @@ import { ENABLE_BRANDING } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
+import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect } from "react";
 import { useBlocker, useParams } from "react-router-dom";
 import FlowToolbar from "../../components/chatComponent";
-import { BuildInProgressModal } from "../../modals/buildInProgressModal";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -19,6 +19,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -47,12 +48,26 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const handleSave = () => {
-    saveFlow().then(() => (blocker.proceed ? blocker.proceed() : null));
-  };
-
-  const handleStopBuild = () => {
-    stopBuilding();
-    if (blocker.proceed) blocker.proceed();
+    let saving = true;
+    let proceed = false;
+    setTimeout(() => {
+      saving = false;
+      if (proceed) {
+        blocker.proceed && blocker.proceed();
+        setSuccessData({
+          title: "Flow saved successfully!",
+        });
+      }
+    }, 1200);
+    saveFlow().then(() => {
+      if (!autoSaving || saving === false) {
+        blocker.proceed && blocker.proceed();
+        setSuccessData({
+          title: "Flow saved successfully!",
+        });
+      }
+      proceed = true;
+    });
   };
 
   const handleExit = () => {
@@ -111,6 +126,27 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     };
   }, [id]);
 
+  useEffect(() => {
+    if (
+      blocker.state === "blocked" &&
+      autoSaving &&
+      changesNotSaved &&
+      !isBuilding
+    ) {
+      handleSave();
+    }
+  }, [blocker.state, isBuilding]);
+
+  useEffect(() => {
+    if (blocker.state === "blocked") {
+      if (isBuilding) {
+        stopBuilding();
+      } else if (!changesNotSaved) {
+        blocker.proceed && blocker.proceed();
+      }
+    }
+  }, [blocker.state, isBuilding]);
+
   return (
     <>
       <div className="flow-page-positioning">
@@ -140,19 +176,12 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       </div>
       {blocker.state === "blocked" && (
         <>
-          {isBuilding && (
-            <BuildInProgressModal
-              onStopBuild={handleStopBuild}
-              onCancel={() => blocker.reset?.()}
-            />
-          )}
           {!isBuilding && currentSavedFlow && (
             <SaveChangesModal
               onSave={handleSave}
               onCancel={() => blocker.reset?.()}
               onProceed={handleExit}
               flowName={currentSavedFlow.name}
-              unsavedChanges={changesNotSaved}
               lastSaved={
                 updatedAt
                   ? new Date(updatedAt).toLocaleString("en-US", {
