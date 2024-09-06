@@ -319,7 +319,7 @@ class Graph:
         for vertex in self.vertices:
             if vertex._custom_component is None:
                 continue
-            for output in vertex._custom_component._outputs.values():
+            for output in vertex._custom_component._outputs_map.values():
                 for key, value in config["output"].items():
                     setattr(output, key, value)
 

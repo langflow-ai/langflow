@@ -53,7 +53,7 @@ class Component(CustomComponent):
             else:
                 inputs[key] = value
         self._inputs: dict[str, "InputTypes"] = {}
-        self._outputs: dict[str, Output] = {}
+        self._outputs_map: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
         self._parameters = inputs or {}
@@ -86,8 +86,8 @@ class Component(CustomComponent):
         self._event_manager = event_manager
 
     def _reset_all_output_values(self):
-        if isinstance(self._outputs, dict):
-            for output in self._outputs.values():
+        if isinstance(self._outputs_map, dict):
+            for output in self._outputs_map.values():
                 setattr(output, "value", UNDEFINED)
 
     def _build_state_model(self):
@@ -96,7 +96,7 @@ class Component(CustomComponent):
         name = self.name or self.__class__.__name__
         model_name = f"{name}StateModel"
         fields = {}
-        for output in self._outputs.values():
+        for output in self._outputs_map.values():
             fields[output.name] = getattr(self, output.method)
         self._state_model = create_state_model(model_name=model_name, **fields)
         return self._state_model
@@ -117,7 +117,7 @@ class Component(CustomComponent):
         kwargs["inputs"] = deepcopy(self.__inputs)
         new_component = type(self)(**kwargs)
         new_component._code = self._code
-        new_component._outputs = self._outputs
+        new_component._outputs_map = self._outputs_map
         new_component._inputs = self._inputs
         new_component._edges = self._edges
         new_component._components = self._components
@@ -168,7 +168,7 @@ class Component(CustomComponent):
         """
         Returns a list of output names.
         """
-        return [_output.name for _output in self._outputs.values()]
+        return [_output.name for _output in self._outputs_map.values()]
 
     async def run(self):
         """
@@ -221,8 +221,8 @@ class Component(CustomComponent):
         Raises:
             ValueError: If the output with the specified name is not found.
         """
-        if name in self._outputs:
-            return self._outputs[name]
+        if name in self._outputs_map:
+            return self._outputs_map[name]
         raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
 
     def set_on_output(self, name: str, **kwargs):
@@ -233,8 +233,8 @@ class Component(CustomComponent):
             setattr(output, key, value)
 
     def set_output_value(self, name: str, value: Any):
-        if name in self._outputs:
-            self._outputs[name].value = value
+        if name in self._outputs_map:
+            self._outputs_map[name].value = value
         else:
             raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
 
@@ -256,7 +256,7 @@ class Component(CustomComponent):
                 raise ValueError("Output name cannot be None.")
             # Deepcopy is required to avoid modifying the original component;
             # allows each instance of each component to modify its own output
-            self._outputs[output.name] = deepcopy(output)
+            self._outputs_map[output.name] = deepcopy(output)
 
     def map_inputs(self, inputs: list["InputTypes"]):
         """
@@ -289,7 +289,7 @@ class Component(CustomComponent):
         self._validate_outputs()
 
     def _set_output_types(self):
-        for output in self._outputs.values():
+        for output in self._outputs_map.values():
             return_types = self._get_method_return_type(output.method)
             output.add_types(return_types)
             output.set_selected()
@@ -297,7 +297,7 @@ class Component(CustomComponent):
     def get_output_by_method(self, method: Callable):
         # method is a callable and output.method is a string
         # we need to find the output that has the same method
-        output = next((output for output in self._outputs.values() if output.method == method.__name__), None)
+        output = next((output for output in self._outputs_map.values() if output.method == method.__name__), None)
         if output is None:
             method_name = method.__name__ if hasattr(method, "__name__") else str(method)
             raise ValueError(f"Output with method {method_name} not found")
@@ -327,7 +327,7 @@ class Component(CustomComponent):
 
     def _find_matching_output_method(self, value: "Component"):
         # get all outputs of the value component
-        outputs = value._outputs.values()
+        outputs = value._outputs_map.values()
         # check if the any of the types in the output.types matches ONLY one input in the current component
         matching_pairs = []
         for output in outputs:
@@ -579,7 +579,7 @@ class Component(CustomComponent):
         self.outputs = [Output(**output) for output in outputs]
         for output in self.outputs:
             setattr(self, output.name, output)
-            self._outputs[output.name] = output
+            self._outputs_map[output.name] = output
 
     def get_trace_as_inputs(self):
         predefined_inputs = {
@@ -621,7 +621,7 @@ class Component(CustomComponent):
         _results = {}
         _artifacts = {}
         if hasattr(self, "outputs"):
-            for output in self._outputs.values():
+            for output in self._outputs_map.values():
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
                 if (
