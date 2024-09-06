@@ -60,7 +60,7 @@ jq = { version = "^1.7.0", markers = "sys_platform != 'win32'" }
 pypdf = "^4.2.0"
 nest-asyncio = "^1.6.0"
 emoji = "^2.12.0"
-cryptography = "^42.0.5"
+cryptography = ">=42.0.5,<44.0.0"
 asyncer = "^0.0.5"
 pyperclip = "^1.8.2"
 uncurl = "^0.0.11"

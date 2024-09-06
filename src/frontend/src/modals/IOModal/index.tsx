@@ -2,6 +2,7 @@ import {
   useDeleteMessages,
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useState } from "react";
 import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -171,6 +172,16 @@ export default function IOModal({
     setSessions(Array.from(sessions));
     sessions;
   }, [messages]);
+
+  const setPlaygroundScrollBehaves = useUtilityStore(
+    (state) => state.setPlaygroundScrollBehaves,
+  );
+
+  useEffect(() => {
+    if (open) {
+      setPlaygroundScrollBehaves("instant");
+    }
+  }, [open]);
 
   return (
     <BaseModal
