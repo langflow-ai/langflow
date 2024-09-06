@@ -65,7 +65,6 @@ export default function GlobalVariablesPage() {
     },
     {
       field: "value",
-      cellRenderer:TableAutoCellRender
     },
     {
       headerName: "Apply To Fields",
