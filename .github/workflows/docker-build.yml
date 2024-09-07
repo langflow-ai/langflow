@@ -113,8 +113,8 @@ jobs:
       - name: Set Dockerfile and Tags
         id: set-vars
         run: |
-          nightly_suffix=""
-          if [[ "${{ inputs.nightly_build }}" == "true" ]]; then
+          nightly_suffix=''
+          if [[ "${{ needs.get-version.outputs.nightly_tag }}" != '' ]]; then
             nightly_suffix="-nightly"
           fi
 
