@@ -71,6 +71,7 @@ jobs:
           else
             echo "nightly_tag=" >> $GITHUB_OUTPUT
           fi
+
       - name: Check out the code at a specific ref (e.g., nightly tag)
         uses: actions/checkout@v4
         with:
@@ -105,16 +106,19 @@ jobs:
     outputs:
       tags: ${{ steps.set-vars.outputs.tags }}
       file: ${{ steps.set-vars.outputs.file }}
+    env:
+      NIGHTLY_TAG: ${{ needs.get-version.outputs.nightly-tag }}
     steps:
       - name: Check out the code at a specific ref (e.g., nightly tag)
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.get-version.outputs.nightly_tag || github.ref }} 
+          ref: ${{ env.NIGHTLY_TAG || github.ref }}
+
       - name: Set Dockerfile and Tags
         id: set-vars
         run: |
           nightly_suffix=''
-          if [[ "${{ needs.get-version.outputs.nightly_tag }}" != '' ]]; then
+          if [[ "${{ env.NIGHTLY_TAG }}" != '' ]]; then
             nightly_suffix="-nightly"
           fi
 
@@ -141,7 +145,7 @@ jobs:
       - name: Check out the code at a specific ref (e.g., nightly tag)
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.get-version.outputs.nightly_tag || github.ref }} 
+          ref: ${{ needs.get-version.outputs.nightly-tag || github.ref }} 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to Docker Hub
@@ -177,7 +181,7 @@ jobs:
       - name: Check out the code at a specific ref (e.g., nightly tag)
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.get-version.outputs.nightly_tag || github.ref }} 
+          ref: ${{ needs.get-version.outputs.nightly-tag || github.ref }} 
  
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
