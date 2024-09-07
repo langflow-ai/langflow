@@ -118,7 +118,7 @@ jobs:
             nightly_suffix="-nightly"
           fi
 
-          if [[ "${{ nightly_suffix }}" == '' ]]; then
+          if [[ "$nightly_suffix" == '' ]]; then
             echo "Error: Nightly suffix is empty"
             exit 1
           fi
