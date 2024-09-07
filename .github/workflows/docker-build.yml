@@ -118,6 +118,11 @@ jobs:
             nightly_suffix="-nightly"
           fi
 
+          if [[ "${{ nightly_suffix }}" == '' ]]; then
+            echo "Error: Nightly suffix is empty"
+            exit 1
+          fi
+
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
             echo "tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
