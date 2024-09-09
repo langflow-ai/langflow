@@ -9,8 +9,8 @@ from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
 
-class UpdateOrAppendDataComponent(Component):
-    display_name: str = "Update"
+class UpdateDataComponent(Component):
+    display_name: str = "Update data"
     description: str = "Dynamically update or append data with a specified number of fields."
     name: str = "UpdateData"
 
@@ -31,14 +31,14 @@ class UpdateOrAppendDataComponent(Component):
         MessageTextInput(
             name="text_key",
             display_name="Text Key",
-            info="Key to identify the data that is text.",
+            info="Key that identifies the field to be used as the text content.",
             advanced=True,
         ),
         BoolInput(
             name="text_key_validator",
             display_name="Text Key Validator",
             advanced=True,
-            info="If True, it will turn on the Text Key Validator and will check if the Text Key is one of the keys in the Data",
+            info="If enabled, checks if the given 'Text Key' is present in the given 'Data'.",
         ),
     ]
 

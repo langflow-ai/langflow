@@ -26,14 +26,14 @@ class CreateDataComponent(Component):
         MessageTextInput(
             name="text_key",
             display_name="Text Key",
-            info="Key to identify the data that is text.",
+            info="Key that identifies the field to be used as the text content.",
             advanced=True,
         ),
         BoolInput(
             name="text_key_validator",
             display_name="Text Key Validator",
             advanced=True,
-            info="If True, it will turn on the Text Key Validator and will check if the Text Key is one of the keys in the Data",
+            info="If enabled, checks if the given 'Text Key' is present in the given 'Data'.",
         ),
     ]
 
@@ -84,7 +84,7 @@ class CreateDataComponent(Component):
         return return_data
 
     def get_data(self):
-        """Fucntion to get the Data from the attributes"""
+        """Function to get the Data from the attributes"""
         data = {}
         for value_dict in self._attributes.values():
             if isinstance(value_dict, dict):
@@ -96,7 +96,7 @@ class CreateDataComponent(Component):
         return data
 
     def add_validator(self):
-        """This fucntion validates that the Text Key is one of the keys in the Data"""
+        """This function validates that the Text Key is one of the keys in the Data"""
         data_keys = self.get_data().keys()
         if self.text_key not in data_keys and self.text_key != "":
             raise ValueError(f"Text Key: {self.text_key} not found in the Data keys: {",".join(data_keys)}")
