@@ -31,7 +31,7 @@ class UpdateOrAppendDataComponent(Component):
         MessageTextInput(
             name="text_key",
             display_name="Text Key",
-            info="Key to be used as text. This is useful because more Parsers/splitters look into the Text column for processing",
+            info="Key to identify the data that is text.",
             advanced=True,
         ),
         BoolInput(
