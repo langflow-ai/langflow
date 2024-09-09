@@ -323,7 +323,12 @@ export default function GenericNode({
                   {renderInputParameter}
                   {shownOutputs &&
                     shownOutputs.length > 0 &&
-                    renderOutputParameter(shownOutputs[0], 0)}
+                    renderOutputParameter(
+                      shownOutputs[0],
+                      data.node!.outputs?.findIndex(
+                        (out) => out.name === shownOutputs[0].name,
+                      ) ?? 0,
+                    )}
                 </>
               )}
             </div>
