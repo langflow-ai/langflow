@@ -72,7 +72,7 @@ assemblyai = "^0.26.0"
 litellm = "^1.44.0"
 chromadb = "^0.4"
 langchain-anthropic = "^0.1.23"
-langchain-astradb = "^0.3.3"
+langchain-astradb = "^0.3.5"
 langchain-openai = "0.1.22"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
 langchain-google-vertexai = "1.0.10"
