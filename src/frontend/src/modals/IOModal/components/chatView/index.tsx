@@ -83,6 +83,7 @@ export default function ChatView({
     if (ref.current) {
       ref.current.focus();
     }
+    // trigger focus on chat when new session is set
   }, [focusChat]);
 
   function clearChat(): void {
