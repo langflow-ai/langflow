@@ -24,7 +24,7 @@ def test_create_variable(client, body, active_user, logged_in_headers):
     assert body["type"] == result["type"]
     assert body["default_fields"] == result["default_fields"]
     assert "id" in result.keys()
-    assert "value" not in result.keys()
+    assert body["value"] != result["value"]
 
 
 def test_create_variable__variable_name_alread_exists(client, body, active_user, logged_in_headers):

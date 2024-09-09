@@ -7,7 +7,7 @@ import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
 import { InputGlobalComponentType } from "../../types/components";
 import { cn } from "../../utils/utils";
-import AddNewVariableButton from "../addNewVariableButtonComponent/addNewVariableButton";
+import GlobalVariableModal from "../GlobalVariableModal/GlobalVariableModal";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { CommandItem } from "../ui/command";
@@ -72,7 +72,7 @@ export default function InputGlobalComponent({
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
       optionsButton={
-        <AddNewVariableButton>
+        <GlobalVariableModal>
           <CommandItem value="doNotFilter-addNewVariable">
             <ForwardedIconComponent
               name="Plus"
@@ -81,7 +81,7 @@ export default function InputGlobalComponent({
             />
             <span>Add New Variable</span>
           </CommandItem>
-        </AddNewVariableButton>
+        </GlobalVariableModal>
       }
       optionButton={(option) => (
         <DeleteConfirmationModal
