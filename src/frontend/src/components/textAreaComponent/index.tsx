@@ -74,10 +74,7 @@ export default function TextAreaComponent({
         unstyled
         tabIndex={-1}
         className={classNames(
-          "side-bar-button-size absolute mb-px text-muted-foreground hover:text-current",
-          editNode
-            ? "bottom-[1.3rem] right-[4.2rem]"
-            : "bottom-4 right-[4.2rem]",
+          "side-bar-button-size absolute right-3 top-1/2 mb-px -translate-y-1/2 text-muted-foreground hover:text-current",
         )}
         onClick={(event) => {
           event.preventDefault();
@@ -123,12 +120,12 @@ export default function TextAreaComponent({
   };
 
   return (
-    <div className={classNames("flex w-full items-center", disabled ? "" : "")}>
-      <div className="flex w-full items-center gap-3" data-testid={`div-${id}`}>
+    <div className={classNames("flex w-full items-center gap-3")}>
+      <div className="relative w-full" data-testid={`div-${id}`}>
         {renderTextarea()}
-        {renderExternalLinkButton()}
         {renderPasswordToggle()}
       </div>
+      {renderExternalLinkButton()}
     </div>
   );
 }
