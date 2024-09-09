@@ -26,9 +26,7 @@ class IDGeneratorComponent(Component):
         Output(display_name="ID", name="id", method="generate_id"),
     ]
 
-    def update_build_config(
-        self, build_config: dotdict, field_value: Any, field_name: Optional[str] = None
-    ):
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: Optional[str] = None):
         if field_name == "unique_id":
             build_config[field_name]["value"] = str(uuid.uuid4())
         return build_config
