@@ -68,7 +68,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByText("Playground", { exact: true }).click();
 
   // Read the image file as a binary string
-  const filePath = "tests/core/assets/chain.png";
+  const filePath = "tests/assets/chain.png";
   const fileContent = readFileSync(filePath, "base64");
 
   // Create the DataTransfer and File objects within the browser context

@@ -64,7 +64,9 @@ test("Document QA", async ({ page }) => {
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("icon-FileSearch2").click();
   const fileChooser = await fileChooserPromise;
-  await fileChooser.setFiles(path.join(__dirname, "/assets/test_file.txt"));
+  await fileChooser.setFiles(
+    path.join(__dirname, "tests/assets/test_file.txt"),
+  );
   await page.getByText("test_file.txt").isVisible();
 
   await page.waitForTimeout(1000);
