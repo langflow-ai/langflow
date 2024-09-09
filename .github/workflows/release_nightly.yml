@@ -204,7 +204,7 @@ jobs:
       # version should be needs.release-main.outputs.version  if release_type is main
       version: ""
       release_type: ${{ matrix.release_type }}
-      nightly_build: true
+      nightly_tag_base: ${{ inputs.nightly_tag_base }}
     secrets: inherit
 
   call_docker_build_main:
@@ -221,5 +221,5 @@ jobs:
       # version should be needs.release-main.outputs.version  if release_type is main
       version: ""
       release_type: ${{ matrix.release_type }}
-      nightly_build: true
+      nightly_tag_main: ${{ inputs.nightly_tag_main }}
     secrets: inherit
