@@ -10,7 +10,7 @@ from langflow.schema.dotdict import dotdict
 
 
 class UpdateOrAppendDataComponent(Component):
-    display_name: str = "Update or Append Data"
+    display_name: str = "Update"
     description: str = "Dynamically update or append data with a specified number of fields."
     name: str = "UpdateData"
 
