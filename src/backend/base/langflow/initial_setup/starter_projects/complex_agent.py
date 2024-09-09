@@ -6,7 +6,7 @@ from langflow.components.models.OpenAIModel import OpenAIModelComponent
 from langflow.components.outputs.ChatOutput import ChatOutput
 from langflow.components.prompts.Prompt import PromptComponent
 from langflow.components.tools.SearchAPI import SearchAPIComponent
-from langflow.components.tools.YfinanceTool import YfinanceToolComponent
+from langflow.components.tools.YfinanceTool import YahooFinanceToolComponent
 from langflow.graph.graph.base import Graph
 
 
@@ -14,7 +14,7 @@ def complex_agent_graph():
     llm = OpenAIModelComponent(model_name="gpt-4o-mini")
     manager_llm = OpenAIModelComponent(model_name="gpt-4o")
     search_api_tool = SearchAPIComponent()
-    yahoo_search_tool = YfinanceToolComponent()
+    yahoo_search_tool = YahooFinanceToolComponent
     dynamic_agent = CrewAIAgentComponent()
     chat_input = ChatInput()
     role_prompt = PromptComponent(_display_name="Role Prompt")
