@@ -20,7 +20,7 @@ class CreateDataComponent(Component):
             display_name="Number of Fields",
             info="Number of fields to be added to the record.",
             real_time_refresh=True,
-            value=0,
+            value=1,
             range_spec=RangeSpec(min=1, max=15, step=1, step_type="int"),
         ),
         MessageTextInput(
@@ -80,7 +80,7 @@ class CreateDataComponent(Component):
         return_data = Data(data=data, text_key=self.text_key)
         self.status = return_data
         if self.text_key_validator:
-            self.add_validator()
+            self.validate_text_key()
         return return_data
 
     def get_data(self):
@@ -95,7 +95,7 @@ class CreateDataComponent(Component):
                 data.update(value_dict)
         return data
 
-    def add_validator(self):
+    def validate_text_key(self):
         """This function validates that the Text Key is one of the keys in the Data"""
         data_keys = self.get_data().keys()
         if self.text_key not in data_keys and self.text_key != "":

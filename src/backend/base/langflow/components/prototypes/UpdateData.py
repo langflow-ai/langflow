@@ -11,7 +11,7 @@ from langflow.schema.dotdict import dotdict
 
 class UpdateDataComponent(Component):
     display_name: str = "Update data"
-    description: str = "Dynamically update or append data with a specified number of fields."
+    description: str = "Dynamically update or append data with the specified fields."
     name: str = "UpdateData"
 
     inputs = [
@@ -86,7 +86,7 @@ class UpdateDataComponent(Component):
         if self.text_key:
             self.old_data.text_key = self.text_key
         self.status = self.old_data
-        self.add_validator(self.old_data)
+        self.validate_text_key(self.old_data)
         return self.old_data
 
     def get_data(self):
@@ -101,7 +101,7 @@ class UpdateDataComponent(Component):
                 data.update(value_dict)
         return data
 
-    def add_validator(self, data: Data):
+    def validate_text_key(self, data: Data):
         """This function validates that the Text Key is one of the keys in the Data"""
         data_keys = data.data.keys()
         if self.text_key not in data_keys and self.text_key != "":
