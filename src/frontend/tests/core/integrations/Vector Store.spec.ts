@@ -97,7 +97,7 @@ test("Vector Store RAG", async ({ page }) => {
   await page.getByTestId("icon-FileSearch2").last().click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(
-    path.join(__dirname, "tests/assets/test_file.txt"),
+    path.join(__dirname, "../../assets/test_file.txt"),
   );
   await page.getByText("test_file.txt").isVisible();
 
