@@ -40,9 +40,7 @@ class AssistantsCreateAssistant(Component):
     ]
 
     outputs = [
-        Output(
-            display_name="Assistant ID", name="assistant_id", method="process_inputs"
-        ),
+        Output(display_name="Assistant ID", name="assistant_id", method="process_inputs"),
     ]
 
     def process_inputs(self) -> Message:
