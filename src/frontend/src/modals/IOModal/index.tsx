@@ -27,6 +27,7 @@ import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
 import SessionView from "./components/SessionView";
 import ChatView from "./components/chatView";
+import ShortUniqueId from "short-unique-id";
 
 export default function IOModal({
   children,
@@ -114,6 +115,8 @@ export default function IOModal({
   const [sessions, setSessions] = useState<string[]>([]);
   const messages = useMessagesStore((state) => state.messages);
   const flowPool = useFlowStore((state) => state.flowPool);
+  const uuid = new ShortUniqueId();
+  const [sessionId, setSessionId] =  useState<string|undefined>();
 
   const { refetch } = useGetMessagesQuery(
     {
@@ -461,6 +464,16 @@ export default function IOModal({
                       No memories available.
                     </span>
                   )}
+                  {sessions.length>0 && <div className="pt-6">
+                    <Button
+                    onClick={(_)=>{
+                      setvisibleSessions([])
+                      setSessionId(uuid.randomUUID(8))
+                    }
+                    }>
+                      Start fresh
+                    </Button>
+                  </div>}
                 </TabsContent>
               </Tabs>
             </div>
@@ -526,6 +539,7 @@ export default function IOModal({
               >
                 {haveChat ? (
                   <ChatView
+                    focusChat={sessionId}
                     sendMessage={sendMessage}
                     chatValue={chatValue}
                     setChatValue={setChatValue}

@@ -29,7 +29,8 @@ export default function ChatView({
   setChatValue,
   lockChat,
   setLockChat,
-  visibleSessions
+  visibleSessions,
+  focusChat
 }: chatViewProps): JSX.Element {
   const { flowPool, outputs, inputs, CleanFlowPool } = useFlowStore();
   const { setErrorData } = useAlertStore();
@@ -82,7 +83,7 @@ export default function ChatView({
     if (ref.current) {
       ref.current.focus();
     }
-  }, []);
+  }, [focusChat]);
 
   function clearChat(): void {
     setChatHistory([]);
