@@ -200,10 +200,12 @@ def test_create_flows(client: TestClient, session: Session, json_flow: str, logg
     flow = orjson.loads(json_flow)
     data = flow["data"]
     # Create test data
+    flow_unique_name = str(uuid4())
+    flow_2_unique_name = str(uuid4())
     flow_list = FlowListCreate(
         flows=[
-            FlowCreate(name="Flow 1", description="description", data=data),
-            FlowCreate(name="Flow 2", description="description", data=data),
+            FlowCreate(name=flow_unique_name, description="description", data=data),
+            FlowCreate(name=flow_2_unique_name, description="description", data=data),
         ]
     )
     # Make request to endpoint
@@ -213,10 +215,10 @@ def test_create_flows(client: TestClient, session: Session, json_flow: str, logg
     # Check response data
     response_data = response.json()
     assert len(response_data) == 2
-    assert "Flow 1" in response_data[0]["name"]
+    assert flow_unique_name in response_data[0]["name"]
     assert response_data[0]["description"] == "description"
     assert response_data[0]["data"] == data
-    assert response_data[1]["name"] == "Flow 2"
+    assert response_data[1]["name"] == flow_2_unique_name
     assert response_data[1]["description"] == "description"
     assert response_data[1]["data"] == data
 
@@ -225,10 +227,12 @@ def test_upload_file(client: TestClient, session: Session, json_flow: str, logge
     flow = orjson.loads(json_flow)
     data = flow["data"]
     # Create test data
+    flow_unique_name = str(uuid4())
+    flow_2_unique_name = str(uuid4())
     flow_list = FlowListCreate(
         flows=[
-            FlowCreate(name="Flow 1", description="description", data=data),
-            FlowCreate(name="Flow 2", description="description", data=data),
+            FlowCreate(name=flow_unique_name, description="description", data=data),
+            FlowCreate(name=flow_2_unique_name, description="description", data=data),
         ]
     )
     file_contents = orjson_dumps(flow_list.dict())
@@ -242,10 +246,10 @@ def test_upload_file(client: TestClient, session: Session, json_flow: str, logge
     # Check response data
     response_data = response.json()
     assert len(response_data) == 2
-    assert "Flow 1" in response_data[0]["name"]
+    assert flow_unique_name in response_data[0]["name"]
     assert response_data[0]["description"] == "description"
     assert response_data[0]["data"] == data
-    assert response_data[1]["name"] == "Flow 2"
+    assert response_data[1]["name"] == flow_2_unique_name
     assert response_data[1]["description"] == "description"
     assert response_data[1]["data"] == data
 
@@ -260,10 +264,12 @@ def test_download_file(
     flow = orjson.loads(json_flow)
     data = flow["data"]
     # Create test data
+    flow_unique_name = str(uuid4())
+    flow_2_unique_name = str(uuid4())
     flow_list = FlowListCreate(
         flows=[
-            FlowCreate(name="Flow 1", description="description", data=data),
-            FlowCreate(name="Flow 2", description="description", data=data),
+            FlowCreate(name=flow_unique_name, description="description", data=data),
+            FlowCreate(name=flow_2_unique_name, description="description", data=data),
         ]
     )
     db_manager = get_db_service()
