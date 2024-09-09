@@ -4621,19 +4621,22 @@ langchain-core = ">=0.2.26,<0.3.0"
 
 [[package]]
 name = "langchain-astradb"
-version = "0.3.3"
+version = "0.3.5"
 description = "An integration package connecting Astra DB and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_astradb-0.3.3-py3-none-any.whl", hash = "sha256:39deef1253947ef1bfaf3c27881ecdf07621d96c2cf37814aed9e506a9bee217"},
-    {file = "langchain_astradb-0.3.3.tar.gz", hash = "sha256:f9a996ec4bef134896195430adeb7f264389c368a03d2ea91356837e8ddde091"},
+    {file = "langchain_astradb-0.3.5-py3-none-any.whl", hash = "sha256:c86db219ec7b93548b23c06bf4303fadf0cb90b07e27222956c97ae27a14860c"},
+    {file = "langchain_astradb-0.3.5.tar.gz", hash = "sha256:9377fed7f380b7ece363ef5acd6788f787bbacc4de825860c710c401047f4ece"},
 ]
 
 [package.dependencies]
-astrapy = ">=1.2,<2.0"
+astrapy = ">=1.4,<2.0"
 langchain-core = ">=0.1.31,<0.3"
-numpy = ">=1,<2"
+numpy = [
+    {version = ">=1.24.0,<2.0.0", markers = "python_version < \"3.12\""},
+    {version = ">=1.26.0,<2.0.0", markers = "python_version >= \"3.12\""},
+]
 
 [[package]]
 name = "langchain-aws"
@@ -5052,7 +5055,7 @@ cachetools = "^5.3.1"
 chardet = "^5.2.0"
 clickhouse-connect = "0.7.19"
 crewai = "^0.36.0"
-cryptography = "^42.0.5"
+cryptography = ">=42.0.5,<44.0.0"
 diskcache = "^5.6.3"
 docstring-parser = "^0.16"
 duckdb = "^1.0.0"
@@ -12084,4 +12087,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "38d0bb488f9d89b6fc67c04fe2242a5fc1e5796aa67a045f37f1496e5134cc23"
+content-hash = "22fc0755bfc3ae10abe8d225f832b22dcb81c4d52f52accc8ce4a27a4d06fdb9"
