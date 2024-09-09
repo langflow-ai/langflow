@@ -12,12 +12,10 @@ from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableUpdate
 from langflow.services.deps import get_session
 from langflow.services.variable.base import VariableService
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
-
-CREDENTIAL_TYPE = "Credential"
-GENERIC_TYPE = "Generic"
 
 
 class DatabaseVariableService(VariableService, Service):

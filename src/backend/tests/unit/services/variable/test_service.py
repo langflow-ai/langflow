@@ -1,11 +1,14 @@
-from langflow.services.database.models.variable.model import VariableUpdate
-import pytest
+from datetime import datetime
 from unittest.mock import patch
 from uuid import uuid4
-from datetime import datetime
-from sqlmodel import SQLModel, Session, create_engine
+
+import pytest
+from sqlmodel import Session, SQLModel, create_engine
+
+from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
-from langflow.services.variable.service import GENERIC_TYPE, CREDENTIAL_TYPE, DatabaseVariableService
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.service import DatabaseVariableService
 
 
 @pytest.fixture

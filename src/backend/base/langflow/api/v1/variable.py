@@ -9,7 +9,8 @@ from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_session, get_settings_service, get_variable_service
 from langflow.services.variable.base import VariableService
-from langflow.services.variable.service import GENERIC_TYPE, DatabaseVariableService
+from langflow.services.variable.constants import GENERIC_TYPE
+from langflow.services.variable.service import DatabaseVariableService
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
 
@@ -61,7 +62,6 @@ def read_variables(
     """Read all variables."""
     try:
         return variable_service.get_all(user_id=current_user.id, session=session)
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
