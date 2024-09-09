@@ -12,15 +12,8 @@ from langflow.graph.utils import log_transaction, log_vertex_build
 from langflow.initial_setup.setup import load_flows_from_directory, load_starter_projects
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
-from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, session_scope
-from langflow.services.monitor.schema import TransactionModel
-from langflow.services.monitor.utils import (
-    add_row_to_table,
-    drop_and_create_table_if_schema_mismatch,
-    new_duckdb_locked_connection,
-)
+from langflow.services.deps import get_db_service
 
 
 @pytest.fixture(scope="module")
@@ -357,6 +350,7 @@ def test_load_flows(client: TestClient, load_flows_dir):
     response = client.get("api/v1/flows/c54f9130-f2fa-4a3e-b22a-3856d946351b")
     assert response.status_code == 200
     assert response.json()["name"] == "BasicExample"
+
 
 def test_sqlite_pragmas():
     db_service = get_db_service()

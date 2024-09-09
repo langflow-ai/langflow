@@ -1,18 +1,14 @@
-import json
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from alembic.util.exc import CommandError
 from loguru import logger
-from sqlmodel import Session, select, text
+from sqlmodel import Session, text
 
-from langflow.services.database.models import TransactionTable
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
-
-from typing import Dict, List
 
 
 def initialize_database(fix_migration: bool = False):
