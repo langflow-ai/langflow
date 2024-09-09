@@ -51,7 +51,7 @@ export default function GenericNode({
   const [isOutdated, setIsOutdated] = useState(false);
   const [isUserEdited, setIsUserEdited] = useState(false);
   const [borderColor, setBorderColor] = useState<string>("");
-  const [showNode, setShowNode] = useState(data.showNode ?? true);
+  const showNode = data.showNode ?? true;
 
   const updateNodeCode = useUpdateNodeCode(
     data?.id,
@@ -77,10 +77,6 @@ export default function GenericNode({
   }
 
   useCheckCodeValidity(data, templates, setIsOutdated, setIsUserEdited, types);
-
-  useEffect(() => {
-    setShowNode(data.showNode ?? true);
-  }, [data.showNode]);
 
   const [loadingUpdate, setLoadingUpdate] = useState(false);
 
@@ -193,7 +189,6 @@ export default function GenericNode({
               data: { ...old.data, showNode: show },
             }));
           }}
-          setShowState={setShowNode}
           numberOfOutputHandles={shownOutputs.length ?? 0}
           showNode={showNode}
           openAdvancedModal={false}
@@ -208,7 +203,6 @@ export default function GenericNode({
     deleteNode,
     takeSnapshot,
     setNode,
-    setShowNode,
     showNode,
     updateNodeCode,
     isOutdated,
@@ -333,14 +327,16 @@ export default function GenericNode({
                 </>
               )}
             </div>
-            <NodeStatus
-              frozen={data.node?.frozen}
-              showNode={showNode}
-              display_name={data.node?.display_name!}
-              nodeId={data.id}
-              selected={selected}
-              setBorderColor={setBorderColor}
-            />
+            {!showNode && (
+              <NodeStatus
+                frozen={data.node?.frozen}
+                showNode={showNode}
+                display_name={data.node?.display_name!}
+                nodeId={data.id}
+                selected={selected}
+                setBorderColor={setBorderColor}
+              />
+            )}
           </div>
         </div>
 
