@@ -33,9 +33,12 @@ export const usePatchUpdateFlow: useMutationFunctionType<
   };
 
   const mutation: UseMutationResult<IPatchUpdateFlow, any, IPatchUpdateFlow> =
-    mutate(["usePatchUpdateFlow"], PatchUpdateFlowFn, {onSettled: () => {
-      queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
-    }, ...options});
+    mutate(["usePatchUpdateFlow"], PatchUpdateFlowFn, {
+      onSettled: () => {
+        queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
+      },
+      ...options,
+    });
 
   return mutation;
 };
