@@ -29,7 +29,7 @@ export default function ChatView({
   setChatValue,
   lockChat,
   setLockChat,
-  hiddenSessions,
+  visibleSessions
 }: chatViewProps): JSX.Element {
   const { flowPool, outputs, inputs, CleanFlowPool } = useFlowStore();
   const { setErrorData } = useAlertStore();
@@ -47,53 +47,7 @@ export default function ChatView({
 
   //build chat history
   useEffect(() => {
-    const chatOutputResponses: VertexBuildTypeAPI[] = [];
-    outputIds.forEach((outputId) => {
-      if (outputId.includes("ChatOutput")) {
-        if (flowPool[outputId] && flowPool[outputId].length > 0) {
-          chatOutputResponses.push(...flowPool[outputId]);
-        }
-      }
-    });
-    inputIds.forEach((inputId) => {
-      if (inputId.includes("ChatInput")) {
-        if (flowPool[inputId] && flowPool[inputId].length > 0) {
-          chatOutputResponses.push(...flowPool[inputId]);
-        }
-      }
-    });
-    const messagesFromPool: ChatMessageType[] = chatOutputResponses
-      .filter(
-        (output) =>
-          output.data.message!==undefined
-      )
-      .map((output, index) => {
-        try {
-          const messageOutput = output.data.message!;
-          const { sender, message, sender_name, stream_url, files } = messageOutput
-
-          const is_ai =
-            sender === "Machine" || sender === null || sender === undefined;
-          return {
-            isSend: !is_ai,
-            message,
-            sender_name,
-            stream_url: stream_url,
-            files,
-            timestamp: output.timestamp,
-          };
-        } catch (e) {
-          console.error(e);
-          return {
-            isSend: false,
-            message: "Error parsing message",
-            sender_name: "Error",
-            componentId: output.id,
-            timestamp: output.timestamp,
-          };
-        }
-      });
-    const messagesFromMessagesStore:ChatMessageType[] = messages.filter(message=>message.flow_id===currentFlowId)
+    const messagesFromMessagesStore:ChatMessageType[] = messages.filter(message=>message.flow_id===currentFlowId && (visibleSessions?.includes(message.session_id)??true))
     .map((message) => {
       let files = message.files;
       //HANDLE THE "[]" case
@@ -115,7 +69,7 @@ export default function ChatView({
 
     setChatHistory(finalChatHistory);
 
-  }, [flowPool,messages]);
+  }, [flowPool,messages,visibleSessions]);
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;

@@ -62,7 +62,7 @@ export default function IOModal({
   const deleteSession = useMessagesStore((state) => state.deleteSession);
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
-  const [hiddenSessions, setHiddenSessions] = useState<string[]>([]);
+  const [visibleSessions, setvisibleSessions] = useState<string[]>([]);
 
   function handleDeleteSession(session_id: string) {
     deleteSessionFunction(
@@ -170,10 +170,11 @@ export default function IOModal({
         sessions.add(row.session_id);
       });
     setSessions(Array.from(sessions));
+    setvisibleSessions(Array.from(sessions));
   }, [messages]);
 
   useEffect(() => {
-    setHiddenSessions(sessions);
+
   }, []);
 
   return (
@@ -384,7 +385,13 @@ export default function IOModal({
                               unstyled
                               size="icon"
                               onClick={(e) => {
-
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setvisibleSessions((prev) =>
+                                  prev.includes(session)
+                                    ? prev.filter((item) => item !== session)
+                                    : [...prev, session],
+                                );
                               }}
                             >
                               <ShadTooltip
@@ -393,7 +400,7 @@ export default function IOModal({
                               >
                                 <div>
                                   <IconComponent
-                                    name={hiddenSessions.includes(session) ? "EyeOff" : "Eye"}
+                                    name={!visibleSessions.includes(session) ? "EyeOff" : "Eye"}
                                     className="h-4 w-4"
                                   ></IconComponent>
                                 </div>
@@ -525,7 +532,7 @@ export default function IOModal({
                     setChatValue={setChatValue}
                     lockChat={lockChat}
                     setLockChat={setLockChat}
-                    hiddenSessions={[]}
+                    visibleSessions={visibleSessions}
                   />
                 ) : (
                   <span className="flex h-full w-full items-center justify-center font-thin text-muted-foreground">
