@@ -185,12 +185,12 @@ export default function IOModal({
 
   return (
     <BaseModal
-      size={"md-thin"}
       open={open}
       setOpen={setOpen}
       disable={disable}
       type={isPlayground ? "modal" : undefined}
       onSubmit={() => sendMessage({ repeat: 1 })}
+      size="x-large"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}

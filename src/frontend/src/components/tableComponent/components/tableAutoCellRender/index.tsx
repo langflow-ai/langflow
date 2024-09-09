@@ -15,6 +15,7 @@ export default function TableAutoCellRender({
   setValue,
   colDef,
   formatter,
+  api,
 }: CustomCellRender) {
   function getCellType() {
     let format: string = formatter ? formatter : typeof value;
@@ -63,7 +64,10 @@ export default function TableAutoCellRender({
         } else {
           return (
             <StringReader
-              editable={!!colDef?.onCellValueChanged}
+              editable={
+                !!colDef?.onCellValueChanged ||
+                !!api.getGridOption("onCellValueChanged")
+              }
               setValue={setValue!}
               string={value}
             />
