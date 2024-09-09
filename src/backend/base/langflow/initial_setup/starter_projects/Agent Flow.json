@@ -1,143 +1,10 @@
 {
+  "id": "71fef4b4-318f-4eeb-98f0-d8ad1f1dbd9c",
   "data": {
-    "edges": [
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ToolCallingAgent",
-            "id": "ToolCallingAgent-hz7Eb",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-INBLf",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ToolCallingAgent-hz7Eb{œdataTypeœ:œToolCallingAgentœ,œidœ:œToolCallingAgent-hz7Ebœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-INBLf{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-INBLfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ToolCallingAgent-hz7Eb",
-        "sourceHandle": "{œdataTypeœ: œToolCallingAgentœ, œidœ: œToolCallingAgent-hz7Ebœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-INBLf",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-INBLfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-JusJ7",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "ToolCallingAgent-hz7Eb",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-JusJ7{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-JusJ7œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-ToolCallingAgent-hz7Eb{œfieldNameœ:œllmœ,œidœ:œToolCallingAgent-hz7Ebœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "source": "OpenAIModel-JusJ7",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-JusJ7œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "ToolCallingAgent-hz7Eb",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œToolCallingAgent-hz7Ebœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CalculatorTool",
-            "id": "CalculatorTool-CN8yi",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "ToolCallingAgent-hz7Eb",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-CalculatorTool-CN8yi{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-CN8yiœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-hz7Eb{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-hz7Ebœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorTool-CN8yi",
-        "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-CN8yiœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "ToolCallingAgent-hz7Eb",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-hz7Ebœ, œinputTypesœ: [œToolœ, œBaseToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-oZ2ae",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ToolCallingAgent-hz7Eb",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-oZ2ae{œdataTypeœ:œChatInputœ,œidœ:œChatInput-oZ2aeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ToolCallingAgent-hz7Eb{œfieldNameœ:œinput_valueœ,œidœ:œToolCallingAgent-hz7Ebœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-oZ2ae",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-oZ2aeœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ToolCallingAgent-hz7Eb",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œToolCallingAgent-hz7Ebœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "PythonREPLTool",
-            "id": "PythonREPLTool-Lq9f4",
-            "name": "tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "ToolCallingAgent-hz7Eb",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-PythonREPLTool-Lq9f4{œdataTypeœ:œPythonREPLToolœ,œidœ:œPythonREPLTool-Lq9f4œ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-hz7Eb{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-hz7Ebœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
-        "source": "PythonREPLTool-Lq9f4",
-        "sourceHandle": "{œdataTypeœ: œPythonREPLToolœ, œidœ: œPythonREPLTool-Lq9f4œ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "ToolCallingAgent-hz7Eb",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-hz7Ebœ, œinputTypesœ: [œToolœ, œBaseToolœ], œtypeœ: œotherœ}"
-      }
-    ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-oZ2ae",
+          "id": "ChatInput-wzYnd",
           "node": {
             "base_classes": [
               "Message"
@@ -159,41 +26,41 @@
             ],
             "frozen": false,
             "icon": "ChatInput",
-            "lf_version": "1.0.16",
+            "lf_version": "1.0.17",
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
-                "display_name": "Message",
-                "method": "message_response",
-                "name": "message",
-                "selected": "Message",
                 "types": [
                   "Message"
                 ],
-                "value": "__UNDEFINED__"
+                "selected": "Message",
+                "name": "message",
+                "display_name": "Message",
+                "method": "message_response",
+                "value": "__UNDEFINED__",
+                "cache": true
               }
             ],
             "pinned": false,
             "template": {
               "_type": "Component",
               "code": {
-                "advanced": true,
-                "dynamic": true,
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output\nfrom langflow.memory import store_message\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, MESSAGE_SENDER_NAME_USER\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n    name = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n        )\n\n        if (\n            self.session_id\n            and isinstance(message, Message)\n            and isinstance(message.text, str)\n            and self.should_store_message\n        ):\n            store_message(\n                message,\n                flow_id=self.graph.flow_id,\n            )\n            self.message.value = message\n\n        self.status = message\n        return message\n",
                 "fileTypes": [],
                 "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
                 "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output\nfrom langflow.memory import store_message\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, MESSAGE_SENDER_NAME_USER\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n    name = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n        )\n\n        if (\n            self.session_id\n            and isinstance(message, Message)\n            and isinstance(message.text, str)\n            and self.should_store_message\n        ):\n            store_message(\n                message,\n                flow_id=self.graph.flow_id,\n            )\n            self.message.value = message\n\n        self.status = message\n        return message\n"
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
               },
               "files": {
                 "_input_type": "FileInput",
@@ -257,7 +124,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "write short python scsript to say hello world"
+                "value": "use the python tool to create a python code that prints a christma tree using *"
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -342,8 +209,8 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 298,
-        "id": "ChatInput-oZ2ae",
+        "height": 302,
+        "id": "ChatInput-wzYnd",
         "position": {
           "x": 1760.192972923414,
           "y": -191.51901724049213
@@ -358,7 +225,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-INBLf",
+          "id": "ChatOutput-jiUne",
           "node": {
             "base_classes": [
               "Message"
@@ -380,41 +247,41 @@
             ],
             "frozen": false,
             "icon": "ChatOutput",
-            "lf_version": "1.0.16",
+            "lf_version": "1.0.17",
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
-                "display_name": "Message",
-                "method": "message_response",
-                "name": "message",
-                "selected": "Message",
                 "types": [
                   "Message"
                 ],
-                "value": "__UNDEFINED__"
+                "selected": "Message",
+                "name": "message",
+                "display_name": "Message",
+                "method": "message_response",
+                "value": "__UNDEFINED__",
+                "cache": true
               }
             ],
             "pinned": false,
             "template": {
               "_type": "Component",
               "code": {
-                "advanced": true,
-                "dynamic": true,
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.memory import store_message\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n    name = \"ChatOutput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if (\n            self.session_id\n            and isinstance(message, Message)\n            and isinstance(message.text, str)\n            and self.should_store_message\n        ):\n            store_message(\n                message,\n                flow_id=self.graph.flow_id,\n            )\n            self.message.value = message\n\n        self.status = message\n        return message\n",
                 "fileTypes": [],
                 "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
                 "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.memory import store_message\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n    name = \"ChatOutput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if (\n            self.session_id\n            and isinstance(message, Message)\n            and isinstance(message.text, str)\n            and self.should_store_message\n        ):\n            store_message(\n                message,\n                flow_id=self.graph.flow_id,\n            )\n            self.message.value = message\n\n        self.status = message\n        return message\n"
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
               },
               "data_template": {
                 "_input_type": "MessageTextInput",
@@ -541,8 +408,8 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 298,
-        "id": "ChatOutput-INBLf",
+        "height": 302,
+        "id": "ChatOutput-jiUne",
         "position": {
           "x": 3968.8870036313238,
           "y": 627.770746142633
@@ -559,7 +426,7 @@
         "data": {
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
-          "id": "OpenAIModel-JusJ7",
+          "id": "OpenAIModel-9Sxdf",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -588,30 +455,30 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
-            "lf_version": "1.0.16",
+            "lf_version": "1.0.17",
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
-                "display_name": "Text",
-                "method": "text_response",
-                "name": "text_output",
-                "selected": "Message",
                 "types": [
                   "Message"
                 ],
-                "value": "__UNDEFINED__"
+                "selected": "Message",
+                "name": "text_output",
+                "display_name": "Text",
+                "method": "text_response",
+                "value": "__UNDEFINED__",
+                "cache": true
               },
               {
-                "cache": true,
-                "display_name": "Language Model",
-                "method": "build_model",
-                "name": "model_output",
-                "selected": "LanguageModel",
                 "types": [
                   "LanguageModel"
                 ],
-                "value": "__UNDEFINED__"
+                "selected": "LanguageModel",
+                "name": "model_output",
+                "display_name": "Language Model",
+                "method": "build_model",
+                "value": "__UNDEFINED__",
+                "cache": true
               }
             ],
             "pinned": false,
@@ -626,7 +493,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -637,22 +504,22 @@
                 "value": ""
               },
               "code": {
-                "advanced": true,
-                "dynamic": true,
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "import operator\nfrom functools import reduce\n\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = LCModelComponent._base_inputs + [\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        # self.output_schema is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")  # type: ignore\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})  # type: ignore\n\n        return output  # type: ignore\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")  # type: ignore\n            if message:\n                return message\n        return\n",
                 "fileTypes": [],
                 "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
                 "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import operator\nfrom functools import reduce\n\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = LCModelComponent._base_inputs + [\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        # self.output_schema is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")  # type: ignore\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})  # type: ignore\n\n        return output  # type: ignore\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")  # type: ignore\n            if message:\n                return message\n        return\n"
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -862,8 +729,8 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "height": 601,
-        "id": "OpenAIModel-JusJ7",
+        "height": 605,
+        "id": "OpenAIModel-9Sxdf",
         "position": {
           "x": 2538.9919009235173,
           "y": 1206.8619086167491
@@ -878,7 +745,7 @@
       },
       {
         "data": {
-          "id": "ToolCallingAgent-hz7Eb",
+          "id": "ToolCallingAgent-iuIJD",
           "node": {
             "base_classes": [
               "AgentExecutor",
@@ -904,7 +771,7 @@
             ],
             "frozen": false,
             "icon": "bot-message-square",
-            "lf_version": "1.0.16",
+            "lf_version": "1.0.17",
             "output_types": [],
             "outputs": [
               {
@@ -1130,8 +997,8 @@
           "type": "ToolCallingAgent"
         },
         "dragging": false,
-        "height": 594,
-        "id": "ToolCallingAgent-hz7Eb",
+        "height": 598,
+        "id": "ToolCallingAgent-iuIJD",
         "position": {
           "x": 3276.3854573966964,
           "y": 516.3304705434241
@@ -1146,7 +1013,7 @@
       },
       {
         "data": {
-          "id": "CalculatorTool-CN8yi",
+          "id": "CalculatorTool-7KbA6",
           "node": {
             "base_classes": [
               "Data",
@@ -1166,7 +1033,7 @@
             ],
             "frozen": false,
             "icon": "calculator",
-            "lf_version": "1.0.16",
+            "lf_version": "1.0.17",
             "official": false,
             "output_types": [],
             "outputs": [
@@ -1242,8 +1109,8 @@
           "type": "CalculatorTool"
         },
         "dragging": false,
-        "height": 371,
-        "id": "CalculatorTool-CN8yi",
+        "height": 375,
+        "id": "CalculatorTool-7KbA6",
         "position": {
           "x": 2330.062076024461,
           "y": 429.6717346334192
@@ -1257,168 +1124,287 @@
         "width": 384
       },
       {
+        "id": "PythonREPLTool-SjnIB",
+        "type": "genericNode",
+        "position": {
+          "x": 1723.323628914292,
+          "y": 799.296866227669
+        },
         "data": {
-          "id": "PythonREPLTool-Lq9f4",
+          "type": "PythonREPLTool",
           "node": {
-            "base_classes": [
-              "BaseTool",
-              "Generic",
-              "object",
-              "Runnable",
-              "RunnableSerializable",
-              "Serializable",
-              "Tool"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {
-              "description": null,
-              "global_imports": null,
-              "name": null
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "import importlib\nfrom typing import List, Union\nfrom pydantic import BaseModel, Field\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.inputs import StrInput\nfrom langflow.schema import Data\nfrom langflow.field_typing import Tool\nfrom langchain.tools import StructuredTool\nfrom langchain_experimental.utilities import PythonREPL\n\nclass PythonREPLToolComponent(LCToolComponent):\n    display_name = \"Python REPL Tool\"\n    description = \"A tool for running Python code in a REPL environment.\"\n    name = \"PythonREPLTool\"\n\n    inputs = [\n        StrInput(\n            name=\"name\",\n            display_name=\"Tool Name\",\n            info=\"The name of the tool.\",\n            value=\"python_repl\",\n        ),\n        StrInput(\n            name=\"description\",\n            display_name=\"Tool Description\",\n            info=\"A description of the tool.\",\n            value=\"A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.\",\n        ),\n        StrInput(\n            name=\"global_imports\",\n            display_name=\"Global Imports\",\n            info=\"A comma-separated list of modules to import globally, e.g. 'math,numpy'.\",\n            value=\"math\",\n        ),\n        StrInput(\n            name=\"code\",\n            display_name=\"Python Code\",\n            info=\"The Python code to execute.\",\n            value=\"print('Hello, World!')\",\n        ),\n    ]\n\n    class PythonREPLSchema(BaseModel):\n        code: str = Field(..., description=\"The Python code to execute.\")\n\n    def get_globals(self, global_imports: Union[str, List[str]]) -> dict:\n        global_dict = {}\n        if isinstance(global_imports, str):\n            modules = [module.strip() for module in global_imports.split(',')]\n        elif isinstance(global_imports, list):\n            modules = global_imports\n        else:\n            raise ValueError(\"global_imports must be either a string or a list\")\n\n        for module in modules:\n            try:\n                imported_module = importlib.import_module(module)\n                global_dict[imported_module.__name__] = imported_module\n            except ImportError:\n                raise ImportError(f\"Could not import module {module}\")\n        return global_dict\n\n    def build_tool(self) -> Tool:\n        _globals = self.get_globals(self.global_imports)\n        python_repl = PythonREPL(_globals=_globals)\n\n        def run_python_code(code: str) -> str:\n            try:\n                return python_repl.run(code)\n            except Exception as e:\n                return f\"Error: {str(e)}\"\n\n        tool = StructuredTool.from_function(\n            name=self.name,\n            description=self.description,\n            func=run_python_code,\n            args_schema=self.PythonREPLSchema,\n        )\n\n        self.status = f\"Python REPL Tool created with global imports: {self.global_imports}\"\n        return tool\n\n    def run_model(self) -> List[Data]:\n        tool = self.build_tool()\n        result = tool.run(self.code)\n        return [Data(data={\"result\": result})]\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "description": {
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "description",
+                "value": "A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.",
+                "display_name": "Tool Description",
+                "advanced": false,
+                "dynamic": false,
+                "info": "A description of the tool.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "StrInput"
+              },
+              "global_imports": {
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "global_imports",
+                "value": "math",
+                "display_name": "Global Imports",
+                "advanced": false,
+                "dynamic": false,
+                "info": "A comma-separated list of modules to import globally, e.g. 'math,numpy'.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "StrInput"
+              },
+              "name": {
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "name",
+                "value": "python_repl",
+                "display_name": "Tool Name",
+                "advanced": false,
+                "dynamic": false,
+                "info": "The name of the tool.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "StrInput"
+              }
             },
             "description": "A tool for running Python code in a REPL environment.",
-            "display_name": "Python REPL Tool",
-            "documentation": "",
-            "edited": false,
-            "field_order": [],
-            "frozen": false,
-            "lf_version": "1.0.16",
-            "output_types": [
+            "base_classes": [
+              "Data",
               "Tool"
             ],
+            "display_name": "Python REPL Tool",
+            "documentation": "",
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
             "outputs": [
               {
-                "cache": true,
-                "display_name": "Tool",
-                "hidden": null,
-                "method": null,
-                "name": "tool",
-                "selected": "Tool",
+                "types": [
+                  "Data"
+                ],
+                "selected": "Data",
+                "name": "api_run_model",
+                "display_name": "Data",
+                "method": "run_model",
+                "value": "__UNDEFINED__",
+                "cache": true
+              },
+              {
                 "types": [
                   "Tool"
                 ],
-                "value": "__UNDEFINED__"
+                "selected": "Tool",
+                "name": "api_build_tool",
+                "display_name": "Tool",
+                "method": "build_tool",
+                "value": "__UNDEFINED__",
+                "cache": true
               }
             ],
-            "pinned": false,
-            "template": {
-              "_type": "CustomComponent",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import importlib\nfrom langchain_experimental.utilities import PythonREPL\n\nfrom langflow.base.tools.base import build_status_from_tool\nfrom langflow.custom import CustomComponent\nfrom langchain_core.tools import Tool\n\n\nclass PythonREPLToolComponent(CustomComponent):\n    display_name = \"Python REPL Tool\"\n    description = \"A tool for running Python code in a REPL environment.\"\n    name = \"PythonREPLTool\"\n\n    def build_config(self):\n        return {\n            \"name\": {\"display_name\": \"Name\", \"info\": \"The name of the tool.\"},\n            \"description\": {\"display_name\": \"Description\", \"info\": \"A description of the tool.\"},\n            \"global_imports\": {\n                \"display_name\": \"Global Imports\",\n                \"info\": \"A list of modules to import globally, e.g. ['math', 'numpy'].\",\n            },\n        }\n\n    def get_globals(self, globals: list[str]) -> dict:\n        \"\"\"\n        Retrieves the global variables from the specified modules.\n\n        Args:\n            globals (list[str]): A list of module names.\n\n        Returns:\n            dict: A dictionary containing the global variables from the specified modules.\n        \"\"\"\n        global_dict = {}\n        for module in globals:\n            try:\n                imported_module = importlib.import_module(module)\n                global_dict[imported_module.__name__] = imported_module\n            except ImportError:\n                raise ImportError(f\"Could not import module {module}\")\n        return global_dict\n\n    def build(\n        self,\n        name: str = \"python_repl\",\n        description: str = \"A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.\",\n        global_imports: list[str] = [\"math\"],\n    ) -> Tool:\n        \"\"\"\n        Builds a Python REPL tool.\n\n        Args:\n            name (str, optional): The name of the tool. Defaults to \"python_repl\".\n            description (str, optional): The description of the tool. Defaults to \"A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`. \".\n            global_imports (list[str], optional): A list of global imports to be available in the Python REPL. Defaults to [\"math\"].\n\n        Returns:\n            Tool: The built Python REPL tool.\n        \"\"\"\n        _globals = self.get_globals(global_imports)\n        python_repl = PythonREPL(_globals=_globals)\n        tool = Tool(\n            name=name,\n            description=description,\n            func=python_repl.run,\n        )\n        self.status = build_status_from_tool(tool)\n        return tool\n"
-              },
-              "description": {
-                "advanced": false,
-                "display_name": "Description",
-                "dynamic": false,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "A description of the tool.",
-                "input_types": [
-                  "Text"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": false,
-                "name": "description",
-                "password": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`."
-              },
-              "global_imports": {
-                "advanced": false,
-                "display_name": "Global Imports",
-                "dynamic": false,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "A list of modules to import globally, e.g. ['math', 'numpy'].",
-                "input_types": [
-                  "Text"
-                ],
-                "list": true,
-                "load_from_db": false,
-                "multiline": false,
-                "name": "global_imports",
-                "password": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": [
-                  "math"
-                ]
-              },
-              "name": {
-                "advanced": false,
-                "display_name": "Name",
-                "dynamic": false,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "The name of the tool.",
-                "input_types": [
-                  "Text"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": false,
-                "name": "name",
-                "password": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "python_repl"
-              }
-            }
+            "field_order": [
+              "name",
+              "description",
+              "global_imports",
+              "code"
+            ],
+            "beta": false,
+            "edited": false,
+            "lf_version": "1.0.17"
           },
-          "type": "PythonREPLTool"
+          "id": "PythonREPLTool-SjnIB"
         },
-        "dragging": false,
-        "height": 498,
-        "id": "PythonREPLTool-Lq9f4",
-        "position": {
-          "x": 1913.7230985868182,
-          "y": 692.706669085293
-        },
+        "selected": true,
+        "width": 384,
+        "height": 547,
         "positionAbsolute": {
-          "x": 1913.7230985868182,
-          "y": 692.706669085293
+          "x": 1723.323628914292,
+          "y": 799.296866227669
         },
-        "selected": false,
-        "type": "genericNode",
-        "width": 384
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ToolCallingAgent",
+            "id": "ToolCallingAgent-iuIJD",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-jiUne",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ToolCallingAgent-iuIJD{œdataTypeœ:œToolCallingAgentœ,œidœ:œToolCallingAgent-iuIJDœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-jiUne{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jiUneœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ToolCallingAgent-iuIJD",
+        "sourceHandle": "{œdataTypeœ:œToolCallingAgentœ,œidœ:œToolCallingAgent-iuIJDœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-jiUne",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jiUneœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-9Sxdf",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "ToolCallingAgent-iuIJD",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-9Sxdf{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-9Sxdfœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-ToolCallingAgent-iuIJD{œfieldNameœ:œllmœ,œidœ:œToolCallingAgent-iuIJDœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "source": "OpenAIModel-9Sxdf",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-9Sxdfœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "ToolCallingAgent-iuIJD",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œToolCallingAgent-iuIJDœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "CalculatorTool",
+            "id": "CalculatorTool-7KbA6",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "ToolCallingAgent-iuIJD",
+            "inputTypes": [
+              "Tool",
+              "BaseTool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-CalculatorTool-7KbA6{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-7KbA6œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-iuIJD{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-iuIJDœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorTool-7KbA6",
+        "sourceHandle": "{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-7KbA6œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "ToolCallingAgent-iuIJD",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-iuIJDœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-wzYnd",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ToolCallingAgent-iuIJD",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-wzYnd{œdataTypeœ:œChatInputœ,œidœ:œChatInput-wzYndœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ToolCallingAgent-iuIJD{œfieldNameœ:œinput_valueœ,œidœ:œToolCallingAgent-iuIJDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-wzYnd",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-wzYndœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ToolCallingAgent-iuIJD",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œToolCallingAgent-iuIJDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "source": "PythonREPLTool-SjnIB",
+        "sourceHandle": "{œdataTypeœ:œPythonREPLToolœ,œidœ:œPythonREPLTool-SjnIBœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "ToolCallingAgent-iuIJD",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-iuIJDœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "ToolCallingAgent-iuIJD",
+            "inputTypes": [
+              "Tool",
+              "BaseTool"
+            ],
+            "type": "other"
+          },
+          "sourceHandle": {
+            "dataType": "PythonREPLTool",
+            "id": "PythonREPLTool-SjnIB",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          }
+        },
+        "id": "reactflow__edge-PythonREPLTool-SjnIB{œdataTypeœ:œPythonREPLToolœ,œidœ:œPythonREPLTool-SjnIBœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-iuIJD{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-iuIJDœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}"
       }
     ],
     "viewport": {
-      "x": -754.0306037880273,
-      "y": 162.78671921468404,
-      "zoom": 0.4165803465525388
+      "x": -537.0603683848472,
+      "y": 148.74095905876857,
+      "zoom": 0.40331299649282293
     }
   },
   "description": "Single Agent Flow to get you started. This flow contains a calculator and a Python REPL tool, that could be used by our tool calling agent.",
-  "endpoint_name": null,
-  "id": "b4267655-485a-44eb-9232-0bc120086418",
-  "is_component": false,
+  "name": "Simple Agent",
   "last_tested_version": "1.0.17",
-  "name": "Simple Agent"
+  "endpoint_name": null,
+  "is_component": false
 }
