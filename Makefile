@@ -148,6 +148,9 @@ else
 		$(args)
 endif
 
+unit_tests_looponfail:
+	@make unit_tests args="-f"
+
 integration_tests:
 	poetry run pytest src/backend/tests/integration \
 		--instafail -ra \
@@ -265,16 +268,15 @@ frontendc: install_frontendc
 	make run_frontend
 
 
-
 backend: setup_env install_backend ## run the backend in development mode
-	@-kill -9 $$(lsof -t -i:7860)
+	@-kill -9 $$(lsof -t -i:7860) || true
 ifdef login
 	@echo "Running backend autologin is $(login)";
 	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
-		$(if $(workers),,--reload) \
+		$(if $(filter-out 1,$(workers)),, --reload) \
 		--env-file $(env) \
 		--loop asyncio \
 		$(if $(workers),--workers $(workers),)
@@ -284,7 +286,7 @@ else
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
-		$(if $(workers),,--reload) \
+		$(if $(filter-out 1,$(workers)),, --reload) \
 		--env-file $(env) \
 		--loop asyncio \
 		$(if $(workers),--workers $(workers),)
@@ -410,6 +412,12 @@ publish_base:
 publish_langflow:
 	poetry publish
 
+publish_base_testpypi:
+	cd src/backend/base && poetry publish --skip-existing -r test-pypi
+
+publish_langflow_testpypi:
+	poetry publish -r test-pypi
+
 publish: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
 ifdef base
@@ -419,3 +427,17 @@ endif
 ifdef main
 	make publish_langflow
 endif
+
+publish_testpypi: ## build the frontend static files and package the project and publish it to PyPI
+	@echo 'Publishing the project'
+
+ifdef base
+	poetry config repositories.test-pypi https://test.pypi.org/legacy/
+	make publish_base_testpypi
+endif
+
+ifdef main
+	poetry config repositories.test-pypi https://test.pypi.org/legacy/
+	make publish_langflow_testpypi
+endif
+

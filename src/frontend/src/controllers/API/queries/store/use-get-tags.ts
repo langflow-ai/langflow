@@ -25,7 +25,10 @@ export const useGetTagsQuery: useQueryFunctionType<
     return data;
   };
 
-  const queryResult = query(["useGetTagsQuery"], responseFn, { ...options });
+  const queryResult = query(["useGetTagsQuery"], responseFn, {
+    refetchOnWindowFocus: false,
+    ...options,
+  });
 
   return queryResult;
 };

@@ -176,6 +176,7 @@ import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { CassandraIcon } from "../icons/Cassandra";
 import { ChromaIcon } from "../icons/ChromaIcon";
+import { ClickhouseIcon } from "../icons/Clickhouse";
 import { CohereIcon } from "../icons/Cohere";
 import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
@@ -195,6 +196,7 @@ import {
   GradientUngroup,
 } from "../icons/GradientSparkles";
 import { GroqIcon } from "../icons/Groq";
+import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { LangChainIcon } from "../icons/LangChain";
@@ -375,6 +377,7 @@ export const nodeIconsLucide: iconsType = {
   Cassandra: CassandraIcon,
   Chroma: ChromaIcon,
   Couchbase: CouchbaseIcon,
+  Clickhouse: ClickhouseIcon,
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
@@ -397,6 +400,7 @@ export const nodeIconsLucide: iconsType = {
   Google: GoogleIcon,
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
   Groq: GroqIcon,
+  HCD: HCDIcon,
   HNLoader: HackerNewsIcon,
   Unstructured: UnstructuredIcon,
   HuggingFaceHub: HuggingFaceIcon,

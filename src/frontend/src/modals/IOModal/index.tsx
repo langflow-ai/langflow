@@ -2,6 +2,7 @@ import {
   useDeleteMessages,
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useState } from "react";
 import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -175,18 +176,24 @@ export default function IOModal({
     setSessions(Array.from(sessions));
   }, [messages]);
 
-  useEffect(() => {
+  const setPlaygroundScrollBehaves = useUtilityStore(
+    (state) => state.setPlaygroundScrollBehaves,
+  );
 
-  }, []);
+  useEffect(() => {
+    if (open) {
+      setPlaygroundScrollBehaves("instant");
+    }
+  }, [open]);
 
   return (
     <BaseModal
-      size={"md-thin"}
       open={open}
       setOpen={setOpen}
       disable={disable}
       type={isPlayground ? "modal" : undefined}
       onSubmit={() => sendMessage({ repeat: 1 })}
+      size="x-large"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
