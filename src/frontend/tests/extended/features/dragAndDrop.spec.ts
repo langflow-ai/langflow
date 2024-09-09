@@ -25,10 +25,7 @@ test.describe("drag and drop test", () => {
 
     await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
     // Read your file into a buffer.
-    const jsonContent = readFileSync(
-      "tests/end-to-end/assets/collection.json",
-      "utf-8",
-    );
+    const jsonContent = readFileSync("tests/assets/collection.json", "utf-8");
 
     // Create the DataTransfer and File
     const dataTransfer = await page.evaluateHandle((data) => {

@@ -78,10 +78,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
     timeout: 50000,
   });
 
-  const jsonContent = readFileSync(
-    "tests/end-to-end/assets/collection.json",
-    "utf-8",
-  );
+  const jsonContent = readFileSync("tests/assets/collection.json", "utf-8");
 
   // Wait for the target element to be available before evaluation
 
