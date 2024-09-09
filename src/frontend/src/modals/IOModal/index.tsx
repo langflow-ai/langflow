@@ -170,7 +170,6 @@ export default function IOModal({
         sessions.add(row.session_id);
       });
     setSessions(Array.from(sessions));
-    setvisibleSessions(Array.from(sessions));
   }, [messages]);
 
   useEffect(() => {
