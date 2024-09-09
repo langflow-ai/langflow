@@ -645,7 +645,6 @@ export type parsedDataType = {
 };
 
 export type SanitizedHTMLWrapperType = {
-  className?: string;
   content: string;
   suppressWarning?: boolean;
 };
