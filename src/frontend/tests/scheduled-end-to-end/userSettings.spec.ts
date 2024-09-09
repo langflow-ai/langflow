@@ -21,6 +21,8 @@ test("should see general profile gradient", async ({ page }) => {
 
 test("should interact with global variables", async ({ page }) => {
   const randomName = Math.random().toString(36).substring(2);
+  const randomName2 = Math.random().toString(36).substring(2);
+  const randomName3 = Math.random().toString(36).substring(2);
 
   await page.goto("/");
   await page.waitForTimeout(1000);
@@ -50,28 +52,63 @@ test("should interact with global variables", async ({ page }) => {
     .fill("testtesttesttesttesttesttesttest");
   await page.getByTestId("popover-anchor-apply-to-fields").click();
 
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(1000);
 
-  await page.getByPlaceholder("Search options...").fill("System Message");
+  await page.getByPlaceholder("Search options...").fill("System");
 
-  await page.waitForSelector("text=System Message", { timeout: 30000 });
+  await page.waitForTimeout(500);
 
-  await page.getByText("System Message").first().click();
+  await page.waitForSelector("text=System", { timeout: 30000 });
+
+  await page.waitForTimeout(500);
+
+  await page.getByText("System").last().click();
 
   await page.getByPlaceholder("Search options...").fill("openAI");
 
-  await page.waitForSelector("text=OpenAI API Base", { timeout: 30000 });
+  await page.waitForSelector("text=openai", { timeout: 30000 });
 
-  await page.getByText("OpenAI API Base").first().click();
+  await page.waitForTimeout(500);
 
-  await page.getByPlaceholder("Search options...").fill("llama");
+  await page.getByText("openai").last().click();
 
-  await page.getByText("Ollama").first().click();
+  await page.waitForTimeout(500);
+
+  await page.getByPlaceholder("Search options...").fill("ollama");
+
+  await page.waitForSelector("text=ollama", { timeout: 30000 });
+
+  await page.getByText("ollama").first().click();
 
   await page.keyboard.press("Escape");
   await page.getByText("Save Variable", { exact: true }).click();
 
   await page.getByText(randomName).last().isVisible();
+
+  await page.getByText(randomName).last().click();
+  await page.getByText(randomName).last().click();
+
+  await page.waitForTimeout(500);
+
+  await page
+    .getByPlaceholder("Insert a name for the variable...")
+    .fill(randomName2);
+
+  await page.getByText("Update Variable", { exact: true }).last().click();
+
+  await page.getByText(randomName2).last().isVisible();
+
+  await page.getByText(randomName2).last().click();
+
+  await page.waitForTimeout(500);
+
+  await page
+    .getByPlaceholder("Insert a name for the variable...")
+    .fill(randomName3);
+
+  await page.getByText("Update Variable", { exact: true }).last().click();
+
+  await page.getByText(randomName3).last().isVisible();
 
   const focusElementsOnBoard = async ({ page }) => {
     await page.waitForSelector(

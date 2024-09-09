@@ -3,7 +3,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { handleKeyDown } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 
 export default function NodeDescription({
@@ -29,6 +29,27 @@ export default function NodeDescription({
   const [nodeDescription, setNodeDescription] = useState(description);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = useFlowStore((state) => state.setNode);
+  const overflowRef = useRef<HTMLDivElement>(null);
+  const [hasScroll, sethasScroll] = useState(false);
+
+  useEffect(() => {
+    //timeout to wait for the dom to update
+    setTimeout(() => {
+      if (overflowRef.current) {
+        console.log(
+          overflowRef.current.clientHeight,
+          overflowRef.current.scrollHeight,
+        );
+        if (
+          overflowRef.current.clientHeight < overflowRef.current.scrollHeight
+        ) {
+          sethasScroll(true);
+        } else {
+          sethasScroll(false);
+        }
+      }
+    }, 200);
+  }, [inputDescription]);
 
   useEffect(() => {
     if (!selected) {
@@ -45,6 +66,7 @@ export default function NodeDescription({
       className={cn(
         "generic-node-desc",
         !inputDescription ? "overflow-auto" : "",
+        hasScroll ? "nowheel" : "",
       )}
     >
       {inputDescription ? (
@@ -109,6 +131,7 @@ export default function NodeDescription({
         </>
       ) : (
         <div
+          ref={overflowRef}
           className={cn(
             "nodoubleclick generic-node-desc-text h-full cursor-text word-break-break-word dark:text-note-placeholder",
             description === "" || !description ? "font-light italic" : "",

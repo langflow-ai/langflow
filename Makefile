@@ -148,6 +148,9 @@ else
 		$(args)
 endif
 
+unit_tests_looponfail:
+	@make unit_tests args="-f"
+
 integration_tests:
 	poetry run pytest src/backend/tests/integration \
 		--instafail -ra \
