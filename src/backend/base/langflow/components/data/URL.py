@@ -71,8 +71,7 @@ class URLComponent(Component):
         return data
 
     def fetch_content_text(self) -> Message:
-        content = self.fetch_content()
-        data = content if isinstance(content, list) else [content]
+        data = self.fetch_content()
 
         result_string = data_to_text("{text}", data)
         self.status = result_string

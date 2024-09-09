@@ -35,7 +35,3 @@ class IDGeneratorComponent(Component):
         unique_id = self.unique_id or str(uuid.uuid4())
         self.status = f"Generated ID: {unique_id}"
         return Message(text=unique_id)
-
-    def build(self) -> None:
-        if not self.unique_id:
-            self.unique_id = str(uuid.uuid4())
