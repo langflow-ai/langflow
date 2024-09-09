@@ -327,7 +327,7 @@ export default function GenericNode({
                 </>
               )}
             </div>
-            {!showNode && (
+            {showNode && (
               <NodeStatus
                 frozen={data.node?.frozen}
                 showNode={showNode}
