@@ -50,12 +50,7 @@ export default function TextAreaComponent({
       disabled={disabled}
       password={password}
     >
-      <div
-        className={classNames(
-          "flex items-center",
-          password ? "relative left-6" : "",
-        )}
-      >
+      <div className={classNames("flex items-center")}>
         <Button unstyled>
           <IconComponent
             strokeWidth={1.5}
