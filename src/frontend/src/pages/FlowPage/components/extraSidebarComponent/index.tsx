@@ -316,7 +316,7 @@ export default function ExtraSidebar(): JSX.Element {
                 title: "Bundles",
                 Icon: nodeIconsLucide.unknown,
               }}
-              testId="extended-disclosure"
+              testId="bundle-extended-disclosure"
             >
               {Object.keys(dataFilter)
                 .sort(sortKeys)

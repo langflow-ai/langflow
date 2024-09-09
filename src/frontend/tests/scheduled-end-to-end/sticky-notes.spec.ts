@@ -3,10 +3,6 @@ import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
 test("user should be able to interact with sticky notes", async ({ page }) => {
-  // prevent test from failing if feature flag is disabled
-  if (!ENABLE_MVPS) {
-    return;
-  }
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,

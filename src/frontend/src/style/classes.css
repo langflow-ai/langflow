@@ -162,3 +162,7 @@ textarea[class^="ag-"]:focus {
 .react-flow__node.dragging * {
   cursor: grabbing !important;
 }
+
+.react-flow__node-noteNode:not(.selected){
+  z-index: -1 !important;
+}
