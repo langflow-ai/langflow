@@ -140,7 +140,7 @@ const SideBarFoldersButtonsComponent = ({
     );
   };
 
-  const { mutate: mutateAddFolder } = usePostFolders();
+  const { mutate: mutateAddFolder, isPending } = usePostFolders();
   const { mutate: mutateUpdateFolder } = usePatchFolders();
 
   function addNewFolder() {
@@ -240,7 +240,7 @@ const SideBarFoldersButtonsComponent = ({
             className="px-2"
             onClick={addNewFolder}
             data-testid="add-folder-button"
-            disabled={isFetchingFolders || loading}
+            disabled={isFetchingFolders || isPending || loading}
           >
             <ForwardedIconComponent name="FolderPlus" className="w-4" />
           </Button>
@@ -253,7 +253,7 @@ const SideBarFoldersButtonsComponent = ({
             className="px-2"
             onClick={handleUploadFlowsToFolder}
             data-testid="upload-folder-button"
-            disabled={isFetchingFolders || loading}
+            disabled={isFetchingFolders || isPending || loading}
           >
             <ForwardedIconComponent name="Upload" className="w-4" />
           </Button>
