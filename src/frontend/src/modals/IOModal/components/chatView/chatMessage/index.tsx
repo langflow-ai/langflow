@@ -126,12 +126,10 @@ export default function ChatMessage({
     }
   }, [lastMessage]);
 
-
-  let decodedMessage = chatMessage??"";
+  let decodedMessage = chatMessage ?? "";
   try {
     decodedMessage = decodeURIComponent(chatMessage);
-  }
-  catch (e) {
+  } catch (e) {
     console.error(e);
   }
   const isEmpty = decodedMessage?.trim() === "";
