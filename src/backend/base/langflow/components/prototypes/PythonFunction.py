@@ -1,4 +1,4 @@
-from typing import List
+from typing import Callable, List
 
 from langflow.custom import Component
 from langflow.custom.utils import get_function
@@ -9,7 +9,9 @@ from langflow.schema.message import Message
 
 class PythonFunctionComponent(Component):
     display_name = "Python Function"
-    description = "Define and execute a Python function that returns a Data object or a Message."
+    description = (
+        "Define and execute a Python function that returns a Data object or a Message."
+    )
     icon = "Python"
     name = "PythonFunction"
     beta = True
@@ -25,6 +27,11 @@ class PythonFunctionComponent(Component):
     outputs = [
         Output(
             name="function_output",
+            display_name="Function Callable",
+            method="get_function_callable",
+        ),
+        Output(
+            name="function_output_data",
             display_name="Function Output (Data)",
             method="execute_function_data",
         ),
@@ -34,6 +41,12 @@ class PythonFunctionComponent(Component):
             method="execute_function_message",
         ),
     ]
+
+    def get_function_callable(self) -> Callable:
+        function_code = self.function_code
+        self.status = function_code
+        func = get_function(function_code)
+        return func
 
     async def execute_function(self) -> List[dotdict] | dotdict | str | List[str]:
         function_code = self.function_code
