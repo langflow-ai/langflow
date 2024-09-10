@@ -1,6 +1,6 @@
 import pytest
 
-from langflow.components.tools.YfinanceTool import YahooFinanceToolComponent
+from langflow.components.tools.YfinanceTool import YfinanceToolComponent
 from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template
 
@@ -11,7 +11,7 @@ def client():
 
 
 def test_yfinance_tool_template():
-    yf_tool = YahooFinanceToolComponent()
+    yf_tool = YfinanceToolComponent()
     component = Component(_code=yf_tool._code)
     frontend_node, _ = build_custom_component_template(component)
     assert "outputs" in frontend_node

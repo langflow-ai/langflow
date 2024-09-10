@@ -11,7 +11,7 @@ from langflow.inputs import DropdownInput, IntInput, MessageTextInput
 from langflow.schema import Data
 
 
-class YahooFinanceToolComponent(LCToolComponent):
+class YfinanceToolComponent(LCToolComponent):
     display_name = "Yahoo Finance Tool"
     description = "Access financial data and market information using Yahoo Finance."
     icon = "trending-up"
