@@ -1,3 +1,4 @@
+import ShadTooltip from "@/components/shadTooltipComponent";
 import {
   usePatchFolders,
   usePostFolders,
@@ -8,6 +9,7 @@ import { ENABLE_CUSTOM_PARAM } from "@/customization/feature-flags";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { useIsFetching } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
@@ -138,7 +140,7 @@ const SideBarFoldersButtonsComponent = ({
     );
   };
 
-  const { mutate: mutateAddFolder } = usePostFolders();
+  const { mutate: mutateAddFolder, isPending } = usePostFolders();
   const { mutate: mutateUpdateFolder } = usePatchFolders();
 
   function addNewFolder() {
@@ -221,28 +223,41 @@ const SideBarFoldersButtonsComponent = ({
     }
   };
 
+  const isFetchingFolders = !!useIsFetching({
+    queryKey: ["useGetFolders"],
+    exact: false,
+  });
+
   return (
     <>
       <div className="flex shrink-0 items-center justify-between gap-2">
         <div className="flex-1 self-start text-lg font-semibold">Folders</div>
-        <Button
-          variant="primary"
-          size="icon"
-          className="px-2"
-          onClick={addNewFolder}
-          data-testid="add-folder-button"
-        >
-          <ForwardedIconComponent name="FolderPlus" className="w-4" />
-        </Button>
-        <Button
-          variant="primary"
-          size="icon"
-          className="px-2"
-          onClick={handleUploadFlowsToFolder}
-          data-testid="upload-folder-button"
-        >
-          <ForwardedIconComponent name="Upload" className="w-4" />
-        </Button>
+
+        <ShadTooltip content={"Add a new folder"}>
+          <Button
+            variant="primary"
+            size="icon"
+            className="px-2"
+            onClick={addNewFolder}
+            data-testid="add-folder-button"
+            disabled={isFetchingFolders || isPending || loading}
+          >
+            <ForwardedIconComponent name="FolderPlus" className="w-4" />
+          </Button>
+        </ShadTooltip>
+
+        <ShadTooltip content={"Upload a folder"}>
+          <Button
+            variant="primary"
+            size="icon"
+            className="px-2"
+            onClick={handleUploadFlowsToFolder}
+            data-testid="upload-folder-button"
+            disabled={isFetchingFolders || isPending || loading}
+          >
+            <ForwardedIconComponent name="Upload" className="w-4" />
+          </Button>
+        </ShadTooltip>
       </div>
 
       <div className="flex gap-2 overflow-auto lg:h-[70vh] lg:flex-col">
