@@ -111,12 +111,6 @@ class Settings(BaseSettings):
     sentry_traces_sample_rate: Optional[float] = 1.0
     sentry_profiles_sample_rate: Optional[float] = 1.0
 
-    # PLUGIN_DIR: Optional[str] = None
-
-    langfuse_secret_key: Optional[str] = None
-    langfuse_public_key: Optional[str] = None
-    langfuse_host: Optional[str] = None
-
     store: Optional[bool] = True
     store_url: Optional[str] = "https://api.langflow.store"
     download_webhook_url: Optional[str] = (
@@ -220,13 +214,12 @@ class Settings(BaseSettings):
                 # if there is a database in that location
                 if not info.data["config_dir"]:
                     raise ValueError("config_dir not set, please set it or provide a database_url")
-                try:
-                    from langflow.version import is_pre_release  # type: ignore
-                except ImportError:
-                    from importlib import metadata
 
-                    version = metadata.version("langflow-base")
-                    is_pre_release = "a" in version or "b" in version or "rc" in version
+                from langflow.utils.version import get_version_info
+                from langflow.utils.version import is_pre_release as langflow_is_pre_release
+
+                version = get_version_info()["version"]
+                is_pre_release = langflow_is_pre_release(version)
 
                 if info.data["save_db_in_config_dir"]:
                     database_dir = info.data["config_dir"]

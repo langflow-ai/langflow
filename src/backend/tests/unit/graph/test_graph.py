@@ -26,6 +26,11 @@ from langflow.utils.payload import get_root_vertex
 
 
 @pytest.fixture
+def client():
+    pass
+
+
+@pytest.fixture
 def sample_template():
     return {
         "field1": {"proxy": {"field": "some_field", "id": "node1"}},
