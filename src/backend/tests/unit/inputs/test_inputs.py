@@ -3,6 +3,7 @@ from pydantic import ValidationError
 
 from langflow.inputs.inputs import (
     BoolInput,
+    CodeInput,
     DataInput,
     DictInput,
     DropdownInput,
@@ -97,6 +98,11 @@ def test_data_input_valid():
 def test_prompt_input_valid():
     prompt_input = PromptInput(name="valid_prompt", value="Enter your name")
     assert prompt_input.value == "Enter your name"
+
+
+def test_code_input_valid():
+    code_input = CodeInput(name="valid_code", value="def hello():\n    print('Hello, World!')")
+    assert code_input.value == "def hello():\n    print('Hello, World!')"
 
 
 def test_multiline_input_valid():
@@ -214,7 +220,10 @@ def test_instantiate_input_comprehensive():
         "FloatInput": {"name": "float_input", "value": 10.5},
         "BoolInput": {"name": "bool_input", "value": True},
         "DictInput": {"name": "dict_input", "value": {"key": "value"}},
-        "MultiselectInput": {"name": "multiselect_input", "value": ["option1", "option2"]},
+        "MultiselectInput": {
+            "name": "multiselect_input",
+            "value": ["option1", "option2"],
+        },
     }
 
     for input_type, data in valid_data.items():
