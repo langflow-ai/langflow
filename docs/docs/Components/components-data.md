@@ -100,7 +100,6 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 | Output | Type | Description |
 |--------|------|-------------|
 | data | Data | Loaded email data |
-This component loads emails from Gmail. The content is stripped of email addresses and URLs, then the content is loaded as Chat Session objects.
 
 ## Google Drive Loader
 
