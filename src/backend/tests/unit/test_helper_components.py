@@ -47,9 +47,7 @@ def test_uuid_generator_component():
     # Act
     build_config = frontend_node.get("template")
     field_name = "unique_id"
-    build_config = uuid_generator_component.update_build_config(
-        build_config, None, field_name
-    )
+    build_config = uuid_generator_component.update_build_config(build_config, None, field_name)
     result = uuid_generator_component.generate_id()
 
     # Assert
