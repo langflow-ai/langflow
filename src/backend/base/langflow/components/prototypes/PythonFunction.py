@@ -9,7 +9,9 @@ from langflow.schema.message import Message
 
 class PythonFunctionComponent(Component):
     display_name = "Python Function"
-    description = "Define and execute a Python function that returns a Data object or a Message."
+    description = (
+        "Define and execute a Python function that returns a Data object or a Message."
+    )
     icon = "Python"
     name = "PythonFunction"
     beta = True
@@ -46,7 +48,7 @@ class PythonFunctionComponent(Component):
         func = get_function(function_code)
         return func
 
-    def execute_function(self) -> List[dotdict] | dotdict | str | List[str]:
+    def execute_function(self) -> List[dotdict | str] | dotdict | str:
         function_code = self.function_code
 
         if not function_code:
@@ -67,7 +69,7 @@ class PythonFunctionComponent(Component):
     def execute_function_message(self) -> Message:
         results = self.execute_function()
         results = results if isinstance(results, list) else [results]
-        results = [str(x) for x in results]
-        results = "\n".join(results)
-        data = Message(text=results)
+        results_list = [str(x) for x in results]
+        results_str = "\n".join(results_list)
+        data = Message(text=results_str)
         return data
