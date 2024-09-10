@@ -1,4 +1,3 @@
-import ForwardedIconComponent from "@/components/genericIconComponent";
 import useFlowStore from "@/stores/flowStore";
 import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
@@ -159,9 +158,9 @@ export default function HandleRenderComponent({
             `group/handle z-20 rounded-full border-none transition-all`,
             filterPresent
               ? openHandle || ownHandle
-                ? cn("h-6 w-6")
+                ? cn("h-5 w-5")
                 : cn("h-1.5 w-1.5")
-              : cn("h-1.5 w-1.5 group-hover/node:h-6 group-hover/node:w-6"),
+              : cn("h-1.5 w-1.5 group-hover/node:h-5 group-hover/node:w-5"),
           )}
           style={{
             background: handleColor,
@@ -186,32 +185,13 @@ export default function HandleRenderComponent({
               filterPresent
                 ? openHandle || ownHandle
                   ? cn(
-                      "h-5 w-5",
+                      "h-4 w-4",
                       ownHandle ? "bg-transparent" : "bg-background",
                     )
                   : ""
-                : "group-hover/node:h-5 group-hover/node:w-5",
+                : "group-hover/node:h-4 group-hover/node:w-4",
             )}
-          >
-            <ForwardedIconComponent
-              iconColor={colors[0]}
-              name="ArrowRight"
-              className={cn(
-                "h-4 w-4 scale-0 stroke-2 transition-all",
-                left && "rotate-180 transform",
-                filterPresent
-                  ? openHandle || ownHandle
-                    ? cn(
-                        ownHandle
-                          ? "text-background"
-                          : "group-hover/handle:text-background",
-                        "scale-100",
-                      )
-                    : ""
-                  : "group-hover/node:scale-100 group-hover/handle:text-background",
-              )}
-            />
-          </div>
+          ></div>
           <div
             className="pointer-events-none absolute left-1/2 top-[50%] z-10 flex h-3 w-3 -translate-x-1/2 translate-y-[-50%] items-center justify-center rounded-full opacity-50 transition-all"
             style={{
