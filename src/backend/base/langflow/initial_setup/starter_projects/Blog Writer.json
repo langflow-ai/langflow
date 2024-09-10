@@ -1,145 +1,12 @@
 {
+  "id": "63cc0f86-e9ce-4206-9821-4e545845b486",
   "data": {
-    "edges": [
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "URL",
-            "id": "URL-76lwY",
-            "name": "data",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data",
-            "id": "ParseData-jYhXf",
-            "inputTypes": [
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-URL-76lwY{œdataTypeœ:œURLœ,œidœ:œURL-76lwYœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-jYhXf{œfieldNameœ:œdataœ,œidœ:œParseData-jYhXfœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "URL-76lwY",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-76lwYœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-jYhXf",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-jYhXfœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ParseData",
-            "id": "ParseData-jYhXf",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "references",
-            "id": "Prompt-ABI8S",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ParseData-jYhXf{œdataTypeœ:œParseDataœ,œidœ:œParseData-jYhXfœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-ABI8S{œfieldNameœ:œreferencesœ,œidœ:œPrompt-ABI8Sœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-jYhXf",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-jYhXfœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-ABI8S",
-        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-ABI8Sœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInput-jiXJB",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "instructions",
-            "id": "Prompt-ABI8S",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-TextInput-jiXJB{œdataTypeœ:œTextInputœ,œidœ:œTextInput-jiXJBœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-ABI8S{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-ABI8Sœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "TextInput-jiXJB",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-jiXJBœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-ABI8S",
-        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-ABI8Sœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-ABI8S",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-JBO2p",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-ABI8S{œdataTypeœ:œPromptœ,œidœ:œPrompt-ABI8Sœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-JBO2p{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-JBO2pœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-ABI8S",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ABI8Sœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-JBO2p",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-JBO2pœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-JBO2p",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-uaX6T",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-JBO2p{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-JBO2pœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-uaX6T{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uaX6Tœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-JBO2p",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-JBO2pœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-uaX6T",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-uaX6Tœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      }
-    ],
     "nodes": [
       {
         "data": {
           "description": "Fetch content from one or more URLs.",
           "display_name": "URL",
-          "id": "URL-76lwY",
+          "id": "URL-ew8HM",
           "node": {
             "base_classes": [
               "Data"
@@ -230,8 +97,8 @@
           "type": "URL"
         },
         "dragging": false,
-        "height": 359,
-        "id": "URL-76lwY",
+        "height": 397,
+        "id": "URL-ew8HM",
         "position": {
           "x": 220.79156431407534,
           "y": 498.8186168722667
@@ -248,7 +115,7 @@
         "data": {
           "description": "Convert Data into plain text following a specified template.",
           "display_name": "Parse Data",
-          "id": "ParseData-jYhXf",
+          "id": "ParseData-CiHQA",
           "node": {
             "base_classes": [
               "Message"
@@ -363,8 +230,8 @@
           "type": "ParseData"
         },
         "dragging": false,
-        "height": 385,
-        "id": "ParseData-jYhXf",
+        "height": 378,
+        "id": "ParseData-CiHQA",
         "position": {
           "x": 754.3607306709101,
           "y": 736.8516961537598
@@ -381,7 +248,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-ABI8S",
+          "id": "Prompt-M9omU",
           "node": {
             "base_classes": [
               "Message"
@@ -507,8 +374,8 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 517,
-        "id": "Prompt-ABI8S",
+        "height": 502,
+        "id": "Prompt-M9omU",
         "position": {
           "x": 1368.0633591447076,
           "y": 467.19448061224284
@@ -525,85 +392,87 @@
         "data": {
           "description": "Get text inputs from the Playground.",
           "display_name": "Instructions",
-          "id": "TextInput-jiXJB",
+          "id": "TextInput-59GlS",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Get text inputs from the Playground.",
-            "display_name": "Instructions",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_value"
-            ],
-            "frozen": false,
-            "icon": "type",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Text",
-                "method": "text_response",
-                "name": "text",
-                "selected": "Message",
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
             "template": {
               "_type": "Component",
               "code": {
-                "advanced": true,
-                "dynamic": true,
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import MultilineInput, Output\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n    name = \"TextInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n        )\n        return message\n",
                 "fileTypes": [],
                 "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
                 "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n    name = \"TextInput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n        )\n        return message\n"
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
               },
               "input_value": {
-                "advanced": false,
+                "trace_as_input": true,
+                "multiline": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "input_value",
+                "value": "Use the references above for style to write a new blog/tutorial about Langflow and AI. Suggest non-covered topics.",
                 "display_name": "Text",
-                "dynamic": false,
-                "info": "Text to be passed as input.",
+                "advanced": false,
                 "input_types": [
                   "Message"
                 ],
-                "list": false,
-                "load_from_db": false,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
+                "dynamic": false,
+                "info": "Text to be passed as input.",
                 "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
                 "type": "str",
-                "value": "Use the references above for style to write a new blog/tutorial about Langflow and AI. Suggest non-covered topics."
+                "_input_type": "MultilineInput"
               }
-            }
+            },
+            "description": "Get text inputs from the Playground.",
+            "icon": "type",
+            "base_classes": [
+              "Message"
+            ],
+            "display_name": "Instructions",
+            "documentation": "",
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Message"
+                ],
+                "selected": "Message",
+                "name": "text",
+                "display_name": "Text",
+                "method": "text_response",
+                "value": "__UNDEFINED__",
+                "cache": true
+              }
+            ],
+            "field_order": [
+              "input_value"
+            ],
+            "beta": false,
+            "edited": false
           },
           "type": "TextInput"
         },
         "dragging": false,
-        "height": 309,
-        "id": "TextInput-jiXJB",
+        "height": 302,
+        "id": "TextInput-59GlS",
         "position": {
           "x": 743.7338453293725,
           "y": 301.58775454952183
@@ -620,7 +489,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-uaX6T",
+          "id": "ChatOutput-UgHT9",
           "node": {
             "base_classes": [
               "Message"
@@ -796,8 +665,8 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 309,
-        "id": "ChatOutput-uaX6T",
+        "height": 302,
+        "id": "ChatOutput-UgHT9",
         "position": {
           "x": 2449.3489426461606,
           "y": 571.2449700910389
@@ -814,7 +683,7 @@
         "data": {
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
-          "id": "OpenAIModel-JBO2p",
+          "id": "OpenAIModel-a5Jkk",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -888,7 +757,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1093,8 +962,8 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "height": 623,
-        "id": "OpenAIModel-JBO2p",
+        "height": 605,
+        "id": "OpenAIModel-a5Jkk",
         "position": {
           "x": 1950.3830456413473,
           "y": 380.8161704718418
@@ -1108,16 +977,149 @@
         "width": 384
       }
     ],
+    "edges": [
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "URL",
+            "id": "URL-ew8HM",
+            "name": "data",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "ParseData-CiHQA",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-URL-ew8HM{œdataTypeœ:œURLœ,œidœ:œURL-ew8HMœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-CiHQA{œfieldNameœ:œdataœ,œidœ:œParseData-CiHQAœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "URL-ew8HM",
+        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-ew8HMœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "target": "ParseData-CiHQA",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-CiHQAœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-CiHQA",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "references",
+            "id": "Prompt-M9omU",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ParseData-CiHQA{œdataTypeœ:œParseDataœ,œidœ:œParseData-CiHQAœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-M9omU{œfieldNameœ:œreferencesœ,œidœ:œPrompt-M9omUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-CiHQA",
+        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-CiHQAœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-M9omU",
+        "targetHandle": "{œfieldNameœ:œreferencesœ,œidœ:œPrompt-M9omUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "TextInput",
+            "id": "TextInput-59GlS",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "instructions",
+            "id": "Prompt-M9omU",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-TextInput-59GlS{œdataTypeœ:œTextInputœ,œidœ:œTextInput-59GlSœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-M9omU{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-M9omUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "TextInput-59GlS",
+        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-59GlSœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-M9omU",
+        "targetHandle": "{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-M9omUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-M9omU",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-a5Jkk",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-M9omU{œdataTypeœ:œPromptœ,œidœ:œPrompt-M9omUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-a5Jkk{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-a5Jkkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-M9omU",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-M9omUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-a5Jkk",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-a5Jkkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-a5Jkk",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-UgHT9",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-a5Jkk{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-a5Jkkœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-UgHT9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-UgHT9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-a5Jkk",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-a5Jkkœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-UgHT9",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-UgHT9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      }
+    ],
     "viewport": {
-      "x": -52.959712994147594,
-      "y": 41.95510708899229,
-      "zoom": 0.5873729194514925
+      "x": -46.935859383438924,
+      "y": 104.32720664181306,
+      "zoom": 0.5205627295612754
     }
   },
   "description": "This flow can be used to create a blog post following instructions from the user, using two other blogs as reference.",
+  "name": "Blog Writer",
+  "last_tested_version": "1.0.17",
   "endpoint_name": null,
-  "id": "6b576678-66cd-4d6e-ab40-af1104f02c37",
-  "is_component": false,
-  "last_tested_version": "1.0.9",
-  "name": "Blog Writer"
+  "is_component": false
 }
