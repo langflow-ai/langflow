@@ -1,6 +1,7 @@
 from langflow.components import helpers
 from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Data
+from langflow.schema.message import Message
 import pytest
 
 
@@ -46,13 +47,15 @@ def test_uuid_generator_component():
     # Act
     build_config = frontend_node.get("template")
     field_name = "unique_id"
-    build_config = uuid_generator_component.update_build_config(build_config, None, field_name)
-    result = uuid_generator_component.build()
+    build_config = uuid_generator_component.update_build_config(
+        build_config, None, field_name
+    )
+    result = uuid_generator_component.generate_id()
 
     # Assert
     # UUID should be a string of length 36
-    assert isinstance(result, str)
-    assert len(result) == 36
+    assert isinstance(result, Message)
+    assert len(result.text) == 36
 
 
 def test_data_as_text_component():
