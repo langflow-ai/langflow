@@ -1,6 +1,603 @@
 {
-  "id": "93709197-049c-41fa-ab4d-f871c20e83eb",
   "data": {
+    "edges": [
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "HierarchicalCrewComponent",
+            "id": "HierarchicalCrewComponent-3JGY1",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-8FKry",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-HierarchicalCrewComponent-3JGY1{œdataTypeœ:œHierarchicalCrewComponentœ,œidœ:œHierarchicalCrewComponent-3JGY1œ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-8FKry{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8FKryœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "HierarchicalCrewComponent-3JGY1",
+        "sourceHandle": "{œdataTypeœ: œHierarchicalCrewComponentœ, œidœ: œHierarchicalCrewComponent-3JGY1œ, œnameœ: œoutputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-8FKry",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-8FKryœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "HierarchicalTaskComponent",
+            "id": "HierarchicalTaskComponent-GuXH7",
+            "name": "task_output",
+            "output_types": [
+              "HierarchicalTask"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tasks",
+            "id": "HierarchicalCrewComponent-3JGY1",
+            "inputTypes": [
+              "HierarchicalTask"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-HierarchicalTaskComponent-GuXH7{œdataTypeœ:œHierarchicalTaskComponentœ,œidœ:œHierarchicalTaskComponent-GuXH7œ,œnameœ:œtask_outputœ,œoutput_typesœ:[œHierarchicalTaskœ]}-HierarchicalCrewComponent-3JGY1{œfieldNameœ:œtasksœ,œidœ:œHierarchicalCrewComponent-3JGY1œ,œinputTypesœ:[œHierarchicalTaskœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "HierarchicalTaskComponent-GuXH7",
+        "sourceHandle": "{œdataTypeœ: œHierarchicalTaskComponentœ, œidœ: œHierarchicalTaskComponent-GuXH7œ, œnameœ: œtask_outputœ, œoutput_typesœ: [œHierarchicalTaskœ]}",
+        "target": "HierarchicalCrewComponent-3JGY1",
+        "targetHandle": "{œfieldNameœ: œtasksœ, œidœ: œHierarchicalCrewComponent-3JGY1œ, œinputTypesœ: [œHierarchicalTaskœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "CrewAIAgentComponent",
+            "id": "CrewAIAgentComponent-ViX9d",
+            "name": "output",
+            "output_types": [
+              "Agent"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "agents",
+            "id": "HierarchicalCrewComponent-3JGY1",
+            "inputTypes": [
+              "Agent"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-CrewAIAgentComponent-ViX9d{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-3JGY1{œfieldNameœ:œagentsœ,œidœ:œHierarchicalCrewComponent-3JGY1œ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "CrewAIAgentComponent-ViX9d",
+        "sourceHandle": "{œdataTypeœ: œCrewAIAgentComponentœ, œidœ: œCrewAIAgentComponent-ViX9dœ, œnameœ: œoutputœ, œoutput_typesœ: [œAgentœ]}",
+        "target": "HierarchicalCrewComponent-3JGY1",
+        "targetHandle": "{œfieldNameœ: œagentsœ, œidœ: œHierarchicalCrewComponent-3JGY1œ, œinputTypesœ: [œAgentœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-ucjrK",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "CrewAIAgentComponent-ViX9d",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-ucjrK{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ucjrKœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-ViX9d{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "OpenAIModel-ucjrK",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-ucjrKœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "CrewAIAgentComponent-ViX9d",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œCrewAIAgentComponent-ViX9dœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "CrewAIAgentComponent",
+            "id": "CrewAIAgentComponent-aCLi7",
+            "name": "output",
+            "output_types": [
+              "Agent"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "manager_agent",
+            "id": "HierarchicalCrewComponent-3JGY1",
+            "inputTypes": [
+              "Agent"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-CrewAIAgentComponent-aCLi7{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-aCLi7œ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-3JGY1{œfieldNameœ:œmanager_agentœ,œidœ:œHierarchicalCrewComponent-3JGY1œ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "CrewAIAgentComponent-aCLi7",
+        "sourceHandle": "{œdataTypeœ: œCrewAIAgentComponentœ, œidœ: œCrewAIAgentComponent-aCLi7œ, œnameœ: œoutputœ, œoutput_typesœ: [œAgentœ]}",
+        "target": "HierarchicalCrewComponent-3JGY1",
+        "targetHandle": "{œfieldNameœ: œmanager_agentœ, œidœ: œHierarchicalCrewComponent-3JGY1œ, œinputTypesœ: [œAgentœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-wMVJn",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "CrewAIAgentComponent-aCLi7",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-wMVJn{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-wMVJnœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-aCLi7{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-aCLi7œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "OpenAIModel-wMVJn",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-wMVJnœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "CrewAIAgentComponent-aCLi7",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œCrewAIAgentComponent-aCLi7œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-gbnQU",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "task_description",
+            "id": "HierarchicalTaskComponent-GuXH7",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-gbnQU{œdataTypeœ:œPromptœ,œidœ:œPrompt-gbnQUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-HierarchicalTaskComponent-GuXH7{œfieldNameœ:œtask_descriptionœ,œidœ:œHierarchicalTaskComponent-GuXH7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-gbnQU",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gbnQUœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "HierarchicalTaskComponent-GuXH7",
+        "targetHandle": "{œfieldNameœ: œtask_descriptionœ, œidœ: œHierarchicalTaskComponent-GuXH7œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-1Gki8",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "query",
+            "id": "Prompt-gbnQU",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-1Gki8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1Gki8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-gbnQU{œfieldNameœ:œqueryœ,œidœ:œPrompt-gbnQUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-1Gki8",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1Gki8œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-gbnQU",
+        "targetHandle": "{œfieldNameœ: œqueryœ, œidœ: œPrompt-gbnQUœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "YFinanceTool",
+            "id": "YFinanceTool-gzeyq",
+            "name": "tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "CrewAIAgentComponent-ViX9d",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-YFinanceTool-gzeyq{œdataTypeœ:œYFinanceToolœ,œidœ:œYFinanceTool-gzeyqœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-ViX9d{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "YFinanceTool-gzeyq",
+        "sourceHandle": "{œdataTypeœ: œYFinanceToolœ, œidœ: œYFinanceTool-gzeyqœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "CrewAIAgentComponent-ViX9d",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œCrewAIAgentComponent-ViX9dœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-qCC5T",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-KnjCY",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-qCC5T{œdataTypeœ:œPromptœ,œidœ:œPrompt-qCC5Tœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-KnjCY{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-KnjCYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-qCC5T",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-qCC5Tœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-KnjCY",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-KnjCYœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-KnjCY",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "role",
+            "id": "CrewAIAgentComponent-ViX9d",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-KnjCY{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KnjCYœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-ViX9d{œfieldNameœ:œroleœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "OpenAIModel-KnjCY",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-KnjCYœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CrewAIAgentComponent-ViX9d",
+        "targetHandle": "{œfieldNameœ: œroleœ, œidœ: œCrewAIAgentComponent-ViX9dœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-1Gki8",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "query",
+            "id": "Prompt-5wrVb",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-1Gki8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1Gki8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-5wrVb{œfieldNameœ:œqueryœ,œidœ:œPrompt-5wrVbœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-1Gki8",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1Gki8œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-5wrVb",
+        "targetHandle": "{œfieldNameœ: œqueryœ, œidœ: œPrompt-5wrVbœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-1Gki8",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "query",
+            "id": "Prompt-qCC5T",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-1Gki8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1Gki8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-qCC5T{œfieldNameœ:œqueryœ,œidœ:œPrompt-qCC5Tœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-1Gki8",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1Gki8œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-qCC5T",
+        "targetHandle": "{œfieldNameœ: œqueryœ, œidœ: œPrompt-qCC5Tœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-5wrVb",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-wOSDH",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-5wrVb{œdataTypeœ:œPromptœ,œidœ:œPrompt-5wrVbœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-wOSDH{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-wOSDHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-5wrVb",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-5wrVbœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-wOSDH",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-wOSDHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-KnjCY",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "role",
+            "id": "Prompt-5wrVb",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-KnjCY{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KnjCYœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-5wrVb{œfieldNameœ:œroleœ,œidœ:œPrompt-5wrVbœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "OpenAIModel-KnjCY",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-KnjCYœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-5wrVb",
+        "targetHandle": "{œfieldNameœ: œroleœ, œidœ: œPrompt-5wrVbœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-wOSDH",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "goal",
+            "id": "CrewAIAgentComponent-ViX9d",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-wOSDH{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-wOSDHœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-ViX9d{œfieldNameœ:œgoalœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "OpenAIModel-wOSDH",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-wOSDHœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CrewAIAgentComponent-ViX9d",
+        "targetHandle": "{œfieldNameœ: œgoalœ, œidœ: œCrewAIAgentComponent-ViX9dœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-g5dyc",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-lajm6",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-g5dyc{œdataTypeœ:œPromptœ,œidœ:œPrompt-g5dycœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-lajm6{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-lajm6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-g5dyc",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-g5dycœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-lajm6",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-lajm6œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-wOSDH",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "goal",
+            "id": "Prompt-g5dyc",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-wOSDH{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-wOSDHœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-g5dyc{œfieldNameœ:œgoalœ,œidœ:œPrompt-g5dycœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-wOSDH",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-wOSDHœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-g5dyc",
+        "targetHandle": "{œfieldNameœ: œgoalœ, œidœ: œPrompt-g5dycœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-KnjCY",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "role",
+            "id": "Prompt-g5dyc",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-KnjCY{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KnjCYœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-g5dyc{œfieldNameœ:œroleœ,œidœ:œPrompt-g5dycœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-KnjCY",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-KnjCYœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-g5dyc",
+        "targetHandle": "{œfieldNameœ: œroleœ, œidœ: œPrompt-g5dycœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-1Gki8",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "query",
+            "id": "Prompt-g5dyc",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-1Gki8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1Gki8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-g5dyc{œfieldNameœ:œqueryœ,œidœ:œPrompt-g5dycœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-1Gki8",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1Gki8œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-g5dyc",
+        "targetHandle": "{œfieldNameœ: œqueryœ, œidœ: œPrompt-g5dycœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-lajm6",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "backstory",
+            "id": "CrewAIAgentComponent-ViX9d",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-lajm6{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-lajm6œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-ViX9d{œfieldNameœ:œbackstoryœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-lajm6",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-lajm6œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CrewAIAgentComponent-ViX9d",
+        "targetHandle": "{œfieldNameœ: œbackstoryœ, œidœ: œCrewAIAgentComponent-ViX9dœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "SearchAPI",
+            "id": "SearchAPI-1mPpu",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "CrewAIAgentComponent-ViX9d",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-SearchAPI-1mPpu{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-1mPpuœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-ViX9d{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "SearchAPI-1mPpu",
+        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-1mPpuœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "CrewAIAgentComponent-ViX9d",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œCrewAIAgentComponent-ViX9dœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      }
+    ],
     "nodes": [
       {
         "data": {
@@ -2406,101 +3003,101 @@
           "display_name": "Role Prompt",
           "id": "Prompt-qCC5T",
           "node": {
-            "template": {
-              "_type": "Component",
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": true,
-                "dynamic": true,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "template": {
-                "trace_as_input": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "template",
-                "value": "Define a Role that could execute or answer well the user's query.\n\nUser's query: {query}\n\nRole should be two words max. Something like \"Researcher\" or \"Software Developer\".\n",
-                "display_name": "Template",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "type": "prompt",
-                "_input_type": "PromptInput",
-                "load_from_db": false
-              },
-              "query": {
-                "field_type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "name": "query",
-                "display_name": "query",
-                "advanced": false,
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false,
-                "type": "str"
-              }
-            },
-            "description": "Create a prompt template with dynamic variables.",
-            "icon": "prompts",
             "base_classes": [
               "Message"
             ],
-            "display_name": "Role Prompt",
-            "documentation": "",
+            "beta": false,
+            "conditional_paths": [],
             "custom_fields": {
               "template": [
                 "query"
               ]
             },
-            "output_types": [],
-            "pinned": false,
-            "conditional_paths": [],
-            "frozen": false,
-            "outputs": [
-              {
-                "types": [
-                  "Message"
-                ],
-                "selected": "Message",
-                "name": "prompt",
-                "display_name": "Prompt Message",
-                "method": "build_prompt",
-                "value": "__UNDEFINED__",
-                "cache": true
-              }
-            ],
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Role Prompt",
+            "documentation": "",
+            "edited": false,
             "field_order": [
               "template"
             ],
-            "beta": false,
-            "edited": false
+            "frozen": false,
+            "icon": "prompts",
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "query": {
+                "advanced": false,
+                "display_name": "query",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "query",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "Define a Role that could execute or answer well the user's query.\n\nUser's query: {query}\n\nRole should be two words max. Something like \"Researcher\" or \"Software Developer\".\n"
+              }
+            }
           },
           "type": "Prompt"
         },
@@ -2820,125 +3417,125 @@
           "display_name": "Goal Prompt",
           "id": "Prompt-5wrVb",
           "node": {
-            "template": {
-              "_type": "Component",
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": true,
-                "dynamic": true,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "template": {
-                "trace_as_input": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "template",
-                "value": "Define the Goal of this Role, given the User's Query. \nUser's query: {query}\n\nRole: {role}\n\nThe goal should be concise and specific.\nGoal: \n",
-                "display_name": "Template",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "type": "prompt",
-                "_input_type": "PromptInput",
-                "load_from_db": false
-              },
-              "query": {
-                "field_type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "name": "query",
-                "display_name": "query",
-                "advanced": false,
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false,
-                "type": "str"
-              },
-              "role": {
-                "field_type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "name": "role",
-                "display_name": "role",
-                "advanced": false,
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false,
-                "type": "str"
-              }
-            },
-            "description": "Create a prompt template with dynamic variables.",
-            "icon": "prompts",
             "base_classes": [
               "Message"
             ],
-            "display_name": "Goal Prompt",
-            "documentation": "",
+            "beta": false,
+            "conditional_paths": [],
             "custom_fields": {
               "template": [
                 "query",
                 "role"
               ]
             },
-            "output_types": [],
-            "pinned": false,
-            "conditional_paths": [],
-            "frozen": false,
-            "outputs": [
-              {
-                "types": [
-                  "Message"
-                ],
-                "selected": "Message",
-                "name": "prompt",
-                "display_name": "Prompt Message",
-                "method": "build_prompt",
-                "value": "__UNDEFINED__",
-                "cache": true
-              }
-            ],
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Goal Prompt",
+            "documentation": "",
+            "edited": false,
             "field_order": [
               "template"
             ],
-            "beta": false,
-            "edited": false
+            "frozen": false,
+            "icon": "prompts",
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "query": {
+                "advanced": false,
+                "display_name": "query",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "query",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "role": {
+                "advanced": false,
+                "display_name": "role",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "role",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "Define the Goal of this Role, given the User's Query. \nUser's query: {query}\n\nRole: {role}\n\nThe goal should be concise and specific.\nGoal: \n"
+              }
+            }
           },
           "type": "Prompt"
         },
@@ -3486,7 +4083,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -3590,604 +4187,6 @@
         "width": 384
       }
     ],
-    "edges": [
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "HierarchicalCrewComponent",
-            "id": "HierarchicalCrewComponent-3JGY1",
-            "name": "output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-8FKry",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-HierarchicalCrewComponent-3JGY1{œdataTypeœ:œHierarchicalCrewComponentœ,œidœ:œHierarchicalCrewComponent-3JGY1œ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-8FKry{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8FKryœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "HierarchicalCrewComponent-3JGY1",
-        "sourceHandle": "{œdataTypeœ:œHierarchicalCrewComponentœ,œidœ:œHierarchicalCrewComponent-3JGY1œ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-8FKry",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8FKryœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "HierarchicalTaskComponent",
-            "id": "HierarchicalTaskComponent-GuXH7",
-            "name": "task_output",
-            "output_types": [
-              "HierarchicalTask"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tasks",
-            "id": "HierarchicalCrewComponent-3JGY1",
-            "inputTypes": [
-              "HierarchicalTask"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-HierarchicalTaskComponent-GuXH7{œdataTypeœ:œHierarchicalTaskComponentœ,œidœ:œHierarchicalTaskComponent-GuXH7œ,œnameœ:œtask_outputœ,œoutput_typesœ:[œHierarchicalTaskœ]}-HierarchicalCrewComponent-3JGY1{œfieldNameœ:œtasksœ,œidœ:œHierarchicalCrewComponent-3JGY1œ,œinputTypesœ:[œHierarchicalTaskœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "HierarchicalTaskComponent-GuXH7",
-        "sourceHandle": "{œdataTypeœ:œHierarchicalTaskComponentœ,œidœ:œHierarchicalTaskComponent-GuXH7œ,œnameœ:œtask_outputœ,œoutput_typesœ:[œHierarchicalTaskœ]}",
-        "target": "HierarchicalCrewComponent-3JGY1",
-        "targetHandle": "{œfieldNameœ:œtasksœ,œidœ:œHierarchicalCrewComponent-3JGY1œ,œinputTypesœ:[œHierarchicalTaskœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CrewAIAgentComponent",
-            "id": "CrewAIAgentComponent-ViX9d",
-            "name": "output",
-            "output_types": [
-              "Agent"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "agents",
-            "id": "HierarchicalCrewComponent-3JGY1",
-            "inputTypes": [
-              "Agent"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-CrewAIAgentComponent-ViX9d{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-3JGY1{œfieldNameœ:œagentsœ,œidœ:œHierarchicalCrewComponent-3JGY1œ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "CrewAIAgentComponent-ViX9d",
-        "sourceHandle": "{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}",
-        "target": "HierarchicalCrewComponent-3JGY1",
-        "targetHandle": "{œfieldNameœ:œagentsœ,œidœ:œHierarchicalCrewComponent-3JGY1œ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-ucjrK",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "CrewAIAgentComponent-ViX9d",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-ucjrK{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ucjrKœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-ViX9d{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "OpenAIModel-ucjrK",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ucjrKœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-        "target": "CrewAIAgentComponent-ViX9d",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CrewAIAgentComponent",
-            "id": "CrewAIAgentComponent-aCLi7",
-            "name": "output",
-            "output_types": [
-              "Agent"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "manager_agent",
-            "id": "HierarchicalCrewComponent-3JGY1",
-            "inputTypes": [
-              "Agent"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-CrewAIAgentComponent-aCLi7{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-aCLi7œ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-3JGY1{œfieldNameœ:œmanager_agentœ,œidœ:œHierarchicalCrewComponent-3JGY1œ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "CrewAIAgentComponent-aCLi7",
-        "sourceHandle": "{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-aCLi7œ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}",
-        "target": "HierarchicalCrewComponent-3JGY1",
-        "targetHandle": "{œfieldNameœ:œmanager_agentœ,œidœ:œHierarchicalCrewComponent-3JGY1œ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-wMVJn",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "CrewAIAgentComponent-aCLi7",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-wMVJn{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-wMVJnœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-aCLi7{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-aCLi7œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "OpenAIModel-wMVJn",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-wMVJnœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-        "target": "CrewAIAgentComponent-aCLi7",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-aCLi7œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-gbnQU",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "task_description",
-            "id": "HierarchicalTaskComponent-GuXH7",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-gbnQU{œdataTypeœ:œPromptœ,œidœ:œPrompt-gbnQUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-HierarchicalTaskComponent-GuXH7{œfieldNameœ:œtask_descriptionœ,œidœ:œHierarchicalTaskComponent-GuXH7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-gbnQU",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-gbnQUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "HierarchicalTaskComponent-GuXH7",
-        "targetHandle": "{œfieldNameœ:œtask_descriptionœ,œidœ:œHierarchicalTaskComponent-GuXH7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-1Gki8",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "query",
-            "id": "Prompt-gbnQU",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-1Gki8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1Gki8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-gbnQU{œfieldNameœ:œqueryœ,œidœ:œPrompt-gbnQUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-1Gki8",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1Gki8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-gbnQU",
-        "targetHandle": "{œfieldNameœ:œqueryœ,œidœ:œPrompt-gbnQUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "YFinanceTool",
-            "id": "YFinanceTool-gzeyq",
-            "name": "tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "CrewAIAgentComponent-ViX9d",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-YFinanceTool-gzeyq{œdataTypeœ:œYFinanceToolœ,œidœ:œYFinanceTool-gzeyqœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-ViX9d{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "YFinanceTool-gzeyq",
-        "sourceHandle": "{œdataTypeœ:œYFinanceToolœ,œidœ:œYFinanceTool-gzeyqœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "CrewAIAgentComponent-ViX9d",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-qCC5T",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-KnjCY",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-qCC5T{œdataTypeœ:œPromptœ,œidœ:œPrompt-qCC5Tœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-KnjCY{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-KnjCYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-qCC5T",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-qCC5Tœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "OpenAIModel-KnjCY",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-KnjCYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-KnjCY",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "role",
-            "id": "CrewAIAgentComponent-ViX9d",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-KnjCY{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KnjCYœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-ViX9d{œfieldNameœ:œroleœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "OpenAIModel-KnjCY",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KnjCYœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "CrewAIAgentComponent-ViX9d",
-        "targetHandle": "{œfieldNameœ:œroleœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-1Gki8",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "query",
-            "id": "Prompt-5wrVb",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-1Gki8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1Gki8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-5wrVb{œfieldNameœ:œqueryœ,œidœ:œPrompt-5wrVbœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-1Gki8",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1Gki8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-5wrVb",
-        "targetHandle": "{œfieldNameœ:œqueryœ,œidœ:œPrompt-5wrVbœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-1Gki8",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "query",
-            "id": "Prompt-qCC5T",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-1Gki8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1Gki8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-qCC5T{œfieldNameœ:œqueryœ,œidœ:œPrompt-qCC5Tœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-1Gki8",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1Gki8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-qCC5T",
-        "targetHandle": "{œfieldNameœ:œqueryœ,œidœ:œPrompt-qCC5Tœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-5wrVb",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-wOSDH",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-5wrVb{œdataTypeœ:œPromptœ,œidœ:œPrompt-5wrVbœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-wOSDH{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-wOSDHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-5wrVb",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-5wrVbœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "OpenAIModel-wOSDH",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-wOSDHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-KnjCY",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "role",
-            "id": "Prompt-5wrVb",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-KnjCY{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KnjCYœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-5wrVb{œfieldNameœ:œroleœ,œidœ:œPrompt-5wrVbœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "OpenAIModel-KnjCY",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KnjCYœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-5wrVb",
-        "targetHandle": "{œfieldNameœ:œroleœ,œidœ:œPrompt-5wrVbœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-wOSDH",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "goal",
-            "id": "CrewAIAgentComponent-ViX9d",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-wOSDH{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-wOSDHœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-ViX9d{œfieldNameœ:œgoalœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "OpenAIModel-wOSDH",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-wOSDHœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "CrewAIAgentComponent-ViX9d",
-        "targetHandle": "{œfieldNameœ:œgoalœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-g5dyc",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-lajm6",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-g5dyc{œdataTypeœ:œPromptœ,œidœ:œPrompt-g5dycœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-lajm6{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-lajm6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-g5dyc",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-g5dycœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "OpenAIModel-lajm6",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-lajm6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-wOSDH",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "goal",
-            "id": "Prompt-g5dyc",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-wOSDH{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-wOSDHœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-g5dyc{œfieldNameœ:œgoalœ,œidœ:œPrompt-g5dycœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-wOSDH",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-wOSDHœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-g5dyc",
-        "targetHandle": "{œfieldNameœ:œgoalœ,œidœ:œPrompt-g5dycœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-KnjCY",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "role",
-            "id": "Prompt-g5dyc",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-KnjCY{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KnjCYœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-g5dyc{œfieldNameœ:œroleœ,œidœ:œPrompt-g5dycœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-KnjCY",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KnjCYœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-g5dyc",
-        "targetHandle": "{œfieldNameœ:œroleœ,œidœ:œPrompt-g5dycœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-1Gki8",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "query",
-            "id": "Prompt-g5dyc",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-1Gki8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1Gki8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-g5dyc{œfieldNameœ:œqueryœ,œidœ:œPrompt-g5dycœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-1Gki8",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1Gki8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-g5dyc",
-        "targetHandle": "{œfieldNameœ:œqueryœ,œidœ:œPrompt-g5dycœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-lajm6",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "backstory",
-            "id": "CrewAIAgentComponent-ViX9d",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-lajm6{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-lajm6œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-ViX9d{œfieldNameœ:œbackstoryœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-lajm6",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-lajm6œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "CrewAIAgentComponent-ViX9d",
-        "targetHandle": "{œfieldNameœ:œbackstoryœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "SearchAPI",
-            "id": "SearchAPI-1mPpu",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "CrewAIAgentComponent-ViX9d",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-SearchAPI-1mPpu{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-1mPpuœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-ViX9d{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "SearchAPI-1mPpu",
-        "sourceHandle": "{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-1mPpuœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "CrewAIAgentComponent-ViX9d",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-ViX9dœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
-      }
-    ],
     "viewport": {
       "x": 514.3183520357233,
       "y": 43.747988301750695,
@@ -4195,8 +4194,9 @@
     }
   },
   "description": "This Agent is created on the fly based on what the user asks and a Manager Agent calls it if needed.",
-  "name": "Dynamic Agent",
-  "last_tested_version": "1.0.17",
   "endpoint_name": null,
-  "is_component": false
+  "id": "93709197-049c-41fa-ab4d-f871c20e83eb",
+  "is_component": false,
+  "last_tested_version": "1.0.17",
+  "name": "Dynamic Agent"
 }
