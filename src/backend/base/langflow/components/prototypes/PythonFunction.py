@@ -46,7 +46,7 @@ class PythonFunctionComponent(Component):
         func = get_function(function_code)
         return func
 
-    async def execute_function(self) -> List[dotdict] | dotdict | str | List[str]:
+    def execute_function(self) -> List[dotdict] | dotdict | str | List[str]:
         function_code = self.function_code
 
         if not function_code:
@@ -58,14 +58,14 @@ class PythonFunctionComponent(Component):
         except Exception as e:
             return f"Error executing function: {str(e)}"
 
-    async def execute_function_data(self) -> List[Data]:
-        results = await self.execute_function()
+    def execute_function_data(self) -> List[Data]:
+        results = self.execute_function()
         results = results if isinstance(results, list) else [results]
         data = [(Data(text=x) if isinstance(x, str) else Data(**x)) for x in results]
         return data
 
-    async def execute_function_message(self) -> Message:
-        results = await self.execute_function()
+    def execute_function_message(self) -> Message:
+        results = self.execute_function()
         results = results if isinstance(results, list) else [results]
         results = [str(x) for x in results]
         results = "\n".join(results)
