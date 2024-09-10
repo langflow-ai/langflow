@@ -34,7 +34,9 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
     def validate_value(cls, v: Any, _info):
         # Check if value is a list of dicts
         if not isinstance(v, list):
-            raise ValueError(f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list.")
+            raise ValueError(
+                f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list."
+            )
 
         for item in v:
             if not isinstance(item, (dict, Data)):
@@ -74,8 +76,14 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
+class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
+    field_type: SerializableFieldTypes = FieldTypes.CODE
+
+
 # Applying mixins to a specific input type
-class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTraceMixin):
+class StrInput(
+    BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTraceMixin
+):
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     load_from_db: CoalesceBool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
@@ -97,12 +105,16 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
         """
         if not isinstance(v, str) and v is not None:
             # Keep the warning for now, but we should change it to an error
-            if _info.data.get("input_types") and v.__class__.__name__ not in _info.data.get("input_types"):
+            if _info.data.get(
+                "input_types"
+            ) and v.__class__.__name__ not in _info.data.get("input_types"):
                 warnings.warn(
                     f"Invalid value type {type(v)} for input {_info.data.get('name')}. Expected types: {_info.data.get('input_types')}"
                 )
             else:
-                warnings.warn(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
+                warnings.warn(
+                    f"Invalid value type {type(v)} for input {_info.data.get('name')}."
+                )
         return v
 
     @field_validator("value")
@@ -274,7 +286,9 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
         elif isinstance(v, (AsyncIterator, Iterator)):
             value = v
         else:
-            raise ValueError(f"Invalid value type `{type(v)}` for input `{_info.data['name']}`")
+            raise ValueError(
+                f"Invalid value type `{type(v)}` for input `{_info.data['name']}`"
+            )
         return value
 
 
@@ -309,7 +323,9 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
         """
 
         if v and not isinstance(v, (int, float)):
-            raise ValueError(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
+            raise ValueError(
+                f"Invalid value type {type(v)} for input {_info.data.get('name')}."
+            )
         if isinstance(v, float):
             v = int(v)
         return v
@@ -345,7 +361,9 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
         if v and not isinstance(v, (int, float)):
-            raise ValueError(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
+            raise ValueError(
+                f"Invalid value type {type(v)} for input {_info.data.get('name')}."
+            )
         if isinstance(v, int):
             v = float(v)
         return v
@@ -367,7 +385,9 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     value: CoalesceBool = False
 
 
-class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, InputTraceMixin):
+class NestedDictInput(
+    BaseInputMixin, ListableInputMixin, MetadataTraceMixin, InputTraceMixin
+):
     """
     Represents a nested dictionary field.
 
@@ -417,7 +437,9 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
     combobox: CoalesceBool = False
 
 
-class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin):
+class MultiselectInput(
+    BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin
+):
     """
     Represents a multiselect input field.
 
@@ -443,7 +465,9 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
             raise ValueError(f"MultiselectInput value must be a list. Value: '{v}'")
         for item in v:
             if not isinstance(item, str):
-                raise ValueError(f"MultiselectInput value must be a list of strings. Item: '{item}' is not a string")
+                raise ValueError(
+                    f"MultiselectInput value must be a list of strings. Item: '{item}' is not a string"
+                )
         return v
 
 
@@ -491,6 +515,7 @@ InputTypes = Union[
     MultilineSecretInput,
     NestedDictInput,
     PromptInput,
+    CodeInput,
     SecretStrInput,
     StrInput,
     MessageTextInput,
@@ -498,7 +523,9 @@ InputTypes = Union[
     TableInput,
 ]
 
-InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
+InputTypesMap: dict[str, type[InputTypes]] = {
+    t.__name__: t for t in get_args(InputTypes)
+}
 
 
 def instantiate_input(input_type: str, data: dict) -> InputTypes:

@@ -1,7 +1,14 @@
 from enum import Enum
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator, model_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    field_validator,
+    model_serializer,
+)
 
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.validators import CoalesceBool
@@ -18,11 +25,14 @@ class FieldTypes(str, Enum):
     NESTED_DICT = "NestedDict"
     FILE = "file"
     PROMPT = "prompt"
+    CODE = "code"
     OTHER = "other"
     TABLE = "table"
 
 
-SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
+SerializableFieldTypes = Annotated[
+    FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)
+]
 
 
 # Base mixin for common input field attributes and methods
