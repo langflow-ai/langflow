@@ -12,8 +12,7 @@ class CustomComponent(Component):
     name = "CustomComponent"
 
     inputs = [
-        MessageTextInput(name="input_value",
-                         display_name="Input Value", value="Hello, World!"),
+        MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
     ]
 
     outputs = [

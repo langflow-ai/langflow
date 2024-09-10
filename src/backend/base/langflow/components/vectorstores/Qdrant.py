@@ -23,13 +23,10 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
     icon = "Qdrant"
 
     inputs = [
-        StrInput(name="collection_name",
-                 display_name="Collection Name", required=True),
-        StrInput(name="host", display_name="Host",
-                 value="localhost", advanced=True),
+        StrInput(name="collection_name", display_name="Collection Name", required=True),
+        StrInput(name="host", display_name="Host", value="localhost", advanced=True),
         IntInput(name="port", display_name="Port", value=6333, advanced=True),
-        IntInput(name="grpc_port", display_name="gRPC Port",
-                 value=6334, advanced=True),
+        IntInput(name="grpc_port", display_name="gRPC Port", value=6334, advanced=True),
         SecretStrInput(name="api_key", display_name="API Key", advanced=True),
         StrInput(name="prefix", display_name="Prefix", advanced=True),
         IntInput(name="timeout", display_name="Timeout", advanced=True),
@@ -42,18 +39,15 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             value="Cosine",
             advanced=True,
         ),
-        StrInput(name="content_payload_key", display_name="Content Payload Key",
-                 value="page_content", advanced=True),
-        StrInput(name="metadata_payload_key",
-                 display_name="Metadata Payload Key", value="metadata", advanced=True),
+        StrInput(name="content_payload_key", display_name="Content Payload Key", value="page_content", advanced=True),
+        StrInput(name="metadata_payload_key", display_name="Metadata Payload Key", value="metadata", advanced=True),
         MultilineInput(name="search_query", display_name="Search Query"),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",
             is_list=True,
         ),
-        HandleInput(name="embedding", display_name="Embedding",
-                    input_types=["Embeddings"]),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -83,8 +77,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             "url": self.url if self.url else None,
         }
 
-        server_kwargs = {k: v for k,
-                         v in server_kwargs.items() if v is not None}
+        server_kwargs = {k: v for k, v in server_kwargs.items() if v is not None}
         documents = []
 
         for _input in self.ingest_data or []:
@@ -97,14 +90,12 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError("Invalid embedding object")
 
         if documents:
-            qdrant = Qdrant.from_documents(
-                documents, embedding=self.embedding, **qdrant_kwargs, **server_kwargs)
+            qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs, **server_kwargs)
         else:
             from qdrant_client import QdrantClient
 
             client = QdrantClient(**server_kwargs)
-            qdrant = Qdrant(embeddings=self.embedding,
-                            client=client, **qdrant_kwargs)
+            qdrant = Qdrant(embeddings=self.embedding, client=client, **qdrant_kwargs)
 
         return qdrant
 
