@@ -61,7 +61,7 @@ test("Vector Store RAG", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  if (process?.env?.ASTRA_DB_API_ENDPOINT?.includes("dev")) {
+  if (process?.env?.ASTRA_DB_API_ENDPOINT?.includes("astra-dev")) {
     const getUA = await page.evaluate(() => navigator.userAgent);
     const userAgentInfo = uaParser(getUA);
     let control = "Control";
