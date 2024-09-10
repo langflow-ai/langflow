@@ -2,9 +2,11 @@ import re
 
 from langchain_community.document_loaders.web_base import WebBaseLoader
 
+from langflow.helpers.data import data_to_text
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Data
+from langflow.schema.message import Message
 
 
 class URLComponent(Component):
@@ -24,6 +26,7 @@ class URLComponent(Component):
 
     outputs = [
         Output(display_name="Data", name="data", method="fetch_content"),
+        Output(display_name="Text", name="text", method="fetch_content_text"),
     ]
 
     def ensure_url(self, string: str) -> str:
@@ -66,3 +69,10 @@ class URLComponent(Component):
         data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]
         self.status = data
         return data
+
+    def fetch_content_text(self) -> Message:
+        data = self.fetch_content()
+
+        result_string = data_to_text("{text}", data)
+        self.status = result_string
+        return Message(text=result_string)
