@@ -1,13 +1,9 @@
 import os
-from langflow.components.inputs import ChatInput
 import pytest
 
 from langflow.components.models.OpenAIModel import OpenAIModelComponent
 from langflow.components.output_parsers.CSVOutputParser import CSVOutputParserComponent
 from langflow.components.prompts.Prompt import PromptComponent
-from langflow.schema.message import Message
-from langflow.template.field.base import Input
-from langflow.template.template.base import Template
 from tests.integration.utils import ComponentInputHandle, run_single_component
 
 
