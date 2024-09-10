@@ -111,12 +111,6 @@ class Settings(BaseSettings):
     sentry_traces_sample_rate: Optional[float] = 1.0
     sentry_profiles_sample_rate: Optional[float] = 1.0
 
-    # PLUGIN_DIR: Optional[str] = None
-
-    langfuse_secret_key: Optional[str] = None
-    langfuse_public_key: Optional[str] = None
-    langfuse_host: Optional[str] = None
-
     store: Optional[bool] = True
     store_url: Optional[str] = "https://api.langflow.store"
     download_webhook_url: Optional[str] = (
