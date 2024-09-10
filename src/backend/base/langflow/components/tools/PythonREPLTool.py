@@ -12,7 +12,6 @@ from langchain_experimental.utilities import PythonREPL
 class PythonREPLToolComponent(LCToolComponent):
     display_name = "Python REPL Tool"
     description = "A tool for running Python code in a REPL environment."
-    icon = "python"
     name = "PythonREPLTool"
 
     inputs = [
