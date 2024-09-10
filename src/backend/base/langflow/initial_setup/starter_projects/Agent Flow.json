@@ -113,9 +113,7 @@
             "dataType": "PythonREPLTool",
             "id": "PythonREPLTool-Lq9f4",
             "name": "tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": []
           },
           "targetHandle": {
             "fieldName": "tools",
@@ -129,7 +127,7 @@
         },
         "id": "reactflow__edge-PythonREPLTool-Lq9f4{œdataTypeœ:œPythonREPLToolœ,œidœ:œPythonREPLTool-Lq9f4œ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-hz7Eb{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-hz7Ebœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
         "source": "PythonREPLTool-Lq9f4",
-        "sourceHandle": "{œdataTypeœ: œPythonREPLToolœ, œidœ: œPythonREPLTool-Lq9f4œ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œPythonREPLToolœ, œidœ: œPythonREPLTool-Lq9f4œ, œnameœ: œtoolœ, œoutput_typesœ: []}",
         "target": "ToolCallingAgent-hz7Eb",
         "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-hz7Ebœ, œinputTypesœ: [œToolœ, œBaseToolœ], œtypeœ: œotherœ}"
       }
@@ -1282,6 +1280,7 @@
             "edited": false,
             "field_order": [],
             "frozen": false,
+            "icon": "python",
             "lf_version": "1.0.16",
             "output_types": [],
             "outputs": [
@@ -1300,7 +1299,7 @@
                 "cache": true,
                 "display_name": "Tool",
                 "method": "build_tool",
-                "name": "tool",
+                "name": "api_build_tool",
                 "selected": "Tool",
                 "types": [
                   "Tool"
@@ -1327,14 +1326,14 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import importlib\nfrom typing import cast\n\nfrom langchain_experimental.utilities import PythonREPL\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.io import MessageTextInput, MultiselectInput\nfrom langflow.schema.data import Data\nfrom langflow.template.field.base import Output\n\n\nclass PythonREPLToolComponent(LCToolComponent):\n    display_name = \"Python REPL Tool\"\n    description = \"A tool for running Python code in a REPL environment.\"\n    name = \"PythonREPLTool\"\n\n    inputs = [\n        MessageTextInput(name=\"input_value\", display_name=\"Input\", value=\"\"),\n        MessageTextInput(name=\"name\", display_name=\"Name\", value=\"python_repl\"),\n        MessageTextInput(\n            name=\"description\",\n            display_name=\"Description\",\n            value=\"A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.\",\n        ),\n        MultiselectInput(\n            name=\"global_imports\",\n            display_name=\"Global Imports\",\n            info=\"A list of modules to import globally, e.g. ['math', 'numpy'].\",\n            value=[\"math\"],\n            combobox=True,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"api_run_model\", display_name=\"Data\", method=\"run_model\"),\n        # Keep this for backwards compatibility\n        Output(name=\"tool\", display_name=\"Tool\", method=\"build_tool\"),\n    ]\n\n    def get_globals(self, globals: list[str]) -> dict:\n        \"\"\"\n        Retrieves the global variables from the specified modules.\n\n        Args:\n            globals (list[str]): A list of module names.\n\n        Returns:\n            dict: A dictionary containing the global variables from the specified modules.\n        \"\"\"\n        global_dict = {}\n        for module in globals:\n            try:\n                imported_module = importlib.import_module(module)\n                global_dict[imported_module.__name__] = imported_module\n            except ImportError:\n                raise ImportError(f\"Could not import module {module}\")\n        return global_dict\n\n    def build_tool(self) -> Tool:\n        \"\"\"\n        Builds a Python REPL tool.\n\n        Returns:\n            Tool: The built Python REPL tool.\n        \"\"\"\n        _globals = self.get_globals(self.global_imports)\n        python_repl = PythonREPL(_globals=_globals)\n        return cast(\n            Tool,\n            Tool(\n                name=self.name,\n                description=self.description,\n                func=python_repl.run,\n            ),\n        )\n\n    def run_model(self) -> Data:\n        tool = self.build_tool()\n        result = tool.invoke(self.input_value)\n        return Data(text=result)\n"
+                "value": "import importlib\nfrom typing import List, Union\nfrom pydantic import BaseModel, Field\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.inputs import StrInput\nfrom langflow.schema import Data\nfrom langflow.field_typing import Tool\nfrom langchain.tools import StructuredTool\nfrom langchain_experimental.utilities import PythonREPL\n\nclass PythonREPLToolComponent(LCToolComponent):\n    display_name = \"Python REPL Tool\"\n    description = \"A tool for running Python code in a REPL environment.\"\n    icon = \"python\"\n    name = \"PythonREPLTool\"\n\n    inputs = [\n        StrInput(\n            name=\"name\",\n            display_name=\"Tool Name\",\n            info=\"The name of the tool.\",\n            value=\"python_repl\",\n        ),\n        StrInput(\n            name=\"description\",\n            display_name=\"Tool Description\",\n            info=\"A description of the tool.\",\n            value=\"A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.\",\n        ),\n        StrInput(\n            name=\"global_imports\",\n            display_name=\"Global Imports\",\n            info=\"A comma-separated list of modules to import globally, e.g. 'math,numpy'.\",\n            value=\"math\",\n        ),\n        StrInput(\n            name=\"code\",\n            display_name=\"Python Code\",\n            info=\"The Python code to execute.\",\n            value=\"print('Hello, World!')\",\n        ),\n    ]\n\n    class PythonREPLSchema(BaseModel):\n        code: str = Field(..., description=\"The Python code to execute.\")\n\n    def get_globals(self, global_imports: Union[str, List[str]]) -> dict:\n        global_dict = {}\n        if isinstance(global_imports, str):\n            modules = [module.strip() for module in global_imports.split(',')]\n        elif isinstance(global_imports, list):\n            modules = global_imports\n        else:\n            raise ValueError(\"global_imports must be either a string or a list\")\n\n        for module in modules:\n            try:\n                imported_module = importlib.import_module(module)\n                global_dict[imported_module.__name__] = imported_module\n            except ImportError:\n                raise ImportError(f\"Could not import module {module}\")\n        return global_dict\n\n    def build_tool(self) -> Tool:\n        _globals = self.get_globals(self.global_imports)\n        python_repl = PythonREPL(_globals=_globals)\n\n        def run_python_code(code: str) -> str:\n            try:\n                return python_repl.run(code)\n            except Exception as e:\n                return f\"Error: {str(e)}\"\n\n        tool = StructuredTool.from_function(\n            name=self.name,\n            description=self.description,\n            func=run_python_code,\n            args_schema=self.PythonREPLSchema,\n        )\n\n        self.status = f\"Python REPL Tool created with global imports: {self.global_imports}\"\n        return tool\n\n    def run_model(self) -> List[Data]:\n        tool = self.build_tool()\n        result = tool.run(self.code)\n        return [Data(data={\"result\": result})]"
               },
               "description": {
                 "_input_type": "MessageTextInput",
                 "advanced": false,
-                "display_name": "Description",
+                "display_name": "Tool Description",
                 "dynamic": false,
-                "info": "",
+                "info": "A description of the tool.",
                 "input_types": [
                   "Message"
                 ],
@@ -1356,8 +1355,8 @@
                 "combobox": true,
                 "display_name": "Global Imports",
                 "dynamic": false,
-                "info": "A list of modules to import globally, e.g. ['math', 'numpy'].",
-                "list": true,
+                "info": "A comma-separated list of modules to import globally, e.g. 'math,numpy'.",
+                "list": false,
                 "name": "global_imports",
                 "options": [],
                 "placeholder": "",
@@ -1370,33 +1369,12 @@
                   "math"
                 ]
               },
-              "input_value": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
               "name": {
                 "_input_type": "MessageTextInput",
                 "advanced": false,
-                "display_name": "Name",
+                "display_name": "Tool Name",
                 "dynamic": false,
-                "info": "",
+                "info": "The name of the tool.",
                 "input_types": [
                   "Message"
                 ],
