@@ -126,7 +126,14 @@ export default function ChatMessage({
     }
   }, [lastMessage]);
 
-  const decodedMessage = decodeURIComponent(chatMessage ?? "");
+
+  let decodedMessage = chatMessage??"";
+  try {
+    decodedMessage = decodeURIComponent(chatMessage);
+  }
+  catch (e) {
+    console.error(e);
+  }
   const isEmpty = decodedMessage?.trim() === "";
 
   return (
