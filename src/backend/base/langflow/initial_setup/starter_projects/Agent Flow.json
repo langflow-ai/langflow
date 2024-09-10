@@ -1283,15 +1283,23 @@
             "field_order": [],
             "frozen": false,
             "lf_version": "1.0.16",
-            "output_types": [
-              "Tool"
-            ],
+            "output_types": [],
             "outputs": [
               {
                 "cache": true,
+                "display_name": "Data",
+                "method": "run_model",
+                "name": "api_run_model",
+                "selected": "Data",
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
                 "display_name": "Tool",
-                "hidden": null,
-                "method": null,
+                "method": "build_tool",
                 "name": "tool",
                 "selected": "Tool",
                 "types": [
@@ -1302,7 +1310,7 @@
             ],
             "pinned": false,
             "template": {
-              "_type": "CustomComponent",
+              "_type": "Component",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1319,73 +1327,88 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import importlib\nfrom langchain_experimental.utilities import PythonREPL\n\nfrom langflow.base.tools.base import build_status_from_tool\nfrom langflow.custom import CustomComponent\nfrom langchain_core.tools import Tool\n\n\nclass PythonREPLToolComponent(CustomComponent):\n    display_name = \"Python REPL Tool\"\n    description = \"A tool for running Python code in a REPL environment.\"\n    name = \"PythonREPLTool\"\n\n    def build_config(self):\n        return {\n            \"name\": {\"display_name\": \"Name\", \"info\": \"The name of the tool.\"},\n            \"description\": {\"display_name\": \"Description\", \"info\": \"A description of the tool.\"},\n            \"global_imports\": {\n                \"display_name\": \"Global Imports\",\n                \"info\": \"A list of modules to import globally, e.g. ['math', 'numpy'].\",\n            },\n        }\n\n    def get_globals(self, globals: list[str]) -> dict:\n        \"\"\"\n        Retrieves the global variables from the specified modules.\n\n        Args:\n            globals (list[str]): A list of module names.\n\n        Returns:\n            dict: A dictionary containing the global variables from the specified modules.\n        \"\"\"\n        global_dict = {}\n        for module in globals:\n            try:\n                imported_module = importlib.import_module(module)\n                global_dict[imported_module.__name__] = imported_module\n            except ImportError:\n                raise ImportError(f\"Could not import module {module}\")\n        return global_dict\n\n    def build(\n        self,\n        name: str = \"python_repl\",\n        description: str = \"A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.\",\n        global_imports: list[str] = [\"math\"],\n    ) -> Tool:\n        \"\"\"\n        Builds a Python REPL tool.\n\n        Args:\n            name (str, optional): The name of the tool. Defaults to \"python_repl\".\n            description (str, optional): The description of the tool. Defaults to \"A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`. \".\n            global_imports (list[str], optional): A list of global imports to be available in the Python REPL. Defaults to [\"math\"].\n\n        Returns:\n            Tool: The built Python REPL tool.\n        \"\"\"\n        _globals = self.get_globals(global_imports)\n        python_repl = PythonREPL(_globals=_globals)\n        tool = Tool(\n            name=name,\n            description=description,\n            func=python_repl.run,\n        )\n        self.status = build_status_from_tool(tool)\n        return tool\n"
+                "value": "import importlib\nfrom typing import cast\n\nfrom langchain_experimental.utilities import PythonREPL\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.io import MessageTextInput, MultiselectInput\nfrom langflow.schema.data import Data\nfrom langflow.template.field.base import Output\n\n\nclass PythonREPLToolComponent(LCToolComponent):\n    display_name = \"Python REPL Tool\"\n    description = \"A tool for running Python code in a REPL environment.\"\n    name = \"PythonREPLTool\"\n\n    inputs = [\n        MessageTextInput(name=\"input_value\", display_name=\"Input\", value=\"\"),\n        MessageTextInput(name=\"name\", display_name=\"Name\", value=\"python_repl\"),\n        MessageTextInput(\n            name=\"description\",\n            display_name=\"Description\",\n            value=\"A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.\",\n        ),\n        MultiselectInput(\n            name=\"global_imports\",\n            display_name=\"Global Imports\",\n            info=\"A list of modules to import globally, e.g. ['math', 'numpy'].\",\n            value=[\"math\"],\n            combobox=True,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"api_run_model\", display_name=\"Data\", method=\"run_model\"),\n        # Keep this for backwards compatibility\n        Output(name=\"tool\", display_name=\"Tool\", method=\"build_tool\"),\n    ]\n\n    def get_globals(self, globals: list[str]) -> dict:\n        \"\"\"\n        Retrieves the global variables from the specified modules.\n\n        Args:\n            globals (list[str]): A list of module names.\n\n        Returns:\n            dict: A dictionary containing the global variables from the specified modules.\n        \"\"\"\n        global_dict = {}\n        for module in globals:\n            try:\n                imported_module = importlib.import_module(module)\n                global_dict[imported_module.__name__] = imported_module\n            except ImportError:\n                raise ImportError(f\"Could not import module {module}\")\n        return global_dict\n\n    def build_tool(self) -> Tool:\n        \"\"\"\n        Builds a Python REPL tool.\n\n        Returns:\n            Tool: The built Python REPL tool.\n        \"\"\"\n        _globals = self.get_globals(self.global_imports)\n        python_repl = PythonREPL(_globals=_globals)\n        return cast(\n            Tool,\n            Tool(\n                name=self.name,\n                description=self.description,\n                func=python_repl.run,\n            ),\n        )\n\n    def run_model(self) -> Data:\n        tool = self.build_tool()\n        result = tool.invoke(self.input_value)\n        return Data(text=result)\n"
               },
               "description": {
+                "_input_type": "MessageTextInput",
                 "advanced": false,
                 "display_name": "Description",
                 "dynamic": false,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "A description of the tool.",
+                "info": "",
                 "input_types": [
-                  "Text"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
-                "multiline": false,
                 "name": "description",
-                "password": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": "A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`."
               },
               "global_imports": {
+                "_input_type": "MultiselectInput",
                 "advanced": false,
+                "combobox": true,
                 "display_name": "Global Imports",
                 "dynamic": false,
-                "fileTypes": [],
-                "file_path": "",
                 "info": "A list of modules to import globally, e.g. ['math', 'numpy'].",
-                "input_types": [
-                  "Text"
-                ],
                 "list": true,
-                "load_from_db": false,
-                "multiline": false,
                 "name": "global_imports",
-                "password": false,
+                "options": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": [
                   "math"
                 ]
               },
-              "name": {
+              "input_value": {
+                "_input_type": "MessageTextInput",
                 "advanced": false,
-                "display_name": "Name",
+                "display_name": "Input",
                 "dynamic": false,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "The name of the tool.",
+                "info": "",
                 "input_types": [
-                  "Text"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
-                "multiline": false,
-                "name": "name",
-                "password": false,
+                "name": "input_value",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "name": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Name",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": "python_repl"
               }
