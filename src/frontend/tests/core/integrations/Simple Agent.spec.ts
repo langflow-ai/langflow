@@ -65,6 +65,12 @@ test("Simple Agent", async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
+  await page
+    .getByTestId("textarea_str_input_value")
+    .fill(
+      "Use the Python REPL tool to create a python function that calculates 4 + 4 and stores it in a variable.",
+    );
+
   await page.getByTestId("button_run_chat output").click();
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
@@ -75,7 +81,7 @@ test("Simple Agent", async ({ page }) => {
   await page.getByText("Playground", { exact: true }).click();
 
   await page.waitForSelector(
-    "text=write short python scsript to say hello world",
+    "text=Use the Python REPL tool to create a python function that calculates 4 + 4 and stores it in a variable.",
     {
       timeout: 30000,
     },
