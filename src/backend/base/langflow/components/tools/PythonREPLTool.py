@@ -1,25 +1,42 @@
 import importlib
+from typing import cast
+
 from langchain_experimental.utilities import PythonREPL
 
-from langflow.base.tools.base import build_status_from_tool
-from langflow.custom import CustomComponent
-from langchain_core.tools import Tool
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
+from langflow.io import MessageTextInput, MultiselectInput
+from langflow.schema.data import Data
+from langflow.template.field.base import Output
 
 
-class PythonREPLToolComponent(CustomComponent):
+class PythonREPLToolComponent(LCToolComponent):
     display_name = "Python REPL Tool"
     description = "A tool for running Python code in a REPL environment."
     name = "PythonREPLTool"
 
-    def build_config(self):
-        return {
-            "name": {"display_name": "Name", "info": "The name of the tool."},
-            "description": {"display_name": "Description", "info": "A description of the tool."},
-            "global_imports": {
-                "display_name": "Global Imports",
-                "info": "A list of modules to import globally, e.g. ['math', 'numpy'].",
-            },
-        }
+    inputs = [
+        MessageTextInput(name="input_value", display_name="Input", value=""),
+        MessageTextInput(name="name", display_name="Name", value="python_repl"),
+        MessageTextInput(
+            name="description",
+            display_name="Description",
+            value="A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.",
+        ),
+        MultiselectInput(
+            name="global_imports",
+            display_name="Global Imports",
+            info="A list of modules to import globally, e.g. ['math', 'numpy'].",
+            value=["math"],
+            combobox=True,
+        ),
+    ]
+
+    outputs = [
+        Output(name="api_run_model", display_name="Data", method="run_model"),
+        # Keep this for backwards compatibility
+        Output(name="tool", display_name="Tool", method="build_tool"),
+    ]
 
     def get_globals(self, globals: list[str]) -> dict:
         """
@@ -40,29 +57,25 @@ class PythonREPLToolComponent(CustomComponent):
                 raise ImportError(f"Could not import module {module}")
         return global_dict
 
-    def build(
-        self,
-        name: str = "python_repl",
-        description: str = "A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.",
-        global_imports: list[str] = ["math"],
-    ) -> Tool:
+    def build_tool(self) -> Tool:
         """
         Builds a Python REPL tool.
-
-        Args:
-            name (str, optional): The name of the tool. Defaults to "python_repl".
-            description (str, optional): The description of the tool. Defaults to "A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`. ".
-            global_imports (list[str], optional): A list of global imports to be available in the Python REPL. Defaults to ["math"].
 
         Returns:
             Tool: The built Python REPL tool.
         """
-        _globals = self.get_globals(global_imports)
+        _globals = self.get_globals(self.global_imports)
         python_repl = PythonREPL(_globals=_globals)
-        tool = Tool(
-            name=name,
-            description=description,
-            func=python_repl.run,
+        return cast(
+            Tool,
+            Tool(
+                name=self.name,
+                description=self.description,
+                func=python_repl.run,
+            ),
         )
-        self.status = build_status_from_tool(tool)
-        return tool
+
+    def run_model(self) -> Data:
+        tool = self.build_tool()
+        result = tool.invoke(self.input_value)
+        return Data(text=result)
