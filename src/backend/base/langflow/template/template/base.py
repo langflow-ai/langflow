@@ -56,6 +56,11 @@ class Template(BaseModel):
                     _input = Input(**value)
 
                 data["fields"].append(_input)
+
+        # Necessary for components with no inputs(?)
+        if "fields" not in data:
+            data["fields"] = []
+
         return cls(**data)
 
     # For backwards compatibility
