@@ -5,14 +5,15 @@ from langflow.schema import Data
 
 
 class CustomComponent(Component):
-    display_name = "Custom Component"
+    display_name = "Google Generative AI Embeddings"
     description = "Use as a template to create your own component."
     documentation: str = "http://docs.langflow.org/components/custom"
     icon = "custom_components"
     name = "CustomComponent"
 
     inputs = [
-        MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
+        MessageTextInput(name="input_value",
+                         display_name="Input Value", value="Hello, World!"),
     ]
 
     outputs = [
