@@ -110,6 +110,7 @@ lark = "^1.2.2"
 jq = "^1.8.0"
 clickhouse-connect = {version = "0.7.19", optional = true, extras = ["clickhouse-connect"]}
 langchain-unstructured = "^0.1.2"
+pydantic-settings = "2.4.0"
 
 
 [tool.poetry.group.dev.dependencies]
