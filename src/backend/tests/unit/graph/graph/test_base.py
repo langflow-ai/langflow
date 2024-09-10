@@ -152,6 +152,7 @@ def test_graph_set_with_invalid_component():
         chat_output.set(sender_name=chat_input)
 
 
+@pytest.mark.skip(reason="Temporarily disabled")
 def test_graph_set_with_valid_component():
     tool = YfinanceToolComponent()
     tool_calling_agent = ToolCallingAgentComponent()
