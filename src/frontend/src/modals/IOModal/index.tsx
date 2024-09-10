@@ -173,7 +173,16 @@ export default function IOModal({
       .forEach((row) => {
         sessions.add(row.session_id);
       });
-    setSessions(Array.from(sessions));
+    setSessions((prev)=>{
+      if(prev.length<Array.from(sessions).length){
+        // set the new session as visible
+        setvisibleSessions((prev) => [
+          ...prev,
+          Array.from(sessions)[Array.from(sessions).length - 1],
+        ])
+      }
+      return Array.from(sessions);
+    });
   }, [messages]);
 
   const setPlaygroundScrollBehaves = useUtilityStore(
