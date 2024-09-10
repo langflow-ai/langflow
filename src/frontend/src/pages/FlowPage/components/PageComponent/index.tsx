@@ -447,7 +447,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onSelectionDragStart={onSelectionDragStart}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
-            connectionRadius={20}
+            connectionRadius={25}
             edgeTypes={{ default: DefaultEdge }}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
