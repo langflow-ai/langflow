@@ -8,6 +8,7 @@ from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 from langchain_experimental.utilities import PythonREPL
 
+
 class PythonREPLToolComponent(LCToolComponent):
     display_name = "Python REPL Tool"
     description = "A tool for running Python code in a REPL environment."
@@ -47,7 +48,7 @@ class PythonREPLToolComponent(LCToolComponent):
     def get_globals(self, global_imports: Union[str, List[str]]) -> dict:
         global_dict = {}
         if isinstance(global_imports, str):
-            modules = [module.strip() for module in global_imports.split(',')]
+            modules = [module.strip() for module in global_imports.split(",")]
         elif isinstance(global_imports, list):
             modules = global_imports
         else:
