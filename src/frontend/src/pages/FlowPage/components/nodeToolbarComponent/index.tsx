@@ -50,7 +50,6 @@ export default function NodeToolbarComponent({
   numberOfOutputHandles,
   showNode,
   name = "code",
-  setShowState,
   onCloseAdvancedModal,
   updateNode,
   isOutdated,
@@ -79,7 +78,6 @@ export default function NodeToolbarComponent({
 
   function minimize() {
     if (isMinimal) {
-      setShowState((show) => !show);
       setShowNode((data.showNode ?? true) ? false : true);
       return;
     }

@@ -2566,6 +2566,17 @@
             "outputs": [
               {
                 "cache": true,
+                "display_name": "Data",
+                "method": "run_model",
+                "name": "api_run_model",
+                "selected": "Data",
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
                 "display_name": "Tool",
                 "method": "build_tool",
                 "name": "tool",
@@ -2595,7 +2606,28 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import cast\n\nfrom langchain_community.tools.yahoo_finance_news import YahooFinanceNewsTool\n\nfrom langflow.custom import Component\nfrom langflow.field_typing import Tool\nfrom langflow.io import Output\n\n\nclass YfinanceToolComponent(Component):\n    display_name = \"Yahoo Finance News Tool\"\n    description = \"Tool for interacting with Yahoo Finance News.\"\n    name = \"YFinanceTool\"\n\n    outputs = [\n        Output(display_name=\"Tool\", name=\"tool\", method=\"build_tool\"),\n    ]\n\n    def build_tool(self) -> Tool:\n        return cast(Tool, YahooFinanceNewsTool())\n"
+                "value": "from typing import cast\n\nfrom langchain_community.tools.yahoo_finance_news import YahooFinanceNewsTool\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Data, Tool\nfrom langflow.inputs.inputs import MessageTextInput\nfrom langflow.template.field.base import Output\n\n\nclass YfinanceToolComponent(LCToolComponent):\n    display_name = \"Yahoo Finance News Tool\"\n    description = \"Tool for interacting with Yahoo Finance News.\"\n    name = \"YFinanceTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Query\",\n            info=\"Input should be a company ticker. For example, AAPL for Apple, MSFT for Microsoft.\",\n        )\n    ]\n\n    outputs = [\n        Output(name=\"api_run_model\", display_name=\"Data\", method=\"run_model\"),\n        # Keep this for backwards compatibility\n        Output(name=\"tool\", display_name=\"Tool\", method=\"build_tool\"),\n    ]\n\n    def build_tool(self) -> Tool:\n        return cast(Tool, YahooFinanceNewsTool())\n\n    def run_model(self) -> Data:\n        tool = self.build_tool()\n        return tool.run(self.input_value)\n"
+              },
+              "input_value": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Query",
+                "dynamic": false,
+                "info": "Input should be a company ticker. For example, AAPL for Apple, MSFT for Microsoft.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               }
             }
           },
