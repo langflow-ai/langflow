@@ -57,7 +57,6 @@ class TestInput:
             "multiline": False,
             "fileTypes": [],
             "file_path": "",
-            "password": False,
             "advanced": False,
             "title_case": False,
             "dynamic": False,

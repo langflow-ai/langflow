@@ -644,9 +644,7 @@ export type parsedDataType = {
 };
 
 export type SanitizedHTMLWrapperType = {
-  className: string;
   content: string;
-  onClick: () => void;
   suppressWarning?: boolean;
 };
 
