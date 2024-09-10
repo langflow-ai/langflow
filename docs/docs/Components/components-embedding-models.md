@@ -6,7 +6,7 @@ slug: /components-embedding-models
 
 # Embedding Models
 
-Embeddings models convert text into numerical vectors. These vectors can be used for various tasks such as similarity search, clustering, and classification.
+Embeddings models are used to convert text into numerical vectors. These vectors can be used for various tasks such as similarity search, clustering, and classification.
 
 ## AI/ML
 
