@@ -8,6 +8,11 @@ test("Travel Planning Agent", async ({ page }) => {
     "OPENAI_API_KEY required to run this test",
   );
 
+  test.skip(
+    !process?.env?.SERP_API_KEY,
+    "SERP_API_KEY required to run this test",
+  );
+
   if (!process.env.CI) {
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
@@ -58,7 +63,7 @@ test("Travel Planning Agent", async ({ page }) => {
 
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("yahoo finance");
+  await page.getByPlaceholder("Search").fill("serp search");
   await page.waitForTimeout(1000);
 
   await page.getByText("SearchAPI").last().click();
@@ -78,7 +83,7 @@ test("Travel Planning Agent", async ({ page }) => {
   await page.mouse.up();
 
   await page
-    .getByTestId("toolsYahoo Finance News Tool")
+    .getByTestId("toolsSerp Search API")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTitle("fit view").click();
@@ -87,10 +92,10 @@ test("Travel Planning Agent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
 
   //connection 1
-  const yahooElementOutput = await page
-    .getByTestId("handle-yfinancetool-shownode-tool-right")
+  const serpElementOutput = await page
+    .getByTestId("handle-serpapi-shownode-tool-right")
     .nth(0);
-  await yahooElementOutput.hover();
+  await serpElementOutput.hover();
   await page.mouse.down();
   const agentOne = await page
     .getByTestId("handle-toolcallingagent-shownode-tools-left")
@@ -99,7 +104,7 @@ test("Travel Planning Agent", async ({ page }) => {
   await page.mouse.up();
 
   //connection 2
-  await yahooElementOutput.hover();
+  await serpElementOutput.hover();
   await page.mouse.down();
   const agentTwo = await page
     .getByTestId("handle-toolcallingagent-shownode-tools-left")
@@ -108,7 +113,7 @@ test("Travel Planning Agent", async ({ page }) => {
   await page.mouse.up();
 
   //connection 3
-  await yahooElementOutput.hover();
+  await serpElementOutput.hover();
   await page.mouse.down();
   const agentThree = await page
     .getByTestId("handle-toolcallingagent-shownode-tools-left")
@@ -120,6 +125,11 @@ test("Travel Planning Agent", async ({ page }) => {
     .getByTestId("popover-anchor-input-api_key")
     .first()
     .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page
+    .getByTestId("popover-anchor-input-serpapi_api_key")
+    .first()
+    .fill(process.env.SERP_API_KEY ?? "");
 
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
