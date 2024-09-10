@@ -30,9 +30,7 @@ class FieldTypes(str, Enum):
     TABLE = "table"
 
 
-SerializableFieldTypes = Annotated[
-    FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)
-]
+SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
 
 
 # Base mixin for common input field attributes and methods
