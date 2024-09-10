@@ -4,6 +4,10 @@ sidebar_position: 6
 slug: /components-embedding-models
 ---
 
+# Embedding Models
+
+Embeddings models convert text into numerical vectors. These vectors can be used for various tasks such as similarity search, clustering, and classification.
+
 ## AI/ML
 
 This component generates embeddings using the [AI/ML API](https://docs.aimlapi.com/api-overview/embeddings).
