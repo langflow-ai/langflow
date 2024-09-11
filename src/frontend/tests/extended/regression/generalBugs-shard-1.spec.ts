@@ -36,7 +36,6 @@ test("should delete rows from table message", async ({ page }) => {
   }
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
-
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
   });
