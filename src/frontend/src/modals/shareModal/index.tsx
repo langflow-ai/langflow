@@ -254,8 +254,9 @@ export default function ShareModal({
 
         <BaseModal.Footer
           submit={{
-            label: `Share ${is_component ? " Component" : " Flow"}`,
+            label: `Share ${is_component ? "Component" : "Flow"}`,
             loading: loadingNames,
+            dataTestId: "share-modal-button-flow",
           }}
         >
           <>
