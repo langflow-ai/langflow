@@ -168,7 +168,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
       - name: Build and push to Github Container Registry
         uses: docker/build-push-action@v6
         with:
@@ -230,7 +230,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
         
       - name: Build and push to Github Container Registry ${{ matrix.component }}
         uses: docker/build-push-action@v6
