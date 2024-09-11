@@ -1,10 +1,11 @@
+from typing import Union, List
 from langflow.custom import Component
 from langflow.io import DataInput, MessageTextInput, DropdownInput, Output
 from langflow.schema import Data, dotdict
 
 class DataConditionalRouterComponent(Component):
     display_name = "Data Conditional Router"
-    description = "Route a Data object based on a condition applied to a specified key, including boolean validation."
+    description = "Route Data object(s) based on a condition applied to a specified key, including boolean validation."
     icon = "split"
     beta = True
     name = "DataConditionalRouter"
@@ -13,12 +14,13 @@ class DataConditionalRouterComponent(Component):
         DataInput(
             name="data_input",
             display_name="Data Input",
-            info="The Data object to process",
+            info="The Data object or list of Data objects to process",
+            is_list=True,
         ),
         MessageTextInput(
             name="key_name",
             display_name="Key Name",
-            info="The name of the key in the Data object to check",
+            info="The name of the key in the Data object(s) to check",
         ),
         DropdownInput(
             name="operator",
@@ -61,20 +63,37 @@ class DataConditionalRouterComponent(Component):
             return value.lower() in ['true', '1', 'yes', 'y', 'on']
         return bool(value)
 
-    def validate_input(self):
-        if not isinstance(self.data_input, Data):
+    def validate_input(self, data_item: Data) -> bool:
+        if not isinstance(data_item, Data):
             self.status = "Input is not a Data object"
             return False
-        if self.key_name not in self.data_input.data:
+        if self.key_name not in data_item.data:
             self.status = f"Key '{self.key_name}' not found in Data"
             return False
         return True
 
-    def process_data(self) -> Data:
-        if not self.validate_input():
-            return Data(data={"error": self.status})
+    def process_data(self) -> Union[Data, List[Data]]:
+        if isinstance(self.data_input, list):
+            true_output = []
+            false_output = []
+            for item in self.data_input:
+                if self.validate_input(item):
+                    result = self.process_single_data(item)
+                    if result:
+                        true_output.append(item)
+                    else:
+                        false_output.append(item)
+            self.stop("false_output" if true_output else "true_output")
+            return true_output if true_output else false_output
+        else:
+            if not self.validate_input(self.data_input):
+                return Data(data={"error": self.status})
+            result = self.process_single_data(self.data_input)
+            self.stop("false_output" if result else "true_output")
+            return self.data_input
 
-        item_value = self.data_input.data[self.key_name]
+    def process_single_data(self, data_item: Data) -> bool:
+        item_value = data_item.data[self.key_name]
         operator = self.operator
 
         if operator == "boolean validator":
@@ -87,12 +106,10 @@ class DataConditionalRouterComponent(Component):
 
         if condition_met:
             self.status = f"Condition met: {condition_description}"
-            self.stop("false_output")
-            return self.data_input
+            return True
         else:
             self.status = f"Condition not met: {condition_description}"
-            self.stop("true_output")
-            return self.data_input
+            return False
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "operator":
