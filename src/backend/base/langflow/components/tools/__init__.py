@@ -26,5 +26,5 @@ __all__ = [
     "SerpAPIComponent",
     "WikipediaAPIComponent",
     "WolframAlphaAPIComponent",
-    "CalculatorToolComponent"
+    "CalculatorToolComponent",
 ]

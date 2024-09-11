@@ -8,6 +8,7 @@ from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 
+
 class CalculatorToolComponent(LCToolComponent):
     display_name = "Calculator"
     description = "Perform basic arithmetic operations on a given expression."
@@ -58,11 +59,11 @@ class CalculatorToolComponent(LCToolComponent):
                     raise TypeError(node)
 
             # Parse the expression and evaluate it
-            tree = ast.parse(expression, mode='eval')
+            tree = ast.parse(expression, mode="eval")
             result = eval_expr(tree.body)
 
             # Format the result to a reasonable number of decimal places
-            formatted_result = f"{result:.6f}".rstrip('0').rstrip('.')
+            formatted_result = f"{result:.6f}".rstrip("0").rstrip(".")
 
             self.status = formatted_result
             return [Data(data={"result": formatted_result})]
