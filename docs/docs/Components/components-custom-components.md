@@ -92,7 +92,8 @@ You now have an operational custom component.
 
 ![](./238089171.png)
 
-## Adding inputs and modifying the output method
+
+## Add inputs and modify output methods
 
 This code defines a custom component that accepts 5 inputs and outputs a Message.
 
@@ -119,7 +120,7 @@ class MyCustomComponent(Component):
             display_name="Password",
             info="Enter your password."
         ),
-        MultilineInput(
+        MessageTextInput(
             name="special_message",
             display_name="special_message",
             info="Enter a special message.",
@@ -150,7 +151,7 @@ class MyCustomComponent(Component):
         """
         try:
             processed_text = f"User {self.username} (Age: {self.age}, Gender: {self.gender}) " \
-                             f"send the following special message: {self.special_message}"
+                             f"sent the following special message: {self.special_message}"
             return Message(text=processed_text)
         except AttributeError as e:
             return Message(text=f"Error processing inputs: {str(e)}")
@@ -158,9 +159,17 @@ class MyCustomComponent(Component):
 
 Since the component outputs a `Message`, you can wire it into a chat and pass messages to yourself.
 
-Your Custom Component accepts the Chat Input and passes the message `User Username (Age: 49, Gender: Male) send the following special message: Hello!` to Chat Output.
+Your Custom Component accepts the Chat Input message through `MessageTextInput`, fills in the variables with the `process_inputs` method, and finally passes the message `User Username (Age: 49, Gender: Male) sent the following special message: Hello!` to Chat Output.
 
 ![](./custom-component-chat.png)
+
+By defining inputs this way, Langflow can automatically handle the validation and display of these fields in the user interface, making it easier to create robust and user-friendly custom components.
+
+All of the types detailed above derive from a general class that can also be accessed through the generic `Input` class.
+
+:::tip
+Use `MessageInput` to get the entire Message object instead of just the text.
+:::
 
 ## Input Types {#3815589831f24ab792328ed233c8b00d}
 
@@ -285,62 +294,6 @@ Represents a file input field.
 - **Attributes:** `file_types` to specify the types of files that can be uploaded.
 - **Input Types:** `["File"]`
 
-Here is an example of how these inputs can be defined in a custom component:
-
-
-```python
-from langflow.custom import Component
-from langflow.inputs import StrInput, MultilineInput, SecretStrInput, IntInput, DropdownInput
-from langflow.template import Output, Input
-
-class MyCustomComponent(Component):
-    display_name = "My Custom Component"
-    description = "An example of a custom component with various input types."
-
-    inputs = [
-        StrInput(
-            name="username",
-            display_name="Username",
-            info="Enter your username."
-        ),
-        SecretStrInput(
-            name="password",
-            display_name="Password",
-            info="Enter your password."
-        ),
-        MultilineInput(
-            name="description",
-            display_name="Description",
-            info="Enter a detailed description.",
-        ),
-        IntInput(
-            name="age",
-            display_name="Age",
-            info="Enter your age."
-        ),
-        DropdownInput(
-            name="gender",
-            display_name="Gender",
-            options=["Male", "Female", "Other"],
-            info="Select your gender."
-        )
-    ]
-
-    outputs = [
-        Output(display_name="Result", name="result", method="process_inputs"),
-    ]
-
-    def process_inputs(self) -> str:
-    # Your processing logic here
-        return "Processed"
-```
-
-
-By defining inputs this way, Langflow can automatically handle the validation and display of these fields in the user interface, making it easier to create robust and user-friendly custom components.
-
-
-All of the types detailed above derive from a general class that can also be accessed through the generic `Input` class.
-
 
 ### Generic Input {#278e2027493e45b68746af0a5b6c06f6}
 
@@ -377,8 +330,9 @@ The `Input` class is highly customizable, allowing you to specify a wide range
 - `load_from_db`: Boolean indicating if the field should load from the database. Default is `False`.
 - `title_case`: Boolean indicating if the display name should be in title case. Default is `True`.
 
-Below is an example of how to define inputs for a component using the `Input` class:
+## Create a Custom Component with Generic Input
 
+Here is an example of how to define inputs for a component using the `Input` class:
 
 ```python
 from langflow.template import Input, Output
@@ -407,7 +361,7 @@ class ExampleComponent(Component):
             required=False,
             placeholder="Maximum length",
             info="Enter the maximum length of the text.",
-            range_spec={"min": 0, "max": 1000},
+            max_length={"min": 0, "max": 1000},
         ),
         Input(
             name="options",
@@ -429,10 +383,7 @@ class ExampleComponent(Component):
 
 # Define how to use the inputs and outputs
 component = ExampleComponent()
-
-
 ```
-
 
 In this example:
 
@@ -442,9 +393,7 @@ In this example:
 
 These attributes allow for a high degree of customization, making it easy to create input fields that suit the needs of your specific component.
 
-
-### Multiple Outputs {#6f225be8a142450aa19ee8e46a3b3c8c}
-
+## Create a Custom Component with Multiple Outputs {#6f225be8a142450aa19ee8e46a3b3c8c}
 
 ---
 
@@ -454,7 +403,7 @@ In Langflow, custom components can have multiple outputs. Each output can be ass
 1. **Definition of Outputs**: Each output is defined in the `outputs` list of the component. Each output is associated with a display name, an internal name, and a method that gets called to generate the output.
 2. **Output Methods**: The methods associated with outputs are responsible for generating the data for that particular output. These methods are called when the component is executed, and each method can independently produce its result.
 
-Below is an example of a component with two outputs:
+This example component has two outputs:
 
 - `process_data`: Processes the input text (e.g., converts it to uppercase) and returns it.
 - `get_processing_function`: Returns the `process_data` method itself to be reused in composition.
@@ -495,9 +444,7 @@ class DualOutputComponent(Component):
         return self.process_data
 ```
 
-
 This example shows how to define multiple outputs in a custom component. The first output returns the processed data, while the second output returns the processing function itself.
-
 
 The `processing_function` output can be used in scenarios where the function itself is needed for further processing or dynamic flow control. Notice how both outputs are properly annotated with their respective types, ensuring clarity and type safety.
 
