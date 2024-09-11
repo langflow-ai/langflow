@@ -112,7 +112,6 @@ test("user must see on handle click the possibility connections - LLMChain", asy
     "disclosure-utilities",
     "disclosure-prototypes",
     "disclosure-retrievers",
-    "disclosure-text splitters",
     "disclosure-tools",
   ];
 
@@ -123,7 +122,6 @@ test("user must see on handle click the possibility connections - LLMChain", asy
     "toolsSearch API",
     "prototypesSub Flow",
     "retrieversSelf Query Retriever",
-    "textsplittersCharacterTextSplitter",
   ];
 
   await Promise.all(
