@@ -1,6 +1,5 @@
 from .AIMLEmbeddings import AIMLEmbeddingsComponent
 from .AmazonBedrockEmbeddings import AmazonBedrockEmbeddingsComponent
-from .AstraVectorize import AstraVectorizeComponent
 from .AzureOpenAIEmbeddings import AzureOpenAIEmbeddingsComponent
 from .CohereEmbeddings import CohereEmbeddingsComponent
 from .HuggingFaceInferenceAPIEmbeddings import HuggingFaceInferenceAPIEmbeddingsComponent
@@ -12,7 +11,6 @@ from .GoogleGenerativeAIEmbeddings import GoogleGenerativeAIEmbeddingsComponent
 __all__ = [
     "AIMLEmbeddingsComponent",
     "AmazonBedrockEmbeddingsComponent",
-    "AstraVectorizeComponent",
     "AzureOpenAIEmbeddingsComponent",
     "CohereEmbeddingsComponent",
     "HuggingFaceInferenceAPIEmbeddingsComponent",
