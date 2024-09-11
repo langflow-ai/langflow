@@ -2,6 +2,7 @@ from typing import List
 
 from langchain_community.graph_vectorstores import CassandraGraphVectorStore
 from loguru import logger
+from uuid import UUID
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
@@ -128,8 +129,6 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             raise ImportError(
                 "Could not import cassio integration package. " "Please install it with `pip install cassio`."
             )
-
-        from uuid import UUID
 
         database_ref = self.database_ref
 
