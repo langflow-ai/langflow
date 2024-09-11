@@ -50,7 +50,7 @@ jobs:
           # Poetry will use a different cached virtual environment once the main pyproject.toml
           # project-name is updated, which does not have dependencies installed.
           # BASE_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py base)"
-          BASE_TAG="0.0.95dev9"
+          BASE_TAG="0.0.95.dev9"
           echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
           poetry run python ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
           poetry run python ./scripts/ci/update_pyproject_version.py $BASE_TAG base
@@ -59,7 +59,7 @@ jobs:
           poetry run python ./scripts/ci/update_lf_base_dependency.py $BASE_TAG
 
           # MAIN_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py main)"
-          MAIN_TAG="1.0.17dev9"
+          MAIN_TAG="1.0.17.dev9"
           echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
           poetry run python ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
           poetry run python ./scripts/ci/update_pyproject_name.py langflow-nightly main
