@@ -2,7 +2,7 @@ from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
-from langflow.inputs import DictInput, FloatInput
+from langflow.inputs import DictInput, FloatInput, MessageTextInput
 from langflow.io import (
     BoolInput,
     DataInput,
@@ -269,7 +269,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 if field in build_config:
                     del build_config[field]
 
-            provider_value = self.VECTORIZE_PROVIDERS_MAPPING[field_value][0]
             model_options = self.VECTORIZE_PROVIDERS_MAPPING[field_value][1]
 
             new_parameter_0 = DropdownInput(
