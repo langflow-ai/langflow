@@ -212,7 +212,8 @@ jobs:
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if: ${{ inputs.build_docker_main == 'true' }}
+    # if: ${{ inputs.build_docker_main == 'true' }}
+    if: always()
     # needs: [release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     strategy:
