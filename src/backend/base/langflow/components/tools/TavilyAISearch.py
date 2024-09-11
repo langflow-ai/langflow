@@ -14,7 +14,7 @@ class TavilySearchToolComponent(LCToolComponent):
 
 Note: Check 'Advanced' for all options.
 """
-    icon = "search"
+    icon = "TavilyIcon"
     name = "TavilyAISearch"
     documentation = "https://docs.tavily.com/"
 
