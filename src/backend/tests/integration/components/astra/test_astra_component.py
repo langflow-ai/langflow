@@ -147,13 +147,20 @@ def test_astra_vectorize_with_provider_api_key():
 
     store = None
     try:
-        options = {"provider": "openai", "modelName": "text-embedding-3-small", 
-                   "parameters": {}, "authentication": {"providerKey": "openai"}}
+        options = {
+            "provider": "openai",
+            "modelName": "text-embedding-3-small",
+            "parameters": {},
+            "authentication": {"providerKey": "openai"},
+        }
 
-        options_comp = {"provider": "openai", "z_01_model_name": "text-embedding-3-small",
-                        "z_04_model_parameters": {}, "z_02_authentication": {},
-                        "z_03_provider_api_key": "openai"}
-
+        options_comp = {
+            "provider": "openai",
+            "z_01_model_name": "text-embedding-3-small",
+            "z_04_model_parameters": {},
+            "z_02_authentication": {},
+            "z_03_provider_api_key": "openai",
+        }
 
         store = AstraDBVectorStore(
             collection_name=VECTORIZE_COLLECTION_OPENAI,
@@ -201,7 +208,7 @@ def test_astra_vectorize_passes_authentication():
             "provider": "openai",
             "modelName": "text-embedding-3-small",
             "parameters": {},
-            "authentication": {"providerKey": "openai"}
+            "authentication": {"providerKey": "openai"},
         }
         options_comp = {
             "provider": "openai",

@@ -320,31 +320,37 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vectorize_options(self, **kwargs):
-        for attribute in ["provider", "z_00_api_key_name", "z_01_model_name", "z_02_authentication",
-                          "z_03_provider_api_key", "z_04_model_parameters"]:
+        for attribute in [
+            "provider",
+            "z_00_api_key_name",
+            "z_01_model_name",
+            "z_02_authentication",
+            "z_03_provider_api_key",
+            "z_04_model_parameters",
+        ]:
             if not hasattr(self, attribute):
                 setattr(self, attribute, None)
-        
+
         # Fetch values from kwargs if any self.* attributes are None
-        provider_value = self.VECTORIZE_PROVIDERS_MAPPING.get(self.provider, [None])[0] or kwargs.get('provider')
-        authentication = {**(self.z_02_authentication or kwargs.get('z_02_authentication', {}))}
-        
-        api_key_name = self.z_00_api_key_name or kwargs.get('z_00_api_key_name')
-        provider_key_name = self.z_03_provider_api_key or kwargs.get('z_03_provider_api_key')
+        provider_value = self.VECTORIZE_PROVIDERS_MAPPING.get(self.provider, [None])[0] or kwargs.get("provider")
+        authentication = {**(self.z_02_authentication or kwargs.get("z_02_authentication", {}))}
+
+        api_key_name = self.z_00_api_key_name or kwargs.get("z_00_api_key_name")
+        provider_key_name = self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key")
         if provider_key_name:
             authentication["providerKey"] = provider_key_name
         if api_key_name:
             authentication["providerKey"] = api_key_name
-        
+
         return {
             # must match astrapy.info.CollectionVectorServiceOptions
             "collection_vector_service_options": {
                 "provider": provider_value,
-                "modelName": self.z_01_model_name or kwargs.get('z_01_model_name'),
+                "modelName": self.z_01_model_name or kwargs.get("z_01_model_name"),
                 "authentication": authentication,
-                "parameters": self.z_04_model_parameters or kwargs.get('z_04_model_parameters', {}),
+                "parameters": self.z_04_model_parameters or kwargs.get("z_04_model_parameters", {}),
             },
-            "collection_embedding_api_key": self.z_03_provider_api_key or kwargs.get('z_03_provider_api_key'),
+            "collection_embedding_api_key": self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key"),
         }
 
     def build_vector_store(self, vectorize_options=None):
@@ -356,7 +362,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 "Could not import langchain Astra DB integration package. "
                 "Please install it with `pip install langchain-astradb`."
             )
-        
+
         try:
             if not self.setup_mode:
                 self.setup_mode = self._inputs["setup_mode"].options[0]
@@ -377,7 +383,9 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if k and v}
 
             embedding_dict = {
-                "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(dict_options.get("collection_vector_service_options", {})),
+                "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(
+                    dict_options.get("collection_vector_service_options", {})
+                ),
             }
 
         vector_store_kwargs = {
@@ -406,7 +414,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             vector_store = AstraDBVectorStore(**vector_store_kwargs)
         except Exception as e:
             raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
-        
+
         self._add_documents_to_vector_store(vector_store)
 
         return vector_store
