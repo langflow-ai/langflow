@@ -125,15 +125,15 @@ jobs:
 
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
             echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
-            echo "ghcr_tags=ghcr.io/langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},ghcr.io/langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
+            echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},ghcr.io/langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
           else
             if [[ "${{ inputs.pre_release }}" == "true" ]]; then
               echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
-              echo "ghcr_tags=ghcr.io/langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
             else
               echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
-              echo "ghcr_tags=ghcr.io/langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
             fi
             echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
           fi
