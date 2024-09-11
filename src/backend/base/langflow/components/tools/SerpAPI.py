@@ -7,6 +7,7 @@ from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 
+
 class SerpAPIComponent(LCToolComponent):
     display_name = "Serp Search API"
     description = "Call Serp Search API with result limiting"
@@ -35,15 +36,14 @@ class SerpAPIComponent(LCToolComponent):
                 serpapi_api_key=self.serpapi_api_key,
                 params=self.search_params,
             )
-        return SerpAPIWrapper(
-            serpapi_api_key=self.serpapi_api_key
-        )
+        return SerpAPIWrapper(serpapi_api_key=self.serpapi_api_key)
 
     def build_tool(self) -> Tool:
         wrapper = self._build_wrapper()
 
-        def search_func(query: str, params: Optional[Dict[str, Any]] = None,
-                        max_results: int = 5, max_snippet_length: int = 100) -> List[Dict[str, Any]]:
+        def search_func(
+            query: str, params: Optional[Dict[str, Any]] = None, max_results: int = 5, max_snippet_length: int = 100
+        ) -> List[Dict[str, Any]]:
             params = params or {}
             full_results = wrapper.results(query, **params)
             organic_results = full_results.get("organic_results", [])[:max_results]
@@ -53,7 +53,7 @@ class SerpAPIComponent(LCToolComponent):
                 limited_result = {
                     "title": result.get("title", "")[:max_snippet_length],
                     "link": result.get("link", ""),
-                    "snippet": result.get("snippet", "")[:max_snippet_length]
+                    "snippet": result.get("snippet", "")[:max_snippet_length],
                 }
                 limited_results.append(limited_result)
 
@@ -72,12 +72,14 @@ class SerpAPIComponent(LCToolComponent):
     def run_model(self) -> List[Data]:
         tool = self.build_tool()
         try:
-            results = tool.run({
-                "query": self.input_value,
-                "params": self.search_params or {},
-                "max_results": self.max_results,
-                "max_snippet_length": self.max_snippet_length
-            })
+            results = tool.run(
+                {
+                    "query": self.input_value,
+                    "params": self.search_params or {},
+                    "max_results": self.max_results,
+                    "max_snippet_length": self.max_snippet_length,
+                }
+            )
 
             data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]
 
