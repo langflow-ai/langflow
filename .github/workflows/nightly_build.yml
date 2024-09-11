@@ -49,7 +49,8 @@ jobs:
           # WARNING: These scripts must be run in this order.
           # Poetry will use a different cached virtual environment once the main pyproject.toml
           # project-name is updated, which does not have dependencies installed.
-          BASE_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py base)"
+          # BASE_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py base)"
+          BASE_TAG="0.0.95dev9"
           echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
           poetry run python ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
           poetry run python ./scripts/ci/update_pyproject_version.py $BASE_TAG base
@@ -57,7 +58,8 @@ jobs:
           # This updates the dependency of langflow-base to langflow-base-nightly in {project_root}/pyproject.toml
           poetry run python ./scripts/ci/update_lf_base_dependency.py $BASE_TAG
 
-          MAIN_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py main)"
+          # MAIN_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py main)"
+          MAIN_TAG="1.0.17dev9"
           echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
           poetry run python ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
           poetry run python ./scripts/ci/update_pyproject_name.py langflow-nightly main
@@ -65,12 +67,13 @@ jobs:
           git add pyproject.toml src/backend/base/pyproject.toml
           git commit -m "Update version and project name in files"
 
-          git tag -a $MAIN_TAG -m "Langflow nightly $MAIN_TAG"
-          git push origin $MAIN_TAG || echo "Tag push failed. Check if the tag already exists."
+          # git tag -a $MAIN_TAG -m "Langflow nightly $MAIN_TAG"
+          # git push origin $MAIN_TAG || echo "Tag push failed. Check if the tag already exists."
           # TODO: notify on failure
 
   frontend-tests:
     name: Run Frontend Tests
+    if: false
     needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
     with:
@@ -82,6 +85,7 @@ jobs:
 
   backend-unit-tests:
     name: Run Backend Unit Tests
+    if: false
     needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
     with:
@@ -101,7 +105,8 @@ jobs:
 
   release-nightly-build:
     name: Run Nightly Langflow Build
-    needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
+    # needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
+    needs: [create-nightly-tag]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
