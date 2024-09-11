@@ -1,6 +1,378 @@
 {
-  "id": "c15755c5-264b-4ca7-bed8-9bbf605307f1",
   "data": {
+    "edges": [
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-gRakF",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "ToolCallingAgent-0QzrL",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-gRakF{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gRakFœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-ToolCallingAgent-0QzrL{œfieldNameœ:œllmœ,œidœ:œToolCallingAgent-0QzrLœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "source": "OpenAIModel-gRakF",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-gRakFœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "ToolCallingAgent-0QzrL",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œToolCallingAgent-0QzrLœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-uYdzQ",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ToolCallingAgent-0QzrL",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-uYdzQ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uYdzQœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ToolCallingAgent-0QzrL{œfieldNameœ:œinput_valueœ,œidœ:œToolCallingAgent-0QzrLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-uYdzQ",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-uYdzQœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ToolCallingAgent-0QzrL",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œToolCallingAgent-0QzrLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ToolCallingAgent",
+            "id": "ToolCallingAgent-KLe5u",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ToolCallingAgent-VYDK9",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ToolCallingAgent-KLe5u{œdataTypeœ:œToolCallingAgentœ,œidœ:œToolCallingAgent-KLe5uœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ToolCallingAgent-VYDK9{œfieldNameœ:œinput_valueœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ToolCallingAgent-KLe5u",
+        "sourceHandle": "{œdataTypeœ: œToolCallingAgentœ, œidœ: œToolCallingAgent-KLe5uœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ToolCallingAgent-VYDK9",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œToolCallingAgent-VYDK9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ToolCallingAgent",
+            "id": "ToolCallingAgent-0QzrL",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ToolCallingAgent-KLe5u",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ToolCallingAgent-0QzrL{œdataTypeœ:œToolCallingAgentœ,œidœ:œToolCallingAgent-0QzrLœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ToolCallingAgent-KLe5u{œfieldNameœ:œinput_valueœ,œidœ:œToolCallingAgent-KLe5uœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ToolCallingAgent-0QzrL",
+        "sourceHandle": "{œdataTypeœ: œToolCallingAgentœ, œidœ: œToolCallingAgent-0QzrLœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ToolCallingAgent-KLe5u",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œToolCallingAgent-KLe5uœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "SearchAPI",
+            "id": "SearchAPI-I4yU0",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "ToolCallingAgent-0QzrL",
+            "inputTypes": [
+              "Tool",
+              "BaseTool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-SearchAPI-I4yU0{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-I4yU0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-0QzrL{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-0QzrLœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
+        "source": "SearchAPI-I4yU0",
+        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-I4yU0œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "ToolCallingAgent-0QzrL",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-0QzrLœ, œinputTypesœ: [œToolœ, œBaseToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "url_content_fetcher",
+            "id": "url_content_fetcher-1FugB",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "ToolCallingAgent-0QzrL",
+            "inputTypes": [
+              "Tool",
+              "BaseTool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-url_content_fetcher-1FugB{œdataTypeœ:œurl_content_fetcherœ,œidœ:œurl_content_fetcher-1FugBœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-0QzrL{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-0QzrLœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
+        "source": "url_content_fetcher-1FugB",
+        "sourceHandle": "{œdataTypeœ: œurl_content_fetcherœ, œidœ: œurl_content_fetcher-1FugBœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "ToolCallingAgent-0QzrL",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-0QzrLœ, œinputTypesœ: [œToolœ, œBaseToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "SearchAPI",
+            "id": "SearchAPI-I4yU0",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "ToolCallingAgent-KLe5u",
+            "inputTypes": [
+              "Tool",
+              "BaseTool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-SearchAPI-I4yU0{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-I4yU0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-KLe5u{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-KLe5uœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
+        "source": "SearchAPI-I4yU0",
+        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-I4yU0œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "ToolCallingAgent-KLe5u",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-KLe5uœ, œinputTypesœ: [œToolœ, œBaseToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "url_content_fetcher",
+            "id": "url_content_fetcher-1FugB",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "ToolCallingAgent-KLe5u",
+            "inputTypes": [
+              "Tool",
+              "BaseTool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-url_content_fetcher-1FugB{œdataTypeœ:œurl_content_fetcherœ,œidœ:œurl_content_fetcher-1FugBœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-KLe5u{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-KLe5uœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
+        "source": "url_content_fetcher-1FugB",
+        "sourceHandle": "{œdataTypeœ: œurl_content_fetcherœ, œidœ: œurl_content_fetcher-1FugBœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "ToolCallingAgent-KLe5u",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-KLe5uœ, œinputTypesœ: [œToolœ, œBaseToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "url_content_fetcher",
+            "id": "url_content_fetcher-1FugB",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "ToolCallingAgent-VYDK9",
+            "inputTypes": [
+              "Tool",
+              "BaseTool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-url_content_fetcher-1FugB{œdataTypeœ:œurl_content_fetcherœ,œidœ:œurl_content_fetcher-1FugBœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-VYDK9{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
+        "source": "url_content_fetcher-1FugB",
+        "sourceHandle": "{œdataTypeœ: œurl_content_fetcherœ, œidœ: œurl_content_fetcher-1FugBœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "ToolCallingAgent-VYDK9",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-VYDK9œ, œinputTypesœ: [œToolœ, œBaseToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "SearchAPI",
+            "id": "SearchAPI-I4yU0",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "ToolCallingAgent-VYDK9",
+            "inputTypes": [
+              "Tool",
+              "BaseTool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-SearchAPI-I4yU0{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-I4yU0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-VYDK9{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
+        "source": "SearchAPI-I4yU0",
+        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-I4yU0œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "ToolCallingAgent-VYDK9",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-VYDK9œ, œinputTypesœ: [œToolœ, œBaseToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ToolCallingAgent",
+            "id": "ToolCallingAgent-VYDK9",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-O63dG",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ToolCallingAgent-VYDK9{œdataTypeœ:œToolCallingAgentœ,œidœ:œToolCallingAgent-VYDK9œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-O63dG{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-O63dGœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ToolCallingAgent-VYDK9",
+        "sourceHandle": "{œdataTypeœ: œToolCallingAgentœ, œidœ: œToolCallingAgent-VYDK9œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-O63dG",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-O63dGœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-gRakF",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "ToolCallingAgent-VYDK9",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-gRakF{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gRakFœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-ToolCallingAgent-VYDK9{œfieldNameœ:œllmœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "source": "OpenAIModel-gRakF",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-gRakFœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "ToolCallingAgent-VYDK9",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œToolCallingAgent-VYDK9œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-gRakF",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "ToolCallingAgent-KLe5u",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-gRakF{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gRakFœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-ToolCallingAgent-KLe5u{œfieldNameœ:œllmœ,œidœ:œToolCallingAgent-KLe5uœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "source": "OpenAIModel-gRakF",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-gRakFœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "ToolCallingAgent-KLe5u",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œToolCallingAgent-KLe5uœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "CalculatorTool",
+            "id": "CalculatorTool-5S6u9",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "ToolCallingAgent-VYDK9",
+            "inputTypes": [
+              "Tool",
+              "BaseTool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-CalculatorTool-5S6u9{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-5S6u9œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-VYDK9{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorTool-5S6u9",
+        "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-5S6u9œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "ToolCallingAgent-VYDK9",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-VYDK9œ, œinputTypesœ: [œToolœ, œBaseToolœ], œtypeœ: œotherœ}"
+      }
+    ],
     "nodes": [
       {
         "data": {
@@ -1071,7 +1443,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1097,7 +1469,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Dict, Any, Optional, List\nfrom pydantic import BaseModel, Field\nfrom langchain_community.utilities.searchapi import SearchApiAPIWrapper\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.inputs import SecretStrInput, MultilineInput, DictInput, MessageTextInput, IntInput\nfrom langflow.schema import Data\nfrom langflow.field_typing import Tool\nfrom langchain.tools import StructuredTool\n\nclass SearchAPIComponent(LCToolComponent):\n    display_name: str = \"Search API\"\n    description: str = \"Call the searchapi.io API with result limiting\"\n    name = \"SearchAPI\"\n    documentation: str = \"https://www.searchapi.io/docs/google\"\n\n    inputs = [\n        MessageTextInput(name=\"engine\", display_name=\"Engine\", value=\"google\"),\n        SecretStrInput(name=\"api_key\", display_name=\"SearchAPI API Key\", required=True),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n        ),\n        DictInput(name=\"search_params\", display_name=\"Search parameters\", advanced=True, is_list=True),\n        IntInput(name=\"max_results\", display_name=\"Max Results\", value=5, advanced=True),\n        IntInput(name=\"max_snippet_length\", display_name=\"Max Snippet Length\", value=100, advanced=True),\n    ]\n\n    class SearchAPISchema(BaseModel):\n        query: str = Field(..., description=\"The search query\")\n        params: Optional[Dict[str, Any]] = Field(default_factory=dict, description=\"Additional search parameters\")\n        max_results: int = Field(5, description=\"Maximum number of results to return\")\n        max_snippet_length: int = Field(100, description=\"Maximum length of each result snippet\")\n\n    def _build_wrapper(self):\n        return SearchApiAPIWrapper(engine=self.engine, searchapi_api_key=self.api_key)\n\n    def build_tool(self) -> Tool:\n        wrapper = self._build_wrapper()\n\n        def search_func(query: str, params: Optional[Dict[str, Any]] = None,\n                        max_results: int = 5, max_snippet_length: int = 100) -> List[Dict[str, Any]]:\n            params = params or {}\n            full_results = wrapper.results(query=query, **params)\n            organic_results = full_results.get(\"organic_results\", [])[:max_results]\n\n            limited_results = []\n            for result in organic_results:\n                limited_result = {\n                    \"title\": result.get(\"title\", \"\")[:max_snippet_length],\n                    \"link\": result.get(\"link\", \"\"),\n                    \"snippet\": result.get(\"snippet\", \"\")[:max_snippet_length]\n                }\n                limited_results.append(limited_result)\n\n            return limited_results\n\n        tool = StructuredTool.from_function(\n            name=\"search_api\",\n            description=\"Search for recent results using searchapi.io with result limiting\",\n            func=search_func,\n            args_schema=self.SearchAPISchema,\n        )\n\n        self.status = f\"Search API Tool created with engine: {self.engine}\"\n        return tool\n\n    def run_model(self) -> List[Data]:\n        tool = self.build_tool()\n        results = tool.run({\n            \"query\": self.input_value,\n            \"params\": self.search_params or {},\n            \"max_results\": self.max_results,\n            \"max_snippet_length\": self.max_snippet_length\n        })\n\n        data_list = [Data(data=result, text=result.get(\"snippet\", \"\")) for result in results]\n\n        self.status = data_list\n        return data_list\n"
+                "value": "from typing import Dict, Any, Optional, List\nfrom pydantic import BaseModel, Field\nfrom langchain_community.utilities.searchapi import SearchApiAPIWrapper\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.inputs import SecretStrInput, MultilineInput, DictInput, MessageTextInput, IntInput\nfrom langflow.schema import Data\nfrom langflow.field_typing import Tool\nfrom langchain.tools import StructuredTool\n\n\nclass SearchAPIComponent(LCToolComponent):\n    display_name: str = \"Search API\"\n    description: str = \"Call the searchapi.io API with result limiting\"\n    name = \"SearchAPI\"\n    documentation: str = \"https://www.searchapi.io/docs/google\"\n\n    inputs = [\n        MessageTextInput(name=\"engine\", display_name=\"Engine\", value=\"google\"),\n        SecretStrInput(name=\"api_key\", display_name=\"SearchAPI API Key\", required=True),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n        ),\n        DictInput(name=\"search_params\", display_name=\"Search parameters\", advanced=True, is_list=True),\n        IntInput(name=\"max_results\", display_name=\"Max Results\", value=5, advanced=True),\n        IntInput(name=\"max_snippet_length\", display_name=\"Max Snippet Length\", value=100, advanced=True),\n    ]\n\n    class SearchAPISchema(BaseModel):\n        query: str = Field(..., description=\"The search query\")\n        params: Optional[Dict[str, Any]] = Field(default_factory=dict, description=\"Additional search parameters\")\n        max_results: int = Field(5, description=\"Maximum number of results to return\")\n        max_snippet_length: int = Field(100, description=\"Maximum length of each result snippet\")\n\n    def _build_wrapper(self):\n        return SearchApiAPIWrapper(engine=self.engine, searchapi_api_key=self.api_key)\n\n    def build_tool(self) -> Tool:\n        wrapper = self._build_wrapper()\n\n        def search_func(\n            query: str, params: Optional[Dict[str, Any]] = None, max_results: int = 5, max_snippet_length: int = 100\n        ) -> List[Dict[str, Any]]:\n            params = params or {}\n            full_results = wrapper.results(query=query, **params)\n            organic_results = full_results.get(\"organic_results\", [])[:max_results]\n\n            limited_results = []\n            for result in organic_results:\n                limited_result = {\n                    \"title\": result.get(\"title\", \"\")[:max_snippet_length],\n                    \"link\": result.get(\"link\", \"\"),\n                    \"snippet\": result.get(\"snippet\", \"\")[:max_snippet_length],\n                }\n                limited_results.append(limited_result)\n\n            return limited_results\n\n        tool = StructuredTool.from_function(\n            name=\"search_api\",\n            description=\"Search for recent results using searchapi.io with result limiting\",\n            func=search_func,\n            args_schema=self.SearchAPISchema,\n        )\n\n        self.status = f\"Search API Tool created with engine: {self.engine}\"\n        return tool\n\n    def run_model(self) -> List[Data]:\n        tool = self.build_tool()\n        results = tool.run(\n            {\n                \"query\": self.input_value,\n                \"params\": self.search_params or {},\n                \"max_results\": self.max_results,\n                \"max_snippet_length\": self.max_snippet_length,\n            }\n        )\n\n        data_list = [Data(data=result, text=result.get(\"snippet\", \"\")) for result in results]\n\n        self.status = data_list\n        return data_list\n"
               },
               "engine": {
                 "_input_type": "MessageTextInput",
@@ -1983,379 +2355,6 @@
         "width": 384
       }
     ],
-    "edges": [
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-gRakF",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "ToolCallingAgent-0QzrL",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-gRakF{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gRakFœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-ToolCallingAgent-0QzrL{œfieldNameœ:œllmœ,œidœ:œToolCallingAgent-0QzrLœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "source": "OpenAIModel-gRakF",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gRakFœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-        "target": "ToolCallingAgent-0QzrL",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œToolCallingAgent-0QzrLœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-uYdzQ",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ToolCallingAgent-0QzrL",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-uYdzQ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uYdzQœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ToolCallingAgent-0QzrL{œfieldNameœ:œinput_valueœ,œidœ:œToolCallingAgent-0QzrLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-uYdzQ",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uYdzQœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ToolCallingAgent-0QzrL",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œToolCallingAgent-0QzrLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ToolCallingAgent",
-            "id": "ToolCallingAgent-KLe5u",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ToolCallingAgent-VYDK9",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ToolCallingAgent-KLe5u{œdataTypeœ:œToolCallingAgentœ,œidœ:œToolCallingAgent-KLe5uœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ToolCallingAgent-VYDK9{œfieldNameœ:œinput_valueœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ToolCallingAgent-KLe5u",
-        "sourceHandle": "{œdataTypeœ:œToolCallingAgentœ,œidœ:œToolCallingAgent-KLe5uœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ToolCallingAgent-VYDK9",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ToolCallingAgent",
-            "id": "ToolCallingAgent-0QzrL",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ToolCallingAgent-KLe5u",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ToolCallingAgent-0QzrL{œdataTypeœ:œToolCallingAgentœ,œidœ:œToolCallingAgent-0QzrLœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ToolCallingAgent-KLe5u{œfieldNameœ:œinput_valueœ,œidœ:œToolCallingAgent-KLe5uœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ToolCallingAgent-0QzrL",
-        "sourceHandle": "{œdataTypeœ:œToolCallingAgentœ,œidœ:œToolCallingAgent-0QzrLœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ToolCallingAgent-KLe5u",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œToolCallingAgent-KLe5uœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "SearchAPI",
-            "id": "SearchAPI-I4yU0",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "ToolCallingAgent-0QzrL",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-SearchAPI-I4yU0{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-I4yU0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-0QzrL{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-0QzrLœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
-        "source": "SearchAPI-I4yU0",
-        "sourceHandle": "{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-I4yU0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "ToolCallingAgent-0QzrL",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-0QzrLœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "url_content_fetcher",
-            "id": "url_content_fetcher-1FugB",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "ToolCallingAgent-0QzrL",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-url_content_fetcher-1FugB{œdataTypeœ:œurl_content_fetcherœ,œidœ:œurl_content_fetcher-1FugBœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-0QzrL{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-0QzrLœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
-        "source": "url_content_fetcher-1FugB",
-        "sourceHandle": "{œdataTypeœ:œurl_content_fetcherœ,œidœ:œurl_content_fetcher-1FugBœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "ToolCallingAgent-0QzrL",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-0QzrLœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "SearchAPI",
-            "id": "SearchAPI-I4yU0",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "ToolCallingAgent-KLe5u",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-SearchAPI-I4yU0{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-I4yU0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-KLe5u{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-KLe5uœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
-        "source": "SearchAPI-I4yU0",
-        "sourceHandle": "{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-I4yU0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "ToolCallingAgent-KLe5u",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-KLe5uœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "url_content_fetcher",
-            "id": "url_content_fetcher-1FugB",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "ToolCallingAgent-KLe5u",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-url_content_fetcher-1FugB{œdataTypeœ:œurl_content_fetcherœ,œidœ:œurl_content_fetcher-1FugBœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-KLe5u{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-KLe5uœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
-        "source": "url_content_fetcher-1FugB",
-        "sourceHandle": "{œdataTypeœ:œurl_content_fetcherœ,œidœ:œurl_content_fetcher-1FugBœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "ToolCallingAgent-KLe5u",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-KLe5uœ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "url_content_fetcher",
-            "id": "url_content_fetcher-1FugB",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "ToolCallingAgent-VYDK9",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-url_content_fetcher-1FugB{œdataTypeœ:œurl_content_fetcherœ,œidœ:œurl_content_fetcher-1FugBœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-VYDK9{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
-        "source": "url_content_fetcher-1FugB",
-        "sourceHandle": "{œdataTypeœ:œurl_content_fetcherœ,œidœ:œurl_content_fetcher-1FugBœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "ToolCallingAgent-VYDK9",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "SearchAPI",
-            "id": "SearchAPI-I4yU0",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "ToolCallingAgent-VYDK9",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-SearchAPI-I4yU0{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-I4yU0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-VYDK9{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
-        "source": "SearchAPI-I4yU0",
-        "sourceHandle": "{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-I4yU0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "ToolCallingAgent-VYDK9",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ToolCallingAgent",
-            "id": "ToolCallingAgent-VYDK9",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-O63dG",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ToolCallingAgent-VYDK9{œdataTypeœ:œToolCallingAgentœ,œidœ:œToolCallingAgent-VYDK9œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-O63dG{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-O63dGœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ToolCallingAgent-VYDK9",
-        "sourceHandle": "{œdataTypeœ:œToolCallingAgentœ,œidœ:œToolCallingAgent-VYDK9œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-O63dG",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-O63dGœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-gRakF",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "ToolCallingAgent-VYDK9",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-gRakF{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gRakFœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-ToolCallingAgent-VYDK9{œfieldNameœ:œllmœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "source": "OpenAIModel-gRakF",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gRakFœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-        "target": "ToolCallingAgent-VYDK9",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-gRakF",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "ToolCallingAgent-KLe5u",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-gRakF{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gRakFœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-ToolCallingAgent-KLe5u{œfieldNameœ:œllmœ,œidœ:œToolCallingAgent-KLe5uœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "source": "OpenAIModel-gRakF",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gRakFœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-        "target": "ToolCallingAgent-KLe5u",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œToolCallingAgent-KLe5uœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CalculatorTool",
-            "id": "CalculatorTool-5S6u9",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "ToolCallingAgent-VYDK9",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-CalculatorTool-5S6u9{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-5S6u9œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-ToolCallingAgent-VYDK9{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorTool-5S6u9",
-        "sourceHandle": "{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-5S6u9œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "ToolCallingAgent-VYDK9",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œToolCallingAgent-VYDK9œ,œinputTypesœ:[œToolœ,œBaseToolœ],œtypeœ:œotherœ}"
-      }
-    ],
     "viewport": {
       "x": -805.3414274486533,
       "y": 202.2051258636879,
@@ -2363,8 +2362,9 @@
     }
   },
   "description": "Multi Agent system to plan trips.",
-  "name": "Travel Planning Agents",
-  "last_tested_version": "1.0.17",
   "endpoint_name": null,
-  "is_component": false
+  "id": "c15755c5-264b-4ca7-bed8-9bbf605307f1",
+  "is_component": false,
+  "last_tested_version": "1.0.17",
+  "name": "Travel Planning Agents"
 }
