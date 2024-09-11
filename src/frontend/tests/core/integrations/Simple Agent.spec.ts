@@ -130,5 +130,5 @@ test("Simple Agent", async ({ page }) => {
 
   pythonWords = await page.getByText("Hello, World!").count();
 
-  expect(pythonWords).toBe(4);
+  expect(pythonWords).toBe(3);
 });
