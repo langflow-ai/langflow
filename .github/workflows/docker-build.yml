@@ -125,7 +125,7 @@ jobs:
 
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
             echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
-            echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},ghcr.io/langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
+            echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
           else
             if [[ "${{ inputs.pre_release }}" == "true" ]]; then
@@ -133,7 +133,7 @@ jobs:
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
             else
               echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
-              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
             fi
             echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
           fi
@@ -180,21 +180,28 @@ jobs:
           provenance: false
 
   build_components:
-    if: ${{ inputs.release_type == 'main' }}
+    # if: ${{ inputs.release_type == 'main' }}
+    if: false
     runs-on: ubuntu-latest
     permissions:
       packages: write
     needs: [build, get-version]
     strategy:
       matrix:
-        component: [backend, frontend]
+        component: [docker-backend, docker-frontend, ghcr-backend, ghcr-frontend]
         include:
-          - component: backend
+          - component: docker-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
             tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend{0}:{1}', inputs.nightly_build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-backend{0}:{1},langflowai/langflow-backend{0}:latest{1}',  inputs.nightly_build && '-nightly' || '', needs.get-version.outputs.version) }}
-          - component: frontend
+          - component: docker-frontend
             dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
             tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend{0}:{1}', inputs.nightly_build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-frontend{0}:{1},langflowai/langflow-frontend{0}:latest{1}',  inputs.nightly_build && '-nightly' || '', needs.get-version.outputs.version) }}
+          - component: ghcr-backend
+            dockerfile: ./docker/build_and_push_backend.Dockerfile
+            # tags:
+          - component: ghcr-frontend
+            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
+            # tags: 
     steps:
       - name: Check out the code at a specific ref (e.g., nightly tag)
         uses: actions/checkout@v4
