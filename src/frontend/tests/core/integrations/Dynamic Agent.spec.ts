@@ -9,8 +9,8 @@ test("Dynamic Agent", async ({ page }) => {
   );
 
   test.skip(
-    !process?.env?.BRAVE_SEARCH_API_KEY,
-    "BRAVE_SEARCH_API_KEY required to run this test",
+    !process?.env?.SEARCH_API_KEY,
+    "SEARCH_API_KEY required to run this test",
   );
 
   if (!process.env.CI) {
@@ -64,7 +64,7 @@ test("Dynamic Agent", async ({ page }) => {
   await page
     .getByTestId("popover-anchor-input-api_key")
     .last()
-    .fill(process.env.BRAVE_SEARCH_API_KEY ?? "");
+    .fill(process.env.SEARCH_API_KEY ?? "");
 
   await page.waitForTimeout(1000);
 
@@ -82,6 +82,11 @@ test("Dynamic Agent", async ({ page }) => {
     await page.waitForTimeout(1000);
   }
 
+  await page
+    .getByTestId("textarea_str_input_value")
+    .first()
+    .fill("how much is an apple stock today");
+
   await page.getByTestId("button_run_chat output").click();
   await page.waitForSelector("text=built successfully", { timeout: 60000 * 3 });
 
@@ -93,9 +98,7 @@ test("Dynamic Agent", async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
-  expect(
-    page.getByText("Could you search info about AAPL?", { exact: true }).last(),
-  ).toBeVisible();
+  expect(page.getByText("apple").last()).toBeVisible();
 
   const textContents = await page
     .getByTestId("div-chat-message")
@@ -103,6 +106,9 @@ test("Dynamic Agent", async ({ page }) => {
 
   const concatAllText = textContents.join(" ");
   expect(concatAllText.toLocaleLowerCase()).toContain("apple");
+  expect(concatAllText.toLocaleLowerCase()).not.toContain("error");
+  expect(concatAllText.toLocaleLowerCase()).not.toContain("apologize");
+  expect(concatAllText.toLocaleLowerCase()).not.toContain("unable");
   const allTextLength = concatAllText.length;
   expect(allTextLength).toBeGreaterThan(100);
 });
