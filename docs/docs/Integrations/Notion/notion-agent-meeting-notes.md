@@ -25,6 +25,8 @@ Before using this flow, ensure you have obtained the necessary API keys from Not
 
 ![Notion Meeting Agent Part 1](./notion_meeting_agent_part_1.png)
 
+[Download Flow Meeting Agent Flow](./Meeting_Notes_Agent.json)
+
 ### Meeting Transcript (Text Input)
 
 This component allows users to input the meeting transcript directly into the flow.

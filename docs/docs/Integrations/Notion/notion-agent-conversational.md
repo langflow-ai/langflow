@@ -1,7 +1,7 @@
 ---
-title: Conversational Notion Agent
+title: Notion Agent - Conversational
 sidebar_position: 2
-slug: /integrations/notion/notion-agent-meeting-notes
+slug: /integrations/notion/notion-agent-conversational
 ---
 
 The Conversational Notion Agent is an AI-powered assistant designed to interact with your Notion workspace through natural language conversations. This flow enables users to perform various Notion-related tasks, such as creating pages, searching for information, and managing content, all through a chat interface.
@@ -20,6 +20,8 @@ The Conversational Notion Agent is an AI-powered assistant designed to interact 
 ## Flow Components
 
 ---
+
+[Download Flow Conversation Agent Flow](./Conversational_Notion_Agent.json)
 
 ### Input and Output
 - **Chat Input**: Accepts user queries and commands
