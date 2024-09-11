@@ -1,11 +1,12 @@
 import httpx
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import SecretStrInput, MessageTextInput, DropdownInput, IntInput, BoolInput
 from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
+
 
 class TavilySearchToolComponent(LCToolComponent):
     display_name = "Tavily AI Search"
@@ -121,7 +122,7 @@ Note: Check 'Advanced' for all options.
 
             with httpx.Client() as client:
                 response = client.post(url, json=payload, headers=headers)
-            
+
             response.raise_for_status()
             search_results = response.json()
 
