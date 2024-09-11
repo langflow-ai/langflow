@@ -8,6 +8,11 @@ test("Travel Planning Agent", async ({ page }) => {
     "OPENAI_API_KEY required to run this test",
   );
 
+  test.skip(
+    !process?.env?.SEARCH_API_KEY,
+    "SEARCH_API_KEY required to run this test",
+  );
+
   if (!process.env.CI) {
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
@@ -56,65 +61,10 @@ test("Travel Planning Agent", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("yahoo finance");
-  await page.waitForTimeout(1000);
-
-  await page.getByText("SearchAPI").last().click();
-  await page.waitForTimeout(1000);
-  await page.keyboard.press("Backspace");
-
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
   await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-100, 100);
-    });
-
-  await page.mouse.up();
-
-  await page
-    .getByTestId("toolsYahoo Finance News Tool")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page.getByTitle("fit view").click();
-
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-
-  //connection 1
-  const yahooElementOutput = await page
-    .getByTestId("handle-yfinancetool-shownode-tool-right")
-    .nth(0);
-  await yahooElementOutput.hover();
-  await page.mouse.down();
-  const agentOne = await page
-    .getByTestId("handle-toolcallingagent-shownode-tools-left")
-    .nth(0);
-  await agentOne.hover();
-  await page.mouse.up();
-
-  //connection 2
-  await yahooElementOutput.hover();
-  await page.mouse.down();
-  const agentTwo = await page
-    .getByTestId("handle-toolcallingagent-shownode-tools-left")
-    .nth(1);
-  await agentTwo.hover();
-  await page.mouse.up();
-
-  //connection 3
-  await yahooElementOutput.hover();
-  await page.mouse.down();
-  const agentThree = await page
-    .getByTestId("handle-toolcallingagent-shownode-tools-left")
-    .nth(2);
-  await agentThree.hover();
-  await page.mouse.up();
+    .getByTestId("popover-anchor-input-api_key")
+    .last()
+    .fill(process.env.SEARCH_API_KEY ?? "");
 
   await page
     .getByTestId("popover-anchor-input-api_key")
