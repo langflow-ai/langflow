@@ -104,7 +104,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: get-version
     outputs:
-      tags: ${{ steps.set-vars.outputs.tags }}
+      docker_tags: ${{ steps.set-vars.outputs.docker_tags }}
+      ghcr_tags: ${{ steps.set-vars.outputs.ghcr_tags }}
       file: ${{ steps.set-vars.outputs.file }}
     env:
       NIGHTLY_TAG: ${{ needs.get-version.outputs.nightly-tag }}
