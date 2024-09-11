@@ -1,5 +1,4 @@
 from loguru import logger
-from copy import deepcopy
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
@@ -93,7 +92,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             display_name="Namespace",
             info="Optional namespace within Astra DB to use for the collection.",
             advanced=True,
-        ),  
+        ),
         DropdownInput(
             name="embedding_service",
             display_name="Embedding Model or Astra Vectorize",
@@ -207,12 +206,12 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         for new_field_name, new_parameter in new_parameters.items():
             # Get all the items as a list of tuples (key, value)
             items = list(build_config.items())
-            
+
             # Find the index of the key to insert after
             for i, (key, value) in enumerate(items):
                 if key == field_name:
                     break
-            
+
             items.insert(i + 1, (new_field_name, new_parameter))
 
             # Clear the original dictionary and update with the modified items
@@ -239,26 +238,37 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
                 self.insert_in_dict(build_config, "embedding_service", {"provider": new_parameter})
             else:
-                for field in ["provider", "z_00_model_name", "z_01_model_parameters", "z_02_api_key_name", 
-                              "z_03_provider_api_key", "z_04_authentication"]:
+                for field in [
+                    "provider",
+                    "z_00_model_name",
+                    "z_01_model_parameters",
+                    "z_02_api_key_name",
+                    "z_03_provider_api_key",
+                    "z_04_authentication",
+                ]:
                     if field in build_config:
                         del build_config[field]
-                
+
                 new_parameter = HandleInput(
                     name="embedding",
                     display_name="Embedding Model",
                     input_types=["Embeddings"],
                     info="Allows an embedding model configuration.",  # TODO: This should be optional, but need to refactor langchain-astradb first.
                 ).to_dict()
-                
+
                 self.insert_in_dict(build_config, "embedding_service", {"embedding": new_parameter})
-                
+
         elif field_name == "provider":
-            for field in ["z_00_model_name", "z_01_model_parameters", "z_02_api_key_name", 
-                          "z_03_provider_api_key", "z_04_authentication"]:
+            for field in [
+                "z_00_model_name",
+                "z_01_model_parameters",
+                "z_02_api_key_name",
+                "z_03_provider_api_key",
+                "z_04_authentication",
+            ]:
                 if field in build_config:
                     del build_config[field]
-                
+
             provider_value = self.VECTORIZE_PROVIDERS_MAPPING[field_value][0]
             model_options = self.VECTORIZE_PROVIDERS_MAPPING[field_value][1]
 
@@ -295,14 +305,18 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 is_list=True,
             ).to_dict()
 
-            self.insert_in_dict(build_config, "provider", {
-                "z_00_model_name": new_parameter_0,
-                "z_01_model_parameters": new_parameter_1,
-                "z_02_api_key_name": new_parameter_2,
-                "z_03_provider_api_key": new_parameter_3,
-                "z_04_authentication": new_parameter_4,
-            })
-        
+            self.insert_in_dict(
+                build_config,
+                "provider",
+                {
+                    "z_00_model_name": new_parameter_0,
+                    "z_01_model_parameters": new_parameter_1,
+                    "z_02_api_key_name": new_parameter_2,
+                    "z_03_provider_api_key": new_parameter_3,
+                    "z_04_authentication": new_parameter_4,
+                },
+            )
+
         return build_config
 
     @check_cached_vector_store
@@ -357,7 +371,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 k: v for k, v in dict_options.get("authentication", {}).items() if k and v
             }
             dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if k and v}
-            
+
             embedding_dict = {
                 "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(dict_options)
             }
