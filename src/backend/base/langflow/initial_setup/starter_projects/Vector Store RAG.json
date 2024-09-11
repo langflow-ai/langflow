@@ -6,7 +6,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-1QVCE",
+            "id": "ChatInput-DFgo2",
             "name": "message",
             "output_types": [
               "Message"
@@ -14,25 +14,25 @@
           },
           "targetHandle": {
             "fieldName": "search_input",
-            "id": "AstraVectorStoreComponent-vXWPf",
+            "id": "AstraVectorStoreComponent-XE3MH",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-1QVCE{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1QVCEœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraVectorStoreComponent-vXWPf{œfieldNameœ:œsearch_inputœ,œidœ:œAstraVectorStoreComponent-vXWPfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-1QVCE",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1QVCEœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraVectorStoreComponent-vXWPf",
-        "targetHandle": "{œfieldNameœ: œsearch_inputœ, œidœ: œAstraVectorStoreComponent-vXWPfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-DFgo2{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DFgo2œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraVectorStoreComponent-XE3MH{œfieldNameœ:œsearch_inputœ,œidœ:œAstraVectorStoreComponent-XE3MHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-DFgo2",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DFgo2œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraVectorStoreComponent-XE3MH",
+        "targetHandle": "{œfieldNameœ: œsearch_inputœ, œidœ: œAstraVectorStoreComponent-XE3MHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-QVaZr",
+            "id": "ParseData-ILuxa",
             "name": "text",
             "output_types": [
               "Message"
@@ -40,7 +40,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-eV1SH",
+            "id": "Prompt-Tfriy",
             "inputTypes": [
               "Message",
               "Text"
@@ -48,18 +48,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-QVaZr{œdataTypeœ:œParseDataœ,œidœ:œParseData-QVaZrœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-eV1SH{œfieldNameœ:œcontextœ,œidœ:œPrompt-eV1SHœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-QVaZr",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-QVaZrœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-eV1SH",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-eV1SHœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-ILuxa{œdataTypeœ:œParseDataœ,œidœ:œParseData-ILuxaœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Tfriy{œfieldNameœ:œcontextœ,œidœ:œPrompt-Tfriyœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-ILuxa",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-ILuxaœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-Tfriy",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-Tfriyœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-1QVCE",
+            "id": "ChatInput-DFgo2",
             "name": "message",
             "output_types": [
               "Message"
@@ -67,7 +67,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-eV1SH",
+            "id": "Prompt-Tfriy",
             "inputTypes": [
               "Message",
               "Text"
@@ -75,18 +75,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-1QVCE{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1QVCEœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-eV1SH{œfieldNameœ:œquestionœ,œidœ:œPrompt-eV1SHœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-1QVCE",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1QVCEœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-eV1SH",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-eV1SHœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-DFgo2{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DFgo2œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-Tfriy{œfieldNameœ:œquestionœ,œidœ:œPrompt-Tfriyœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-DFgo2",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DFgo2œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-Tfriy",
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-Tfriyœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-RKdDQ",
+            "id": "File-TBV93",
             "name": "data",
             "output_types": [
               "Data"
@@ -94,25 +94,25 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-74sLS",
+            "id": "SplitText-rAbUh",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-RKdDQ{œdataTypeœ:œFileœ,œidœ:œFile-RKdDQœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-74sLS{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-74sLSœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "File-RKdDQ",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-RKdDQœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "SplitText-74sLS",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-74sLSœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-File-TBV93{œdataTypeœ:œFileœ,œidœ:œFile-TBV93œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-rAbUh{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-rAbUhœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "File-TBV93",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-TBV93œ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "SplitText-rAbUh",
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-rAbUhœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-74sLS",
+            "id": "SplitText-rAbUh",
             "name": "chunks",
             "output_types": [
               "Data"
@@ -120,25 +120,25 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "AstraVectorStoreComponent-wvuVK",
+            "id": "AstraVectorStoreComponent-6hNSy",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-SplitText-74sLS{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-74sLSœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraVectorStoreComponent-wvuVK{œfieldNameœ:œingest_dataœ,œidœ:œAstraVectorStoreComponent-wvuVKœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "SplitText-74sLS",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-74sLSœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
-        "target": "AstraVectorStoreComponent-wvuVK",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraVectorStoreComponent-wvuVKœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-SplitText-rAbUh{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-rAbUhœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraVectorStoreComponent-6hNSy{œfieldNameœ:œingest_dataœ,œidœ:œAstraVectorStoreComponent-6hNSyœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "SplitText-rAbUh",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-rAbUhœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
+        "target": "AstraVectorStoreComponent-6hNSy",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraVectorStoreComponent-6hNSyœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-rQV2h",
+            "id": "OpenAIEmbeddings-hLfqb",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -146,7 +146,7 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "AstraVectorStoreComponent-wvuVK",
+            "id": "AstraVectorStoreComponent-6hNSy",
             "inputTypes": [
               "Embeddings",
               "dict"
@@ -154,18 +154,18 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-rQV2h{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-rQV2hœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraVectorStoreComponent-wvuVK{œfieldNameœ:œembeddingœ,œidœ:œAstraVectorStoreComponent-wvuVKœ,œinputTypesœ:[œEmbeddingsœ,œdictœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-rQV2h",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-rQV2hœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraVectorStoreComponent-wvuVK",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraVectorStoreComponent-wvuVKœ, œinputTypesœ: [œEmbeddingsœ, œdictœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-OpenAIEmbeddings-hLfqb{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-hLfqbœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraVectorStoreComponent-6hNSy{œfieldNameœ:œembeddingœ,œidœ:œAstraVectorStoreComponent-6hNSyœ,œinputTypesœ:[œEmbeddingsœ,œdictœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-hLfqb",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-hLfqbœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraVectorStoreComponent-6hNSy",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraVectorStoreComponent-6hNSyœ, œinputTypesœ: [œEmbeddingsœ, œdictœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-EJT2O",
+            "id": "OpenAIEmbeddings-OhWJM",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -173,7 +173,7 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "AstraVectorStoreComponent-vXWPf",
+            "id": "AstraVectorStoreComponent-XE3MH",
             "inputTypes": [
               "Embeddings",
               "dict"
@@ -181,18 +181,18 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-EJT2O{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-EJT2Oœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraVectorStoreComponent-vXWPf{œfieldNameœ:œembeddingœ,œidœ:œAstraVectorStoreComponent-vXWPfœ,œinputTypesœ:[œEmbeddingsœ,œdictœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-EJT2O",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-EJT2Oœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraVectorStoreComponent-vXWPf",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraVectorStoreComponent-vXWPfœ, œinputTypesœ: [œEmbeddingsœ, œdictœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-OpenAIEmbeddings-OhWJM{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-OhWJMœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraVectorStoreComponent-XE3MH{œfieldNameœ:œembeddingœ,œidœ:œAstraVectorStoreComponent-XE3MHœ,œinputTypesœ:[œEmbeddingsœ,œdictœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-OhWJM",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-OhWJMœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraVectorStoreComponent-XE3MH",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraVectorStoreComponent-XE3MHœ, œinputTypesœ: [œEmbeddingsœ, œdictœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-eV1SH",
+            "id": "Prompt-Tfriy",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -200,25 +200,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-DUuku",
+            "id": "OpenAIModel-ExXPZ",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-eV1SH{œdataTypeœ:œPromptœ,œidœ:œPrompt-eV1SHœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-DUuku{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-DUukuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-eV1SH",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-eV1SHœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-DUuku",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-DUukuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-Tfriy{œdataTypeœ:œPromptœ,œidœ:œPrompt-Tfriyœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-ExXPZ{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ExXPZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-Tfriy",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Tfriyœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-ExXPZ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-ExXPZœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-DUuku",
+            "id": "OpenAIModel-ExXPZ",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -226,25 +226,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-OrmMa",
+            "id": "ChatOutput-Mh7FA",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-DUuku{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-DUukuœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-OrmMa{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-OrmMaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-DUuku",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-DUukuœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-OrmMa",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-OrmMaœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-ExXPZ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ExXPZœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Mh7FA{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Mh7FAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-ExXPZ",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-ExXPZœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-Mh7FA",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Mh7FAœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "AstraVectorStoreComponent",
-            "id": "AstraVectorStoreComponent-vXWPf",
+            "id": "AstraVectorStoreComponent-XE3MH",
             "name": "search_results",
             "output_types": [
               "Data"
@@ -252,18 +252,18 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-QVaZr",
+            "id": "ParseData-ILuxa",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AstraVectorStoreComponent-vXWPf{œdataTypeœ:œAstraVectorStoreComponentœ,œidœ:œAstraVectorStoreComponent-vXWPfœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-QVaZr{œfieldNameœ:œdataœ,œidœ:œParseData-QVaZrœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "AstraVectorStoreComponent-vXWPf",
-        "sourceHandle": "{œdataTypeœ: œAstraVectorStoreComponentœ, œidœ: œAstraVectorStoreComponent-vXWPfœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-QVaZr",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-QVaZrœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-AstraVectorStoreComponent-XE3MH{œdataTypeœ:œAstraVectorStoreComponentœ,œidœ:œAstraVectorStoreComponent-XE3MHœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-ILuxa{œfieldNameœ:œdataœ,œidœ:œParseData-ILuxaœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "AstraVectorStoreComponent-XE3MH",
+        "sourceHandle": "{œdataTypeœ: œAstraVectorStoreComponentœ, œidœ: œAstraVectorStoreComponent-XE3MHœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-ILuxa",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-ILuxaœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -271,7 +271,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-1QVCE",
+          "id": "ChatInput-DFgo2",
           "node": {
             "base_classes": [
               "Message"
@@ -468,8 +468,8 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 308,
-        "id": "ChatInput-1QVCE",
+        "height": 302,
+        "id": "ChatInput-DFgo2",
         "position": {
           "x": 642.3545710150049,
           "y": 220.22556606238678
@@ -487,7 +487,7 @@
           "description": "Implementation of Vector Store using Astra DB with search capabilities",
           "display_name": "Astra DB",
           "edited": false,
-          "id": "AstraVectorStoreComponent-vXWPf",
+          "id": "AstraVectorStoreComponent-XE3MH",
           "node": {
             "base_classes": [
               "Data",
@@ -580,7 +580,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_API_ENDPOINT"
               },
               "batch_size": {
                 "advanced": true,
@@ -932,15 +932,15 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_APPLICATION_TOKEN"
               }
             }
           },
           "type": "AstraVectorStoreComponent"
         },
         "dragging": false,
-        "height": 753,
-        "id": "AstraVectorStoreComponent-vXWPf",
+        "height": 774,
+        "id": "AstraVectorStoreComponent-XE3MH",
         "position": {
           "x": 1246.0381406498648,
           "y": 333.25157075413966
@@ -949,7 +949,7 @@
           "x": 1246.0381406498648,
           "y": 333.25157075413966
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 384
       },
@@ -957,7 +957,7 @@
         "data": {
           "description": "Convert Data into plain text following a specified template.",
           "display_name": "Parse Data",
-          "id": "ParseData-QVaZr",
+          "id": "ParseData-ILuxa",
           "node": {
             "base_classes": [
               "Message"
@@ -1072,8 +1072,8 @@
           "type": "ParseData"
         },
         "dragging": false,
-        "height": 384,
-        "id": "ParseData-QVaZr",
+        "height": 378,
+        "id": "ParseData-ILuxa",
         "position": {
           "x": 1854.1518317915907,
           "y": 459.3386924128532
@@ -1090,7 +1090,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-eV1SH",
+          "id": "Prompt-Tfriy",
           "node": {
             "base_classes": [
               "Message"
@@ -1216,8 +1216,8 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 515,
-        "id": "Prompt-eV1SH",
+        "height": 502,
+        "id": "Prompt-Tfriy",
         "position": {
           "x": 2486.0988668404975,
           "y": 496.5120474157301
@@ -1234,7 +1234,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-OrmMa",
+          "id": "ChatOutput-Mh7FA",
           "node": {
             "base_classes": [
               "Message"
@@ -1409,8 +1409,8 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 308,
-        "id": "ChatOutput-OrmMa",
+        "height": 302,
+        "id": "ChatOutput-Mh7FA",
         "position": {
           "x": 3769.242086248817,
           "y": 585.3403837062634
@@ -1427,7 +1427,7 @@
         "data": {
           "description": "Split text into chunks based on specified criteria.",
           "display_name": "Split Text",
-          "id": "SplitText-74sLS",
+          "id": "SplitText-rAbUh",
           "node": {
             "base_classes": [
               "Data"
@@ -1555,8 +1555,8 @@
           "type": "SplitText"
         },
         "dragging": false,
-        "height": 527,
-        "id": "SplitText-74sLS",
+        "height": 550,
+        "id": "SplitText-rAbUh",
         "position": {
           "x": 2044.2799160989089,
           "y": 1185.3130355818519
@@ -1573,7 +1573,7 @@
         "data": {
           "description": "A generic file loader.",
           "display_name": "File",
-          "id": "File-RKdDQ",
+          "id": "File-TBV93",
           "node": {
             "base_classes": [
               "Data"
@@ -1682,8 +1682,8 @@
           "type": "File"
         },
         "dragging": false,
-        "height": 300,
-        "id": "File-RKdDQ",
+        "height": 302,
+        "id": "File-TBV93",
         "position": {
           "x": 1418.981990122179,
           "y": 1539.3825691184466
@@ -1701,7 +1701,7 @@
           "description": "Implementation of Vector Store using Astra DB with search capabilities",
           "display_name": "Astra DB",
           "edited": false,
-          "id": "AstraVectorStoreComponent-wvuVK",
+          "id": "AstraVectorStoreComponent-6hNSy",
           "node": {
             "base_classes": [
               "Data",
@@ -1794,7 +1794,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_API_ENDPOINT"
               },
               "batch_size": {
                 "advanced": true,
@@ -2146,15 +2146,15 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_APPLICATION_TOKEN"
               }
             }
           },
           "type": "AstraVectorStoreComponent"
         },
         "dragging": false,
-        "height": 753,
-        "id": "AstraVectorStoreComponent-wvuVK",
+        "height": 774,
+        "id": "AstraVectorStoreComponent-6hNSy",
         "position": {
           "x": 2678.506138892635,
           "y": 1267.3353646037478
@@ -2171,7 +2171,7 @@
         "data": {
           "description": "Generate embeddings using OpenAI models.",
           "display_name": "OpenAI Embeddings",
-          "id": "OpenAIEmbeddings-rQV2h",
+          "id": "OpenAIEmbeddings-hLfqb",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -2606,8 +2606,8 @@
           "type": "OpenAIEmbeddings"
         },
         "dragging": false,
-        "height": 394,
-        "id": "OpenAIEmbeddings-rQV2h",
+        "height": 388,
+        "id": "OpenAIEmbeddings-hLfqb",
         "position": {
           "x": 2044.683126356786,
           "y": 1785.2283494456522
@@ -2616,7 +2616,7 @@
           "x": 2044.683126356786,
           "y": 1785.2283494456522
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 384
       },
@@ -2624,7 +2624,7 @@
         "data": {
           "description": "Generate embeddings using OpenAI models.",
           "display_name": "OpenAI Embeddings",
-          "id": "OpenAIEmbeddings-EJT2O",
+          "id": "OpenAIEmbeddings-OhWJM",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -3059,8 +3059,8 @@
           "type": "OpenAIEmbeddings"
         },
         "dragging": false,
-        "height": 394,
-        "id": "OpenAIEmbeddings-EJT2O",
+        "height": 388,
+        "id": "OpenAIEmbeddings-OhWJM",
         "position": {
           "x": 628.9252513328779,
           "y": 648.6750537749285
@@ -3077,7 +3077,7 @@
         "data": {
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
-          "id": "OpenAIModel-DUuku",
+          "id": "OpenAIModel-ExXPZ",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -3360,8 +3360,8 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "height": 621,
-        "id": "OpenAIModel-DUuku",
+        "height": 605,
+        "id": "OpenAIModel-ExXPZ",
         "position": {
           "x": 3138.7638747868177,
           "y": 413.0859233500825
@@ -3376,14 +3376,15 @@
       }
     ],
     "viewport": {
-      "x": -113.2164904186335,
-      "y": -51.497463142696176,
-      "zoom": 0.32587982414714645
+      "x": -439.4891000981311,
+      "y": -36.825136403696206,
+      "zoom": 0.7131428627969274
     }
   },
   "description": "Visit https://docs.langflow.org/tutorials/rag-with-astradb for a detailed guide of this project.\nThis project give you both Ingestion and RAG in a single file. You'll need to visit https://astra.datastax.com/ to create an Astra DB instance, your Token and grab an API Endpoint.\nRunning this project requires you to add a file in the Files component, then define a Collection Name and click on the Play icon on the Astra DB component. \n\nAfter the ingestion ends you are ready to click on the Run button at the lower left corner and start asking questions about your data.",
-  "id": "74a6c5d0-9d9c-41c4-b6f1-92b20856d0de",
+  "endpoint_name": null,
+  "id": "11244a74-eba2-4b1f-b34a-2ce3ba421e2a",
   "is_component": false,
-  "last_tested_version": "1.0.12",
+  "last_tested_version": "1.0.17",
   "name": "Vector Store RAG"
 }
