@@ -9,6 +9,8 @@ class CurrentDateComponent(Component):
     display_name = "Current Date"
     description = "Returns the current date and time in the selected timezone."
     icon = "clock"
+    beta = True
+    name = "CurrentDate"
 
     inputs = [
         DropdownInput(

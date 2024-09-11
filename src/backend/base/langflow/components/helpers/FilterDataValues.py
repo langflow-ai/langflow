@@ -7,6 +7,8 @@ class DataFilterComponent(Component):
     display_name = "Filter Data Values"
     description = "Filter a list of data items based on a specified key, filter value, and comparison operator. Check advanced options to select match comparision."
     icon = "filter"
+    beta = True
+    name = "FilterDataValues"
 
     inputs = [
         DataInput(

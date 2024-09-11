@@ -6,6 +6,8 @@ class DataConditionalRouterComponent(Component):
     display_name = "Data Conditional Router"
     description = "Route a Data object based on a condition applied to a specified key, including boolean validation."
     icon = "split"
+    beta = True
+    name = "DataConditionalRouter"
 
     inputs = [
         DataInput(
