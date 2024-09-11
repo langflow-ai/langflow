@@ -8753,6 +8753,20 @@ data-clean = ["emoji", "ltp", "sentencepiece", "torch", "torch (<=1.13.1)"]
 langchain = ["langchain (>=0.0.321)"]
 
 [[package]]
+name = "ragstack-ai-knowledge-store"
+version = "0.2.1"
+description = "DataStax RAGStack Graph Store"
+optional = false
+python-versions = "<3.13,>=3.9"
+files = [
+    {file = "ragstack_ai_knowledge_store-0.2.1-py3-none-any.whl", hash = "sha256:2749c6ab43768e14892dbc1190f2348e9006ad5eb77188e875d704ff811ccc6b"},
+    {file = "ragstack_ai_knowledge_store-0.2.1.tar.gz", hash = "sha256:20424d42978be228feb887a71d76228638765446d1a37a1f6faef109e448fe06"},
+]
+
+[package.dependencies]
+cassio = ">=0.1.7,<0.2.0"
+
+[[package]]
 name = "rapidfuzz"
 version = "3.9.7"
 description = "rapid fuzzy string matching"
@@ -12092,4 +12106,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "66a79ae2b64b5e513327b265cf4973a066345e5bc1857339dce759ca7630c0a5"
+content-hash = "64cce31a5fc6e0dbb35aebf34f34bf437469f213f9059be6ac31f7877a02cbea"
