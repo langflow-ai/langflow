@@ -256,7 +256,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "Use the Python REPL tool to create a python function that calculates 4 + 4 and stores it in a variable. "
+                "value": "write short python scsript to say hello world"
               },
               "sender": {
                 "_input_type": "DropdownInput",
