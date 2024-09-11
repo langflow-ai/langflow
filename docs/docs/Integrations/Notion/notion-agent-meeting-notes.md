@@ -25,17 +25,17 @@ Before using this flow, ensure you have obtained the necessary API keys from Not
 
 ![Notion Meeting Agent Part 1](./notion_meeting_agent_part_1.png)
 
-### Meeting Transcript (Text Input) #[meeting-transcript]
+### Meeting Transcript (Text Input)
 
 This component allows users to input the meeting transcript directly into the flow.
 
-### List Users (Notion Component) #[list-users]
+### List Users (Notion Component)
 
 - **Purpose**: Retrieves a list of users from the Notion workspace.
 - **Input**: Notion Secret (API key)
 - **Output**: List of user data
 
-### List Databases (Notion Component) #[list-databases]
+### List Databases (Notion Component)
 
 - **Purpose**: Searches and lists all databases in the Notion workspace.
 - **Input**:
