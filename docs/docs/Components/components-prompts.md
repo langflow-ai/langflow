@@ -4,22 +4,33 @@ sidebar_position: 2
 slug: /components-prompts
 ---
 
-A prompt is the input provided to a language model, consisting of multiple components and can be parameterized using prompt templates. A prompt template offers a reproducible method for generating prompts, enabling easy customization through input variables.
+# Prompts
 
-### Prompt {#c852d1761e6c46b19ce72e5f7c70958c}
+A prompt serves as the input to a language model, comprising multiple components that can be parameterized using prompt templates.
 
-This component creates a prompt template with dynamic variables. This is useful for structuring prompts and passing dynamic data to a language model.
+Prompt templates provide a systematic approach for generating prompts, allowing for reproducible customization through defined input variables.
 
-**Parameters**
+## Prompt
 
-- **Template:** The template for the prompt. This field allows you to create other fields dynamically by using curly brackets `{}`. For example, if you have a template like `Hello {name}, how are you?`, a new field called `name` will be created. Prompt variables can be created with any name inside curly brackets, e.g. `{variable_name}`.
+This component creates a prompt template with dynamic variables. It is useful for structuring prompts and passing dynamic data to a language model.
 
-### Langchain Hub Prompt Template {#6e32412f062b42efbdf56857eafb3651}
+If you have a template like `Hello {name}, how are you?`, a new field called `name` will be created.
 
-This component fetches prompts from the Langchain Hub.
+### Parameters
 
-**Parameters**
+| Name     | Display Name | Info                                                                    |
+|----------|--------------|-------------------------------------------------------------------------|
+| Template | Template     | The template for the prompt. Creates dynamic fields using `{variable_name}` |
 
-- **langchain_api_key**: A SecretStrInput that requires the user's LangChain API key for authentication
+## Langchain Hub Prompt Template
 
-- **langchain_hub_prompt**: A StrInput that specifies the LangChain Hub prompt to use. When a prompt is loaded, the component generates input fields for custom variables. You can see how the component generates `profession` and `question` fields for the `efriis/my-first-prompt` default prompt.
+This component fetches prompts from the [Langchain Hub](https://docs.smith.langchain.com/old/category/prompt-hub).
+
+When a prompt is loaded, the component generates input fields for custom variables. For example, the default prompt "efriis/my-first-prompt" generates fields for `profession` and `question`.
+
+### Parameters
+
+| Name                  | Display Name            | Info                                                   |
+|-----------------------|-------------------------|--------------------------------------------------------|
+| langchain_api_key     | LangChain API Key       | SecretStrInput for user's LangChain API key            |
+| langchain_hub_prompt  | LangChain Hub Prompt    | StrInput specifying the LangChain Hub prompt to use    |
