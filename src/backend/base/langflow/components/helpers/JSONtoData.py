@@ -5,6 +5,7 @@ from langflow.custom import Component
 from langflow.io import MessageInput, Output
 from langflow.schema import Data
 
+
 class JSONToDataComponent(Component):
     display_name = "JSON to Data"
     description = "Convert a JSON string to a Data object or a list of Data objects"
@@ -34,6 +35,7 @@ class JSONToDataComponent(Component):
             except json.JSONDecodeError:
                 # If JSON parsing fails, try to evaluate it as a Python literal
                 import ast
+
                 parsed_data = ast.literal_eval(json_string)
 
             # Check if the parsed data is a list

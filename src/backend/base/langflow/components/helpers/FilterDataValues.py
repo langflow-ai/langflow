@@ -1,7 +1,8 @@
 from langflow.custom import Component
 from langflow.io import DataInput, MessageInput, DropdownInput, Output
 from langflow.schema import Data
-from typing import List, Dict, Any
+from typing import List, Any
+
 
 class DataFilterComponent(Component):
     display_name = "Filter Data Values"
@@ -11,23 +12,15 @@ class DataFilterComponent(Component):
     name = "FilterDataValues"
 
     inputs = [
-        DataInput(
-            name="input_data",
-            display_name="Input Data",
-            info="The list of data items to filter.",
-            is_list=True
-        ),
+        DataInput(name="input_data", display_name="Input Data", info="The list of data items to filter.", is_list=True),
         MessageInput(
-            name="filter_key",
-            display_name="Filter Key",
-            info="The key to filter on (e.g., 'route').",
-            value="route"
+            name="filter_key", display_name="Filter Key", info="The key to filter on (e.g., 'route').", value="route"
         ),
         MessageInput(
             name="filter_value",
             display_name="Filter Value",
             info="The value to filter by (e.g., 'CMIP').",
-            value="CMIP"
+            value="CMIP",
         ),
         DropdownInput(
             name="operator",
@@ -35,8 +28,8 @@ class DataFilterComponent(Component):
             options=["equals", "not equals", "contains", "starts with", "ends with"],
             info="The operator to apply for comparing the values.",
             value="equals",
-            advanced=True
-        )
+            advanced=True,
+        ),
     ]
 
     outputs = [

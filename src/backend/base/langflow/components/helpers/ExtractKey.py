@@ -3,6 +3,7 @@ from langflow.custom import Component
 from langflow.io import DataInput, StrInput, Output
 from langflow.schema import Data
 
+
 class ExtractDataKeyComponent(Component):
     display_name = "Extract Key"
     description = "Extract a specific key from a Data object or a list of Data objects and return the extracted value(s) as Data object(s)."

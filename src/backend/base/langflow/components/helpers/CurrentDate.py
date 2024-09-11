@@ -1,9 +1,9 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from typing import List
 from langflow.custom import Component
 from langflow.io import DropdownInput, Output
 from langflow.schema.message import Message
+
 
 class CurrentDateComponent(Component):
     display_name = "Current Date"
