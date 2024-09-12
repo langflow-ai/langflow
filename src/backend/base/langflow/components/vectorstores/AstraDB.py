@@ -96,15 +96,16 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         DropdownInput(
             name="embedding_service",
             display_name="Embedding Model or Astra Vectorize",
-            info="Boolean flag to determine whether to use Astra Vectorize for the collection.",
+            info="Determines whether to use Astra Vectorize for the collection.",
             options=["Embedding Model", "Astra Vectorize"],
             real_time_refresh=True,
+            value="Embedding Model",
         ),
         HandleInput(
             name="embedding",
             display_name="Embedding Model",
             input_types=["Embeddings"],
-            info="Allows an embedding model configuration.",  # TODO: This should be optional, but need to refactor langchain-astradb first.
+            info="Allows an embedding model configuration.",
         ),
         DropdownInput(
             name="metric",
@@ -253,7 +254,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                     name="embedding",
                     display_name="Embedding Model",
                     input_types=["Embeddings"],
-                    info="Allows an embedding model configuration.",  # TODO: This should be optional, but need to refactor langchain-astradb first.
+                    info="Allows an embedding model configuration.",
                 ).to_dict()
 
                 self.insert_in_dict(build_config, "embedding_service", {"embedding": new_parameter})
@@ -318,7 +319,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
         return build_config
 
-    @check_cached_vector_store
     def build_vectorize_options(self, **kwargs):
         for attribute in [
             "provider",
@@ -353,6 +353,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             "collection_embedding_api_key": self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key"),
         }
 
+    @check_cached_vector_store
     def build_vector_store(self, vectorize_options=None):
         try:
             from langchain_astradb import AstraDBVectorStore
