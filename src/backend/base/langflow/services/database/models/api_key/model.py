@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 def utc_now():
     return datetime.now(timezone.utc)
 
+
 def expire_time():
     return utc_now() + timedelta(days=API_KEY_EXPIRATION_DAYS)
 
@@ -30,10 +31,7 @@ class ApiKey(ApiKeyBase, table=True):  # type: ignore
         default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     )
     expire_at: Optional[datetime] = Field(
-        default_factory=expire_time,
-        sa_column=Column(
-          DateTime(timezone=True), 
-          nullable=False)
+        default_factory=expire_time, sa_column=Column(DateTime(timezone=True), nullable=False)
     )
     api_key: str = Field(index=True, unique=True)
     # User relationship
