@@ -29,6 +29,7 @@ import IOFieldView from "./components/IOFieldView";
 import SessionView from "./components/SessionView";
 import ChatView from "./components/chatView";
 import ShortUniqueId from "short-unique-id";
+import { someFlowTemplateFields } from "@/utils/reactflowUtils";
 
 export default function IOModal({
   children,
@@ -60,6 +61,7 @@ export default function IOModal({
     inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
 
@@ -117,7 +119,8 @@ export default function IOModal({
   const messages = useMessagesStore((state) => state.messages);
   const flowPool = useFlowStore((state) => state.flowPool);
   const uuid = new ShortUniqueId();
-  const [sessionId, setSessionId] =  useState<string|undefined>();
+  const [sessionId, setSessionId] =  useState<string>(currentFlowId);
+  const [SessionInFlow, setSessionInFlow] = useState<boolean>(false);
 
   const { refetch } = useGetMessagesQuery(
     {
@@ -126,6 +129,15 @@ export default function IOModal({
     },
     { enabled: open },
   );
+
+  useEffect(() => {
+    const hasSectionInFlow =someFlowTemplateFields({nodes:allNodes},(Field)=>Field.display_name?.toLocaleLowerCase()==="session id" && Field.value)
+    setSessionInFlow(hasSectionInFlow)
+    //if there is no session in the flow components we should not allow the user to see multiple sessions at a time
+    if(!hasSectionInFlow && visibleSessions.length>1){
+      setvisibleSessions([])
+    }
+  }, [allNodes]);
 
   async function sendMessage({
     repeat = 1,
@@ -138,12 +150,23 @@ export default function IOModal({
     setIsBuilding(true);
     setLockChat(true);
     setChatValue("");
+    const runSession = visibleSessions.length>1?undefined:sessionId;
+    // check for multiple sessions view without session id in flow
+    if(!SessionInFlow && !runSession){
+      setNoticeData({
+        title:"Multiple sessions are supported only when a session id is set inside components, otherwise only the default session will be used.",
+      })
+      if(sessions.includes(currentFlowId)){
+        setvisibleSessions([currentFlowId])
+      }
+    }
     for (let i = 0; i < repeat; i++) {
       await buildFlow({
         input_value: chatValue,
         startNodeId: chatInput?.id,
         files: files,
         silent: true,
+        session: runSession,
         setLockChat,
       }).catch((err) => {
         console.error(err);
@@ -184,6 +207,17 @@ export default function IOModal({
       return Array.from(sessions);
     });
   }, [messages]);
+
+  useEffect(() => {
+    if(visibleSessions.length===0 && sessions.length>0)
+    {
+      setSessionId(uuid.randomUUID(8))
+    }
+    else if(visibleSessions.length===1)
+    {
+      setSessionId(visibleSessions[0])
+    }
+  }, [visibleSessions]);
 
   const setPlaygroundScrollBehaves = useUtilityStore(
     (state) => state.setPlaygroundScrollBehaves,
@@ -408,7 +442,7 @@ export default function IOModal({
                                 setvisibleSessions((prev) =>
                                   prev.includes(session)
                                     ? prev.filter((item) => item !== session)
-                                    : [...prev, session],
+                                    : (SessionInFlow?[...prev, session]:[session]),
                                 );
                               }}
                             >
@@ -484,7 +518,6 @@ export default function IOModal({
                     <Button
                     onClick={(_)=>{
                       setvisibleSessions([])
-                      setSessionId(uuid.randomUUID(8))
                     }
                     }>
                       Start fresh
