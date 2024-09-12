@@ -50,7 +50,6 @@ env:
 jobs:
   release-nightly-base:
     name: Release Langflow Nightly Base
-    if: false
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -123,7 +122,6 @@ jobs:
 
   release-nightly-main:
     name: Release Langflow Nightly Main
-    if: false
     needs: [release-nightly-base]
     runs-on: ubuntu-latest
     defaults:
@@ -194,8 +192,7 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    # if: ${{ inputs.build_docker_base == 'true' }}
-    if: false
+    if: always() && ${{ inputs.build_docker_base == 'true' }}
     needs: [release-nightly-base]
     uses: ./.github/workflows/docker-build.yml
     strategy:
@@ -212,9 +209,8 @@ jobs:
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    # if: ${{ inputs.build_docker_main == 'true' }}
-    if: always()
-    # needs: [release-nightly-main]
+    if: always() && ${{ inputs.build_docker_main == 'true' }}
+    needs: [release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     strategy:
       matrix:
