@@ -1,6 +1,6 @@
 from typing import List
 
-import weaviate  # type: ignore
+import weaviate
 from langchain_community.vectorstores import Weaviate
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -19,7 +19,12 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
     inputs = [
         StrInput(name="url", display_name="Weaviate URL", value="http://localhost:8080", required=True),
         SecretStrInput(name="api_key", display_name="API Key", required=False),
-        StrInput(name="index_name", display_name="Index Name", required=True),
+        StrInput(
+            name="index_name",
+            display_name="Index Name",
+            required=True,
+            info="Please use capitalized index name. Weaviate requires the index name to be capitalized.",
+        ),
         StrInput(name="text_key", display_name="Text Key", value="text", advanced=True),
         MultilineInput(name="search_query", display_name="Search Query"),
         DataInput(
@@ -37,6 +42,13 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
         ),
         BoolInput(name="search_by_text", display_name="Search By Text", advanced=True),
     ]
+    index_name: str
+
+    def get_valid_index_name(self, client: weaviate.Client, index_name: str) -> str:
+        capitalized_name = index_name.capitalize()
+        if index_name != capitalized_name:
+            raise ValueError(f"Weaviate requires the index name to be capitalized. Use: {capitalized_name}")
+        return capitalized_name
 
     @check_cached_vector_store
     def build_vector_store(self) -> Weaviate:
@@ -45,6 +57,8 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
             client = weaviate.Client(url=self.url, auth_client_secret=auth_config)
         else:
             client = weaviate.Client(url=self.url)
+
+        self.index_name = self.get_valid_index_name(client, self.index_name)
 
         documents = []
         for _input in self.ingest_data or []:
