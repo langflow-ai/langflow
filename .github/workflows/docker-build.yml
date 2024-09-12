@@ -75,6 +75,7 @@ jobs:
             echo "nightly_tag=" >> $GITHUB_OUTPUT
             echo "nightly_build=false" >> $GITHUB_OUTPUT
           fi
+          echo "version=${{ inputs.version }}"
 
       - name: Check out the code at a specific ref (e.g., nightly tag)
         uses: actions/checkout@v4
@@ -191,24 +192,27 @@ jobs:
     needs: [build, get-version]
     strategy:
       matrix:
-        component: [docker-backend, docker-frontend, ghcr-backend, ghcr-frontend]
+        # component: [docker-backend, docker-frontend, ghcr-backend, ghcr-frontend]
+        component: [docker-backend, docker-frontend]
         include:
           - component: docker-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend{0}:{1}', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-backend{0}:{1},langflowai/langflow-backend{0}:latest',  needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
-            langflow_image: langflowai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend:{0}', needs.get-version.outputs.version) || format('langflowai/langflow-backend{0}:{1},langflowai/langflow-backend{0}:latest',  needs.get-version.outputs.nightly-build && '' || '', needs.get-version.outputs.version) }}
+            # langflow_image: langflowai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            langflow_image: langflowai/langflow:${{ needs.get-version.outputs.version }}
           - component: docker-frontend
             dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
-            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend{0}:{1}', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-frontend{0}:{1},langflowai/langflow-frontend{0}:latest',  needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
-            langflow_image: langflowai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
-          - component: ghcr-backend
-            dockerfile: ./docker/build_and_push_backend.Dockerfile
-            tags: ${{ format('ghcr.io/langflow-ai/langflow-backend{0}:{1},ghcr.io/langflow-ai/langflow-backend{0}:latest', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
-            langflow_image: ghcr.io/langflow-ai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
-          - component: ghcr-frontend
-            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
-            tags: ${{ format('ghcr.io/langflow-ai/langflow-frontend{0}:{1},ghcr.io/langflow-ai/langflow-frontend{0}:latest', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
-            langflow_image: ghcr.io/langflow-ai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend{0}:{1}', needs.get-version.outputs.nightly-build && '' || '', needs.get-version.outputs.version) || format('langflowai/langflow-frontend{0}:{1},langflowai/langflow-frontend{0}:latest',  needs.get-version.outputs.nightly-build && '' || '', needs.get-version.outputs.version) }}
+            # langflow_image: langflowai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            langflow_image: langflowai/langflow:${{ needs.get-version.outputs.version }}
+          # - component: ghcr-backend
+          #   dockerfile: ./docker/build_and_push_backend.Dockerfile
+          #   tags: ${{ format('ghcr.io/langflow-ai/langflow-backend{0}:{1},ghcr.io/langflow-ai/langflow-backend{0}:latest', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
+          #   langflow_image: ghcr.io/langflow-ai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+          # - component: ghcr-frontend
+          #   dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
+          #   tags: ${{ format('ghcr.io/langflow-ai/langflow-frontend{0}:{1},ghcr.io/langflow-ai/langflow-frontend{0}:latest', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
+          #   langflow_image: ghcr.io/langflow-ai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
     steps:
       - name: Check out the code at a specific ref (e.g., nightly tag)
         uses: actions/checkout@v4
