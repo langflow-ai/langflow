@@ -7,12 +7,12 @@ import {
   DropdownMenuTrigger,
 } from "../../../ui/dropdown-menu";
 
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useNavigate } from "react-router-dom";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import { SAVED_HOVER } from "../../../../constants/constants";
 import ExportModal from "../../../../modals/exportModal";
@@ -34,18 +34,13 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const addFlow = useAddFlow();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setLockChat = useFlowStore((state) => state.setLockChat);
-  const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
-  const revertBuiltStatusFromBuilding = useFlowStore(
-    (state) => state.revertBuiltStatusFromBuilding,
-  );
   const undo = useFlowsManagerStore((state) => state.undo);
   const redo = useFlowsManagerStore((state) => state.redo);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const [openSettings, setOpenSettings] = useState(false);
   const [openLogs, setOpenLogs] = useState(false);
   const uploadFlow = useUploadFlow();
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const getTypes = useTypesStore((state) => state.getTypes);
   const saveFlow = useSaveFlow();
@@ -55,10 +50,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const updatedAt = currentSavedFlow?.updated_at;
   const onFlowPage = useFlowStore((state) => state.onFlowPage);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+  const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const changesNotSaved =
-    customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
-    !autoSaving;
+    customStringify(currentFlow) !== customStringify(currentSavedFlow);
 
   const savedText =
     updatedAt && changesNotSaved
@@ -315,10 +310,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               disabled={!isBuilding}
               onClick={(_) => {
                 if (isBuilding) {
-                  setIsBuilding(false);
-                  revertBuiltStatusFromBuilding();
-                  setLockChat(false);
-                  window.stop();
+                  stopBuilding();
                 }
               }}
               className={

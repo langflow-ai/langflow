@@ -7,7 +7,6 @@ import {
   hasDuplicateKeys,
 } from "@/utils/reactflowUtils";
 import { cloneDeep } from "lodash";
-import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
 
@@ -27,7 +26,7 @@ export default function KeypairListComponent({
 
   const [duplicateKey, setDuplicateKey] = useState(false);
 
-  const myValue =
+  const values =
     Object.keys(value || {})?.length === 0 || !value
       ? [{ "": "" }]
       : convertObjToArray(value, "dict");
@@ -43,120 +42,100 @@ export default function KeypairListComponent({
   };
 
   const handleChangeKey = (event, idx) => {
-    const oldKey = Object.keys(myValue[idx])[0];
-    const updatedObj = { [event.target.value]: myValue[idx][oldKey] };
+    const oldKey = Object.keys(values[idx])[0];
+    const updatedObj = { [event.target.value]: values[idx][oldKey] };
 
-    const newValue = cloneDeep(myValue);
+    const newValue = cloneDeep(values);
     newValue[idx] = updatedObj;
 
     handleNewValue(newValue);
   };
 
   const handleChangeValue = (event, idx) => {
-    const key = Object.keys(myValue[idx])[0];
+    const key = Object.keys(values[idx])[0];
     const updatedObj = { [key]: event.target.value };
 
-    const newValue = cloneDeep(myValue);
+    const newValue = cloneDeep(values);
     newValue[idx] = updatedObj;
 
     handleNewValue(newValue);
   };
 
+  const addNewKeyValuePair = () => {
+    const newValues = cloneDeep(values);
+    newValues.push({ "": "" });
+    onChange(newValues);
+  };
+
+  const removeKeyValuePair = (index) => {
+    const newValues = cloneDeep(values);
+    newValues.splice(index, 1);
+    onChange(newValues);
+  };
+
+  const getInputClassName = (isEditNode, isDuplicateKey) => {
+    return `${isEditNode ? "input-edit-node" : ""} ${isDuplicateKey ? "input-invalid" : ""}`.trim();
+  };
+
+  const getTestId = (prefix, index) =>
+    `${editNode ? "editNode" : ""}${prefix}${index}`;
+
   return (
     <div
-      className={classNames(
-        myValue?.length > 1 && editNode ? "mx-2 my-1" : "",
-        "flex h-full flex-col gap-3",
-      )}
+      className={`flex h-full flex-col gap-3 ${values?.length > 1 && editNode ? "mx-2 my-1" : ""}`}
     >
-      {myValue?.map((obj, index) => {
-        return Object.keys(obj).map((key, idx) => {
-          return (
-            <div key={idx} className="flex w-full gap-2">
-              <Input
-                data-testid={
-                  editNode ? "editNodekeypair" + index : "keypair" + index
-                }
-                id={editNode ? "editNodekeypair" + index : "keypair" + index}
-                type="text"
-                value={key.trim()}
-                className={classNames(
-                  editNode ? "input-edit-node" : "",
-                  duplicateKey ? "input-invalid" : "",
-                )}
-                placeholder="Type key..."
-                onChange={(event) => handleChangeKey(event, index)}
-              />
+      {values?.map((obj, index) =>
+        Object.keys(obj).map((key, idx) => (
+          <div key={idx} className="flex w-full gap-2">
+            <Input
+              data-testid={getTestId("keypair", index)}
+              id={getTestId("keypair", index)}
+              type="text"
+              value={key.trim()}
+              className={getInputClassName(editNode, duplicateKey)}
+              placeholder="Type key..."
+              onChange={(event) => handleChangeKey(event, index)}
+            />
 
-              <Input
-                data-testid={
-                  editNode
-                    ? "editNodekeypair" + (index + 100).toString()
-                    : "keypair" + (index + 100).toString()
-                }
-                id={
-                  editNode
-                    ? "editNodekeypair" + (index + 100).toString()
-                    : "keypair" + (index + 100).toString()
-                }
-                type="text"
-                disabled={disabled}
-                value={obj[key]}
-                className={editNode ? "input-edit-node" : ""}
-                placeholder="Type a value..."
-                onChange={(event) => handleChangeValue(event, index)}
-              />
+            <Input
+              data-testid={getTestId("keypair", index + 100)}
+              id={getTestId("keypair", index + 100)}
+              type="text"
+              disabled={disabled}
+              value={obj[key]}
+              className={editNode ? "input-edit-node" : ""}
+              placeholder="Type a value..."
+              onChange={(event) => handleChangeValue(event, index)}
+            />
 
-              {isList && index === myValue.length - 1 ? (
+            {isList &&
+              (index === values.length - 1 ? (
                 <button
                   disabled={disabled}
-                  onClick={() => {
-                    let newInputList = cloneDeep(myValue);
-                    newInputList.push({ "": "" });
-                    onChange(newInputList);
-                  }}
-                  id={
-                    editNode
-                      ? "editNodeplusbtn" + index.toString()
-                      : "plusbtn" + index.toString()
-                  }
+                  onClick={addNewKeyValuePair}
+                  id={getTestId("plusbtn", index)}
                   data-testid={id}
                 >
                   <IconComponent
                     name="Plus"
-                    className={"h-4 w-4 hover:text-accent-foreground"}
+                    className="h-4 w-4 hover:text-accent-foreground"
                   />
                 </button>
-              ) : isList ? (
+              ) : (
                 <button
-                  onClick={() => {
-                    let newInputList = cloneDeep(myValue);
-                    newInputList.splice(index, 1);
-                    onChange(newInputList);
-                  }}
-                  data-testid={
-                    editNode
-                      ? "editNodeminusbtn" + index.toString()
-                      : "minusbtn" + index.toString()
-                  }
-                  id={
-                    editNode
-                      ? "editNodeminusbtn" + index.toString()
-                      : "minusbtn" + index.toString()
-                  }
+                  onClick={() => removeKeyValuePair(index)}
+                  data-testid={getTestId("minusbtn", index)}
+                  id={getTestId("minusbtn", index)}
                 >
                   <IconComponent
                     name="X"
                     className="h-4 w-4 hover:text-status-red"
                   />
                 </button>
-              ) : (
-                ""
-              )}
-            </div>
-          );
-        });
-      })}
+              ))}
+          </div>
+        )),
+      )}
     </div>
   );
 }

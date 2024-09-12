@@ -1,38 +1,59 @@
 import importlib
+from typing import List, Union
+from pydantic import BaseModel, Field
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.inputs import StrInput
+from langflow.schema import Data
+from langflow.field_typing import Tool
+from langchain.tools import StructuredTool
 from langchain_experimental.utilities import PythonREPL
 
-from langflow.base.tools.base import build_status_from_tool
-from langflow.custom import CustomComponent
-from langchain_core.tools import Tool
 
-
-class PythonREPLToolComponent(CustomComponent):
+class PythonREPLToolComponent(LCToolComponent):
     display_name = "Python REPL Tool"
     description = "A tool for running Python code in a REPL environment."
     name = "PythonREPLTool"
 
-    def build_config(self):
-        return {
-            "name": {"display_name": "Name", "info": "The name of the tool."},
-            "description": {"display_name": "Description", "info": "A description of the tool."},
-            "global_imports": {
-                "display_name": "Global Imports",
-                "info": "A list of modules to import globally, e.g. ['math', 'numpy'].",
-            },
-        }
+    inputs = [
+        StrInput(
+            name="name",
+            display_name="Tool Name",
+            info="The name of the tool.",
+            value="python_repl",
+        ),
+        StrInput(
+            name="description",
+            display_name="Tool Description",
+            info="A description of the tool.",
+            value="A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.",
+        ),
+        StrInput(
+            name="global_imports",
+            display_name="Global Imports",
+            info="A comma-separated list of modules to import globally, e.g. 'math,numpy'.",
+            value="math",
+        ),
+        StrInput(
+            name="code",
+            display_name="Python Code",
+            info="The Python code to execute.",
+            value="print('Hello, World!')",
+        ),
+    ]
 
-    def get_globals(self, globals: list[str]) -> dict:
-        """
-        Retrieves the global variables from the specified modules.
+    class PythonREPLSchema(BaseModel):
+        code: str = Field(..., description="The Python code to execute.")
 
-        Args:
-            globals (list[str]): A list of module names.
-
-        Returns:
-            dict: A dictionary containing the global variables from the specified modules.
-        """
+    def get_globals(self, global_imports: Union[str, List[str]]) -> dict:
         global_dict = {}
-        for module in globals:
+        if isinstance(global_imports, str):
+            modules = [module.strip() for module in global_imports.split(",")]
+        elif isinstance(global_imports, list):
+            modules = global_imports
+        else:
+            raise ValueError("global_imports must be either a string or a list")
+
+        for module in modules:
             try:
                 imported_module = importlib.import_module(module)
                 global_dict[imported_module.__name__] = imported_module
@@ -40,29 +61,27 @@ class PythonREPLToolComponent(CustomComponent):
                 raise ImportError(f"Could not import module {module}")
         return global_dict
 
-    def build(
-        self,
-        name: str = "python_repl",
-        description: str = "A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.",
-        global_imports: list[str] = ["math"],
-    ) -> Tool:
-        """
-        Builds a Python REPL tool.
-
-        Args:
-            name (str, optional): The name of the tool. Defaults to "python_repl".
-            description (str, optional): The description of the tool. Defaults to "A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`. ".
-            global_imports (list[str], optional): A list of global imports to be available in the Python REPL. Defaults to ["math"].
-
-        Returns:
-            Tool: The built Python REPL tool.
-        """
-        _globals = self.get_globals(global_imports)
+    def build_tool(self) -> Tool:
+        _globals = self.get_globals(self.global_imports)
         python_repl = PythonREPL(_globals=_globals)
-        tool = Tool(
-            name=name,
-            description=description,
-            func=python_repl.run,
+
+        def run_python_code(code: str) -> str:
+            try:
+                return python_repl.run(code)
+            except Exception as e:
+                return f"Error: {str(e)}"
+
+        tool = StructuredTool.from_function(
+            name=self.name,
+            description=self.description,
+            func=run_python_code,
+            args_schema=self.PythonREPLSchema,
         )
-        self.status = build_status_from_tool(tool)
+
+        self.status = f"Python REPL Tool created with global imports: {self.global_imports}"
         return tool
+
+    def run_model(self) -> List[Data]:
+        tool = self.build_tool()
+        result = tool.run(self.code)
+        return [Data(data={"result": result})]

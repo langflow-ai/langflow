@@ -1,5 +1,6 @@
 import { AIMLIcon } from "@/icons/AIML";
 import Perplexity from "@/icons/Perplexity/Perplexity";
+import { UnstructuredIcon } from "@/icons/Unstructured";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import {
@@ -26,6 +27,7 @@ import {
   ChevronRight,
   ChevronRightSquare,
   ChevronUp,
+  ChevronsDownUp,
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
@@ -86,6 +88,7 @@ import {
   Laptop2,
   Layers,
   Link,
+  Link2,
   ListFilter,
   Loader2,
   Lock,
@@ -139,6 +142,7 @@ import {
   Sparkles,
   Square,
   SquarePen,
+  StickyNote,
   Store,
   SunIcon,
   Table,
@@ -176,6 +180,7 @@ import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { CassandraIcon } from "../icons/Cassandra";
 import { ChromaIcon } from "../icons/ChromaIcon";
+import { ClickhouseIcon } from "../icons/Clickhouse";
 import { CohereIcon } from "../icons/Cohere";
 import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
@@ -195,6 +200,7 @@ import {
   GradientUngroup,
 } from "../icons/GradientSparkles";
 import { GroqIcon } from "../icons/Groq";
+import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { LangChainIcon } from "../icons/LangChain";
@@ -286,6 +292,8 @@ export const nodeColors: { [char: string]: string } = {
   textsplitters: "#B47CB5",
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
+  notion: "#000000",
+  Notion: "#000000",
   helpers: "#31A3CC",
   prototypes: "#E6277A",
   astra_assistants: "#272541",
@@ -312,6 +320,8 @@ export const nodeNames: { [char: string]: string } = {
   data: "Data",
   prompts: "Prompts",
   models: "Models",
+  notion: "Notion",
+  Notion: "Notion",
   model_specs: "Model Specs",
   chains: "Chains",
   agents: "Agents",
@@ -334,6 +344,7 @@ export const nodeNames: { [char: string]: string } = {
   langchain_utilities: "Utilities",
   output_parsers: "Output Parsers",
   custom_components: "Custom",
+  link_extractors: "Link Extractors",
   unknown: "Other",
 };
 
@@ -371,6 +382,7 @@ export const nodeIconsLucide: iconsType = {
   Cassandra: CassandraIcon,
   Chroma: ChromaIcon,
   Couchbase: CouchbaseIcon,
+  Clickhouse: ClickhouseIcon,
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
@@ -394,7 +406,9 @@ export const nodeIconsLucide: iconsType = {
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
   ArrowRight,
   Groq: GroqIcon,
+  HCD: HCDIcon,
   HNLoader: HackerNewsIcon,
+  Unstructured: UnstructuredIcon,
   Filter: Filter,
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
@@ -409,6 +423,8 @@ export const nodeIconsLucide: iconsType = {
   MongoDBAtlasVectorSearch: MongoDBIcon,
   MongoDB: MongoDBIcon,
   MongoDBChatMessageHistory: MongoDBIcon,
+  notion: NotionIcon,
+  Notion: NotionIcon,
   NotionDirectoryLoader: NotionIcon,
   NVIDIA: NvidiaIcon,
   ChatOpenAI: OpenAiIcon,
@@ -446,6 +462,7 @@ export const nodeIconsLucide: iconsType = {
   saved_components: GradientSave,
   ScrollText,
   documentloaders: Paperclip,
+  link_extractors: Link2,
   vectorstores: Layers,
   vectorsearch: TextSearch,
   toolkits: Package2,
@@ -586,6 +603,8 @@ export const nodeIconsLucide: iconsType = {
   Command,
   ArrowBigUp,
   Dot,
+  StickyNote,
+  note: StickyNote,
   RotateCcw,
   Wrench,
   FolderPlusIcon,
@@ -597,6 +616,7 @@ export const nodeIconsLucide: iconsType = {
   MistralAI: MistralIcon,
   Upstash: UpstashSvgIcon,
   PGVector: CpuIcon,
+  ChevronsDownUp,
   Confluence: ConfluenceIcon,
   FreezeAll: freezeAllIcon,
   Table: Table,

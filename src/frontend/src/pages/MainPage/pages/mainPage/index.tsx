@@ -1,8 +1,10 @@
 import FolderSidebarNav from "@/components/folderSidebarComponent";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
 import { useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import DropdownButton from "../../../../components/dropdownButtonComponent";
 import PageLayout from "../../../../components/pageLayout";
 import {
@@ -18,9 +20,9 @@ export default function HomePage(): JSX.Element {
   const pathname = location.pathname;
   const [openModal, setOpenModal] = useState(false);
   const [openDeleteFolderModal, setOpenDeleteFolderModal] = useState(false);
-  const is_component = pathname === "/components";
+  const is_component = pathname.includes("/components");
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -64,7 +66,10 @@ export default function HomePage(): JSX.Element {
           <div className="flex gap-2">
             <DropdownButton
               firstButtonName="New Project"
-              onFirstBtnClick={() => setOpenModal(true)}
+              onFirstBtnClick={() => {
+                setOpenModal(true);
+                track("New Project Button Clicked");
+              }}
               options={dropdownOptions}
               plusButton={true}
               dropdownOptions={false}

@@ -2,6 +2,7 @@ import {
   useDeleteMessages,
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useState } from "react";
 import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -114,10 +115,13 @@ export default function IOModal({
   const messages = useMessagesStore((state) => state.messages);
   const flowPool = useFlowStore((state) => state.flowPool);
 
-  const { refetch } = useGetMessagesQuery({
-    mode: "union",
-    id: currentFlowId,
-  });
+  const { refetch } = useGetMessagesQuery(
+    {
+      mode: "union",
+      id: currentFlowId,
+    },
+    { enabled: open },
+  );
 
   async function sendMessage({
     repeat = 1,
@@ -159,10 +163,6 @@ export default function IOModal({
   }, [allNodes.length]);
 
   useEffect(() => {
-    refetch();
-  }, [open]);
-
-  useEffect(() => {
     const sessions = new Set<string>();
     messages
       .filter((message) => message.flow_id === currentFlowId)
@@ -173,14 +173,24 @@ export default function IOModal({
     sessions;
   }, [messages]);
 
+  const setPlaygroundScrollBehaves = useUtilityStore(
+    (state) => state.setPlaygroundScrollBehaves,
+  );
+
+  useEffect(() => {
+    if (open) {
+      setPlaygroundScrollBehaves("instant");
+    }
+  }, [open]);
+
   return (
     <BaseModal
-      size={"md-thin"}
       open={open}
       setOpen={setOpen}
       disable={disable}
       type={isPlayground ? "modal" : undefined}
       onSubmit={() => sendMessage({ repeat: 1 })}
+      size="x-large"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}

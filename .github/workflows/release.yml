@@ -29,7 +29,11 @@ on:
         required: false
         type: boolean
         default: false
-
+      create_release:
+        description: "Whether to create a gh release"
+        required: false
+        type: boolean
+        default: true
 
 env:
   POETRY_VERSION: "1.8.2"
@@ -155,7 +159,7 @@ jobs:
           fi
       - name: Wait for PyPI Propagation
         if: needs.release-base.outputs.skipped == 'false'
-        run: sleep 300  # wait for 5 minutes to ensure PyPI propagation
+        run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
 
       - name: Build project for distribution
         run: make build main=true
@@ -188,7 +192,7 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if : inputs.build_docker_base == true
+    if: inputs.build_docker_base == true
     uses: ./.github/workflows/docker-build.yml
     strategy:
       matrix:
@@ -197,14 +201,14 @@ jobs:
     with:
       # version should be needs.release-base.outputs.version  if release_type is base
       # version should be needs.release-main.outputs.version  if release_type is main
-      version: ''
+      version: ""
       release_type: ${{ matrix.release_type }}
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if : inputs.build_docker_main == true
+    if: inputs.build_docker_main == true
     uses: ./.github/workflows/docker-build.yml
     strategy:
       matrix:
@@ -213,7 +217,7 @@ jobs:
     with:
       # version should be needs.release-base.outputs.version  if release_type is base
       # version should be needs.release-main.outputs.version  if release_type is main
-      version: ''
+      version: ""
       release_type: ${{ matrix.release_type }}
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit

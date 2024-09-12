@@ -226,4 +226,7 @@ export type FlowStoreType = {
       | undefined,
   ) => void;
   updateEdgesRunningByNodes: (ids: string[], running: boolean) => void;
+  stopBuilding: () => void;
+  buildController: AbortController;
+  setBuildController: (controller: AbortController) => void;
 };

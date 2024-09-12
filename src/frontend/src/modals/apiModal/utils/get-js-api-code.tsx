@@ -1,3 +1,5 @@
+import { GetCodeType } from "@/types/tweaks";
+
 /**
  * Function to generate JavaScript code for interfacing with an API using the LangflowClient class.
  * @param {string} flowId - The id of the flow.
@@ -6,12 +8,12 @@
  * @param {string} [endpointName] - Optional endpoint name.
  * @returns {string} - The JavaScript code as a string.
  */
-export default function getJsApiCode(
-  flowId: string,
-  isAuth: boolean,
-  tweaksBuildedObject: {},
-  endpointName?: string | null,
-): string {
+export default function getJsApiCode({
+  flowId,
+  isAuth,
+  tweaksBuildedObject,
+  endpointName,
+}: GetCodeType): string {
   let tweaksString = "{}";
   if (tweaksBuildedObject)
     tweaksString = JSON.stringify(tweaksBuildedObject, null, 2);

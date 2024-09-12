@@ -3,7 +3,7 @@ import IconComponent from "../../../../components/genericIconComponent";
 import { DisclosureComponentType } from "../../../../types/components";
 
 export default function ParentDisclosureComponent({
-  button: { title, Icon, buttons = [] },
+  button: { title, Icon, buttons = [], beta },
   children,
   defaultOpen,
   testId,
@@ -19,7 +19,7 @@ export default function ParentDisclosureComponent({
             >
               <div className="flex items-baseline gap-1 align-baseline">
                 <span className="text-sm font-medium">{title}</span>
-                {title === "Experimental" && (
+                {beta && (
                   <div className="h-fit rounded-full bg-beta-background px-2 py-1 text-xs/3 font-semibold text-beta-foreground-soft">
                     BETA
                   </div>

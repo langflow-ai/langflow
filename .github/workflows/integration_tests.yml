@@ -1,0 +1,58 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      python-versions:
+        description: "(Optional) Python versions to test"
+        required: true
+        type: string
+        default: "['3.10', '3.11', '3.12']"
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
+
+env:
+  POETRY_VERSION: "1.8.2"
+
+jobs:
+  integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1 # Currently, we can only run at a time for collection-per-db-constraints
+      matrix:
+        python-version:
+          - "3.12"
+          - "3.11"
+          - "3.10"
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ASTRA_DB_API_ENDPOINT: ${{ secrets.ASTRA_DB_API_ENDPOINT }}
+      ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install Python dependencies
+        run: |
+          poetry env use ${{ matrix.python-version }}
+          poetry install
+      - name: Run integration tests with api keys
+        timeout-minutes: 20
+        run: |
+          make integration_tests_api_keys

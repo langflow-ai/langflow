@@ -28,10 +28,9 @@ from langflow.initial_setup.setup import (
 )
 from langflow.interface.types import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
-from langflow.services.deps import get_cache_service, get_settings_service, get_telemetry_service
-from langflow.services.plugins.langfuse_plugin import LangfuseInstance
-from langflow.services.utils import initialize_services, teardown_services
 from langflow.logging.logger import configure
+from langflow.services.deps import get_cache_service, get_settings_service, get_telemetry_service
+from langflow.services.utils import initialize_services, teardown_services
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -91,7 +90,6 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
         try:
             initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
             setup_llm_caching()
-            LangfuseInstance.update()
             initialize_super_user_if_needed()
             task = asyncio.create_task(get_and_cache_all_types_dict(get_settings_service(), get_cache_service()))
             await create_or_update_starter_projects(task)
@@ -111,12 +109,9 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
 
 def create_app():
     """Create the FastAPI app and include the router."""
-    try:
-        from langflow.version import __version__  # type: ignore
-    except ImportError:
-        from importlib.metadata import version
+    from langflow.utils.version import get_version_info
 
-        __version__ = version("langflow-base")
+    __version__ = get_version_info()["version"]
 
     configure()
     lifespan = get_lifespan(version=__version__)
@@ -132,8 +127,6 @@ def create_app():
         allow_headers=["*"],
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
-    # ! Deactivating this until we find a better solution
-    # app.add_middleware(RequestCancelledMiddleware)
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):

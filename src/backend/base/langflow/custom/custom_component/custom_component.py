@@ -1,5 +1,6 @@
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 import yaml
 from cachetools import TTLCache
@@ -9,9 +10,7 @@ from pydantic import BaseModel
 from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Data
-from langflow.schema.artifact import get_artifact_type
 from langflow.schema.dotdict import dotdict
-from langflow.schema.log import LoggableType
 from langflow.schema.schema import OutputValue
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
@@ -48,42 +47,42 @@ class CustomComponent(BaseComponent):
         _tree (Optional[dict]): The code tree of the custom component.
     """
 
-    name: Optional[str] = None
+    name: str | None = None
     """The name of the component used to styles. Defaults to None."""
-    display_name: Optional[str] = None
+    display_name: str | None = None
     """The display name of the component. Defaults to None."""
-    description: Optional[str] = None
+    description: str | None = None
     """The description of the component. Defaults to None."""
-    icon: Optional[str] = None
+    icon: str | None = None
     """The icon of the component. It should be an emoji. Defaults to None."""
-    is_input: Optional[bool] = None
+    is_input: bool | None = None
     """The input state of the component. Defaults to None.
     If True, the component must have a field named 'input_value'."""
-    is_output: Optional[bool] = None
+    is_output: bool | None = None
     """The output state of the component. Defaults to None.
     If True, the component must have a field named 'input_value'."""
     field_config: dict = {}
     """The field configuration of the component. Defaults to an empty dictionary."""
-    field_order: Optional[List[str]] = None
+    field_order: list[str] | None = None
     """The field order of the component. Defaults to an empty list."""
-    frozen: Optional[bool] = False
+    frozen: bool | None = False
     """The default frozen state of the component. Defaults to False."""
-    build_parameters: Optional[dict] = None
+    build_parameters: dict | None = None
     """The build parameters of the component. Defaults to None."""
     _vertex: Optional["Vertex"] = None
     """The edge target parameter of the component. Defaults to None."""
     _code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
-    function: Optional[Callable] = None
-    repr_value: Optional[Any] = ""
-    status: Optional[Any] = None
+    function: Callable | None = None
+    repr_value: Any | None = ""
+    status: Any | None = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
-    _flows_data: Optional[List[Data]] = None
-    _outputs: List[OutputValue] = []
-    _logs: List[Log] = []
+    _flows_data: list[Data] | None = None
+    _outputs: list[OutputValue] = []
+    _logs: list[Log] = []
     _output_logs: dict[str, Log] = {}
     _tracing_service: Optional["TracingService"] = None
-    _tree: Optional[dict] = None
+    _tree: dict | None = None
 
     def __init__(self, **data):
         """
@@ -215,7 +214,7 @@ class CustomComponent(BaseComponent):
         self,
         build_config: dotdict,
         field_value: Any,
-        field_name: Optional[str] = None,
+        field_name: str | None = None,
     ):
         build_config[field_name] = field_value
         return build_config
@@ -230,7 +229,7 @@ class CustomComponent(BaseComponent):
         """
         return self.get_code_tree(self._code or "")
 
-    def to_data(self, data: Any, keys: Optional[List[str]] = None, silent_errors: bool = False) -> List[Data]:
+    def to_data(self, data: Any, keys: list[str] | None = None, silent_errors: bool = False) -> list[Data]:
         """
         Converts input data into a list of Data objects.
 
@@ -289,7 +288,7 @@ class CustomComponent(BaseComponent):
 
         return self._extract_return_type(return_type)
 
-    def create_references_from_data(self, data: List[Data], include_data: bool = False) -> str:
+    def create_references_from_data(self, data: list[Data], include_data: bool = False) -> str:
         """
         Create references from a list of data.
 
@@ -352,7 +351,7 @@ class CustomComponent(BaseComponent):
         return build_methods[0] if build_methods else {}
 
     @property
-    def get_function_entrypoint_return_type(self) -> List[Any]:
+    def get_function_entrypoint_return_type(self) -> list[Any]:
         """
         Gets the return type of the function entrypoint for the custom component.
 
@@ -361,7 +360,7 @@ class CustomComponent(BaseComponent):
         """
         return self.get_method_return_type(self._function_entrypoint_name)
 
-    def _extract_return_type(self, return_type: Any) -> List[Any]:
+    def _extract_return_type(self, return_type: Any) -> list[Any]:
         return post_process_type(return_type)
 
     @property
@@ -451,7 +450,7 @@ class CustomComponent(BaseComponent):
             Callable: A function that returns the value at the given index.
         """
 
-        def get_index(iterable: List[Any]):
+        def get_index(iterable: list[Any]):
             return iterable[value] if iterable else iterable
 
         return get_index
@@ -465,18 +464,18 @@ class CustomComponent(BaseComponent):
         """
         return validate.create_function(self._code, self._function_entrypoint_name)
 
-    async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
+    async def load_flow(self, flow_id: str, tweaks: dict | None = None) -> "Graph":
         if not self.user_id:
             raise ValueError("Session is invalid")
         return await load_flow(user_id=str(self._user_id), flow_id=flow_id, tweaks=tweaks)
 
     async def run_flow(
         self,
-        inputs: Optional[Union[dict, List[dict]]] = None,
-        flow_id: Optional[str] = None,
-        flow_name: Optional[str] = None,
-        output_type: Optional[str] = "chat",
-        tweaks: Optional[dict] = None,
+        inputs: dict | list[dict] | None = None,
+        flow_id: str | None = None,
+        flow_name: str | None = None,
+        output_type: str | None = "chat",
+        tweaks: dict | None = None,
     ) -> Any:
         return await run_flow(
             inputs=inputs,
@@ -487,7 +486,7 @@ class CustomComponent(BaseComponent):
             user_id=str(self._user_id),
         )
 
-    def list_flows(self) -> List[Data]:
+    def list_flows(self) -> list[Data]:
         if not self.user_id:
             raise ValueError("Session is invalid")
         try:
@@ -508,20 +507,6 @@ class CustomComponent(BaseComponent):
         """
         raise NotImplementedError
 
-    def log(self, message: LoggableType | list[LoggableType], name: Optional[str] = None):
-        """
-        Logs a message.
-
-        Args:
-            message (LoggableType | list[LoggableType]): The message to log.
-        """
-        if name is None:
-            name = f"Log {len(self._logs) + 1}"
-        log = Log(message=message, type=get_artifact_type(message), name=name)
-        self._logs.append(log)
-        if self._tracing_service and self._vertex:
-            self._tracing_service.add_log(trace_name=self.trace_name, log=log)
-
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """
         This function is called after the code validation is done.
@@ -531,7 +516,7 @@ class CustomComponent(BaseComponent):
         )
         return frontend_node
 
-    def get_langchain_callbacks(self) -> List["BaseCallbackHandler"]:
+    def get_langchain_callbacks(self) -> list["BaseCallbackHandler"]:
         if self._tracing_service:
             return self._tracing_service.get_langchain_callbacks()
         return []

@@ -12,7 +12,7 @@ on:
         description: "Frontend Tests Folder"
         required: false
         type: string
-        default: "tests/end-to-end"
+        default: "tests/core"
   workflow_dispatch:
     inputs:
       branch:
@@ -27,6 +27,11 @@ on:
         description: "Store API Key"
         required: false
         type: string
+      python-versions:
+        description: "Python Versions"
+        required: false
+        type: string
+        default: "['3.10']"
   pull_request:
     types: [synchronize, labeled]
 
@@ -74,7 +79,7 @@ jobs:
     if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.tests == 'true' }}
     uses: ./.github/workflows/python_test.yml
     with:
-      python-versions: ${{ inputs.python-versions }}
+      python-versions: ${{ inputs.python-versions || '["3.10"]' }}
 
   test-frontend:
     needs: path-filter
@@ -111,6 +116,7 @@ jobs:
         test-docs-build,
         set-ci-condition,
       ]
+
     if: always()
     runs-on: ubuntu-latest
     env:

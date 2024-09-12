@@ -1,3 +1,4 @@
+import { track } from "@/customization/utils/analytics";
 import { useState } from "react";
 import { Control } from "react-hook-form";
 import IOModal from "../../modals/IOModal";
@@ -53,6 +54,32 @@ export default function CollectionCardComponent({
     selectedFlowsComponentsCards?.includes(data?.id) ?? false;
 
   const { onDragStart } = useDragStart(data);
+
+  const handlePlaygroundClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    track("Playground Button Clicked", { flowId: data.id });
+    setLoadingPlayground(true);
+    const flow = getFlowById(data.id);
+    if (flow) {
+      if (!hasPlayground(flow)) {
+        setErrorData({
+          title: "Error",
+          list: ["This flow doesn't have a playground."],
+        });
+        setLoadingPlayground(false);
+        return;
+      }
+      setCurrentFlow(flow);
+      setOpenPlayground(true);
+      setLoadingPlayground(false);
+    } else {
+      setErrorData({
+        title: "Error",
+        list: ["Error getting flow data."],
+      });
+    }
+  };
 
   return (
     <>
@@ -134,30 +161,7 @@ export default function CollectionCardComponent({
                   size="sm"
                   className="gap-2 whitespace-nowrap bg-muted"
                   data-testid={"playground-flow-button-" + data.id}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setLoadingPlayground(true);
-                    const flow = getFlowById(data.id);
-                    if (flow) {
-                      if (!hasPlayground(flow)) {
-                        setErrorData({
-                          title: "Error",
-                          list: ["This flow doesn't have a playground."],
-                        });
-                        setLoadingPlayground(false);
-                        return;
-                      }
-                      setCurrentFlow(flow);
-                      setOpenPlayground(true);
-                      setLoadingPlayground(false);
-                    } else {
-                      setErrorData({
-                        title: "Error",
-                        list: ["Error getting flow data."],
-                      });
-                    }
-                  }}
+                  onClick={handlePlaygroundClick}
                 >
                   {!loadingPlayground ? (
                     <IconComponent

@@ -23,6 +23,7 @@ import {
   CODE_PROMPT_DIALOG_SUBTITLE,
   EDIT_CODE_TITLE,
 } from "../../constants/constants";
+import { postCustomComponent } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { CodeErrorDataTypeAPI } from "../../types/api";
@@ -52,11 +53,11 @@ export default function CodeAreaModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openConfirmation, setOpenConfirmation] = useState(false);
   const codeRef = useRef<ReactAce | null>(null);
+  const { mutate, isPending } = usePostValidateCode();
   const [error, setError] = useState<{
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
 
-  const { mutate: validateCode } = usePostValidateCode();
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
 
   useEffect(() => {
@@ -68,7 +69,7 @@ export default function CodeAreaModal({
   }, []);
 
   function processNonDynamicField() {
-    validateCode(
+    mutate(
       { code },
       {
         onSuccess: (apiReturn) => {
@@ -184,6 +185,7 @@ export default function CodeAreaModal({
       }}
       open={open}
       setOpen={setOpen}
+      size="x-large"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
@@ -256,7 +258,9 @@ export default function CodeAreaModal({
           </div>
         </div>
         <ConfirmationModal
-          onClose={setOpenConfirmation}
+          onClose={() => {
+            setOpenConfirmation(false);
+          }}
           onEscapeKeyDown={(e) => {
             e.stopPropagation();
             setOpenConfirmation(false);

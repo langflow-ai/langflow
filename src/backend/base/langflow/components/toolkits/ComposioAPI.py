@@ -153,8 +153,9 @@ class ComposioAPIComponent(LCToolComponent):
 
         if field_name in {"app_names", "auth_status_config"}:
             if hasattr(self, "api_key") and self.api_key != "":
-                build_config = self._update_app_names_with_connected_status(build_config)
-
+                build_config["auth_status_config"]["value"] = self._check_for_authorization(
+                    self._get_normalized_app_name()
+                )
             all_action_names = [action_name for action_name in Action.__annotations__]
             app_action_names = [
                 action_name
@@ -167,7 +168,7 @@ class ComposioAPIComponent(LCToolComponent):
 
     def build_tool(self) -> Sequence[Tool]:
         composio_toolset = self._build_wrapper()
-        composio_tools = composio_toolset.get_actions(actions=self.action_names)
+        composio_tools = composio_toolset.get_tools(actions=self.action_names)
         return composio_tools
 
     def _build_wrapper(self) -> ComposioToolSet:

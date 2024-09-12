@@ -1,11 +1,15 @@
 import time
 from asyncio import Lock
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated, List, Optional, Union
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from loguru import logger
+from sqlmodel import Session, select
+
+from langflow.api.utils import parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -24,14 +28,16 @@ from langflow.exceptions.api import APIException, InvalidChatInputException
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
-from langflow.services.database.models.user.model import User
+from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
     get_cache_service,
     get_session,
@@ -45,8 +51,6 @@ from langflow.services.task.service import TaskService
 from langflow.services.telemetry.schema import RunPayload
 from langflow.services.telemetry.service import TelemetryService
 from langflow.utils.version import get_version_info
-from loguru import logger
-from sqlmodel import Session, select
 
 if TYPE_CHECKING:
     from langflow.services.cache.base import CacheService
@@ -105,12 +109,12 @@ async def simple_run_flow(
     flow: Flow,
     input_request: SimplifiedAPIRequest,
     stream: bool = False,
-    api_key_user: Optional[User] = None,
+    api_key_user: User | None = None,
 ):
     if input_request.input_value is not None and input_request.tweaks is not None:
         validate_input_and_tweaks(input_request)
     try:
-        task_result: List[RunOutputs] = []
+        task_result: list[RunOutputs] = []
         user_id = api_key_user.id if api_key_user else None
         flow_id_str = str(flow.id)
         if flow.data is None:
@@ -152,7 +156,7 @@ async def simple_run_flow_task(
     flow: Flow,
     input_request: SimplifiedAPIRequest,
     stream: bool = False,
-    api_key_user: Optional[User] = None,
+    api_key_user: User | None = None,
 ):
     """
     Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
@@ -173,10 +177,10 @@ async def simple_run_flow_task(
 @router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)
 async def simplified_run_flow(
     background_tasks: BackgroundTasks,
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
     input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
     stream: bool = False,
-    api_key_user: User = Depends(api_key_security),
+    api_key_user: UserRead = Depends(api_key_security),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
 ):
     """
@@ -227,6 +231,8 @@ async def simplified_run_flow(
 
     This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency, supporting a wide range of applications by allowing for dynamic input and output configuration along with performance optimizations through session management and caching.
     """
+    if flow is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
     start_time = time.perf_counter()
     try:
         result = await simple_run_flow(
@@ -281,6 +287,7 @@ async def simplified_run_flow(
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
 async def webhook_run_flow(
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    user: Annotated[User, Depends(get_user_by_flow_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
@@ -324,11 +331,13 @@ async def webhook_run_flow(
             tweaks=tweaks,
             session_id=None,
         )
+
         logger.debug("Starting background task")
         background_tasks.add_task(  # type: ignore
             simple_run_flow_task,
             flow=flow,
             input_request=input_request,
+            api_key_user=user,
         )
         background_tasks.add_task(
             telemetry_service.log_package_run,
@@ -357,12 +366,12 @@ async def webhook_run_flow(
 async def experimental_run_flow(
     session: Annotated[Session, Depends(get_session)],
     flow_id: UUID,
-    inputs: Optional[List[InputValueRequest]] = [InputValueRequest(components=[], input_value="")],
-    outputs: Optional[List[str]] = [],
-    tweaks: Annotated[Optional[Tweaks], Body(embed=True)] = None,  # noqa: F821
+    inputs: list[InputValueRequest] | None = [InputValueRequest(components=[], input_value="")],
+    outputs: list[str] | None = [],
+    tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,  # noqa: F821
     stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
-    session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
-    api_key_user: User = Depends(api_key_security),
+    session_id: Annotated[None | str, Body(embed=True)] = None,  # noqa: F821
+    api_key_user: UserRead = Depends(api_key_security),
     session_service: SessionService = Depends(get_session_service),
 ):
     """
@@ -471,12 +480,12 @@ async def experimental_run_flow(
 async def process(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
-    inputs: Optional[Union[List[dict], dict]] = None,
-    tweaks: Optional[dict] = None,
+    inputs: list[dict] | dict | None = None,
+    tweaks: dict | None = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
-    session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
+    session_id: Annotated[None | str, Body(embed=True)] = None,  # noqa: F821
     task_service: "TaskService" = Depends(get_task_service),
-    api_key_user: User = Depends(api_key_security),
+    api_key_user: UserRead = Depends(api_key_security),
     sync: Annotated[bool, Body(embed=True)] = True,  # noqa: F821
     session_service: SessionService = Depends(get_session_service),
 ):
@@ -590,17 +599,14 @@ async def custom_component_update(
         )
         if hasattr(cc_instance, "set_attributes"):
             template = code_request.get_template()
-            params = {
-                key: value_dict.get("value")
-                if value_dict.get("_input_type") != "IntInput"
-                else (
-                    int(value_dict.get("value"))  # type: ignore
-                    if value_dict.get("_input_type") != "FloatInput"
-                    else float(value_dict.get("value"))  # type: ignore
-                )
-                for key, value_dict in template.items()
-                if isinstance(value_dict, dict)
-            }
+            params = {}
+
+            for key, value_dict in template.items():
+                if isinstance(value_dict, dict):
+                    value = value_dict.get("value")
+                    input_type = str(value_dict.get("_input_type"))
+                    params[key] = parse_value(value, input_type)
+
             load_from_db_fields = [
                 field_name
                 for field_name, field_dict in template.items()

@@ -1,4 +1,3 @@
-from langchain_anthropic.chat_models import ChatAnthropic
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
@@ -53,6 +52,12 @@ class AnthropicModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        try:
+            from langchain_anthropic.chat_models import ChatAnthropic
+        except ImportError:
+            raise ImportError(
+                "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
+            )
         model = self.model
         anthropic_api_key = self.anthropic_api_key
         max_tokens = self.max_tokens

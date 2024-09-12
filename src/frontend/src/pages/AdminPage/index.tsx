@@ -7,7 +7,6 @@ import {
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
-import Header from "../../components/headerComponent";
 import LoadingComponent from "../../components/loadingComponent";
 import PaginatorComponent from "../../components/paginatorComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
@@ -246,7 +245,6 @@ export default function AdminPage() {
 
   return (
     <>
-      <Header />
       {userData && (
         <div className="admin-page-panel flex h-full flex-col pb-8">
           <div className="main-page-nav-arrangement">

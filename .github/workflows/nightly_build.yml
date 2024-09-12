@@ -1,0 +1,144 @@
+name: Nightly Build
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run job at 6:30 UTC, 10.30pm PST, or 11.30pm PDT
+    - cron: "30 6 * * *"
+
+env:
+  POETRY_VERSION: "1.8.3"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  create-nightly-tag:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      # Required to create tag
+      contents: write
+    outputs:
+      main_tag: ${{ steps.create_tag.outputs.main_tag }}
+      base_tag: ${{ steps.create_tag.outputs.base_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        run: |
+          poetry env use ${{ env.PYTHON_VERSION }}
+          poetry install
+
+      - name: Create tag
+        id: create_tag
+        run: |
+          git config --global user.email "bot-nightly-builds@langflow.org"
+          git config --global user.name "Langflow Bot"
+
+          # WARNING: These scripts must be run in this order.
+          # Poetry will use a different cached virtual environment once the main pyproject.toml
+          # project-name is updated, which does not have dependencies installed.
+          BASE_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py base)"
+          echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
+          poetry run python ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
+          poetry run python ./scripts/ci/update_pyproject_version.py $BASE_TAG base
+
+          # This updates the dependency of langflow-base to langflow-base-nightly in {project_root}/pyproject.toml
+          poetry run python ./scripts/ci/update_lf_base_dependency.py $BASE_TAG
+
+          MAIN_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py main)"
+          echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
+          poetry run python ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
+          poetry run python ./scripts/ci/update_pyproject_name.py langflow-nightly main
+
+          git add pyproject.toml src/backend/base/pyproject.toml
+          git commit -m "Update version and project name in files"
+
+          git tag -a $MAIN_TAG -m "Langflow nightly $MAIN_TAG"
+          git push origin $MAIN_TAG || echo "Tag push failed. Check if the tag already exists."
+          # TODO: notify on failure
+
+  frontend-tests:
+    name: Run Frontend Tests
+    needs: create-nightly-tag
+    uses: ./.github/workflows/typescript_test.yml
+    with:
+      tests_folder: "tests/core"
+      ref: ${{ needs.create-nightly-tag.outputs.tag }}
+    secrets:
+      OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
+      STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
+
+  backend-unit-tests:
+    name: Run Backend Unit Tests
+    needs: create-nightly-tag
+    uses: ./.github/workflows/python_test.yml
+    with:
+      python-versions: '["3.10", "3.11", "3.12"]'
+      ref: ${{ needs.create-nightly-tag.outputs.tag }}
+
+  # Not making nightly builds dependent on integration test success
+  # due to inherent flakiness of 3rd party integrations
+  # Revisit when https://github.com/langflow-ai/langflow/pull/3607 is merged.
+  # backend-integration-tests:
+  #   name: Run Backend Integration Tests
+  #   needs: create-nightly-tag
+  #   uses: ./.github/workflows/integration_tests.yml
+  #   with:
+  #     python-versions: '["3.10", "3.11", "3.12"]'
+  #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
+
+  release-nightly-build:
+    name: Run Nightly Langflow Build
+    needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
+    uses: ./.github/workflows/release_nightly.yml
+    with:
+      build_docker_base: true
+      build_docker_main: true
+      nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
+      nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
+    secrets: inherit
+
+  # slack-notification:
+  #   name: Send Slack Notification
+  #   needs: run-nightly-build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Send success notification to Slack
+  #       if: success()
+  #       uses: slackapi/slack-github-action@v1.26.0
+  #       with:
+  #         payload: |
+  #           {
+  #             "channel": "#langflow-nightly-builds",
+  #             "username": "GitHub Actions",
+  #             "text": "Nightly Build Successful :white_check_mark:",
+  #             "icon_emoji": ":rocket:"
+  #           }
+  #       env:
+  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  #     - name: Send failure notification to Slack
+  #       if: failure()
+  #       uses: slackapi/slack-github-action@v1.26.0
+  #       with:
+  #         payload: |
+  #           {
+  #             "channel": "#langflow-nightly-builds",
+  #             "username": "GitHub Actions",
+  #             "text": "Nightly Build Failed :x:",
+  #             "icon_emoji": ":warning:"
+  #           }
+  #       env:
+  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
