@@ -496,6 +496,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     files,
     silent,
     setLockChat,
+    session
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -503,6 +504,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     files?: string[];
     silent?: boolean;
     setLockChat?: (lock: boolean) => void;
+    session?: string;
   }) => {
     get().setIsBuilding(true);
     get().setLockChat(true);
@@ -606,6 +608,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
     }
     await buildFlowVerticesWithFallback({
+      session,
       input_value,
       files,
       flowId: currentFlow!.id,
