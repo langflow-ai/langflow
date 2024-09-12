@@ -10,6 +10,7 @@ from .SearXNGTool import SearXNGToolComponent
 from .SerpAPI import SerpAPIComponent
 from .WikipediaAPI import WikipediaAPIComponent
 from .WolframAlphaAPI import WolframAlphaAPIComponent
+from .Calculator import CalculatorToolComponent
 
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "SerpAPIComponent",
     "WikipediaAPIComponent",
     "WolframAlphaAPIComponent",
+    "CalculatorToolComponent",
 ]
