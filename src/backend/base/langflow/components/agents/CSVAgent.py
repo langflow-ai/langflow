@@ -4,7 +4,6 @@ from langflow.field_typing import AgentExecutor
 from langflow.inputs import HandleInput, FileInput, DropdownInput
 from langflow.inputs.inputs import MessageTextInput
 from langflow.schema.message import Message
-from typing import Union
 
 from langflow.template.field.base import Output
 
@@ -65,7 +64,7 @@ class CSVAgentComponent(LCAgentComponent):
         result = agent_csv.invoke({"input": self.input_value})
         return Message(text=str(result["output"]))
 
-    def build_agent(self) -> Union[AgentExecutor, Agent]:
+    def build_agent(self) -> AgentExecutor:
         agent_kwargs = {
             "verbose": self.verbose,
             "allow_dangerous_code": True,
