@@ -103,14 +103,3 @@ def test_validate_text_key_invalid(update_data_component):
         f"Text Key: {update_data_component.text_key} not found in the Data keys: {','.join(data.data.keys())}"
     )
     assert str(exc_info.value) == expected_error_message
-
-
-def test_post_code_processing(update_data_component):
-    new_frontend_node = {"template": {"number_of_fields": {"value": 2}}}
-    current_frontend_node = {}
-
-    result = update_data_component.post_code_processing(new_frontend_node, current_frontend_node)
-
-    assert "field_1_key" in result["template"]
-    assert "field_2_key" in result["template"]
-    assert result["template"]["number_of_fields"]["value"] == 2

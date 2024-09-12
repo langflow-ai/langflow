@@ -100,14 +100,3 @@ class CreateDataComponent(Component):
         data_keys = self.get_data().keys()
         if self.text_key not in data_keys and self.text_key != "":
             raise ValueError(f"Text Key: {self.text_key} not found in the Data keys: {",".join(data_keys)}")
-
-    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
-        """
-        This function is called after the code validation is done.
-        """
-        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
-        frontend_node["template"] = self.update_build_config(
-            frontend_node["template"], frontend_node["template"]["number_of_fields"]["value"], "number_of_fields"
-        )
-        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
-        return frontend_node
