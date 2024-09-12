@@ -34,6 +34,7 @@ type BuildVerticesParams = {
   nodes?: Node[];
   edges?: Edge[];
   logBuilds?: boolean;
+  session?: string;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -153,6 +154,7 @@ export async function buildFlowVertices({
   edges,
   logBuilds,
   setLockChat,
+  session,
 }: BuildVerticesParams) {
   let url = `${BASE_URL_API}build/${flowId}/flow?`;
   if (startNodeId) {
@@ -176,6 +178,9 @@ export async function buildFlowVertices({
       nodes,
       edges,
     };
+  }
+  if(session) {
+    postData["session"] = session;
   }
 
   const buildResults: Array<boolean> = [];
