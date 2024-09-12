@@ -4,8 +4,6 @@ from langchain_core.documents import BaseDocumentTransformer
 from langchain_text_splitters import TextSplitter
 
 from langflow.base.document_transformers.model import LCDocumentTransformerComponent
-from langflow.io import Output
-from langflow.schema import Data
 
 
 class LCTextSplitterComponent(LCDocumentTransformerComponent):
