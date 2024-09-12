@@ -4,7 +4,7 @@ sidebar_position: 0
 slug: /integrations/notion/setup
 ---
 
-# Setting up a Notion App
+# Set up a Notion App
 
 To use Notion components in Langflow, you first need to create a Notion integration and configure it with the necessary capabilities. This guide will walk you through the process of setting up a Notion integration and granting it access to your Notion databases.
 
@@ -13,7 +13,7 @@ To use Notion components in Langflow, you first need to create a Notion integrat
 - A Notion account with access to the workspace where you want to use the integration.
 - Admin permissions in the Notion workspace to create and manage integrations.
 
-## Step 1: Create a Notion Integration
+## Create a Notion Integration
 
 1. Go to the [Notion Integrations](https://www.notion.com/my-integrations) page.
 2. Click on the "New integration" button.
@@ -25,7 +25,7 @@ When creating the integration, make sure to enable the necessary capabilities ba
 :::
 
 
-## Step 2: Configure Integration Capabilities
+## Configure Integration Capabilities
 
 After creating the integration, you need to configure its capabilities to define what actions it can perform and what data it can access.
 
@@ -37,7 +37,7 @@ After creating the integration, you need to configure its capabilities to define
 3. Configure the user information access level based on your integration's requirements.
 4. Save the changes.
 
-## Step 3: Obtain Integration Token
+## Obtain Integration Token
 
 To authenticate your integration with Notion, you need to obtain an integration token.
 
@@ -48,7 +48,7 @@ To authenticate your integration with Notion, you need to obtain an integration 
 Your integration token is a sensitive piece of information. Make sure to keep it secure and never share it publicly. Store it safely in your Langflow configuration or environment variables.
 :::
 
-## Step 4: Grant Integration Access to Notion Databases
+## Grant Integration Access to Notion Databases
 
 For your integration to interact with Notion databases, you need to grant it access to the specific databases it will be working with.
 
@@ -61,7 +61,7 @@ For your integration to interact with Notion databases, you need to grant it acc
 If your database contains references to other databases, you need to grant the integration access to those referenced databases as well. Repeat step 4 for each referenced database to ensure your integration has the necessary access.
 :::
 
-# Using Notion Components in Langflow
+# Use Notion Components in Langflow
 
 Once you have set up your Notion integration and granted it access to the required databases, you can start using the Notion components in Langflow.
 
