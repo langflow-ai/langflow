@@ -332,66 +332,102 @@ The `Input` class is highly customizable, allowing you to specify a wide range
 
 ## Create a Custom Component with Generic Input
 
-Here is an example of how to define inputs for a component using the `Input` class:
+Here is an example of how to define inputs for a component using the `Input` class.
+
+Copy and paste it into the Custom Component code pane and click **Check & Save.**
 
 ```python
 from langflow.template import Input, Output
 from langflow.custom import Component
 from langflow.field_typing import Text
+from langflow.schema.message import Message
+from typing import Dict, Any
 
-class ExampleComponent(Component):
-    display_name = "Example Component"
-    description = "An example component demonstrating input fields."
+class TextAnalyzerComponent(Component):
+    display_name = "Text Analyzer"
+    description = "Analyzes input text and provides basic statistics."
 
     inputs = [
         Input(
             name="input_text",
             display_name="Input Text",
-            field_type="str",
+            field_type="Message",
             required=True,
-            placeholder="Enter some text",
+            placeholder="Enter text to analyze",
             multiline=True,
-            info="This is a required text input.",
+            info="The text you want to analyze.",
             input_types=["Text"]
         ),
         Input(
-            name="max_length",
-            display_name="Max Length",
-            field_type="int",
+            name="include_word_count",
+            display_name="Include Word Count",
+            field_type="bool",
             required=False,
-            placeholder="Maximum length",
-            info="Enter the maximum length of the text.",
-            max_length={"min": 0, "max": 1000},
+            info="Whether to include word count in the analysis.",
         ),
         Input(
-            name="options",
-            display_name="Options",
-            field_type="str",
-            is_list=True,
-            options=["Option 1", "Option 2", "Option 3"],
-            info="Select one or more options."
+            name="perform_sentiment_analysis",
+            display_name="Perform Sentiment Analysis",
+            field_type="bool",
+            required=False,
+            info="Whether to perform basic sentiment analysis.",
         ),
     ]
 
     outputs = [
-        Output(display_name="Result", name="result", method="process_input"),
+        Output(display_name="Analysis Results", name="results", method="analyze_text"),
     ]
 
-    def process_input(self) -> Text:
-        # Process the inputs and generate output
-        return Text(value=f"Processed: {self.input_text}, Max Length: {self.max_length}, Options: {self.options}")
+    def analyze_text(self) -> Message:
+        # Extract text from the Message object
+        if isinstance(self.input_text, Message):
+            text = self.input_text.text
+        else:
+            text = str(self.input_text)
+
+        results = {
+            "character_count": len(text),
+            "sentence_count": text.count('.') + text.count('!') + text.count('?')
+        }
+
+        if self.include_word_count:
+            results["word_count"] = len(text.split())
+
+        if self.perform_sentiment_analysis:
+            # Basic sentiment analysis
+            text_lower = text.lower()
+            if "happy" in text_lower or "good" in text_lower:
+                sentiment = "positive"
+            elif "sad" in text_lower or "bad" in text_lower:
+                sentiment = "negative"
+            else:
+                sentiment = "neutral"
+
+            results["sentiment"] = sentiment
+
+        # Convert the results dictionary to a formatted string
+        formatted_results = "\n".join([f"{key}: {value}" for key, value in results.items()])
+
+        # Return a Message object
+        return Message(text=formatted_results)
 
 # Define how to use the inputs and outputs
-component = ExampleComponent()
+component = TextAnalyzerComponent()
 ```
 
-In this example:
+In this custom component:
 
-- The `input_text` input is a required multi-line text field.
-- The `max_length` input is an optional integer field with a range specification.
-- The `options` input is a list of strings with predefined options.
+- The `input_text` input is a required multi-line text field that accepts a Message object or a string. It's used to provide the text for analysis.
 
-These attributes allow for a high degree of customization, making it easy to create input fields that suit the needs of your specific component.
+- The `include_word_count` input is an optional boolean field. When set to True, it adds a word count to the analysis results.
+
+- The `perform_sentiment_analysis` input is an optional boolean field. When set to True, it triggers a basic sentiment analysis of the input text.
+
+The component performs basic text analysis, including character count and sentence count (based on punctuation marks). If word count is enabled, it splits the text and counts the words. If sentiment analysis is enabled, it performs a simple keyword-based sentiment classification (positive, negative, or neutral).
+
+Since the component inputs and outputs a `Message`, you can wire the component into a chat and see how the basic custom component logic interacts with your input.
+
+![](./custom-component-inputs-chat.png)
 
 ## Create a Custom Component with Multiple Outputs {#6f225be8a142450aa19ee8e46a3b3c8c}
 
@@ -449,11 +485,7 @@ This example shows how to define multiple outputs in a custom component. The fir
 The `processing_function` output can be used in scenarios where the function itself is needed for further processing or dynamic flow control. Notice how both outputs are properly annotated with their respective types, ensuring clarity and type safety.
 
 
-## Special Operations {#b1ef2d18e2694b93927ae9403d24b96b}
-
-
----
-
+## Special Operations
 
 Advanced methods and attributes offer additional control and functionality. Understanding how to leverage these can enhance your custom components' capabilities.
 
