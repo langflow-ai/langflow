@@ -151,18 +151,14 @@ textarea[class^="ag-"]:focus {
   height: fit-content !important;
 }
 
-.json-view-white {
-  background-color: #f8fafc !important;
-}
-
-.json-view-dark {
-  background-color: #141924 !important;
+.json-view.dark {
+  background-color: #161c28 !important;
 }
 
 .react-flow__node.dragging * {
   cursor: grabbing !important;
 }
 
-.react-flow__node-noteNode:not(.selected){
+.react-flow__node-noteNode:not(.selected) {
   z-index: -1 !important;
 }
