@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
-from langflow.utils.constants import API_KEY_EXPIRATION_DAYS
+from langflow.utils.constants import API_KEY_EXPIRATION_HOURS
 
 
 def get_api_keys(session: Session, user_id: UUID) -> List[ApiKeyRead]:
@@ -34,7 +34,7 @@ def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID
         created_at=api_key_create.created_at or datetime.datetime.now(datetime.timezone.utc),
         flow_id=api_key_create.flow_id,
         expire_at=api_key_create.expire_at
-        or (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=API_KEY_EXPIRATION_DAYS)),
+        or (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=API_KEY_EXPIRATION_HOURS)),
     )
 
     session.add(api_key)
