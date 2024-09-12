@@ -6,7 +6,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-76lwY",
+            "id": "URL-46k0m",
             "name": "data",
             "output_types": [
               "Data"
@@ -14,25 +14,25 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-jYhXf",
+            "id": "ParseData-jUQRS",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-76lwY{œdataTypeœ:œURLœ,œidœ:œURL-76lwYœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-jYhXf{œfieldNameœ:œdataœ,œidœ:œParseData-jYhXfœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "URL-76lwY",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-76lwYœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-jYhXf",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-jYhXfœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-URL-46k0m{œdataTypeœ:œURLœ,œidœ:œURL-46k0mœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-jUQRS{œfieldNameœ:œdataœ,œidœ:œParseData-jUQRSœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "URL-46k0m",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-46k0mœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-jUQRS",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-jUQRSœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-jYhXf",
+            "id": "ParseData-jUQRS",
             "name": "text",
             "output_types": [
               "Message"
@@ -40,7 +40,7 @@
           },
           "targetHandle": {
             "fieldName": "references",
-            "id": "Prompt-ABI8S",
+            "id": "Prompt-Pf4QQ",
             "inputTypes": [
               "Message",
               "Text"
@@ -48,18 +48,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-jYhXf{œdataTypeœ:œParseDataœ,œidœ:œParseData-jYhXfœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-ABI8S{œfieldNameœ:œreferencesœ,œidœ:œPrompt-ABI8Sœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-jYhXf",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-jYhXfœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-ABI8S",
-        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-ABI8Sœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-jUQRS{œdataTypeœ:œParseDataœ,œidœ:œParseData-jUQRSœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Pf4QQ{œfieldNameœ:œreferencesœ,œidœ:œPrompt-Pf4QQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-jUQRS",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-jUQRSœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-Pf4QQ",
+        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-Pf4QQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "TextInput",
-            "id": "TextInput-jiXJB",
+            "id": "TextInput-slCbp",
             "name": "text",
             "output_types": [
               "Message"
@@ -67,7 +67,7 @@
           },
           "targetHandle": {
             "fieldName": "instructions",
-            "id": "Prompt-ABI8S",
+            "id": "Prompt-Pf4QQ",
             "inputTypes": [
               "Message",
               "Text"
@@ -75,18 +75,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-TextInput-jiXJB{œdataTypeœ:œTextInputœ,œidœ:œTextInput-jiXJBœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-ABI8S{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-ABI8Sœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "TextInput-jiXJB",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-jiXJBœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-ABI8S",
-        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-ABI8Sœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-TextInput-slCbp{œdataTypeœ:œTextInputœ,œidœ:œTextInput-slCbpœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Pf4QQ{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-Pf4QQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "TextInput-slCbp",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-slCbpœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-Pf4QQ",
+        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-Pf4QQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-ABI8S",
+            "id": "Prompt-Pf4QQ",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -94,25 +94,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-JBO2p",
+            "id": "OpenAIModel-o0Gr0",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-ABI8S{œdataTypeœ:œPromptœ,œidœ:œPrompt-ABI8Sœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-JBO2p{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-JBO2pœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-ABI8S",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ABI8Sœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-JBO2p",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-JBO2pœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-Pf4QQ{œdataTypeœ:œPromptœ,œidœ:œPrompt-Pf4QQœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-o0Gr0{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-o0Gr0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-Pf4QQ",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Pf4QQœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-o0Gr0",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-o0Gr0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-JBO2p",
+            "id": "OpenAIModel-o0Gr0",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -120,18 +120,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-uaX6T",
+            "id": "ChatOutput-eIVde",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-JBO2p{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-JBO2pœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-uaX6T{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uaX6Tœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-JBO2p",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-JBO2pœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-uaX6T",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-uaX6Tœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-o0Gr0{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-o0Gr0œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-eIVde{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-eIVdeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-o0Gr0",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-o0Gr0œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-eIVde",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-eIVdeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -139,7 +139,7 @@
         "data": {
           "description": "Fetch content from one or more URLs.",
           "display_name": "URL",
-          "id": "URL-76lwY",
+          "id": "URL-46k0m",
           "node": {
             "base_classes": [
               "Data"
@@ -200,7 +200,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import re\n\nfrom langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.helpers.data import data_to_text\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n    name = \"URL\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            info=\"Enter one or more URLs, by clicking the '+' button.\",\n            is_list=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"\n        Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.\n        Raises an error if the string is not a valid URL.\n\n        Parameters:\n            string (str): The string to be checked and possibly modified.\n\n        Returns:\n            str: The modified string that is ensured to be a URL.\n\n        Raises:\n            ValueError: If the string is not a valid URL.\n        \"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        # Basic URL validation regex\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"  # optional protocol\n            r\"(www\\.)?\"  # optional www\n            r\"([a-zA-Z0-9.-]+)\"  # domain\n            r\"(\\.[a-zA-Z]{2,})?\"  # top-level domain\n            r\"(:\\d+)?\"  # optional port\n            r\"(\\/[^\\s]*)?$\",  # optional path\n            re.IGNORECASE,\n        )\n\n        if not url_regex.match(string):\n            raise ValueError(f\"Invalid URL: {string}\")\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]\n        loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n        docs = loader.load()\n        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n\n    def fetch_content_text(self) -> Message:\n        content = self.fetch_content()\n        data = content if isinstance(content, list) else [content]\n\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n"
+                "value": "import re\n\nfrom langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.helpers.data import data_to_text\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n    name = \"URL\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            info=\"Enter one or more URLs, by clicking the '+' button.\",\n            is_list=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"\n        Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.\n        Raises an error if the string is not a valid URL.\n\n        Parameters:\n            string (str): The string to be checked and possibly modified.\n\n        Returns:\n            str: The modified string that is ensured to be a URL.\n\n        Raises:\n            ValueError: If the string is not a valid URL.\n        \"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        # Basic URL validation regex\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"  # optional protocol\n            r\"(www\\.)?\"  # optional www\n            r\"([a-zA-Z0-9.-]+)\"  # domain\n            r\"(\\.[a-zA-Z]{2,})?\"  # top-level domain\n            r\"(:\\d+)?\"  # optional port\n            r\"(\\/[^\\s]*)?$\",  # optional path\n            re.IGNORECASE,\n        )\n\n        if not url_regex.match(string):\n            raise ValueError(f\"Invalid URL: {string}\")\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]\n        loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n        docs = loader.load()\n        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n"
               },
               "urls": {
                 "advanced": false,
@@ -230,8 +230,8 @@
           "type": "URL"
         },
         "dragging": false,
-        "height": 359,
-        "id": "URL-76lwY",
+        "height": 397,
+        "id": "URL-46k0m",
         "position": {
           "x": 220.79156431407534,
           "y": 498.8186168722667
@@ -248,7 +248,7 @@
         "data": {
           "description": "Convert Data into plain text following a specified template.",
           "display_name": "Parse Data",
-          "id": "ParseData-jYhXf",
+          "id": "ParseData-jUQRS",
           "node": {
             "base_classes": [
               "Message"
@@ -363,8 +363,8 @@
           "type": "ParseData"
         },
         "dragging": false,
-        "height": 385,
-        "id": "ParseData-jYhXf",
+        "height": 378,
+        "id": "ParseData-jUQRS",
         "position": {
           "x": 754.3607306709101,
           "y": 736.8516961537598
@@ -381,7 +381,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-ABI8S",
+          "id": "Prompt-Pf4QQ",
           "node": {
             "base_classes": [
               "Message"
@@ -507,8 +507,8 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 517,
-        "id": "Prompt-ABI8S",
+        "height": 502,
+        "id": "Prompt-Pf4QQ",
         "position": {
           "x": 1368.0633591447076,
           "y": 467.19448061224284
@@ -525,7 +525,7 @@
         "data": {
           "description": "Get text inputs from the Playground.",
           "display_name": "Instructions",
-          "id": "TextInput-jiXJB",
+          "id": "TextInput-slCbp",
           "node": {
             "base_classes": [
               "Message"
@@ -575,9 +575,10 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n    name = \"TextInput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n        )\n        return message\n"
+                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import MultilineInput, Output\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n    name = \"TextInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n        )\n        return message\n"
               },
               "input_value": {
+                "_input_type": "MultilineInput",
                 "advanced": false,
                 "display_name": "Text",
                 "dynamic": false,
@@ -587,6 +588,7 @@
                 ],
                 "list": false,
                 "load_from_db": false,
+                "multiline": true,
                 "name": "input_value",
                 "placeholder": "",
                 "required": false,
@@ -602,8 +604,8 @@
           "type": "TextInput"
         },
         "dragging": false,
-        "height": 309,
-        "id": "TextInput-jiXJB",
+        "height": 302,
+        "id": "TextInput-slCbp",
         "position": {
           "x": 743.7338453293725,
           "y": 301.58775454952183
@@ -620,7 +622,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-uaX6T",
+          "id": "ChatOutput-eIVde",
           "node": {
             "base_classes": [
               "Message"
@@ -796,8 +798,8 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 309,
-        "id": "ChatOutput-uaX6T",
+        "height": 302,
+        "id": "ChatOutput-eIVde",
         "position": {
           "x": 2449.3489426461606,
           "y": 571.2449700910389
@@ -814,7 +816,7 @@
         "data": {
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
-          "id": "OpenAIModel-JBO2p",
+          "id": "OpenAIModel-o0Gr0",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1093,8 +1095,8 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "height": 623,
-        "id": "OpenAIModel-JBO2p",
+        "height": 605,
+        "id": "OpenAIModel-o0Gr0",
         "position": {
           "x": 1950.3830456413473,
           "y": 380.8161704718418
@@ -1103,21 +1105,21 @@
           "x": 1950.3830456413473,
           "y": 380.8161704718418
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 384
       }
     ],
     "viewport": {
-      "x": -52.959712994147594,
-      "y": 41.95510708899229,
-      "zoom": 0.5873729194514925
+      "x": -314.93585938343927,
+      "y": 168.32720664181306,
+      "zoom": 0.5205627295612754
     }
   },
   "description": "This flow can be used to create a blog post following instructions from the user, using two other blogs as reference.",
   "endpoint_name": null,
-  "id": "6b576678-66cd-4d6e-ab40-af1104f02c37",
+  "id": "92d42e25-91d4-4108-8187-92fc53fc9778",
   "is_component": false,
-  "last_tested_version": "1.0.9",
+  "last_tested_version": "1.0.17",
   "name": "Blog Writer"
 }

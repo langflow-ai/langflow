@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
 import path from "path";
+import uaParser from "ua-parser-js";
 
 test("Vector Store RAG", async ({ page }) => {
   test.skip(
@@ -58,6 +59,47 @@ test("Vector Store RAG", async ({ page }) => {
     await page.getByTestId("icon-AlertTriangle").first().click();
     await page.waitForTimeout(1000);
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+  }
+
+  if (process?.env?.ASTRA_DB_API_ENDPOINT?.includes("astra-dev")) {
+    const getUA = await page.evaluate(() => navigator.userAgent);
+    const userAgentInfo = uaParser(getUA);
+    let control = "Control";
+
+    if (userAgentInfo.os.name.includes("Mac")) {
+      control = "Meta";
+    }
+
+    await page.getByTestId("title-Astra DB").first().click();
+
+    await page.waitForTimeout(500);
+    await page.getByTestId("code-button-modal").click();
+    await page.waitForTimeout(500);
+
+    let cleanCode = await extractAndCleanCode(page);
+
+    cleanCode = cleanCode!.replace(
+      '"pre_delete_collection": self.pre_delete_collection or False,',
+      '"pre_delete_collection": self.pre_delete_collection or False,\n            "environment": "dev",',
+    );
+
+    await page.locator("textarea").last().press(`${control}+a`);
+    await page.keyboard.press("Backspace");
+    await page.locator("textarea").last().fill(cleanCode);
+    await page.locator('//*[@id="checkAndSaveBtn"]').click();
+    await page.waitForTimeout(500);
+
+    await page.getByTestId("title-Astra DB").last().click();
+
+    await page.waitForTimeout(500);
+    await page.getByTestId("code-button-modal").click();
+
+    await page.waitForTimeout(500);
+    await page.locator("textarea").last().press(`${control}+a`);
+    await page.keyboard.press("Backspace");
+    await page.locator("textarea").last().fill(cleanCode);
+    await page.locator('//*[@id="checkAndSaveBtn"]').click();
+    await page.waitForTimeout(500);
   }
 
   await page
@@ -158,3 +200,24 @@ test("Vector Store RAG", async ({ page }) => {
 
   await page.getByTestId("input-chat-playground").last().isVisible();
 });
+
+async function extractAndCleanCode(page: Page): Promise<string> {
+  const outerHTML = await page
+    .locator('//*[@id="codeValue"]')
+    .evaluate((el) => el.outerHTML);
+
+  const valueMatch = outerHTML.match(/value="([\s\S]*?)"/);
+  if (!valueMatch) {
+    throw new Error("Could not find value attribute in the HTML");
+  }
+
+  let codeContent = valueMatch[1]
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, "/");
+
+  return codeContent;
+}

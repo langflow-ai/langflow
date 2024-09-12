@@ -86,6 +86,7 @@ import {
   Laptop2,
   Layers,
   Link,
+  Link2,
   Loader2,
   Lock,
   LogIn,
@@ -340,6 +341,7 @@ export const nodeNames: { [char: string]: string } = {
   langchain_utilities: "Utilities",
   output_parsers: "Output Parsers",
   custom_components: "Custom",
+  link_extractors: "Link Extractors",
   unknown: "Other",
 };
 
@@ -454,6 +456,7 @@ export const nodeIconsLucide: iconsType = {
   saved_components: GradientSave,
   ScrollText,
   documentloaders: Paperclip,
+  link_extractors: Link2,
   vectorstores: Layers,
   vectorsearch: TextSearch,
   toolkits: Package2,

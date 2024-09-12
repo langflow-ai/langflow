@@ -74,6 +74,10 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
+class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
+    field_type: SerializableFieldTypes = FieldTypes.CODE
+
+
 # Applying mixins to a specific input type
 class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.TEXT
@@ -493,6 +497,7 @@ InputTypes = Union[
     MultilineSecretInput,
     NestedDictInput,
     PromptInput,
+    CodeInput,
     SecretStrInput,
     StrInput,
     MessageTextInput,
