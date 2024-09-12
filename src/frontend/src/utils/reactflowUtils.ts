@@ -1712,3 +1712,12 @@ export function checkOldComponents({ nodes }: { nodes: any[] }) {
       ),
   );
 }
+
+
+export function someFlowTemplateFields({nodes}:{nodes:NodeType[]},validateFn:(field:InputFieldType)=>boolean):boolean{
+  return nodes.some((node)=>{
+    return Object.keys(node.data.node?.template??{}).some((field)=>{
+      return validateFn((node.data.node?.template??{})[field])
+    })
+  })
+}
