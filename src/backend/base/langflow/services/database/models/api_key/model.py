@@ -1,9 +1,10 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
+from langflow.utils.constants import API_KEY_EXPIRATION_DAYS
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
@@ -11,6 +12,9 @@ if TYPE_CHECKING:
 
 def utc_now():
     return datetime.now(timezone.utc)
+
+def expire_time():
+    return utc_now() + timedelta(days=API_KEY_EXPIRATION_DAYS)
 
 
 class ApiKeyBase(SQLModel):
@@ -26,10 +30,9 @@ class ApiKey(ApiKeyBase, table=True):  # type: ignore
         default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     )
     expire_at: Optional[datetime] = Field(
-        default=None,
+        default_factory=expire_time,
         sa_column=Column(
           DateTime(timezone=True), 
-          server_default=func.now(), 
           nullable=False)
     )
     api_key: str = Field(index=True, unique=True)
@@ -49,13 +52,13 @@ class ApiKeyCreate(ApiKeyBase):
     api_key: Optional[str] = None
     user_id: Optional[UUID] = None
     created_at: Optional[datetime] = Field(default_factory=utc_now)
-    expire_at: Optional[datetime] = Field(default_factory=utc_now)
+    expire_at: Optional[datetime] = Field(default_factory=expire_time)
     flow_id: Optional[UUID] = None
 
     @field_validator("expire_at", mode="before")
     @classmethod
     def set_expire_at(cls, v):
-        return v or utc_now()
+        return v or expire_time()
 
     @field_validator("created_at", mode="before")
     @classmethod
