@@ -202,20 +202,6 @@ export default function ChatView({
       onDrop={onDrop}
     >
       <div className="eraser-size">
-        <div className="eraser-position">
-          <Button
-            className="flex gap-1"
-            unstyled
-            disabled={lockChat}
-            onClick={() => handleSelectChange("builds")}
-          >
-            <IconComponent
-              name="Eraser"
-              className={classNames("h-5 w-5 text-primary")}
-              aria-hidden="true"
-            />
-          </Button>
-        </div>
         <div ref={messagesRef} className="chat-message-div">
           {chatHistory?.length > 0 ? (
             chatHistory.map((chat, index) => (
