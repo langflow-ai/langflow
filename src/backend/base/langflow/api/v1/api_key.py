@@ -8,7 +8,12 @@ from langflow.api.v1.schemas import ApiKeyCreateRequest, ApiKeysResponse, ApiKey
 from langflow.services.auth import utils as auth_utils
 
 # Assuming you have these methods in your service layer
-from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key, get_api_keys, get_api_keys_by_flow_id
+from langflow.services.database.models.api_key.crud import (
+    create_api_key,
+    delete_api_key,
+    get_api_keys,
+    get_api_keys_by_flow_id,
+)
 from langflow.services.database.models.api_key.model import ApiKeyCreate, UnmaskedApiKeyRead
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
@@ -32,6 +37,7 @@ def get_api_keys_route(
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+
 @router.get("/flow/{flow_id}", response_model=ApiKeysFlowResponse)
 def get_api_keys_by_flow_route(
     flow_id: UUID,
@@ -42,6 +48,7 @@ def get_api_keys_by_flow_route(
         return ApiKeysFlowResponse(total_count=len(keys), flow_id=flow_id, api_keys=keys)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
 
 @router.post("/", response_model=UnmaskedApiKeyRead)
 def create_api_key_route(
@@ -54,6 +61,7 @@ def create_api_key_route(
         return create_api_key(db, req, user_id=user_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
 
 @router.post("/flow/{flow_id}", response_model=UnmaskedApiKeyRead)
 def create_api_key_for_flow_route(
@@ -69,6 +77,7 @@ def create_api_key_for_flow_route(
         return create_api_key(db, req, user_id=user_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
 
 @router.delete("/{api_key_id}")
 def delete_api_key_route(
