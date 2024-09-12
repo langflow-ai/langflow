@@ -494,3 +494,7 @@ Advanced methods and attributes offer additional control and functionality. Unde
 - `self.status`: Use this to update the component's status or intermediate results. It helps track the component's internal state or store temporary data.
 - `self.graph.flow_id`: Retrieve the flow ID, useful for maintaining context or debugging.
 - `self.stop("output_name")`: Use this method within an output function to prevent data from being sent through other components. This method stops next component execution and is particularly useful for specific operations where a component should stop from running based on specific conditions.
+
+## Contribute Custom Components to Langflow
+
+See [How to Contribute](/contributing-how-to-contribute#submitting-components) to contribute your custom component to Langflow.
