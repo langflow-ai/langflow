@@ -82,6 +82,42 @@ test("should be able to share a component on the store by clicking on the share 
 
   await page.getByTestId("share-modal-button-flow").click();
 
+  let replace = await page.getByTestId("replace-button").isVisible();
+
+  if (replace) {
+    await page.getByTestId("replace-button").click();
+  }
+
+  await page.waitForSelector("text=flow shared successfully ", {
+    timeout: 10000,
+  });
+
+  await page.waitForTimeout(500);
+
+  await page.waitForSelector("text=share", { timeout: 10000 });
+  await page.waitForSelector("text=playground", { timeout: 10000 });
+  await page.waitForSelector("text=api", { timeout: 10000 });
+
+  await page.getByTestId("shared-button-flow").click();
+
+  await page.waitForTimeout(500);
+
+  await page.waitForSelector("text=Publish workflow to the Langflow Store.", {
+    timeout: 10000,
+  });
+  await page.waitForSelector('[data-testid="share-modal-button-flow"]', {
+    timeout: 10000,
+  });
+  await page.waitForSelector("text=Share Flow", { timeout: 10000 });
+
+  await page.getByTestId("share-modal-button-flow").click();
+
+  replace = await page.getByTestId("replace-button").isVisible();
+
+  if (replace) {
+    await page.getByTestId("replace-button").click();
+  }
+
   await page.waitForSelector("text=flow shared successfully ", {
     timeout: 10000,
   });
