@@ -25,6 +25,13 @@ class ApiKey(ApiKeyBase, table=True):  # type: ignore
     created_at: Optional[datetime] = Field(
         default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     )
+    expire_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(
+          DateTime(timezone=True), 
+          server_default=func.now(), 
+          nullable=False)
+    )
     api_key: str = Field(index=True, unique=True)
     # User relationship
     # Delete API keys when user is deleted
@@ -32,12 +39,23 @@ class ApiKey(ApiKeyBase, table=True):  # type: ignore
     user: "User" = Relationship(
         back_populates="api_keys",
     )
+    # Flow relationship (optional)
+    # Delete API keys when flow is deleted
+    flow_id: Optional[UUID] = Field(default=None, foreign_key="flow.id", nullable=True)
+    flow: Optional["Flow"] = Relationship()
 
 
 class ApiKeyCreate(ApiKeyBase):
     api_key: Optional[str] = None
     user_id: Optional[UUID] = None
     created_at: Optional[datetime] = Field(default_factory=utc_now)
+    expire_at: Optional[datetime] = Field(default_factory=utc_now)
+    flow_id: Optional[UUID] = None
+
+    @field_validator("expire_at", mode="before")
+    @classmethod
+    def set_expire_at(cls, v):
+        return v or utc_now()
 
     @field_validator("created_at", mode="before")
     @classmethod
@@ -49,6 +67,9 @@ class UnmaskedApiKeyRead(ApiKeyBase):
     id: UUID
     api_key: str = Field()
     user_id: UUID = Field()
+    created_at: datetime = Field()
+    expire_at: datetime = Field()
+    flow_id: Optional[UUID] = Field(default=None)
 
 
 class ApiKeyRead(ApiKeyBase):
@@ -56,6 +77,8 @@ class ApiKeyRead(ApiKeyBase):
     api_key: str = Field(schema_extra={"validate_default": True})
     user_id: UUID = Field()
     created_at: datetime = Field()
+    expire_at: datetime = Field()
+    flow_id: Optional[UUID] = Field(default=None)
 
     @field_validator("api_key")
     @classmethod

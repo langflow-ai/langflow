@@ -147,6 +147,10 @@ class Flow(FlowBase, table=True):  # type: ignore
     messages: List["MessageTable"] = Relationship(back_populates="flow")
     transactions: List["TransactionTable"] = Relationship(back_populates="flow")
     vertex_builds: List["VertexBuildTable"] = Relationship(back_populates="flow")
+    api_keys: List["ApiKey"] = Relationship(
+        back_populates="flow",
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
 
     def to_data(self):
         serialized = self.model_dump()

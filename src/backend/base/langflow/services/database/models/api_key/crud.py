@@ -15,8 +15,12 @@ def get_api_keys(session: Session, user_id: UUID) -> List[ApiKeyRead]:
     api_keys = session.exec(query).all()
     return [ApiKeyRead.model_validate(api_key) for api_key in api_keys]
 
+def get_api_keys_by_flow_id(session: Session, flow_id: UUID) -> List[ApiKeyRead]:
+    query: SelectOfScalar = select(ApiKey).where(ApiKey.flow_id == flow_id)
+    api_keys = session.exec(query).all()
+    return [ApiKeyRead.model_validate(api_key) for api_key in api_keys]
 
-def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
+def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID, flow_id: UUID) -> UnmaskedApiKeyRead:
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
 
@@ -25,6 +29,8 @@ def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID
         name=api_key_create.name,
         user_id=user_id,
         created_at=api_key_create.created_at or datetime.datetime.now(datetime.timezone.utc),
+        flow_id=flow_id,
+        expire_at=api_key_create.expire_at or datetime.datetime.now(datetime.timezone.utc),
     )
 
     session.add(api_key)
