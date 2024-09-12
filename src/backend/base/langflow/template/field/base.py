@@ -5,7 +5,15 @@ from typing import _UnionGenericAlias  # type: ignore
 from typing import Any
 from collections.abc import Callable
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
@@ -50,8 +58,8 @@ class Input(BaseModel):
     file_path: str | None = ""
     """The file path of the field if it is a file. Defaults to None."""
 
-    password: bool = False
-    """Specifies if the field is a password. Defaults to False."""
+    password: bool | None = None
+    """Specifies if the field is a password. Defaults to None."""
 
     options: list[str] | Callable | None = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
@@ -178,6 +186,7 @@ class Output(BaseModel):
     """The method to use for the output."""
 
     value: Any | None = Field(default=UNDEFINED)
+    """The result of the Output. Dynamically updated as execution occurs."""
 
     cache: bool = Field(default=True)
 

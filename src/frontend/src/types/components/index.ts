@@ -1,5 +1,5 @@
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { ReactElement, ReactNode, SetStateAction } from "react";
+import { ReactElement, ReactNode } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
 import {
@@ -440,14 +440,14 @@ export type ConfirmationModalType = {
   modalContentTitle?: string;
   loading?: boolean;
   cancelText?: string;
-  confirmationText: string;
+  confirmationText?: string;
   children:
     | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
     | React.ReactElement<ContentProps>;
   icon?: string;
   data?: any;
   index?: number;
-  onConfirm: (index, data) => void;
+  onConfirm?: (index, data) => void;
   open?: boolean;
   onClose?: () => void;
   size?:
@@ -633,7 +633,6 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
-  setShowState: (show: boolean | SetStateAction<boolean>) => void;
   updateNode: () => void;
 };
 
@@ -645,9 +644,7 @@ export type parsedDataType = {
 };
 
 export type SanitizedHTMLWrapperType = {
-  className: string;
   content: string;
-  onClick: () => void;
   suppressWarning?: boolean;
 };
 
@@ -775,7 +772,7 @@ export type tabsArrayType = {
 };
 
 export type codeTabsPropsType = {
-  open: boolean;
+  open?: boolean;
   tabs: Array<tabsArrayType>;
   activeTab: string;
   setActiveTab: (value: string) => void;

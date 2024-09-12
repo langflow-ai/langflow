@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import CodeAreaModal from "../../modals/codeAreaModal";
 import { CodeAreaComponentType } from "../../types/components";
+import { cn } from "../../utils/utils";
 
 import IconComponent from "../genericIconComponent";
 
@@ -17,57 +18,68 @@ export default function CodeAreaComponent({
   open,
   setOpen,
 }: CodeAreaComponentType) {
-  const [myValue, setMyValue] = useState(
+  const [componentValue, setComponentValue] = useState(
     typeof value == "string" ? value : JSON.stringify(value),
   );
   useEffect(() => {
-    if (disabled && myValue !== "") {
-      setMyValue("");
+    if (disabled && componentValue !== "") {
+      setComponentValue("");
       onChange("", undefined, true);
     }
   }, [disabled]);
 
   useEffect(() => {
-    setMyValue(typeof value == "string" ? value : JSON.stringify(value));
+    setComponentValue(typeof value == "string" ? value : JSON.stringify(value));
   }, [value]);
 
+  const handleValueChange = (newValue) => {
+    onChange(newValue);
+  };
+
+  const renderInputText = () => (
+    <span
+      id={id}
+      data-testid={id}
+      className={cn(
+        editNode
+          ? "input-edit-node input-dialog"
+          : "primary-input text-muted-foreground",
+        disabled && !editNode && "input-disable input-ring",
+      )}
+    >
+      {value !== "" ? value : "Type something..."}
+    </span>
+  );
+
+  const renderExternalLinkIcon = () => {
+    if (editNode) return null;
+
+    return (
+      <IconComponent
+        name="ExternalLink"
+        className={cn(
+          "icons-parameters-comp shrink-0",
+          disabled ? "text-ring" : "hover:text-accent-foreground",
+        )}
+      />
+    );
+  };
+
   return (
-    <div className={disabled ? "pointer-events-none w-full" : "w-full"}>
+    <div className={cn("w-full", disabled && "pointer-events-none")}>
       <CodeAreaModal
         open={open}
         setOpen={setOpen}
         readonly={readonly}
         dynamic={dynamic}
-        value={myValue}
+        value={value}
         nodeClass={nodeClass}
         setNodeClass={setNodeClass!}
-        setValue={(value: string) => {
-          setMyValue(value);
-          onChange(value);
-        }}
+        setValue={handleValueChange}
       >
         <div className="flex w-full items-center gap-3">
-          <span
-            id={id}
-            data-testid={id}
-            className={
-              editNode
-                ? "input-edit-node input-dialog"
-                : (disabled ? "input-disable input-ring " : "") +
-                  " primary-input text-muted-foreground"
-            }
-          >
-            {myValue !== "" ? myValue : "Type something..."}
-          </span>
-          {!editNode && (
-            <IconComponent
-              name="ExternalLink"
-              className={
-                "icons-parameters-comp shrink-0" +
-                (disabled ? " text-ring" : " hover:text-accent-foreground")
-              }
-            />
-          )}
+          {renderInputText()}
+          {renderExternalLinkIcon()}
         </div>
       </CodeAreaModal>
     </div>

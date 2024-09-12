@@ -13,12 +13,12 @@ on:
         required: false
         type: string
         default: "tests"
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: "(Optional) Branch to checkout"
+      ref:
+        description: "(Optional) ref to checkout"
         required: false
         type: string
+  workflow_dispatch:
+    inputs:
       tests_folder:
         description: "(Optional) Tests to run"
         required: false
@@ -45,7 +45,7 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
-      BRAVE_SEARCH_API_KEY: "${{ secrets.BRAVE_SEARCH_API_KEY }}"
+      SEARCH_API_KEY: "${{ secrets.SEARCH_API_KEY }}"
       ASTRA_DB_APPLICATION_TOKEN: "${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}"
       ASTRA_DB_API_ENDPOINT: "${{ secrets.ASTRA_DB_API_ENDPOINT }}"
     outputs:
@@ -54,9 +54,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # If branch is passed as input, checkout that branch
-          # else checkout the default branch
-          ref: ${{ github.event.inputs.branch || github.ref }}
+          # If ref is passed as input, checkout that ref
+          # else checkout the default ref
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
