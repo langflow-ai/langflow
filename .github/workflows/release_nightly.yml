@@ -192,7 +192,7 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if: ${{ inputs.build_docker_base == 'true' }}
+    if: always() && ${{ inputs.build_docker_base == 'true' }}
     needs: [release-nightly-base]
     uses: ./.github/workflows/docker-build.yml
     strategy:
@@ -209,7 +209,7 @@ jobs:
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if: ${{ inputs.build_docker_main == 'true' }}
+    if: always() && ${{ inputs.build_docker_main == 'true' }}
     needs: [release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     strategy:
