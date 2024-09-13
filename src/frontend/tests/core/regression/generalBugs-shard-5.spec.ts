@@ -137,20 +137,20 @@ test("should be able to see output preview from grouped components and connect c
   await elementCombineTextOutput0.click();
 
   const blockedHandle = await page
-    .getByTestId("handle-textinput-shownode-text-right")
+    .getByTestId("gradient-handle-textinput-shownode-text-right")
     .nth(2);
   const secondBlockedHandle = await page
-    .getByTestId("handle-combinetext-shownode-combined text-right")
+    .getByTestId("gradient-handle-combinetext-shownode-combined text-right")
     .nth(2);
   const thirdBlockedHandle = await page
-    .getByTestId("handle-textoutput-shownode-text-right")
+    .getByTestId("gradient-handle-textoutput-shownode-text-right")
     .nth(0);
 
   const hasGradient = await blockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
     return (
       style.backgroundImage.includes("conic-gradient") &&
-      style.backgroundImage.includes("rgb(128, 128, 128)")
+      style.backgroundImage.includes("rgb(203, 213, 225)")
     );
   });
 
@@ -160,7 +160,7 @@ test("should be able to see output preview from grouped components and connect c
     const style = window.getComputedStyle(el);
     return (
       style.backgroundImage.includes("conic-gradient") &&
-      style.backgroundImage.includes("rgb(128, 128, 128)")
+      style.backgroundImage.includes("rgb(203, 213, 225)")
     );
   });
 
@@ -170,7 +170,7 @@ test("should be able to see output preview from grouped components and connect c
     const style = window.getComputedStyle(el);
     return (
       style.backgroundImage.includes("conic-gradient") &&
-      style.backgroundImage.includes("rgb(128, 128, 128)")
+      style.backgroundImage.includes("rgb(203, 213, 225)")
     );
   });
 
@@ -181,16 +181,16 @@ test("should be able to see output preview from grouped components and connect c
   expect(thirdHasGradient).toBe(true);
 
   const unlockedHandle = await page
-    .getByTestId("handle-textinput-shownode-text-left")
+    .getByTestId("gradient-handle-textinput-shownode-text-left")
     .last();
   const secondUnlockedHandle = await page
-    .getByTestId("handle-combinetext-shownode-second text-left")
+    .getByTestId("gradient-handle-combinetext-shownode-second text-left")
     .last();
   const thirdUnlockedHandle = await page
-    .getByTestId("handle-combinetext-shownode-second text-left")
+    .getByTestId("gradient-handle-combinetext-shownode-second text-left")
     .first();
   const fourthUnlockedHandle = await page
-    .getByTestId("handle-textoutput-shownode-text-left")
+    .getByTestId("gradient-handle-textoutput-shownode-text-left")
     .first();
 
   const hasGradientUnlocked = await unlockedHandle?.evaluate((el) => {
@@ -215,11 +215,11 @@ test("should be able to see output preview from grouped components and connect c
 
   await page.waitForTimeout(500);
 
-  const thirdHasGradientUnlocked = await thirdUnlockedHandle?.evaluate((el) => {
+  const thirdHasGradientLocked = await thirdUnlockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
     return (
       style.backgroundImage.includes("conic-gradient") &&
-      style.backgroundImage.includes("rgb(79, 70, 229)")
+      style.backgroundImage.includes("rgb(203, 213, 225)")
     );
   });
 
@@ -239,7 +239,7 @@ test("should be able to see output preview from grouped components and connect c
 
   expect(hasGradientUnlocked).toBe(true);
   expect(secondHasGradientUnlocked).toBe(true);
-  expect(thirdHasGradientUnlocked).toBe(true);
+  expect(thirdHasGradientLocked).toBe(true);
   expect(fourthHasGradientUnlocked).toBe(true);
 
   const elementCombineTextInput1 = await page
@@ -291,31 +291,31 @@ test("should be able to see output preview from grouped components and connect c
 
   await page.getByTestId("textarea_str_input_value").nth(0).fill(randomName);
 
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
   await page
     .getByTestId("textarea_str_input_value")
     .nth(1)
     .fill(secondRandomName);
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
 
   await page
     .getByPlaceholder("Type something...", { exact: true })
     .nth(6)
     .fill(thirdRandomName);
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
 
   await page
     .getByPlaceholder("Type something...", { exact: true })
     .nth(3)
     .fill("-");
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
 
   await page
     .getByPlaceholder("Type something...", { exact: true })
     .nth(4)
     .fill("-");
 
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(500);
 
   await page.getByTestId("button_run_text output").last().click();
 
@@ -324,13 +324,13 @@ test("should be able to see output preview from grouped components and connect c
   await page.getByText("built successfully").last().click({
     timeout: 15000,
   });
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(500);
 
   expect(
     await page.getByTestId("output-inspection-combined text").first(),
   ).not.toBeDisabled();
   await page.getByTestId("output-inspection-combined text").first().click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
 
   await page.getByText("Component Output").isVisible();
 
