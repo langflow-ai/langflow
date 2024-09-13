@@ -3,6 +3,7 @@ from langflow.io import StrInput, IntInput, Output
 from langflow.schema.message import Message
 from langchain_community.tools import DuckDuckGoSearchRun
 
+
 class DuckDuckGoSearchComponent(TextComponent):
     display_name = "DuckDuckGo Search"
     description = "Perform web searches using the DuckDuckGo search engine."
@@ -34,7 +35,7 @@ class DuckDuckGoSearchComponent(TextComponent):
             results = search_tool.run(f"{self.query} (site:*)")
 
             # Split the results into a list and limit to the specified number
-            result_list = results.split('\n')[:self.num_results]
+            result_list = results.split("\n")[: self.num_results]
 
             # Format the results as a string
             formatted_results = "\n\n".join([f"{i+1}. {result}" for i, result in enumerate(result_list)])
