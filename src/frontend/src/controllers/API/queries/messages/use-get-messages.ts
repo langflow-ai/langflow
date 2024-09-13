@@ -40,7 +40,6 @@ export const useGetMessagesQuery: useQueryFunctionType<
     const data = await getMessagesFn(id, params);
     const columns = extractColumnsFromRows(data.data, mode, excludedFields);
     useMessagesStore.getState().setMessages(data.data);
-    useMessagesStore.getState().setColumns(columns);
     return { rows: data, columns };
   };
 
