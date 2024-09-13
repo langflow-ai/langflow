@@ -211,7 +211,7 @@ export default function IOModal({
   useEffect(() => {
     if(visibleSessions.length===0 && sessions.length>0)
     {
-      setSessionId(uuid.randomUUID(8))
+      setSessionId(`Session ${uuid.randomUUID(4)}`)
     }
     else if(visibleSessions.length===1)
     {
@@ -448,7 +448,7 @@ export default function IOModal({
                             >
                               <ShadTooltip
                                 styleClasses="z-50"
-                                content={"Table View"}
+                                content={"Toggle Visibility"}
                               >
                                 <div>
                                   <IconComponent
