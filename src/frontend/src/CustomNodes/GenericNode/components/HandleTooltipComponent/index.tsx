@@ -1,3 +1,5 @@
+import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
+
 export default function HandleTooltipComponent({
   isInput,
   tooltipTitle,
@@ -39,6 +41,7 @@ export default function HandleTooltipComponent({
             <div
               className="rounded-sm px-1.5 text-background"
               style={{ backgroundColor: colors[index] }}
+              data-testid={`${isInput ? "input" : "output"}-tooltip-${convertTestName(word)}`}
             >
               {word}
             </div>
