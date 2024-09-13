@@ -6,7 +6,7 @@ from langflow.services.deps import session_scope
 
 def update_message(message_id: UUID, message: MessageUpdate | dict):
     if not isinstance(message, MessageUpdate):
-        message = MessageUpdate(**message)
+        message = MessageUpdate(**message,edited=True)
     with session_scope() as session:
         db_message = session.get(MessageTable, message_id)
         if not db_message:
