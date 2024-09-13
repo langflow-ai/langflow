@@ -63,7 +63,9 @@ def check_key(session: Session, api_key: str) -> Optional[ApiKey]:
     api_key_object: Optional[ApiKey] = session.exec(query).first()
     if api_key_object is not None:
         # Check if the API key has expired
-        if api_key_object.expire_at != None and (api_key_object.expire_at <= datetime.datetime.now(datetime.timezone.utc)):
+        if api_key_object.expire_at != None and (
+            api_key_object.expire_at <= datetime.datetime.now(datetime.timezone.utc)
+        ):
             raise ValueError("API Key has expired")
         threading.Thread(
             target=update_total_uses,
