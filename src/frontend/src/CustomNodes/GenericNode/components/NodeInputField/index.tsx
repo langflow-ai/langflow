@@ -81,6 +81,7 @@ export default function NodeInputField({
       setFilterEdge={setFilterEdge}
       showNode={showNode}
       testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+      nodeId={data.id}
     />
   );
 

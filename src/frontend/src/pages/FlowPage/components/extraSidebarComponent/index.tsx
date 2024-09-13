@@ -17,6 +17,7 @@ import { nodeIconsLucide } from "../../../../utils/styleUtils";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import { SidebarCategoryComponent } from "./SidebarCategoryComponent";
 
+import { SidebarFilterComponent } from "./sidebarFilterComponent";
 import { sortKeys } from "./utils";
 
 export default function ExtraSidebar(): JSX.Element {
@@ -25,6 +26,7 @@ export default function ExtraSidebar(): JSX.Element {
   const getFilterEdge = useFlowStore((state) => state.getFilterEdge);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const hasStore = useStoreStore((state) => state.hasStore);
+  const filterType = useFlowStore((state) => state.filterType);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
@@ -222,8 +224,18 @@ export default function ExtraSidebar(): JSX.Element {
 
       <div className="side-bar-components-div-arrangement">
         <div className="parent-disclosure-arrangement">
-          <div className="flex items-center gap-4 align-middle">
-            <span className="parent-disclosure-title">Components</span>
+          <div className="flex w-full flex-col items-start justify-between gap-2.5">
+            <span className="text-sm font-medium">Components</span>
+            {filterType && (
+              <SidebarFilterComponent
+                isInput={!!filterType.source}
+                type={filterType.type}
+                resetFilters={() => {
+                  setFilterEdge([]);
+                  setFilterData(data);
+                }}
+              />
+            )}
           </div>
         </div>
         <Separator />

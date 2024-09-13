@@ -339,6 +339,8 @@ export type ShadTooltipProps = {
   style?: string;
 };
 export type ShadToolTipType = {
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
   content?: ReactNode | null;
   side?: "top" | "right" | "bottom" | "left";
   asChild?: boolean;

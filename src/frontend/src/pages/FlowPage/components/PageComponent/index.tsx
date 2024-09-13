@@ -1,3 +1,4 @@
+import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import IconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
@@ -8,7 +9,6 @@ import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
 
-import { ENABLE_MVPS } from "@/customization/feature-flags";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -457,6 +457,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onSelectionDragStart={onSelectionDragStart}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
+            connectionRadius={25}
+            edgeTypes={{ default: DefaultEdge }}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
             onNodeDragStop={onNodeDragStop}

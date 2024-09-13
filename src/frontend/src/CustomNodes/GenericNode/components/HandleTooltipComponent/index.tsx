@@ -1,30 +1,65 @@
-import { TOOLTIP_EMPTY } from "../../../../constants/constants";
-import useFlowStore from "../../../../stores/flowStore";
-import { useTypesStore } from "../../../../stores/typesStore";
-import { NodeType } from "../../../../types/flow";
-import { groupByFamily } from "../../../../utils/utils";
-import TooltipRenderComponent from "../tooltipRenderComponent";
+import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
 
-export default function HandleTooltips({
-  left,
+export default function HandleTooltipComponent({
+  isInput,
   tooltipTitle,
+  colors,
+  isConnecting,
+  isCompatible,
+  isSameNode,
 }: {
-  left: boolean;
-  nodes: NodeType[];
+  isInput: boolean;
+  colors: string[];
   tooltipTitle: string;
+  isConnecting: boolean;
+  isCompatible: boolean;
+  isSameNode: boolean;
 }) {
-  const myData = useTypesStore((state) => state.data);
-  const nodes = useFlowStore((state) => state.nodes);
-
-  let groupedObj: any = groupByFamily(myData, tooltipTitle!, left, nodes!);
-
-  if (groupedObj && groupedObj.length > 0) {
-    //@ts-ignore
-    return groupedObj.map((item, index) => {
-      return <TooltipRenderComponent index={index} item={item} left={left} />;
-    });
-  } else {
-    //@ts-ignore
-    return <span data-testid={`empty-tooltip-filter`}>{TOOLTIP_EMPTY}</span>;
-  }
+  const tooltips = tooltipTitle.split("\n");
+  const plural = tooltips.length > 1 ? "s" : "";
+  return (
+    <div className="py-1.5 font-medium text-muted-foreground">
+      {isSameNode ? (
+        "Can't connect to the same node"
+      ) : (
+        <div className="flex items-start gap-1.5">
+          {isConnecting ? (
+            isCompatible ? (
+              <span>
+                <span className="font-semibold text-foreground">Connect</span>{" "}
+                to
+              </span>
+            ) : (
+              <span>Incompatible with</span>
+            )
+          ) : (
+            <span className="text-foreground">
+              {isInput ? `Input${plural}` : `Output${plural}`}:{" "}
+            </span>
+          )}
+          {tooltips.map((word, index) => (
+            <div
+              className="rounded-sm px-1.5 text-background"
+              style={{ backgroundColor: colors[index] }}
+              data-testid={`${isInput ? "input" : "output"}-tooltip-${convertTestName(word)}`}
+            >
+              {word}
+            </div>
+          ))}
+          {isConnecting && <span>{isInput ? `input` : `output`}</span>}
+        </div>
+      )}
+      {!isConnecting && (
+        <div className="mt-2 flex flex-col gap-0.5 text-xs">
+          <div>
+            <b>Drag</b> to connect compatible {!isInput ? "inputs" : "outputs"}
+          </div>
+          <div>
+            <b>Select</b> to filter compatible {!isInput ? "inputs" : "outputs"}{" "}
+            and components
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

@@ -54,28 +54,21 @@ test("user must see on handle hover a tooltip with possibility connections", asy
   }
 
   await visibleElementHandle.hover().then(async () => {
-    const testIds = [
-      "available-output-inputs",
-      "available-output-chains",
-      "available-output-textsplitters",
-      "available-output-retrievers",
-      "available-output-prototypes",
-      "available-output-embeddings",
-      "available-output-data",
-      "available-output-vectorstores",
-      "available-output-memories",
-      "available-output-models",
-      "available-output-outputs",
-      "available-output-agents",
-      "available-output-helpers",
-    ];
+    await expect(
+      page.getByText("Drag to connect compatible inputs").first(),
+    ).toBeVisible();
 
-    await Promise.all(
-      testIds.map((id) => expect(page.getByTestId(id).first()).toBeVisible()),
-    );
+    await expect(
+      page
+        .getByText("Select to filter compatible inputs and components")
+        .first(),
+    ).toBeVisible();
 
-    await page.getByTestId("icon-X").click();
-    await page.waitForTimeout(500);
+    await expect(page.getByText("Output:").first()).toBeVisible();
+
+    await expect(
+      page.getByTestId("output-tooltip-message").first(),
+    ).toBeVisible();
   });
 
   await page.getByTitle("fit view").click();
@@ -96,13 +89,20 @@ test("user must see on handle hover a tooltip with possibility connections", asy
 
   await visibleElementHandle.hover().then(async () => {
     await expect(
-      page.getByTestId("available-input-models").first(),
+      page.getByText("Drag to connect compatible outputs").first(),
     ).toBeVisible();
-    await page.waitForTimeout(1000);
 
-    await page.getByTestId("icon-Search").click();
+    await expect(
+      page
+        .getByText("Select to filter compatible outputs and components")
+        .first(),
+    ).toBeVisible();
 
-    await page.waitForTimeout(500);
+    await expect(page.getByText("Input:").first()).toBeVisible();
+
+    await expect(
+      page.getByTestId("input-tooltip-languagemodel").first(),
+    ).toBeVisible();
   });
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
@@ -121,16 +121,21 @@ test("user must see on handle hover a tooltip with possibility connections", asy
   }
 
   await visibleElementHandle.hover().then(async () => {
-    await page.waitForTimeout(2500);
-
     await expect(
-      page.getByTestId("available-input-retrievers").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-input-vectorstores").first(),
+      page.getByText("Drag to connect compatible outputs").first(),
     ).toBeVisible();
 
-    await page.waitForTimeout(500);
+    await expect(
+      page
+        .getByText("Select to filter compatible outputs and components")
+        .first(),
+    ).toBeVisible();
+
+    await expect(page.getByText("Input:").first()).toBeVisible();
+
+    await expect(
+      page.getByTestId("input-tooltip-retriever").first(),
+    ).toBeVisible();
   });
 
   await page.getByTitle("fit view").click();
@@ -151,7 +156,19 @@ test("user must see on handle hover a tooltip with possibility connections", asy
 
   await visibleElementHandle.hover().then(async () => {
     await expect(
-      page.getByTestId("available-input-helpers").first(),
+      page.getByText("Drag to connect compatible outputs").first(),
+    ).toBeVisible();
+
+    await expect(
+      page
+        .getByText("Select to filter compatible outputs and components")
+        .first(),
+    ).toBeVisible();
+
+    await expect(page.getByText("Input:").first()).toBeVisible();
+
+    await expect(
+      page.getByTestId("input-tooltip-basechatmemory").first(),
     ).toBeVisible();
   });
 });
