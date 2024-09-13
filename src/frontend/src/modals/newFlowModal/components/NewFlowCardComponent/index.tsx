@@ -1,4 +1,5 @@
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useParams } from "react-router-dom";
 import {
@@ -7,7 +8,6 @@ import {
   CardDescription,
   CardTitle,
 } from "../../../../components/ui/card";
-import { track } from "@/customization/utils/analytics";
 
 export default function NewFlowCardComponent() {
   const addFlow = useAddFlow();
@@ -20,7 +20,7 @@ export default function NewFlowCardComponent() {
         addFlow().then((id) => {
           navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
         });
-        track("New Flow Created: Blank Flow")
+        track("New Flow Created: Blank Flow");
       }}
       className="h-64 w-80 cursor-pointer bg-background pt-4"
       data-testid="blank-flow"

@@ -11,6 +11,7 @@ import BasicPrompt from "../../../../assets/undraw_short_bio_re_fmx0.svg?react";
 import TransferFiles from "../../../../assets/undraw_transfer_files_re_a2a9.svg?react";
 
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import {
   Card,
@@ -21,7 +22,6 @@ import {
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { UndrawCardComponentProps } from "../../../../types/components";
 import { updateIds } from "../../../../utils/reactflowUtils";
-import { track } from "@/customization/utils/analytics";
 
 export default function UndrawCardComponent({
   flow,
@@ -145,7 +145,7 @@ export default function UndrawCardComponent({
         addFlow({ flow }).then((id) => {
           navigate(`/flow/${id}/folder/${folderIdUrl}`);
         });
-        track(`New Flow Created: ${flow.name} Template`)
+        track(`New Flow Created: ${flow.name} Template`);
       }}
       className="h-64 w-80 cursor-pointer bg-background pt-4"
     >
