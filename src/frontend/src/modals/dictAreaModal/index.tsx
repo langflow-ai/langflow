@@ -65,14 +65,13 @@ export default function DictAreaModal({
     <BaseModal.Content>
       <div className="flex h-full w-full flex-col transition-all">
         <JsonView
-          theme="vscode"
-          dark={isDark}
-          className={!isDark ? "json-view-white" : "json-view-dark"}
+          dark
           editable={!!onChange}
           enableClipboard
           onChange={handleJsonChange}
           src={cloneDeep(componentValue)}
           customizeCopy={customizeCopy}
+          theme="vscode"
         />
       </div>
     </BaseModal.Content>
