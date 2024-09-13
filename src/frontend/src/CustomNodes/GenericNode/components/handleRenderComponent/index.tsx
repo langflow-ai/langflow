@@ -155,16 +155,8 @@ export default function HandleRenderComponent({
             isValidConnection(connection, nodes, edges)
           }
           className={classNames(
-            `group/handle z-20 rounded-full border-none transition-all`,
-            filterPresent
-              ? openHandle || ownHandle
-                ? cn("h-5 w-5")
-                : cn("h-1.5 w-1.5")
-              : cn("h-1.5 w-1.5 group-hover/node:h-5 group-hover/node:w-5"),
+            `group/handle z-20 h-6 w-6 rounded-full border-none bg-transparent transition-all`,
           )}
-          style={{
-            background: handleColor,
-          }}
           onClick={() => {
             setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
             setFilterType(currentFilter);
@@ -199,6 +191,19 @@ export default function HandleRenderComponent({
           ></div>
           <div
             className="pointer-events-none absolute left-1/2 top-[50%] z-10 flex h-3 w-3 -translate-x-1/2 translate-y-[-50%] items-center justify-center rounded-full opacity-50 transition-all"
+            style={{
+              background: handleColor,
+            }}
+          />
+          <div
+            className={classNames(
+              `pointer-events-none absolute left-1/2 top-[50%] z-10 flex -translate-x-1/2 translate-y-[-50%] items-center justify-center rounded-full transition-all`,
+              filterPresent
+                ? openHandle || ownHandle
+                  ? cn("h-5 w-5")
+                  : cn("h-1.5 w-1.5")
+                : cn("h-1.5 w-1.5 group-hover/node:h-5 group-hover/node:w-5"),
+            )}
             style={{
               background: handleColor,
             }}
