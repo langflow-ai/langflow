@@ -6,6 +6,7 @@ import {
 } from "@/controllers/API/queries/folders";
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
 import { ENABLE_CUSTOM_PARAM } from "@/customization/feature-flags";
+import { track } from "@/customization/utils/analytics";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
@@ -151,6 +152,7 @@ const SideBarFoldersButtonsComponent = ({
         description: "",
       },
     });
+    track("Create New Folder");
   }
 
   function handleEditFolderName(e, name): void {
@@ -401,6 +403,7 @@ const SideBarFoldersButtonsComponent = ({
                         handleDownloadFolder(item.id!);
                         e.stopPropagation();
                         e.preventDefault();
+                        track("Folder Exported", { folderId: item.id! });
                       }}
                       unstyled
                     >

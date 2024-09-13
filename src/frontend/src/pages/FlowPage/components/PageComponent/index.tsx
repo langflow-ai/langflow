@@ -295,6 +295,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     (params: Connection) => {
       takeSnapshot();
       onConnect(params);
+      track("New Component Connection Added");
     },
     [takeSnapshot, onConnect],
   );

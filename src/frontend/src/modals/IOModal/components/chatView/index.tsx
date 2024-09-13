@@ -1,5 +1,6 @@
 import { useDeleteBuilds } from "@/controllers/API/queries/_builds";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { track } from "@/customization/utils/analytics";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -284,9 +285,10 @@ export default function ChatView({
               chatValue={chatValue}
               noInput={!inputTypes.includes("ChatInput")}
               lockChat={lockChat}
-              sendMessage={({ repeat, files }) =>
-                sendMessage({ repeat, files })
-              }
+              sendMessage={({ repeat, files }) => {
+                sendMessage({ repeat, files });
+                track("Playground Message Sent");
+              }}
               setChatValue={(value) => {
                 setChatValue(value);
               }}
