@@ -110,6 +110,7 @@ export default function NodeOutputField({
       id={id}
       title={title}
       edges={edges}
+      nodeId={data.id}
       myData={myData}
       colors={colors}
       setFilterEdge={setFilterEdge}
