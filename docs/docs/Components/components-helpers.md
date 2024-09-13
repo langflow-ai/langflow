@@ -24,7 +24,7 @@ This component retrieves and manages chat messages from Langflow tables or an ex
 | n_messages | Number of Messages | Number of messages to retrieve. |
 | session_id | Session ID | The session ID of the chat. If empty, the current session ID parameter will be used. |
 | order | Order | Order of the messages. |
-| template | Template | The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data. |
+| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{sender}` or any other key in the message data. |
 
 #### Outputs
 
@@ -117,7 +117,7 @@ This component transforms structured data into human-readable text formats, allo
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | The data to convert to text |
-| template | Template | The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data |
+| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{data}` or any other key in the Data |
 | sep | Separator | The separator to use between multiple data items |
 
 #### Outputs
