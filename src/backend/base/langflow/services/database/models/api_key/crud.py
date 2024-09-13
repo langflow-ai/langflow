@@ -6,13 +6,12 @@ from uuid import UUID
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
-
 from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
 
+load_dotenv()
 
 def get_api_keys(session: Session, user_id: UUID) -> List[ApiKeyRead]:
     query: SelectOfScalar = select(ApiKey).where(ApiKey.user_id == user_id)
@@ -63,7 +62,7 @@ def check_key(session: Session, api_key: str) -> Optional[ApiKey]:
     api_key_object: Optional[ApiKey] = session.exec(query).first()
     if api_key_object is not None:
         # Check if the API key has expired
-        if api_key_object.expire_at != None and (
+        if api_key_object.expire_at is not None and (
             api_key_object.expire_at <= datetime.datetime.now(datetime.timezone.utc)
         ):
             raise ValueError("API Key has expired")

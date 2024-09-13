@@ -9,7 +9,9 @@ from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
+    from langflow.services.database.models.flow import Flow
 
+load_dotenv()
 
 def utc_now():
     return datetime.now(timezone.utc)

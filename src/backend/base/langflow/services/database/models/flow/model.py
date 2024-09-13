@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.message import MessageTable
     from langflow.services.database.models.user import User
     from langflow.services.database.models import TransactionTable
+    from langflow.services.database.models.api_key import ApiKey
 
 
 class FlowBase(SQLModel):
