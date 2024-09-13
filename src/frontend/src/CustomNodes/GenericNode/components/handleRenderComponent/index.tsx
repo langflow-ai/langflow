@@ -65,15 +65,23 @@ export default function HandleRenderComponent({
 
   const myId = scapedJSONStringfy(proxy ? { ...id, proxy } : id);
 
+  const ownDraggingNode =
+    (left ? handleDragging?.target : handleDragging?.source) === nodeId;
+
   const ownDraggingHandle =
     handleDragging &&
-    (left ? handleDragging.target : handleDragging.source) === nodeId &&
+    ownDraggingNode &&
     (left ? handleDragging.targetHandle : handleDragging.sourceHandle) === myId;
+
+  const ownFilterNode =
+    (left ? filterType?.target : filterType?.source) === nodeId;
 
   const ownFilterHandle =
     filterType &&
-    (left ? filterType.target : filterType.source) === nodeId &&
+    ownFilterNode &&
     (left ? filterType.targetHandle : filterType.sourceHandle) === myId;
+
+  const ownNode = ownDraggingNode || ownFilterNode;
 
   const ownHandle = ownDraggingHandle || ownFilterHandle;
 
@@ -141,14 +149,11 @@ export default function HandleRenderComponent({
         content={
           <HandleTooltipComponent
             isInput={left}
-            color={colors[0]}
+            colors={colors}
             tooltipTitle={tooltipTitle}
             isConnecting={!!filterPresent && !ownHandle}
             isCompatible={openHandle}
-            isSameNode={
-              nodeId === (handleDragging?.target ?? handleDragging?.source) &&
-              !ownHandle
-            }
+            isSameNode={ownNode && !ownHandle}
           />
         }
         side={left ? "left" : "right"}

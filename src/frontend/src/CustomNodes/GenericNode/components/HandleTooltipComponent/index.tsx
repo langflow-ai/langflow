@@ -1,18 +1,20 @@
 export default function HandleTooltipComponent({
   isInput,
   tooltipTitle,
-  color,
+  colors,
   isConnecting,
   isCompatible,
   isSameNode,
 }: {
   isInput: boolean;
-  color: string;
+  colors: string[];
   tooltipTitle: string;
   isConnecting: boolean;
   isCompatible: boolean;
   isSameNode: boolean;
 }) {
+  const tooltips = tooltipTitle.split("\n");
+  const plural = tooltips.length > 1 ? "s" : "";
   return (
     <div className="py-1.5 font-medium text-muted-foreground">
       {isSameNode ? (
@@ -30,16 +32,18 @@ export default function HandleTooltipComponent({
             )
           ) : (
             <span className="text-foreground">
-              {isInput ? "Input" : "Output"}:{" "}
+              {isInput ? `Input${plural}` : `Output${plural}`}:{" "}
             </span>
           )}
-          <div
-            className="rounded-sm px-1.5 text-background"
-            style={{ backgroundColor: color }}
-          >
-            {tooltipTitle}
-          </div>
-          {isConnecting && <span>{isInput ? "input" : "output"}</span>}
+          {tooltips.map((word, index) => (
+            <div
+              className="rounded-sm px-1.5 text-background"
+              style={{ backgroundColor: colors[index] }}
+            >
+              {word}
+            </div>
+          ))}
+          {isConnecting && <span>{isInput ? `input` : `output`}</span>}
         </div>
       )}
       {!isConnecting && (
