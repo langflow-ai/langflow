@@ -4,104 +4,174 @@ sidebar_position: 8
 slug: /components-custom-components
 ---
 
+# Custom Components
+
+Custom components are created within Langflow and extend the platform's functionality with custom, resusable Python code.
+
+Since Langflow operates with Python behind the scenes, you can implement any Python function within a Custom Component. This means you can leverage the power of libraries such as Pandas, Scikit-learn, Numpy, and thousands of other packages to create components that handle data processing in unlimited ways. You can use any type as long as the type is properly annotated in the output methods (e.g., `> list[int]`).
+
+Custom Components create reusable and configurable components to enhance the capabilities of Langflow, making it a powerful tool for developing complex processing between user and AI messages.
+
+## How to Create Custom Components
+
+Creating custom components in Langflow involves creating a Python class that defines the component's functionality, inputs, and outputs.
+The default code provides a working structure for your custom component.
+```python
+# from langflow.field_typing import Data
+from langflow.custom import Component
+from langflow.io import MessageTextInput, Output
+from langflow.schema import Data
 
 
-Langflow components can be created from within the platform, allowing users to extend the platform's functionality using Python code. They encapsulate are designed to be independent units, reusable across different workflows. 
+class CustomComponent(Component):
+    display_name = "Custom Component"
+    description = "Use as a template to create your own component."
+    documentation: str = "http://docs.langflow.org/components/custom"
+    icon = "custom_components"
+    name = "CustomComponent"
 
+    inputs = [
+        MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
+    ]
 
-These components can be easily connected within a language model pipeline, adding freedom and flexibility to what can be included in between user and AI messages. 
+    outputs = [
+        Output(display_name="Output", name="output", method="build_output"),
+    ]
 
+    def build_output(self) -> Data:
+        data = Data(value=self.input_value)
+        self.status = data
+        return data
+
+```
+
+You can create your class in your favorite text editor outside of Langflow and paste it in later, or just follow along in the code pane.
+
+1. In Langflow, from under **Helpers**, drag a **Custom Component** into the workspace.
+2. Open the component's code pane.
+3. Import dependencies.
+Your custom component inherits from the langflow `Component` class so you need to include it.
+```python
+from langflow.custom import Component
+from langflow.io import MessageTextInput, Output
+from langflow.schema import Data
+```
+4. **Define the Class**: Start by defining a Python class that inherits from `Component`. This class will encapsulate the functionality of your custom component.
+
+```python
+class CustomComponent(Component):
+    display_name = "Custom Component"
+    description = "Use as a template to create your own component."
+    documentation: str = "http://docs.langflow.org/components/custom"
+    icon = "custom_components"
+    name = "CustomComponent"
+```
+5. **Specify Inputs and Outputs**: Use Langflow's input and output classes to define the inputs and outputs of your component. They should be declared as class attributes.
+```python
+    inputs = [
+        MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
+    ]
+
+    outputs = [
+        Output(display_name="Output", name="output", method="build_output"),
+    ]
+```
+6. **Implement Output Methods**: Implement methods for each output, which contains the logic of your component. These methods can access input values using `self.<input_name>` , return processed values and define what to be displayed in the component with the `self.status` attribute.
+```python
+    def build_output(self) -> Data:
+        data = Data(value=self.input_value)
+        self.status = data
+        return data
+```
+7. **Use Proper Annotations**: Ensure that output methods are properly annotated with their types. Langflow uses these annotations to validate and handle data correctly. For example, this method is annotated to output `Data`.
+```python
+    def build_output(self) -> Data:
+```
+8. Click **Check & Save** to confirm your component works.
+You now have an operational custom component.
 
 ![](./238089171.png)
 
 
-Since Langflow operates with Python behind the scenes, you can implement any Python function within a Custom Component. This means you can leverage the power of libraries such as Pandas, Scikit-learn, Numpy, and thousands of packages to create components that handle data processing in unlimited ways. 
+## Add inputs and modify output methods
 
+This code defines a custom component that accepts 5 inputs and outputs a Message.
 
-Custom Components are not just about extending functionality; they also streamline the development process. By creating reusable and configurable components, you can enhance the capabilities of Langflow, making it a powerful tool for developing complex workflows.
-
-
-### Key Characteristics: {#d3a151089a9e4584bd420461cd1432c6}
-
-1. **Modular and Reusable**: Designed as independent units, components encapsulate specific functionality, making them reusable across different projects and workflows.
-2. **Integration with Python Libraries**: You can import libraries like Pandas, Scikit-learn, Numpy, etc., to build components that handle data processing, machine learning, numerical computations, and more.
-3. **Flexible Inputs and Outputs**: While Langflow offers native input and output types, you can use any type as long as they are properly annotated in the output methods (e.g., `> list[int]`).
-4. **Python-Powered**: Since Langflow operates with Python behind the scenes, any Python function can be implemented within a custom component.
-5. **Enhanced Workflow**: Custom components serve as reusable building blocks, enabling you to create pre-processing visual blocks with ease and integrate them into your language model pipeline.
-
-### Why Use Custom Components? {#827a2b5acec94426a4a2106a8332622d}
-
-- **Customization**: Tailor the functionality to your specific needs by writing Python code that suits your workflow.
-- **Flexibility**: Add any Python-based logic or processing step between user/AI messages, enhancing the flexibility of Langflow.
-- **Efficiency**: Streamline your development process by creating reusable, configurable components that can be easily deployed.
-
-### How to Write Them {#2088ade519514bb3923cdf7f2ac2089a}
-
-
----
-
-
-Writing custom components in Langflow involves creating a Python class that defines the component's functionality, inputs, and outputs. The process involves a few key steps:
-
-1. **Define the Class**: Start by defining a Python class that inherits from `Component`. This class will encapsulate the functionality of your custom component.
-2. **Specify Inputs and Outputs**: Use Langflow's input and output classes to define the inputs and outputs of your component. They should be declared as class attributes.
-3. **Implement Output Methods**: Implement methods for each output, which contains the logic of your component. These methods can access input values using `self.<input_name>` , return processed values and define what to be displayed in the component with the `self.status` attribute.
-4. **Use Proper Annotations**: Ensure that output methods are properly annotated with their types. Langflow uses these annotations to validate and handle data correctly.
-
-Here's a basic structure of a custom component:
-
+Copy and paste it into the Custom Component code pane and click **Check & Save.**
 
 ```python
 from langflow.custom import Component
-from langflow.inputs import StrInput, IntInput
-from langflow.template import Output
+from langflow.inputs import StrInput, MultilineInput, SecretStrInput, IntInput, DropdownInput
+from langflow.template import Output, Input
+from langflow.schema.message import Message
 
 class MyCustomComponent(Component):
-    icon = "coffee" # check lucide.dev/icons or pass an emoji
+    display_name = "My Custom Component"
+    description = "An example of a custom component with various input types."
 
     inputs = [
         StrInput(
-            name="input_text",
-            display_name="Input Text",
-            info="Text to be processed.",
+            name="username",
+            display_name="Username",
+            info="Enter your username."
+        ),
+        SecretStrInput(
+            name="password",
+            display_name="Password",
+            info="Enter your password."
+        ),
+        MessageTextInput(
+            name="special_message",
+            display_name="special_message",
+            info="Enter a special message.",
         ),
         IntInput(
-            name="input_number",
-            display_name="Input Number",
-            info="Number to be processed.",
+            name="age",
+            display_name="Age",
+            info="Enter your age."
         ),
+        DropdownInput(
+            name="gender",
+            display_name="Gender",
+            options=["Male", "Female", "Other"],
+            info="Select your gender."
+        )
     ]
 
     outputs = [
-        Output(display_name="Processed Text", name="processed_text", method="process_text"),
+        Output(display_name="Result", name="result", method="process_inputs"),
     ]
 
-    def process_text(self) -> str:
-        input_text = self.input_text
-        input_number = self.input_number
-        # Implement your logic here
-        processed_text = f"{input_text} processed with number {input_number}"
-        self.status = processed_text
-        return processed_text
+    def process_inputs(self) -> Message:
+        """
+        Process the user inputs and return a Message object.
 
-
+        Returns:
+            Message: A Message object containing the processed information.
+        """
+        try:
+            processed_text = f"User {self.username} (Age: {self.age}, Gender: {self.gender}) " \
+                             f"sent the following special message: {self.special_message}"
+            return Message(text=processed_text)
+        except AttributeError as e:
+            return Message(text=f"Error processing inputs: {str(e)}")
 ```
 
+Since the component outputs a `Message`, you can wire it into a chat and pass messages to yourself.
 
-Paste that code into the Custom Component code snippet and click **Check & Save.**
+Your Custom Component accepts the Chat Input message through `MessageTextInput`, fills in the variables with the `process_inputs` method, and finally passes the message `User Username (Age: 49, Gender: Male) sent the following special message: Hello!` to Chat Output.
 
+![](./custom-component-chat.png)
 
-![](./1028644105.png)
+By defining inputs this way, Langflow can automatically handle the validation and display of these fields in the user interface, making it easier to create robust and user-friendly custom components.
 
+All of the types detailed above derive from a general class that can also be accessed through the generic `Input` class.
 
-You should see something like the component below. Double click the name or description areas to edit them.
-
-
-![](./241280398.png)
-
+:::tip
+Use `MessageInput` to get the entire Message object instead of just the text.
+:::
 
 ## Input Types {#3815589831f24ab792328ed233c8b00d}
-
 
 ---
 
@@ -224,62 +294,6 @@ Represents a file input field.
 - **Attributes:** `file_types` to specify the types of files that can be uploaded.
 - **Input Types:** `["File"]`
 
-Here is an example of how these inputs can be defined in a custom component:
-
-
-```python
-from langflow.custom import Component
-from langflow.inputs import StrInput, MultilineInput, SecretStrInput, IntInput, DropdownInput
-from langflow.template import Output, Input
-
-class MyCustomComponent(Component):
-    display_name = "My Custom Component"
-    description = "An example of a custom component with various input types."
-
-    inputs = [
-        StrInput(
-            name="username",
-            display_name="Username",
-            info="Enter your username."
-        ),
-        SecretStrInput(
-            name="password",
-            display_name="Password",
-            info="Enter your password."
-        ),
-        MultilineInput(
-            name="description",
-            display_name="Description",
-            info="Enter a detailed description.",
-        ),
-        IntInput(
-            name="age",
-            display_name="Age",
-            info="Enter your age."
-        ),
-        DropdownInput(
-            name="gender",
-            display_name="Gender",
-            options=["Male", "Female", "Other"],
-            info="Select your gender."
-        )
-    ]
-
-    outputs = [
-        Output(display_name="Result", name="result", method="process_inputs"),
-    ]
-
-    def process_inputs(self):
-        # Your processing logic here
-        return "Processed"
-```
-
-
-By defining inputs this way, Langflow can automatically handle the validation and display of these fields in the user interface, making it easier to create robust and user-friendly custom components.
-
-
-All of the types detailed above derive from a general class that can also be accessed through the generic `Input` class.
-
 
 ### Generic Input {#278e2027493e45b68746af0a5b6c06f6}
 
@@ -316,74 +330,106 @@ The `Input` class is highly customizable, allowing you to specify a wide range
 - `load_from_db`: Boolean indicating if the field should load from the database. Default is `False`.
 - `title_case`: Boolean indicating if the display name should be in title case. Default is `True`.
 
-Below is an example of how to define inputs for a component using the `Input` class:
+## Create a Custom Component with Generic Input
 
+Here is an example of how to define inputs for a component using the `Input` class.
+
+Copy and paste it into the Custom Component code pane and click **Check & Save.**
 
 ```python
 from langflow.template import Input, Output
 from langflow.custom import Component
 from langflow.field_typing import Text
+from langflow.schema.message import Message
+from typing import Dict, Any
 
-class ExampleComponent(Component):
-    display_name = "Example Component"
-    description = "An example component demonstrating input fields."
+class TextAnalyzerComponent(Component):
+    display_name = "Text Analyzer"
+    description = "Analyzes input text and provides basic statistics."
 
     inputs = [
         Input(
             name="input_text",
             display_name="Input Text",
-            field_type="str",
+            field_type="Message",
             required=True,
-            placeholder="Enter some text",
+            placeholder="Enter text to analyze",
             multiline=True,
-            info="This is a required text input.",
+            info="The text you want to analyze.",
             input_types=["Text"]
         ),
         Input(
-            name="max_length",
-            display_name="Max Length",
-            field_type="int",
+            name="include_word_count",
+            display_name="Include Word Count",
+            field_type="bool",
             required=False,
-            placeholder="Maximum length",
-            info="Enter the maximum length of the text.",
-            range_spec={"min": 0, "max": 1000},
+            info="Whether to include word count in the analysis.",
         ),
         Input(
-            name="options",
-            display_name="Options",
-            field_type="str",
-            is_list=True,
-            options=["Option 1", "Option 2", "Option 3"],
-            info="Select one or more options."
+            name="perform_sentiment_analysis",
+            display_name="Perform Sentiment Analysis",
+            field_type="bool",
+            required=False,
+            info="Whether to perform basic sentiment analysis.",
         ),
     ]
 
     outputs = [
-        Output(display_name="Result", name="result", method="process_input"),
+        Output(display_name="Analysis Results", name="results", method="analyze_text"),
     ]
 
-    def process_input(self) -> Text:
-        # Process the inputs and generate output
-        return Text(value=f"Processed: {self.input_text}, Max Length: {self.max_length}, Options: {self.options}")
+    def analyze_text(self) -> Message:
+        # Extract text from the Message object
+        if isinstance(self.input_text, Message):
+            text = self.input_text.text
+        else:
+            text = str(self.input_text)
+
+        results = {
+            "character_count": len(text),
+            "sentence_count": text.count('.') + text.count('!') + text.count('?')
+        }
+
+        if self.include_word_count:
+            results["word_count"] = len(text.split())
+
+        if self.perform_sentiment_analysis:
+            # Basic sentiment analysis
+            text_lower = text.lower()
+            if "happy" in text_lower or "good" in text_lower:
+                sentiment = "positive"
+            elif "sad" in text_lower or "bad" in text_lower:
+                sentiment = "negative"
+            else:
+                sentiment = "neutral"
+
+            results["sentiment"] = sentiment
+
+        # Convert the results dictionary to a formatted string
+        formatted_results = "\n".join([f"{key}: {value}" for key, value in results.items()])
+
+        # Return a Message object
+        return Message(text=formatted_results)
 
 # Define how to use the inputs and outputs
-component = ExampleComponent()
-
-
+component = TextAnalyzerComponent()
 ```
 
+In this custom component:
 
-In this example:
+- The `input_text` input is a required multi-line text field that accepts a Message object or a string. It's used to provide the text for analysis.
 
-- The `input_text` input is a required multi-line text field.
-- The `max_length` input is an optional integer field with a range specification.
-- The `options` input is a list of strings with predefined options.
+- The `include_word_count` input is an optional boolean field. When set to True, it adds a word count to the analysis results.
 
-These attributes allow for a high degree of customization, making it easy to create input fields that suit the needs of your specific component.
+- The `perform_sentiment_analysis` input is an optional boolean field. When set to True, it triggers a basic sentiment analysis of the input text.
 
+The component performs basic text analysis, including character count and sentence count (based on punctuation marks). If word count is enabled, it splits the text and counts the words. If sentiment analysis is enabled, it performs a simple keyword-based sentiment classification (positive, negative, or neutral).
 
-### Multiple Outputs {#6f225be8a142450aa19ee8e46a3b3c8c}
+Since the component inputs and outputs a `Message`, you can wire the component into a chat and see how the basic custom component logic interacts with your input.
 
+![](./custom-component-inputs-chat.png)
+
+## Create a Custom Component with Multiple Outputs {#6f225be8a142450aa19ee8e46a3b3c8c}
 
 ---
 
@@ -393,7 +439,7 @@ In Langflow, custom components can have multiple outputs. Each output can be ass
 1. **Definition of Outputs**: Each output is defined in the `outputs` list of the component. Each output is associated with a display name, an internal name, and a method that gets called to generate the output.
 2. **Output Methods**: The methods associated with outputs are responsible for generating the data for that particular output. These methods are called when the component is executed, and each method can independently produce its result.
 
-Below is an example of a component with two outputs:
+This example component has two outputs:
 
 - `process_data`: Processes the input text (e.g., converts it to uppercase) and returns it.
 - `get_processing_function`: Returns the `process_data` method itself to be reused in composition.
@@ -434,18 +480,12 @@ class DualOutputComponent(Component):
         return self.process_data
 ```
 
-
 This example shows how to define multiple outputs in a custom component. The first output returns the processed data, while the second output returns the processing function itself.
-
 
 The `processing_function` output can be used in scenarios where the function itself is needed for further processing or dynamic flow control. Notice how both outputs are properly annotated with their respective types, ensuring clarity and type safety.
 
 
-## Special Operations {#b1ef2d18e2694b93927ae9403d24b96b}
-
-
----
-
+## Special Operations
 
 Advanced methods and attributes offer additional control and functionality. Understanding how to leverage these can enhance your custom components' capabilities.
 
@@ -454,3 +494,7 @@ Advanced methods and attributes offer additional control and functionality. Unde
 - `self.status`: Use this to update the component's status or intermediate results. It helps track the component's internal state or store temporary data.
 - `self.graph.flow_id`: Retrieve the flow ID, useful for maintaining context or debugging.
 - `self.stop("output_name")`: Use this method within an output function to prevent data from being sent through other components. This method stops next component execution and is particularly useful for specific operations where a component should stop from running based on specific conditions.
+
+## Contribute Custom Components to Langflow
+
+See [How to Contribute](/contributing-how-to-contribute#submitting-components) to contribute your custom component to Langflow.
