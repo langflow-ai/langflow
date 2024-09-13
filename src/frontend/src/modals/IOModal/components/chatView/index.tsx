@@ -40,8 +40,6 @@ export default function ChatView({
   const messages = useMessagesStore((state) => state.messages);
 
   const inputTypes = inputs.map((obj) => obj.type);
-  const inputIds = inputs.map((obj) => obj.id);
-  const outputIds = outputs.map((obj) => obj.id);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const [id, setId] = useState<string>("");
   const { mutate: mutateDeleteFlowPool } = useDeleteBuilds();
