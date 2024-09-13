@@ -10,7 +10,7 @@ import { useMemo, useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
 import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
-import { messagesSorter } from "../../../../utils/utils";
+import { extractColumnsFromRows, messagesSorter } from "../../../../utils/utils";
 
 export default function SessionView({
   session,
@@ -19,12 +19,12 @@ export default function SessionView({
   session?: string;
   id?: string;
 }) {
-  const columns = useMessagesStore((state) => state.columns);
   const messages = useMessagesStore((state) => state.messages);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const updateMessage = useMessagesStore((state) => state.updateMessage);
   const deleteMessagesStore = useMessagesStore((state) => state.removeMessages);
+  const columns = extractColumnsFromRows(messages, "intersection");
   const isFetching = useIsFetching({
     queryKey: ["useGetMessagesQuery"],
     exact: false,
