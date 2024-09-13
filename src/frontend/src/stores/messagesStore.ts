@@ -10,10 +10,6 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
       return { messages: updatedMessages };
     });
   },
-  columns: [],
-  setColumns: (columns) => {
-    set(() => ({ columns: columns }));
-  },
   messages: [],
   setMessages: (messages) => {
     set(() => ({ messages: messages }));
