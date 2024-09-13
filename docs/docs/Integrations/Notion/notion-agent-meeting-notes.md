@@ -1,5 +1,5 @@
 ---
-title: Notion Agent - Meeting Notes
+title: Notion Meeting Notes Agent
 sidebar_position: 1
 slug: /integrations/notion/notion-agent-meeting-notes
 ---
@@ -12,7 +12,7 @@ The Notion Agent for Meeting Notes is an AI-powered tool that automatically proc
 - [Notion App](/integrations/notion/setup)
 - [Notion API key](https://www.notion.so/my-integrations)
 - [OpenAI API key](https://platform.openai.com/account/api-keys)
-- [Download Flow Meeting Agent Flow](./Meeting_Notes_Agent.json)
+- [Download Flow Meeting Agent Flow](./Meeting_Notes_Agent.json)(Download link)
 
 :::warning
 
@@ -140,23 +140,37 @@ Displays the final output of the Notion Agent in the Playground.
 
 To run the Notion Agent for Meeting Notes:
 
-1. Input the Notion and OpenAI API keys in their respective components.
-2. Paste your meeting transcript into the Meeting Transcript component.
-3. Run the flow by clicking **Play** on the **Chat Output** component.
-4. Review the output in the Chat Output component, which will summarize the actions taken in your Notion workspace.
+1. Open Langflow and create a new project.
+2. Add the components listed above to your flow canvas, or download the [Flow Meeting Agent Flow](./Meeting_Notes_Agent.json)(Download link) and **Import** the JSON file into Langflow.
+3. Connect the components as shown in the flow diagram.
+4. Input the Notion and OpenAI API keys in their respective components.
+5. Paste your meeting transcript into the Meeting Transcript component.
+6. Run the flow by clicking **Play** on the **Chat Output** component.
+7. Review the output in the Chat Output component, which will summarize the actions taken in your Notion workspace.
 
-:::info
-
-Pro Tip: For optimal results, use detailed meeting transcripts. The quality of the output depends on the comprehensiveness of the input provided.
-
-:::
+For optimal results, use detailed meeting transcripts. The quality of the output depends on the comprehensiveness of the input provided.
 
 ## Customization
 
 ---
 
-:::note
+The flow can be customized to meet your team's specific needs.
 
-The flow can be customized to match your team's specific needs. Feel free to adjust the prompts and settings as necessary to align with your workflow.
+Customize this flow by:
 
-:::
+1. Adjusting the system prompt to change the agent's behavior or knowledge base.
+2. Adding or removing Notion tools based on your specific needs.
+3. Modifying the OpenAI model parameters (e.g., temperature) to adjust the agent's response style.
+
+## Troubleshooting
+
+---
+
+If you encounter issues:
+
+1. Ensure all API keys are correctly set and have the necessary permissions.
+2. Check that your Notion integration has access to the relevant pages and databases.
+3. Verify that all components are properly connected in the flow.
+4. Review the Langflow logs for any error messages.
+
+For more advanced usage and integration options, refer to the [Notion API documentation](https://developers.notion.com/) and [Langflow documentation](/).

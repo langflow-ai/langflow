@@ -1,10 +1,10 @@
 ---
-title: Notion Agent - Conversational
+title: Notion Conversational Agent
 sidebar_position: 2
 slug: /integrations/notion/notion-agent-conversational
 ---
 
-The Conversational Notion Agent is an AI-powered assistant designed to interact with your Notion workspace through natural language conversations. This flow enables users to perform various Notion-related tasks, such as creating pages, searching for information, and managing content, all through a chat interface.
+The Notion Conversational Agent is an AI-powered assistant that interacts with your Notion workspace through natural language conversations. This flow  performs Notion-related tasks like creating pages, searching for information, and managing content, all through a chat interface.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ The Conversational Notion Agent is an AI-powered assistant designed to interact 
 - [Notion App](/integrations/notion/setup)
 - [Notion account and API key](https://www.notion.so/my-integrations)
 - [OpenAI API key](https://platform.openai.com/account/api-keys)
-- [Download Flow Conversation Agent Flow](./Conversational_Notion_Agent.json)
+- [Download Flow Conversation Agent Flow](./Conversational_Notion_Agent.json)(Download link)
 
 ![Notion Components Toolkit](./notion_conversational_agent_tools.png)
 
@@ -47,27 +47,22 @@ The Conversational Notion Agent is an AI-powered assistant designed to interact 
 - **Prompt**: Provides system instructions and context for the agent
 - **Current Date**: Supplies the current date and time for context
 
-## Set Up the Flow
-
----
-
-1. Open Langflow and create a new project.
-2. Add the components listed above to your flow canvas, or Download the [Conversation Agent Flow](./Conversational_Notion_Agent.json) and **Import** the JSON file into Langflow.
-3. Connect the components as shown in the flow diagram.
-4. Configure the OpenAI Model with your API key.
-5. Set up the Notion tools with your Notion API key and any required database or page IDs.
 
 ## Run the Conversational Notion Agent
 
 ---
 
-1. To start the flow, click the "Play" button in Langflow.
-2. In the chat interface, enter a Notion-related request or question. For example:
+1. Open Langflow and create a new project.
+2. Add the components listed above to your flow canvas, or Download the [Conversation Agent Flow](./Conversational_Notion_Agent.json)(Download link) and **Import** the JSON file into Langflow.
+3. Connect the components as shown in the flow diagram.
+4. Input the Notion and OpenAI API keys in their respective components.
+5. To start the flow, click the "Play" button in Langflow.
+6. In the chat interface, enter a Notion-related request or question. For example:
    - "Create a new page in my task database"
    - "Search for pages about project management"
    - "List all users in my Notion workspace"
-3. The agent will process your request, use the appropriate Notion tools, and provide a response.
-4. Continue the conversation, asking follow-up questions or giving new commands as needed.
+7. The agent will process your request, use the appropriate Notion tools, and provide a response.
+8. Continue the conversation, asking follow-up questions or giving new commands as needed.
 
 ## Example Interactions
 
@@ -123,11 +118,14 @@ The description has been added as a new text block on the page. Is there anythin
 
 ```
 
+
 ## Customization
 
 ---
 
-You can customize this flow by:
+The flow can be customized to meet your team's specific needs.
+
+Customize this flow by:
 
 1. Adjusting the system prompt to change the agent's behavior or knowledge base.
 2. Adding or removing Notion tools based on your specific needs.
