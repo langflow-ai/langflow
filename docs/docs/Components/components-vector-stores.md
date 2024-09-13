@@ -3,586 +3,508 @@ title: Vector Stores
 sidebar_position: 7
 slug: /components-vector-stores
 ---
+# Vector Stores
+
+Vector databases are used to store and search for vectors. They can be used to store embeddings, search for similar vectors, and perform other vector operations.
+
+## Astra DB Serverless
+
+This component creates an Astra DB Vector Store with search capabilities.
+For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
+
+### Parameters
+
+#### Intputs
+
+| Name                 | Type             | Description                                           |
+|----------------------|------------------|-------------------------------------------------------|
+| collection_name       | String           | Name of the collection in Astra DB                    |
+| token                 | SecretString     | Astra DB Application Token                            |
+| api_endpoint          | SecretString     | API endpoint URL for Astra DB                         |
+| search_input          | String           | Query for similarity search                           |
+| ingest_data           | Data             | Data to be ingested into the vector store             |
+| namespace             | String           | Optional namespace within Astra DB                    |
+| metric                | String           | Distance metric for vector comparisons                |
+| batch_size            | Integer          | Number of data to process in a single batch           |
+| setup_mode            | String           | Configuration mode for setting up the vector store    |
+| pre_delete_collection | Boolean          | Whether to delete the collection before creating a new one |
+| embedding             | Embeddings/Dict  | Embedding model or Astra Vectorize configuration      |
+| number_of_results     | Integer          | Number of results to return in search                 |
+| search_type           | String           | Type of search to perform                             |
+| search_score_threshold| Float            | Minimum similarity score for search results           |
+| search_filter         | Dict             | Metadata filters for search query                     |
+
+#### Outputs
+
+| Name           | Type      | Description                       |
+|----------------|-----------|-----------------------------------|
+| vector_store   | AstraDB   | Astra DB vector store instance    |
+| search_results | List[Data]| Results of similarity search      |
+
+## Cassandra
+
+This component creates a Cassandra Vector Store with search capabilities.
+For more information, see the [Cassandra documentation](https://cassandra.apache.org/doc/latest/cassandra/vector-search/overview.html).
+
+### Parameters
+
+#### Intputs
+
+| Name                | Type           | Description                                        |
+|---------------------|----------------|----------------------------------------------------|
+| database_ref         | String         | Contact points for the database or AstraDB database ID |
+| username             | String         | Username for the database (leave empty for AstraDB) |
+| token                | SecretString   | User password for the database or AstraDB token     |
+| keyspace             | String         | Table Keyspace or AstraDB namespace                 |
+| table_name           | String         | Name of the table or AstraDB collection             |
+| ttl_seconds          | Integer        | Time-to-live for added texts                        |
+| batch_size           | Integer        | Number of data to process in a single batch         |
+| setup_mode           | String         | Configuration mode for setting up the Cassandra table |
+| cluster_kwargs       | Dict           | Additional keyword arguments for the Cassandra cluster |
+| search_query         | String         | Query for similarity search                         |
+| ingest_data          | Data           | Data to be ingested into the vector store           |
+| embedding            | Embeddings     | Embedding function to use                           |
+| number_of_results    | Integer        | Number of results to return in search               |
+| search_type          | String         | Type of search to perform                           |
+| search_score_threshold| Float         | Minimum similarity score for search results         |
+| search_filter        | Dict           | Metadata filters for search query                   |
+| body_search          | String         | Document textual search terms                       |
+| enable_body_search   | Boolean        | Flag to enable body search                          |
+
+#### Outputs
+
+| Name           | Type       | Description                      |
+|----------------|------------|----------------------------------|
+| vector_store   | Cassandra  | Cassandra vector store instance  |
+| search_results | List[Data] | Results of similarity search     |
+
+## Chroma DB
+
+This component creates a Chroma Vector Store with search capabilities.
+For more information, see the [Chroma documentation](https://docs.trychroma.com/).
+
+### Parameters
+
+#### Intputs
+
+| Name                         | Type          | Description                                      |
+|------------------------------|---------------|--------------------------------------------------|
+| collection_name               | String        | The name of the Chroma collection. Default: "langflow". |
+| persist_directory             | String        | The directory to persist the Chroma database.     |
+| search_query                  | String        | The query to search for in the vector store.      |
+| ingest_data                   | Data          | The data to ingest into the vector store (list of Data objects). |
+| embedding                     | Embeddings    | The embedding function to use for the vector store. |
+| chroma_server_cors_allow_origins | String     | CORS allow origins for the Chroma server.         |
+| chroma_server_host            | String        | Host for the Chroma server.                       |
+| chroma_server_http_port       | Integer       | HTTP port for the Chroma server.                  |
+| chroma_server_grpc_port       | Integer       | gRPC port for the Chroma server.                  |
+| chroma_server_ssl_enabled     | Boolean       | Enable SSL for the Chroma server.                 |
+| allow_duplicates              | Boolean       | Allow duplicate documents in the vector store.    |
+| search_type                   | String        | Type of search to perform: "Similarity" or "MMR". |
+| number_of_results             | Integer       | Number of results to return from the search. Default: 10. |
+| limit                         | Integer       | Limit the number of records to compare when Allow Duplicates is False. |
+
+#### Outputs
 
+| Name           | Type          | Description                    |
+|----------------|---------------|--------------------------------|
+| vector_store   | Chroma        | Chroma vector store instance   |
+| search_results | List[Data]    | Results of similarity search   |
 
+## Couchbase
 
-:::info
+This component creates a Couchbase Vector Store with search capabilities.
+For more information, see the [Couchbase documentation](https://docs.couchbase.com/home/index.html).
 
-This page may contain outdated information. It will be updated as soon as possible.
+### Parameters
 
-:::
+#### Intputs
 
+| Name                    | Type          | Description                                      |
+|-------------------------|---------------|--------------------------------------------------|
+| couchbase_connection_string | SecretString | Couchbase Cluster connection string (required).   |
+| couchbase_username       | String        | Couchbase username (required).                   |
+| couchbase_password       | SecretString  | Couchbase password (required).                   |
+| bucket_name              | String        | Name of the Couchbase bucket (required).         |
+| scope_name               | String        | Name of the Couchbase scope (required).          |
+| collection_name          | String        | Name of the Couchbase collection (required).     |
+| index_name               | String        | Name of the Couchbase index (required).          |
+| search_query             | String        | The query to search for in the vector store.     |
+| ingest_data              | Data          | The data to ingest into the vector store (list of Data objects). |
+| embedding                | Embeddings    | The embedding function to use for the vector store. |
+| number_of_results        | Integer       | Number of results to return from the search. Default: 4 (advanced). |
 
+#### Outputs
 
+| Name           | Type                   | Description                    |
+|----------------|------------------------|--------------------------------|
+| vector_store   | CouchbaseVectorStore    | A Couchbase vector store instance configured with the specified parameters. |
 
-### Astra DB {#453bcf5664154e37a920f1b602bd39da}
+## FAISS
 
+This component creates a FAISS Vector Store with search capabilities.
+For more information, see the [FAISS documentation](https://faiss.ai/index.html).
 
-The `Astra DB` initializes a vector store using Astra DB from Data. It creates Astra DB-based vector indexes to efficiently store and retrieve documents.
+### Parameters
 
+#### Intputs
 
-**Parameters:**
+| Name                      | Type          | Description                                      |
+|---------------------------|---------------|--------------------------------------------------|
+| index_name                 | String        | The name of the FAISS index. Default: "langflow_index". |
+| persist_directory          | String        | Path to save the FAISS index. It will be relative to where Langflow is running. |
+| search_query               | String        | The query to search for in the vector store.     |
+| ingest_data                | Data          | The data to ingest into the vector store (list of Data objects or documents). |
+| allow_dangerous_deserialization | Boolean  | Set to True to allow loading pickle files from untrusted sources. Default: True (advanced). |
+| embedding                  | Embeddings    | The embedding function to use for the vector store. |
+| number_of_results          | Integer       | Number of results to return from the search. Default: 4 (advanced). |
 
-- **Input:** Documents or Data for input.
-- **Embedding or Astra vectorize:** External or server-side model Astra DB uses.
-- **Collection Name:** Name of the Astra DB collection.
-- **Token:** Authentication token for Astra DB.
-- **API Endpoint:** API endpoint for Astra DB.
-- **Namespace:** Astra DB namespace.
-- **Metric:** Metric used by Astra DB.
-- **Batch Size:** Batch size for operations.
-- **Bulk Insert Batch Concurrency:** Concurrency level for bulk inserts.
-- **Bulk Insert Overwrite Concurrency:** Concurrency level for overwriting during bulk inserts.
-- **Bulk Delete Concurrency:** Concurrency level for bulk deletions.
-- **Setup Mode:** Setup mode for the vector store.
-- **Pre Delete Collection:** Option to delete the collection before setup.
-- **Metadata Indexing Include:** Fields to include in metadata indexing.
-- **Metadata Indexing Exclude:** Fields to exclude from metadata indexing.
-- **Collection Indexing Policy:** Indexing policy for the collection.
+#### Outputs
 
-NOTE
+| Name           | Type                   | Description                    |
+|----------------|------------------------|--------------------------------|
+| vector_store   | FAISS                  | A FAISS vector store instance configured with the specified parameters. |
 
 
-Ensure you configure the necessary Astra DB token and API endpoint before starting.
+## Milvus
 
+This component creates a Milvus Vector Store with search capabilities.
+For more information, see the [Milvus documentation](https://milvus.io/docs).
 
----
+### Parameters
 
+#### Intputs
 
-### Astra DB Search {#26f25d1933a9459bad2d6725f87beb11}
+| Name                    | Type          | Description                                      |
+|-------------------------|---------------|--------------------------------------------------|
+| collection_name          | String        | Name of the Milvus collection                    |
+| collection_description   | String        | Description of the Milvus collection             |
+| uri                      | String        | Connection URI for Milvus                        |
+| password                 | SecretString  | Password for Milvus                              |
+| username                 | SecretString  | Username for Milvus                              |
+| batch_size               | Integer       | Number of data to process in a single batch      |
+| search_query             | String        | Query for similarity search                      |
+| ingest_data              | Data          | Data to be ingested into the vector store        |
+| embedding                | Embeddings    | Embedding function to use                        |
+| number_of_results        | Integer       | Number of results to return in search            |
+| search_type              | String        | Type of search to perform                        |
+| search_score_threshold   | Float         | Minimum similarity score for search results      |
+| search_filter            | Dict          | Metadata filters for search query                |
+| setup_mode               | String        | Configuration mode for setting up the vector store |
+| vector_dimensions        | Integer       | Number of dimensions of the vectors              |
+| pre_delete_collection    | Boolean       | Whether to delete the collection before creating a new one |
 
+#### Outputs
 
-`Astra DBSearch` searches an existing Astra DB vector store for documents similar to the input. It uses the `Astra DB`component's functionality for efficient retrieval.
+| Name           | Type                   | Description                    |
+|----------------|------------------------|--------------------------------|
+| vector_store   | Milvus                 | A Milvus vector store instance configured with the specified parameters. |
 
+## MongoDB Atlas
 
-**Parameters:**
+This component creates a MongoDB Atlas Vector Store with search capabilities.
+For more information, see the [MongoDB Atlas documentation](https://www.mongodb.com/docs/atlas/atlas-vector-search/tutorials/vector-search-quick-start/).
 
-- **Search Type:** Type of search, such as Similarity or MMR.
-- **Input Value:** Value to search for.
-- **Embedding or Astra vectorize:** External or server-side model Astra DB uses.
-- **Collection Name:** Name of the Astra DB collection.
-- **Token:** Authentication token for Astra DB.
-- **API Endpoint:** API endpoint for Astra DB.
-- **Namespace:** Astra DB namespace.
-- **Metric:** Metric used by Astra DB.
-- **Batch Size:** Batch size for operations.
-- **Bulk Insert Batch Concurrency:** Concurrency level for bulk inserts.
-- **Bulk Insert Overwrite Concurrency:** Concurrency level for overwriting during bulk inserts.
-- **Bulk Delete Concurrency:** Concurrency level for bulk deletions.
-- **Setup Mode:** Setup mode for the vector store.
-- **Pre Delete Collection:** Option to delete the collection before setup.
-- **Metadata Indexing Include:** Fields to include in metadata indexing.
-- **Metadata Indexing Exclude:** Fields to exclude from metadata indexing.
-- **Collection Indexing Policy:** Indexing policy for the collection.
+### Parameters
 
----
+###### Intputs
 
+| Name                     | Type         | Description                               |
+| ------------------------ | ------------ | ----------------------------------------- |
+| mongodb_atlas_cluster_uri | SecretString | MongoDB Atlas Cluster URI                 |
+| db_name                   | String       | Database name                             |
+| collection_name           | String       | Collection name                           |
+| index_name                | String       | Index name                                |
+| search_query              | String       | Query for similarity search               |
+| ingest_data               | Data         | Data to be ingested into the vector store |
+| embedding                 | Embeddings   | Embedding function to use                 |
+| number_of_results         | Integer      | Number of results to return in search     |
 
-### Chroma {#74730795605143cba53e1f4c4f2ef5d6}
+#### Outputs
 
+| Name          | Type                   | Description                               |
+| ------------- | ---------------------- | ----------------------------------------- |
+| vector_store  | MongoDBAtlasVectorSearch| MongoDB Atlas vector store instance       |
+| search_results| List[Data]             | Results of similarity search              |
 
-`Chroma` sets up a vector store using Chroma for efficient vector storage and retrieval within language processing workflows.
 
+## PGVector
 
-**Parameters:**
+This component creates a PGVector Vector Store with search capabilities.
+For more information, see the [PGVector documentation](https://github.com/pgvector/pgvector).
 
-- **Collection Name:** Name of the collection.
-- **Persist Directory:** Directory to persist the Vector Store.
-- **Server CORS Allow Origins (Optional):** CORS allow origins for the Chroma server.
-- **Server Host (Optional):** Host for the Chroma server.
-- **Server Port (Optional):** Port for the Chroma server.
-- **Server gRPC Port (Optional):** gRPC port for the Chroma server.
-- **Server SSL Enabled (Optional):** SSL configuration for the Chroma server.
-- **Input:** Input data for creating the Vector Store.
-- **Embedding:** Embeddings used for the Vector Store.
+### Parameters
 
-For detailed documentation and integration guides, please refer to the [Chroma Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/chroma).
+###### Intputs
 
+| Name            | Type         | Description                               |
+| --------------- | ------------ | ----------------------------------------- |
+| pg_server_url   | SecretString | PostgreSQL server connection string       |
+| collection_name | String       | Table name for the vector store           |
+| search_query    | String       | Query for similarity search               |
+| ingest_data     | Data         | Data to be ingested into the vector store |
+| embedding       | Embeddings   | Embedding function to use                 |
+| number_of_results | Integer    | Number of results to return in search     |
 
----
+#### Outputs
 
+| Name          | Type        | Description                               |
+| ------------- | ----------- | ----------------------------------------- |
+| vector_store  | PGVector    | PGVector vector store instance            |
+| search_results| List[Data]  | Results of similarity search              |
 
-### Chroma Search {#5718072a155441f3a443b944ad4d638f}
 
+## Pinecone
 
-`ChromaSearch` searches a Chroma collection for documents similar to the input text. It leverages Chroma to ensure efficient document retrieval.
+This component creates a Pinecone Vector Store with search capabilities.
+For more information, see the [Pinecone documentation](https://docs.pinecone.io/home).
 
+### Parameters
 
-**Parameters:**
+#### Inputs
 
-- **Input:** Input text for search.
-- **Search Type:** Type of search, such as Similarity or MMR.
-- **Collection Name:** Name of the Chroma collection.
-- **Index Directory:** Directory where the Chroma index is stored.
-- **Embedding:** Embedding model used for vectorization.
-- **Server CORS Allow Origins (Optional):** CORS allow origins for the Chroma server.
-- **Server Host (Optional):** Host for the Chroma server.
-- **Server Port (Optional):** Port for the Chroma server.
-- **Server gRPC Port (Optional):** gRPC port for the Chroma server.
-- **Server SSL Enabled (Optional):** SSL configuration for the Chroma server.
+| Name              | Type         | Description                               |
+| ----------------- | ------------ | ----------------------------------------- |
+| index_name        | String       | Name of the Pinecone index                |
+| namespace         | String       | Namespace for the index                   |
+| distance_strategy | String       | Strategy for calculating distance between vectors |
+| pinecone_api_key  | SecretString | API key for Pinecone                      |
+| text_key          | String       | Key in the record to use as text          |
+| search_query      | String       | Query for similarity search               |
+| ingest_data       | Data         | Data to be ingested into the vector store |
+| embedding         | Embeddings   | Embedding function to use                 |
+| number_of_results | Integer      | Number of results to return in search     |
 
----
+#### Outputs
 
+| Name          | Type       | Description                               |
+| ------------- | ---------- | ----------------------------------------- |
+| vector_store  | Pinecone   | Pinecone vector store instance            |
+| search_results| List[Data] | Results of similarity search              |
 
-### Couchbase {#6900a79347164f35af27ae27f0d64a6d}
 
+## Qdrant
 
-`Couchbase` builds a Couchbase vector store from Data, streamlining the storage and retrieval of documents.
+This component creates a Qdrant Vector Store with search capabilities.
+For more information, see the [Qdrant documentation](https://qdrant.tech/documentation/).
 
+### Parameters
 
-**Parameters:**
+#### Inputs
 
-- **Embedding:** Model used by Couchbase.
-- **Input:** Documents or Data.
-- **Couchbase Cluster Connection String:** Cluster Connection string.
-- **Couchbase Cluster Username:** Cluster Username.
-- **Couchbase Cluster Password:** Cluster Password.
-- **Bucket Name:** Bucket identifier in Couchbase.
-- **Scope Name:** Scope identifier in Couchbase.
-- **Collection Name:** Collection identifier in Couchbase.
-- **Index Name:** Index identifier.
+| Name                 | Type         | Description                               |
+| -------------------- | ------------ | ----------------------------------------- |
+| collection_name       | String       | Name of the Qdrant collection             |
+| host                 | String       | Qdrant server host                        |
+| port                 | Integer      | Qdrant server port                        |
+| grpc_port            | Integer      | Qdrant gRPC port                          |
+| api_key              | SecretString | API key for Qdrant                        |
+| prefix               | String       | Prefix for Qdrant                         |
+| timeout              | Integer      | Timeout for Qdrant operations             |
+| path                 | String       | Path for Qdrant                           |
+| url                  | String       | URL for Qdrant                            |
+| distance_func        | String       | Distance function for vector similarity   |
+| content_payload_key  | String       | Key for content payload                   |
+| metadata_payload_key | String       | Key for metadata payload                  |
+| search_query         | String       | Query for similarity search               |
+| ingest_data          | Data         | Data to be ingested into the vector store |
+| embedding            | Embeddings   | Embedding function to use                 |
+| number_of_results    | Integer      | Number of results to return in search     |
 
-For detailed documentation and integration guides, please refer to the [Couchbase Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/couchbase).
+#### Outputs
 
+| Name          | Type     | Description                               |
+| ------------- | -------- | ----------------------------------------- |
+| vector_store  | Qdrant   | Qdrant vector store instance              |
+| search_results| List[Data] | Results of similarity search            |
 
----
 
+## Redis
 
-### Couchbase Search {#c77bb09425a3426f9677d38d8237d9ba}
+This component creates a Redis Vector Store with search capabilities.
+For more information, see the [Redis documentation](https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/).
 
+### Parameters
 
-`CouchbaseSearch` leverages the Couchbase component to search for documents based on similarity metric.
+#### Inputs
 
+| Name              | Type         | Description                               |
+| ----------------- | ------------ | ----------------------------------------- |
+| redis_server_url  | SecretString | Redis server connection string            |
+| redis_index_name  | String       | Name of the Redis index                   |
+| code              | String       | Custom code for Redis (advanced)          |
+| schema            | String       | Schema for Redis index                    |
+| search_query      | String       | Query for similarity search               |
+| ingest_data       | Data         | Data to be ingested into the vector store |
+| number_of_results | Integer      | Number of results to return in search     |
+| embedding         | Embeddings   | Embedding function to use                 |
 
-**Parameters:**
+#### Outputs
 
-- **Input:** Search query.
-- **Embedding:** Model used in the Vector Store.
-- **Couchbase Cluster Connection String:** Cluster Connection string.
-- **Couchbase Cluster Username:** Cluster Username.
-- **Couchbase Cluster Password:** Cluster Password.
-- **Bucket Name:** Bucket identifier.
-- **Scope Name:** Scope identifier.
-- **Collection Name:** Collection identifier in Couchbase.
-- **Index Name:** Index identifier.
+| Name          | Type     | Description                               |
+| ------------- | -------- | ----------------------------------------- |
+| vector_store  | Redis    | Redis vector store instance               |
+| search_results| List[Data]| Results of similarity search             |
 
----
 
+## Supabase
 
-### FAISS {#5b3f4e6592a847b69e07df2f674a03f0}
+This component creates a Supabase Vector Store with search capabilities.
+For more information, see the [Supabase documentation](https://supabase.com/docs/guides/ai).
 
+### Parameters
 
-The `FAISS` component manages document ingestion into a FAISS Vector Store, optimizing document indexing and retrieval.
+#### Inputs
 
+| Name                | Type         | Description                               |
+| ------------------- | ------------ | ----------------------------------------- |
+| supabase_url        | String       | URL of the Supabase instance              |
+| supabase_service_key| SecretString | Service key for Supabase authentication   |
+| table_name          | String       | Name of the table in Supabase             |
+| query_name          | String       | Name of the query to use                  |
+| search_query        | String       | Query for similarity search               |
+| ingest_data         | Data         | Data to be ingested into the vector store |
+| embedding           | Embeddings   | Embedding function to use                 |
+| number_of_results   | Integer      | Number of results to return in search     |
 
-**Parameters:**
+#### Outputs
 
-- **Embedding:** Model used for vectorizing inputs.
-- **Input:** Documents to ingest.
-- **Folder Path:** Save path for the FAISS index, relative to Langflow.
+| Name          | Type               | Description                               |
+| ------------- | ------------------ | ----------------------------------------- |
+| vector_store  | SupabaseVectorStore | Supabase vector store instance            |
+| search_results| List[Data]          | Results of similarity search              |
 
-For more details, see the [FAISS Component Documentation](https://faiss.ai/index.html).
 
+## Upstash
 
----
+This component creates an Upstash Vector Store with search capabilities.
+For more information, see the [Upstash documentation](https://upstash.com/docs/introduction).
 
+### Parameters
 
-### FAISS Search {#81ff12d7205940a3b14e3ddf304630f8}
+#### Inputs
 
+| Name            | Type         | Description                               |
+| --------------- | ------------ | ----------------------------------------- |
+| index_url       | String       | The URL of the Upstash index              |
+| index_token     | SecretString | The token for the Upstash index           |
+| text_key        | String       | The key in the record to use as text      |
+| namespace       | String       | Namespace for the index                   |
+| search_query    | String       | Query for similarity search               |
+| metadata_filter | String       | Filters documents by metadata             |
+| ingest_data     | Data         | Data to be ingested into the vector store |
+| embedding       | Embeddings   | Embedding function to use (optional)      |
+| number_of_results | Integer    | Number of results to return in search     |
 
-`FAISSSearch` searches a FAISS Vector Store for documents similar to a given input, using similarity metrics for efficient retrieval.
+#### Outputs
 
+| Name          | Type             | Description                               |
+| ------------- | ---------------- | ----------------------------------------- |
+| vector_store  | UpstashVectorStore| Upstash vector store instance             |
+| search_results| List[Data]        | Results of similarity search              |
 
-**Parameters:**
 
-- **Embedding:** Model used in the FAISS Vector Store.
-- **Folder Path:** Path to load the FAISS index from, relative to Langflow.
-- **Input:** Search query.
-- **Index Name:** Index identifier.
+## Vectara
 
----
+This component creates a Vectara Vector Store with search capabilities.
+For more information, see the [Vectara documentation](https://docs.vectara.com/docs/).
 
+### Parameters
 
-### MongoDB Atlas {#eba8892f7a204b97ad1c353e82948149}
+#### Inputs
 
+| Name             | Type         | Description                               |
+| ---------------- | ------------ | ----------------------------------------- |
+| vectara_customer_id | String     | Vectara customer ID                       |
+| vectara_corpus_id   | String     | Vectara corpus ID                         |
+| vectara_api_key   | SecretString | Vectara API key                           |
+| embedding         | Embeddings   | Embedding function to use (optional)      |
+| ingest_data       | List[Document/Data] | Data to be ingested into the vector store |
+| search_query      | String       | Query for similarity search               |
+| number_of_results | Integer      | Number of results to return in search     |
 
-`MongoDBAtlas` builds a MongoDB Atlas-based vector store from Data, streamlining the storage and retrieval of documents.
+#### Outputs
 
+| Name          | Type              | Description                               |
+| ------------- | ----------------- | ----------------------------------------- |
+| vector_store  | VectaraVectorStore | Vectara vector store instance             |
+| search_results| List[Data]         | Results of similarity search              |
 
-**Parameters:**
+## Vectara Search
 
-- **Embedding:** Model used by MongoDB Atlas.
-- **Input:** Documents or Data.
-- **Collection Name:** Collection identifier in MongoDB Atlas.
-- **Database Name:** Database identifier.
-- **Index Name:** Index identifier.
-- **MongoDB Atlas Cluster URI:** Cluster URI.
-- **Search Kwargs:** Additional search parameters.
+This component searches a Vectara Vector Store for documents based on the provided input.
+For more information, see the [Vectara documentation](https://docs.vectara.com/docs/).
 
-NOTE
+### Parameters
 
+#### Inputs
 
-Ensure pymongo is installed for using MongoDB Atlas Vector Store.
+| Name                | Type         | Description                               |
+|---------------------|--------------|-------------------------------------------|
+| search_type         | String       | Type of search, such as "Similarity" or "MMR" |
+| input_value         | String       | Search query                              |
+| vectara_customer_id | String       | Vectara customer ID                       |
+| vectara_corpus_id   | String       | Vectara corpus ID                         |
+| vectara_api_key     | SecretString | Vectara API key                           |
+| files_url           | List[String] | Optional URLs for file initialization     |
 
+#### Outputs
 
----
+| Name           | Type       | Description                |
+|----------------|------------|----------------------------|
+| search_results | List[Data] | Results of similarity search |
 
+## Weaviate
 
-### MongoDB Atlas Search {#686ba0e30a54438cbc7153b81ee4b1df}
+This component facilitates a Weaviate Vector Store setup, optimizing text and document indexing and retrieval.
+For more information, see the [Weaviate Documentation](https://weaviate.io/developers/weaviate).
 
+### Parameters
 
-`MongoDBAtlasSearch` leverages the MongoDBAtlas component to search for documents based on similarity metrics.
+#### Inputs
 
+| Name          | Type         | Description                               |
+|---------------|--------------|-------------------------------------------|
+| weaviate_url  | String       | Default instance URL                      |
+| search_by_text| Boolean      | Indicates whether to search by text       |
+| api_key       | SecretString | Optional API key for authentication       |
+| index_name    | String       | Optional index name                       |
+| text_key      | String       | Default text extraction key               |
+| input         | Document     | Document or record                        |
+| embedding     | Embeddings   | Model used                                |
+| attributes    | List[String] | Optional additional attributes            |
 
-**Parameters:**
+#### Outputs
 
-- **Search Type:** Type of search, such as "Similarity" or "MMR".
-- **Input:** Search query.
-- **Embedding:** Model used in the Vector Store.
-- **Collection Name:** Collection identifier.
-- **Database Name:** Database identifier.
-- **Index Name:** Index identifier.
-- **MongoDB Atlas Cluster URI:** Cluster URI.
-- **Search Kwargs:** Additional search parameters.
+| Name         | Type             | Description                   |
+|--------------|------------------|-------------------------------|
+| vector_store | WeaviateVectorStore | Weaviate vector store instance |
 
----
+**Note:** Ensure Weaviate instance is running and accessible. Verify API key, index name, text key, and attributes are set correctly.
 
+## Weaviate Search
 
-### PGVector {#7ceebdd84ab14f8e8589c13c58370e5b}
+This component searches a Weaviate Vector Store for documents similar to the input.
+For more information, see the [Weaviate Documentation](https://weaviate.io/developers/weaviate).
 
+### Parameters
 
-`PGVector` integrates a Vector Store within a PostgreSQL database, allowing efficient storage and retrieval of vectors.
+#### Inputs
 
+| Name          | Type         | Description                               |
+|---------------|--------------|-------------------------------------------|
+| search_type   | String       | Type of search, such as "Similarity" or "MMR" |
+| input_value   | String       | Search query                              |
+| weaviate_url  | String       | Default instance URL                      |
+| search_by_text| Boolean      | Indicates whether to search by text       |
+| api_key       | SecretString | Optional API key for authentication       |
+| index_name    | String       | Optional index name                       |
+| text_key      | String       | Default text extraction key               |
+| embedding     | Embeddings   | Model used                                |
+| attributes    | List[String] | Optional additional attributes            |
 
-**Parameters:**
+#### Outputs
 
-- **Input:** Value for the Vector Store.
-- **Embedding:** Model used.
-- **PostgreSQL Server Connection String:** Server URL.
-- **Table:** Table name in the PostgreSQL database.
-
-For more details, see the [PGVector Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/pgvector).
-
-
-NOTE
-
-
-Ensure the PostgreSQL server is accessible and configured correctly.
-
-
----
-
-
-### PGVector Search {#196bf22ea2844bdbba971b5082750943}
-
-
-`PGVectorSearch` extends `PGVector` to search for documents based on similarity metrics.
-
-
-**Parameters:**
-
-- **Input:** Search query.
-- **Embedding:** Model used.
-- **PostgreSQL Server Connection String:** Server URL.
-- **Table:** Table name.
-- **Search Type:** Type of search, such as "Similarity" or "MMR".
-
----
-
-
-### Pinecone {#67abbe3e27c34fb4bcb35926ce831727}
-
-
-`Pinecone` constructs a Pinecone wrapper from Data, setting up Pinecone-based vector indexes for document storage and retrieval.
-
-
-**Parameters:**
-
-- **Input:** Documents or Data.
-- **Embedding:** Model used.
-- **Index Name:** Index identifier.
-- **Namespace:** Namespace used.
-- **Pinecone API Key:** API key.
-- **Pinecone Environment:** Environment settings.
-- **Search Kwargs:** Additional search parameters.
-- **Pool Threads:** Number of threads.
-
-:::info
-
-Ensure the Pinecone API key and environment are correctly configured.
-
-:::
-
-
-
-
----
-
-
-### Pinecone Search {#977944558cad4cf2ba332ea4f06bf485}
-
-
-`PineconeSearch` searches a Pinecone Vector Store for documents similar to the input, using advanced similarity metrics.
-
-
-**Parameters:**
-
-- **Search Type:** Type of search, such as "Similarity" or "MMR".
-- **Input Value:** Search query.
-- **Embedding:** Model used.
-- **Index Name:** Index identifier.
-- **Namespace:** Namespace used.
-- **Pinecone API Key:** API key.
-- **Pinecone Environment:** Environment settings.
-- **Search Kwargs:** Additional search parameters.
-- **Pool Threads:** Number of threads.
-
----
-
-
-### Qdrant {#88df77f3044e4ac6980950835a919fb0}
-
-
-`Qdrant` allows efficient similarity searches and retrieval operations, using a list of texts to construct a Qdrant wrapper.
-
-
-**Parameters:**
-
-- **Input:** Documents or Data.
-- **Embedding:** Model used.
-- **API Key:** Qdrant API key.
-- **Collection Name:** Collection identifier.
-- **Advanced Settings:** Includes content payload key, distance function, gRPC port, host, HTTPS, location, metadata payload key, path, port, prefer gRPC, prefix, search kwargs, timeout, URL.
-
----
-
-
-### Qdrant Search {#5ba5f8dca0f249d7ad00778f49901e6c}
-
-
-`QdrantSearch` extends `Qdrant` to search for documents similar to the input based on advanced similarity metrics.
-
-
-**Parameters:**
-
-- **Search Type:** Type of search, such as "Similarity" or "MMR".
-- **Input Value:** Search query.
-- **Embedding:** Model used.
-- **API Key:** Qdrant API key.
-- **Collection Name:** Collection identifier.
-- **Advanced Settings:** Includes content payload key, distance function, gRPC port, host, HTTPS, location, metadata payload key, path, port, prefer gRPC, prefix, search kwargs, timeout, URL.
-
----
-
-
-### Redis {#a0fb8a9d244a40eb8439d0f8c22a2562}
-
-
-`Redis` manages a Vector Store in a Redis database, supporting efficient vector storage and retrieval.
-
-
-**Parameters:**
-
-- **Index Name:** Default index name.
-- **Input:** Data for building the Redis Vector Store.
-- **Embedding:** Model used.
-- **Schema:** Optional schema file (.yaml) for document structure.
-- **Redis Server Connection String:** Server URL.
-- **Redis Index:** Optional index name.
-
-For detailed documentation, refer to the [Redis Documentation](https://python.langchain.com/docs/integrations/vectorstores/redis).
-
-
-:::info
-
-Ensure the Redis server URL and index name are configured correctly. Provide a schema if no documents are available.
-
-:::
-
-
-
-
----
-
-
-### Redis Search {#80aea4da515f490e979c8576099ee880}
-
-
-`RedisSearch` searches a Redis Vector Store for documents similar to the input.
-
-
-**Parameters:**
-
-- **Search Type:** Type of search, such as "Similarity" or "MMR".
-- **Input Value:** Search query.
-- **Index Name:** Default index name.
-- **Embedding:** Model used.
-- **Schema:** Optional schema file (.yaml) for document structure.
-- **Redis Server Connection String:** Server URL.
-- **Redis Index:** Optional index name.
-
----
-
-
-### Supabase {#e86fb3cc507e4b5494f0a421f94e853b}
-
-
-`Supabase` initializes a Supabase Vector Store from texts and embeddings, setting up an environment for efficient document retrieval.
-
-
-**Parameters:**
-
-- **Input:** Documents or data.
-- **Embedding:** Model used.
-- **Query Name:** Optional query name.
-- **Search Kwargs:** Advanced search parameters.
-- **Supabase Service Key:** Service key.
-- **Supabase URL:** Instance URL.
-- **Table Name:** Optional table name.
-
-:::info
-
-Ensure the Supabase service key, URL, and table name are properly configured.
-
-:::
-
-
-
-
----
-
-
-### Supabase Search {#fd02d550b9b2457f91f2f4073656cb09}
-
-
-`SupabaseSearch` searches a Supabase Vector Store for documents similar to the input.
-
-
-**Parameters:**
-
-- **Search Type:** Type of search, such as "Similarity" or "MMR".
-- **Input Value:** Search query.
-- **Embedding:** Model used.
-- **Query Name:** Optional query name.
-- **Search Kwargs:** Advanced search parameters.
-- **Supabase Service Key:** Service key.
-- **Supabase URL:** Instance URL.
-- **Table Name:** Optional table name.
-
----
-
-
-### Upstash Vector
-
-
-`UpstashVector` searches a Upstash Vector Store for documents similar to the input. It has it's own embedding
-model which can be used to search documents without needing an external embedding model.
-
-
-**Parameters:**
-
-- **Index URL:** The URL of the Upstash index.
-- **Index Token:** The token for the Upstash index.
-- **Text Key:** The key in the record to use as text.
-- **Namespace:** The namespace name. A new namespace is created if not found. Leave empty for default namespace.
-- **Search Query:** The search query.
-- **Metadata Filter:** The metadata filter. Filters documents by metadata. Look at the [docs](https://upstash.com/docs/vector/features/filtering) for more information.
-- **Embedding:** The embedding model used. To use Upstash's embeddings, don't provide an embedding.
-- **Number of Results:** The number of results to return.
-
----
-
-
-### Vectara {#b4e05230b62a47c792a89c5511af97ac}
-
-
-`Vectara` sets up a Vectara Vector Store from files or upserted data, optimizing document retrieval.
-
-
-**Parameters:**
-
-- **Vectara Customer ID:** Customer ID.
-- **Vectara Corpus ID:** Corpus ID.
-- **Vectara API Key:** API key.
-- **Files Url:** Optional URLs for file initialization.
-- **Input:** Optional data for corpus upsert.
-
-For more information, consult the [Vectara Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/vectara).
-
-
-:::info
-
-If inputs or files_url are provided, they will be processed accordingly.
-
-:::
-
-
-
-
----
-
-
-### Vectara Search {#31a47221c23f4fbba4a7465cf1d89eb0}
-
-
-`VectaraSearch` searches a Vectara Vector Store for documents based on the provided input.
-
-
-**Parameters:**
-
-- **Search Type:** Type of search, such as "Similarity" or "MMR".
-- **Input Value:** Search query.
-- **Vectara Customer ID:** Customer ID.
-- **Vectara Corpus ID:** Corpus ID.
-- **Vectara API Key:** API key.
-- **Files Url:** Optional URLs for file initialization.
-
----
-
-
-### Weaviate {#57c7969574b1418dbb079ac5fc8cd857}
-
-
-`Weaviate` facilitates a Weaviate Vector Store setup, optimizing text and document indexing and retrieval.
-
-
-**Parameters:**
-
-- **Weaviate URL:** Default instance URL.
-- **Search By Text:** Indicates whether to search by text.
-- **API Key:** Optional API key for authentication.
-- **Index Name:** Optional index name.
-- **Text Key:** Default text extraction key.
-- **Input:** Document or record.
-- **Embedding:** Model used.
-- **Attributes:** Optional additional attributes.
-
-For more details, see the [Weaviate Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/weaviate).
-
-
-NOTE
-
-
-Ensure Weaviate instance is running and accessible. Verify API key, index name, text key, and attributes are set correctly.
-
-
----
-
-
-### Weaviate Search {#6d4e616dfd6143b28dc055bc1c40ecae}
-
-
-`WeaviateSearch` searches a Weaviate Vector Store for documents similar to the input.
-
-
-**Parameters:**
-
-- **Search Type:** Type of search, such as "Similarity" or "MMR".
-- **Input Value:** Search query.
-- **Weaviate URL:** Default instance URL.
-- **Search By Text:** Indicates whether to search by text.
-- **API Key:** Optional API key for authentication.
-- **Index Name:** Optional index name.
-- **Text Key:** Default text extraction key.
-- **Embedding:** Model used.
-- **Attributes:** Optional additional attributes.
+| Name           | Type       | Description                |
+|----------------|------------|----------------------------|
+| search_results | List[Data] | Results of similarity search |
