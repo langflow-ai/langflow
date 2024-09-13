@@ -28,7 +28,7 @@ def get_api_keys_by_flow_id(session: Session, flow_id: UUID) -> List[ApiKeyRead]
 def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
-    expiration_hours = os.getenv('API_KEY_EXPIRATION_HOURS')
+    expiration_hours = os.getenv("API_KEY_EXPIRATION_HOURS")
 
     api_key = ApiKey(
         api_key=generated_api_key,
