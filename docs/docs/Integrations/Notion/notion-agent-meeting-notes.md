@@ -134,17 +134,16 @@ Displays the final output of the Notion Agent in the Playground.
    - Add content to pages with meeting notes
 6. The Chat Output displays a summary of actions taken in Notion.
 
-## Usage
+## Run the Notion Meeting Notes flow
 
 ---
 
-To use the Notion Agent for Meeting Notes:
+To run the Notion Agent for Meeting Notes:
 
-1. Ensure you have the necessary API keys for Notion and OpenAI.
-2. Input these API keys in the respective components.
-3. Paste your meeting transcript into the Meeting Transcript component.
-4. Run the flow.
-5. Review the output in the Chat Output component, which will summarize the actions taken in your Notion workspace.
+1. Input the Notion and OpenAI API keys in their respective components.
+2. Paste your meeting transcript into the Meeting Transcript component.
+3. Run the flow by clicking **Play** on the **Chat Output** component.
+4. Review the output in the Chat Output component, which will summarize the actions taken in your Notion workspace.
 
 :::info
 

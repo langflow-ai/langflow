@@ -61,7 +61,7 @@ For your integration to interact with Notion databases, you need to grant it acc
 If your database contains references to other databases, you need to grant the integration access to those referenced databases as well. Repeat step 4 for each referenced database to ensure your integration has the necessary access.
 :::
 
-# Use Notion Components in Langflow
+## Build with Notion Components in Langflow
 
 Once you have set up your Notion integration and granted it access to the required databases, you can start using the Notion components in Langflow.
 
@@ -76,7 +76,7 @@ Langflow provides the following Notion components:
 - **List Pages**: Queries a Notion database with filtering and sorting options.
 - **Page Content Viewer**: Retrieves the content of a Notion page as plain text.
 
-Each of these components outputs both "Data" and "Tool":
+Each of these components output both "Data" and "Tool":
 - The "Data" output can be used directly in your Langflow for further processing or display.
 - The "Tool" output can be utilized in Langflow Agents, allowing them to interact with Notion programmatically.
 
