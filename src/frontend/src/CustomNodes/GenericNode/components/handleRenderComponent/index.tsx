@@ -1,5 +1,6 @@
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
+import { useMemo } from "react";
 import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
@@ -51,95 +52,136 @@ export default function HandleRenderComponent({
     document.removeEventListener("mouseup", handleMouseUp);
   };
 
-  const getConnection = (semiConnection: {
-    source: string | undefined;
-    sourceHandle: string | undefined;
-    target: string | undefined;
-    targetHandle: string | undefined;
-  }) => ({
-    source: semiConnection.source ?? nodeId,
-    sourceHandle: semiConnection.sourceHandle ?? myId,
-    target: semiConnection.target ?? nodeId,
-    targetHandle: semiConnection.targetHandle ?? myId,
-  });
+  const myId = useMemo(
+    () => scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+    [id, proxy],
+  );
 
-  const myId = scapedJSONStringfy(proxy ? { ...id, proxy } : id);
+  const getConnection = useMemo(
+    () =>
+      (semiConnection: {
+        source: string | undefined;
+        sourceHandle: string | undefined;
+        target: string | undefined;
+        targetHandle: string | undefined;
+      }) => ({
+        source: semiConnection.source ?? nodeId,
+        sourceHandle: semiConnection.sourceHandle ?? myId,
+        target: semiConnection.target ?? nodeId,
+        targetHandle: semiConnection.targetHandle ?? myId,
+      }),
+    [nodeId, myId],
+  );
 
-  const ownDraggingNode =
-    (left ? handleDragging?.target : handleDragging?.source) === nodeId;
+  const sameDraggingNode = useMemo(
+    () => (!left ? handleDragging?.target : handleDragging?.source) === nodeId,
+    [left, handleDragging, nodeId],
+  );
 
-  const ownDraggingHandle =
-    handleDragging &&
-    ownDraggingNode &&
-    (left ? handleDragging.targetHandle : handleDragging.sourceHandle) === myId;
+  const ownDraggingHandle = useMemo(
+    () =>
+      handleDragging &&
+      (left ? handleDragging?.target : handleDragging?.source) &&
+      (left ? handleDragging.targetHandle : handleDragging.sourceHandle) ===
+        myId,
+    [handleDragging, left, myId],
+  );
 
-  const ownFilterNode =
-    (left ? filterType?.target : filterType?.source) === nodeId;
+  const sameFilterNode = useMemo(
+    () => (!left ? filterType?.target : filterType?.source) === nodeId,
+    [left, filterType, nodeId],
+  );
 
-  const ownFilterHandle =
-    filterType &&
-    ownFilterNode &&
-    (left ? filterType.targetHandle : filterType.sourceHandle) === myId;
+  const ownFilterHandle = useMemo(
+    () =>
+      filterType &&
+      (left ? filterType?.target : filterType?.source) === nodeId &&
+      (left ? filterType.targetHandle : filterType.sourceHandle) === myId,
+    [filterType, left, myId],
+  );
 
-  const ownNode = ownDraggingNode || ownFilterNode;
+  const sameNode = useMemo(
+    () => sameDraggingNode || sameFilterNode,
+    [sameDraggingNode, sameFilterNode],
+  );
+  const ownHandle = useMemo(
+    () => ownDraggingHandle || ownFilterHandle,
+    [ownDraggingHandle, ownFilterHandle],
+  );
 
-  const ownHandle = ownDraggingHandle || ownFilterHandle;
+  const draggingOpenHandle = useMemo(
+    () =>
+      handleDragging &&
+      (left ? handleDragging.source : handleDragging.target) &&
+      !ownDraggingHandle
+        ? isValidConnection(getConnection(handleDragging), nodes, edges)
+        : false,
+    [handleDragging, left, ownDraggingHandle, getConnection, nodes, edges],
+  );
 
-  const draggingOpenHandle =
-    handleDragging &&
-    (left ? handleDragging.source : handleDragging.target) &&
-    !ownDraggingHandle
-      ? isValidConnection(getConnection(handleDragging), nodes, edges)
-      : false;
+  const filterOpenHandle = useMemo(
+    () =>
+      filterType &&
+      (left ? filterType.source : filterType.target) &&
+      !ownFilterHandle
+        ? isValidConnection(getConnection(filterType), nodes, edges)
+        : false,
+    [filterType, left, ownFilterHandle, getConnection, nodes, edges],
+  );
 
-  const filterOpenHandle =
-    filterType &&
-    (left ? filterType.source : filterType.target) &&
-    !ownFilterHandle
-      ? isValidConnection(getConnection(filterType), nodes, edges)
-      : false;
+  const openHandle = useMemo(
+    () => filterOpenHandle || draggingOpenHandle,
+    [filterOpenHandle, draggingOpenHandle],
+  );
+  const filterPresent = useMemo(
+    () => handleDragging || filterType,
+    [handleDragging, filterType],
+  );
 
-  const openHandle = filterOpenHandle || draggingOpenHandle;
+  const currentFilter = useMemo(
+    () =>
+      left
+        ? {
+            targetHandle: myId,
+            target: nodeId,
+            source: undefined,
+            sourceHandle: undefined,
+            type: tooltipTitle,
+            color: colors[0],
+          }
+        : {
+            sourceHandle: myId,
+            source: nodeId,
+            target: undefined,
+            targetHandle: undefined,
+            type: tooltipTitle,
+            color: colors[0],
+          },
+    [left, myId, nodeId, tooltipTitle, colors],
+  );
 
-  const filterPresent = handleDragging || filterType;
-
-  const currentFilter = left
-    ? {
-        targetHandle: myId,
-        target: nodeId,
-        source: undefined,
-        sourceHandle: undefined,
-        type: tooltipTitle,
-        color: colors[0],
-      }
-    : {
-        sourceHandle: myId,
-        source: nodeId,
-        target: undefined,
-        targetHandle: undefined,
-        type: tooltipTitle,
-        color: colors[0],
-      };
-
-  const handleColor =
-    filterPresent && !(openHandle || ownHandle)
-      ? dark
-        ? "conic-gradient(#374151 0deg 360deg)"
-        : "conic-gradient(#cbd5e1 0deg 360deg)"
-      : "conic-gradient(" +
-        colors
-          .concat(colors[0])
-          .map(
-            (color, index) =>
-              color +
-              " " +
-              ((360 / colors.length) * index - 360 / (colors.length * 4)) +
-              "deg " +
-              ((360 / colors.length) * index + 360 / (colors.length * 4)) +
-              "deg",
-          )
-          .join(" ,") +
-        ")";
+  const handleColor = useMemo(
+    () =>
+      filterPresent && !(openHandle || ownHandle)
+        ? dark
+          ? "conic-gradient(#374151 0deg 360deg)"
+          : "conic-gradient(#cbd5e1 0deg 360deg)"
+        : "conic-gradient(" +
+          colors
+            .concat(colors[0])
+            .map(
+              (color, index) =>
+                color +
+                " " +
+                ((360 / colors.length) * index - 360 / (colors.length * 4)) +
+                "deg " +
+                ((360 / colors.length) * index + 360 / (colors.length * 4)) +
+                "deg",
+            )
+            .join(" ,") +
+          ")",
+    [filterPresent, openHandle, ownHandle, dark, colors],
+  );
 
   return (
     <div>
@@ -153,7 +195,7 @@ export default function HandleRenderComponent({
             tooltipTitle={tooltipTitle}
             isConnecting={!!filterPresent && !ownHandle}
             isCompatible={openHandle}
-            isSameNode={ownNode && !ownHandle}
+            isSameNode={sameNode && !ownHandle}
           />
         }
         side={left ? "left" : "right"}
