@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.17"
+version = "1.0.18"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -111,6 +111,7 @@ jq = "^1.8.0"
 clickhouse-connect = {version = "0.7.19", optional = true, extras = ["clickhouse-connect"]}
 langchain-unstructured = "^0.1.2"
 pydantic-settings = "2.4.0"
+ragstack-ai-knowledge-store = "^0.2.1"
 
 
 [tool.poetry.group.dev.dependencies]
