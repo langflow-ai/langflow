@@ -6,7 +6,7 @@ import typing
 import uuid
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from starlette.background import BackgroundTask
@@ -153,6 +153,8 @@ async def build_flow(
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
     session=Depends(get_session),
 ):
+    if not inputs:
+        inputs = InputValueRequest(session=str(flow_id))
     async def build_graph_and_get_order() -> tuple[list[str], list[str], "Graph"]:
         start_time = time.perf_counter()
         components_count = None
