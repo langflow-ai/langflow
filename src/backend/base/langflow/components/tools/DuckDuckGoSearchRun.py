@@ -32,15 +32,15 @@ class DuckDuckGoSearchComponent(TextComponent):
         try:
             search_tool = DuckDuckGoSearchRun()
             results = search_tool.run(f"{self.query} (site:*)")
-            
+
             # Split the results into a list and limit to the specified number
             result_list = results.split('\n')[:self.num_results]
-            
+
             # Format the results as a string
             formatted_results = "\n\n".join([f"{i+1}. {result}" for i, result in enumerate(result_list)])
-            
+
             message_content = f"Search results for '{self.query}':\n\n{formatted_results}"
-            
+
             self.status = message_content
             return Message(text=message_content)
         except Exception as e:
