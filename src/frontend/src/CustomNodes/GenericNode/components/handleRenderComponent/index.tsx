@@ -259,6 +259,9 @@ export default function HandleRenderComponent({
             }}
           />
           <div
+            data-testid={`gradient-handle-${testIdComplement}-${title.toLowerCase()}-${
+              !showNode ? (left ? "target" : "source") : left ? "left" : "right"
+            }`}
             className={classNames(
               `pointer-events-none absolute left-1/2 top-[50%] z-10 flex -translate-x-1/2 translate-y-[-50%] items-center justify-center rounded-full transition-all`,
               filterPresent
