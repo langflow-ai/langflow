@@ -174,9 +174,14 @@ export default function HandleRenderComponent({
               setFilterEdge([]);
             }
           }}
-          onMouseDown={() => {
-            setHandleDragging(currentFilter);
-            document.addEventListener("mouseup", handleMouseUp);
+          onContextMenu={(event) => {
+            event.preventDefault();
+          }}
+          onMouseDown={(event) => {
+            if (event.button === 0) {
+              setHandleDragging(currentFilter);
+              document.addEventListener("mouseup", handleMouseUp);
+            }
           }}
         >
           <div
