@@ -4,170 +4,268 @@ sidebar_position: 6
 slug: /components-embedding-models
 ---
 
+# Embedding Models
+
+Embeddings models are used to convert text into numerical vectors. These vectors can be used for various tasks such as similarity search, clustering, and classification.
+
+## AI/ML
+
+This component generates embeddings using the [AI/ML API](https://docs.aimlapi.com/api-overview/embeddings).
+
+### Parameters
+
+#### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| model_name | String | The name of the AI/ML embedding model to use |
+| aiml_api_key | SecretString | API key for authenticating with the AI/ML service |
+
+#### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance of AIMLEmbeddingsImpl for generating embeddings |
+
+## Amazon Bedrock Embeddings
+
+This component is used to load embedding models from [Amazon Bedrock](https://aws.amazon.com/bedrock/).
+
+### Parameters
+
+#### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| credentials_profile_name | String | Name of the AWS credentials profile in ~/.aws/credentials or ~/.aws/config, which has access keys or role information |
+| model_id | String | ID of the model to call, e.g., `amazon.titan-embed-text-v1`. This is equivalent to the `modelId` property in the `list-foundation-models` API |
+| endpoint_url | String | URL to set a specific service endpoint other than the default AWS endpoint |
+| region_name | String | AWS region to use, e.g., `us-west-2`. Falls back to `AWS_DEFAULT_REGION` environment variable or region specified in ~/.aws/config if not provided |
+
+#### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using Amazon Bedrock |
 
 
-:::info
+## Astra vectorize
 
-This page may contain outdated information. It will be updated as soon as possible.
+This component is used to generate server-side embeddings using [DataStax Astra](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
 
-:::
+### Parameters
 
+#### Inputs
 
+| Name | Type | Description |
+|------|------|-------------|
+| provider | String | The embedding provider to use |
+| model_name | String | The embedding model to use |
+| authentication | Dict | Authentication parameters. Use the Astra Portal to add the embedding provider integration to your Astra organization |
+| provider_api_key | String | An alternative to the Astra Authentication that lets you use directly the API key of the provider |
+| model_parameters | Dict | Additional model parameters |
 
+#### Outputs
 
-## Amazon Bedrock Embeddings {#4ddcfde8c1664e358d3f16d718e944d8}
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using Astra vectorize |                                                                                      |             |
 
+## Azure OpenAI Embeddings
 
-Used to load embedding models from [Amazon Bedrock](https://aws.amazon.com/bedrock/).
+This component generates embeddings using Azure OpenAI models.
 
+### Parameters
 
-| **Parameter**              | **Type** | **Description**                                                                                                                                     | **Default** |
-| -------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `credentials_profile_name` | `str`    | Name of the AWS credentials profile in ~/.aws/credentials or ~/.aws/config, which has access keys or role information.                              |             |
-| `model_id`                 | `str`    | ID of the model to call, e.g., `amazon.titan-embed-text-v1`. This is equivalent to the `modelId` property in the `list-foundation-models` API.      |             |
-| `endpoint_url`             | `str`    | URL to set a specific service endpoint other than the default AWS endpoint.                                                                         |             |
-| `region_name`              | `str`    | AWS region to use, e.g., `us-west-2`. Falls back to `AWS_DEFAULT_REGION` environment variable or region specified in ~/.aws/config if not provided. |             |
+#### Inputs
 
+| Name | Type | Description |
+|------|------|-------------|
+| Azure Endpoint | String | Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/` |
+| Deployment Name | String | The name of the deployment |
+| API Version | String | The API version to use, options include various dates |
+| API Key | String | The API key to access the Azure OpenAI service |
 
-## Astra vectorize {#c1e6d1373824424ea130e052ba0f46af}
+#### Outputs
 
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using Azure OpenAI |
 
-Used to generate server-side embeddings using [DataStax Astra](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
+## Cohere Embeddings
 
+This component is used to load embedding models from [Cohere](https://cohere.com/).
 
-| **Parameter**      | **Type** | **Description**                                                                                                       | **Default** |
-| ------------------ | -------- | --------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `provider`         | `str`    | The embedding provider to use.                                                                                        |             |
-| `model_name`       | `str`    | The embedding model to use.                                                                                           |             |
-| `authentication`   | `dict`   | Authentication parameters. Use the Astra Portal to add the embedding provider integration to your Astra organization. |             |
-| `provider_api_key` | `str`    | An alternative to the Astra Authentication that let you use directly the API key of the provider.                     |             |
-| `model_parameters` | `dict`   | Additional model parameters.                                                                                          |             |
+### Parameters
 
+#### Inputs
 
-## Cohere Embeddings {#0c5b7b8790da448fabd4c5ddba1fcbde}
+| Name | Type | Description |
+|------|------|-------------|
+| cohere_api_key | String | API key required to authenticate with the Cohere service |
+| model | String | Language model used for embedding text documents and performing queries (default: `embed-english-v2.0`) |
+| truncate | Boolean | Whether to truncate the input text to fit within the model's constraints (default: `False`) |
 
+#### Outputs
 
-Used to load embedding models from [Cohere](https://cohere.com/).
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using Cohere |
 
+## Hugging Face Inference API Embeddings
 
-| **Parameter**    | **Type** | **Description**                                                           | **Default**          |
-| ---------------- | -------- | ------------------------------------------------------------------------- | -------------------- |
-| `cohere_api_key` | `str`    | API key required to authenticate with the Cohere service.                 |                      |
-| `model`          | `str`    | Language model used for embedding text documents and performing queries.  | `embed-english-v2.0` |
-| `truncate`       | `bool`   | Whether to truncate the input text to fit within the model's constraints. | `False`              |
+This component generates embeddings using Hugging Face Inference API models.
 
+### Parameters
 
-## Azure OpenAI Embeddings {#8ffb790d5a6c484dab3fe6c777638a44}
+#### Inputs
 
+| Name | Type | Description |
+|------|------|-------------|
+| API Key | String | API key for accessing the Hugging Face Inference API |
+| API URL | String | URL of the Hugging Face Inference API (default: `http://localhost:8080`) |
+| Model Name | String | Name of the model to use for embeddings (default: `BAAI/bge-large-en-v1.5`) |
+| Cache Folder | String | Folder path to cache Hugging Face models |
+| Encode Kwargs | Dict | Additional arguments for the encoding process |
+| Model Kwargs | Dict | Additional arguments for the model |
+| Multi Process | Boolean | Whether to use multiple processes (default: `False`) |
 
-Generate embeddings using Azure OpenAI models.
+#### Outputs
 
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using Hugging Face Inference API |
 
-| **Parameter**     | **Type** | **Description**                                                                                    | **Default** |
-| ----------------- | -------- | -------------------------------------------------------------------------------------------------- | ----------- |
-| `Azure Endpoint`  | `str`    | Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/` |             |
-| `Deployment Name` | `str`    | The name of the deployment.                                                                        |             |
-| `API Version`     | `str`    | The API version to use, options include various dates.                                             |             |
-| `API Key`         | `str`    | The API key to access the Azure OpenAI service.                                                    |             |
+## MistralAI
 
+This component generates embeddings using MistralAI models.
 
-## Hugging Face API Embeddings {#8536e4ee907b48688e603ae9bf7822cb}
+### Parameters
 
+#### Inputs
 
-Generate embeddings using Hugging Face Inference API models.
+| Name | Type | Description |
+|------|------|-------------|
+| model | String | The MistralAI model to use (default: "mistral-embed") |
+| mistral_api_key | SecretString | API key for authenticating with MistralAI |
+| max_concurrent_requests | Integer | Maximum number of concurrent API requests (default: 64) |
+| max_retries | Integer | Maximum number of retry attempts for failed requests (default: 5) |
+| timeout | Integer | Request timeout in seconds (default: 120) |
+| endpoint | String | Custom API endpoint URL (default: "https://api.mistral.ai/v1/") |
 
+#### Outputs
 
-| **Parameter**   | **Type** | **Description**                                       | **Default**              |
-| --------------- | -------- | ----------------------------------------------------- | ------------------------ |
-| `API Key`       | `str`    | API key for accessing the Hugging Face Inference API. |                          |
-| `API URL`       | `str`    | URL of the Hugging Face Inference API.                | `http://localhost:8080`  |
-| `Model Name`    | `str`    | Name of the model to use for embeddings.              | `BAAI/bge-large-en-v1.5` |
-| `Cache Folder`  | `str`    | Folder path to cache Hugging Face models.             |                          |
-| `Encode Kwargs` | `dict`   | Additional arguments for the encoding process.        |                          |
-| `Model Kwargs`  | `dict`   | Additional arguments for the model.                   |                          |
-| `Multi Process` | `bool`   | Whether to use multiple processes.                    | `False`                  |
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | MistralAIEmbeddings instance for generating embeddings |
 
+## NVIDIA
 
-## Hugging Face Embeddings {#b2b74732874743d3be6fdf8aae049e74}
+This component generates embeddings using NVIDIA models.
 
+### Parameters
 
-Used to load embedding models from [HuggingFace](https://huggingface.co/).
+#### Inputs
 
+| Name | Type | Description |
+|------|------|-------------|
+| model | String | The NVIDIA model to use for embeddings (e.g., nvidia/nv-embed-v1) |
+| base_url | String | Base URL for the NVIDIA API (default: https://integrate.api.nvidia.com/v1) |
+| nvidia_api_key | SecretString | API key for authenticating with NVIDIA's service |
+| temperature | Float | Model temperature for embedding generation (default: 0.1) |
 
-| **Parameter**   | **Type** | **Description**                                | **Default**                               |
-| --------------- | -------- | ---------------------------------------------- | ----------------------------------------- |
-| `Cache Folder`  | `str`    | Folder path to cache HuggingFace models.       |                                           |
-| `Encode Kwargs` | `dict`   | Additional arguments for the encoding process. |                                           |
-| `Model Kwargs`  | `dict`   | Additional arguments for the model.            |                                           |
-| `Model Name`    | `str`    | Name of the HuggingFace model to use.          | `sentence-transformers/all-mpnet-base-v2` |
-| `Multi Process` | `bool`   | Whether to use multiple processes.             | `False`                                   |
+#### Outputs
 
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | NVIDIAEmbeddings instance for generating embeddings |
 
-## OpenAI Embeddings {#af7630df05a245d1a632e1bf6db2a4c5}
+## Ollama Embeddings
 
+This component generates embeddings using Ollama models.
 
-Used to load embedding models from [OpenAI](https://openai.com/).
+### Parameters
 
+#### Inputs
 
-| **Parameter**              | **Type**         | **Description**                                  | **Default**              |
-| -------------------------- | ---------------- | ------------------------------------------------ | ------------------------ |
-| `OpenAI API Key`           | `str`            | The API key to use for accessing the OpenAI API. |                          |
-| `Default Headers`          | `Dict[str, str]` | Default headers for the HTTP requests.           |                          |
-| `Default Query`            | `NestedDict`     | Default query parameters for the HTTP requests.  |                          |
-| `Allowed Special`          | `List[str]`      | Special tokens allowed for processing.           | `[]`                     |
-| `Disallowed Special`       | `List[str]`      | Special tokens disallowed for processing.        | `["all"]`                |
-| `Chunk Size`               | `int`            | Chunk size for processing.                       | `1000`                   |
-| `Client`                   | `Any`            | HTTP client for making requests.                 |                          |
-| `Deployment`               | `str`            | Deployment name for the model.                   | `text-embedding-3-small` |
-| `Embedding Context Length` | `int`            | Length of embedding context.                     | `8191`                   |
-| `Max Retries`              | `int`            | Maximum number of retries for failed requests.   | `6`                      |
-| `Model`                    | `str`            | Name of the model to use.                        | `text-embedding-3-small` |
-| `Model Kwargs`             | `NestedDict`     | Additional keyword arguments for the model.      |                          |
-| `OpenAI API Base`          | `str`            | Base URL of the OpenAI API.                      |                          |
-| `OpenAI API Type`          | `str`            | Type of the OpenAI API.                          |                          |
-| `OpenAI API Version`       | `str`            | Version of the OpenAI API.                       |                          |
-| `OpenAI Organization`      | `str`            | Organization associated with the API key.        |                          |
-| `OpenAI Proxy`             | `str`            | Proxy server for the requests.                   |                          |
-| `Request Timeout`          | `float`          | Timeout for the HTTP requests.                   |                          |
-| `Show Progress Bar`        | `bool`           | Whether to show a progress bar for processing.   | `False`                  |
-| `Skip Empty`               | `bool`           | Whether to skip empty inputs.                    | `False`                  |
-| `TikToken Enable`          | `bool`           | Whether to enable TikToken.                      | `True`                   |
-| `TikToken Model Name`      | `str`            | Name of the TikToken model.                      |                          |
+| Name | Type | Description |
+|------|------|-------------|
+| Ollama Model | String | Name of the Ollama model to use (default: `llama2`) |
+| Ollama Base URL | String | Base URL of the Ollama API (default: `http://localhost:11434`) |
+| Model Temperature | Float | Temperature parameter for the model. Adjusts the randomness in the generated embeddings |
 
+#### Outputs
 
-## Ollama Embeddings {#a26d2cb92e6d44669c2cfff71a5e9431}
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using Ollama |
 
+## OpenAI Embeddings
 
-Generate embeddings using Ollama models.
+This component is used to load embedding models from [OpenAI](https://openai.com/).
 
+### Parameters
 
-| **Parameter**       | **Type** | **Description**                                                                          | **Default**              |
-| ------------------- | -------- | ---------------------------------------------------------------------------------------- | ------------------------ |
-| `Ollama Model`      | `str`    | Name of the Ollama model to use.                                                         | `llama2`                 |
-| `Ollama Base URL`   | `str`    | Base URL of the Ollama API.                                                              | `http://localhost:11434` |
-| `Model Temperature` | `float`  | Temperature parameter for the model. Adjusts the randomness in the generated embeddings. |                          |
+#### Inputs
 
+| Name | Type | Description |
+|------|------|-------------|
+| OpenAI API Key | String | The API key to use for accessing the OpenAI API |
+| Default Headers | Dict | Default headers for the HTTP requests |
+| Default Query | NestedDict | Default query parameters for the HTTP requests |
+| Allowed Special | List | Special tokens allowed for processing (default: `[]`) |
+| Disallowed Special | List | Special tokens disallowed for processing (default: `["all"]`) |
+| Chunk Size | Integer | Chunk size for processing (default: `1000`) |
+| Client | Any | HTTP client for making requests |
+| Deployment | String | Deployment name for the model (default: `text-embedding-3-small`) |
+| Embedding Context Length | Integer | Length of embedding context (default: `8191`) |
+| Max Retries | Integer | Maximum number of retries for failed requests (default: `6`) |
+| Model | String | Name of the model to use (default: `text-embedding-3-small`) |
+| Model Kwargs | NestedDict | Additional keyword arguments for the model |
+| OpenAI API Base | String | Base URL of the OpenAI API |
+| OpenAI API Type | String | Type of the OpenAI API |
+| OpenAI API Version | String | Version of the OpenAI API |
+| OpenAI Organization | String | Organization associated with the API key |
+| OpenAI Proxy | String | Proxy server for the requests |
+| Request Timeout | Float | Timeout for the HTTP requests |
+| Show Progress Bar | Boolean | Whether to show a progress bar for processing (default: `False`) |
+| Skip Empty | Boolean | Whether to skip empty inputs (default: `False`) |
+| TikToken Enable | Boolean | Whether to enable TikToken (default: `True`) |
+| TikToken Model Name | String | Name of the TikToken model |
 
-## VertexAI Embeddings {#707b38c23cb9413fbbaab1ae7b872311}
+#### Outputs
 
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using OpenAI |
 
-Wrapper around [Google Vertex AI](https://cloud.google.com/vertex-ai) [Embeddings API](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings).
+## VertexAI Embeddings
 
+This component is a wrapper around [Google Vertex AI](https://cloud.google.com/vertex-ai) [Embeddings API](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings).
 
-| **Parameter**         | **Type**      | **Description**                                                                                                                      | **Default**   |
-| --------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
-| `credentials`         | `Credentials` | The default custom credentials to use.                                                                                               |               |
-| `location`            | `str`         | The default location to use when making API calls.                                                                                   | `us-central1` |
-| `max_output_tokens`   | `int`         | Token limit determines the maximum amount of text output from one prompt.                                                            | `128`         |
-| `model_name`          | `str`         | The name of the Vertex AI large language model.                                                                                      | `text-bison`  |
-| `project`             | `str`         | The default GCP project to use when making Vertex API calls.                                                                         |               |
-| `request_parallelism` | `int`         | The amount of parallelism allowed for requests issued to VertexAI models.                                                            | `5`           |
-| `temperature`         | `float`       | Tunes the degree of randomness in text generations. Should be a non-negative value.                                                  | `0`           |
-| `top_k`               | `int`         | How the model selects tokens for output, the next token is selected from the top `k` tokens.                                         | `40`          |
-| `top_p`               | `float`       | Tokens are selected from the most probable to least until the sum of their probabilities exceeds the top `p` value.                  | `0.95`        |
-| `tuned_model_name`    | `str`         | The name of a tuned model. If provided, `model_name` is ignored.                                                                     |               |
-| `verbose`             | `bool`        | This parameter controls the level of detail in the output. When set to `True`, it prints internal states of the chain to help debug. | `False`       |
+### Parameters
 
+#### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| credentials | Credentials | The default custom credentials to use |
+| location | String | The default location to use when making API calls (default: `us-central1`) |
+| max_output_tokens | Integer | Token limit determines the maximum amount of text output from one prompt (default: `128`) |
+| model_name | String | The name of the Vertex AI large language model (default: `text-bison`) |
+| project | String | The default GCP project to use when making Vertex API calls |
+| request_parallelism | Integer | The amount of parallelism allowed for requests issued to VertexAI models (default: `5`) |
+| temperature | Float | Tunes the degree of randomness in text generations. Should be a non-negative value (default: `0`) |
+| top_k | Integer | How the model selects tokens for output, the next token is selected from the top `k` tokens (default: `40`) |
+| top_p | Float | Tokens are selected from the most probable to least until the sum of their probabilities exceeds the top `p` value (default: `0.95`) |
+| tuned_model_name | String | The name of a tuned model. If provided, `model_name` is ignored |
+| verbose | Boolean | This parameter controls the level of detail in the output. When set to `True`, it prints internal states of the chain to help debug (default: `False`) |
+
+#### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using VertexAI |
 
 [Previous Vector Stores](/components-vector-stores)
 

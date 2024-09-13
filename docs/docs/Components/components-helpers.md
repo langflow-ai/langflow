@@ -4,167 +4,189 @@ sidebar_position: 4
 slug: /components-helpers
 ---
 
+# Helpers
 
+Helper components provide utility functions to help manage data, tasks, and other components in your flow.
 
-:::info
+## Chat Memory
 
-This page may contain outdated information. It will be updated as soon as possible.
+This component retrieves and manages chat messages from Langflow tables or an external memory.
 
-:::
+### Parameters
 
+#### Inputs
 
+| Name | Display Name | Info |
+|------|--------------|------|
+| memory | External Memory | Retrieve messages from an external memory. If empty, it will use the Langflow tables. |
+| sender | Sender Type | Filter by sender type. |
+| sender_name | Sender Name | Filter by sender name. |
+| n_messages | Number of Messages | Number of messages to retrieve. |
+| session_id | Session ID | The session ID of the chat. If empty, the current session ID parameter will be used. |
+| order | Order | Order of the messages. |
+| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{sender}` or any other key in the message data. |
 
+#### Outputs
 
-## Chat memory {#304dc4a3bea74efb9068093ff18a56ad}
+| Name | Display Name | Info |
+|------|--------------|------|
+| messages | Messages (Data) | Retrieved messages as Data objects. |
+| messages_text | Messages (Text) | Retrieved messages formatted as text. |
+| lc_memory | Memory | Built LangChain memory object. |
 
-
-This component retrieves stored chat messages based on a specific session ID.
-
-
-### Parameters {#e0af57d97f844ce99789958161d19767}
-
-- **Sender type:** Choose the sender type from options like "Machine", "User", or "Both".
-- **Sender name:** (Optional) The name of the sender.
-- **Number of messages:** Number of messages to retrieve.
-- **Session ID:** The session ID of the chat history.
-- **Order:** Choose the message order, either "Ascending" or "Descending".
-- **Data template:** (Optional) Template to convert a record to text. If left empty, the system dynamically sets it to the record's text key.
-
----
-
-
-### Combine text {#13443183e6054d0694d65f8df08833d5}
-
+## Combine Text
 
 This component concatenates two text sources into a single text chunk using a specified delimiter.
 
+### Parameters
 
-### Parameters {#246676d119604fc5bf1be85fe93044aa}
+#### Inputs
 
-- **First text:** The first text input to concatenate.
-- **Second text:** The second text input to concatenate.
-- **Delimiter:** A string used to separate the two text inputs. Defaults to a space.
+| Name | Display Name | Info |
+|------|--------------|------|
+| first_text | First Text | The first text input to concatenate. |
+| second_text | Second Text | The second text input to concatenate. |
+| delimiter | Delimiter | A string used to separate the two text inputs. Defaults to a space. |
 
----
-
-
-### Create record {#506f43345854473b8199631bf68a3b4a}
-
+## Create List
 
 This component dynamically creates a record with a specified number of fields.
 
+### Parameters
 
-### Parameters {#08735e90bd10406695771bad8a95976a}
+#### Inputs
 
-- **Number of fields:** Number of fields to be added to the record.
-- **Text key:** Key used as text.
+| Name | Display Name | Info |
+|------|--------------|------|
+| n_fields | Number of Fields | Number of fields to be added to the record. |
+| text_key | Text Key | Key used as text. |
 
----
-
-
-### Custom component {#cda421d4bccb4e7db2e48615884ed753}
-
+## Custom Component
 
 Use this component as a template to create your custom component.
 
+## Filter Data
 
-### Parameters {#04f9eb5e6da4431593a5bee8831f2327}
+This component converts LangChain documents into Data.
 
-- **Parameter:** Describe the purpose of this parameter.
+## Hierarchical Task
 
-INFO
+This component creates and manages hierarchical tasks for CrewAI agents in a Playground environment.
 
+For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Hierarchical/).
 
-Customize the `build_config` and `build` methods according to your requirements.
+### Parameters
 
+#### Inputs
 
-Learn more about creating custom components at [Custom Component](http://docs.langflow.org/components/custom).
+| Name | Display Name | Info |
+|------|--------------|------|
+| task_description | Description | Descriptive text detailing task's purpose and execution. |
+| expected_output | Expected Output | Clear definition of expected task outcome. |
+| tools | Tools | List of tools/resources limited for task execution. Uses the Agent tools by default. |
 
+#### Outputs
 
----
+| Name | Display Name | Info |
+|------|--------------|------|
+| task_output | Task | The built hierarchical task. |
 
+## ID Generator
 
-### Documents to Data {#53a6a99a54f0435e9209169cf7730c55}
+This component generates a unique ID.
 
+### Parameters
 
-Convert LangChain documents into Data.
+#### Outputs
 
+| Name | Display Name | Info |
+|------|--------------|------|
+| value | Value | Unique ID generated. |
 
-### Parameters {#0eb5fce528774c2db4a3677973e75cf8}
+## Merge Data
 
-- **Documents:** Documents to be converted into Data.
+## Parse Data
 
----
+The ParseData component converts Data objects into plain text using a specified template.
+This component transforms structured data into human-readable text formats, allowing for customizable output through the use of templates.
 
+### Parameters
 
-### ID generator {#4a8fbfb95ebe44ee8718725546db5393}
+#### Inputs
 
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The data to convert to text |
+| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{data}` or any other key in the Data |
+| sep | Separator | The separator to use between multiple data items |
 
-Generates a unique ID.
+#### Outputs
 
+| Name | Display Name | Info |
+|------|--------------|------|
+| text | Text | The resulting formatted text string as a Message object |
 
-### Parameters {#4629dd15594c47399c97d9511060e114}
+## Sequential Task
 
-- **Value:** Unique ID generated.
+This component creates and manage sequential tasks for CrewAI agents. It builds a SequentialTask object with the provided description, expected output, and agent, allowing for the specification of tools and asynchronous execution.
 
----
+For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Sequential/).
 
+### Parameters
 
-### Message history {#6a1a60688641490197c6443df573960e}
+#### Inputs
 
+| Name | Display Name | Info |
+|------|--------------|------|
+| task_description | Description | Descriptive text detailing task's purpose and execution. |
+| expected_output | Expected Output | Clear definition of expected task outcome. |
+| tools | Tools | List of tools/resources limited for task execution. Uses the Agent tools by default. |
+| agent | Agent | CrewAI Agent that will perform the task. |
+| task | Task | CrewAI Task that will perform the task. |
+| async_execution | Async Execution | Boolean flag indicating asynchronous task execution. |
 
-Retrieves stored chat messages based on a specific session ID.
+#### Outputs
 
+| Name | Display Name | Info |
+|------|--------------|------|
+| task_output | Task | The built sequential task or list of tasks. |
 
-### Parameters {#31c7fc2a3e8c4f7c89f923e700f4ea34}
+## Split Text
 
-- **Sender type:** Options for the sender type.
-- **Sender name:** Sender name.
-- **Number of messages:** Number of messages to retrieve.
-- **Session ID:** Session ID of the chat history.
-- **Order:** Order of the messages.
+This component splits text into chunks of a specified length.
 
----
+### Parameters
 
+#### Inputs
 
-### Data to text {#f60ab5bbc0db4b27b427897eba97fe29}
+| Name | Display Name | Info |
+|------|--------------|------|
+| texts | Texts | Texts to split. |
+| separators | Separators | Characters to split on. Defaults to a space. |
+| max_chunk_size | Max Chunk Size | The maximum length (in characters) of each chunk. |
+| chunk_overlap | Chunk Overlap | The amount of character overlap between chunks. |
+| recursive | Recursive | Whether to split recursively. |
 
+## Store Message
 
-Convert Data into plain text following a specified template.
+This component stores chat messages or text into Langflow tables or an external memory.
 
+It provides flexibility in managing message storage and retrieval within a chat system.
 
-### Parameters {#01b91376569149a49cfcfd9321323688}
+### Parameters
 
-- **Data:** The Data to convert to text.
-- **Template:** The template used for formatting the Data. It can contain keys like `{text}`, `{data}`, or any other key in the record.
+#### Inputs
 
----
+| Name | Display Name | Info |
+|------|--------------|------|
+| message | Message | The chat message to be stored. (Required) |
+| memory | External Memory | The external memory to store the message. If empty, it will use the Langflow tables. |
+| sender | Sender | The sender of the message. Can be Machine or User. If empty, the current sender parameter will be used. |
+| sender_name | Sender Name | The name of the sender. Can be AI or User. If empty, the current sender parameter will be used. |
+| session_id | Session ID | The session ID of the chat. If empty, the current session ID parameter will be used. |
 
+#### Outputs
 
-### Split text {#210be0ae518d411695d6caafdd7700eb}
-
-
-Split text into chunks of a specified length.
-
-
-### Parameters {#04197fcd05e64e10b189de1171a32682}
-
-- **Texts:** Texts to split.
-- **Separators:** Characters to split on. Defaults to a space.
-- **Max chunk size:** The maximum length (in characters) of each chunk.
-- **Chunk overlap:** The amount of character overlap between chunks.
-- **Recursive:** Whether to split recursively.
-
----
-
-
-### Update record {#d3b6116dfd8d4af080ad01bc8fd2b0b3}
-
-
-Update a record with text-based key/value pairs, similar to updating a Python dictionary.
-
-
-### Parameters {#c830224edc1d486aaaa5e2889f4f6689}
-
-- **Data:** The record to update.
-- **New data:** The new data to update the record with.
+| Name | Display Name | Info |
+|------|--------------|------|
+| stored_messages | Stored Messages | The list of stored messages after the current message has been added. |
