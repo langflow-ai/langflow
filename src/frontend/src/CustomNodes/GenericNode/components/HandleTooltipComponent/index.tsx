@@ -4,39 +4,46 @@ export default function HandleTooltipComponent({
   color,
   isConnecting,
   isCompatible,
+  isSameNode,
 }: {
   isInput: boolean;
   color: string;
   tooltipTitle: string;
   isConnecting: boolean;
   isCompatible: boolean;
+  isSameNode: boolean;
 }) {
   return (
-    <div className="py-1.5 font-medium">
-      <div className="flex items-start gap-1">
-        {isConnecting ? (
-          isCompatible ? (
-            <span className="mr-1">
-              <span className="font-semibold">Connect</span> to
-            </span>
+    <div className="py-1.5 font-medium text-muted-foreground">
+      {isSameNode ? (
+        "Can't connect to the same node"
+      ) : (
+        <div className="flex items-start gap-1.5">
+          {isConnecting ? (
+            isCompatible ? (
+              <span>
+                <span className="font-semibold text-foreground">Connect</span>{" "}
+                to
+              </span>
+            ) : (
+              <span>Incompatible with</span>
+            )
           ) : (
-            <span className="mr-1">Incompatible with</span>
-          )
-        ) : (
-          <span className="mr-1">{isInput ? "Input" : "Output"}: </span>
-        )}
-        <div
-          className="rounded-sm px-1.5 text-background"
-          style={{ backgroundColor: color }}
-        >
-          {tooltipTitle}
+            <span className="text-foreground">
+              {isInput ? "Input" : "Output"}:{" "}
+            </span>
+          )}
+          <div
+            className="rounded-sm px-1.5 text-background"
+            style={{ backgroundColor: color }}
+          >
+            {tooltipTitle}
+          </div>
+          {isConnecting && <span>{isInput ? "input" : "output"}</span>}
         </div>
-        {isConnecting && (
-          <span className="ml-1">{isInput ? "input" : "output"}</span>
-        )}
-      </div>
+      )}
       {!isConnecting && (
-        <div className="mt-2 flex flex-col gap-0.5 text-xs text-muted-foreground">
+        <div className="mt-2 flex flex-col gap-0.5 text-xs">
           <div>
             <b>Drag</b> to connect compatible {!isInput ? "inputs" : "outputs"}
           </div>

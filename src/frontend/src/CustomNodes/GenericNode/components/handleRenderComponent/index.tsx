@@ -145,6 +145,9 @@ export default function HandleRenderComponent({
             tooltipTitle={tooltipTitle}
             isConnecting={!!filterPresent && !ownHandle}
             isCompatible={openHandle}
+            isSameNode={
+              nodeId === (handleDragging?.target ?? handleDragging?.source)
+            }
           />
         }
         side={left ? "left" : "right"}
