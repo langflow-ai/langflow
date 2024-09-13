@@ -236,6 +236,8 @@ import { HackerNewsIcon } from "../icons/hackerNews";
 import { MistralIcon } from "../icons/mistral";
 import { SupabaseIcon } from "../icons/supabase";
 import { iconsType } from "../types/components";
+import { OpenSearch } from "../icons/OpenSearch";
+
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
@@ -631,4 +633,5 @@ export const nodeIconsLucide: iconsType = {
   Option: OptionIcon,
   Perplexity,
   DuckDuckGo: DuckDuckGoIcon,
+  OpenSearch,
 };
