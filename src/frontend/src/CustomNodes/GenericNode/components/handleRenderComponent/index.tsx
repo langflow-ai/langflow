@@ -146,7 +146,8 @@ export default function HandleRenderComponent({
             isConnecting={!!filterPresent && !ownHandle}
             isCompatible={openHandle}
             isSameNode={
-              nodeId === (handleDragging?.target ?? handleDragging?.source)
+              nodeId === (handleDragging?.target ?? handleDragging?.source) &&
+              !ownHandle
             }
           />
         }
