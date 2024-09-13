@@ -113,7 +113,7 @@ export default function HandleRenderComponent({
 
   const handleColor =
     filterPresent && !(openHandle || ownHandle)
-      ? "conic-gradient(gray 0deg 360deg)"
+      ? "conic-gradient(#cbd5e1 0deg 360deg)"
       : "conic-gradient(" +
         colors
           .concat(colors[0])
