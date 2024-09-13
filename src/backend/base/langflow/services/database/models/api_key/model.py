@@ -1,24 +1,15 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
-import os
 
 from pydantic import field_validator
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
+from langflow.services.database.models.api_key.utils import expire_time, utc_now
+
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
     from langflow.services.database.models.flow import Flow
-
-load_dotenv()
-
-def utc_now():
-    return datetime.now(timezone.utc)
-
-
-def expire_time():
-    expiration_hours = os.getenv("API_KEY_EXPIRATION_HOURS")
-    return utc_now() + timedelta(hours=int(expiration_hours))
 
 
 class ApiKeyBase(SQLModel):
