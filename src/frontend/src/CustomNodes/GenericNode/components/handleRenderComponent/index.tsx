@@ -1,6 +1,6 @@
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
@@ -183,9 +183,12 @@ export default function HandleRenderComponent({
     [filterPresent, openHandle, ownHandle, dark, colors],
   );
 
+  const [openTooltip, setOpenTooltip] = useState(false);
   return (
     <div>
       <ShadTooltip
+        open={openTooltip}
+        setOpen={setOpenTooltip}
         styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
         delayDuration={1000}
         content={
@@ -222,6 +225,9 @@ export default function HandleRenderComponent({
               setFilterType(undefined);
               setFilterEdge([]);
             }
+          }}
+          onMouseUp={() => {
+            setOpenTooltip(false);
           }}
           onContextMenu={(event) => {
             event.preventDefault();
