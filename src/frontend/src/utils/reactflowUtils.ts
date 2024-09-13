@@ -217,6 +217,9 @@ export function isValidConnection(
 ) {
   const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle!);
   const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle!);
+  if (source === target) {
+    return false;
+  }
   if (
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType,
