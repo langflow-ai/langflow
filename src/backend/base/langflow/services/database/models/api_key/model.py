@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 load_dotenv()
 
+
 def utc_now():
     return datetime.now(timezone.utc)
 
