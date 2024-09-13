@@ -6,6 +6,7 @@ import {
 } from "@/controllers/API/queries/folders";
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
 import { ENABLE_CUSTOM_PARAM } from "@/customization/feature-flags";
+import { track } from "@/customization/utils/analytics";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
@@ -25,7 +26,6 @@ import { Button, buttonVariants } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { SidebarFolderSkeleton } from "../sidebarFolderSkeleton";
-import { track } from "@/customization/utils/analytics";
 
 type SideBarFoldersButtonsComponentProps = {
   pathname: string;
@@ -403,7 +403,7 @@ const SideBarFoldersButtonsComponent = ({
                         handleDownloadFolder(item.id!);
                         e.stopPropagation();
                         e.preventDefault();
-                        track("Folder Exported", { folderId: item.id!})
+                        track("Folder Exported", { folderId: item.id! });
                       }}
                       unstyled
                     >

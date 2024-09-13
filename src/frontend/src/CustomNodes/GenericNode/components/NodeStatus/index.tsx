@@ -11,6 +11,7 @@ import {
   STATUS_INACTIVE,
 } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
+import { track } from "@/customization/utils/analytics";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
@@ -19,7 +20,6 @@ import { classNames } from "@/utils/utils";
 import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IconComponent from "../../../../components/genericIconComponent";
-import { track } from "@/customization/utils/analytics";
 
 export default function NodeStatus({
   nodeId,
@@ -161,7 +161,7 @@ export default function NodeStatus({
               if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
               setValidationStatus(null);
               buildFlow({ stopNodeId: nodeId });
-              track("Flow Build - Clicked", { stopNodeId: nodeId })
+              track("Flow Build - Clicked", { stopNodeId: nodeId });
             }}
             unstyled
             className="group p-1"
