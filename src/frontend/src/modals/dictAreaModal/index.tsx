@@ -65,13 +65,12 @@ export default function DictAreaModal({
     <BaseModal.Content>
       <div className="flex h-full w-full flex-col transition-all">
         <JsonView
-          dark
+          theme="vscode"
           editable={!!onChange}
           enableClipboard
           onChange={handleJsonChange}
           src={cloneDeep(componentValue)}
           customizeCopy={customizeCopy}
-          theme="vscode"
         />
       </div>
     </BaseModal.Content>
@@ -85,7 +84,9 @@ export default function DictAreaModal({
       setOpen={setOpen}
       onSubmit={onChange ? handleSubmit : undefined}
     >
-      <BaseModal.Trigger className="h-full">{children}</BaseModal.Trigger>
+      <BaseModal.Trigger className="h-full" asChild>
+        {children}
+      </BaseModal.Trigger>
       {renderHeader()}
       {renderContent()}
       <BaseModal.Footer submit={onChange ? { label: "Save" } : undefined} />
