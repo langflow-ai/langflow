@@ -781,9 +781,14 @@ class Vertex:
                 # and we are just getting the result for the requester
                 return await self.get_requester_result(requester)
             self._reset()
-
+            # inject session_id if it is not None
+            if "session" in inputs and inputs.get("session") is not None and self.has_session_id:
+                session_id_value = self.get_value_from_template_dict("session_id")
+                if session_id_value =='':
+                    self.update_raw_params({"session_id": inputs.get("session")}, overwrite=True)
             if self._is_chat_input() and (inputs or files):
                 chat_input = {}
+                # aqui paizao fica na sua
                 if inputs:
                     chat_input.update({"input_value": inputs.get(INPUT_FIELD_NAME, "")})
                 if files:
