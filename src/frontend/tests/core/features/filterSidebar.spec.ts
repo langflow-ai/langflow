@@ -56,21 +56,15 @@ test("user must see on handle click the possibility connections - LLMChain", asy
 
   await page.waitForTimeout(500);
 
-  expect(await page.getByTestId("icon-Filter")).toBeVisible();
+  expect(await page.getByTestId("icon-ListFilter")).toBeVisible();
 
   await page
-    .getByTestId("icon-Filter")
+    .getByTestId("icon-X")
+    .first()
     .hover()
     .then(async () => {
       await page
-        .getByText("Filtering components by output type:", {
-          exact: false,
-        })
-        .first()
-        .isVisible();
-
-      await page
-        .getByText("Click to reset filters", {
+        .getByText("Remove filter", {
           exact: false,
         })
         .first()
@@ -116,8 +110,9 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(page.getByTestId("disclosure-utilities")).toBeVisible();
   await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
   await expect(page.getByTestId("disclosure-retrievers")).toBeVisible();
-  await expect(page.getByTestId("disclosure-text splitters")).toBeVisible();
+  await expect(page.getByTestId("disclosure-embeddings")).toBeVisible();
   await expect(page.getByTestId("disclosure-tools")).toBeVisible();
+  await expect(page.getByTestId("disclosure-toolkits")).toBeVisible();
 
   await expect(page.getByTestId("dataAPI Request")).toBeVisible();
   await expect(page.getByTestId("helpersChat Memory")).toBeVisible();
@@ -127,12 +122,10 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(
     page.getByTestId("retrieversSelf Query Retriever"),
   ).toBeVisible();
-  await expect(
-    page.getByTestId("textsplittersCharacterTextSplitter"),
-  ).toBeVisible();
+  await expect(page.getByTestId("helpersSplit Text")).toBeVisible();
   await expect(page.getByTestId("toolsSearch API")).toBeVisible();
 
-  await page.getByTestId("icon-Filter").click();
+  await page.getByTestId("icon-X").first().click();
 
   await expect(page.getByTestId("dataAPI Request")).not.toBeVisible();
   await expect(page.getByTestId("helpersChat Memory")).not.toBeVisible();
@@ -142,8 +135,6 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(
     page.getByTestId("retrieversSelf Query Retriever"),
   ).not.toBeVisible();
-  await expect(
-    page.getByTestId("textsplittersCharacterTextSplitter"),
-  ).not.toBeVisible();
+  await expect(page.getByTestId("helpersSplit Text")).not.toBeVisible();
   await expect(page.getByTestId("toolsSearch API")).not.toBeVisible();
 });
