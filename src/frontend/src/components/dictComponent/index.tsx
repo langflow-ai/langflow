@@ -3,6 +3,7 @@ import { DictComponentType } from "../../types/components";
 
 import DictAreaModal from "../../modals/dictAreaModal";
 import { classNames, cn } from "../../utils/utils";
+import ForwardedIconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 
 export default function DictComponent({
@@ -40,10 +41,14 @@ export default function DictComponent({
             <Button
               variant="primary"
               size="sm"
-              className={cn("w-full", editNode ? "h-fit px-3 py-0.5" : "")}
+              className={cn(
+                "w-full font-normal",
+                editNode ? "h-fit px-3 py-0.5" : "",
+              )}
               data-testid="dict-input"
             >
-              <span>Click to edit your dictionary...</span>
+              <ForwardedIconComponent name="BookMarked" className="h-4 w-4" />
+              Edit Dictionary
             </Button>
           </DictAreaModal>
         </div>
