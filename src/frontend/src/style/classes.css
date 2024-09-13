@@ -151,8 +151,18 @@ textarea[class^="ag-"]:focus {
   height: fit-content !important;
 }
 
-.json-view.dark {
-  background-color: #161c28 !important;
+.json-view {
+  height: 370px !important;
+  border-radius: 10px !important;
+  padding: 10px !important;
+}
+
+.json-view {
+  background-color: #f8fafc !important;
+}
+
+.dark .json-view {
+  background-color: #141924 !important;
 }
 
 .react-flow__node.dragging * {

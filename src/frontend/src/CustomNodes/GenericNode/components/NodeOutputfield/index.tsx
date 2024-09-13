@@ -127,7 +127,7 @@ export default function NodeOutputField({
     >
       <>
         <div className="flex w-full items-center justify-end truncate text-sm">
-          <div className="flex-1">
+          <div className="flex flex-1">
             <Button
               disabled={disabledOutput}
               unstyled
@@ -150,7 +150,7 @@ export default function NodeOutputField({
               <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
             </div>
           )}
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <span className={data.node?.frozen ? "text-ice" : ""}>
               <OutputComponent
                 proxy={outputProxy}
@@ -175,7 +175,7 @@ export default function NodeOutputField({
                   : "Please build the component first"
               }
             >
-              <div>
+              <div className="flex">
                 <OutputModal
                   disabled={!displayOutputPreview || unknownOutput}
                   nodeId={flowPoolId}
