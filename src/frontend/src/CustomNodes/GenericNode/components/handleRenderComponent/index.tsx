@@ -1,3 +1,4 @@
+import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
@@ -41,6 +42,7 @@ export default function HandleRenderComponent({
   const setFilterType = useFlowStore((state) => state.setFilterType);
   const handleDragging = useFlowStore((state) => state.handleDragging);
   const filterType = useFlowStore((state) => state.filterType);
+  const dark = useDarkStore((state) => state.dark);
 
   const onConnect = useFlowStore((state) => state.onConnect);
 
@@ -113,7 +115,9 @@ export default function HandleRenderComponent({
 
   const handleColor =
     filterPresent && !(openHandle || ownHandle)
-      ? "conic-gradient(#cbd5e1 0deg 360deg)"
+      ? dark
+        ? "conic-gradient(#374151 0deg 360deg)"
+        : "conic-gradient(#cbd5e1 0deg 360deg)"
       : "conic-gradient(" +
         colors
           .concat(colors[0])
@@ -139,6 +143,8 @@ export default function HandleRenderComponent({
             isInput={left}
             color={colors[0]}
             tooltipTitle={tooltipTitle}
+            isConnecting={!!filterPresent && !ownHandle}
+            isCompatible={openHandle}
           />
         }
         side={left ? "left" : "right"}
