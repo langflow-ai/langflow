@@ -5,6 +5,7 @@ from langchain_community.tools import DuckDuckGoSearchRun
 import time
 from typing import Optional
 
+
 class DuckDuckGoSearchComponent(TextComponent):
     display_name = "DuckDuckGo Search"
     description = "Perform web searches using the DuckDuckGo search engine with retry logic."
@@ -29,14 +30,14 @@ class DuckDuckGoSearchComponent(TextComponent):
             display_name="Max Retries",
             value=3,
             info="Maximum number of retry attempts for rate-limited requests.",
-            advanced=True
+            advanced=True,
         ),
         IntInput(
             name="initial_delay",
             display_name="Initial Retry Delay",
             value=5,
             info="Initial delay (in seconds) between retry attempts.",
-            advanced=True
+            advanced=True,
         ),
     ]
 
@@ -46,14 +47,14 @@ class DuckDuckGoSearchComponent(TextComponent):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._code: Optional[str] = kwargs.get('_code')
+        self._code: Optional[str] = kwargs.get("_code")
         self.search_tool = DuckDuckGoSearchRun()
 
     def execute_search(self, query: str) -> str:
         return self.search_tool.run(f"{query} (site:*)")
 
     def format_results(self, results: str, num_results: int) -> str:
-        result_list = results.split('\n')[:num_results]
+        result_list = results.split("\n")[:num_results]
         return "\n\n".join([f"{i+1}. {result}" for i, result in enumerate(result_list)])
 
     def search_with_retry(self, query: str, max_retries: int, initial_delay: int) -> str:
@@ -63,7 +64,9 @@ class DuckDuckGoSearchComponent(TextComponent):
                 return self.execute_search(query)
             except Exception as e:
                 if "202 Ratelimit" in str(e) and attempt < max_retries - 1:
-                    self.status = f"Rate limit hit. Retrying in {delay} seconds... (Attempt {attempt + 1}/{max_retries})"
+                    self.status = (
+                        f"Rate limit hit. Retrying in {delay} seconds... (Attempt {attempt + 1}/{max_retries})"
+                    )
                     time.sleep(delay)
                     delay *= 2  # Exponential backoff
                 else:
