@@ -56,10 +56,12 @@ class CSVAgentComponent(LCAgentComponent):
         }
 
         agent_csv = create_csv_agent(
-            llm=self.llm, path=self.path, agent_type=self.agent_type, handle_parsing_errors=True, **agent_kwargs
+            llm=self.llm,
+            path=self.path,
+            agent_type=self.agent_type,
+            handle_parsing_errors=self.handle_parsing_errors,
+            **agent_kwargs,
         )
-
-        print(f"self.inputs = {agent_csv}")
 
         result = agent_csv.invoke({"input": self.input_value})
         return Message(text=str(result["output"]))
@@ -71,7 +73,11 @@ class CSVAgentComponent(LCAgentComponent):
         }
 
         agent_csv = create_csv_agent(
-            llm=self.llm, path=self.path, agent_type=self.agent_type, handle_parsing_errors=True, **agent_kwargs
+            llm=self.llm,
+            path=self.path,
+            agent_type=self.agent_type,
+            handle_parsing_errors=self.handle_parsing_errors,
+            **agent_kwargs,
         )
 
         self.status = Message(text=str(agent_csv))
