@@ -135,9 +135,6 @@
   .border-frozen {
     @apply border shadow-frozen-ring;
   }
-  .frosted {
-    @apply rounded-md bg-frozen-blue backdrop-blur-xs;
-  }
   .frozen {
     position: relative;
     overflow: hidden;
