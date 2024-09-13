@@ -21,6 +21,7 @@ import {
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { UndrawCardComponentProps } from "../../../../types/components";
 import { updateIds } from "../../../../utils/reactflowUtils";
+import { track } from "@/customization/utils/analytics";
 
 export default function UndrawCardComponent({
   flow,
@@ -144,6 +145,7 @@ export default function UndrawCardComponent({
         addFlow({ flow }).then((id) => {
           navigate(`/flow/${id}/folder/${folderIdUrl}`);
         });
+        track(`New Flow Created: ${flow.name} Template`)
       }}
       className="h-64 w-80 cursor-pointer bg-background pt-4"
     >

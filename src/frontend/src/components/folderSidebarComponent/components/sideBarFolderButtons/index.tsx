@@ -25,6 +25,7 @@ import { Button, buttonVariants } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { SidebarFolderSkeleton } from "../sidebarFolderSkeleton";
+import { track } from "@/customization/utils/analytics";
 
 type SideBarFoldersButtonsComponentProps = {
   pathname: string;
@@ -151,6 +152,7 @@ const SideBarFoldersButtonsComponent = ({
         description: "",
       },
     });
+    track("Create New Folder");
   }
 
   function handleEditFolderName(e, name): void {
@@ -401,6 +403,7 @@ const SideBarFoldersButtonsComponent = ({
                         handleDownloadFolder(item.id!);
                         e.stopPropagation();
                         e.preventDefault();
+                        track("Folder Exported", { folderId: item.id!})
                       }}
                       unstyled
                     >

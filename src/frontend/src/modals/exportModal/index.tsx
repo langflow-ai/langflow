@@ -13,6 +13,7 @@ import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
+import { track } from "@/customization/utils/analytics";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
@@ -66,6 +67,7 @@ const ExportModal = forwardRef(
               description,
             );
           setOpen(false);
+          track("Flow Exported", { flowId: currentFlow!.id })
         }}
       >
         <BaseModal.Trigger asChild>{props.children}</BaseModal.Trigger>

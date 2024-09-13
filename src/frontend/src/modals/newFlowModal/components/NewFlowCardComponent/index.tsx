@@ -7,6 +7,7 @@ import {
   CardDescription,
   CardTitle,
 } from "../../../../components/ui/card";
+import { track } from "@/customization/utils/analytics";
 
 export default function NewFlowCardComponent() {
   const addFlow = useAddFlow();
@@ -19,6 +20,7 @@ export default function NewFlowCardComponent() {
         addFlow().then((id) => {
           navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
         });
+        track("New Flow Created: Blank Flow")
       }}
       className="h-64 w-80 cursor-pointer bg-background pt-4"
       data-testid="blank-flow"

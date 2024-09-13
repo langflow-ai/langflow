@@ -295,6 +295,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     (params: Connection) => {
       takeSnapshot();
       onConnect(params);
+      track("New Component Connection Added");
     },
     [takeSnapshot, onConnect],
   );
@@ -389,6 +390,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const onEdgeUpdate = useCallback(
     (oldEdge: Edge, newConnection: Connection) => {
+      console.log("add new edge")
       if (isValidConnection(newConnection, nodes, edges)) {
         edgeUpdateSuccessful.current = true;
         oldEdge.data.targetHandle = scapeJSONParse(newConnection.targetHandle!);
