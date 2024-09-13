@@ -28,6 +28,7 @@ class FieldTypes(str, Enum):
     CODE = "code"
     OTHER = "other"
     TABLE = "table"
+    LINK = "link"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -149,11 +150,17 @@ class DropDownMixin(BaseModel):
     options: list[str] | None = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
     combobox: CoalesceBool = False
-    """Variable that defines if the user can insert custom values in the dropdown."""
+    """Variable that defines if the user can xinsert custom values in the dropdown."""
 
 
 class MultilineMixin(BaseModel):
     multiline: CoalesceBool = True
+
+class LinkMixin(BaseModel):
+    icon: str | None = None
+    """Icon to be displayed in the link."""
+    text: str | None = None
+    """Text to be displayed in the link."""
 
 
 class TableMixin(BaseModel):
