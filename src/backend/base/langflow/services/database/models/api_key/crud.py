@@ -3,12 +3,15 @@ import secrets
 import threading
 from typing import List, Optional
 from uuid import UUID
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
-from langflow.utils.constants import API_KEY_EXPIRATION_HOURS
 
 
 def get_api_keys(session: Session, user_id: UUID) -> List[ApiKeyRead]:
@@ -26,6 +29,7 @@ def get_api_keys_by_flow_id(session: Session, flow_id: UUID) -> List[ApiKeyRead]
 def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
+    expiration_hours = os.getenv('API_KEY_EXPIRATION_HOURS')
 
     api_key = ApiKey(
         api_key=generated_api_key,
@@ -34,7 +38,7 @@ def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID
         created_at=api_key_create.created_at or datetime.datetime.now(datetime.timezone.utc),
         flow_id=api_key_create.flow_id,
         expire_at=api_key_create.expire_at
-        or (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=API_KEY_EXPIRATION_HOURS)),
+        or (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=expiration_hours)),
     )
 
     session.add(api_key)

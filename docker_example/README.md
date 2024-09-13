@@ -41,6 +41,7 @@ Environment variables:
 
 - `LANGFLOW_DATABASE_URL`: The connection string for the PostgreSQL database.
 - `LANGFLOW_CONFIG_DIR`: The directory where LangFlow stores logs, file storage, monitor data, and secret keys.
+- `API_KEY_EXPIRATION_HOURS`: The API key expiration time
 
 Volumes:
 

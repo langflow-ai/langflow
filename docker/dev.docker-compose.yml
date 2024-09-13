@@ -18,6 +18,7 @@ services:
       - LANGFLOW_SUPERUSER=langflow
       - LANGFLOW_SUPERUSER_PASSWORD=langflow
       - LANGFLOW_CONFIG_DIR=/var/lib/langflow
+      - API_KEY_EXPIRATION_HOURS=8
     env_file:
       - ../.env
     volumes:

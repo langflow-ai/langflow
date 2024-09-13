@@ -19,6 +19,8 @@ services:
         value: 10000
       - key: LANGFLOW_LOG_LEVEL
         value: INFO
+      - key: API_KEY_EXPIRATION_HOURS
+        value: 8
     disk:
       name: langflow-data
       mountPath: /app/data
