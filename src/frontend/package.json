@@ -62,6 +62,7 @@
     "react-hook-form": "^7.52.0",
     "react-hotkeys-hook": "^4.5.0",
     "react-icons": "^5.2.1",
+    "react-json-view-lite": "^1.5.0",
     "react-laag": "^2.0.5",
     "react-markdown": "^8.0.7",
     "react-pdf": "^9.0.0",
