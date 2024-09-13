@@ -22,7 +22,7 @@ from .input_mixin import (
     RangeMixin,
     SerializableFieldTypes,
     TableMixin,
-    LinkMixin
+    LinkMixin,
 )
 
 
@@ -73,6 +73,7 @@ class DataInput(HandleInput, InputTraceMixin, ListableInputMixin):
 
 class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
+
 
 class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.CODE
@@ -465,6 +466,7 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.FILE
+
 
 class LinkInput(BaseInputMixin, LinkMixin):
     field_type: SerializableFieldTypes = FieldTypes.LINK

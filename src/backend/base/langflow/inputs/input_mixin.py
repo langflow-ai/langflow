@@ -156,6 +156,7 @@ class DropDownMixin(BaseModel):
 class MultilineMixin(BaseModel):
     multiline: CoalesceBool = True
 
+
 class LinkMixin(BaseModel):
     icon: str | None = None
     """Icon to be displayed in the link."""

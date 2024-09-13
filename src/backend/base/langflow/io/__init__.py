@@ -19,7 +19,7 @@ from langflow.inputs import (
     StrInput,
     TableInput,
     DefaultPromptField,
-    LinkInput
+    LinkInput,
 )
 from langflow.template import Output
 

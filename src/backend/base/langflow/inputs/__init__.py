@@ -20,7 +20,7 @@ from .inputs import (
     SecretStrInput,
     StrInput,
     TableInput,
-    LinkInput
+    LinkInput,
 )
 
 __all__ = [
