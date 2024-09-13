@@ -156,6 +156,7 @@ export async function buildFlowVertices({
   setLockChat,
   session,
 }: BuildVerticesParams) {
+  const inputs = {};
   let url = `${BASE_URL_API}build/${flowId}/flow?`;
   if (startNodeId) {
     url = `${url}&start_component_id=${startNodeId}`;
@@ -167,9 +168,6 @@ export async function buildFlowVertices({
     url = `${url}&log_builds=${logBuilds}`;
   }
   const postData = {};
-  if (typeof input_value !== "undefined") {
-    postData["inputs"] = { input_value: input_value };
-  }
   if (files) {
     postData["files"] = files;
   }
@@ -179,9 +177,16 @@ export async function buildFlowVertices({
       edges,
     };
   }
-  if(session) {
-    postData["session"] = session;
+  if (typeof input_value !== "undefined") {
+    inputs["input_value"] = input_value;
   }
+  if(session){
+    inputs["session"] = session;
+  }
+  if(Object.keys(inputs).length > 0){
+    postData["inputs"] = inputs;
+  }
+
 
   const buildResults: Array<boolean> = [];
 
