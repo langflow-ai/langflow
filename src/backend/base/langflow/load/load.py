@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Any
+from pydantic import Field, BaseModel
+
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -11,6 +13,18 @@ from langflow.processing.process import process_tweaks, run_graph
 from langflow.logging.logger import configure
 from langflow.utils.util import update_settings
 
+
+class UserFacingData(BaseModel):
+    results: Any | None = Field(default_factory=dict)
+    timedelta: float | None = None
+    duration: str | None = None
+    component_display_name: str | None = None
+    component_id: str | None = None
+    used_frozen_result: bool | None = False
+
+class UserFacingOutputs(BaseModel):
+    inputs: dict = Field(default_factory=dict)
+    outputs: list[UserFacingData | None] = Field(default_factory=list)
 
 def load_flow_from_json(
     flow: Union[Path, str, dict],
@@ -83,7 +97,7 @@ def run_flow_from_json(
     cache: Optional[str] = None,
     disable_logs: Optional[bool] = True,
     fallback_to_env_vars: bool = False,
-) -> List[RunOutputs]:
+) -> List[UserFacingOutputs]:
     """
     Run a flow from a JSON file or dictionary.
 
@@ -131,4 +145,21 @@ def run_flow_from_json(
         output_component=output_component,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    return result
+    user_facing_outputs = []
+    for run_output in result:
+        user_facing_output = UserFacingOutputs(inputs=run_output.inputs)
+        for output in run_output.outputs:
+            if output:
+                user_facing_data = UserFacingData(
+                    results=output.results,
+                    timedelta=output.timedelta,
+                    duration=output.duration,
+                    component_display_name=output.component_display_name,
+                    component_id=output.component_id,
+                    used_frozen_result=output.used_frozen_result
+                )
+                user_facing_output.outputs.append(user_facing_data)
+        user_facing_outputs.append(user_facing_output)
+
+    return user_facing_outputs
+

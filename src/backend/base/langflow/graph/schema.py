@@ -9,9 +9,14 @@ from langflow.utils.schemas import ChatOutputResponse, ContainsEnumMeta
 
 
 class ResultData(BaseModel):
+    # TODO: What are all of these used for? 
+    # Does the FE need anything besides the `results`? 
+    # (And maybe time, duration, metadata etc)
+
     results: Any | None = Field(default_factory=dict)
     artifacts: Any | None = Field(default_factory=dict)
-    outputs: dict | None = Field(default_factory=dict)
+    # TODO: diff between results and outputs? 
+    # outputs: dict | None = Field(default_factory=dict)
     logs: dict | None = Field(default_factory=dict)
     messages: list[ChatOutputResponse] | None = Field(default_factory=list)
     timedelta: float | None = None
