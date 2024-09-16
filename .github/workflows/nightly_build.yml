@@ -21,8 +21,8 @@ jobs:
       # Required to create tag
       contents: write
     outputs:
-      main_tag: ${{ steps.create_tag.outputs.main_tag }}
-      base_tag: ${{ steps.create_tag.outputs.base_tag }}
+      main_tag: ${{ steps.generate_main_tag.outputs.main_tag }}
+      base_tag: ${{ steps.set_base_tag.outputs.base_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,6 +60,14 @@ jobs:
             echo "main_tag_exists=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Generate base nightly tag
+        id: generate_base_tag
+        if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'false' }}
+        run: |
+          BASE_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py base)"
+          echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
+          echo "base_tag=$BASE_TAG"
+
       - name: Commit tag
         id: commit_tag
         if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'false' }}
@@ -72,9 +80,8 @@ jobs:
           # WARNING: These scripts must be run in this order.
           # Poetry will use a different cached virtual environment once the main pyproject.toml
           # project-name is updated, which does not have dependencies installed.
-          BASE_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py base)"
-          echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
-          echo "base_tag=$BASE_TAG"
+          BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
+          echo "Updating base project version to $BASE_TAG"
           poetry run python ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
           poetry run python ./scripts/ci/update_pyproject_version.py $BASE_TAG base
 
@@ -83,6 +90,7 @@ jobs:
 
           # Use the main tag created earlier
           MAIN_TAG="${{ steps.generate_main_tag.outputs.main_tag }}"
+          echo "Updating main project version to $MAIN_TAG"
           poetry run python ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
           poetry run python ./scripts/ci/update_pyproject_name.py langflow-nightly main
 
@@ -119,8 +127,18 @@ jobs:
       - name: Set Base Tag
         id: set_base_tag
         run: |
-          # TODO: FRAZ 
-
+          if [ "${{ steps.retrieve_base_tag.conclusion }}" != "skipped" ] && [ "${{ steps.retrieve_base_tag.outputs.base_tag }}" ]; then
+            BASE_TAG="${{ steps.retrieve_base_tag.outputs.base_tag }}"
+            echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
+            echo "base_tag=$BASE_TAG"
+          elif [ "${{ steps.commit_tag.conclusion }}" != "skipped" ] && [ "${{ steps.commit_tag.outputs.base_tag }}" ]; then
+            BASE_TAG="${{ steps.commit_tag.outputs.base_tag }}"
+            echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
+            echo "base_tag=$BASE_TAG"
+          else
+            echo "No base tag found. Exiting the workflow."
+            exit 1
+          fi
 
   frontend-tests:
     if: github.repository == 'langflow-ai/langflow'
