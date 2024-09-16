@@ -1,7 +1,7 @@
 import asyncio
 import json
-from typing import TYPE_CHECKING, Any, cast
 from collections.abc import AsyncIterator, Generator, Iterator
+from typing import TYPE_CHECKING, Any, cast
 
 import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
@@ -96,15 +96,18 @@ class ComponentVertex(Vertex):
         """
         flow_id = self.graph.flow_id
         if not self._built:
+            default_value = UNDEFINED
+            for edge in self.get_edge_with_target(requester.id):
+                # We need to check if the edge is a normal edge
+                if edge.is_cycle and edge.target_param:
+                    default_value = requester.get_value_from_template_dict(edge.target_param)
+
             if flow_id:
                 asyncio.create_task(
                     log_transaction(source=self, target=requester, flow_id=str(flow_id), status="error")
                 )
-            for edge in self.get_edge_with_target(requester.id):
-                # We need to check if the edge is a normal edge
-                if edge.is_cycle and edge.target_param:
-                    return requester.get_value_from_template_dict(edge.target_param)
-
+            if default_value is not UNDEFINED:
+                return default_value
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
         if requester is None:
