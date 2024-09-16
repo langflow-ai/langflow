@@ -104,6 +104,11 @@ jobs:
         run: |
           version=$(poetry version --short)
           echo version=$version >> $GITHUB_OUTPUT
+        # TODO: FRAZ - this versioning / tag choices are all a mess. Fix this.
+        # e.g. the version is chosen here but then done nothing to check it out - it's just being used for the tag naming.kj
+        # Then, if you can set the nightly, then you can set the nightly tag but then we'd have to choose between that and the version
+
+
   setup:
     runs-on: ubuntu-latest
     needs: get-version
@@ -114,7 +119,7 @@ jobs:
     env:
       NIGHTLY_TAG: ${{ needs.get-version.outputs.nightly-tag }}
     steps:
-      - name: Check out the code at a specific ref (e.g., nightly tag)
+      - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
           ref: ${{ env.NIGHTLY_TAG || github.ref }}
@@ -129,7 +134,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [get-version, setup]
     steps:
-      - name: Check out the code at a specific ref (e.g., nightly tag)
+      - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.get-version.outputs.nightly-tag || github.ref }} 
