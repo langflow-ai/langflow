@@ -18,7 +18,7 @@ export default function ParentDisclosureComponent({
               data-testid={testId}
             >
               <div className="flex items-baseline gap-1 align-baseline">
-                <span className="parent-disclosure-title">{title}</span>
+                <span className="text-sm font-medium">{title}</span>
                 {beta && (
                   <div className="h-fit rounded-full bg-beta-background px-2 py-1 text-xs/3 font-semibold text-beta-foreground-soft">
                     BETA
