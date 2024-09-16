@@ -1,7 +1,5 @@
-from typing import Any, List
-
 from langflow.custom import Component
-from langflow.inputs.inputs import IntInput, DataInput,IntInput
+from langflow.inputs.inputs import DataInput, IntInput
 from langflow.io import Output
 
 from langflow.field_typing.range_spec import RangeSpec
@@ -12,7 +10,7 @@ class SelectDataComponent(Component):
     display_name: str = "Select Data"
     description: str = "Select a single data from a list of data."
     name: str = "SelectData"
-    icon="prototypes"
+    icon = "prototypes"
 
     inputs = [
         DataInput(
@@ -38,7 +36,7 @@ class SelectDataComponent(Component):
         # Retrieve the selected index from the dropdown
         selected_index = int(self.data_index)
         # Get the data list
-        
+
         # Validate that the selected index is within bounds
         if selected_index < 0 or selected_index >= len(self.data_list):
             raise ValueError(f"Selected index {selected_index} is out of range.")

@@ -19,7 +19,7 @@ class UpdateDataComponent(Component):
             name="old_data",
             display_name="Data",
             info="The record to update.",
-            is_list=False, 
+            is_list=False,
         ),
         IntInput(
             name="number_of_fields",
