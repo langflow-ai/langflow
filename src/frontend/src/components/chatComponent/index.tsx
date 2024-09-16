@@ -1,3 +1,4 @@
+import FeatureFlags from "@/../feature-config.json";
 import { ENABLE_API } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { Transition } from "@headlessui/react";
@@ -173,6 +174,7 @@ export default function FlowToolbar(): JSX.Element {
                 </div>
               </>
             )}
+             {FeatureFlags.ENABLE_LANGFLOW_STORE &&
             <div className="flex items-center gap-2">
               <div
                 className={`side-bar-button ${
@@ -183,7 +185,7 @@ export default function FlowToolbar(): JSX.Element {
               >
                 {ModalMemo}
               </div>
-            </div>
+            </div>}
           </div>
         </div>
       </Transition>
