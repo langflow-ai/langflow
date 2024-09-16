@@ -5,6 +5,8 @@ from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MultilineInput
 from langflow.inputs.inputs import DataInput, HandleInput
 from langflow.schema import Data
+
+
 class XMLAgentComponent(LCToolsAgentComponent):
     display_name: str = "XML Agent"
     description: str = "Agent that uses tools formatting instructions as xml to the Language Model."
@@ -41,12 +43,13 @@ Begin!
 Question: {input}
 
 {agent_scratchpad}
-            """
+            """,
         ),
         MultilineInput(
             name="user_prompt", display_name="Prompt", info="This prompt must contain 'input' key.", value="{input}"
         ),
     ]
+
     def get_chat_history_data(self) -> Optional[List[Data]]:
         return self.chat_history
 
@@ -57,7 +60,7 @@ Question: {input}
             ("system", self.system_prompt),
             ("placeholder", "{chat_history}"),
             HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=["input"], template=self.user_prompt)),
-            ("ai", "{agent_scratchpad}")
+            ("ai", "{agent_scratchpad}"),
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
         return create_xml_agent(self.llm, self.tools, prompt)
