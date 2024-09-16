@@ -57,6 +57,8 @@
     --hover: #f2f4f5;
     --disabled-run: #6366f1;
 
+    --filter-foreground: #4f46e5;
+    --filter-background: #eef2ff;
     /* Colors that are shared in dark and light mode */
     --blur-shared: #151923de;
     --build-trigger: #dc735b;
@@ -113,6 +115,9 @@
 
     --destructive: 0 60% 25%; /* hsl(0 60% 25%) */
     --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
+
+    --filter-foreground: #eef2ff;
+    --filter-background: #4e46e599;
 
     --ring: 216 24% 30%; /* hsl(216 24% 30%) */
 
