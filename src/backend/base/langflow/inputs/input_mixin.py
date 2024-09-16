@@ -150,7 +150,7 @@ class DropDownMixin(BaseModel):
     options: list[str] | None = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
     combobox: CoalesceBool = False
-    """Variable that defines if the user can xinsert custom values in the dropdown."""
+    """Variable that defines if the user can insert custom values in the dropdown."""
 
 
 class MultilineMixin(BaseModel):
