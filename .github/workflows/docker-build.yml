@@ -122,25 +122,9 @@ jobs:
       - name: Set Dockerfile and Tags
         id: set-vars
         run: |
-          nightly_suffix=''
-          if [[ "${{ env.NIGHTLY_TAG }}" != '' ]]; then
-            nightly_suffix="-nightly"
-          fi
-
-          if [[ "${{ inputs.release_type }}" == "base" ]]; then
-            echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
-            echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
-            echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
-          else
-            if [[ "${{ inputs.pre_release }}" == "true" ]]; then
-              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
-              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
-            else
-              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
-              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
-            fi
-            echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
-          fi
+          nightly_suffix='-ep'
+          echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+          echo "file=./docker/build_and_push_ep.Dockerfile" >> $GITHUB_OUTPUT
   build:
     runs-on: ubuntu-latest
     needs: [get-version, setup]
@@ -167,24 +151,25 @@ jobs:
           # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
           provenance: false
 
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.TEMP_GHCR_TOKEN}}
-      - name: Build and push to Github Container Registry
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          file: ${{ needs.setup.outputs.file }}
-          tags: ${{ needs.setup.outputs.ghcr_tags }}
-          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
-          provenance: false
+      # - name: Login to Github Container Registry
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.TEMP_GHCR_TOKEN}}
+      # - name: Build and push to Github Container Registry
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     context: .
+      #     push: true
+      #     file: ${{ needs.setup.outputs.file }}
+      #     tags: ${{ needs.setup.outputs.ghcr_tags }}
+      #     # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+      #     provenance: false
 
   build_components:
-    if: ${{ inputs.release_type == 'main' }}
+    # if: ${{ inputs.release_type == 'main' }}
+    if: false
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -250,7 +235,8 @@ jobs:
 
   restart-space:
     name: Restart HuggingFace Spaces
-    if: ${{ inputs.release_type == 'main' && inputs.nightly_build == 'false' }}
+    # if: ${{ inputs.release_type == 'main' && inputs.nightly_build == 'false' }}
+    if: false
     runs-on: ubuntu-latest
     needs: build
     strategy:
