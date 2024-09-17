@@ -95,10 +95,12 @@ class FlowTool(BaseTool):
     ) -> str:
         """Use the tool asynchronously."""
         tweaks = self.build_tweaks_dict(args, kwargs)
+        run_id = self.graph.run_id if self.graph else None
         run_outputs = await run_flow(
             tweaks={key: {"input_value": value} for key, value in tweaks.items()},
             flow_id=self.flow_id,
             user_id=self.user_id,
+            run_id=run_id,
         )
         if not run_outputs:
             return "No output"
