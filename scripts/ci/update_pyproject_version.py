@@ -44,7 +44,7 @@ def main() -> None:
     new_version = sys.argv[1]
 
     # Strip "v" prefix from version if present
-    if new_version.startswith('v'):
+    if new_version.startswith("v"):
         new_version = new_version[1:]
 
     build_type = sys.argv[2]
