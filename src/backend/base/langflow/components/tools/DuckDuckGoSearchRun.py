@@ -7,6 +7,7 @@ from langflow.schema import Data
 from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 
+
 class DuckDuckGoSearchComponent(LCToolComponent):
     display_name: str = "DuckDuckGo Search"
     description: str = "Perform web searches using the DuckDuckGo search engine with result limiting"
@@ -34,11 +35,9 @@ class DuckDuckGoSearchComponent(LCToolComponent):
     def build_tool(self) -> Tool:
         wrapper = self._build_wrapper()
 
-        def search_func(
-            query: str, max_results: int = 5, max_snippet_length: int = 100
-        ) -> List[Dict[str, Any]]:
+        def search_func(query: str, max_results: int = 5, max_snippet_length: int = 100) -> List[Dict[str, Any]]:
             full_results = wrapper.run(f"{query} (site:*)")
-            result_list = full_results.split('\n')[:max_results]
+            result_list = full_results.split("\n")[:max_results]
             limited_results = []
             for result in result_list:
                 limited_result = {
