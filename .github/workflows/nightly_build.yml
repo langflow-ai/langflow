@@ -54,7 +54,7 @@ jobs:
           # Checks if the main tag has already been created on github. This may happen in the
           # event of a partially failed workflow, or if the tag was created manually.
 
-          if [ $(git tag -l "${{ steps.generate_main_tag.outputs.tag }}") ]; then
+          if [ $(git tag -l "${{ steps.generate_main_tag.outputs.main_tag }}") ]; then
             echo "main_tag_exists=true" >> $GITHUB_OUTPUT
           else
             echo "main_tag_exists=false" >> $GITHUB_OUTPUT
