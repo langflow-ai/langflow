@@ -51,10 +51,9 @@ jobs:
       - name: Check if main tag already exists
         id: check_main_tag
         run: |
-          # Checks if the main tag has already been created on github. This may happen in the
-          # event of a partially failed workflow, or if the tag was created manually.
-
-          if [ $(git tag -l "${{ steps.generate_main_tag.outputs.main_tag }}") ]; then
+          git fetch --tags
+          # TODO: FRAZ - add the `v` here after this successful run.
+          if git rev-parse -q --verify "refs/tags/${{ steps.generate_main_tag.outputs.main_tag }}" >/dev/null; then
             echo "main_tag_exists=true" >> $GITHUB_OUTPUT
           else
             echo "main_tag_exists=false" >> $GITHUB_OUTPUT
@@ -97,11 +96,15 @@ jobs:
           git add pyproject.toml src/backend/base/pyproject.toml
           git commit -m "Update version and project name"
 
+          # Prepend "v" to the MAIN_TAG
+          MAIN_TAG="v$MAIN_TAG"
+          echo "Tagging main with $MAIN_TAG"
           if ! git tag -a $MAIN_TAG -m "Langflow nightly $MAIN_TAG"; then
             echo "Tag creation failed. Exiting the workflow."
             exit 1
           fi
 
+          echo "Pushing main tag $MAIN_TAG"
           if ! git push origin $MAIN_TAG; then
             echo "Tag push failed. Check if the tag already exists. Exiting the workflow."
             exit 1
