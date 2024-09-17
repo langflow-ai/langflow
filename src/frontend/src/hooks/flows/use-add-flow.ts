@@ -26,7 +26,7 @@ const useAddFlow = () => {
   );
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
-  const deleteFlow = useDeleteFlow();
+  const { deleteFlow } = useDeleteFlow();
 
   const { folderId } = useParams();
 
