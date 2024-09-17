@@ -22,6 +22,7 @@ from .input_mixin import (
     RangeMixin,
     SerializableFieldTypes,
     TableMixin,
+    LinkMixin,
 )
 
 
@@ -467,6 +468,10 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     field_type: SerializableFieldTypes = FieldTypes.FILE
 
 
+class LinkInput(BaseInputMixin, LinkMixin):
+    field_type: SerializableFieldTypes = FieldTypes.LINK
+
+
 DEFAULT_PROMPT_INTUT_TYPES = ["Message", "Text"]
 
 
@@ -474,7 +479,6 @@ class DefaultPromptField(Input):
     name: str
     display_name: str | None = None
     field_type: str = "str"
-
     advanced: bool = False
     multiline: bool = True
     input_types: list[str] = DEFAULT_PROMPT_INTUT_TYPES
@@ -503,6 +507,7 @@ InputTypes = Union[
     MessageTextInput,
     MessageInput,
     TableInput,
+    LinkInput,
 ]
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
