@@ -20,6 +20,7 @@ from .inputs import (
     SecretStrInput,
     StrInput,
     TableInput,
+    LinkInput,
 )
 
 __all__ = [
@@ -44,4 +45,5 @@ __all__ = [
     "TableInput",
     "Input",
     "DefaultPromptField",
+    "LinkInput",
 ]
