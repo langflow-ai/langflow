@@ -116,7 +116,7 @@ jobs:
         uses: actions/checkout@v4
         if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'true' }}
         with:
-          ref: ${{ steps.generate_main_tag.outputs.main_tag }}
+          ref: v${{ steps.generate_main_tag.outputs.main_tag }}
 
       - name: Retrieve Base Tag
         id: retrieve_base_tag
