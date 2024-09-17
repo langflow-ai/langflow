@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 class LangWatchTracer(BaseTracer):
     flow_id: str
+    pending_count: int = 1
 
     def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
         self.trace_name = trace_name
@@ -33,7 +34,8 @@ class LangWatchTracer(BaseTracer):
             self.trace = self._client.trace(
                 trace_id=str(self.trace_id),
             )
-            self.spans: dict[str, "ContextSpan"] = {}
+            self.spans: dict[str, list["ContextSpan"]] = {}
+            self.pending_count = 1
 
             name_without_id = " - ".join(trace_name.split(" - ")[0:-1])
             self.trace.root_span.update(
@@ -44,6 +46,12 @@ class LangWatchTracer(BaseTracer):
         except Exception as e:
             logger.debug(f"Error setting up LangWatch tracer: {e}")
             self._ready = False
+
+    def inc_nested(self):
+        self.pending_count += 1
+
+    def is_completed(self):
+        return self.pending_count == 0
 
     @property
     def ready(self):
@@ -83,15 +91,19 @@ class LangWatchTracer(BaseTracer):
             else []
         )
 
+        previous_node = previous_nodes[-1][-1] if len(previous_nodes) > 0 else None
         span = self.trace.span(
             span_id=f"{trace_id}-{nanoid.generate(size=6)}",  # Add a nanoid to make the span_id globally unique, which is required for LangWatch for now
             name=name_without_id,
             type="component",
-            parent=(previous_nodes[-1] if len(previous_nodes) > 0 else self.trace.root_span),
+            parent=previous_node if previous_node else (self.trace.get_current_span() or self.trace.root_span),
             input=self._convert_to_langwatch_types(inputs),
         )
-        self.trace.set_current_span(span)
-        self.spans[trace_id] = span
+        if previous_node:
+            self.trace.set_current_span(previous_node)
+        if trace_id not in self.spans:
+            self.spans[trace_id] = []
+        self.spans[trace_id].append(span)
 
     def end_trace(
         self,
@@ -104,7 +116,8 @@ class LangWatchTracer(BaseTracer):
         if not self._ready:
             return
         if self.spans.get(trace_id):
-            self.spans[trace_id].end(output=self._convert_to_langwatch_types(outputs), error=error)
+            for span in self.spans[trace_id]:
+                span.end(output=self._convert_to_langwatch_types(outputs), error=error)
 
     def end(
         self,
@@ -115,14 +128,17 @@ class LangWatchTracer(BaseTracer):
     ):
         if not self._ready:
             return
+        self.pending_count -= 1
+        if self.pending_count < 0:
+            self.pending_count = 0
         self.trace.root_span.end(
             input=self._convert_to_langwatch_types(inputs),
             output=self._convert_to_langwatch_types(outputs),
             error=error,
         )
 
-        if metadata and "flow_name" in metadata:
-            self.trace.update(metadata=(self.trace.metadata or {}) | {"labels": [f"Flow: {metadata['flow_name']}"]})
+        if metadata and "flow_name" in metadata and metadata["flow_name"] is not None:
+            self.trace.update(metadata={"labels": [f"Flow: {metadata['flow_name']}"]})
 
         if self.trace.api_key or self._client.api_key:
             self.trace.deferred_send_spans()

@@ -124,7 +124,8 @@ class TracingService(Service):
 
     def _initialize_langwatch_tracer(self):
         if (
-            "langwatch" not in self._tracers or self._tracers["langwatch"].trace_id != self.run_id  # type: ignore
+            "langwatch" not in self._tracers or
+            (self._tracers["langwatch"].trace_id != self.run_id and self._tracers["langwatch"].is_completed())  # type: ignore
         ):
             langwatch_tracer = _get_langwatch_tracer()
             self._tracers["langwatch"] = langwatch_tracer(
@@ -133,6 +134,9 @@ class TracingService(Service):
                 project_name=self.project_name,
                 trace_id=self.run_id,
             )
+        elif self._tracers["langwatch"].trace_id != self.run_id:  # type: ignore
+            # Workaround to capture Flow as a Tool in the same trace
+            self._tracers["langwatch"].inc_nested()  # type: ignore
 
     def _initialize_langfuse_tracer(self):
         self.project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
