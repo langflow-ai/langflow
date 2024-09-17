@@ -2,7 +2,7 @@ import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-fol
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { useIsFetching } from "@tanstack/react-query";
+import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import ComponentsComponent from "../componentsComponent";
 import HeaderTabsSearchComponent from "./components/headerTabsSearchComponent";
@@ -42,10 +42,15 @@ const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
 
   const { deleteFlow, isDeleting } = useDeleteFlow();
 
+  const isAddingFlow = !!useIsMutating({
+    mutationKey: ["usePostAddFlow"],
+    exact: true,
+  });
+
   return (
     <>
       <HeaderTabsSearchComponent
-        loading={isFetching || isLoadingFolders || isDeleting}
+        loading={isFetching || isLoadingFolders || isDeleting || isAddingFlow}
       />
       <div className="mt-5 flex h-full flex-col">
         <ComponentsComponent
@@ -53,7 +58,9 @@ const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
           type={type}
           currentFolder={data}
           deleteFlow={deleteFlow}
-          isLoading={isFetching || isLoadingFolders || isDeleting}
+          isLoading={
+            isFetching || isLoadingFolders || isDeleting || isAddingFlow
+          }
         />
       </div>
     </>
