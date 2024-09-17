@@ -80,7 +80,7 @@ async def run_flow(
         raise ValueError("Session is invalid")
     graph = await load_flow(user_id, flow_id, flow_name, tweaks)
     if run_id:
-        graph.set_run_id(run_id)
+        graph.set_run_id(UUID(run_id))
 
     if inputs is None:
         inputs = []
