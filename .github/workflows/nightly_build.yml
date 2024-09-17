@@ -124,6 +124,7 @@ jobs:
         working-directory: src/backend/base
         run: |
           # If the main tag already exists, we need to retrieve the base version from the main tag codebase.
+          # Note that this tag is output without the `v` prefix.
           version=$(poetry version --short)
           echo "base_tag=$version" >> $GITHUB_OUTPUT
           echo "base_tag=$version"
