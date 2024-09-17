@@ -145,7 +145,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [get-version, setup]
     steps:
-      - name: Check out the code at a specific ref (e.g., nightly tag)
+      - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.nightly_tag_main || github.ref }} 
