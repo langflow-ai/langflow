@@ -9,6 +9,7 @@ import FloatComponent from "../floatComponent";
 import InputFileComponent from "../inputFileComponent";
 import IntComponent from "../intComponent";
 import KeypairListComponent from "../keypairListComponent";
+import LinkComponent from "../linkComponent";
 import PromptAreaComponent from "../promptComponent";
 import ToggleShadComponent from "../toggleShadComponent";
 import { RefreshParameterComponent } from "./component/refreshParameterComponent";
@@ -93,6 +94,12 @@ export function ParameterRenderComponent({
             enabled={templateValue}
             setEnabled={onChange}
             size={editNode ? "small" : "large"}
+          />
+        ) : templateData.type === "link" ? (
+          <LinkComponent
+            value={templateData}
+            onChange={onChange}
+            id={`link_${id}`}
           />
         ) : templateData.type === "float" ? (
           <FloatComponent
