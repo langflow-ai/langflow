@@ -303,13 +303,13 @@ tests = ["mypy (>=0.800)", "pytest", "pytest-asyncio"]
 
 [[package]]
 name = "assemblyai"
-version = "0.26.0"
+version = "0.33.0"
 description = "AssemblyAI Python SDK"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "assemblyai-0.26.0-py3-none-any.whl", hash = "sha256:46689abfe1bf9bccd595f65314aab7deec3b4859630f6882099165862d305421"},
-    {file = "assemblyai-0.26.0.tar.gz", hash = "sha256:7cd7cf3231333e9ea14a130b7a72bf710c66c5d1877bbfd68ab13ff546920e33"},
+    {file = "assemblyai-0.33.0-py3-none-any.whl", hash = "sha256:7f5ae220eb33924768c2bbe7312c42bcef59323f9b17c8c82ba083c4e35d1774"},
+    {file = "assemblyai-0.33.0.tar.gz", hash = "sha256:782a53707851c0e4485496d307b7270084146a0e9f6b86b027c17f4f63a8fbf0"},
 ]
 
 [package.dependencies]
