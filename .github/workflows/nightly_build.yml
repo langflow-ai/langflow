@@ -72,7 +72,7 @@ jobs:
         id: commit_tag
         if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'false' }}
         run: |
-          # If the main tag does not exist, we can create the base tag from the existing codebase.
+          # If the main tag does not exist in GH, we create the base tag from the existing codebase.
 
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
@@ -95,7 +95,7 @@ jobs:
           poetry run python ./scripts/ci/update_pyproject_name.py langflow-nightly main
 
           git add pyproject.toml src/backend/base/pyproject.toml
-          git commit -m "Update version and project name in files"
+          git commit -m "Update version and project name"
 
           if ! git tag -a $MAIN_TAG -m "Langflow nightly $MAIN_TAG"; then
             echo "Tag creation failed. Exiting the workflow."
