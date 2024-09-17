@@ -46,7 +46,7 @@ test("user should be able to use duckduckgo search component", async ({
   await page.getByTitle("fit view").click();
 
   await page
-    .getByTestId("popover-anchor-input-query")
+    .getByTestId("popover-anchor-input-input_value")
     .fill("what is langflow?");
 
   await page.getByTestId("button_run_duckduckgo search").click();
@@ -57,8 +57,11 @@ test("user should be able to use duckduckgo search component", async ({
 
   await page.waitForTimeout(1000);
 
-  await page.getByTestId("output-inspection-search results").first().click();
+  await page.getByTestId("output-inspection-data").first().click();
+
+  await page.getByRole("gridcell").first().click();
 
   const searchResults = await page.getByPlaceholder("Empty").inputValue();
   expect(searchResults.length).toBeGreaterThan(10);
+  expect(searchResults.toLowerCase()).toContain("langflow");
 });
