@@ -29,7 +29,7 @@ def update_base_dep(pyproject_path: str, new_version: str) -> None:
     if not pattern.search(content):
         raise Exception(f'langflow-base dependency not found in "{filepath}"')
 
-    replacement = f'langflow-base-nightly = "^{new_version}"'
+    replacement = f'langflow-base-nightly = "{new_version}"'
     content = pattern.sub(replacement, content)
 
     with open(filepath, "w") as file:
