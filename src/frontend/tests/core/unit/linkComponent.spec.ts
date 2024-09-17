@@ -31,6 +31,10 @@ test("user should interact with link component", async ({ context, page }) => {
   const userAgentInfo = uaParser(getUA);
   let control = "Control";
 
+  if (userAgentInfo.os.name.includes("Mac")) {
+    control = "Meta";
+  }
+
   await page.waitForSelector('[data-testid="blank-flow"]', {
     timeout: 30000,
   });
@@ -80,7 +84,7 @@ test("user should interact with link component", async ({ context, page }) => {
     LinkInput(name="link", display_name="BUTTON", value="https://www.datastax.com", text="Click me"),`,
   );
 
-  await page.locator("textarea").last().press(`Meta+a`);
+  await page.locator("textarea").last().press(`${control}+a`);
   await page.keyboard.press("Backspace");
   await page.locator("textarea").last().fill(cleanCode);
   await page.locator('//*[@id="checkAndSaveBtn"]').click();
