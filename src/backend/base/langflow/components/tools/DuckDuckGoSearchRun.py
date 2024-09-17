@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 from langchain_community.tools import DuckDuckGoSearchRun
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -53,7 +53,7 @@ class DuckDuckGoSearchComponent(LCToolComponent):
             func=search_func,
             args_schema=self.DuckDuckGoSearchSchema,
         )
-        self.status = f"DuckDuckGo Search Tool created"
+        self.status = "DuckDuckGo Search Tool created"
         return tool
 
     def run_model(self) -> List[Data]:
