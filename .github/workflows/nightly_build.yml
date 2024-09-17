@@ -143,8 +143,7 @@ jobs:
           fi
 
   frontend-tests:
-    # if: github.repository == 'langflow-ai/langflow'
-    if: false
+    if: github.repository == 'langflow-ai/langflow'
     name: Run Frontend Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
@@ -154,8 +153,7 @@ jobs:
     secrets: inherit
 
   backend-unit-tests:
-    # if: github.repository == 'langflow-ai/langflow'
-    if: false
+    if: github.repository == 'langflow-ai/langflow'
     name: Run Backend Unit Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
