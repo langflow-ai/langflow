@@ -54,6 +54,10 @@ def main() -> None:
         raise Exception("New version not specified")
     base_version = sys.argv[1]
 
+    # Strip "v" prefix from version if present
+    if base_version.startswith("v"):
+        base_version = base_version[1:]
+
     verify_pep440(base_version)
     update_base_dep("pyproject.toml", base_version)
 
