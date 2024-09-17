@@ -124,8 +124,8 @@ class TracingService(Service):
 
     def _initialize_langwatch_tracer(self):
         if (
-            "langwatch" not in self._tracers or
-            (self._tracers["langwatch"].trace_id != self.run_id and self._tracers["langwatch"].is_completed())  # type: ignore
+            "langwatch" not in self._tracers
+            or (self._tracers["langwatch"].trace_id != self.run_id and self._tracers["langwatch"].is_completed())  # type: ignore
         ):
             langwatch_tracer = _get_langwatch_tracer()
             self._tracers["langwatch"] = langwatch_tracer(
