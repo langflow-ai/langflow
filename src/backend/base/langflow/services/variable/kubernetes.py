@@ -10,8 +10,8 @@ from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate
 from langflow.services.settings.service import SettingsService
 from langflow.services.variable.base import VariableService
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.kubernetes_secrets import KubernetesSecretManager, encode_user_id
-from langflow.services.variable.service import CREDENTIAL_TYPE, GENERIC_TYPE
 
 
 class KubernetesSecretService(VariableService, Service):

@@ -74,7 +74,7 @@ jobs:
     needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
     with:
-      tests_folder: "tests/end-to-end"
+      tests_folder: "tests/core"
       ref: ${{ needs.create-nightly-tag.outputs.tag }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
@@ -104,8 +104,8 @@ jobs:
     needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
     uses: ./.github/workflows/release_nightly.yml
     with:
-      build_docker_base: false # TODO: Docker builds
-      build_docker_main: false
+      build_docker_base: true
+      build_docker_main: true
       nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
     secrets: inherit

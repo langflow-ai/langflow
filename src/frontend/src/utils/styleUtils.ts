@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   ArrowBigUp,
   ArrowLeft,
+  ArrowRight,
   ArrowUpToLine,
   Bell,
   Binary,
@@ -63,6 +64,7 @@ import {
   FileText,
   FileType2,
   FileUp,
+  Filter,
   FlaskConical,
   FolderIcon,
   FolderPlus,
@@ -86,6 +88,8 @@ import {
   Laptop2,
   Layers,
   Link,
+  Link2,
+  ListFilter,
   Loader2,
   Lock,
   LogIn,
@@ -196,6 +200,7 @@ import {
   GradientUngroup,
 } from "../icons/GradientSparkles";
 import { GroqIcon } from "../icons/Groq";
+import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { LangChainIcon } from "../icons/LangChain";
@@ -339,6 +344,7 @@ export const nodeNames: { [char: string]: string } = {
   langchain_utilities: "Utilities",
   output_parsers: "Output Parsers",
   custom_components: "Custom",
+  link_extractors: "Link Extractors",
   unknown: "Other",
 };
 
@@ -398,9 +404,12 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchRun: GoogleIcon,
   Google: GoogleIcon,
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
+  ArrowRight,
   Groq: GroqIcon,
+  HCD: HCDIcon,
   HNLoader: HackerNewsIcon,
   Unstructured: UnstructuredIcon,
+  Filter: Filter,
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
   HuggingFaceEmbeddings: HuggingFaceIcon,
@@ -410,6 +419,7 @@ export const nodeIconsLucide: iconsType = {
   Meta: MetaIcon,
   CheckCheck,
   Midjorney: MidjourneyIcon,
+  ListFilter,
   MongoDBAtlasVectorSearch: MongoDBIcon,
   MongoDB: MongoDBIcon,
   MongoDBChatMessageHistory: MongoDBIcon,
@@ -452,6 +462,7 @@ export const nodeIconsLucide: iconsType = {
   saved_components: GradientSave,
   ScrollText,
   documentloaders: Paperclip,
+  link_extractors: Link2,
   vectorstores: Layers,
   vectorsearch: TextSearch,
   toolkits: Package2,

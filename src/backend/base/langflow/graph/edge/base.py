@@ -83,7 +83,7 @@ class Edge:
         if not self.valid_handles:
             logger.debug(self.source_handle)
             logger.debug(self.target_handle)
-            raise ValueError(f"Edge between {source.vertex_type} and {target.vertex_type} " f"has invalid handles")
+            raise ValueError(f"Edge between {source.display_name} and {target.display_name} " f"has invalid handles")
 
     def _legacy_validate_handles(self, source, target) -> None:
         if self.target_handle.input_types is None:

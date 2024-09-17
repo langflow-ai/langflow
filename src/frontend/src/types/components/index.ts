@@ -1,5 +1,5 @@
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { ReactElement, ReactNode, SetStateAction } from "react";
+import { ReactElement, ReactNode } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
 import {
@@ -339,6 +339,8 @@ export type ShadTooltipProps = {
   style?: string;
 };
 export type ShadToolTipType = {
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
   content?: ReactNode | null;
   side?: "top" | "right" | "bottom" | "left";
   asChild?: boolean;
@@ -633,7 +635,6 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
-  setShowState: (show: boolean | SetStateAction<boolean>) => void;
   updateNode: () => void;
 };
 
@@ -645,9 +646,7 @@ export type parsedDataType = {
 };
 
 export type SanitizedHTMLWrapperType = {
-  className: string;
   content: string;
-  onClick: () => void;
   suppressWarning?: boolean;
 };
 

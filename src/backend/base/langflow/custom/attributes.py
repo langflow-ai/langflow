@@ -43,6 +43,12 @@ def getattr_return_list_of_object(value):
     return []
 
 
+def getattr_return_list_of_values_from_dict(value):
+    if isinstance(value, dict):
+        return list(value.values())
+    return []
+
+
 ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "display_name": getattr_return_str,
     "description": getattr_return_str,
@@ -53,6 +59,8 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "is_input": getattr_return_bool,
     "is_output": getattr_return_bool,
     "conditional_paths": getattr_return_list_of_str,
+    "_outputs_maps": getattr_return_list_of_values_from_dict,
+    "_inputs": getattr_return_list_of_values_from_dict,
     "outputs": getattr_return_list_of_object,
     "inputs": getattr_return_list_of_object,
 }

@@ -1,3 +1,4 @@
+import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import IconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
@@ -8,7 +9,6 @@ import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
 
-import { ENABLE_MVPS } from "@/customization/feature-flags";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -295,6 +295,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     (params: Connection) => {
       takeSnapshot();
       onConnect(params);
+      track("New Component Connection Added");
     },
     [takeSnapshot, onConnect],
   );
@@ -456,6 +457,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onSelectionDragStart={onSelectionDragStart}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
+            connectionRadius={25}
+            edgeTypes={{ default: DefaultEdge }}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
             onNodeDragStop={onNodeDragStop}
@@ -475,59 +478,58 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             <Background className="" />
             {!view && (
               <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border">
-                {ENABLE_MVPS && (
-                  <ControlButton
-                    data-testid="add_note"
-                    onClick={() => {
-                      const wrapper = reactFlowWrapper.current!;
-                      const x = wrapper.getBoundingClientRect().width / 2;
-                      const y = wrapper.getBoundingClientRect().height / 2;
-                      const nodePosition =
-                        reactFlowInstance?.screenToFlowPosition({ x, y })!;
+                <ControlButton
+                  data-testid="add_note"
+                  onClick={() => {
+                    const wrapper = reactFlowWrapper.current!;
+                    const viewport = reactFlowInstance?.getViewport();
+                    const x = wrapper.getBoundingClientRect().width / 2;
+                    const y = wrapper.getBoundingClientRect().height / 2;
+                    const nodePosition =
+                      reactFlowInstance?.screenToFlowPosition({ x, y })!;
 
-                      const data = {
-                        node: {
-                          description: "",
-                          display_name: "",
-                          documentation: "",
-                          template: {},
-                        },
-                        type: "note",
-                      };
-                      const newId = getNodeId(data.type);
+                    const data = {
+                      node: {
+                        description: "",
+                        display_name: "",
+                        documentation: "",
+                        template: {},
+                      },
+                      type: "note",
+                    };
+                    const newId = getNodeId(data.type);
 
-                      const newNode: NodeType = {
+                    const newNode: NodeType = {
+                      id: newId,
+                      type: "noteNode",
+                      position: { x: 0, y: 0 },
+                      data: {
+                        ...data,
                         id: newId,
-                        type: "noteNode",
-                        position: { x: 0, y: 0 },
-                        data: {
-                          ...data,
-                          id: newId,
-                        },
-                      };
-                      paste(
-                        { nodes: [newNode], edges: [] },
-                        {
-                          x: nodePosition.x,
-                          y: nodePosition?.y,
-                          paneX: wrapper.getBoundingClientRect().x,
-                          paneY: wrapper.getBoundingClientRect().y,
-                        },
-                      );
-                    }}
-                    className="postion absolute -top-10 rounded-sm"
-                  >
-                    <ShadTooltip content="Add note">
-                      <div>
-                        <IconComponent
-                          name="SquarePen"
-                          aria-hidden="true"
-                          className="scale-125"
-                        />
-                      </div>
-                    </ShadTooltip>
-                  </ControlButton>
-                )}
+                      },
+                    };
+                    paste(
+                      { nodes: [newNode], edges: [] },
+                      {
+                        x: nodePosition.x,
+                        y: nodePosition?.y,
+                        paneX: wrapper.getBoundingClientRect().x,
+                        paneY: wrapper.getBoundingClientRect().y,
+                      },
+                    );
+                  }}
+                  className="postion absolute -top-10 rounded-sm"
+                >
+                  <ShadTooltip content="Add note">
+                    <div>
+                      <IconComponent
+                        name="SquarePen"
+                        aria-hidden="true"
+                        className="scale-125"
+                      />
+                    </div>
+                  </ShadTooltip>
+                </ControlButton>
               </Controls>
             )}
             <SelectionMenu

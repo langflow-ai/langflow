@@ -74,6 +74,10 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
+class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
+    field_type: SerializableFieldTypes = FieldTypes.CODE
+
+
 # Applying mixins to a specific input type
 class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.TEXT
@@ -273,6 +277,8 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
                 )
         elif isinstance(v, (AsyncIterator, Iterator)):
             value = v
+        elif v is None:
+            value = None
         else:
             raise ValueError(f"Invalid value type `{type(v)}` for input `{_info.data['name']}`")
         return value
@@ -491,6 +497,7 @@ InputTypes = Union[
     MultilineSecretInput,
     NestedDictInput,
     PromptInput,
+    CodeInput,
     SecretStrInput,
     StrInput,
     MessageTextInput,
