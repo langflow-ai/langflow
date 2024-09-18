@@ -1,9 +1,10 @@
 from tenacity import retry, stop_after_attempt, wait_fixed
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 
+# TODO: langchain_community.llms.huggingface_endpoint is depreciated. Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import DictInput, DropdownInput, SecretStrInput, StrInput, IntInput
+from langflow.io import DictInput, DropdownInput, SecretStrInput, StrInput, IntInput, FloatInput
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
@@ -22,15 +23,62 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             name="task",
             display_name="Task",
             options=["text2text-generation", "text-generation", "summarization", "translation"],
-            value="text-generation",
+            advanced=True,
+            info="The task to call the model with. Should be a task that returns `generated_text` or `summary_text`.",
         ),
         SecretStrInput(name="huggingfacehub_api_token", display_name="API Token", password=True),
         DictInput(name="model_kwargs", display_name="Model Keyword Arguments", advanced=True),
         IntInput(name="retry_attempts", display_name="Retry Attempts", value=1, advanced=True),
+        IntInput(
+            name="max_new_tokens", display_name="Max New Tokens", value=512, info="Maximum number of generated tokens"
+        ),
+        IntInput(
+            name="top_k",
+            display_name="Top K",
+            advanced=True,
+            info="The number of highest probability vocabulary tokens to keep for top-k-filtering",
+        ),
+        FloatInput(
+            name="top_p",
+            display_name="Top P",
+            value=0.95,
+            advanced=True,
+            info="If set to < 1, only the smallest set of most probable tokens with probabilities that add up to `top_p` or higher are kept for generation",
+        ),
+        FloatInput(
+            name="typical_p",
+            display_name="Typical P",
+            value=0.95,
+            advanced=True,
+            info="Typical Decoding mass. See [Typical Decoding for Natural Language Generation](https://arxiv.org/abs/2202.00666) for more information",
+        ),
+        FloatInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.8,
+            advanced=True,
+            info="The value used to module the logits distribution",
+        ),
+        FloatInput(
+            name="repetition_penalty",
+            display_name="Repetition Penalty",
+            advanced=True,
+            info="The parameter for repetition penalty. 1.0 means no penalty. See [this paper](https://arxiv.org/pdf/1909.05858.pdf) for more details",
+        ),
     ]
 
     def create_huggingface_endpoint(
-        self, model_id: str, task: str, huggingfacehub_api_token: str, model_kwargs: dict
+        self,
+        model_id: str,
+        task: str,
+        huggingfacehub_api_token: str,
+        model_kwargs: dict,
+        max_new_tokens: int,
+        top_k: int,
+        top_p: float,
+        typical_p: float,
+        temperature: float,
+        repetition_penalty: float,
     ) -> HuggingFaceEndpoint:
         retry_attempts = self.retry_attempts  # Access the retry attempts input
         endpoint_url = f"https://api-inference.huggingface.co/models/{model_id}"
@@ -42,18 +90,41 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
                 task=task,
                 huggingfacehub_api_token=huggingfacehub_api_token,
                 model_kwargs=model_kwargs,
+                max_new_tokens=max_new_tokens,
+                top_k=top_k,
+                top_p=top_p,
+                typical_p=self.typical_p,
+                temperature=temperature,
+                repetition_penalty=repetition_penalty,
             )
 
         return _attempt_create()
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         model_id = self.model_id
-        task = self.task
+        task = self.task or None
         huggingfacehub_api_token = self.huggingfacehub_api_token
         model_kwargs = self.model_kwargs or {}
+        max_new_tokens = self.max_new_tokens
+        top_k = self.top_k or None
+        top_p = self.top_p
+        typical_p = (self.typical_p,)
+        temperature = self.temperature
+        repetition_penalty = self.repetition_penalty or None
 
         try:
-            llm = self.create_huggingface_endpoint(model_id, task, huggingfacehub_api_token, model_kwargs)
+            llm = self.create_huggingface_endpoint(
+                model_id,
+                task,
+                huggingfacehub_api_token,
+                model_kwargs,
+                max_new_tokens,
+                top_k,
+                top_p,
+                typical_p,
+                temperature,
+                repetition_penalty,
+            )
         except Exception as e:
             raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
 
