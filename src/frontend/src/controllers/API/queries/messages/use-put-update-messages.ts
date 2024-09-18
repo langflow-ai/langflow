@@ -21,7 +21,7 @@ export const useUpdateMessage: useMutationFunctionType<
     if (message.files && typeof message.files === "string") {
       message.files = JSON.parse(message.files);
     }
-    const result = await api.put(`${getURL("MESSAGES")}/${message.id}`, data);
+    const result = await api.put(`${getURL("MESSAGES")}/${message.id}`, message);
     return result.data;
   };
 
