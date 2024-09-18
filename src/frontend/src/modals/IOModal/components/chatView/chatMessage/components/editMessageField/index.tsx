@@ -25,14 +25,19 @@ export default function EditMessageField({
 
     return (
         <div className="flex flex-col w-full h-fit">
-            <Textarea ref={textareaRef} className="h-mx-full" onBlur={()=>onCancel()}  value={message} autoFocus={true} onChange={
+            <Textarea ref={textareaRef} className="h-mx-full" onBlur={()=>{
+                //timeout to prevent component unmount before the click event is triggered
+                setTimeout(() => {
+                    onCancel();
+                }, 100);
+            }}  value={message} autoFocus={true} onChange={
                 (e) => {
                     setMessage(e.target.value);
                 }
             }/>
             <div>
                 <Button onClick={
-                    () => {
+                    (_) => {
                         onEdit(message);
                     }
                 } className="btn btn-primary mt-2">Save</Button>
