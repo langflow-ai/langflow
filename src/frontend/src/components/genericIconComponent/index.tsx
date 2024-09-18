@@ -17,6 +17,7 @@ export const ForwardedIconComponent = memo(
         stroke,
         strokeWidth,
         id = "",
+        skipFallback=false
       }: IconComponentProps,
       ref,
     ) => {
@@ -56,7 +57,7 @@ export const ForwardedIconComponent = memo(
       );
 
       return (
-        <Suspense fallback={fallback}>
+        <Suspense fallback={skipFallback?undefined:fallback}>
           <TargetIcon
             className={className}
             style={style}
