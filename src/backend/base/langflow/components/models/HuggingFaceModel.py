@@ -5,6 +5,7 @@ from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.io import DictInput, DropdownInput, SecretStrInput, StrInput, IntInput, FloatInput
+from typing import Any, Dict, Optional
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
@@ -70,15 +71,15 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     def create_huggingface_endpoint(
         self,
         model_id: str,
-        task: str,
-        huggingfacehub_api_token: str,
-        model_kwargs: dict,
+        task: Optional[str],
+        huggingfacehub_api_token: Optional[str],
+        model_kwargs: Dict[str, Any],
         max_new_tokens: int,
-        top_k: int,
+        top_k: Optional[int],
         top_p: float,
-        typical_p: float,
-        temperature: float,
-        repetition_penalty: float,
+        typical_p: Optional[float],
+        temperature: Optional[float],
+        repetition_penalty: Optional[float],
     ) -> HuggingFaceEndpoint:
         retry_attempts = self.retry_attempts  # Access the retry attempts input
         endpoint_url = f"https://api-inference.huggingface.co/models/{model_id}"
@@ -108,22 +109,22 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         max_new_tokens = self.max_new_tokens
         top_k = self.top_k or None
         top_p = self.top_p
-        typical_p = (self.typical_p,)
-        temperature = self.temperature
+        typical_p = self.typical_p or None
+        temperature = self.temperature or 0.8
         repetition_penalty = self.repetition_penalty or None
 
         try:
             llm = self.create_huggingface_endpoint(
-                model_id,
-                task,
-                huggingfacehub_api_token,
-                model_kwargs,
-                max_new_tokens,
-                top_k,
-                top_p,
-                typical_p,
-                temperature,
-                repetition_penalty,
+                model_id=model_id,
+                task=task,
+                huggingfacehub_api_token=huggingfacehub_api_token,
+                model_kwargs=model_kwargs,
+                max_new_tokens=max_new_tokens,
+                top_k=top_k,
+                top_p=top_p,
+                typical_p=typical_p,
+                temperature=temperature,
+                repetition_penalty=repetition_penalty,
             )
         except Exception as e:
             raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
