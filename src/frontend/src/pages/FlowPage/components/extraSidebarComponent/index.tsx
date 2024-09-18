@@ -245,6 +245,36 @@ export default function ExtraSidebar(): JSX.Element {
               <div key={index}></div>
             ),
           )}
+          <>
+
+            <ParentDisclosureComponent
+              defaultOpen={true}
+              key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
+              button={{
+                title: "Integrations",
+                Icon: nodeIconsLucide.unknown,
+              }}
+              testId="bundle-extended-disclosure"
+            >
+              {Object.keys(dataFilter)
+                .sort(sortKeys)
+                .filter((x) => BUNDLES_SIDEBAR_FOLDER_NAMES.includes(x))
+                .map((SBSectionName: keyof APIObjectType, index) =>
+                  Object.keys(dataFilter[SBSectionName]).length > 0 ? (
+                    <SidebarCategoryComponent
+                      key={`DisclosureComponent${index + search + JSON.stringify(getFilterEdge)}`}
+                      search={search}
+                      getFilterEdge={getFilterEdge}
+                      category={dataFilter[SBSectionName]}
+                      name={SBSectionName}
+                      onDragStart={onDragStart}
+                    />
+                  ) : (
+                    <div key={index}></div>
+                  ),
+                )}
+            </ParentDisclosureComponent>
+          </>
         <ParentDisclosureComponent
           defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
           key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Advanced`}
@@ -306,37 +336,6 @@ export default function ExtraSidebar(): JSX.Element {
             </a>
           )}
         </ParentDisclosureComponent>
-          <>
-            <Separator />
-
-            <ParentDisclosureComponent
-              defaultOpen={true}
-              key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
-              button={{
-                title: "Integrations",
-                Icon: nodeIconsLucide.unknown,
-              }}
-              testId="bundle-extended-disclosure"
-            >
-              {Object.keys(dataFilter)
-                .sort(sortKeys)
-                .filter((x) => BUNDLES_SIDEBAR_FOLDER_NAMES.includes(x))
-                .map((SBSectionName: keyof APIObjectType, index) =>
-                  Object.keys(dataFilter[SBSectionName]).length > 0 ? (
-                    <SidebarCategoryComponent
-                      key={`DisclosureComponent${index + search + JSON.stringify(getFilterEdge)}`}
-                      search={search}
-                      getFilterEdge={getFilterEdge}
-                      category={dataFilter[SBSectionName]}
-                      name={SBSectionName}
-                      onDragStart={onDragStart}
-                    />
-                  ) : (
-                    <div key={index}></div>
-                  ),
-                )}
-            </ParentDisclosureComponent>
-          </>
       </div>
     </div>
   );
