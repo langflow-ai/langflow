@@ -3,13 +3,10 @@ from typing import Optional
 from fastapi import Depends
 from langflow.utils.version import get_version_info
 from sqlmodel import Session
-from sqlalchemy import delete
 
 from langflow.services.deps import get_session
 
 from .model import Flow
-from .. import TransactionTable, MessageTable
-from loguru import logger
 
 
 def get_flow_by_id(session: Session = Depends(get_session), flow_id: Optional[str] = None) -> Flow | None:
@@ -19,15 +16,6 @@ def get_flow_by_id(session: Session = Depends(get_session), flow_id: Optional[st
         raise ValueError("Flow id is required.")
 
     return session.get(Flow, flow_id)
-
-
-def delete_flow_by_id(flow_id: str, session: Session) -> None:
-    """Delete flow by id."""
-    # Manually delete flow, transactions and messages because foreign key constraints might be disabled
-    session.exec(delete(Flow).where(Flow.id == flow_id))  # type: ignore
-    session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))  #  type: ignore
-    session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))  #  type: ignore
-    logger.info(f"Deleted flow {flow_id}")
 
 
 def get_webhook_component_in_flow(flow_data: dict):
