@@ -1,4 +1,3 @@
-import { useIsFetching } from "@tanstack/react-query";
 import { useState } from "react";
 import { dropdownButtonPropsType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
@@ -16,12 +15,9 @@ export default function DropdownButton({
   options,
   plusButton = false,
   dropdownOptions = true,
+  isFetchingFolders = false,
 }: dropdownButtonPropsType): JSX.Element {
   const [showOptions, setShowOptions] = useState<boolean>(false);
-  const isFetchingFolders = !!useIsFetching({
-    queryKey: ["useGetFolders"],
-    exact: false,
-  });
 
   return (
     <div>
