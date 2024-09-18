@@ -518,7 +518,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                       },
                     );
                   }}
-                  className="postion absolute -top-10 react-flow__controls"
+                  className="postion react-flow__controls absolute -top-10"
                 >
                   <ShadTooltip content="Add note">
                     <div>
