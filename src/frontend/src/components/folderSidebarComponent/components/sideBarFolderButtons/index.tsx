@@ -230,37 +230,107 @@ const SideBarFoldersButtonsComponent = ({
     exact: false,
   });
 
+  const isUpdatingFolder = isFetchingFolders || isPending || loading;
+
+  const HeaderButtons = () => (
+    <div className="flex shrink-0 items-center justify-between gap-2">
+      <div className="flex-1 self-start text-lg font-semibold">Folders</div>
+      <AddFolderButton onClick={addNewFolder} disabled={isUpdatingFolder} />
+      <UploadFolderButton
+        onClick={handleUploadFlowsToFolder}
+        disabled={isUpdatingFolder}
+      />
+    </div>
+  );
+
+  const AddFolderButton = ({ onClick, disabled }) => (
+    <ShadTooltip content="Add a new folder">
+      <Button
+        variant="primary"
+        size="icon"
+        className="px-2"
+        onClick={onClick}
+        data-testid="add-folder-button"
+        disabled={disabled}
+      >
+        <IconComponent name="FolderPlus" className="w-4" />
+      </Button>
+    </ShadTooltip>
+  );
+
+  const UploadFolderButton = ({ onClick, disabled }) => (
+    <ShadTooltip content="Upload a folder">
+      <Button
+        variant="primary"
+        size="icon"
+        className="px-2"
+        onClick={onClick}
+        data-testid="upload-folder-button"
+        disabled={disabled}
+      >
+        <IconComponent name="Upload" className="w-4" />
+      </Button>
+    </ShadTooltip>
+  );
+
+  const handleDoubleClick = (event, item) => {
+    if (item.name === "My Projects") {
+      return;
+    }
+
+    if (!foldersNames[item.name]) {
+      setFoldersNames({ [item.name]: item.name });
+    }
+
+    if (editFolders.find((obj) => obj.name === item.name)?.name) {
+      const newEditFolders = editFolders.map((obj) => {
+        if (obj.name === item.name) {
+          return { name: item.name, edit: true };
+        }
+        return { name: obj.name, edit: false };
+      });
+      setEditFolderName(newEditFolders);
+      takeSnapshot();
+      event.stopPropagation();
+      event.preventDefault();
+      return;
+    }
+
+    setEditFolderName((old) => [...old, { name: item.name, edit: true }]);
+    setFoldersNames((oldFolder) => ({
+      ...oldFolder,
+      [item.name]: item.name,
+    }));
+    takeSnapshot();
+    event.stopPropagation();
+    event.preventDefault();
+  };
+
+  const handleKeyDownFn = (e, item) => {
+    if (e.key === "Escape") {
+      const newEditFolders = editFolders.map((obj) => {
+        if (obj.name === item.name) {
+          return { name: item.name, edit: false };
+        }
+        return { name: obj.name, edit: false };
+      });
+      setEditFolderName(newEditFolders);
+      setFoldersNames({});
+      setEditFolderName(
+        folders.map((obj) => ({
+          name: obj.name,
+          edit: false,
+        })),
+      );
+    }
+    if (e.key === "Enter") {
+      refInput.current?.blur();
+    }
+  };
+
   return (
     <>
-      <div className="flex shrink-0 items-center justify-between gap-2">
-        <div className="flex-1 self-start text-lg font-semibold">Folders</div>
-
-        <ShadTooltip content={"Add a new folder"}>
-          <Button
-            variant="primary"
-            size="icon"
-            className="px-2"
-            onClick={addNewFolder}
-            data-testid="add-folder-button"
-            disabled={isFetchingFolders || isPending || loading}
-          >
-            <ForwardedIconComponent name="FolderPlus" className="w-4" />
-          </Button>
-        </ShadTooltip>
-
-        <ShadTooltip content={"Upload a folder"}>
-          <Button
-            variant="primary"
-            size="icon"
-            className="px-2"
-            onClick={handleUploadFlowsToFolder}
-            data-testid="upload-folder-button"
-            disabled={isFetchingFolders || isPending || loading}
-          >
-            <ForwardedIconComponent name="Upload" className="w-4" />
-          </Button>
-        </ShadTooltip>
-      </div>
+      <HeaderButtons />
 
       <div className="flex gap-2 overflow-auto lg:h-[70vh] lg:flex-col">
         <>
@@ -289,41 +359,7 @@ const SideBarFoldersButtonsComponent = ({
                 >
                   <div
                     onDoubleClick={(event) => {
-                      if (item.name === "My Projects") {
-                        return;
-                      }
-
-                      if (!foldersNames[item.name]) {
-                        setFoldersNames({ [item.name]: item.name });
-                      }
-
-                      if (
-                        editFolders.find((obj) => obj.name === item.name)?.name
-                      ) {
-                        const newEditFolders = editFolders.map((obj) => {
-                          if (obj.name === item.name) {
-                            return { name: item.name, edit: true };
-                          }
-                          return { name: obj.name, edit: false };
-                        });
-                        setEditFolderName(newEditFolders);
-                        takeSnapshot();
-                        event.stopPropagation();
-                        event.preventDefault();
-                        return;
-                      }
-
-                      setEditFolderName((old) => [
-                        ...old,
-                        { name: item.name, edit: true },
-                      ]);
-                      setFoldersNames((oldFolder) => ({
-                        ...oldFolder,
-                        [item.name]: item.name,
-                      }));
-                      takeSnapshot();
-                      event.stopPropagation();
-                      event.preventDefault();
+                      handleDoubleClick(event, item);
                     }}
                     className="flex w-full items-center gap-2"
                   >
@@ -331,7 +367,7 @@ const SideBarFoldersButtonsComponent = ({
                       name={"folder"}
                       className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
                     />
-                    {editFolderName?.edit ? (
+                    {editFolderName?.edit && !isUpdatingFolder ? (
                       <div>
                         <Input
                           className="w-36"
@@ -340,34 +376,17 @@ const SideBarFoldersButtonsComponent = ({
                           }}
                           ref={refInput}
                           onKeyDown={(e) => {
-                            if (e.key === "Escape") {
-                              const newEditFolders = editFolders.map((obj) => {
-                                if (obj.name === item.name) {
-                                  return { name: item.name, edit: false };
-                                }
-                                return { name: obj.name, edit: false };
-                              });
-                              setEditFolderName(newEditFolders);
-                              setFoldersNames({});
-                              setEditFolderName(
-                                folders.map((obj) => ({
-                                  name: obj.name,
-                                  edit: false,
-                                })),
-                              );
-                            }
-                            if (e.key === "Enter") {
-                              refInput.current?.blur();
-                            }
+                            handleKeyDownFn(e, item);
                             handleKeyDown(e, e.key, "");
                           }}
                           autoFocus={true}
-                          onBlur={async () => {
+                          onBlur={() => {
                             if (refInput.current?.value !== item.name) {
                               handleEditNameFolder(item);
                             } else {
                               editFolderName.edit = false;
                             }
+                            refInput.current?.blur();
                           }}
                           value={foldersNames[item.name]}
                           id={`input-folder-${item.name}`}
@@ -390,6 +409,7 @@ const SideBarFoldersButtonsComponent = ({
                         }}
                         variant={"ghost"}
                         size={"icon"}
+                        disabled={isUpdatingFolder}
                       >
                         <IconComponent
                           name={"trash"}
@@ -398,14 +418,16 @@ const SideBarFoldersButtonsComponent = ({
                       </Button>
                     )}
                     <Button
-                      className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                      className="hidden px-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
                       onClick={(e) => {
                         handleDownloadFolder(item.id!);
                         e.stopPropagation();
                         e.preventDefault();
                         track("Folder Exported", { folderId: item.id! });
                       }}
-                      unstyled
+                      variant={"ghost"}
+                      size={"icon"}
+                      disabled={isUpdatingFolder}
                     >
                       <IconComponent
                         name={"Download"}
