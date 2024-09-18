@@ -10,10 +10,11 @@ export type ChatMessageType = {
   prompt?: string;
   chatKey?: string;
   componentId?: string;
-  id?: string;
+  id: string;
   timestamp:string;
   stream_url?: string | null;
   sender_name?: string;
+  session?: string;
 };
 
 export type ChatOutputType = {

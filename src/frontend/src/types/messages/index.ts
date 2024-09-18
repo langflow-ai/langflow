@@ -1,5 +1,4 @@
 type Message = {
-  artifacts: Record<string, any>;
   flow_id: string;
   text: string;
   sender: string;
