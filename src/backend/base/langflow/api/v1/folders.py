@@ -1,6 +1,9 @@
+from langflow.api.utils import cascade_delete_flow
+from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
-from sqlalchemy import or_, update
+from sqlalchemy import delete, or_, update
 from sqlmodel import Session, select
 
 from langflow.api.v1.flows import create_flows
@@ -171,22 +174,24 @@ def update_folder(
 
 
 @router.delete("/{folder_id}", status_code=204)
-def delete_folder(
+async def delete_folder(
     *,
     session: Session = Depends(get_session),
     folder_id: str,
     current_user: User = Depends(get_current_active_user),
 ):
     try:
+        flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)).all()
+        if len(flows) > 0:
+            for flow in flows:
+                await cascade_delete_flow(session, flow)
+
         folder = session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
         session.delete(folder)
         session.commit()
-        flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)).all()
-        for flow in flows:
-            session.delete(flow)
-        session.commit()
+
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
