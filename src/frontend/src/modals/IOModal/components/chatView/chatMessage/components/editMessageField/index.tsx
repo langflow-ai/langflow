@@ -35,7 +35,7 @@ export default function EditMessageField({
                     setMessage(e.target.value);
                 }
             }/>
-            <div>
+            <div className="flex gap-2 w-full flex-row-reverse">
                 <Button onClick={
                     (_) => {
                         onEdit(message);
