@@ -339,6 +339,8 @@ export type ShadTooltipProps = {
   style?: string;
 };
 export type ShadToolTipType = {
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
   content?: ReactNode | null;
   side?: "top" | "right" | "bottom" | "left";
   asChild?: boolean;
@@ -876,4 +878,12 @@ export type handleSelectPropsType = {
   lockChat: boolean;
   setLockChat: (lock: boolean) => void;
   setChatHistory: (chatHistory: ChatMessageType) => void;
+};
+
+export type LinkComponentType = {
+  value: Partial<InputFieldType>;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  editNode?: boolean;
+  id?: string;
 };

@@ -98,7 +98,7 @@ class LCAgentComponent(Component):
         self.chat_history = self.get_chat_history_data()
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
-        result = await agent.ainvoke(
+        result = agent.invoke(
             input_dict, config={"callbacks": [AgentAsyncHandler(self.log)] + self.get_langchain_callbacks()}
         )
         self.status = result
@@ -144,7 +144,7 @@ class LCToolsAgentComponent(LCAgentComponent):
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
-        result = await runnable.ainvoke(
+        result = runnable.invoke(
             input_dict, config={"callbacks": [AgentAsyncHandler(self.log)] + self.get_langchain_callbacks()}
         )
         self.status = result

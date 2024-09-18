@@ -1,4 +1,5 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
@@ -9,6 +10,7 @@ import {
   AlertTriangle,
   ArrowBigUp,
   ArrowLeft,
+  ArrowRight,
   ArrowUpToLine,
   Bell,
   Binary,
@@ -64,6 +66,7 @@ import {
   FileText,
   FileType2,
   FileUp,
+  Filter,
   FlaskConical,
   FolderIcon,
   FolderPlus,
@@ -88,6 +91,7 @@ import {
   Layers,
   Link,
   Link2,
+  ListFilter,
   Loader2,
   Lock,
   LogIn,
@@ -402,10 +406,12 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchRun: GoogleIcon,
   Google: GoogleIcon,
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
+  ArrowRight,
   Groq: GroqIcon,
   HCD: HCDIcon,
   HNLoader: HackerNewsIcon,
   Unstructured: UnstructuredIcon,
+  Filter: Filter,
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
   HuggingFaceEmbeddings: HuggingFaceIcon,
@@ -415,6 +421,7 @@ export const nodeIconsLucide: iconsType = {
   Meta: MetaIcon,
   CheckCheck,
   Midjorney: MidjourneyIcon,
+  ListFilter,
   MongoDBAtlasVectorSearch: MongoDBIcon,
   MongoDB: MongoDBIcon,
   MongoDBChatMessageHistory: MongoDBIcon,
@@ -623,4 +630,5 @@ export const nodeIconsLucide: iconsType = {
   Option: OptionIcon,
   Perplexity,
   TavilyIcon,
+  DuckDuckGo: DuckDuckGoIcon,
 };

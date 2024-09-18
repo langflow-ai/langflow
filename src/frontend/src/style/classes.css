@@ -151,11 +151,17 @@ textarea[class^="ag-"]:focus {
   height: fit-content !important;
 }
 
-.json-view-white {
+.json-view {
+  height: 370px !important;
+  border-radius: 10px !important;
+  padding: 10px !important;
+}
+
+.json-view {
   background-color: #f8fafc !important;
 }
 
-.json-view-dark {
+.dark .json-view {
   background-color: #141924 !important;
 }
 
@@ -163,6 +169,26 @@ textarea[class^="ag-"]:focus {
   cursor: grabbing !important;
 }
 
-.react-flow__node-noteNode:not(.selected){
+.react-flow__handle-right {
+  right: 0 !important;
+  transform: translate(50%, -50%) !important;
+}
+
+.react-flow__handle-left {
+  left: 0 !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.react-flow__handle-right {
+  right: 0 !important;
+  transform: translate(50%, -50%) !important;
+}
+
+.react-flow__handle-left {
+  left: 0 !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.react-flow__node-noteNode:not(.selected) {
   z-index: -1 !important;
 }

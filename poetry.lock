@@ -2080,6 +2080,25 @@ files = [
 ]
 
 [[package]]
+name = "duckduckgo-search"
+version = "6.2.11"
+description = "Search for words, documents, images, news, maps and text translation using the DuckDuckGo.com search engine."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "duckduckgo_search-6.2.11-py3-none-any.whl", hash = "sha256:6fb7069b79e8928f487001de6859034ade19201bdcd257ec198802430e374bfe"},
+    {file = "duckduckgo_search-6.2.11.tar.gz", hash = "sha256:6b6ef1b552c5e67f23e252025d2504caf6f9fc14f70e86c6dd512200f386c673"},
+]
+
+[package.dependencies]
+click = ">=8.1.7"
+primp = ">=0.6.1"
+
+[package.extras]
+dev = ["mypy (>=1.11.1)", "pytest (>=8.3.1)", "pytest-asyncio (>=0.23.8)", "ruff (>=0.6.1)"]
+lxml = ["lxml (>=5.2.2)"]
+
+[[package]]
 name = "e2b"
 version = "0.17.1"
 description = "E2B SDK that give agents cloud environments"
@@ -5042,7 +5061,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.95"
+version = "0.0.96"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -7247,6 +7266,26 @@ identify = ">=1.0.0"
 nodeenv = ">=0.11.1"
 pyyaml = ">=5.1"
 virtualenv = ">=20.10.0"
+
+[[package]]
+name = "primp"
+version = "0.6.1"
+description = "HTTP client that can impersonate web browsers, mimicking their headers and `TLS/JA3/JA4/HTTP2` fingerprints"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "primp-0.6.1-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:60cfe95e0bdf154b0f9036d38acaddc9aef02d6723ed125839b01449672d3946"},
+    {file = "primp-0.6.1-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:e1e92433ecf32639f9e800bc3a5d58b03792bdec99421b7fb06500e2fae63c85"},
+    {file = "primp-0.6.1-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6e02353f13f07fb5a6f91df9e2f4d8ec9f41312de95088744dce1c9729a3865d"},
+    {file = "primp-0.6.1-cp38-abi3-manylinux_2_34_aarch64.whl", hash = "sha256:c5a2ccfdf488b17be225a529a31e2b22724b2e22fba8e1ae168a222f857c2dc0"},
+    {file = "primp-0.6.1-cp38-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:f335c2ace907800a23bbb7bc6e15acc7fff659b86a2d5858817f6ed79cea07cf"},
+    {file = "primp-0.6.1-cp38-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:5dc15bd9d47ded7bc356fcb5d8321972dcbeba18e7d3b7250e12bb7365447b2b"},
+    {file = "primp-0.6.1-cp38-abi3-win_amd64.whl", hash = "sha256:eebf0412ebba4089547b16b97b765d83f69f1433d811bb02b02cdcdbca20f672"},
+    {file = "primp-0.6.1.tar.gz", hash = "sha256:64b3c12e3d463a887518811c46f3ec37cca02e6af1ddf1287e548342de436301"},
+]
+
+[package.extras]
+dev = ["certifi", "pytest (>=8.1.1)"]
 
 [[package]]
 name = "prometheus-client"
@@ -10605,11 +10644,6 @@ files = [
     {file = "triton-3.0.0-1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:34e509deb77f1c067d8640725ef00c5cbfcb2052a1a3cb6a6d343841f92624eb"},
     {file = "triton-3.0.0-1-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:bcbf3b1c48af6a28011a5c40a5b3b9b5330530c3827716b5fbf6d7adcc1e53e9"},
     {file = "triton-3.0.0-1-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:6e5727202f7078c56f91ff13ad0c1abab14a0e7f2c87e91b12b6f64f3e8ae609"},
-    {file = "triton-3.0.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:39b052da883351fdf6be3d93cedae6db3b8e3988d3b09ed221bccecfa9612230"},
-    {file = "triton-3.0.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cd34f19a8582af96e6291d4afce25dac08cb2a5d218c599163761e8e0827208e"},
-    {file = "triton-3.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0d5e10de8c011adeb7c878c6ce0dd6073b14367749e34467f1cff2bde1b78253"},
-    {file = "triton-3.0.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e8903767951bf86ec960b4fe4e21bc970055afc65e9d57e916d79ae3c93665e3"},
-    {file = "triton-3.0.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:41004fb1ae9a53fcb3e970745feb87f0e3c94c6ce1ba86e95fa3b8537894bef7"},
 ]
 
 [package.dependencies]
@@ -12114,4 +12148,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "64cce31a5fc6e0dbb35aebf34f34bf437469f213f9059be6ac31f7877a02cbea"
+content-hash = "304221b658b52d3de30e52ebbc45b4730832fb087ce4f15b68c858d0a5af5efb"

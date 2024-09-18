@@ -48,6 +48,11 @@ def create_tag(build_type: str):
 
     new_nightly_version = latest_base_version + ".dev" + build_number
 
+    # Prepend "v" to the version, if DNE.
+    # This is an update to the nightly version format.
+    if not new_nightly_version.startswith("v"):
+        new_nightly_version = "v" + new_nightly_version
+
     # X.Y.Z.dev.YYYYMMDD
     # This takes the base version of the current version and appends the
     # current date. If the last release was on the same day, we exit, as
