@@ -60,22 +60,26 @@ jobs:
     outputs:
       version: ${{ steps.get-version-input.outputs.version || steps.get-version-base.outputs.version || steps.get-version-main.outputs.version }}
       nightly-tag: ${{ steps.resolve-nightly-tag.outputs.nightly_tag }}
+      nightly-build: ${{ steps.resolve-nightly-tag.outputs.nightly_build }}
     steps:
       - name: Resolve nightly tag
         id: resolve-nightly-tag
         run: |
           if [[ "${{ inputs.nightly_tag_main }}" != '' ]]; then
             echo "nightly_tag=${{ inputs.nightly_tag_main }}" >> $GITHUB_OUTPUT
+            echo "nightly_build=true" >> $GITHUB_OUTPUT
           elif [[ "${{ inputs.nightly_tag_base }}" != '' ]]; then
             echo "nightly_tag=${{ inputs.nightly_tag_base }}" >> $GITHUB_OUTPUT
+            echo "nightly_build=true" >> $GITHUB_OUTPUT
           else
             echo "nightly_tag=" >> $GITHUB_OUTPUT
+            echo "nightly_build=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check out the code at a specific ref (e.g., nightly tag)
+      - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.resolve-nightly-tag.outputs.nightly_tag || github.ref }}
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
       - name: Set up Python 3.12 + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:
@@ -104,15 +108,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: get-version
     outputs:
-      tags: ${{ steps.set-vars.outputs.tags }}
+      docker_tags: ${{ steps.set-vars.outputs.docker_tags }}
+      ghcr_tags: ${{ steps.set-vars.outputs.ghcr_tags }}
       file: ${{ steps.set-vars.outputs.file }}
     env:
       NIGHTLY_TAG: ${{ needs.get-version.outputs.nightly-tag }}
     steps:
-      - name: Check out the code at a specific ref (e.g., nightly tag)
+      - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.NIGHTLY_TAG || github.ref }}
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
 
       - name: Set Dockerfile and Tags
         id: set-vars
@@ -123,13 +128,16 @@ jobs:
           fi
 
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
-            echo "tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
+            echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
+            echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
           else
             if [[ "${{ inputs.pre_release }}" == "true" ]]; then
-              echo "tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
+              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
             else
-              echo "tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
             fi
             echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
           fi
@@ -137,63 +145,104 @@ jobs:
     runs-on: ubuntu-latest
     needs: [get-version, setup]
     steps:
-      - name: Check out the code at a specific ref (e.g., nightly tag)
+      - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.get-version.outputs.nightly-tag || github.ref }} 
+          ref: ${{ inputs.nightly_tag_main || github.ref }} 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and Push Docker Image
+      - name: Build and Push to Docker Hub
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           file: ${{ needs.setup.outputs.file }}
-          tags: ${{ needs.setup.outputs.tags }}
+          tags: ${{ needs.setup.outputs.docker_tags }}
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
+
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+      - name: Build and push to Github Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ${{ needs.setup.outputs.file }}
+          tags: ${{ needs.setup.outputs.ghcr_tags }}
           # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
           provenance: false
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     needs: [build, get-version]
     strategy:
       matrix:
-        component: [backend, frontend]
+        component: [docker-backend, docker-frontend, ghcr-backend, ghcr-frontend]
         include:
-          - component: backend
+          - component: docker-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend{0}:{1}', inputs.nightly_build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-backend{0}:{1},langflowai/langflow-backend{0}:latest{1}',  inputs.nightly_build && '-nightly' || '', needs.get-version.outputs.version) }}
-          - component: frontend
+            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend{0}:{1}', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-backend{0}:{1},langflowai/langflow-backend{0}:latest',  needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
+            langflow_image: langflowai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+          - component: docker-frontend
             dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
-            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend{0}:{1}', inputs.nightly_build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-frontend{0}:{1},langflowai/langflow-frontend{0}:latest{1}',  inputs.nightly_build && '-nightly' || '', needs.get-version.outputs.version) }}
+            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend{0}:{1}', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-frontend{0}:{1},langflowai/langflow-frontend{0}:latest',  needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
+            langflow_image: langflowai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+          - component: ghcr-backend
+            dockerfile: ./docker/build_and_push_backend.Dockerfile
+            tags: ${{ format('ghcr.io/langflow-ai/langflow-backend{0}:{1},ghcr.io/langflow-ai/langflow-backend{0}:latest', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
+            langflow_image: ghcr.io/langflow-ai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+          - component: ghcr-frontend
+            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
+            tags: ${{ format('ghcr.io/langflow-ai/langflow-frontend{0}:{1},ghcr.io/langflow-ai/langflow-frontend{0}:latest', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
+            langflow_image: ghcr.io/langflow-ai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
     steps:
-      - name: Check out the code at a specific ref (e.g., nightly tag)
+      - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.get-version.outputs.nightly-tag || github.ref }} 
+          ref: ${{ inputs.nightly_tag_main || github.ref }} 
  
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Login to Docker Hub
+        if: ${{ matrix.component == 'docker-backend' }} || ${{ matrix.component == 'docker-frontend' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Wait for Docker Hub to propagate (for backend)
+       
+      - name: Login to Github Container Registry
+        if: ${{ matrix.component == 'ghcr-backend' }} || ${{ matrix.component == 'ghcr-frontend' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+ 
+      - name: Wait for propagation (for backend)
         run: sleep 120
+
       - name: Build and push ${{ matrix.component }}
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           build-args: |
-            LANGFLOW_IMAGE=langflowai/langflow${{ inputs.nightly_build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            LANGFLOW_IMAGE=${{ matrix.langflow_image }}
           file: ${{ matrix.dockerfile }}
           tags: ${{ matrix.tags }}
           # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)

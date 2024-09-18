@@ -650,6 +650,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "dict",
   "NestedDict",
   "table",
+  "link",
 ]);
 
 export const priorityFields = new Set(["code", "template"]);
@@ -702,7 +703,7 @@ export const CHAT_INPUT_PLACEHOLDER =
 export const CHAT_INPUT_PLACEHOLDER_SEND = "Send a message...";
 export const EDIT_CODE_TITLE = "Edit Code";
 export const MY_COLLECTION_DESC =
-  "Manage your personal projects. Download and upload entire collections.";
+  "Manage your projects. Download and upload entire collections.";
 export const STORE_DESC = "Explore community-shared flows and components.";
 export const STORE_TITLE = "Langflow Store";
 export const NO_API_KEY = "You don't have an API key.";

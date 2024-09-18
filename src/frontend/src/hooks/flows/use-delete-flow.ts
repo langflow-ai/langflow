@@ -10,7 +10,7 @@ const useDeleteFlow = () => {
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
 
-  const { mutate } = useDeleteDeleteFlows();
+  const { mutate, isPending } = useDeleteDeleteFlows();
 
   const deleteFlow = async ({
     id,
@@ -45,7 +45,7 @@ const useDeleteFlow = () => {
     });
   };
 
-  return deleteFlow;
+  return { deleteFlow, isDeleting: isPending };
 };
 
 export default useDeleteFlow;

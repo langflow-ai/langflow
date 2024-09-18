@@ -65,6 +65,12 @@ test("Simple Agent", async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
+  await page
+    .getByTestId("textarea_str_input_value")
+    .fill(
+      "Use the Python REPL tool to create a python function that calculates 4 + 4 and stores it in a variable.",
+    );
+
   await page.getByTestId("button_run_chat output").click();
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
@@ -75,7 +81,7 @@ test("Simple Agent", async ({ page }) => {
   await page.getByText("Playground", { exact: true }).click();
 
   await page.waitForSelector(
-    "text=write short python scsript to say hello world",
+    "text=Use the Python REPL tool to create a python function that calculates 4 + 4 and stores it in a variable.",
     {
       timeout: 30000,
     },
@@ -83,19 +89,41 @@ test("Simple Agent", async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
-  expect(await page.getByText("User")).toBeVisible();
+  expect(page.getByText("User")).toBeVisible();
 
-  expect(await page.locator(".language-python")).toBeVisible();
+  expect(page.locator(".language-python")).toBeVisible();
 
-  let pythonWords = await page.getByText("Hello, World!").count();
+  let pythonWords = await page.getByText("4 + 4").count();
 
-  expect(pythonWords).toBe(2);
+  expect(pythonWords).toBe(3);
+
+  await page
+    .getByPlaceholder("Send a message...")
+    .fill("write short python scsript to say hello world");
+
+  await page.getByTestId("icon-LucideSend").last().click();
+
+  await page.waitForSelector(
+    "text=write short python scsript to say hello world",
+    {
+      timeout: 30000,
+    },
+  );
+
+  await page.waitForSelector('[data-testid="icon-Copy"]', {
+    timeout: 100000,
+  });
+
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("icon-Copy").last().click();
 
   await page.waitForTimeout(500);
 
   await page.getByPlaceholder("Send a message...").click();
+
+  await page.waitForTimeout(500);
+
   await page.keyboard.press("Control+V");
 
   await page.waitForTimeout(500);
