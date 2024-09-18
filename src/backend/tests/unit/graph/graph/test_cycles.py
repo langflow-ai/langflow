@@ -160,11 +160,11 @@ def test_updated_graph_with_prompts():
 
     # First OpenAI LLM component (Processes the guessing prompt)
     openai_component_1 = OpenAIModelComponent(_id="openai_1")
-    openai_component_1.set(input_value=prompt_component_1.build_prompt, api_key=os.environ["OPENAI_API_KEY"])
+    openai_component_1.set(input_value=prompt_component_1.build_prompt, api_key=os.getenv("OPENAI_API_KEY"))
 
     # Tool calling agent that processes the system's next response
     openai_component_3 = OpenAIModelComponent(_id="openai_3")
-    openai_component_3.set(input_value=prompt_component_1.build_prompt, api_key=os.environ["OPENAI_API_KEY"])
+    openai_component_3.set(input_value=prompt_component_1.build_prompt, api_key=os.getenv("OPENAI_API_KEY"))
 
     # Conditional router based on agent response
     router = ConditionalRouterComponent(_id="router")
@@ -185,7 +185,7 @@ def test_updated_graph_with_prompts():
 
     # Second OpenAI component (handles the router's response)
     openai_component_2 = OpenAIModelComponent(_id="openai_2")
-    openai_component_2.set(input_value=prompt_component_2.build_prompt, api_key=os.environ["OPENAI_API_KEY"])
+    openai_component_2.set(input_value=prompt_component_2.build_prompt, api_key=os.getenv("OPENAI_API_KEY"))
 
     prompt_component_1.set(hint=openai_component_2.text_response)
 
