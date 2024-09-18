@@ -201,14 +201,9 @@ async def test_delete_flows_with_transaction_and_build(
 async def test_delete_folder_with_flows_with_transaction_and_build(
     client: TestClient, json_flow: str, active_user, logged_in_headers
 ):
-    #Create a new folder
+    # Create a new folder
     folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(
-        name=folder_name,
-        description="Test folder description",
-        components_list=[],
-        flows_list=[]
-    )
+    folder = FolderCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
 
     response = client.post("/api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201, f"Expected status code 201, but got {response.status_code}"
@@ -269,7 +264,6 @@ async def test_delete_folder_with_flows_with_transaction_and_build(
         )
         assert response.status_code == 200
         assert response.json() == {"vertex_builds": {}}
-
 
 
 def test_create_flows(client: TestClient, session: Session, json_flow: str, logged_in_headers):
