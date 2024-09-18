@@ -1,9 +1,10 @@
+from typing import List, Optional
 from langchain.agents import create_xml_agent
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMessagePromptTemplate
-
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MultilineInput
-from langflow.inputs.inputs import HandleInput
+from langflow.inputs.inputs import DataInput, HandleInput
+from langflow.schema import Data
 
 
 class XMLAgentComponent(LCToolsAgentComponent):
@@ -12,14 +13,14 @@ class XMLAgentComponent(LCToolsAgentComponent):
     icon = "LangChain"
     beta = True
     name = "XMLAgent"
-
     inputs = LCToolsAgentComponent._base_inputs + [
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        DataInput(name="chat_history", display_name="Chat History", is_list=True, advanced=True),
         MultilineInput(
-            name="user_prompt",
-            display_name="Prompt",
-            value="""
-You are a helpful assistant. Help the user answer any questions.
+            name="system_prompt",
+            display_name="System Prompt",
+            info="System prompt for the agent.",
+            value="""You are a helpful assistant. Help the user answer any questions.
 
 You have access to the following tools:
 
@@ -44,11 +45,22 @@ Question: {input}
 {agent_scratchpad}
             """,
         ),
+        MultilineInput(
+            name="user_prompt", display_name="Prompt", info="This prompt must contain 'input' key.", value="{input}"
+        ),
     ]
 
+    def get_chat_history_data(self) -> Optional[List[Data]]:
+        return self.chat_history
+
     def create_agent_runnable(self):
+        if "input" not in self.user_prompt:
+            raise ValueError("Prompt must contain 'input' key.")
         messages = [
-            HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=["input"], template=self.user_prompt))
+            ("system", self.system_prompt),
+            ("placeholder", "{chat_history}"),
+            HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=["input"], template=self.user_prompt)),
+            ("ai", "{agent_scratchpad}"),
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
         return create_xml_agent(self.llm, self.tools, prompt)

@@ -55,6 +55,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           poetry env use ${{ matrix.python-version }}
+          poetry lock --no-update
           poetry install
       - name: Run unit tests
         uses: nick-fields/retry@v3
@@ -71,7 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.ref || github.ref }}
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:
@@ -81,6 +82,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           poetry env use ${{ matrix.python-version }}
+          poetry lock --no-update
           poetry install
       - name: Run integration tests
         run: make integration_tests_no_api_keys

@@ -41,7 +41,7 @@ export const SidebarDraggableComponent = forwardRef(
     ref,
   ) => {
     const [open, setOpen] = useState(false);
-    const deleteFlow = useDeleteFlow();
+    const { deleteFlow } = useDeleteFlow();
     const flows = useFlowsManagerStore((state) => state.flows);
 
     const version = useDarkStore((state) => state.version);
