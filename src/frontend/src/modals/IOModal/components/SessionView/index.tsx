@@ -56,7 +56,7 @@ export default function SessionView({
       ...row,
       [field]: newValue,
     };
-    updateMessageMutation(data, {
+    updateMessageMutation({message:data}, {
       onSuccess: () => {
         updateMessage(data);
         // Set success message

@@ -7,27 +7,40 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 interface UpdateMessageParams {
   message: Message;
+  refetch?: boolean;
 }
 
 export const useUpdateMessage: useMutationFunctionType<
   undefined,
   UpdateMessageParams
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
-  const updateMessageApi = async (data: Message) => {
-    if (data.files && typeof data.files === "string") {
-      data.files = JSON.parse(data.files);
+  const updateMessageApi = async (data: UpdateMessageParams) => {
+    const message = data.message;
+    if (message.files && typeof message.files === "string") {
+      message.files = JSON.parse(message.files);
     }
-    const result = await api.put(`${getURL("MESSAGES")}/${data.id}`, data);
+    const result = await api.put(`${getURL("MESSAGES")}/${message.id}`, data);
     return result.data;
   };
 
   const mutation: UseMutationResult<
-    UpdateMessageParams,
+    Message,
     any,
     UpdateMessageParams
-  > = mutate(["useUpdateMessages"], updateMessageApi, options);
+  > = mutate(["useUpdateMessages"], updateMessageApi, {
+    ...options,
+    onSettled: (_, __, params, ___) => {
+      //@ts-ignore
+      if (params?.refetch) {
+        queryClient.refetchQueries({
+          queryKey: ["useGetMessagesQuery"],
+          exact: false,
+        });
+      }
+    },
+  });
 
   return mutation;
 };
