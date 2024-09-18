@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, List, Optional, Type
 
 from langchain_core.runnables import RunnableConfig
@@ -97,7 +98,11 @@ class FlowTool(BaseTool):
     ) -> str:
         """Use the tool asynchronously."""
         tweaks = self.build_tweaks_dict(args, kwargs)
-        run_id = self.graph.run_id if self.graph else None
+        try:
+            run_id = self.graph.run_id if self.graph else None
+        except Exception as e:
+            warnings.warn(f"Failed to set run_id: {e}")
+            run_id = None
         run_outputs = await run_flow(
             tweaks={key: {"input_value": value} for key, value in tweaks.items()},
             flow_id=self.flow_id,
