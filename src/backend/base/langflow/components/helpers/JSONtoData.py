@@ -7,9 +7,12 @@ from langflow.custom import Component
 from langflow.io import FileInput, MessageTextInput, MultilineInput, Output
 from langflow.schema import Data
 
+
 class JSONToDataComponent(Component):
     display_name = "JSON to Data"
-    description = "Convert a JSON file, JSON from a file path, or a JSON string to a Data object or a list of Data objects"
+    description = (
+        "Convert a JSON file, JSON from a file path, or a JSON string to a Data object or a list of Data objects"
+    )
     icon = "braces"
     beta = True
     name = "JSONtoData"
@@ -47,16 +50,16 @@ class JSONToDataComponent(Component):
             if self.json_file:
                 resolved_path = self.resolve_path(self.json_file)
                 file_path = Path(resolved_path)
-                if file_path.suffix.lower() != '.json':
+                if file_path.suffix.lower() != ".json":
                     raise ValueError("The provided file must be a JSON file.")
-                with open(file_path, 'r', encoding='utf-8') as jsonfile:
+                with open(file_path, "r", encoding="utf-8") as jsonfile:
                     json_data = jsonfile.read()
 
             elif self.json_path:
                 file_path = Path(self.json_path)
-                if file_path.suffix.lower() != '.json':
+                if file_path.suffix.lower() != ".json":
                     raise ValueError("The provided file must be a JSON file.")
-                with open(file_path, 'r', encoding='utf-8') as jsonfile:
+                with open(file_path, "r", encoding="utf-8") as jsonfile:
                     json_data = jsonfile.read()
 
             elif self.json_string:

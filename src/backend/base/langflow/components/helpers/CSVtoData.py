@@ -5,6 +5,7 @@ from pathlib import Path
 import csv
 import io
 
+
 class CSVToDataComponent(Component):
     display_name = "CSV to Data List"
     description = "Load a CSV file, CSV from a file path, or a valid CSV string and convert it to a list of Data"
@@ -45,16 +46,16 @@ class CSVToDataComponent(Component):
             if self.csv_file:
                 resolved_path = self.resolve_path(self.csv_file)
                 file_path = Path(resolved_path)
-                if file_path.suffix.lower() != '.csv':
+                if file_path.suffix.lower() != ".csv":
                     raise ValueError("The provided file must be a CSV file.")
-                with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
+                with open(file_path, "r", newline="", encoding="utf-8") as csvfile:
                     csv_data = csvfile.read()
 
             elif self.csv_path:
                 file_path = Path(self.csv_path)
-                if file_path.suffix.lower() != '.csv':
+                if file_path.suffix.lower() != ".csv":
                     raise ValueError("The provided file must be a CSV file.")
-                with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
+                with open(file_path, "r", newline="", encoding="utf-8") as csvfile:
                     csv_data = csvfile.read()
 
             elif self.csv_string:

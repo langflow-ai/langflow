@@ -3,13 +3,13 @@ from langflow.io import MessageInput, Output
 from langflow.schema import Data
 from langflow.schema.message import Message
 
+
 class MessageToDataComponent(Component):
     display_name = "Message to Data"
     description = "Convert a Message object to a Data object"
     icon = "message-square-share"
     beta = True
     name = "MessagetoData"
-
 
     inputs = [
         MessageInput(
