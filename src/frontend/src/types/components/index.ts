@@ -827,6 +827,7 @@ export type dropdownButtonPropsType = {
   options: Array<{ name: string; onBtnClick: () => void }>;
   plusButton?: boolean;
   dropdownOptions?: boolean;
+  isFetchingFolders?: boolean;
 };
 
 export type IOFieldViewProps = {
