@@ -29,7 +29,7 @@ def update_base_dep(pyproject_path: str, new_version: str) -> None:
     if not pattern.search(content):
         raise Exception(f'langflow-base dependency not found in "{filepath}"')
 
-    replacement = f'langflow-base-nightly = "^{new_version}"'
+    replacement = f'langflow-base-nightly = "{new_version}"'
     content = pattern.sub(replacement, content)
 
     with open(filepath, "w") as file:
@@ -53,6 +53,10 @@ def main() -> None:
     if len(sys.argv) != 2:
         raise Exception("New version not specified")
     base_version = sys.argv[1]
+
+    # Strip "v" prefix from version if present
+    if base_version.startswith("v"):
+        base_version = base_version[1:]
 
     verify_pep440(base_version)
     update_base_dep("pyproject.toml", base_version)
