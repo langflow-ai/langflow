@@ -41,6 +41,10 @@ def is_development_release(version):
 
 
 def update_pyproject_dependency(pyproject_path, version, is_nightly):
+    # Strip "v" prefix from version if present
+    if version.startswith("v"):
+        version = version[1:]
+
     pattern = re.compile(r'langflow-base = \{ path = "\./src/backend/base", develop = true \}')
     if is_nightly:
         # NOTE: This process can be simplified; see the note in update_lf_base_dependency.py

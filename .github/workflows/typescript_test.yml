@@ -113,6 +113,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           poetry env use ${{ env.PYTHON_VERSION }}
+          poetry lock --no-update
           poetry install
 
       - name: create .env

@@ -55,7 +55,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Check out the code at a specific ref (e.g., nightly tag)
+      - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.nightly_tag_main }}
@@ -77,7 +77,7 @@ jobs:
         working-directory: src/backend/base
         run: |
           name=$(poetry version | cut -d' ' -f1)
-          version=$(poetry version --short)
+          version=v$(poetry version --short)
           if [ "$name" != "langflow-base-nightly" ]; then
             echo "Name $name does not match langflow-base-nightly. Exiting the workflow."
             exit 1
@@ -128,7 +128,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Check out the code at a specific ref (e.g., nightly tag)
+      - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.nightly_tag_main }}
@@ -147,7 +147,7 @@ jobs:
       - name: Verify Nightly Name and Version
         run: |
           name=$(poetry version | cut -d' ' -f1)
-          version=$(poetry version --short)
+          version=v$(poetry version --short)
           if [ "$name" != "langflow-nightly" ]; then
             echo "Name $name does not match langflow-nightly. Exiting the workflow."
             exit 1
