@@ -19,6 +19,9 @@ import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { classNames, cn } from "../../../../../utils/utils";
 import FileCardWrapper from "./components/fileCardWrapper";
+import EditMessageField from "./components/editMessageField";
+import { useUpdateMessage } from "@/controllers/API/queries/messages";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 
 export default function ChatMessage({
   chat,
@@ -32,6 +35,7 @@ export default function ChatMessage({
   const template = chat.template;
   const [promptOpen, setPromptOpen] = useState(false);
   const [streamUrl, setStreamUrl] = useState(chat.stream_url);
+  const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
   // We need to check if message is not undefined because
   // we need to run .toString() on it
   const [chatMessage, setChatMessage] = useState(chat.message ? chat.message.toString() : "");
@@ -39,11 +43,12 @@ export default function ChatMessage({
   const eventSource = useRef<EventSource | undefined>(undefined);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const chatMessageRef = useRef(chatMessage);
+  const [editMessage, setEditMessage] = useState(false);
 
   useEffect(() => {
     const chatMessageString = chat.message ? chat.message.toString() : "";
     setChatMessage(chatMessageString);
-  },[chat]);
+  }, [chat]);
   const playgroundScrollBehaves = useUtilityStore(
     (state) => state.playgroundScrollBehaves,
   );
@@ -135,6 +140,47 @@ export default function ChatMessage({
     console.error(e);
   }
   const isEmpty = decodedMessage?.trim() === "";
+  const { mutate: updateMessageMutation } = useUpdateMessage();
+
+  const convertFiles = (files: (string | {
+    path: string;
+    type: string;
+    name: string;
+  })[] | undefined) => {
+    if (!files) return [];
+    return files.map((file) => {
+      if (typeof file === "string") {
+        return file;
+      }
+      return file.path;
+    })
+  }
+
+  const handleEditMessage = (message: string) => {
+    updateMessageMutation({
+      message: {
+        ...chat,
+        files: convertFiles(chat.files),
+        sender_name: chat.sender_name ?? 'AI',
+        text: message,
+        sender: chat.isSend ? "User" : "Machine",
+        flow_id,
+        session_id: chat.session ?? ""
+      },
+      refetch: true
+    }, {
+      onSuccess: () => {
+        updateChat(chat, message);
+        setEditMessage(false);
+      },
+      onError: () => {
+        setErrorData({
+          title: "Error updating messages.",
+        });
+      },
+    });
+  }
+
 
   return (
     <>
@@ -201,81 +247,83 @@ export default function ChatMessage({
                     className="flex w-full flex-col"
                   >
                     {chatMessage === "" && lockChat ? (
-                          <IconComponent
-                            name="MoreHorizontal"
-                            className="h-8 w-8 animate-pulse"
-                          />
-                        ) : (
-                          <Markdown
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeMathjax]}
-                            className={cn(
-                              "markdown prose flex flex-col word-break-break-word dark:prose-invert",
-                              isEmpty
-                                ? "text-chat-trigger-disabled"
-                                : "text-primary",
-                            )}
-                            components={{
-                              pre({ node, ...props }) {
-                                return <>{props.children}</>;
-                              },
-                              code: ({
-                                node,
-                                inline,
-                                className,
-                                children,
-                                ...props
-                              }) => {
-                                if (typeof children === "string") {
-                                  if ((children as string)!.length) {
-                                    if (children![0] === "▍") {
-                                      return (
-                                        <span className="form-modal-markdown-span">
-                                          ▍
-                                        </span>
-                                      );
-                                    }
-                                    children![0] = (
-                                      children![0] as string
-                                    ).replace("`▍`", "▍");
-                                  }
+                      <IconComponent
+                        name="MoreHorizontal"
+                        className="h-8 w-8 animate-pulse"
+                      />
+                    ) : (
+                      <div onDoubleClick={()=>setEditMessage(true)}>
+                      {editMessage?<EditMessageField key={`edit-message-${chat.id}`} message={decodedMessage} onEdit={(message) => { handleEditMessage(message) }} onCancel={() => setEditMessage(false)} />:(<Markdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeMathjax]}
+                        className={cn(
+                          "markdown prose flex flex-col word-break-break-word dark:prose-invert",
+                          isEmpty
+                            ? "text-chat-trigger-disabled"
+                            : "text-primary",
+                        )}
+                        components={{
+                          pre({ node, ...props }) {
+                            return <>{props.children}</>;
+                          },
+                          code: ({
+                            node,
+                            inline,
+                            className,
+                            children,
+                            ...props
+                          }) => {
+                            if (typeof children === "string") {
+                              if ((children as string)!.length) {
+                                if (children![0] === "▍") {
+                                  return (
+                                    <span className="form-modal-markdown-span">
+                                      ▍
+                                    </span>
+                                  );
                                 }
+                                children![0] = (
+                                  children![0] as string
+                                ).replace("`▍`", "▍");
+                              }
+                            }
 
-                                const match = /language-(\w+)/.exec(
-                                  className || "",
-                                );
+                            const match = /language-(\w+)/.exec(
+                              className || "",
+                            );
 
-                                return !inline ? (
-                                  <CodeTabsComponent
-                                    isMessage
-                                    tabs={[
-                                      {
-                                        name: (match && match[1]) || "",
-                                        mode: (match && match[1]) || "",
-                                        image:
-                                          "https://curl.se/logo/curl-symbol-transparent.png",
-                                        language: (match && match[1]) || "",
-                                        code: String(children).replace(
-                                          /\n$/,
-                                          "",
-                                        ),
-                                      },
-                                    ]}
-                                    activeTab={"0"}
-                                    setActiveTab={() => {}}
-                                  />
-                                ) : (
-                                  <code className={className} {...props}>
-                                    {children}
-                                  </code>
-                                );
-                              },
-                            }}
-                          >
-                            {isEmpty && !chat.stream_url
-                              ? EMPTY_OUTPUT_SEND_MESSAGE
-                              : chatMessage}
-                          </Markdown>
+                            return !inline ? (
+                              <CodeTabsComponent
+                                isMessage
+                                tabs={[
+                                  {
+                                    name: (match && match[1]) || "",
+                                    mode: (match && match[1]) || "",
+                                    image:
+                                      "https://curl.se/logo/curl-symbol-transparent.png",
+                                    language: (match && match[1]) || "",
+                                    code: String(children).replace(
+                                      /\n$/,
+                                      "",
+                                    ),
+                                  },
+                                ]}
+                                activeTab={"0"}
+                                setActiveTab={() => { }}
+                              />
+                            ) : (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                        }}
+                      >
+                        {isEmpty && !chat.stream_url
+                          ? EMPTY_OUTPUT_SEND_MESSAGE
+                          : chatMessage}
+                      </Markdown>)}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -306,33 +354,33 @@ export default function ChatMessage({
                 >
                   {promptOpen
                     ? template?.split("\n")?.map((line, index) => {
-                        const regex = /{([^}]+)}/g;
-                        let match;
-                        let parts: Array<JSX.Element | string> = [];
-                        let lastIndex = 0;
-                        while ((match = regex.exec(line)) !== null) {
-                          // Push text up to the match
-                          if (match.index !== lastIndex) {
-                            parts.push(line.substring(lastIndex, match.index));
-                          }
-                          // Push div with matched text
-                          if (chat.message[match[1]]) {
-                            parts.push(
-                              <span className="chat-message-highlight">
-                                {chat.message[match[1]]}
-                              </span>,
-                            );
-                          }
+                      const regex = /{([^}]+)}/g;
+                      let match;
+                      let parts: Array<JSX.Element | string> = [];
+                      let lastIndex = 0;
+                      while ((match = regex.exec(line)) !== null) {
+                        // Push text up to the match
+                        if (match.index !== lastIndex) {
+                          parts.push(line.substring(lastIndex, match.index));
+                        }
+                        // Push div with matched text
+                        if (chat.message[match[1]]) {
+                          parts.push(
+                            <span className="chat-message-highlight">
+                              {chat.message[match[1]]}
+                            </span>,
+                          );
+                        }
 
-                          // Update last index
-                          lastIndex = regex.lastIndex;
-                        }
-                        // Push text after the last match
-                        if (lastIndex !== line.length) {
-                          parts.push(line.substring(lastIndex));
-                        }
-                        return <p>{parts}</p>;
-                      })
+                        // Update last index
+                        lastIndex = regex.lastIndex;
+                      }
+                      // Push text after the last match
+                      if (lastIndex !== line.length) {
+                        parts.push(line.substring(lastIndex));
+                      }
+                      return <p>{parts}</p>;
+                    })
                     : isEmpty
                       ? EMPTY_INPUT_SEND_MESSAGE
                       : chatMessage}
@@ -340,14 +388,19 @@ export default function ChatMessage({
               </>
             ) : (
               <div className="flex flex-col">
-                <div
-                  className={`whitespace-pre-wrap break-words ${
-                    isEmpty ? "text-chat-trigger-disabled" : "text-primary"
-                  }`}
-                  data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
-                >
-                  {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
-                </div>
+                {editMessage ?
+                  <EditMessageField key={`edit-message-${chat.id}`} message={decodedMessage} onEdit={(message) => { handleEditMessage(message) }} onCancel={() => setEditMessage(false)} /> : (
+                    <div
+                      onDoubleClick={() => {
+                        setEditMessage(true);
+                      }}
+                      className={`whitespace-pre-wrap break-words ${isEmpty ? "text-chat-trigger-disabled" : "text-primary"
+                        }`}
+                      data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
+                    >
+                      {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
+                    </div>)
+                }
                 {chat.files && (
                   <div className="my-2 flex flex-col gap-5">
                     {chat.files.map((file, index) => {
