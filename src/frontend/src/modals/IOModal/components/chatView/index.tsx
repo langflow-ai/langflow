@@ -60,6 +60,7 @@ export default function ChatView({
         files: files,
         id: message.id,
         timestamp: message.timestamp,
+        session: message.session_id,
       };
     });
     const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
