@@ -484,6 +484,7 @@ class CustomComponent(BaseComponent):
             flow_name=flow_name,
             tweaks=tweaks,
             user_id=str(self._user_id),
+            run_id=self.graph.run_id,
         )
 
     def list_flows(self) -> list[Data]:
