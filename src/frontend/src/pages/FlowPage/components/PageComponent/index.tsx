@@ -518,7 +518,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                       },
                     );
                   }}
-                  className="postion absolute -top-10 rounded-sm"
+                  className="postion absolute -top-10 react-flow__controls"
                 >
                   <ShadTooltip content="Add note">
                     <div>
