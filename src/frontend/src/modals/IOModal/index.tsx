@@ -122,7 +122,7 @@ export default function IOModal({
   const [sessionId, setSessionId] =  useState<string>(currentFlowId);
   const [SessionInFlow, setSessionInFlow] = useState<boolean>(false);
 
-  const { refetch } = useGetMessagesQuery(
+  useGetMessagesQuery(
     {
       mode: "union",
       id: currentFlowId,
