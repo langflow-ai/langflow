@@ -88,96 +88,6 @@
             "dataType": "File",
             "id": "File-TBV93",
             "name": "data",
-{
-  "data": {
-    "edges": [
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-DFgo2",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "search_input",
-            "id": "AstraVectorStoreComponent-XE3MH",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-DFgo2{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DFgo2œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraVectorStoreComponent-XE3MH{œfieldNameœ:œsearch_inputœ,œidœ:œAstraVectorStoreComponent-XE3MHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-DFgo2",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DFgo2œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraVectorStoreComponent-XE3MH",
-        "targetHandle": "{œfieldNameœ: œsearch_inputœ, œidœ: œAstraVectorStoreComponent-XE3MHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ParseData",
-            "id": "ParseData-ILuxa",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "context",
-            "id": "Prompt-Tfriy",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ParseData-ILuxa{œdataTypeœ:œParseDataœ,œidœ:œParseData-ILuxaœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Tfriy{œfieldNameœ:œcontextœ,œidœ:œPrompt-Tfriyœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-ILuxa",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-ILuxaœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Tfriy",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-Tfriyœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-DFgo2",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "question",
-            "id": "Prompt-Tfriy",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-DFgo2{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DFgo2œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-Tfriy{œfieldNameœ:œquestionœ,œidœ:œPrompt-Tfriyœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-DFgo2",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DFgo2œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Tfriy",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-Tfriyœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "File",
-            "id": "File-TBV93",
-            "name": "data",
             "output_types": [
               "Data"
             ]
@@ -3465,13 +3375,45 @@
         "width": 384
       }
     ],
-    "viewport": {
-      "x": -439.4891000981311,
-      "y": -36.825136403696206,
-      "zoom": 0.7131428627969274
-    }
+    "noteNodes": [
+      {
+        "data": {
+          "content": "This flow demonstrates how to use a vector store for Retrieval Augmented Generation (RAG).\n\nIt uses Astra DB as the vector store, which is a managed service based on Apache Cassandra.\n\nThe flow works as follows:\n1. A file is loaded and split into chunks\n2. The chunks are embedded and stored in Astra DB\n3. When a question is asked, similar chunks are retrieved from Astra DB\n4. The chunks are used as context for the language model to answer the question",
+          "id": "NoteNode-1",
+          "type": "NoteNode"
+        },
+        "id": "NoteNode-1",
+        "position": {
+          "x": 1200,
+          "y": -100
+        },
+        "type": "noteNode",
+        "width": 400,
+        "height": 400
+      },
+      {
+        "data": {
+          "content": "To use this flow:\n\n1. Set up an Astra DB account and database\n2. Create an Astra DB token\n3. Set the Astra DB Application Token and API Endpoint in the Astra DB components\n4. Upload a file in the File component\n5. Run the flow to ingest the data\n6. Ask questions in the chat input",
+          "id": "NoteNode-2",
+          "type": "NoteNode"
+        },
+        "id": "NoteNode-2",
+        "position": {
+          "x": 1700,
+          "y": -100
+        },
+        "type": "noteNode",
+        "width": 400,
+        "height": 400
+      }
+    ]
   },
-  "description": "Visit https://docs.langflow.org/tutorials/rag-with-astradb for a detailed guide of this project.\nThis project give you both Ingestion and RAG in a single file. You'll need to visit https://astra.datastax.com/ to create an Astra DB instance, your Token and grab an API Endpoint.\nRunning this project requires you to add a file in the Files component, then define a Collection Name and click on the Play icon on the Astra DB component. \n\nAfter the ingestion ends you are ready to click on the Run button at the lower left corner and start asking questions about your data.",
+  "viewport": {
+    "x": -439.4891000981311,
+    "y": -36.825136403696206,
+    "zoom": 0.7131428627969274
+  },
+  "description": "Visit https://docs.langflow.org/tutorials/rag-with-astradb for a detailed guide of this project.\nThis project gives you both Ingestion and RAG in a single file. You'll need to visit https://astra.datastax.com/ to create an Astra DB instance, your Token and grab an API Endpoint.\nRunning this project requires you to add a file in the Files component, then define a Collection Name and click on the Play icon on the Astra DB component. \n\nAfter the ingestion ends you are ready to click on the Run button at the lower left corner and start asking questions about your data.",
   "endpoint_name": null,
   "id": "11244a74-eba2-4b1f-b34a-2ce3ba421e2a",
   "is_component": false,
