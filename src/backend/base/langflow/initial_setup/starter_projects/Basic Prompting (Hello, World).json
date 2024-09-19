@@ -26,7 +26,7 @@
         "source": "ChatInput-jbtaD",
         "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-jbtaDœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-0SBd6",
-        "targetHandle": "{œfieldNameœ: œuser_inputœ, œidœ: œPrompt-0SBd6œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œuser_inputœ, œidœ: œPrompt-0SBd6œ, œinputTypesœ: [œMessageœ, ��Textœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
@@ -924,7 +924,20 @@
               "backgroundColor": "indigo"
             }
           }
-        }
+        },
+        "selected": false,
+        "width": 532,
+        "height": 800,
+        "positionAbsolute": {
+          "x": -1058.101977887341,
+          "y": 1080.0989584818851
+        },
+        "dragging": false,
+        "style": {
+          "width": 532,
+          "height": 800
+        },
+        "resizing": false
       }
     ],
     "viewport": {
