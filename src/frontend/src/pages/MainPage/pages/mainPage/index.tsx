@@ -3,6 +3,7 @@ import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
+import { useIsFetching } from "@tanstack/react-query";
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import DropdownButton from "../../../../components/dropdownButtonComponent";
@@ -57,6 +58,11 @@ export default function HomePage(): JSX.Element {
     );
   };
 
+  const isFetchingFolders = !!useIsFetching({
+    queryKey: ["useGetFolders"],
+    exact: false,
+  });
+
   return (
     <>
       <PageLayout
@@ -73,6 +79,7 @@ export default function HomePage(): JSX.Element {
               options={dropdownOptions}
               plusButton={true}
               dropdownOptions={false}
+              isFetchingFolders={isFetchingFolders}
             />
           </div>
         }
