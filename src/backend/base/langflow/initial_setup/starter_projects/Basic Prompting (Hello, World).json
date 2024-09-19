@@ -419,7 +419,7 @@
       },
       {
         "data": {
-          "description": "Display a chat message in the Playground.",
+          "description": "Display a chat message in the Playground.\n\n💡 Click the ▶️ to run the flow..",
           "display_name": "Chat Output",
           "id": "ChatOutput-WG5tg",
           "node": {
@@ -429,7 +429,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Display a chat message in the Playground.",
+            "description": "Display a chat message in the Playground.\n\n💡 Click the ▶️ to run the flow..",
             "display_name": "Chat Output",
             "documentation": "",
             "edited": false,
@@ -624,7 +624,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Generates text using OpenAI LLMs.",
+            "description": "Generates text using OpenAI LLMs.\n\n💡 Be sure to add your **OpenAI API Key**",
             "display_name": "OpenAI",
             "documentation": "",
             "edited": false,
