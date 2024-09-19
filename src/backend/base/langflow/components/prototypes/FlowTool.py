@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, List, Optional
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -79,6 +80,10 @@ class FlowToolComponent(LCToolComponent):
         if not flow_data:
             raise ValueError("Flow not found.")
         graph = Graph.from_payload(flow_data.data["data"])
+        try:
+            graph.set_run_id(self.graph.run_id)
+        except Exception as e:
+            warnings.warn(f"Failed to set run_id: {e}")
         inputs = get_flow_inputs(graph)
         tool = FlowTool(
             name=self.name,
