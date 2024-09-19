@@ -1,4 +1,5 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { AthenaIcon } from "@/icons/athena/index";
@@ -627,4 +628,5 @@ export const nodeIconsLucide: iconsType = {
   OptionIcon: OptionIcon,
   Option: OptionIcon,
   Perplexity,
+  DuckDuckGo: DuckDuckGoIcon,
 };

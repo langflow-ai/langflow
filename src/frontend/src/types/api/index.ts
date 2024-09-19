@@ -84,6 +84,8 @@ export type InputFieldType = {
   combobox?: boolean;
   info?: string;
   [key: string]: any;
+  icon?: string;
+  text?: string;
 };
 
 export type OutputFieldProxyType = {
