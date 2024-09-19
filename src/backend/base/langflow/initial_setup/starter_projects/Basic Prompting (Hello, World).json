@@ -907,6 +907,24 @@
         "selected": false,
         "type": "genericNode",
         "width": 384
+      },
+      {
+        "id": "note-LM2BI",
+        "type": "noteNode",
+        "position": {
+          "x": -1058.101977887341,
+          "y": 1080.0989584818851
+        },
+        "data": {
+          "node": {
+            "description": "### ✅ Basic Prompting (Hello, World) README\n\nPerform basic prompting with an OpenAI model. *Psst: look out for the* '💡' *emoji for tips in components.*\n\n#### Extra notes on these Components\n- **Chat Input:** Sends natural language instructions to the OpenAI model.\n- **OpenAI Model:** Processes the prompt and generates a response.\n- **Chat Output:** Processes the prompt and generates a response.\n#### Get started\n- Input your **OpenAI API key** to the **OpenAI Model component**\n- Select the **Playground** to interact with the chatbot.\n\nFor more details, see the [flow overview doc](https://www.datastax.com).",
+            "display_name": "Read Me",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "indigo"
+            }
+          }
+        }
       }
     ],
     "viewport": {
