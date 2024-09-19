@@ -6,8 +6,8 @@ from langflow.template.field.base import Output
 
 
 class AstraVectorizeComponent(Component):
-    display_name: str = "Astra Vectorize"
-    description: str = "Configuration options for Astra Vectorize server-side embeddings."
+    display_name: str = "Astra Vectorize [DEPRECATED]"
+    description: str = "Configuration options for Astra Vectorize server-side embeddings. This component is deprecated. Please use the Astra DB Component directly."
     documentation: str = "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html"
     icon = "AstraDB"
     name = "AstraVectorize"
