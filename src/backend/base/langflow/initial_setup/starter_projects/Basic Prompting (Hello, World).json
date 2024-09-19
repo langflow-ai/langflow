@@ -613,7 +613,7 @@
       },
       {
         "data": {
-          "description": "Generates text using OpenAI LLMs.",
+          "description": "Generates text using OpenAI LLMs.\n\n💡 Be sure to add your **OpenAI API Key**",
           "display_name": "OpenAI",
           "id": "OpenAIModel-HBuxy",
           "node": {
