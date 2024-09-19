@@ -96,6 +96,7 @@ async def update_message(
         if not db_message:
             raise HTTPException(status_code=404, detail="Message not found")
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
+        message_dict["edit"] = True
         db_message.sqlmodel_update(message_dict)
         session.add(db_message)
         session.commit()
