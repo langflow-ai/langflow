@@ -13,6 +13,7 @@ export default function EditMessageField({
 }) {
     const [message, setMessage] = useState(initialMessage);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const [isButtonClicked, setIsButtonClicked] = useState(false);
     const adjustTextareaHeight = () => {
         if (textareaRef.current) {
             textareaRef.current.style.height = "auto";
@@ -25,25 +26,39 @@ export default function EditMessageField({
 
     return (
         <div className="flex flex-col w-full h-fit">
-            <Textarea ref={textareaRef} className="h-mx-full" onBlur={()=>{
-                //timeout to prevent component unmount before the click event is triggered
-                setTimeout(() => {
-                    onCancel();
-                }, 100);
-            }}  value={message} autoFocus={true} onChange={
-                (e) => {
-                    setMessage(e.target.value);
-                }
-            }/>
-            <div className="flex gap-2 w-full flex-row-reverse">
-                <Button onClick={
-                    (_) => {
-                        onEdit(message);
+            <Textarea
+                ref={textareaRef}
+                className="h-mx-full"
+                onBlur={() => {
+                    if (!isButtonClicked) {
+                        onCancel();
                     }
-                } className="btn btn-primary mt-2">Save</Button>
+                }}
+                value={message}
+                autoFocus={true}
+                onChange={(e) => setMessage(e.target.value)}
+            />
+            <div className="flex gap-2 w-full flex-row-reverse">
                 <Button
-                onClick={onCancel}
-                 className="btn btn-secondary mt-2">Cancel</Button>
+                    onMouseDown={() => setIsButtonClicked(true)}
+                    onClick={() => {
+                        onEdit(message);
+                        setIsButtonClicked(false);
+                    }}
+                    className="btn btn-primary mt-2"
+                >
+                    Save
+                </Button>
+                <Button
+                    onMouseDown={() => setIsButtonClicked(true)}
+                    onClick={() => {
+                        onCancel();
+                        setIsButtonClicked(false);
+                    }}
+                    className="btn btn-secondary mt-2"
+                >
+                    Cancel
+                </Button>
             </div>
         </div>
     );
