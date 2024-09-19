@@ -112,7 +112,7 @@ clickhouse-connect = {version = "0.7.19", optional = true, extras = ["clickhouse
 langchain-unstructured = "^0.1.2"
 pydantic-settings = "2.4.0"
 ragstack-ai-knowledge-store = "^0.2.1"
-duckduckgo-search = "^6.2.11"
+duckduckgo-search = "^6.2.12"
 
 
 [tool.poetry.group.dev.dependencies]
