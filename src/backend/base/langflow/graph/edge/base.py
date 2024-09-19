@@ -244,3 +244,8 @@ class CycleEdge(Edge):
             if target.params.get("message") == "":
                 return self.result
         return self.result
+
+    def __repr__(self) -> str:
+        str_repr = super().__repr__()
+        # Add a symbol to show this is a cycle edge
+        return f"{str_repr} 🔄"
