@@ -84,6 +84,33 @@
     "nodes": [
       {
         "data": {
+          "description": "A note for documentation or explanation",
+          "display_name": "Note",
+          "id": "NoteNode-XXXX",
+          "node": {
+            "description": "A note for documentation or explanation",
+            "display_name": "Note",
+            "id": "NoteNode-XXXX",
+            "type": "NoteNode"
+          }
+        },
+        "dragging": false,
+        "height": 200,
+        "id": "NoteNode-XXXX",
+        "position": {
+          "x": 500,
+          "y": 500
+        },
+        "positionAbsolute": {
+          "x": 500,
+          "y": 500
+        },
+        "selected": false,
+        "type": "genericNode",
+        "width": 300
+      },
+      {
+        "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
           "id": "ChatInput-jbtaD",
