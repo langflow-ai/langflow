@@ -150,29 +150,24 @@ def test_that_outputs_cache_is_set_to_false_in_cycle():
 
 def test_updated_graph_with_prompts():
     # Chat input initialization
-    chat_input = ChatInput(_id="chat_input")
+    chat_input = ChatInput(_id="chat_input").set(input_value="bacon")
 
     # First prompt: Guessing game with hints
-    prompt_component_1 = PromptComponent(_id="prompt_component_1")
-    prompt_component_1.set(
+    prompt_component_1 = PromptComponent(_id="prompt_component_1").set(
         template="Try to guess a word. I will give you hints if you get it wrong.\nHint: {hint}\nLast try: {last_try}\nAnswer:",
     )
 
     # First OpenAI LLM component (Processes the guessing prompt)
-    openai_component_1 = OpenAIModelComponent(_id="openai_1")
-    openai_component_1.set(input_value=prompt_component_1.build_prompt, api_key=os.getenv("OPENAI_API_KEY"))
-
-    # Tool calling agent that processes the system's next response
-    openai_component_3 = OpenAIModelComponent(_id="openai_3")
-    openai_component_3.set(input_value=prompt_component_1.build_prompt, api_key=os.getenv("OPENAI_API_KEY"))
+    openai_component_1 = OpenAIModelComponent(_id="openai_1").set(
+        input_value=prompt_component_1.build_prompt, api_key=os.getenv("OPENAI_API_KEY")
+    )
 
     # Conditional router based on agent response
-    router = ConditionalRouterComponent(_id="router")
-    router.set(
-        input_text=openai_component_3.text_response,
+    router = ConditionalRouterComponent(_id="router").set(
+        input_text=openai_component_1.text_response,
         match_text=chat_input.message_response,
         operator="equals",
-        message=openai_component_3.text_response,
+        message=openai_component_1.text_response,
     )
 
     # Second prompt: After the last try, provide a new hint
@@ -187,11 +182,11 @@ def test_updated_graph_with_prompts():
     openai_component_2 = OpenAIModelComponent(_id="openai_2")
     openai_component_2.set(input_value=prompt_component_2.build_prompt, api_key=os.getenv("OPENAI_API_KEY"))
 
-    prompt_component_1.set(hint=openai_component_2.text_response)
+    prompt_component_1.set(hint=openai_component_2.text_response, last_try=router.false_response)
 
     # First chat output for OpenAI response from component 1
     chat_output_1 = ChatOutput(_id="chat_output_1")
-    chat_output_1.set(input_value=openai_component_3.text_response)
+    chat_output_1.set(input_value=openai_component_1.text_response)
 
     # Second chat output for the final OpenAI response
     chat_output_2 = ChatOutput(_id="chat_output_2")
@@ -215,7 +210,7 @@ def test_updated_graph_with_prompts():
     # Extract the vertex IDs for analysis
     results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
     assert (
-        "chat_output" in results_ids and "chat_output" in results_ids
+        "chat_output_1" in results_ids and "chat_output_2" in results_ids
     ), f"Expected outputs not in results: {results_ids}"
 
     print(f"Execution completed with results: {results_ids}")
