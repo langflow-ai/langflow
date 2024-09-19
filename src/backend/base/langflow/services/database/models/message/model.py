@@ -17,6 +17,8 @@ class MessageBase(SQLModel):
     session_id: str
     text: str
     files: list[str] = Field(default_factory=list)
+    error: bool = Field(default=False)
+    edit: bool = Field(default=False)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -89,3 +91,5 @@ class MessageUpdate(SQLModel):
     sender_name: Optional[str] = None
     session_id: Optional[str] = None
     files: Optional[list[str]] = None
+    edit: Optional[bool] = None
+    error: Optional[bool] = None

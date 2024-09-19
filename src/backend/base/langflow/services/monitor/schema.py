@@ -136,6 +136,8 @@ class MessageModel(DefaultModel):
     session_id: str
     text: str
     files: list[str] = []
+    error: bool = Field(default=False)
+    edit: bool = Field(default=False)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -170,6 +172,8 @@ class MessageModel(DefaultModel):
             files=message.files or [],
             timestamp=message.timestamp,
             flow_id=flow_id,
+            error=message.error,
+            edit=message.edit,
         )
 
 

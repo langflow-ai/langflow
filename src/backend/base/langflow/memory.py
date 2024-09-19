@@ -24,7 +24,7 @@ def get_messages(
 ) -> List[Message]:
     """
     Retrieves messages from the monitor service based on the provided filters.
-
+    Excludes messages with error flag set to True.
     Args:
         sender (Optional[str]): The sender of the messages (e.g., "Machine" or "User")
         sender_name (Optional[str]): The name of the sender.
@@ -37,7 +37,7 @@ def get_messages(
     """
     messages_read: list[Message] = []
     with session_scope() as session:
-        stmt = select(MessageTable)
+        stmt = select(MessageTable).where(MessageTable.error == False)  # Exclude error messages
         if sender:
             stmt = stmt.where(MessageTable.sender == sender)
         if sender_name:
@@ -151,7 +151,7 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
         messages = get_messages(
             session_id=self.session_id,
         )
-        return [m.to_lc_message() for m in messages]
+        return [m.to_lc_message() for m in messages if not m.error]  # Exclude error messages
 
     def add_messages(self, messages: Sequence[BaseMessage]) -> None:
         for lc_message in messages:
