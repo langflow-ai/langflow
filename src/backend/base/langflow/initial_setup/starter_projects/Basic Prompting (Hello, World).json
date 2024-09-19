@@ -926,16 +926,16 @@
           }
         },
         "selected": false,
-        "width": 532,
-        "height": 800,
+        "width": 1064,
+        "height": 1600,
         "positionAbsolute": {
           "x": -1058.101977887341,
           "y": 1080.0989584818851
         },
         "dragging": false,
         "style": {
-          "width": 532,
-          "height": 800
+          "width": 1064,
+          "height": 1600
         },
         "resizing": false
       }
