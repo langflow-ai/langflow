@@ -3373,45 +3373,15 @@
         "selected": false,
         "type": "genericNode",
         "width": 384
-      },
-      {
-        "data": {
-          "content": "This flow demonstrates how to use a vector store for Retrieval Augmented Generation (RAG).\n\nIt uses Astra DB as the vector store, which is a managed service based on Apache Cassandra.\n\nThe flow works as follows:\n1. A file is loaded and split into chunks\n2. The chunks are embedded and stored in Astra DB\n3. When a question is asked, similar chunks are retrieved from Astra DB\n4. The chunks are used as context for the language model to answer the question",
-          "id": "NoteNode-1",
-          "type": "NoteNode"
-        },
-        "id": "NoteNode-1",
-        "position": {
-          "x": 1200,
-          "y": -100
-        },
-        "type": "noteNode",
-        "width": 400,
-        "height": 400
-      },
-      {
-        "data": {
-          "content": "To use this flow:\n\n1. Set up an Astra DB account and database\n2. Create an Astra DB token\n3. Set the Astra DB Application Token and API Endpoint in the Astra DB components\n4. Upload a file in the File component\n5. Run the flow to ingest the data\n6. Ask questions in the chat input",
-          "id": "NoteNode-2",
-          "type": "NoteNode"
-        },
-        "id": "NoteNode-2",
-        "position": {
-          "x": 1700,
-          "y": -100
-        },
-        "type": "noteNode",
-        "width": 400,
-        "height": 400
       }
-    ]
+    ],
+    "viewport": {
+      "x": -439.4891000981311,
+      "y": -36.825136403696206,
+      "zoom": 0.7131428627969274
+    }
   },
-  "viewport": {
-    "x": -439.4891000981311,
-    "y": -36.825136403696206,
-    "zoom": 0.7131428627969274
-  },
-  "description": "Visit https://docs.langflow.org/tutorials/rag-with-astradb for a detailed guide of this project.\nThis project gives you both Ingestion and RAG in a single file. You'll need to visit https://astra.datastax.com/ to create an Astra DB instance, your Token and grab an API Endpoint.\nRunning this project requires you to add a file in the Files component, then define a Collection Name and click on the Play icon on the Astra DB component. \n\nAfter the ingestion ends you are ready to click on the Run button at the lower left corner and start asking questions about your data.",
+  "description": "Visit https://docs.langflow.org/tutorials/rag-with-astradb for a detailed guide of this project.\nThis project give you both Ingestion and RAG in a single file. You'll need to visit https://astra.datastax.com/ to create an Astra DB instance, your Token and grab an API Endpoint.\nRunning this project requires you to add a file in the Files component, then define a Collection Name and click on the Play icon on the Astra DB component. \n\nAfter the ingestion ends you are ready to click on the Run button at the lower left corner and start asking questions about your data.",
   "endpoint_name": null,
   "id": "11244a74-eba2-4b1f-b34a-2ce3ba421e2a",
   "is_component": false,
