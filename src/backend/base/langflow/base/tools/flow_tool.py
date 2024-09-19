@@ -1,6 +1,5 @@
 from typing import Any, List, Optional, Type
 
-from asyncer import syncify
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, ToolException
 from pydantic.v1 import BaseModel
@@ -9,6 +8,7 @@ from langflow.base.flow_processing.utils import build_data_from_result_data, for
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import build_schema_from_inputs, get_arg_names, get_flow_inputs, run_flow
+from langflow.utils.async_helpers import run_until_complete
 
 
 class FlowTool(BaseTool):
@@ -49,10 +49,12 @@ class FlowTool(BaseTool):
             )
         tweaks = {arg["component_name"]: kwargs[arg["arg_name"]] for arg in args_names}
 
-        run_outputs = syncify(run_flow, raise_sync_error=False)(
-            tweaks={key: {"input_value": value} for key, value in tweaks.items()},
-            flow_id=self.flow_id,
-            user_id=self.user_id,
+        run_outputs = run_until_complete(
+            run_flow(
+                tweaks={key: {"input_value": value} for key, value in tweaks.items()},
+                flow_id=self.flow_id,
+                user_id=self.user_id,
+            )
         )
         if not run_outputs:
             return "No output"
