@@ -22,6 +22,7 @@ import FileCardWrapper from "./components/fileCardWrapper";
 import EditMessageField from "./components/editMessageField";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { EditMessageButton } from "./components/editMessageButton";
 
 export default function ChatMessage({
   chat,
@@ -182,11 +183,12 @@ export default function ChatMessage({
   }
 
   const editedFlag = chat.edit ? <span className="text-chat-trigger-disabled text-sm">(Edited)</span> : null;
+  const editMessageButton = <EditMessageButton className="group-hover:visible invisible" onClick={() => setEditMessage(true)} />
 
 
   return (
     <>
-      <div className={cn("form-modal-chat-position", chat.isSend ? "" : " ")}>
+      <div className={cn("form-modal-chat-position hover:bg-background group", chat.isSend ? "" : " ")}>
         <div
           className={
             "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3"
@@ -255,7 +257,9 @@ export default function ChatMessage({
                       />
                     ) : (
                       <div onDoubleClick={() => setEditMessage(true)}>
-                        {editMessage ? <EditMessageField key={`edit-message-${chat.id}`} message={decodedMessage} onEdit={(message) => { handleEditMessage(message) }} onCancel={() => setEditMessage(false)} /> : (<><Markdown
+                        {editMessage ? <EditMessageField key={`edit-message-${chat.id}`} message={decodedMessage} onEdit={(message) => { handleEditMessage(message) }} onCancel={() => setEditMessage(false)} /> : (<>
+                        <div className="flex gap-2">
+                        <Markdown
                           remarkPlugins={[remarkGfm]}
                           rehypePlugins={[rehypeMathjax]}
                           className={cn(
@@ -325,6 +329,8 @@ export default function ChatMessage({
                             ? EMPTY_OUTPUT_SEND_MESSAGE
                             : chatMessage}
                         </Markdown>
+                        {editMessageButton}
+                        </div>
                         {editedFlag}
                         </>)}
                       </div>
@@ -399,11 +405,12 @@ export default function ChatMessage({
                         onDoubleClick={() => {
                           setEditMessage(true);
                         }}
-                        className={`whitespace-pre-wrap break-words ${isEmpty ? "text-chat-trigger-disabled" : "text-primary"
+                        className={`whitespace-pre-wrap break-words flex gap-2 ${isEmpty ? "text-chat-trigger-disabled" : "text-primary"
                           }`}
                         data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                       >
                         {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
+                      {editMessageButton}
                       </div>
                       {editedFlag}
                     </>
