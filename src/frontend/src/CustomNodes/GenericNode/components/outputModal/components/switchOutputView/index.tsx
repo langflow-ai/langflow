@@ -57,7 +57,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
               ? (resultMessage as Array<any>).every((item) => item.data)
                 ? (resultMessage as Array<any>).map((item) => item.data)
                 : resultMessage
-              : Object.keys(resultMessage).length > 0
+              : resultMessage
                 ? [resultMessage]
                 : []
           }

@@ -184,6 +184,11 @@ const TableComponent = forwardRef<
               setColumnStateChange(true);
             }
           }}
+          rowModelType="infinite"
+          rowBuffer={0}
+          paginationPageSize={1000}
+          cacheBlockSize={1000}
+          infiniteInitialRowCount={1000}
         />
         {props.pagination && (
           <TableOptions
