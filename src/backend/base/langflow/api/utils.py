@@ -3,6 +3,9 @@ import warnings
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
+from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from sqlalchemy import delete
 from sqlmodel import Session
 
 from langflow.graph.graph.base import Graph
@@ -241,3 +244,12 @@ def parse_value(value: Any, input_type: str) -> Any:
         return float(value) if value is not None else None
     else:
         return value
+
+
+async def cascade_delete_flow(session: Session, flow: Flow):
+    try:
+        session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))  # type: ignore
+        session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))  # type: ignore
+        session.exec(delete(Flow).where(Flow.id == flow.id))  # type: ignore
+    except Exception as e:
+        raise RuntimeError(f"Unable to cascade delete flow: ${flow.id}", e)
