@@ -916,4 +916,4 @@ export const COLOR_OPTIONS = {
   red: "var(--note-red)",
 };
 
-export const maxSizeFilesInBytes = 9 * 1024 * 1024; // 9MB in bytes
+export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes

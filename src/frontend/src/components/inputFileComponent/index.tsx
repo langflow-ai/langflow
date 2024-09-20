@@ -49,7 +49,7 @@ export default function InputFileComponent({
         const file = files[0];
         if (file.size > maxSizeFilesInBytes) {
           setErrorData({
-            title: INVALID_FILE_SIZE_ALERT(9),
+            title: INVALID_FILE_SIZE_ALERT(10),
           });
           return;
         }
