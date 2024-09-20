@@ -1,10 +1,10 @@
 import re
 
-from langchain_community.document_loaders.web_base import WebBaseLoader
+from langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader
 
 from langflow.helpers.data import data_to_text
 from langflow.custom import Component
-from langflow.io import MessageTextInput, Output
+from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.schema import Data
 from langflow.schema.message import Message
 
@@ -21,6 +21,13 @@ class URLComponent(Component):
             display_name="URLs",
             info="Enter one or more URLs, by clicking the '+' button.",
             is_list=True,
+        ),
+        DropdownInput(
+            name="format",
+            display_name="Output format",
+            info="Output format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
+            options=["Text", "Raw HTML"],
+            value="Text",
         ),
     ]
 
@@ -64,7 +71,10 @@ class URLComponent(Component):
 
     def fetch_content(self) -> list[Data]:
         urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]
-        loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
+        if self.format == "Raw HTML":
+            loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
+        else:
+            loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
         docs = loader.load()
         data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]
         self.status = data
