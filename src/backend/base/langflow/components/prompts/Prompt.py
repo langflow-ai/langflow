@@ -1,7 +1,6 @@
 from langflow.base.prompts.api_utils import process_prompt_template
 from langflow.custom import Component
 from langflow.inputs.inputs import DefaultPromptField
-from langflow.inputs.inputs import MessageInput
 from langflow.io import Output, PromptInput
 from langflow.schema.message import Message
 from langflow.template.utils import update_template_values
