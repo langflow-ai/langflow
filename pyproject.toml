@@ -21,6 +21,11 @@ packages = [{ include = "langflow", from = "src/backend" }]
 include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
 documentation = "https://docs.langflow.org"
 
+[tool.uv.sources]
+langflow-frontend = {path = "src/backend/langflow/*"}
+#langflow-base = {path = "src/backend/base/*"}
+
+
 [project]
 name = "langflow"
 version = "1.0.18"
