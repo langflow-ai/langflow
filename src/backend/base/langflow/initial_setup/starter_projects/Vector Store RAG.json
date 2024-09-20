@@ -269,7 +269,7 @@
     "nodes": [
       {
         "data": {
-          "description": "Get chat inputs from the Playground. 💡",
+          "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
           "id": "ChatInput-DFgo2",
           "node": {
@@ -279,7 +279,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Get chat inputs from the Playground. 💡",
+            "description": "Get chat inputs from the Playground.",
             "display_name": "Chat Input",
             "documentation": "",
             "edited": false,
@@ -484,7 +484,7 @@
       },
       {
         "data": {
-          "description": "Implementation of Vector Store using Astra DB with search capabilities",
+          "description": "💡 Select a Database and a Collection, or create new ones. \n\n*If you're using OS Langflow, Paste your Astra DB Application Token here.*",
           "display_name": "Astra DB",
           "edited": false,
           "id": "AstraVectorStoreComponent-XE3MH",
@@ -496,7 +496,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Implementation of Vector Store using Astra DB with search capabilities",
+            "description": "💡 Select a Database and a Collection, or create new ones. \n\n*If you're using OS Langflow, Paste your Astra DB Application Token here.*",
             "display_name": "Astra DB",
             "documentation": "https://python.langchain.com/docs/integrations/vectorstores/astradb",
             "edited": false,
@@ -1232,7 +1232,7 @@
       },
       {
         "data": {
-          "description": "Display a chat message in the Playground.",
+          "description": "Display a chat message in the Playground. 💡 Click the ▶️ to run the flow",
           "display_name": "Chat Output",
           "id": "ChatOutput-Mh7FA",
           "node": {
@@ -1242,7 +1242,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Display a chat message in the Playground.",
+            "description": "Display a chat message in the Playground. 💡 Click the ▶️ to run the flow",
             "display_name": "Chat Output",
             "documentation": "",
             "edited": false,
@@ -1571,7 +1571,7 @@
       },
       {
         "data": {
-          "description": "A generic file loader.",
+          "description": "💡 Load a PDF file from your local machine.",
           "display_name": "File",
           "id": "File-TBV93",
           "node": {
@@ -1581,7 +1581,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "A generic file loader.",
+            "description": "💡 Load a PDF file from your local machine.",
             "display_name": "File",
             "documentation": "",
             "edited": false,
@@ -1698,7 +1698,7 @@
       },
       {
         "data": {
-          "description": "Implementation of Vector Store using Astra DB with search capabilities",
+          "description": "💡 Select a Database and a Collection, or create new ones. Click  ▶️ **Play** to load your data.*If you're using OS Langflow, Paste your Astra DB Application Token here.*",
           "display_name": "Astra DB",
           "edited": false,
           "id": "AstraVectorStoreComponent-6hNSy",
@@ -1710,7 +1710,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Implementation of Vector Store using Astra DB with search capabilities",
+            "description": "💡 Select a Database and a Collection, or create new ones. Click  ▶️ **Play** to load your data.*If you're using OS Langflow, Paste your Astra DB Application Token here.*",
             "display_name": "Astra DB",
             "documentation": "https://python.langchain.com/docs/integrations/vectorstores/astradb",
             "edited": false,
@@ -2169,7 +2169,7 @@
       },
       {
         "data": {
-          "description": "Generate embeddings using OpenAI models.",
+          "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
           "display_name": "OpenAI Embeddings",
           "id": "OpenAIEmbeddings-hLfqb",
           "node": {
@@ -2179,7 +2179,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Generate embeddings using OpenAI models.",
+            "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
             "display_name": "OpenAI Embeddings",
             "documentation": "",
             "edited": false,
@@ -2622,7 +2622,7 @@
       },
       {
         "data": {
-          "description": "Generate embeddings using OpenAI models.",
+          "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
           "display_name": "OpenAI Embeddings",
           "id": "OpenAIEmbeddings-OhWJM",
           "node": {
@@ -2632,7 +2632,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Generate embeddings using OpenAI models.",
+            "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
             "display_name": "OpenAI Embeddings",
             "documentation": "",
             "edited": false,
@@ -3075,7 +3075,7 @@
       },
       {
         "data": {
-          "description": "Generates text using OpenAI LLMs.",
+          "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
           "display_name": "OpenAI",
           "id": "OpenAIModel-ExXPZ",
           "node": {
@@ -3086,7 +3086,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Generates text using OpenAI LLMs.",
+            "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
             "display_name": "OpenAI",
             "documentation": "",
             "edited": false,
@@ -3383,7 +3383,7 @@
         },
         "data": {
           "node": {
-            "description": "### 📄 Load Data\n\n① Paste your [OpenAI API key](https://platform.openai.com/) key here.\nFile Loader\n② Load a PDF file from your local machine.\nAstra DB Component (Bottom)\n1536 default value for dimensions. \n④ Click  ▶️ **Play** to load your data.\n*If you're using OS Langflow, Paste your Astra DB Application Token here.*\nSelect a Database and a Collection, or create new ones.",
+            "description": "### 📄 Load Data\n\nRun this first! Loads data from a local file and embeds it into the vector database.",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -3416,7 +3416,7 @@
         },
         "data": {
           "node": {
-            "description": "## Vector Store RAG README\n\nLoad your data into a vector database with one flow, and use your data as chat context in another flow. \n\n*Psst: look out for the* '💡' *emoji for tips in components.*\n\n#### 2 distinct flows:\n- **📄Flow Name:** Does this. See the flow note for more details\n- **✨Flow Name:** Does this. See the flow note for more details\n\nFor more details, see the [flow overview doc](https://www.datastax.com)\n.",
+            "description": "## Vector Store RAG README\n\nLoad your data into a vector database with one flow, and use your data as chat context in another flow. \n\n**Look out for the** '💡' **emoji for tips in components.**\n\n#### 2 distinct flows:\n- **📄Load Data:** Run this first! Loads data from a local file and embeds it into the vector database.\n- **✨Retriever:** Retrieves data from the vector database based on your query.",
             "display_name": "Read Me",
             "documentation": "",
             "template": {
@@ -3449,7 +3449,7 @@
         },
         "data": {
           "node": {
-            "description": "### ✨ AI Magics (retriever)\n\n① Paste your [OpenAI API key](https://platform.openai.com/) key here.\nFile Loader\n② Load a PDF file from your local machine.\nAstra DB Component (Bottom)\n1536 default value for dimensions. \n④ Click  ▶️ **Play** to load your data.\n*If you're using OS Langflow, Paste your Astra DB Application Token here.*\nSelect a Database and a Collection, or create new ones.",
+            "description": "### ✨ Retriever \n\n Retrieves data from the vector database based on your query.",
             "display_name": "",
             "documentation": "",
             "template": {
