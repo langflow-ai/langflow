@@ -151,7 +151,7 @@ class AssemblyAITranscriptionJobCreator(Component):
         audio = None
         if self.audio_file:
             if self.audio_file_url:
-                logger.warning(f"Both an audio file an audio URL were specified. The audio URL was ignored.")
+                logger.warning("Both an audio file an audio URL were specified. The audio URL was ignored.")
 
             # Check if the file exists
             if not os.path.exists(self.audio_file):
