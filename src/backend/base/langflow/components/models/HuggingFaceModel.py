@@ -20,6 +20,12 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             display_name="Model ID",
             value="openai-community/gpt2",
         ),
+        StrInput(
+            name="inference_endpoint",
+            display_name="Inference Endpoint",
+            value="https://api-inference.huggingface.co/models/",
+            info="Custom inference endpoint URL.",
+        ),
         DropdownInput(
             name="task",
             display_name="Task",
@@ -68,6 +74,12 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         ),
     ]
 
+    def get_api_url(self) -> str:
+        if "huggingface" in self.inference_endpoint.lower():
+            return f"{self.inference_endpoint}{self.model_id}"
+        else:
+            return self.inference_endpoint
+
     def create_huggingface_endpoint(
         self,
         model_id: str,
@@ -81,8 +93,8 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         temperature: Optional[float],
         repetition_penalty: Optional[float],
     ) -> HuggingFaceEndpoint:
-        retry_attempts = self.retry_attempts  # Access the retry attempts input
-        endpoint_url = f"https://api-inference.huggingface.co/models/{model_id}"
+        retry_attempts = self.retry_attempts
+        endpoint_url = self.get_api_url()
 
         @retry(stop=stop_after_attempt(retry_attempts), wait=wait_fixed(2))
         def _attempt_create():
@@ -101,7 +113,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
 
         return _attempt_create()
 
-    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+    def build_model(self) -> LanguageModel:
         model_id = self.model_id
         task = self.task or None
         huggingfacehub_api_token = self.huggingfacehub_api_token
