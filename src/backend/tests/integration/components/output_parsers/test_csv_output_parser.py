@@ -23,7 +23,7 @@ async def test_csv_output_parser_openai():
     prompt_handler = ComponentInputHandle(
         clazz=PromptComponent,
         inputs={
-            "template": "List the first three positive integers",
+            "template": "List the first five positive integers.\n\n{format_instructions}",
             "format_instructions": format_instructions,
         },
         output_name="prompt",
@@ -37,4 +37,4 @@ async def test_csv_output_parser_openai():
             "input_value": prompt_handler,
         },
     )
-    assert outputs["text_output"] == "1, 2, 3"
+    assert outputs["text_output"] == "1, 2, 3, 4, 5"

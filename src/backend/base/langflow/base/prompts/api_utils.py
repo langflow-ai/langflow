@@ -32,7 +32,6 @@ _INVALID_NAMES = {
     "template",
     "template_format",
     "validate_template",
-    "format_instructions",
 }
 
 
