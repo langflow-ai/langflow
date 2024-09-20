@@ -3290,7 +3290,7 @@ local = [
 [package.metadata]
 requires-dist = [
     { name = "assemblyai", specifier = ">=0.26.0,<0.27.0" },
-    { name = "astra-assistants", specifier = ">=2.1.0.10,<3.0.0.0" },
+    { name = "astra-assistants", specifier = ">=2.1.2,<3.0.0" },
     { name = "beautifulsoup4", specifier = ">=4.12.2,<5.0.0" },
     { name = "boto3", specifier = ">=1.34.162,<1.35.0" },
     { name = "bson", specifier = ">=0.5.10,<0.6.0" },
@@ -3305,7 +3305,7 @@ requires-dist = [
     { name = "crewai", extras = ["tools"], specifier = ">=0.36.0,<0.37.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10,<0.3.0" },
     { name = "dspy-ai", specifier = ">=2.4.0,<3.0.0" },
-    { name = "duckduckgo-search", specifier = ">=6.2.11,<7.0.0" },
+    { name = "duckduckgo-search", specifier = ">=6.2.12,<7.0.0" },
     { name = "elasticsearch", specifier = ">=8.12.0,<9.0.0" },
     { name = "faiss-cpu", specifier = ">=1.8.0,<2.0.0" },
     { name = "fake-useragent", specifier = ">=1.5.0,<2.0.0" },
@@ -3521,7 +3521,7 @@ requires-dist = [
     { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1" },
     { name = "setuptools", specifier = ">=70" },
     { name = "spider-client", specifier = ">=0.0.27" },
-    { name = "sqlmodel", specifier = ">=0.0.18" },
+    { name = "sqlmodel", specifier = "==0.0.18" },
     { name = "typer", specifier = ">=0.12.0" },
     { name = "types-google-cloud-ndb", marker = "extra == 'dev'", specifier = ">=2.2.0.0" },
     { name = "types-markdown", marker = "extra == 'dev'", specifier = ">=3.7.0.20240822" },
@@ -6502,15 +6502,15 @@ wheels = [
 
 [[package]]
 name = "sqlmodel"
-version = "0.0.22"
+version = "0.0.18"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "sqlalchemy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b5/39/8641040ab0d5e1d8a1c2325ae89a01ae659fc96c61a43d158fb71c9a0bf0/sqlmodel-0.0.22.tar.gz", hash = "sha256:7d37c882a30c43464d143e35e9ecaf945d88035e20117bf5ec2834a23cbe505e", size = 116392 }
+sdist = { url = "https://files.pythonhosted.org/packages/32/19/d0b363befa90c168941f4f7826f6a9d7211f4aa2b99660ac0410bf5803f8/sqlmodel-0.0.18.tar.gz", hash = "sha256:2e520efe03810ef2c268a1004cfc5ef8f8a936312232f38d6c8e62c11af2cac3", size = 109419 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dd/b1/3af5104b716c420e40a6ea1b09886cae3a1b9f4538343875f637755cae5b/sqlmodel-0.0.22-py3-none-any.whl", hash = "sha256:a1ed13e28a1f4057cbf4ff6cdb4fc09e85702621d3259ba17b3c230bfb2f941b", size = 28276 },
+    { url = "https://files.pythonhosted.org/packages/cc/5f/8838e6b1b6673709e93386d6d42d28030883079b5ebcbdc7a37f2953e993/sqlmodel-0.0.18-py3-none-any.whl", hash = "sha256:d70fdf8fe595e30a918660cf4537b9c5fc2fffdbfcba851a0135de73c3ebcbb7", size = 26507 },
 ]
 
 [[package]]
