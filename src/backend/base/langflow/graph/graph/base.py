@@ -556,7 +556,8 @@ class Graph:
         self.tracing_service.set_run_name(name)
 
     async def initialize_run(self):
-        await self.tracing_service.initialize_tracers()
+        if self.tracing_service:
+            await self.tracing_service.initialize_tracers()
 
     async def end_all_traces(self, outputs: dict[str, Any] | None = None, error: Exception | None = None):
         if not self.tracing_service:
