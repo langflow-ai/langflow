@@ -27,7 +27,7 @@ class GmailLoaderComponent(Component):
             display_name="JSON String of the Service Account Token",
             info="JSON string containing OAuth 2.0 access token information for service account access",
             required=True,
-            value=str("""{
+            value="""{
                 "account": "",
                 "client_id": "",
                 "client_secret": "",
@@ -39,7 +39,7 @@ class GmailLoaderComponent(Component):
                 "token": "",
                 "token_uri": "https://oauth2.googleapis.com/token",
                 "universe_domain": "googleapis.com"
-            }"""),
+            }""",
         ),
         MessageTextInput(
             name="label_ids",

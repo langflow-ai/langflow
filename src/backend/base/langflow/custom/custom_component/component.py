@@ -51,7 +51,7 @@ class Component(CustomComponent):
                 config[key[1:]] = value
             else:
                 inputs[key] = value
-        self._inputs: dict[str, "InputTypes"] = {}
+        self._inputs: dict[str, InputTypes] = {}
         self._outputs_map: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}

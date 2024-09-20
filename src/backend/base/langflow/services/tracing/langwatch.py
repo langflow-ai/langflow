@@ -33,7 +33,7 @@ class LangWatchTracer(BaseTracer):
             self.trace = self._client.trace(
                 trace_id=str(self.trace_id),
             )
-            self.spans: dict[str, "ContextSpan"] = {}
+            self.spans: dict[str, ContextSpan] = {}
 
             name_without_id = " - ".join(trace_name.split(" - ")[0:-1])
             self.trace.root_span.update(

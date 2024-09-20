@@ -633,7 +633,7 @@ def get_config():
     try:
         from langflow.services.deps import get_settings_service
 
-        settings_service: "SettingsService" = get_settings_service()  # type: ignore
+        settings_service: SettingsService = get_settings_service()  # type: ignore
         return settings_service.settings.model_dump()
     except Exception as exc:
         logger.exception(exc)

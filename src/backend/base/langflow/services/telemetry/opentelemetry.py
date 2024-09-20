@@ -102,7 +102,7 @@ class ThreadSafeSingletonMetaUsingWeakref(type):
         if cls not in cls._instances:
             with cls._lock:
                 if cls not in cls._instances:
-                    instance = super(ThreadSafeSingletonMetaUsingWeakref, cls).__call__(*args, **kwargs)
+                    instance = super().__call__(*args, **kwargs)
                     cls._instances[cls] = instance
         return cls._instances[cls]
 

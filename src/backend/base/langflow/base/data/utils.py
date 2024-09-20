@@ -103,7 +103,7 @@ def read_text_file(file_path: str) -> str:
         if encoding in ["Windows-1252", "Windows-1254", "MacRoman"]:
             encoding = "utf-8"
 
-    with open(file_path, "r", encoding=encoding) as f:
+    with open(file_path, encoding=encoding) as f:
         return f.read()
 
 

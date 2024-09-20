@@ -115,7 +115,7 @@ class Graph:
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         try:
-            self.tracing_service: "TracingService" | None = get_tracing_service()
+            self.tracing_service: TracingService | None = get_tracing_service()
         except Exception as exc:
             logger.error(f"Error getting tracing service: {exc}")
             self.tracing_service = None
@@ -1384,7 +1384,7 @@ class Graph:
 
     def get_vertices_with_target(self, vertex_id: str) -> list["Vertex"]:
         """Returns the vertices connected to a vertex."""
-        vertices: list["Vertex"] = []
+        vertices: list[Vertex] = []
         for edge in self.edges:
             if edge.target_id == vertex_id:
                 vertex = self.get_vertex(edge.source_id)
@@ -1471,7 +1471,7 @@ class Graph:
         """Executes tasks in parallel, handling exceptions for each task."""
         results = []
         completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
-        vertices: list["Vertex"] = []
+        vertices: list[Vertex] = []
 
         for i, result in enumerate(completed_tasks):
             task_name = tasks[i].get_name()
@@ -1582,7 +1582,7 @@ class Graph:
 
     def get_vertex_neighbors(self, vertex: "Vertex") -> dict["Vertex", int]:
         """Returns the neighbors of a vertex."""
-        neighbors: dict["Vertex", int] = {}
+        neighbors: dict[Vertex, int] = {}
         for edge in self.edges:
             if edge.source_id == vertex.id:
                 neighbor = self.get_vertex(edge.target_id)
@@ -1657,7 +1657,7 @@ class Graph:
 
     def _build_vertices(self) -> list["Vertex"]:
         """Builds the vertices of the graph."""
-        vertices: list["Vertex"] = []
+        vertices: list[Vertex] = []
         for frontend_data in self._vertices:
             if frontend_data.get("type") == NodeTypeEnum.NoteNode:
                 continue

@@ -489,7 +489,7 @@ async def build_vertex(
         if not cache:
             # If there's no cache
             logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-            graph: "Graph" = await build_graph_from_db(
+            graph: Graph = await build_graph_from_db(
                 flow_id=flow_id_str, session=next(get_session()), chat_service=chat_service
             )
         else:
@@ -650,7 +650,7 @@ async def build_vertex_stream(
                 else:
                     graph = cache.get("result")
 
-                vertex: "InterfaceVertex" = graph.get_vertex(vertex_id)
+                vertex: InterfaceVertex = graph.get_vertex(vertex_id)
                 if not hasattr(vertex, "stream"):
                     raise ValueError(f"Vertex {vertex_id} does not support streaming")
                 if isinstance(vertex._built_result, str) and vertex._built_result:

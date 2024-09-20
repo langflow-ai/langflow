@@ -362,7 +362,7 @@ def load_settings_from_yaml(file_path: str) -> Settings:
 
         file_path = os.path.join(current_path, file_path)
 
-    with open(file_path, "r") as f:
+    with open(file_path) as f:
         settings_dict = yaml.safe_load(f)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 

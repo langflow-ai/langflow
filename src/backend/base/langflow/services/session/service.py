@@ -9,7 +9,7 @@ class SessionService(Service):
     name = "session_service"
 
     def __init__(self, cache_service):
-        self.cache_service: "CacheService" = cache_service
+        self.cache_service: CacheService = cache_service
 
     async def load_session(self, key, flow_id: str, data_graph: Optional[dict] = None):
         # Check if the data is cached

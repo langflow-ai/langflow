@@ -23,7 +23,7 @@ class ServiceManager:
     """
 
     def __init__(self):
-        self.services: Dict[str, "Service"] = {}
+        self.services: Dict[str, Service] = {}
         self.factories = {}
         self.register_factories()
         self.keyed_lock = KeyedMemoryLockManager()

@@ -144,6 +144,9 @@ ignore_missing_imports = true
 exclude = ["src/backend/langflow/alembic/*"]
 line-length = 120
 
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "UP"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

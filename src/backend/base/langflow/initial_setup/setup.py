@@ -343,7 +343,7 @@ def load_starter_projects(retries=3, delay=1) -> list[tuple[Path, dict]]:
     for file in folder.glob("*.json"):
         attempt = 0
         while attempt < retries:
-            with open(file, "r", encoding="utf-8") as f:
+            with open(file, encoding="utf-8") as f:
                 try:
                     project = orjson.loads(f.read())
                     starter_projects.append((file, project))
@@ -510,7 +510,7 @@ def load_flows_from_directory():
             if not filename.endswith(".json"):
                 continue
             logger.info(f"Loading flow from file: {filename}")
-            with open(os.path.join(flows_path, filename), "r", encoding="utf-8") as file:
+            with open(os.path.join(flows_path, filename), encoding="utf-8") as file:
                 flow = orjson.loads(file.read())
                 no_json_name = filename.replace(".json", "")
                 flow_endpoint_name = flow.get("endpoint_name")
