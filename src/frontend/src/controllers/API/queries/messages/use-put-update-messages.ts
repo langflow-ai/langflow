@@ -4,6 +4,7 @@ import { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 
 interface UpdateMessageParams {
   message: Partial<Message>;
@@ -32,11 +33,12 @@ export const useUpdateMessage: useMutationFunctionType<
   > = mutate(["useUpdateMessages"], updateMessageApi, {
     ...options,
     onSettled: (_, __, params, ___) => {
+      const flowId = useFlowsManagerStore.getState().currentFlowId
       //@ts-ignore
-      if (params?.refetch) {
-        queryClient.refetchQueries({
-          queryKey: ["useGetMessagesQuery"],
-          exact: false,
+      if (params?.refetch && flowId) {
+          queryClient.refetchQueries({
+            queryKey: ["useGetMessagesQuery",{id: flowId}],
+          exact: true,
         });
       }
     },
