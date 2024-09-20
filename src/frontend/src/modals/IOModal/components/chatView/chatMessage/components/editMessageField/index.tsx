@@ -38,15 +38,16 @@ export default function EditMessageField({
                 autoFocus={true}
                 onChange={(e) => setMessage(e.target.value)}
             />
-            <div className="flex gap-2 w-full flex-row-reverse">
-                <Button
-                    onMouseDown={() => setIsButtonClicked(true)}
+            <div className="flex justify-between w-full flex-row-reverse">
+                <div className="flex flex-row-reverse gap-2">
+                    <Button
+                        onMouseDown={() => setIsButtonClicked(true)}
                     onClick={() => {
                         onEdit(message);
                         setIsButtonClicked(false);
                     }}
                     className="btn btn-primary mt-2"
-                >
+                    >
                     Save
                 </Button>
                 <Button
@@ -56,9 +57,15 @@ export default function EditMessageField({
                         setIsButtonClicked(false);
                     }}
                     className="btn btn-secondary mt-2"
-                >
+                    >
                     Cancel
-                </Button>
+                    </Button>
+                </div>
+                <div>
+                    <span className="text-sm text-muted-foreground">
+                    Editing messages will update the memory but won't restart the conversation.
+                    </span>
+                </div>
             </div>
         </div>
     );
