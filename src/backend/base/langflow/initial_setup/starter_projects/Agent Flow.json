@@ -14,21 +14,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "ChatOutput-Ag9YG",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "ChatOutput-INBLf",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -51,21 +40,10 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-mf0BN",
             "inputTypes": [
               "LanguageModel"
             ],
-=======
-            "id": "ToolCallingAgent-hz7Eb",
-<<<<<<< HEAD
-            "inputTypes": ["LanguageModel"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "LanguageModel"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -88,23 +66,11 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-mf0BN",
             "inputTypes": [
               "Tool",
               "BaseTool"
             ],
-=======
-            "id": "ToolCallingAgent-hz7Eb",
-<<<<<<< HEAD
-            "inputTypes": ["Tool", "BaseTool"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -127,21 +93,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-mf0BN",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "ToolCallingAgent-hz7Eb",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -155,7 +110,6 @@
         "data": {
           "sourceHandle": {
             "dataType": "PythonREPLTool",
-<<<<<<< HEAD
             "id": "PythonREPLTool-i922a",
             "name": "api_build_tool",
             "output_types": [
@@ -169,25 +123,6 @@
               "Tool",
               "BaseTool"
             ],
-=======
-            "id": "PythonREPLTool-Lq9f4",
-            "name": "tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "ToolCallingAgent-hz7Eb",
-<<<<<<< HEAD
-            "inputTypes": ["Tool", "BaseTool"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -1224,21 +1159,10 @@
             "description": "Perform basic arithmetic operations on a given expression.",
             "display_name": "Calculator",
             "documentation": "",
-<<<<<<< HEAD
             "edited": false,
             "field_order": [
               "expression"
             ],
-=======
-            "edited": true,
-<<<<<<< HEAD
-            "field_order": ["expression"],
->>>>>>> f6e45bae6 (format)
-=======
-            "field_order": [
-              "expression"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "frozen": false,
             "icon": "calculator",
             "lf_version": "1.0.16",
@@ -1251,20 +1175,9 @@
                 "method": "run_model",
                 "name": "api_run_model",
                 "selected": "Data",
-<<<<<<< HEAD
-<<<<<<< HEAD
                 "types": [
                   "Data"
                 ],
-=======
-                "types": ["Data", "list"],
->>>>>>> f6e45bae6 (format)
-=======
-                "types": [
-                  "Data",
-                  "list"
-                ],
->>>>>>> 85b21f75a (revert starters)
                 "value": "__UNDEFINED__"
               },
               {
@@ -1273,20 +1186,9 @@
                 "method": "build_tool",
                 "name": "api_build_tool",
                 "selected": "Tool",
-<<<<<<< HEAD
-<<<<<<< HEAD
                 "types": [
                   "Tool"
                 ],
-=======
-                "types": ["Tool", "Sequence"],
->>>>>>> f6e45bae6 (format)
-=======
-                "types": [
-                  "Tool",
-                  "Sequence"
-                ],
->>>>>>> 85b21f75a (revert starters)
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1375,14 +1277,6 @@
               "code"
             ],
             "frozen": false,
-<<<<<<< HEAD
-=======
-            "lf_version": "1.0.16",
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> f6e45bae6 (format)
-=======
->>>>>>> 85b21f75a (revert starters)
             "output_types": [],
             "outputs": [
               {
@@ -1434,27 +1328,7 @@
                 "advanced": false,
                 "display_name": "Tool Description",
                 "dynamic": false,
-<<<<<<< HEAD
-<<<<<<< HEAD
                 "info": "A description of the tool.",
-=======
-<<<<<<< HEAD
-=======
->>>>>>> 85b21f75a (revert starters)
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-<<<<<<< HEAD
-=======
-                "fileTypes": [],
-                "file_path": "",
-                "info": "A description of the tool.",
-                "input_types": ["Text"],
->>>>>>> dc765cf20 (format)
->>>>>>> f6e45bae6 (format)
-=======
->>>>>>> 85b21f75a (revert starters)
                 "list": false,
                 "load_from_db": false,
                 "name": "description",
@@ -1471,42 +1345,7 @@
                 "advanced": false,
                 "display_name": "Global Imports",
                 "dynamic": false,
-<<<<<<< HEAD
                 "info": "A comma-separated list of modules to import globally, e.g. 'math,numpy'.",
-=======
-                "info": "A list of modules to import globally, e.g. ['math', 'numpy'].",
-                "list": true,
-                "name": "global_imports",
-                "options": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": [
-                  "math"
-                ]
-              },
-              "input_value": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-<<<<<<< HEAD
-=======
-                "fileTypes": [],
-                "file_path": "",
-                "info": "The name of the tool.",
-                "input_types": ["Text"],
->>>>>>> dc765cf20 (format)
->>>>>>> f6e45bae6 (format)
-=======
->>>>>>> 85b21f75a (revert starters)
                 "list": false,
                 "load_from_db": false,
                 "name": "global_imports",

@@ -14,21 +14,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "ChatOutput-8FKry",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "ChatOutput-ZEUNq",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -52,21 +41,10 @@
           },
           "targetHandle": {
             "fieldName": "tasks",
-<<<<<<< HEAD
             "id": "HierarchicalCrewComponent-3JGY1",
             "inputTypes": [
               "HierarchicalTask"
             ],
-=======
-            "id": "HierarchicalCrewComponent-EfNrX",
-<<<<<<< HEAD
-            "inputTypes": ["HierarchicalTask"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "HierarchicalTask"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -90,21 +68,10 @@
           },
           "targetHandle": {
             "fieldName": "agents",
-<<<<<<< HEAD
             "id": "HierarchicalCrewComponent-3JGY1",
             "inputTypes": [
               "Agent"
             ],
-=======
-            "id": "HierarchicalCrewComponent-EfNrX",
-<<<<<<< HEAD
-            "inputTypes": ["Agent"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Agent"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -128,21 +95,10 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-<<<<<<< HEAD
             "id": "CrewAIAgentComponent-ViX9d",
             "inputTypes": [
               "LanguageModel"
             ],
-=======
-            "id": "CrewAIAgentComponent-Qm4en",
-<<<<<<< HEAD
-            "inputTypes": ["LanguageModel"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "LanguageModel"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -166,21 +122,10 @@
           },
           "targetHandle": {
             "fieldName": "manager_agent",
-<<<<<<< HEAD
             "id": "HierarchicalCrewComponent-3JGY1",
             "inputTypes": [
               "Agent"
             ],
-=======
-            "id": "HierarchicalCrewComponent-EfNrX",
-<<<<<<< HEAD
-            "inputTypes": ["Agent"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Agent"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -204,21 +149,10 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-<<<<<<< HEAD
             "id": "CrewAIAgentComponent-aCLi7",
             "inputTypes": [
               "LanguageModel"
             ],
-=======
-            "id": "CrewAIAgentComponent-Q2BtZ",
-<<<<<<< HEAD
-            "inputTypes": ["LanguageModel"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "LanguageModel"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -242,21 +176,10 @@
           },
           "targetHandle": {
             "fieldName": "task_description",
-<<<<<<< HEAD
             "id": "HierarchicalTaskComponent-GuXH7",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "HierarchicalTaskComponent-yWaMT",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -280,23 +203,11 @@
           },
           "targetHandle": {
             "fieldName": "query",
-<<<<<<< HEAD
             "id": "Prompt-gbnQU",
             "inputTypes": [
               "Message",
               "Text"
             ],
-=======
-            "id": "Prompt-AVtIX",
-<<<<<<< HEAD
-            "inputTypes": ["Message", "Text"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -320,21 +231,10 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-<<<<<<< HEAD
             "id": "CrewAIAgentComponent-ViX9d",
             "inputTypes": [
               "Tool"
             ],
-=======
-            "id": "CrewAIAgentComponent-Qm4en",
-<<<<<<< HEAD
-            "inputTypes": ["Tool"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Tool"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -358,21 +258,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "OpenAIModel-KnjCY",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "OpenAIModel-bjGnq",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -396,21 +285,10 @@
           },
           "targetHandle": {
             "fieldName": "role",
-<<<<<<< HEAD
             "id": "CrewAIAgentComponent-ViX9d",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "CrewAIAgentComponent-Qm4en",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -434,23 +312,11 @@
           },
           "targetHandle": {
             "fieldName": "query",
-<<<<<<< HEAD
             "id": "Prompt-5wrVb",
             "inputTypes": [
               "Message",
               "Text"
             ],
-=======
-            "id": "Prompt-S0Qt3",
-<<<<<<< HEAD
-            "inputTypes": ["Message", "Text"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -474,23 +340,11 @@
           },
           "targetHandle": {
             "fieldName": "query",
-<<<<<<< HEAD
             "id": "Prompt-qCC5T",
             "inputTypes": [
               "Message",
               "Text"
             ],
-=======
-            "id": "Prompt-kSwv4",
-<<<<<<< HEAD
-            "inputTypes": ["Message", "Text"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -514,21 +368,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "OpenAIModel-wOSDH",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "OpenAIModel-GAfpF",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -552,23 +395,11 @@
           },
           "targetHandle": {
             "fieldName": "role",
-<<<<<<< HEAD
             "id": "Prompt-5wrVb",
             "inputTypes": [
               "Message",
               "Text"
             ],
-=======
-            "id": "Prompt-S0Qt3",
-<<<<<<< HEAD
-            "inputTypes": ["Message", "Text"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -592,21 +423,10 @@
           },
           "targetHandle": {
             "fieldName": "goal",
-<<<<<<< HEAD
             "id": "CrewAIAgentComponent-ViX9d",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "CrewAIAgentComponent-Qm4en",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -630,21 +450,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "OpenAIModel-lajm6",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "OpenAIModel-EnsCt",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -668,23 +477,11 @@
           },
           "targetHandle": {
             "fieldName": "goal",
-<<<<<<< HEAD
             "id": "Prompt-g5dyc",
             "inputTypes": [
               "Message",
               "Text"
             ],
-=======
-            "id": "Prompt-a0x5s",
-<<<<<<< HEAD
-            "inputTypes": ["Message", "Text"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -707,23 +504,11 @@
           },
           "targetHandle": {
             "fieldName": "role",
-<<<<<<< HEAD
             "id": "Prompt-g5dyc",
             "inputTypes": [
               "Message",
               "Text"
             ],
-=======
-            "id": "Prompt-a0x5s",
-<<<<<<< HEAD
-            "inputTypes": ["Message", "Text"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -746,23 +531,11 @@
           },
           "targetHandle": {
             "fieldName": "query",
-<<<<<<< HEAD
             "id": "Prompt-g5dyc",
             "inputTypes": [
               "Message",
               "Text"
             ],
-=======
-            "id": "Prompt-a0x5s",
-<<<<<<< HEAD
-            "inputTypes": ["Message", "Text"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -785,21 +558,10 @@
           },
           "targetHandle": {
             "fieldName": "backstory",
-<<<<<<< HEAD
             "id": "CrewAIAgentComponent-ViX9d",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "CrewAIAgentComponent-Qm4en",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -822,21 +584,10 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-<<<<<<< HEAD
             "id": "CrewAIAgentComponent-ViX9d",
             "inputTypes": [
               "Tool"
             ],
-=======
-            "id": "CrewAIAgentComponent-Qm4en",
-<<<<<<< HEAD
-            "inputTypes": ["Tool"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Tool"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -3266,20 +3017,9 @@
             "display_name": "Role Prompt",
             "documentation": "",
             "edited": false,
-<<<<<<< HEAD
             "field_order": [
               "template"
             ],
-=======
-            "error": null,
-<<<<<<< HEAD
-            "field_order": ["template"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "field_order": [
-              "template"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "frozen": false,
             "icon": "prompts",
             "output_types": [],
@@ -3692,20 +3432,9 @@
             "display_name": "Goal Prompt",
             "documentation": "",
             "edited": false,
-<<<<<<< HEAD
             "field_order": [
               "template"
             ],
-=======
-            "error": null,
-<<<<<<< HEAD
-            "field_order": ["template"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "field_order": [
-              "template"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "frozen": false,
             "icon": "prompts",
             "output_types": [],
@@ -4500,14 +4229,6 @@
   "endpoint_name": null,
   "id": "93709197-049c-41fa-ab4d-f871c20e83eb",
   "is_component": false,
-<<<<<<< HEAD
   "last_tested_version": "1.0.17",
-=======
-  "last_tested_version": "1.0.9",
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
->>>>>>> f6e45bae6 (format)
   "name": "Dynamic Agent"
 }

@@ -14,21 +14,10 @@
           },
           "targetHandle": {
             "fieldName": "search_input",
-<<<<<<< HEAD
             "id": "AstraVectorStoreComponent-XE3MH",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "AstraVectorStoreComponent-vXWPf",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -51,23 +40,11 @@
           },
           "targetHandle": {
             "fieldName": "context",
-<<<<<<< HEAD
             "id": "Prompt-Tfriy",
             "inputTypes": [
               "Message",
               "Text"
             ],
-=======
-            "id": "Prompt-eV1SH",
-<<<<<<< HEAD
-            "inputTypes": ["Message", "Text"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -90,23 +67,11 @@
           },
           "targetHandle": {
             "fieldName": "question",
-<<<<<<< HEAD
             "id": "Prompt-Tfriy",
             "inputTypes": [
               "Message",
               "Text"
             ],
-=======
-            "id": "Prompt-eV1SH",
-<<<<<<< HEAD
-            "inputTypes": ["Message", "Text"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -129,21 +94,10 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-<<<<<<< HEAD
             "id": "SplitText-rAbUh",
             "inputTypes": [
               "Data"
             ],
-=======
-            "id": "SplitText-74sLS",
-<<<<<<< HEAD
-            "inputTypes": ["Data"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Data"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -166,21 +120,10 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-<<<<<<< HEAD
             "id": "AstraVectorStoreComponent-6hNSy",
             "inputTypes": [
               "Data"
             ],
-=======
-            "id": "AstraVectorStoreComponent-wvuVK",
-<<<<<<< HEAD
-            "inputTypes": ["Data"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Data"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -203,23 +146,11 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-<<<<<<< HEAD
             "id": "AstraVectorStoreComponent-6hNSy",
             "inputTypes": [
               "Embeddings",
               "dict"
             ],
-=======
-            "id": "AstraVectorStoreComponent-wvuVK",
-<<<<<<< HEAD
-            "inputTypes": ["Embeddings", "dict"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Embeddings",
-              "dict"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -242,23 +173,11 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-<<<<<<< HEAD
             "id": "AstraVectorStoreComponent-XE3MH",
             "inputTypes": [
               "Embeddings",
               "dict"
             ],
-=======
-            "id": "AstraVectorStoreComponent-vXWPf",
-<<<<<<< HEAD
-            "inputTypes": ["Embeddings", "dict"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Embeddings",
-              "dict"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -281,21 +200,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "OpenAIModel-ExXPZ",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "OpenAIModel-DUuku",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -318,21 +226,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "ChatOutput-Mh7FA",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "ChatOutput-OrmMa",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -355,21 +252,10 @@
           },
           "targetHandle": {
             "fieldName": "data",
-<<<<<<< HEAD
             "id": "ParseData-ILuxa",
             "inputTypes": [
               "Data"
             ],
-=======
-            "id": "ParseData-QVaZr",
-<<<<<<< HEAD
-            "inputTypes": ["Data"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Data"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },

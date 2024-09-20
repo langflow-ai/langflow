@@ -14,21 +14,10 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-0QzrL",
             "inputTypes": [
               "LanguageModel"
             ],
-=======
-            "id": "ToolCallingAgent-vCq4v",
-<<<<<<< HEAD
-            "inputTypes": ["LanguageModel"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "LanguageModel"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -51,21 +40,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-0QzrL",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "ToolCallingAgent-vCq4v",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -88,21 +66,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-VYDK9",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "ToolCallingAgent-Zo0ES",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -125,21 +92,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-KLe5u",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "ToolCallingAgent-rT7Y8",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -162,23 +118,11 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-0QzrL",
             "inputTypes": [
               "Tool",
               "BaseTool"
             ],
-=======
-            "id": "ToolCallingAgent-vCq4v",
-<<<<<<< HEAD
-            "inputTypes": ["Tool", "BaseTool"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -201,23 +145,11 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-0QzrL",
             "inputTypes": [
               "Tool",
               "BaseTool"
             ],
-=======
-            "id": "ToolCallingAgent-vCq4v",
-<<<<<<< HEAD
-            "inputTypes": ["Tool", "BaseTool"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -240,23 +172,11 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-KLe5u",
             "inputTypes": [
               "Tool",
               "BaseTool"
             ],
-=======
-            "id": "ToolCallingAgent-rT7Y8",
-<<<<<<< HEAD
-            "inputTypes": ["Tool", "BaseTool"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -279,23 +199,11 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-KLe5u",
             "inputTypes": [
               "Tool",
               "BaseTool"
             ],
-=======
-            "id": "ToolCallingAgent-rT7Y8",
-<<<<<<< HEAD
-            "inputTypes": ["Tool", "BaseTool"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -318,23 +226,11 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-VYDK9",
             "inputTypes": [
               "Tool",
               "BaseTool"
             ],
-=======
-            "id": "ToolCallingAgent-Zo0ES",
-<<<<<<< HEAD
-            "inputTypes": ["Tool", "BaseTool"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -357,23 +253,11 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-VYDK9",
             "inputTypes": [
               "Tool",
               "BaseTool"
             ],
-=======
-            "id": "ToolCallingAgent-Zo0ES",
-<<<<<<< HEAD
-            "inputTypes": ["Tool", "BaseTool"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -396,21 +280,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "ChatOutput-O63dG",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "ChatOutput-zxRey",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -433,21 +306,10 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-VYDK9",
             "inputTypes": [
               "LanguageModel"
             ],
-=======
-            "id": "ToolCallingAgent-Zo0ES",
-<<<<<<< HEAD
-            "inputTypes": ["LanguageModel"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "LanguageModel"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -470,21 +332,10 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-KLe5u",
             "inputTypes": [
               "LanguageModel"
             ],
-=======
-            "id": "ToolCallingAgent-rT7Y8",
-<<<<<<< HEAD
-            "inputTypes": ["LanguageModel"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "LanguageModel"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -507,23 +358,11 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-<<<<<<< HEAD
             "id": "ToolCallingAgent-VYDK9",
             "inputTypes": [
               "Tool",
               "BaseTool"
             ],
-=======
-            "id": "ToolCallingAgent-Zo0ES",
-<<<<<<< HEAD
-            "inputTypes": ["Tool", "BaseTool"],
->>>>>>> f6e45bae6 (format)
-=======
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -2419,21 +2258,10 @@
             "description": "Perform basic arithmetic operations on a given expression.",
             "display_name": "Calculator",
             "documentation": "",
-<<<<<<< HEAD
             "edited": false,
             "field_order": [
               "expression"
             ],
-=======
-            "edited": true,
-<<<<<<< HEAD
-            "field_order": ["expression"],
->>>>>>> f6e45bae6 (format)
-=======
-            "field_order": [
-              "expression"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "frozen": false,
             "icon": "calculator",
             "lf_version": "1.0.15",
@@ -2446,20 +2274,9 @@
                 "method": "run_model",
                 "name": "api_run_model",
                 "selected": "Data",
-<<<<<<< HEAD
-<<<<<<< HEAD
                 "types": [
                   "Data"
                 ],
-=======
-                "types": ["Data", "list"],
->>>>>>> f6e45bae6 (format)
-=======
-                "types": [
-                  "Data",
-                  "list"
-                ],
->>>>>>> 85b21f75a (revert starters)
                 "value": "__UNDEFINED__"
               },
               {
@@ -2468,20 +2285,9 @@
                 "method": "build_tool",
                 "name": "api_build_tool",
                 "selected": "Tool",
-<<<<<<< HEAD
-<<<<<<< HEAD
                 "types": [
                   "Tool"
                 ],
-=======
-                "types": ["Tool", "Sequence"],
->>>>>>> f6e45bae6 (format)
-=======
-                "types": [
-                  "Tool",
-                  "Sequence"
-                ],
->>>>>>> 85b21f75a (revert starters)
                 "value": "__UNDEFINED__"
               }
             ],

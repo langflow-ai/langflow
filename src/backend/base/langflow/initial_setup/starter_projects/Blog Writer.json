@@ -14,21 +14,10 @@
           },
           "targetHandle": {
             "fieldName": "data",
-<<<<<<< HEAD
             "id": "ParseData-jUQRS",
             "inputTypes": [
               "Data"
             ],
-=======
-            "id": "ParseData-jYhXf",
-<<<<<<< HEAD
-            "inputTypes": ["Data"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Data"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "other"
           }
         },
@@ -51,23 +40,11 @@
           },
           "targetHandle": {
             "fieldName": "references",
-<<<<<<< HEAD
             "id": "Prompt-Pf4QQ",
             "inputTypes": [
               "Message",
               "Text"
             ],
-=======
-            "id": "Prompt-ABI8S",
-<<<<<<< HEAD
-            "inputTypes": ["Message", "Text"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -90,23 +67,11 @@
           },
           "targetHandle": {
             "fieldName": "instructions",
-<<<<<<< HEAD
             "id": "Prompt-Pf4QQ",
             "inputTypes": [
               "Message",
               "Text"
             ],
-=======
-            "id": "Prompt-ABI8S",
-<<<<<<< HEAD
-            "inputTypes": ["Message", "Text"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -129,21 +94,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "OpenAIModel-o0Gr0",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "OpenAIModel-JBO2p",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
@@ -166,21 +120,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
             "id": "ChatOutput-eIVde",
             "inputTypes": [
               "Message"
             ],
-=======
-            "id": "ChatOutput-uaX6T",
-<<<<<<< HEAD
-            "inputTypes": ["Message"],
->>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
-=======
-            "inputTypes": [
-              "Message"
-            ],
->>>>>>> 85b21f75a (revert starters)
             "type": "str"
           }
         },
