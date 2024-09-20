@@ -23,6 +23,7 @@ import EditMessageField from "./components/editMessageField";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { EditMessageButton } from "./components/editMessageButton";
+import ShadTooltip from "@/components/shadTooltipComponent";
 
 export default function ChatMessage({
   chat,
@@ -183,7 +184,6 @@ export default function ChatMessage({
   }
 
   const editedFlag = chat.edit ? <span className="text-chat-trigger-disabled text-sm">(Edited)</span> : null;
-  const editMessageButton = <EditMessageButton className="group-hover:visible invisible" onClick={() => setEditMessage(true)} />
 
 
   return (
@@ -329,7 +329,6 @@ export default function ChatMessage({
                             ? EMPTY_OUTPUT_SEND_MESSAGE
                             : chatMessage}
                         </Markdown>
-                        {editMessageButton}
                         </div>
                         {editedFlag}
                         </>)}
@@ -410,9 +409,7 @@ export default function ChatMessage({
                         data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                       >
                         {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
-                      {editMessageButton}
                       </div>
-                      {editedFlag}
                     </>
                   )
                 }
@@ -432,6 +429,11 @@ export default function ChatMessage({
             )}
           </div>
         )}
+        {(!editMessage && <ShadTooltip content="Edit Message" styleClasses="z-50">
+          <div>
+          <EditMessageButton className="group-hover:visible invisible h-fit" onClick={() => setEditMessage(true)} />
+          </div>
+        </ShadTooltip>)}
       </div>
       <div id={lastMessage ? "last-chat-message" : undefined} />
     </>
