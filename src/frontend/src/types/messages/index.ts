@@ -7,6 +7,7 @@ type Message = {
   timestamp: string;
   files: Array<string>;
   id: string;
+  edit: boolean;
 };
 
 export type { Message };

@@ -6,7 +6,7 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface UpdateMessageParams {
-  message: Message;
+  message: Partial<Message>;
   refetch?: boolean;
 }
 

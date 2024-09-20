@@ -15,6 +15,7 @@ export type ChatMessageType = {
   stream_url?: string | null;
   sender_name?: string;
   session?: string;
+  edit?: boolean;
 };
 
 export type ChatOutputType = {

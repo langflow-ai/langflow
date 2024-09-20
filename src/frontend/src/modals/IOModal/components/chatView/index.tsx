@@ -61,6 +61,7 @@ export default function ChatView({
         id: message.id,
         timestamp: message.timestamp,
         session: message.session_id,
+        edit: message.edit,
       };
     });
     const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
