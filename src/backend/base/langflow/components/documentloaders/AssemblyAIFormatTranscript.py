@@ -9,7 +9,7 @@ class AssemblyAITranscriptionParser(Component):
     display_name = "AssemblyAI Parse Transcript"
     description = "Parse AssemblyAI transcription result. If Speaker Labels was enabled, format utterances with speakers and timestamps"
     documentation = "https://www.assemblyai.com/docs"
-    icon = "📊"
+    icon = "AssemblyAI"
 
     inputs = [
         DataInput(

@@ -8,7 +8,7 @@ class AssemblyAIGetSubtitles(Component):
     display_name = "AssemblyAI Get Subtitles"
     description = "Export your transcript in SRT or VTT format for subtitles and closed captions"
     documentation = "https://www.assemblyai.com/docs"
-    icon = "🗨️"
+    icon = "AssemblyAI"
 
     inputs = [
         SecretStrInput(

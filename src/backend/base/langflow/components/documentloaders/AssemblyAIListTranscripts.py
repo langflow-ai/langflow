@@ -9,7 +9,7 @@ class AssemblyAIListTranscripts(Component):
     display_name = "AssemblyAI List Transcripts"
     description = "Retrieve a list of transcripts from AssemblyAI with filtering options"
     documentation = "https://www.assemblyai.com/docs"
-    icon = "📋"
+    icon = "AssemblyAI"
 
     inputs = [
         SecretStrInput(

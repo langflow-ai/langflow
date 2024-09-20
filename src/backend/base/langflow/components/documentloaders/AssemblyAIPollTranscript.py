@@ -9,7 +9,7 @@ class AssemblyAITranscriptionJobPoller(Component):
     display_name = "AssemblyAI Poll Transcript"
     description = "Poll for the status of a transcription job using AssemblyAI"
     documentation = "https://www.assemblyai.com/docs"
-    icon = "🔄"
+    icon = "AssemblyAI"
 
     inputs = [
         SecretStrInput(

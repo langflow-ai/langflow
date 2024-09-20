@@ -10,7 +10,7 @@ class AssemblyAITranscriptionJobCreator(Component):
     display_name = "AssemblyAI Start Transcript"
     description = "Create a transcription job for an audio file using AssemblyAI with advanced options"
     documentation = "https://www.assemblyai.com/docs"
-    icon = "🎤"
+    icon = "AssemblyAI"
 
     inputs = [
         SecretStrInput(

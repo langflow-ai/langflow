@@ -9,7 +9,7 @@ class AssemblyAILeMUR(Component):
     display_name = "AssemblyAI LeMUR"
     description = "Apply Large Language Models to spoken data using the AssemblyAI LeMUR framework"
     documentation = "https://www.assemblyai.com/docs/lemur"
-    icon = "🔄"
+    icon = "AssemblyAI"
 
     inputs = [
         SecretStrInput(
