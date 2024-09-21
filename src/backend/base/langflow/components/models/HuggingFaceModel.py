@@ -57,7 +57,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             display_name="Typical P",
             value=0.95,
             advanced=True,
-            info="Typical Decoding mass. See [Typical Decoding for Natural Language Generation](https://arxiv.org/abs/2202.00666) for more information",
+            info="Typical Decoding mass.",
         ),
         FloatInput(
             name="temperature",
@@ -70,7 +70,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             name="repetition_penalty",
             display_name="Repetition Penalty",
             advanced=True,
-            info="The parameter for repetition penalty. 1.0 means no penalty. See [this paper](https://arxiv.org/pdf/1909.05858.pdf) for more details",
+            info="The parameter for repetition penalty. 1.0 means no penalty.",
         ),
     ]
 
