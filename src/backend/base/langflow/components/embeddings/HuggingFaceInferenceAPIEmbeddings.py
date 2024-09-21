@@ -1,4 +1,5 @@
 from urllib.parse import urlparse
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 import requests
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
@@ -27,7 +28,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
             name="inference_endpoint",
             display_name="Inference Endpoint",
             required=True,
-            value="http://localhost:8080",
+            value="https://api-inference.huggingface.co/models/",
             info="Custom inference endpoint URL.",
         ),
         MessageTextInput(
@@ -61,24 +62,32 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
         # returning True to solve linting error
         return True
 
+    def get_api_url(self) -> str:
+        if "huggingface" in self.inference_endpoint.lower():
+            return f"{self.inference_endpoint}{self.model_name}"
+        else:
+            return self.inference_endpoint
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
+    def create_huggingface_embeddings(
+        self, api_key: SecretStr, api_url: str, model_name: str
+    ) -> HuggingFaceInferenceAPIEmbeddings:
+        return HuggingFaceInferenceAPIEmbeddings(api_key=api_key, api_url=api_url, model_name=model_name)
+
     def build_embeddings(self) -> Embeddings:
-        if not self.inference_endpoint:
-            raise ValueError("Inference endpoint is required")
+        api_url = self.get_api_url()
 
-        self.validate_inference_endpoint(self.inference_endpoint)
+        is_local_url = api_url.startswith(("http://localhost", "http://127.0.0.1"))
 
-        # Check if the inference endpoint is local
-        is_local_url = self.inference_endpoint.startswith(("http://localhost", "http://127.0.0.1"))
-
-        # Use a dummy key for local URLs if no key is provided.
-        # Refer https://python.langchain.com/v0.2/api_reference/community/embeddings/langchain_community.embeddings.huggingface.HuggingFaceInferenceAPIEmbeddings.html
         if not self.api_key and is_local_url:
+            self.validate_inference_endpoint(api_url)
             api_key = SecretStr("DummyAPIKeyForLocalDeployment")
         elif not self.api_key:
             raise ValueError("API Key is required for non-local inference endpoints")
         else:
             api_key = SecretStr(self.api_key)
 
-        return HuggingFaceInferenceAPIEmbeddings(
-            api_key=api_key, api_url=self.inference_endpoint, model_name=self.model_name
-        )
+        try:
+            return self.create_huggingface_embeddings(api_key, api_url, self.model_name)
+        except Exception as e:
+            raise ValueError("Could not connect to HuggingFace Inference API.") from e
