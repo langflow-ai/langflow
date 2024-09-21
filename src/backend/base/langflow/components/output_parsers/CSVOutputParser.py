@@ -7,7 +7,7 @@ from langchain_core.output_parsers import CommaSeparatedListOutputParser
 
 class CSVOutputParserComponent(Component):
     display_name = "CSV Output Parser"
-    description = "Pass to a model when you want it to return a comma separated list."
+    description = "Use with an LLM to return a comma separated list."
     icon = "type"
     name = "CSVOutputParser"
 

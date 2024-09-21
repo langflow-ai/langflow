@@ -8,7 +8,7 @@ from langflow.template.utils import update_template_values
 
 class PromptComponent(Component):
     display_name: str = "Prompt"
-    description: str = "Create a prompt template with dynamic variables. If using an OutputParser, you must include {format_instructions} as an additional variable."
+    description: str = "Create a prompt template with dynamic variables."
     icon = "prompts"
     trace_type = "prompt"
     name = "Prompt"
