@@ -99,4 +99,5 @@ class CreateDataComponent(Component):
         """This function validates that the Text Key is one of the keys in the Data"""
         data_keys = self.get_data().keys()
         if self.text_key not in data_keys and self.text_key != "":
-            raise ValueError(f"Text Key: {self.text_key} not found in the Data keys: {",".join(data_keys)}")
+            formatted_data_keys = ", ".join(data_keys)
+            raise ValueError(f"Text Key: {self.text_key} not found in the Data keys: {formatted_data_keys}")
