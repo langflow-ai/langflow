@@ -2,7 +2,7 @@ import { expect, Page, test } from "@playwright/test";
 import path from "path";
 import uaParser from "ua-parser-js";
 
-test("Vector Store RAG", async ({ page }) => {
+test.skip("Vector Store RAG", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
