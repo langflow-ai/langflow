@@ -100,4 +100,4 @@ class CreateDataComponent(Component):
         data_keys = self.get_data().keys()
         if self.text_key not in data_keys and self.text_key != "":
             formatted_data_keys = ", ".join(data_keys)
-            raise ValueError(f"Text Key: {self.text_key} not found in the Data keys: {formatted_data_keys}")
+            raise ValueError(f"Text Key: '{self.text_key}' not found in the Data keys: '{formatted_data_keys}'")

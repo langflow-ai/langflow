@@ -113,5 +113,5 @@ def test_validate_text_key_invalid(create_data_component):
         create_data_component.validate_text_key()
 
     # Check for the exact error message
-    expected_error_message = f"Text Key: {create_data_component.text_key} not found in the Data keys: {','.join(create_data_component.get_data().keys())}"
+    expected_error_message = f"Text Key: '{create_data_component.text_key}' not found in the Data keys: '{', '.join(create_data_component.get_data().keys())}'"
     assert str(exc_info.value) == expected_error_message
