@@ -1,9 +1,10 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
-import { readFileSync } from "fs";
 import path from "path";
 
-test("user must be able to send an image on chat", async ({ page }) => {
+test("user must be able to send an image on chat using advanced tool on ChatInputComponent", async ({
+  page,
+}) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
@@ -63,58 +64,51 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("showfiles").click();
   await page.getByText("Close").last().click();
+
+  await page.waitForTimeout(500);
+
+  const userQuestion = "What is this image?";
+  await page.getByTestId("textarea_str_input_value").fill(userQuestion);
+
+  const filePath = "tests/assets/chain.png";
+
+  await page.click('[data-testid="inputfile_file_files"]');
+
+  const [fileChooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    page.click('[data-testid="inputfile_file_files"]'),
+  ]);
+
+  await fileChooser.setFiles(filePath);
+
+  await page.keyboard.press("Escape");
+
+  await page.getByTestId("button_run_chat output").click();
+  await page.getByText("built successfully").last().click({
+    timeout: 15000,
+  });
 
   await page.getByText("Playground", { exact: true }).click();
 
-  // Read the image file as a binary string
-  const filePath = "tests/assets/chain.png";
-  const fileContent = readFileSync(filePath, "base64");
-
-  // Create the DataTransfer and File objects within the browser context
-  const dataTransfer = await page.evaluateHandle(
-    ({ fileContent }) => {
-      const dt = new DataTransfer();
-      const byteCharacters = atob(fileContent);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const file = new File([byteArray], "chain.png", { type: "image/png" });
-      dt.items.add(file);
-      return dt;
-    },
-    { fileContent },
-  );
-
-  await page.waitForSelector('[data-testid="input-chat-playground"]', {
-    timeout: 100000,
-  });
-
-  // Locate the target element
-  const element = await page.getByTestId("input-chat-playground");
-
-  // Dispatch the drop event on the target element
-  await element.dispatchEvent("drop", { dataTransfer });
+  await page.waitForTimeout(500);
 
   await page.waitForSelector('[data-testid="icon-LucideSend"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-LucideSend").click();
-
   await page.waitForSelector("text=chain.png", { timeout: 30000 });
 
-  await page.getByText("chain.png").isVisible();
+  expect(await page.getByAltText("generated image").isVisible()).toBeTruthy();
 
-  await page.getByText("Close", { exact: true }).click();
+  expect(
+    await page.getByTestId(`chat-message-User-${userQuestion}`).isVisible(),
+  ).toBeTruthy();
 
-  await page.waitForSelector('[data-testid="icon-ScanEye"]', {
-    timeout: 30000,
-  });
+  const textContents = await page
+    .getByTestId("div-chat-message")
+    .allTextContents();
 
-  await page.getByTestId("icon-ScanEye").nth(4).click();
-
-  await page.getByText("Restart").isHidden();
+  expect(textContents[0]).toContain("chain");
 });
