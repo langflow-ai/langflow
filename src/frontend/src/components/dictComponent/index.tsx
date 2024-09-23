@@ -2,8 +2,9 @@ import { useEffect } from "react";
 import { DictComponentType } from "../../types/components";
 
 import DictAreaModal from "../../modals/dictAreaModal";
-import { classNames } from "../../utils/utils";
-import { Input } from "../ui/input";
+import { classNames, cn } from "../../utils/utils";
+import ForwardedIconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
 
 export default function DictComponent({
   value = [],
@@ -37,16 +38,18 @@ export default function DictComponent({
             }}
             disabled={disabled}
           >
-            <Input
-              type="text"
-              className={
-                editNode
-                  ? "input-edit-node input-disable pointer-events-none cursor-pointer"
-                  : "input-disable pointer-events-none cursor-pointer"
-              }
-              placeholder={disabled ? "" : "Click to edit your dictionary..."}
+            <Button
+              variant="primary"
+              size="sm"
+              className={cn(
+                "w-full font-normal",
+                editNode ? "h-fit px-3 py-0.5" : "",
+              )}
               data-testid="dict-input"
-            />
+            >
+              <ForwardedIconComponent name="BookMarked" className="h-4 w-4" />
+              Edit Dictionary
+            </Button>
           </DictAreaModal>
         </div>
       }
