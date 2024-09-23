@@ -544,6 +544,14 @@ def test_custom_component_multiple_outputs(code_component_with_multiple_outputs,
     assert frontnd_node_dict["outputs"][0]["types"] == ["Text"]
 
 
+def test_feature_flags_add_toolkit_output(active_user, code_component_with_multiple_outputs):
+    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
+    len_outputs = len(frontnd_node_dict["outputs"])
+    FEATURE_FLAGS.add_toolkit_output = True
+    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
+    assert len(frontnd_node_dict["outputs"]) == len_outputs + 1
+
+
 def test_custom_component_subclass_from_lctoolcomponent():
     # Import LCToolComponent and create a subclass
     code = dedent("""
@@ -564,11 +572,3 @@ def test_custom_component_subclass_from_lctoolcomponent():
     assert "outputs" in frontend_node
     assert frontend_node["outputs"][0]["types"] != []
     assert frontend_node["outputs"][1]["types"] != []
-
-
-def test_feature_flags_add_toolkit_output(active_user, code_component_with_multiple_outputs):
-    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
-    len_outputs = len(frontnd_node_dict["outputs"])
-    FEATURE_FLAGS.add_toolkit_output = True
-    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
-    assert len(frontnd_node_dict["outputs"]) == len_outputs + 1
