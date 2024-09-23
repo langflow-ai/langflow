@@ -114,6 +114,7 @@ class Graph:
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
         self._is_cyclic: bool | None = None
         self._cycles: list[tuple[str, str]] | None = None
+        self._cycle_vertices: set[str] | None = None
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         try:
@@ -1628,6 +1629,13 @@ class Graph:
                 self._cycles = find_all_cycle_edges(entry_vertex, edges)
         return self._cycles
 
+    @property
+    def cycle_vertices(self):
+        if self._cycle_vertices is None:
+            edges = self._get_edges_as_list_of_tuples()
+            self._cycle_vertices = set(find_cycle_vertices(edges))
+        return self._cycle_vertices
+
     def _build_edges(self) -> list[CycleEdge]:
         """Builds the edges of the graph."""
         # Edge takes two vertices as arguments, so we need to build the vertices first
@@ -1649,7 +1657,7 @@ class Graph:
             raise ValueError(f"Source vertex {edge['source']} not found")
         if target is None:
             raise ValueError(f"Target vertex {edge['target']} not found")
-        if (source.id, target.id) in self.cycles:
+        if any(v in self.cycle_vertices for v in [source.id, target.id]):
             new_edge: CycleEdge | Edge = CycleEdge(source, target, edge)
         else:
             new_edge = Edge(source, target, edge)
