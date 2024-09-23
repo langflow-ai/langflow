@@ -13,5 +13,5 @@ __all__ = [
     "AssistantsCreateThread",
     "AssistantsRun",
     "GetEnvVar",
-    "Dotenv"
+    "Dotenv",
 ]

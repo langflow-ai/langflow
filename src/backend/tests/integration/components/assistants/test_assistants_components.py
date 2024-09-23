@@ -8,8 +8,7 @@ async def test_list_assistants():
 
     results = await run_single_component(
         AssistantsListAssistants,
-        inputs={
-        },
+        inputs={},
     )
     assert results["assistants"].text is not None
 
@@ -35,14 +34,12 @@ async def test_create_assistants():
     await run_assistant(assistant_id, thread_id)
 
 
-
 async def test_create_thread():
     from langflow.components.astra_assistants import AssistantsCreateThread
 
     results = await run_single_component(
         AssistantsCreateThread,
-        inputs={
-        },
+        inputs={},
     )
     thread_id = results["thread_id"].text
     assert thread_id is not None
@@ -60,6 +57,7 @@ async def get_assistant_name(assistant_id):
     )
     assert results["assistant_name"].text is not None
 
+
 async def run_assistant(assistant_id, thread_id):
     from langflow.components.astra_assistants import AssistantsRun
 
@@ -71,4 +69,4 @@ async def run_assistant(assistant_id, thread_id):
             "thread_id": thread_id,
         },
     )
-    assert results['assistant_response'].text is not None
+    assert results["assistant_response"].text is not None
