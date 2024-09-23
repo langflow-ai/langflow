@@ -182,9 +182,7 @@ export default function ChatMessage({
       },
     });
   }
-
   const editedFlag = chat.edit ? <span className="text-chat-trigger-disabled text-sm">(Edited)</span> : null;
-
 
   return (
     <>
@@ -410,6 +408,7 @@ export default function ChatMessage({
                       >
                         {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
                       </div>
+                        {editedFlag}
                     </>
                   )
                 }
