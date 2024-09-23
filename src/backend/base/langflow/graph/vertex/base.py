@@ -6,9 +6,8 @@ import traceback
 import types
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional, Set
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional
 from uuid import UUID
-from typing import TYPE_CHECKING, Any, Optional
 
 import pandas as pd
 from loguru import logger
@@ -489,7 +488,9 @@ class Vertex:
         """
         if self._custom_component is not None:
             raise ValueError("Component is already built.")
-        custom_component, custom_params = await initialize.loading.instantiate_class(user_id=user_id, vertex=self, event_manager=event_manager)
+        custom_component, custom_params = await initialize.loading.instantiate_class(
+            user_id=user_id, vertex=self, event_manager=event_manager
+        )
         return custom_component, custom_params
 
     def get_component_instance(self, user_id: Optional[str | UUID] = None):

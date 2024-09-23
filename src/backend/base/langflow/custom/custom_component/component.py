@@ -85,7 +85,7 @@ class Component(CustomComponent):
 
     def _set_call_inputs(self, key: str, value: Any):
         self._call_inputs[key] = value
-        
+
     def set_event_manager(self, event_manager: EventManager | None = None):
         self._event_manager = event_manager
 
