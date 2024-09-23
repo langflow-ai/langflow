@@ -6,12 +6,12 @@ export type ChatMessageType = {
   template?: string;
   isSend: boolean;
   thought?: string;
-  files?: Array<{ path: string; type: string; name: string }|string>;
+  files?: Array<{ path: string; type: string; name: string } | string>;
   prompt?: string;
   chatKey?: string;
   componentId?: string;
   id: string;
-  timestamp:string;
+  timestamp: string;
   stream_url?: string | null;
   sender_name?: string;
   session?: string;

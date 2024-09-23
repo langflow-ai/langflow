@@ -1,6 +1,7 @@
 import { useDeleteBuilds } from "@/controllers/API/queries/_builds";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { track } from "@/customization/utils/analytics";
+import { useMessagesStore } from "@/stores/messagesStore";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -18,11 +19,13 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { VertexBuildTypeAPI } from "../../../../types/api";
 import { ChatMessageType } from "../../../../types/chat";
 import { FilePreviewType, chatViewProps } from "../../../../types/components";
-import { classNames, removeDuplicatesBasedOnAttribute } from "../../../../utils/utils";
+import {
+  classNames,
+  removeDuplicatesBasedOnAttribute,
+} from "../../../../utils/utils";
 import ChatInput from "./chatInput";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import ChatMessage from "./chatMessage";
-import { useMessagesStore } from "@/stores/messagesStore";
 
 export default function ChatView({
   sendMessage,
@@ -31,7 +34,7 @@ export default function ChatView({
   lockChat,
   setLockChat,
   visibleSessions,
-  focusChat
+  focusChat,
 }: chatViewProps): JSX.Element {
   const { flowPool, outputs, inputs, CleanFlowPool } = useFlowStore();
   const { setErrorData } = useAlertStore();
@@ -47,31 +50,35 @@ export default function ChatView({
 
   //build chat history
   useEffect(() => {
-    const messagesFromMessagesStore:ChatMessageType[] = messages.filter(message=>message.flow_id===currentFlowId && (visibleSessions?.includes(message.session_id)??true))
-    .map((message) => {
-      let files = message.files;
-      //HANDLE THE "[]" case
-      if(typeof files === "string") {
-        files = JSON.parse(files);
-      }
-      return {
-        isSend: message.sender === "User",
-        message: message.text,
-        sender_name: message.sender_name,
-        files: files,
-        id: message.id,
-        timestamp: message.timestamp,
-        session: message.session_id,
-        edit: message.edit,
-      };
-    });
+    const messagesFromMessagesStore: ChatMessageType[] = messages
+      .filter(
+        (message) =>
+          message.flow_id === currentFlowId &&
+          (visibleSessions?.includes(message.session_id) ?? true),
+      )
+      .map((message) => {
+        let files = message.files;
+        //HANDLE THE "[]" case
+        if (typeof files === "string") {
+          files = JSON.parse(files);
+        }
+        return {
+          isSend: message.sender === "User",
+          message: message.text,
+          sender_name: message.sender_name,
+          files: files,
+          id: message.id,
+          timestamp: message.timestamp,
+          session: message.session_id,
+          edit: message.edit,
+        };
+      });
     const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
-      return (new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    })
+      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+    });
 
     setChatHistory(finalChatHistory);
-
-  }, [flowPool,messages,visibleSessions]);
+  }, [flowPool, messages, visibleSessions]);
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
@@ -119,11 +126,12 @@ export default function ChatView({
     stream_url?: string,
   ) {
     chat.message = message;
-    if(chat.componentId) updateFlowPool(chat.componentId, {
-      message,
-      sender_name: chat.sender_name ?? "Bot",
-      sender: chat.isSend ? "User" : "Machine",
-    });
+    if (chat.componentId)
+      updateFlowPool(chat.componentId, {
+        message,
+        sender_name: chat.sender_name ?? "Bot",
+        sender: chat.isSend ? "User" : "Machine",
+      });
   }
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);

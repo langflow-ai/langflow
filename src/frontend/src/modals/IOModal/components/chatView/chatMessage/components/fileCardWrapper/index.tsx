@@ -18,8 +18,7 @@ export default function FileCardWrapper({
     name = path.split("/").pop() || "";
     type = path.split(".").pop() || "";
     pathString = path;
-  }
-  else {
+  } else {
     name = path.name;
     type = path.type;
     pathString = path.path;
@@ -34,7 +33,12 @@ export default function FileCardWrapper({
         {formatFileName(name, 50)}
         <ForwardedIconComponent name={show ? "ChevronDown" : "ChevronRight"} />
       </span>
-      <FileCard showFile={show} fileName={name} fileType={type} path={pathString} />
+      <FileCard
+        showFile={show}
+        fileName={name}
+        fileType={type}
+        path={pathString}
+      />
     </div>
   );
 }

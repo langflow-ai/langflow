@@ -3,7 +3,9 @@ import {
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { someFlowTemplateFields } from "@/utils/reactflowUtils";
 import { useEffect, useState } from "react";
+import ShortUniqueId from "short-unique-id";
 import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
@@ -28,8 +30,6 @@ import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
 import SessionView from "./components/SessionView";
 import ChatView from "./components/chatView";
-import ShortUniqueId from "short-unique-id";
-import { someFlowTemplateFields } from "@/utils/reactflowUtils";
 
 export default function IOModal({
   children,
@@ -118,7 +118,7 @@ export default function IOModal({
   const [sessions, setSessions] = useState<string[]>([]);
   const messages = useMessagesStore((state) => state.messages);
   const flowPool = useFlowStore((state) => state.flowPool);
-  const [sessionId, setSessionId] =  useState<string>(currentFlowId);
+  const [sessionId, setSessionId] = useState<string>(currentFlowId);
   const [SessionInFlow, setSessionInFlow] = useState<boolean>(false);
 
   useGetMessagesQuery(
@@ -130,11 +130,15 @@ export default function IOModal({
   );
 
   useEffect(() => {
-    const hasSectionInFlow =someFlowTemplateFields({nodes:allNodes},(Field)=>Field.display_name?.toLocaleLowerCase()==="session id" && Field.value)
-    setSessionInFlow(hasSectionInFlow)
+    const hasSectionInFlow = someFlowTemplateFields(
+      { nodes: allNodes },
+      (Field) =>
+        Field.display_name?.toLocaleLowerCase() === "session id" && Field.value,
+    );
+    setSessionInFlow(hasSectionInFlow);
     //if there is no session in the flow components we should not allow the user to see multiple sessions at a time
-    if(!hasSectionInFlow && visibleSessions.length>1){
-      setvisibleSessions([])
+    if (!hasSectionInFlow && visibleSessions.length > 1) {
+      setvisibleSessions([]);
     }
   }, [allNodes]);
 
@@ -149,14 +153,15 @@ export default function IOModal({
     setIsBuilding(true);
     setLockChat(true);
     setChatValue("");
-    const runSession = visibleSessions.length>1?undefined:sessionId;
+    const runSession = visibleSessions.length > 1 ? undefined : sessionId;
     // check for multiple sessions view without session id in flow
-    if(!SessionInFlow && !runSession){
+    if (!SessionInFlow && !runSession) {
       setNoticeData({
-        title:"Multiple sessions are supported only when a session id is set inside components, otherwise only the default session will be used.",
-      })
-      if(sessions.includes(currentFlowId)){
-        setvisibleSessions([currentFlowId])
+        title:
+          "Multiple sessions are supported only when a session id is set inside components, otherwise only the default session will be used.",
+      });
+      if (sessions.includes(currentFlowId)) {
+        setvisibleSessions([currentFlowId]);
       }
     }
     for (let i = 0; i < repeat; i++) {
@@ -195,26 +200,25 @@ export default function IOModal({
       .forEach((row) => {
         sessions.add(row.session_id);
       });
-    setSessions((prev)=>{
-      if(prev.length<Array.from(sessions).length){
+    setSessions((prev) => {
+      if (prev.length < Array.from(sessions).length) {
         // set the new session as visible
         setvisibleSessions((prev) => [
           ...prev,
           Array.from(sessions)[Array.from(sessions).length - 1],
-        ])
+        ]);
       }
       return Array.from(sessions);
     });
   }, [messages]);
 
   useEffect(() => {
-    if(visibleSessions.length===0 && sessions.length>0)
-    {
-      setSessionId(`Session ${new Date().toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true,second:"2-digit" })}`);
-    }
-    else if(visibleSessions.length===1)
-    {
-      setSessionId(visibleSessions[0])
+    if (visibleSessions.length === 0 && sessions.length > 0) {
+      setSessionId(
+        `Session ${new Date().toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true, second: "2-digit" })}`,
+      );
+    } else if (visibleSessions.length === 1) {
+      setSessionId(visibleSessions[0]);
     }
   }, [visibleSessions]);
 
@@ -413,10 +417,7 @@ export default function IOModal({
                 <TabsContent value={"0"} className="api-modal-tabs-content">
                   {sessions.map((session, index) => {
                     return (
-                      <div
-                        key={index}
-                        className="file-component-accordion-div"
-                      >
+                      <div key={index} className="file-component-accordion-div">
                         <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3.5 align-middle">
                           <ShadTooltip styleClasses="z-50" content={session}>
                             <div className="flex min-w-0">
@@ -432,7 +433,7 @@ export default function IOModal({
                             </div>
                           </ShadTooltip>
                           <div className="flex shrink-0 items-center justify-center gap-2 align-middle">
-                          <Button
+                            <Button
                               unstyled
                               size="icon"
                               onClick={(e) => {
@@ -441,7 +442,9 @@ export default function IOModal({
                                 setvisibleSessions((prev) =>
                                   prev.includes(session)
                                     ? prev.filter((item) => item !== session)
-                                    : (SessionInFlow?[...prev, session]:[session]),
+                                    : SessionInFlow
+                                      ? [...prev, session]
+                                      : [session],
                                 );
                               }}
                             >
@@ -451,13 +454,17 @@ export default function IOModal({
                               >
                                 <div>
                                   <IconComponent
-                                    name={!visibleSessions.includes(session) ? "EyeOff" : "Eye"}
+                                    name={
+                                      !visibleSessions.includes(session)
+                                        ? "EyeOff"
+                                        : "Eye"
+                                    }
                                     className="h-4 w-4"
                                   ></IconComponent>
                                 </div>
                               </ShadTooltip>
                             </Button>
-                          <Button
+                            <Button
                               unstyled
                               size="icon"
                               onClick={(event) => {
@@ -513,15 +520,17 @@ export default function IOModal({
                       No memories available.
                     </span>
                   )}
-                  {sessions.length>0 && <div className="pt-6">
-                    <Button
-                    onClick={(_)=>{
-                      setvisibleSessions([])
-                    }
-                    }>
-                      Start fresh
-                    </Button>
-                  </div>}
+                  {sessions.length > 0 && (
+                    <div className="pt-6">
+                      <Button
+                        onClick={(_) => {
+                          setvisibleSessions([]);
+                        }}
+                      >
+                        Start fresh
+                      </Button>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>

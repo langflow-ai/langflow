@@ -497,7 +497,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     files,
     silent,
     setLockChat,
-    session
+    session,
   }: {
     startNodeId?: string;
     stopNodeId?: string;

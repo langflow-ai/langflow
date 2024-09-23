@@ -1,6 +1,8 @@
 import { BASE_URL_API } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
+import { useMessagesStore } from "@/stores/messagesStore";
 import { AxiosError } from "axios";
+import { timeStamp } from "console";
 import { Edge, Node } from "reactflow";
 import { BuildStatus } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
@@ -10,8 +12,6 @@ import { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import { VertexLayerElementType } from "../types/zustand/flow";
 import { tryParseJson } from "./utils";
-import { useMessagesStore } from "@/stores/messagesStore";
-import { timeStamp } from "console";
 
 type BuildVerticesParams = {
   setLockChat?: (lock: boolean) => void;
@@ -180,13 +180,12 @@ export async function buildFlowVertices({
   if (typeof input_value !== "undefined") {
     inputs["input_value"] = input_value;
   }
-  if(session){
+  if (session) {
     inputs["session"] = session;
   }
-  if(Object.keys(inputs).length > 0){
+  if (Object.keys(inputs).length > 0) {
     postData["inputs"] = inputs;
   }
-
 
   const buildResults: Array<boolean> = [];
 

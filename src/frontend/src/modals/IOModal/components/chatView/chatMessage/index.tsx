@@ -1,3 +1,6 @@
+import ShadTooltip from "@/components/shadTooltipComponent";
+import { useUpdateMessage } from "@/controllers/API/queries/messages";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import Convert from "ansi-to-html";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -18,12 +21,9 @@ import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { classNames, cn } from "../../../../../utils/utils";
-import FileCardWrapper from "./components/fileCardWrapper";
-import EditMessageField from "./components/editMessageField";
-import { useUpdateMessage } from "@/controllers/API/queries/messages";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { EditMessageButton } from "./components/editMessageButton";
-import ShadTooltip from "@/components/shadTooltipComponent";
+import EditMessageField from "./components/editMessageField";
+import FileCardWrapper from "./components/fileCardWrapper";
 
 export default function ChatMessage({
   chat,
@@ -40,7 +40,9 @@ export default function ChatMessage({
   const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
   // We need to check if message is not undefined because
   // we need to run .toString() on it
-  const [chatMessage, setChatMessage] = useState(chat.message ? chat.message.toString() : "");
+  const [chatMessage, setChatMessage] = useState(
+    chat.message ? chat.message.toString() : "",
+  );
   const [isStreaming, setIsStreaming] = useState(false);
   const eventSource = useRef<EventSource | undefined>(undefined);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -144,49 +146,66 @@ export default function ChatMessage({
   const isEmpty = decodedMessage?.trim() === "";
   const { mutate: updateMessageMutation } = useUpdateMessage();
 
-  const convertFiles = (files: (string | {
-    path: string;
-    type: string;
-    name: string;
-  })[] | undefined) => {
+  const convertFiles = (
+    files:
+      | (
+          | string
+          | {
+              path: string;
+              type: string;
+              name: string;
+            }
+        )[]
+      | undefined,
+  ) => {
     if (!files) return [];
     return files.map((file) => {
       if (typeof file === "string") {
         return file;
       }
       return file.path;
-    })
-  }
+    });
+  };
 
   const handleEditMessage = (message: string) => {
-    updateMessageMutation({
-      message: {
-        ...chat,
-        files: convertFiles(chat.files),
-        sender_name: chat.sender_name ?? 'AI',
-        text: message,
-        sender: chat.isSend ? "User" : "Machine",
-        flow_id,
-        session_id: chat.session ?? ""
+    updateMessageMutation(
+      {
+        message: {
+          ...chat,
+          files: convertFiles(chat.files),
+          sender_name: chat.sender_name ?? "AI",
+          text: message,
+          sender: chat.isSend ? "User" : "Machine",
+          flow_id,
+          session_id: chat.session ?? "",
+        },
+        refetch: true,
       },
-      refetch: true
-    }, {
-      onSuccess: () => {
-        updateChat(chat, message);
-        setEditMessage(false);
+      {
+        onSuccess: () => {
+          updateChat(chat, message);
+          setEditMessage(false);
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error updating messages.",
+          });
+        },
       },
-      onError: () => {
-        setErrorData({
-          title: "Error updating messages.",
-        });
-      },
-    });
-  }
-  const editedFlag = chat.edit ? <span className="text-chat-trigger-disabled text-sm">(Edited)</span> : null;
+    );
+  };
+  const editedFlag = chat.edit ? (
+    <span className="text-sm text-chat-trigger-disabled">(Edited)</span>
+  ) : null;
 
   return (
     <>
-      <div className={cn("form-modal-chat-position hover:bg-background group", chat.isSend ? "" : " ")}>
+      <div
+        className={cn(
+          "form-modal-chat-position group hover:bg-background",
+          chat.isSend ? "" : " ",
+        )}
+      >
         <div
           className={
             "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3"
@@ -255,81 +274,92 @@ export default function ChatMessage({
                       />
                     ) : (
                       <div onDoubleClick={() => setEditMessage(true)}>
-                        {editMessage ? <EditMessageField key={`edit-message-${chat.id}`} message={decodedMessage} onEdit={(message) => { handleEditMessage(message) }} onCancel={() => setEditMessage(false)} /> : (<>
-                        <div className="flex gap-2">
-                        <Markdown
-                          remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeMathjax]}
-                          className={cn(
-                            "markdown prose flex flex-col word-break-break-word dark:prose-invert",
-                            isEmpty
-                              ? "text-chat-trigger-disabled"
-                              : "text-primary",
-                          )}
-                          components={{
-                            pre({ node, ...props }) {
-                              return <>{props.children}</>;
-                            },
-                            code: ({
-                              node,
-                              inline,
-                              className,
-                              children,
-                              ...props
-                            }) => {
-                              if (typeof children === "string") {
-                                if ((children as string)!.length) {
-                                  if (children![0] === "▍") {
-                                    return (
-                                      <span className="form-modal-markdown-span">
-                                        ▍
-                                      </span>
+                        {editMessage ? (
+                          <EditMessageField
+                            key={`edit-message-${chat.id}`}
+                            message={decodedMessage}
+                            onEdit={(message) => {
+                              handleEditMessage(message);
+                            }}
+                            onCancel={() => setEditMessage(false)}
+                          />
+                        ) : (
+                          <>
+                            <div className="flex gap-2">
+                              <Markdown
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeMathjax]}
+                                className={cn(
+                                  "markdown prose flex flex-col word-break-break-word dark:prose-invert",
+                                  isEmpty
+                                    ? "text-chat-trigger-disabled"
+                                    : "text-primary",
+                                )}
+                                components={{
+                                  pre({ node, ...props }) {
+                                    return <>{props.children}</>;
+                                  },
+                                  code: ({
+                                    node,
+                                    inline,
+                                    className,
+                                    children,
+                                    ...props
+                                  }) => {
+                                    if (typeof children === "string") {
+                                      if ((children as string)!.length) {
+                                        if (children![0] === "▍") {
+                                          return (
+                                            <span className="form-modal-markdown-span">
+                                              ▍
+                                            </span>
+                                          );
+                                        }
+                                        children![0] = (
+                                          children![0] as string
+                                        ).replace("`▍`", "▍");
+                                      }
+                                    }
+
+                                    const match = /language-(\w+)/.exec(
+                                      className || "",
                                     );
-                                  }
-                                  children![0] = (
-                                    children![0] as string
-                                  ).replace("`▍`", "▍");
-                                }
-                              }
 
-                              const match = /language-(\w+)/.exec(
-                                className || "",
-                              );
-
-                              return !inline ? (
-                                <CodeTabsComponent
-                                  isMessage
-                                  tabs={[
-                                    {
-                                      name: (match && match[1]) || "",
-                                      mode: (match && match[1]) || "",
-                                      image:
-                                        "https://curl.se/logo/curl-symbol-transparent.png",
-                                      language: (match && match[1]) || "",
-                                      code: String(children).replace(
-                                        /\n$/,
-                                        "",
-                                      ),
-                                    },
-                                  ]}
-                                  activeTab={"0"}
-                                  setActiveTab={() => { }}
-                                />
-                              ) : (
-                                <code className={className} {...props}>
-                                  {children}
-                                </code>
-                              );
-                            },
-                          }}
-                        >
-                          {isEmpty && !chat.stream_url
-                            ? EMPTY_OUTPUT_SEND_MESSAGE
-                            : chatMessage}
-                        </Markdown>
-                        </div>
-                        {editedFlag}
-                        </>)}
+                                    return !inline ? (
+                                      <CodeTabsComponent
+                                        isMessage
+                                        tabs={[
+                                          {
+                                            name: (match && match[1]) || "",
+                                            mode: (match && match[1]) || "",
+                                            image:
+                                              "https://curl.se/logo/curl-symbol-transparent.png",
+                                            language: (match && match[1]) || "",
+                                            code: String(children).replace(
+                                              /\n$/,
+                                              "",
+                                            ),
+                                          },
+                                        ]}
+                                        activeTab={"0"}
+                                        setActiveTab={() => {}}
+                                      />
+                                    ) : (
+                                      <code className={className} {...props}>
+                                        {children}
+                                      </code>
+                                    );
+                                  },
+                                }}
+                              >
+                                {isEmpty && !chat.stream_url
+                                  ? EMPTY_OUTPUT_SEND_MESSAGE
+                                  : chatMessage}
+                              </Markdown>
+                            </div>
+                            {editedFlag}
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -361,33 +391,33 @@ export default function ChatMessage({
                 >
                   {promptOpen
                     ? template?.split("\n")?.map((line, index) => {
-                      const regex = /{([^}]+)}/g;
-                      let match;
-                      let parts: Array<JSX.Element | string> = [];
-                      let lastIndex = 0;
-                      while ((match = regex.exec(line)) !== null) {
-                        // Push text up to the match
-                        if (match.index !== lastIndex) {
-                          parts.push(line.substring(lastIndex, match.index));
-                        }
-                        // Push div with matched text
-                        if (chat.message[match[1]]) {
-                          parts.push(
-                            <span className="chat-message-highlight">
-                              {chat.message[match[1]]}
-                            </span>,
-                          );
-                        }
+                        const regex = /{([^}]+)}/g;
+                        let match;
+                        let parts: Array<JSX.Element | string> = [];
+                        let lastIndex = 0;
+                        while ((match = regex.exec(line)) !== null) {
+                          // Push text up to the match
+                          if (match.index !== lastIndex) {
+                            parts.push(line.substring(lastIndex, match.index));
+                          }
+                          // Push div with matched text
+                          if (chat.message[match[1]]) {
+                            parts.push(
+                              <span className="chat-message-highlight">
+                                {chat.message[match[1]]}
+                              </span>,
+                            );
+                          }
 
-                        // Update last index
-                        lastIndex = regex.lastIndex;
-                      }
-                      // Push text after the last match
-                      if (lastIndex !== line.length) {
-                        parts.push(line.substring(lastIndex));
-                      }
-                      return <p>{parts}</p>;
-                    })
+                          // Update last index
+                          lastIndex = regex.lastIndex;
+                        }
+                        // Push text after the last match
+                        if (lastIndex !== line.length) {
+                          parts.push(line.substring(lastIndex));
+                        }
+                        return <p>{parts}</p>;
+                      })
                     : isEmpty
                       ? EMPTY_INPUT_SEND_MESSAGE
                       : chatMessage}
@@ -395,32 +425,35 @@ export default function ChatMessage({
               </>
             ) : (
               <div className="flex flex-col">
-                {editMessage ?
-                  <EditMessageField key={`edit-message-${chat.id}`} message={decodedMessage} onEdit={(message) => { handleEditMessage(message) }} onCancel={() => setEditMessage(false)} /> : (
-                    <>
-                      <div
-                        onDoubleClick={() => {
-                          setEditMessage(true);
-                        }}
-                        className={`whitespace-pre-wrap break-words flex gap-2 ${isEmpty ? "text-chat-trigger-disabled" : "text-primary"
-                          }`}
-                        data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
-                      >
-                        {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
-                      </div>
-                        {editedFlag}
-                    </>
-                  )
-                }
+                {editMessage ? (
+                  <EditMessageField
+                    key={`edit-message-${chat.id}`}
+                    message={decodedMessage}
+                    onEdit={(message) => {
+                      handleEditMessage(message);
+                    }}
+                    onCancel={() => setEditMessage(false)}
+                  />
+                ) : (
+                  <>
+                    <div
+                      onDoubleClick={() => {
+                        setEditMessage(true);
+                      }}
+                      className={`flex gap-2 whitespace-pre-wrap break-words ${
+                        isEmpty ? "text-chat-trigger-disabled" : "text-primary"
+                      }`}
+                      data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
+                    >
+                      {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
+                    </div>
+                    {editedFlag}
+                  </>
+                )}
                 {chat.files && (
                   <div className="my-2 flex flex-col gap-5">
                     {chat.files.map((file, index) => {
-                      return (
-                        <FileCardWrapper
-                          index={index}
-                          path={file}
-                        />
-                      );
+                      return <FileCardWrapper index={index} path={file} />;
                     })}
                   </div>
                 )}
@@ -428,11 +461,16 @@ export default function ChatMessage({
             )}
           </div>
         )}
-        {(!editMessage && <ShadTooltip content="Edit Message" styleClasses="z-50">
-          <div>
-          <EditMessageButton className="group-hover:visible invisible h-fit" onClick={() => setEditMessage(true)} />
-          </div>
-        </ShadTooltip>)}
+        {!editMessage && (
+          <ShadTooltip content="Edit Message" styleClasses="z-50">
+            <div>
+              <EditMessageButton
+                className="invisible h-fit group-hover:visible"
+                onClick={() => setEditMessage(true)}
+              />
+            </div>
+          </ShadTooltip>
+        )}
       </div>
       <div id={lastMessage ? "last-chat-message" : undefined} />
     </>

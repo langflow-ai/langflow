@@ -10,7 +10,10 @@ import { useMemo, useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
 import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
-import { extractColumnsFromRows, messagesSorter } from "../../../../utils/utils";
+import {
+  extractColumnsFromRows,
+  messagesSorter,
+} from "../../../../utils/utils";
 
 export default function SessionView({
   session,
@@ -56,22 +59,25 @@ export default function SessionView({
       ...row,
       [field]: newValue,
     };
-    updateMessageMutation({message:data}, {
-      onSuccess: () => {
-        updateMessage(data);
-        // Set success message
-        setSuccessData({
-          title: "Messages updated successfully.",
-        });
+    updateMessageMutation(
+      { message: data },
+      {
+        onSuccess: () => {
+          updateMessage(data);
+          // Set success message
+          setSuccessData({
+            title: "Messages updated successfully.",
+          });
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error updating messages.",
+          });
+          event.data[field] = event.oldValue;
+          event.api.refreshCells();
+        },
       },
-      onError: () => {
-        setErrorData({
-          title: "Error updating messages.",
-        });
-        event.data[field] = event.oldValue;
-        event.api.refreshCells();
-      },
-    });
+    );
   }
 
   const filteredMessages = useMemo(() => {

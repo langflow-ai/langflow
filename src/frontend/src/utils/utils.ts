@@ -623,7 +623,10 @@ export function addPlusSignes(array: string[]): string[] {
   });
 }
 
-export function removeDuplicatesBasedOnAttribute<T>(arr: T[],attribute:string): T[] {
+export function removeDuplicatesBasedOnAttribute<T>(
+  arr: T[],
+  attribute: string,
+): T[] {
   const seen = new Set();
   const filteredChatHistory = arr.filter((item) => {
     const duplicate = seen.has(item[attribute]);
