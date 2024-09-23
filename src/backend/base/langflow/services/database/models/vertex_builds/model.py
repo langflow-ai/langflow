@@ -40,6 +40,44 @@ class VertexBuildBase(SQLModel):
         return value
 
 
+
+
+    @field_serializer("data")
+    def serialize_data(self, data: dict) -> dict:
+        paths_to_truncate = [
+            (['artifacts', 'data', 'raw'], 'text'),
+            (['artifacts', 'data'], 'repr'),
+            (['outputs', 'data', 'message'], 'text'),
+            (['message', 'data', 'raw'], 'text'),
+            (['message', 'data'], 'repr'),
+            (['outputs', 'text'], 'message'),
+            (['message', 'text'], 'raw'),
+            (['message', 'text'], 'repr'),
+            (['artifacts', 'text'], 'raw'),
+            (['artifacts', 'text'], 'repr')
+        ]
+
+        for path, key in paths_to_truncate:
+            truncate_text(data, path, key)
+
+        return data
+
+
+    @field_serializer("artifacts")
+    def serialize_artifacts(self, data) -> dict:
+        paths_to_truncate = [
+            (['data', 'raw'], 'text'),
+            (['text'], 'raw'),
+            (['text'], 'repr')
+        ]
+
+        for path, key in paths_to_truncate:
+            truncate_text(data, path, key)
+
+        return data
+
+
+
 class VertexBuildTable(VertexBuildBase, table=True):  # type: ignore
     __tablename__ = "vertex_build"
     build_id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True)
@@ -57,3 +95,15 @@ class VertexBuildMapModel(BaseModel):
                 vertex_build_map[vertex_build.id] = []
             vertex_build_map[vertex_build.id].append(vertex_build)
         return cls(vertex_builds=vertex_build_map)
+
+
+def truncate_text(data, path: list, key: str):
+    """Helper function to safely truncate text in nested dictionaries."""
+    target = data
+    for p in path:
+        if not isinstance(target, dict) or p not in target:
+            return  # Exit if path is invalid
+        target = target[p]
+
+    if key in target and isinstance(target[key], str):
+        target[key] = target[key][:99999]

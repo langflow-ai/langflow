@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, validator
 
 from langflow.graph.schema import RunOutputs
 from langflow.graph.utils import serialize_field
@@ -281,6 +281,25 @@ class VertexBuildResponse(BaseModel):
     timestamp: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
     """Timestamp of the build."""
 
+    @field_serializer("data")
+    def serialize_data(self, data: ResultDataResponse) -> dict:
+        serialized_data = data.model_dump()
+        paths_to_truncate = [
+            (['artifacts', 'data', 'raw'], 'text'),
+            (['outputs', 'data', 'message'], 'text'),
+            (['messsage', 'data', 'raw'], 'text'),
+            (['outputs', 'text'], 'message'),
+            (['message', 'text'], 'raw'),
+            (['message', 'text'], 'repr'),
+            (['artifacts', 'text'], 'raw'),
+            (['artifacts', 'text'], 'repr')
+        ]
+
+        for path, key in paths_to_truncate:
+            truncate_text(serialized_data, path, key)
+
+        return serialized_data
+
 
 class VerticesBuiltResponse(BaseModel):
     vertices: list[VertexBuildResponse]
@@ -341,3 +360,14 @@ class ConfigResponse(BaseModel):
     auto_saving: bool
     auto_saving_interval: int
     health_check_max_retries: int
+
+def truncate_text(data, path: list, key: str):
+    """Helper function to safely truncate text in nested dictionaries."""
+    target = data
+    for p in path:
+        if not isinstance(target, dict) or p not in target:
+            return  # Exit if path is invalid
+        target = target[p]
+
+    if key in target and isinstance(target[key], str):
+        target[key] = target[key][:99999]

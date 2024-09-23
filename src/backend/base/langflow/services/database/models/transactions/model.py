@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
-from pydantic import field_validator
+from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -32,6 +32,23 @@ class TransactionBase(SQLModel):
             value = UUID(value)
         return value
 
+    @field_serializer("outputs")
+    def serialize_outputs(self, data) -> dict:
+        paths_to_truncate = [
+            (['artifacts', 'data', 'raw'], 'text'),
+            (['outputs', 'data', 'message'], 'text'),
+            (['messsage', 'data', 'raw'], 'text'),
+            (['outputs', 'text'], 'message'),
+            (['message', 'text'], 'raw'),
+            (['message', 'text'], 'repr'),
+            (['artifacts', 'text'], 'raw'),
+            (['artifacts', 'text'], 'repr')
+        ]
+
+        for path, key in paths_to_truncate:
+            truncate_text(data, path, key)
+
+        return data
 
 class TransactionTable(TransactionBase, table=True):  # type: ignore
     __tablename__ = "transaction"
@@ -42,3 +59,15 @@ class TransactionTable(TransactionBase, table=True):  # type: ignore
 class TransactionReadResponse(TransactionBase):
     transaction_id: UUID
     flow_id: UUID
+
+
+def truncate_text(data, path: list, key: str):
+    """Helper function to safely truncate text in nested dictionaries."""
+    target = data
+    for p in path:
+        if not isinstance(target, dict) or p not in target:
+            return  # Exit if path is invalid
+        target = target[p]
+
+    if key in target and isinstance(target[key], str):
+        target[key] = target[key][:99999]
