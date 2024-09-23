@@ -129,38 +129,6 @@ local = [
 clickhouse-connect = [
     "clickhouse-connect[clickhouse-connect]==0.7.19"
 ]
-dev = [
-    "types-redis>=4.6.0.5",
-    "ipykernel>=6.29.0",
-    "mypy>=1.11.0",
-    "ruff>=0.6.2,<0.7.0",
-    "httpx",
-    "pytest>=8.2.0",
-    "types-requests>=2.32.0",
-    "requests>=2.32.0",
-    "pytest-cov>=5.0.0",
-    "pandas-stubs>=2.1.4.231227",
-    "types-pillow>=10.2.0.20240213",
-    "types-pyyaml>=6.0.12.8",
-    "types-python-jose>=3.3.4.8",
-    "types-passlib>=1.7.7.13",
-    "pytest-mock>=3.14.0",
-    "pytest-xdist>=3.6.0",
-    "types-pywin32>=306.0.0.4",
-    "types-google-cloud-ndb>=2.2.0.0",
-    "pytest-sugar>=1.0.0",
-    "respx>=0.21.1",
-    "pytest-instafail>=0.5.0",
-    "pytest-asyncio>=0.23.0",
-    "pytest-profiling>=1.7.0",
-    "pre-commit>=3.7.0",
-    "vulture>=2.11",
-    "dictdiffer>=0.9.0",
-    "pytest-split>=0.9.0",
-    "pytest-flakefinder>=1.1.0",
-    "types-markdown>=3.7.0.20240822",
-    "packaging>=23.2,<24.0"
-]
 
 [project.scripts]
 langflow = "langflow.__main__:main"
@@ -183,7 +151,7 @@ psycopg2-binary = "^2.9.6"
 pyarrow = "^14.0.0"
 wikipedia = "^1.4.0"
 qdrant-client = "^1.9.0"
-weaviate-client = "*"
+weaviate-client = "^4.6.5"
 sentence-transformers = { version = "^2.3.1", optional = true }
 ctransformers = { version = "^0.2.10", optional = true }
 cohere = "^5.5.3"
@@ -296,6 +264,41 @@ deploy = ["celery", "redis", "flower"]
 couchbase = ["couchbase"]
 cassio = ["cassio"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest-instafail>=0.5.0",
+    "types-redis>=4.6.0.5",
+    "ipykernel>=6.29.0",
+    "mypy>=1.11.0",
+    "ruff>=0.6.2,<0.7.0",
+    "httpx",
+    "pytest>=8.2.0",
+    "types-requests>=2.32.0",
+    "requests>=2.32.0",
+    "pytest-cov>=5.0.0",
+    "pandas-stubs>=2.1.4.231227",
+    "types-pillow>=10.2.0.20240213",
+    "types-pyyaml>=6.0.12.8",
+    "types-python-jose>=3.3.4.8",
+    "types-passlib>=1.7.7.13",
+    "pytest-mock>=3.14.0",
+    "pytest-xdist>=3.6.0",
+    "types-pywin32>=306.0.0.4",
+    "types-google-cloud-ndb>=2.2.0.0",
+    "pytest-sugar>=1.0.0",
+    "respx>=0.21.1",
+    "pytest-asyncio>=0.23.0",
+    "pytest-profiling>=1.7.0",
+    "pre-commit>=3.7.0",
+    "vulture>=2.11",
+    "dictdiffer>=0.9.0",
+    "pytest-split>=0.9.0",
+    "pytest-flakefinder>=1.1.0",
+    "types-markdown>=3.7.0.20240822",
+    "packaging>=23.2,<24.0"
+
+]
 
 
 [tool.poetry.group.spelling]
