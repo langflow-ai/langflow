@@ -10,6 +10,7 @@ from typing_extensions import Protocol
 from langflow.schema.log import LoggableType
 from fastapi.encoders import jsonable_encoder
 
+
 class EventCallback(Protocol):
     def __call__(self, *, manager: "EventManager", event_type: str, data: LoggableType): ...
 

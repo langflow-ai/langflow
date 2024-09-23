@@ -313,8 +313,8 @@ class InputValueRequest(BaseModel):
                 },
                 {"components": ["Component Name"], "input_value": "input_value"},
                 {"input_value": "input_value"},
-                {"components": ["Component Name"], "input_value": "input_value","session": "session_id"},
-                {"input_value": "input_value","session": "session_id"},
+                {"components": ["Component Name"], "input_value": "input_value", "session": "session_id"},
+                {"input_value": "input_value", "session": "session_id"},
                 {"type": "chat", "input_value": "input_value"},
                 {"type": "json", "input_value": '{"key": "value"}'},
             ]
