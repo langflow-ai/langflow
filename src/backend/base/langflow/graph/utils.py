@@ -187,9 +187,16 @@ def log_vertex_build(
         logger.exception(f"Error logging vertex build: {e}")
 
 def rewrite_file_path(file_path: str):
-    file_path_split = file_path.split("/")
+    file_path = file_path.replace('\\', '/')
+
+    if ':' in file_path:
+        file_path = file_path.split(':', 1)[-1]
+
+    file_path_split = [part for part in file_path.split("/") if part]
+
     if len(file_path_split) >= 2:
         consistent_file_path = f"{file_path_split[-2]}/{file_path_split[-1]}"
     else:
         consistent_file_path = "/".join(file_path_split)
+
     return [consistent_file_path]
