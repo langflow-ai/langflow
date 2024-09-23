@@ -148,6 +148,7 @@ def test_that_outputs_cache_is_set_to_false_in_cycle():
         assert output.cache is True
 
 
+@pytest.mark.api_key_required
 def test_updated_graph_with_prompts():
     # Chat input initialization
     chat_input = ChatInput(_id="chat_input").set(input_value="bacon")
