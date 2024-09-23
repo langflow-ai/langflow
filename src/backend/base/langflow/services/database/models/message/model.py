@@ -33,7 +33,7 @@ class MessageBase(SQLModel):
         if message.files:
             image_paths = []
             for file in message.files:
-                if hasattr(file, 'path') and hasattr(file, 'url') and file.path:
+                if hasattr(file, "path") and hasattr(file, "url") and file.path:
                     session_id = message.session_id
                     image_paths.append(f"{session_id}{file.path.split(session_id)[1]}")
             message.files = image_paths
