@@ -36,6 +36,7 @@ patch: ## bump the version in langflow and langflow-base
 # check for required tools
 check_tools:
 	@command -v poetry >/dev/null 2>&1 || { echo >&2 "$(RED)Poetry is not installed. Aborting.$(NC)"; exit 1; }
+	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v docker >/dev/null 2>&1 || { echo >&2 "$(RED)Docker is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v pipx >/dev/null 2>&1 || { echo >&2 "$(RED)pipx is not installed. Aborting.$(NC)"; exit 1; }
@@ -134,8 +135,10 @@ endif
 ######################
 
 coverage: ## run the tests and generate a coverage report
-	@poetry run coverage run
-	@poetry run coverage erase
+	@uv run coverage run
+	@uv run coverage erase
+	#@poetry run coverage run
+	#@poetry run coverage erase
 
 unit_tests: ## run unit tests
 	cd src/backend/base && uv sync --extra dev && cd ../../../ && uv sync --extra dev > /dev/null 2>&1
@@ -335,7 +338,7 @@ build_langflow_backup:
 
 build_langflow:
 	cd ./scripts && uv run python update_dependencies.py
-	uv lock --no-update
+	uv lock --no-upgrade
 	uv build
 ifdef restore
 	mv pyproject.toml.bak pyproject.toml
@@ -414,15 +417,19 @@ update: ## update dependencies
 	uv sync --upgrade
 
 publish_base:
+	#TODO: replace with uvx twine upload dist/*
 	cd src/backend/base && poetry publish --skip-existing
 
 publish_langflow:
+	#TODO: replace with uvx twine upload dist/*
 	poetry publish
 
 publish_base_testpypi:
+	#TODO: replace with uvx twine upload dist/*
 	cd src/backend/base && poetry publish --skip-existing -r test-pypi
 
 publish_langflow_testpypi:
+	#TODO: replace with uvx twine upload dist/*
 	poetry publish -r test-pypi
 
 publish: ## build the frontend static files and package the project and publish it to PyPI
@@ -439,11 +446,13 @@ publish_testpypi: ## build the frontend static files and package the project and
 	@echo 'Publishing the project'
 
 ifdef base
+	#TODO: replace with uvx twine upload dist/*
 	poetry config repositories.test-pypi https://test.pypi.org/legacy/
 	make publish_base_testpypi
 endif
 
 ifdef main
+	#TODO: replace with uvx twine upload dist/*
 	poetry config repositories.test-pypi https://test.pypi.org/legacy/
 	make publish_langflow_testpypi
 endif
