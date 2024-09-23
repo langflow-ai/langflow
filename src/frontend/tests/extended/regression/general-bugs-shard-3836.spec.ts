@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
-import { readFileSync } from "fs";
 import path from "path";
 
-test("user must be able to send an image on chat", async ({ page }) => {
+test("user must be able to send an image on chat using advanced tool on ChatInputComponent", async ({
+  page,
+}) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
