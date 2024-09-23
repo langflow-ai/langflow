@@ -148,7 +148,7 @@ jobs:
     needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
     with:
-      tests_folder: "tests/core"
+      tests_folder: "tests"
     secrets: inherit
 
   backend-unit-tests:
