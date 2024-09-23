@@ -263,13 +263,12 @@ def test_update_source_handle():
     assert updated_edge["data"]["sourceHandle"]["id"] == "last_node"
 
 
-@pytest.mark.asyncio
-async def test_pickle_graph():
+def test_serialize_graph():
     starter_projects = load_starter_projects()
     data = starter_projects[0][1]["data"]
     graph = Graph.from_payload(data)
     assert isinstance(graph, Graph)
-    pickled = pickle.dumps(graph)
-    assert pickled is not None
-    unpickled = pickle.loads(pickled)
-    assert unpickled is not None
+    serialized = graph.dumps()
+    assert serialized is not None
+    assert isinstance(serialized, str)
+    assert len(serialized) > 0
