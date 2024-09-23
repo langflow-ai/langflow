@@ -118,7 +118,6 @@ export default function IOModal({
   const [sessions, setSessions] = useState<string[]>([]);
   const messages = useMessagesStore((state) => state.messages);
   const flowPool = useFlowStore((state) => state.flowPool);
-  const uuid = new ShortUniqueId();
   const [sessionId, setSessionId] =  useState<string>(currentFlowId);
   const [SessionInFlow, setSessionInFlow] = useState<boolean>(false);
 
@@ -211,7 +210,7 @@ export default function IOModal({
   useEffect(() => {
     if(visibleSessions.length===0 && sessions.length>0)
     {
-      setSessionId(`Session ${uuid.randomUUID(4)}`)
+      setSessionId(`Session ${new Date().toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true,second:"2-digit" })}`);
     }
     else if(visibleSessions.length===1)
     {
