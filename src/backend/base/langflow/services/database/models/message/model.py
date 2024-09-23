@@ -30,16 +30,29 @@ class MessageBase(SQLModel):
         # first check if the record has all the required fields
         if message.text is None or not message.sender or not message.sender_name:
             raise ValueError("The message does not have the required fields (text, sender, sender_name).")
+        if message.files:
+            image_paths = []
+            for file in message.files:
+                if hasattr(file, "path") and hasattr(file, "url") and file.path:
+                    session_id = message.session_id
+                    image_paths.append(f"{session_id}{file.path.split(session_id)[1]}")
+            message.files = image_paths
         if isinstance(message.timestamp, str):
             timestamp = datetime.fromisoformat(message.timestamp)
         else:
             timestamp = message.timestamp
         if not flow_id and message.flow_id:
             flow_id = message.flow_id
+        if not isinstance(message.text, str):
+            # If the text is not a string, it means it could be
+            # async iterator so we simply add it as an empty string
+            message_text = ""
+        else:
+            message_text = message.text
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
-            text=message.text,
+            text=message_text,
             session_id=message.session_id,
             files=message.files or [],
             timestamp=timestamp,

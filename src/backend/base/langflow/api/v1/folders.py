@@ -1,5 +1,4 @@
-from typing import List
-
+from langflow.api.utils import cascade_delete_flow
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy import or_, update
@@ -78,7 +77,7 @@ def create_folder(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/", response_model=List[FolderRead], status_code=200)
+@router.get("/", response_model=list[FolderRead], status_code=200)
 def read_folders(
     *,
     session: Session = Depends(get_session),
@@ -173,22 +172,24 @@ def update_folder(
 
 
 @router.delete("/{folder_id}", status_code=204)
-def delete_folder(
+async def delete_folder(
     *,
     session: Session = Depends(get_session),
     folder_id: str,
     current_user: User = Depends(get_current_active_user),
 ):
     try:
+        flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)).all()
+        if len(flows) > 0:
+            for flow in flows:
+                await cascade_delete_flow(session, flow)
+
         folder = session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
         session.delete(folder)
         session.commit()
-        flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)).all()
-        for flow in flows:
-            session.delete(flow)
-        session.commit()
+
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -211,7 +212,7 @@ async def download_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/upload/", response_model=List[FlowRead], status_code=201)
+@router.post("/upload/", response_model=list[FlowRead], status_code=201)
 async def upload_file(
     *,
     session: Session = Depends(get_session),

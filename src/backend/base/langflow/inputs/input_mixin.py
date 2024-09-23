@@ -1,7 +1,14 @@
 from enum import Enum
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator, model_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    field_validator,
+    model_serializer,
+)
 
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.validators import CoalesceBool
@@ -18,8 +25,10 @@ class FieldTypes(str, Enum):
     NESTED_DICT = "NestedDict"
     FILE = "file"
     PROMPT = "prompt"
+    CODE = "code"
     OTHER = "other"
     TABLE = "table"
+    LINK = "link"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -50,27 +59,27 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore
     value: Any = ""
     """The value of the field. Default is an empty string."""
 
-    display_name: Optional[str] = None
+    display_name: str | None = None
     """Display name of the field. Defaults to None."""
 
     advanced: bool = False
     """Specifies if the field will an advanced parameter (hidden). Defaults to False."""
 
-    input_types: Optional[list[str]] = None
+    input_types: list[str] | None = None
     """List of input types for the handle when the field has more than one type. Default is an empty list."""
 
     dynamic: bool = False
     """Specifies if the field is dynamic. Defaults to False."""
 
-    info: Optional[str] = ""
+    info: str | None = ""
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
 
-    real_time_refresh: Optional[bool] = None
+    real_time_refresh: bool | None = None
     """Specifies if the field should have real time refresh. `refresh_button` must be False. Defaults to None."""
 
-    refresh_button: Optional[bool] = None
+    refresh_button: bool | None = None
     """Specifies if the field should have a refresh button. Defaults to False."""
-    refresh_button_text: Optional[str] = None
+    refresh_button_text: str | None = None
     """Specifies the text for the refresh button. Defaults to None."""
 
     title_case: bool = False
@@ -116,7 +125,7 @@ class DatabaseLoadMixin(BaseModel):
 
 # Specific mixin for fields needing file interaction
 class FileMixin(BaseModel):
-    file_path: Optional[str] = Field(default="")
+    file_path: str | None = Field(default="")
     file_types: list[str] = Field(default=[], alias="fileTypes")
 
     @field_validator("file_types")
@@ -134,11 +143,11 @@ class FileMixin(BaseModel):
 
 
 class RangeMixin(BaseModel):
-    range_spec: Optional[RangeSpec] = None
+    range_spec: RangeSpec | None = None
 
 
 class DropDownMixin(BaseModel):
-    options: Optional[list[str]] = None
+    options: list[str] | None = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
     combobox: CoalesceBool = False
     """Variable that defines if the user can insert custom values in the dropdown."""
@@ -148,8 +157,15 @@ class MultilineMixin(BaseModel):
     multiline: CoalesceBool = True
 
 
+class LinkMixin(BaseModel):
+    icon: str | None = None
+    """Icon to be displayed in the link."""
+    text: str | None = None
+    """Text to be displayed in the link."""
+
+
 class TableMixin(BaseModel):
-    table_schema: Optional[TableSchema | list[Column]] = None
+    table_schema: TableSchema | list[Column] | None = None
 
     @field_validator("table_schema")
     @classmethod

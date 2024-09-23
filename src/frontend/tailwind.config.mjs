@@ -67,6 +67,7 @@ const config = {
         "dark-blue": "var(--dark-blue)",
         "dark-gray": "var(--dark-gray)",
         "dark-red": "var(--dark-red)",
+        "note-placeholder": "var(--note-placeholder)",
         error: {
           DEFAULT: "var(--error)",
           background: "var(--error-background)",
@@ -96,9 +97,15 @@ const config = {
         "status-gray": "var(--status-gray)",
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
-        "beta-background": "var(--beta-background)",
-        "beta-foreground": "var(--beta-foreground)",
-        "beta-foreground-soft": "var(--beta-foreground-soft)",
+        filter: {
+          foreground: "var(--filter-foreground)",
+          background: "var(--filter-background)",
+        },
+        beta: {
+          background: "var(--beta-background)",
+          foreground: "var(--beta-foreground)",
+          "foreground-soft": "var(--beta-foreground-soft)",
+        },
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
         ice: "var(--ice)",
@@ -108,6 +115,7 @@ const config = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        "node-selected": "hsl(var(--node-selected))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {

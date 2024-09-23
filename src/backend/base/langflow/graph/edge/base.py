@@ -17,12 +17,29 @@ class Edge:
         self.target_param: str | None = None
         self._target_handle: TargetHandleDict | str | None = None
         self._data = edge.copy()
+        self.is_cycle = False
         if data := edge.get("data", {}):
             self._source_handle = data.get("sourceHandle", {})
             self._target_handle = cast(TargetHandleDict, data.get("targetHandle", {}))
             self.source_handle: SourceHandle = SourceHandle(**self._source_handle)
             if isinstance(self._target_handle, dict):
-                self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
+                try:
+                    self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
+                except Exception as e:
+                    if "inputTypes" in self._target_handle and self._target_handle["inputTypes"] is None:
+                        # Check if self._target_handle['fieldName']
+                        if hasattr(target, "_custom_component"):
+                            display_name = getattr(target._custom_component, "display_name", "")
+                            raise ValueError(
+                                f"Component {display_name} field '{self._target_handle['fieldName']}' might not be a valid input."
+                            ) from e
+                        else:
+                            raise ValueError(
+                                f"Field '{self._target_handle['fieldName']}' on {target.display_name} might not be a valid input."
+                            ) from e
+                    else:
+                        raise e
+
             else:
                 raise ValueError("Target handle is not a dictionary")
             self.target_param = self.target_handle.field_name
@@ -66,7 +83,7 @@ class Edge:
         if not self.valid_handles:
             logger.debug(self.source_handle)
             logger.debug(self.target_handle)
-            raise ValueError(f"Edge between {source.vertex_type} and {target.vertex_type} " f"has invalid handles")
+            raise ValueError(f"Edge between {source.display_name} and {target.display_name} " f"has invalid handles")
 
     def _legacy_validate_handles(self, source, target) -> None:
         if self.target_handle.input_types is None:
@@ -87,6 +104,13 @@ class Edge:
         self.target_param = state["target_param"]
         self.source_handle = state.get("source_handle")
         self.target_handle = state.get("target_handle")
+        self._source_handle = state.get("_source_handle")
+        self._target_handle = state.get("_target_handle")
+        self._data = state.get("_data")
+        self.valid_handles = state.get("valid_handles")
+        self.source_types = state.get("source_types")
+        self.target_reqs = state.get("target_reqs")
+        self.matched_type = state.get("matched_type")
 
     def validate_edge(self, source, target) -> None:
         # If the self.source_handle has base_classes, then we are using the legacy
@@ -152,10 +176,11 @@ class Edge:
             raise ValueError(f"Edge between {source.vertex_type} and {target.vertex_type} " f"has no matched type")
 
     def __repr__(self) -> str:
-        return (
-            f"Edge(source={self.source_id}, target={self.target_id}, target_param={self.target_param}"
-            f", matched_type={self.matched_type})"
-        )
+        if (hasattr(self, "source_handle") and self.source_handle) and (
+            hasattr(self, "target_handle") and self.target_handle
+        ):
+            return f"{self.source_id} -[{self.source_handle.name}->{self.target_handle.field_name}]-> {self.target_id}"
+        return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"
 
     def __hash__(self) -> int:
         return hash(self.__repr__())
@@ -169,12 +194,16 @@ class Edge:
             and self.target_param == __o.target_param
         )
 
+    def __str__(self) -> str:
+        return self.__repr__()
 
-class ContractEdge(Edge):
+
+class CycleEdge(Edge):
     def __init__(self, source: "Vertex", target: "Vertex", raw_edge: EdgeData):
         super().__init__(source, target, raw_edge)
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
         self.result: Any = None
+        self.is_cycle = True
 
     async def honor(self, source: "Vertex", target: "Vertex") -> None:
         """
@@ -213,10 +242,3 @@ class ContractEdge(Edge):
             if target.params.get("message") == "":
                 return self.result
         return self.result
-
-    def __repr__(self) -> str:
-        if (hasattr(self, "source_handle") and self.source_handle) and (
-            hasattr(self, "target_handle") and self.target_handle
-        ):
-            return f"{self.source_id} -[{self.source_handle.name}->{self.target_handle.field_name}]-> {self.target_id}"
-        return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"

@@ -1,5 +1,6 @@
 import { useDeleteBuilds } from "@/controllers/API/queries/_builds";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { track } from "@/customization/utils/analytics";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -11,7 +12,6 @@ import {
   FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "../../../../constants/constants";
-import { deleteFlowPool } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -81,7 +81,6 @@ export default function ChatView({
 
           const is_ai =
             sender === "Machine" || sender === null || sender === undefined;
-
           return {
             isSend: !is_ai,
             message,
@@ -286,9 +285,10 @@ export default function ChatView({
               chatValue={chatValue}
               noInput={!inputTypes.includes("ChatInput")}
               lockChat={lockChat}
-              sendMessage={({ repeat, files }) =>
-                sendMessage({ repeat, files })
-              }
+              sendMessage={({ repeat, files }) => {
+                sendMessage({ repeat, files });
+                track("Playground Message Sent");
+              }}
               setChatValue={(value) => {
                 setChatValue(value);
               }}

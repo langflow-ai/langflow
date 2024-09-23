@@ -15,6 +15,11 @@ export type APITemplateType = {
   [key: string]: InputFieldType;
 };
 
+export type APICodeValidateType = {
+  imports: { errors: Array<string> };
+  function: { errors: Array<string> };
+};
+
 export type CustomFieldsType = {
   [key: string]: Array<string>;
 };
@@ -77,7 +82,10 @@ export type InputFieldType = {
   refresh_button?: boolean;
   refresh_button_text?: string;
   combobox?: boolean;
+  info?: string;
   [key: string]: any;
+  icon?: string;
+  text?: string;
 };
 
 export type OutputFieldProxyType = {
@@ -242,7 +250,6 @@ export type ResponseErrorDetailAPI = {
 };
 export type useQueryFunctionType<T = undefined, R = any> = T extends undefined
   ? (
-      params?: T,
       options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
     ) => UseQueryResult<R>
   : (

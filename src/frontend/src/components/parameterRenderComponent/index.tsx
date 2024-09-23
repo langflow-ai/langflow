@@ -1,13 +1,15 @@
-import { TEXT_FIELD_TYPES } from "@/CustomNodes/GenericNode/components/parameterComponent/constants";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
+import TableNodeComponent from "../TableNodeComponent";
 import CodeAreaComponent from "../codeAreaComponent";
 import DictComponent from "../dictComponent";
 import FloatComponent from "../floatComponent";
 import InputFileComponent from "../inputFileComponent";
 import IntComponent from "../intComponent";
 import KeypairListComponent from "../keypairListComponent";
+import LinkComponent from "../linkComponent";
 import PromptAreaComponent from "../promptComponent";
 import ToggleShadComponent from "../toggleShadComponent";
 import { RefreshParameterComponent } from "./component/refreshParameterComponent";
@@ -93,6 +95,12 @@ export function ParameterRenderComponent({
             setEnabled={onChange}
             size={editNode ? "small" : "large"}
           />
+        ) : templateData.type === "link" ? (
+          <LinkComponent
+            value={templateData}
+            onChange={onChange}
+            id={`link_${id}`}
+          />
         ) : templateData.type === "float" ? (
           <FloatComponent
             disabled={disabled}
@@ -108,7 +116,7 @@ export function ParameterRenderComponent({
             id={`int_${id}`}
             disabled={disabled}
             editNode={editNode}
-            value={templateValue ?? ""}
+            value={templateValue ?? 0}
             onChange={onChange}
           />
         ) : templateData.type === "file" ? (
@@ -146,6 +154,14 @@ export function ParameterRenderComponent({
           />
         ) : templateData.type === "Any" ? (
           <>-</>
+        ) : templateData.type === "table" ? (
+          <TableNodeComponent
+            description={templateData.info || "Add or edit data"}
+            columns={templateData?.table_schema?.columns}
+            onChange={onChange}
+            tableTitle={templateData?.display_name ?? "Table"}
+            value={templateValue}
+          />
         ) : (
           String(templateValue)
         )}

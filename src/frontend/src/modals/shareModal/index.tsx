@@ -1,4 +1,5 @@
 import { useGetTagsQuery } from "@/controllers/API/queries/store";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
@@ -8,13 +9,11 @@ import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import {
   getStoreComponents,
-  getStoreTags,
   saveFlowStore,
   updateFlowStore,
 } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { FlowType } from "../../types/flow";
 import {
@@ -59,7 +58,7 @@ export default function ShareModal({
   const [unavaliableNames, setUnavaliableNames] = useState<
     { id: string; name: string }[]
   >([]);
-  const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
+  const saveFlow = useSaveFlow();
   const { data, isFetching } = useGetTagsQuery();
 
   const [loadingNames, setLoadingNames] = useState(false);
@@ -105,7 +104,7 @@ export default function ShareModal({
 
     function successShare() {
       if (!is_component) {
-        saveFlow(flow!, true);
+        saveFlow(flow);
       }
       setSuccessData({
         title: `${is_component ? "Component" : "Flow"} shared successfully!`,
@@ -255,8 +254,9 @@ export default function ShareModal({
 
         <BaseModal.Footer
           submit={{
-            label: `Share ${is_component ? " Component" : " Flow"}`,
+            label: `Share ${is_component ? "Component" : "Flow"}`,
             loading: loadingNames,
+            dataTestId: "share-modal-button-flow",
           }}
         >
           <>

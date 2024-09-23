@@ -1,8 +1,11 @@
+import useSaveFlow from "@/hooks/flows/use-save-flow";
+import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
+import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
-import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import { FlowType } from "../../types/flow";
@@ -13,8 +16,10 @@ export default function FlowSettingsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const saveFlow = useSaveFlow();
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const flows = useFlowsManagerStore((state) => state.flows);
   useEffect(() => {
     setName(currentFlow!.name);
@@ -28,35 +33,42 @@ export default function FlowSettingsModal({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [disableSave, setDisableSave] = useState(true);
+  const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   function handleClick(): void {
     setIsSaving(true);
-    currentFlow!.name = name;
-    currentFlow!.description = description;
-    currentFlow!.endpoint_name =
+    if (!currentFlow) return;
+    const newFlow = cloneDeep(currentFlow);
+    newFlow.name = name;
+    newFlow.description = description;
+    newFlow.endpoint_name =
       endpoint_name && endpoint_name.length > 0 ? endpoint_name : null;
-    saveFlow(currentFlow!)
-      ?.then(() => {
-        setOpen(false);
-        setIsSaving(false);
-      })
-      .catch((err) => {
-        useAlertStore.getState().setErrorData({
-          title: "Error while saving changes",
-          list: [err?.response?.data.detail ?? ""],
+    if (autoSaving) {
+      saveFlow(newFlow)
+        ?.then(() => {
+          setOpen(false);
+          setIsSaving(false);
+          setSuccessData({ title: "Changes saved successfully" });
+        })
+        .catch(() => {
+          setIsSaving(false);
         });
-        console.error(err);
-        setIsSaving(false);
-      });
+    } else {
+      setCurrentFlow(newFlow);
+      setOpen(false);
+      setIsSaving(false);
+    }
   }
 
   const [nameLists, setNameList] = useState<string[]>([]);
 
   useEffect(() => {
-    const tempNameList: string[] = [];
-    flows.forEach((flow: FlowType) => {
-      if ((flow.is_component ?? false) === false) tempNameList.push(flow.name);
-    });
-    setNameList(tempNameList.filter((name) => name !== currentFlow!.name));
+    if (flows) {
+      const tempNameList: string[] = [];
+      flows.forEach((flow: FlowType) => {
+        tempNameList.push(flow.name);
+      });
+      setNameList(tempNameList.filter((name) => name !== currentFlow!.name));
+    }
   }, [flows]);
 
   useEffect(() => {

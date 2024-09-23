@@ -12,20 +12,32 @@ export const useDeleteFolders: useMutationFunctionType<
   undefined,
   DeleteFoldersParams
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const deleteFolder = async ({
     folder_id,
   }: DeleteFoldersParams): Promise<any> => {
     const res = await api.delete(`${getURL("FOLDERS")}/${folder_id}`);
-    return res.data;
+    // returning id to use it in onSuccess and delete the folder from the cache
+    return folder_id;
   };
 
   const mutation: UseMutationResult<
     DeleteFoldersParams,
     any,
     DeleteFoldersParams
-  > = mutate(["useDeleteFolders"], deleteFolder, options);
+  > = mutate(["useDeleteFolders"], deleteFolder, {
+    ...options,
+    onSettled: () => {
+      queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+    },
+    onSuccess: (id) => {
+      queryClient.removeQueries({
+        queryKey: ["useGetFolder", { id }],
+        exact: true,
+      });
+    },
+  });
 
   return mutation;
 };

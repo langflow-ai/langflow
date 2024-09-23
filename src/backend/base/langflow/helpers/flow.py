@@ -1,15 +1,16 @@
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Tuple, Type, Union, cast
 from uuid import UUID
 
-from fastapi import Depends, HTTPException
+from fastapi import HTTPException
 from pydantic.v1 import BaseModel, Field, create_model
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from langflow.graph.schema import RunOutputs
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.database.models.flow import Flow
-from langflow.services.deps import get_session, get_settings_service, session_scope
+from langflow.services.database.models.flow.model import FlowRead
+from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
@@ -73,10 +74,13 @@ async def run_flow(
     flow_name: Optional[str] = None,
     output_type: Optional[str] = "chat",
     user_id: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> List[RunOutputs]:
     if user_id is None:
         raise ValueError("Session is invalid")
     graph = await load_flow(user_id, flow_id, flow_name, tweaks)
+    if run_id:
+        graph.set_run_id(UUID(run_id))
 
     if inputs is None:
         inputs = []
@@ -257,23 +261,23 @@ def get_arg_names(inputs: List["Vertex"]) -> List[dict[str, str]]:
     ]
 
 
-def get_flow_by_id_or_endpoint_name(
-    flow_id_or_name: str, db: Session = Depends(get_session), user_id: Optional[UUID] = None
-) -> Flow:
-    endpoint_name = None
-    try:
-        flow_id = UUID(flow_id_or_name)
-        flow = db.get(Flow, flow_id)
-    except ValueError:
-        endpoint_name = flow_id_or_name
-        stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
-        if user_id:
-            stmt = stmt.where(Flow.user_id == user_id)
-        flow = db.exec(stmt).first()
-    if flow is None:
-        raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
-
-    return flow
+def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: Optional[UUID] = None) -> FlowRead | None:
+    flow_read = None
+    with session_scope() as session:
+        endpoint_name = None
+        try:
+            flow_id = UUID(flow_id_or_name)
+            flow = session.get(Flow, flow_id)
+        except ValueError:
+            endpoint_name = flow_id_or_name
+            stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
+            if user_id:
+                stmt = stmt.where(Flow.user_id == user_id)
+            flow = session.exec(stmt).first()
+        if flow is None:
+            raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
+        flow_read = FlowRead.model_validate(flow, from_attributes=True)
+    return flow_read
 
 
 def generate_unique_flow_name(flow_name, user_id, session):

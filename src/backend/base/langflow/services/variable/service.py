@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional, Union
 from uuid import UUID
 
@@ -8,15 +9,13 @@ from sqlmodel import Session, select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
-from langflow.services.database.models.variable.model import Variable, VariableCreate
+from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableUpdate
 from langflow.services.deps import get_session
 from langflow.services.variable.base import VariableService
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
-
-CREDENTIAL_TYPE = "Credential"
-GENERIC_TYPE = "Generic"
 
 
 class DatabaseVariableService(VariableService, Service):
@@ -76,6 +75,9 @@ class DatabaseVariableService(VariableService, Service):
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
 
+        if not variable or not variable.value:
+            raise ValueError(f"{name} variable not found.")
+
         if variable.type == CREDENTIAL_TYPE and field == "session_id":  # type: ignore
             raise TypeError(
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
@@ -83,14 +85,15 @@ class DatabaseVariableService(VariableService, Service):
             )
 
         # we decrypt the value
-        if not variable or not variable.value:
-            raise ValueError(f"{name} variable not found.")
         decrypted = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
         return decrypted
 
+    def get_all(self, user_id: Union[UUID, str], session: Session = Depends(get_session)) -> list[Optional[Variable]]:
+        return list(session.exec(select(Variable).where(Variable.user_id == user_id)).all())
+
     def list_variables(self, user_id: Union[UUID, str], session: Session = Depends(get_session)) -> list[Optional[str]]:
-        variables = session.exec(select(Variable).where(Variable.user_id == user_id)).all()
-        return [variable.name for variable in variables]
+        variables = self.get_all(user_id=user_id, session=session)
+        return [variable.name for variable in variables if variable]
 
     def update_variable(
         self,
@@ -109,18 +112,47 @@ class DatabaseVariableService(VariableService, Service):
         session.refresh(variable)
         return variable
 
+    def update_variable_fields(
+        self,
+        user_id: Union[UUID, str],
+        variable_id: Union[UUID, str],
+        variable: VariableUpdate,
+        session: Session = Depends(get_session),
+    ):
+        query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
+        db_variable = session.exec(query).one()
+
+        variable_data = variable.model_dump(exclude_unset=True)
+        for key, value in variable_data.items():
+            setattr(db_variable, key, value)
+        db_variable.updated_at = datetime.now(timezone.utc)
+        encrypted = auth_utils.encrypt_api_key(db_variable.value, settings_service=self.settings_service)
+        variable.value = encrypted
+
+        session.add(db_variable)
+        session.commit()
+        session.refresh(db_variable)
+        return db_variable
+
     def delete_variable(
         self,
         user_id: Union[UUID, str],
         name: str,
         session: Session = Depends(get_session),
     ):
-        variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
+        stmt = select(Variable).where(Variable.user_id == user_id).where(Variable.name == name)
+        variable = session.exec(stmt).first()
         if not variable:
             raise ValueError(f"{name} variable not found.")
         session.delete(variable)
         session.commit()
-        return variable
+
+    def delete_variable_by_id(self, user_id: Union[UUID, str], variable_id: UUID, session: Session):
+        variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.id == variable_id)).first()
+        if not variable:
+            raise ValueError(f"{variable_id} variable not found.")
+        session.delete(variable)
+        session.commit()
 
     def create_variable(
         self,

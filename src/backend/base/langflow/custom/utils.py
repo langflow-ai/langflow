@@ -3,7 +3,7 @@ import contextlib
 import re
 import traceback
 import warnings
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -33,7 +33,7 @@ class UpdateBuildConfigError(Exception):
     pass
 
 
-def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
+def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: list[str]):
     """Add output types to the frontend node"""
     for return_type in return_types:
         if return_type is None:
@@ -44,7 +44,7 @@ def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: L
                     "traceback": traceback.format_exc(),
                 },
             )
-        if return_type == str:
+        if return_type is str:
             return_type = "Text"
         elif hasattr(return_type, "__name__"):
             return_type = return_type.__name__
@@ -56,7 +56,7 @@ def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: L
         frontend_node.add_output_type(return_type)
 
 
-def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: List[str]):
+def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list[str]):
     """Reorder fields in the frontend node based on the specified field_order."""
     if not field_order:
         return
@@ -72,7 +72,7 @@ def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: List
     frontend_node.field_order = field_order
 
 
-def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
+def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: list[str]):
     """Add base classes to the frontend node"""
     for return_type_instance in return_types:
         if return_type_instance is None:
@@ -85,7 +85,7 @@ def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: L
             )
 
         base_classes = get_base_classes(return_type_instance)
-        if return_type_instance == str:
+        if return_type_instance is str:
             base_classes.append("Text")
 
         for base_class in base_classes:
@@ -243,7 +243,7 @@ def add_extra_fields(frontend_node, field_config, function_args):
             )
 
 
-def get_field_dict(field: Union[Input, dict]):
+def get_field_dict(field: Input | dict):
     """Get the field dictionary from a Input or a dict"""
     if isinstance(field, Input):
         return dotdict(field.model_dump(by_alias=True, exclude_none=True))
@@ -252,7 +252,7 @@ def get_field_dict(field: Union[Input, dict]):
 
 def run_build_inputs(
     custom_component: Component,
-    user_id: Optional[Union[str, UUID]] = None,
+    user_id: str | UUID | None = None,
 ):
     """Run the build inputs of a custom component."""
     try:
@@ -264,7 +264,7 @@ def run_build_inputs(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def get_component_instance(custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None):
+def get_component_instance(custom_component: CustomComponent, user_id: str | UUID | None = None):
     try:
         if custom_component._code is None:
             raise ValueError("Code is None")
@@ -295,8 +295,8 @@ def get_component_instance(custom_component: CustomComponent, user_id: Optional[
 
 def run_build_config(
     custom_component: CustomComponent,
-    user_id: Optional[Union[str, UUID]] = None,
-) -> Tuple[dict, CustomComponent]:
+    user_id: str | UUID | None = None,
+) -> tuple[dict, CustomComponent]:
     """Build the field configuration for a custom component"""
 
     try:
@@ -318,7 +318,7 @@ def run_build_config(
 
     try:
         custom_instance = custom_class(_user_id=user_id)
-        build_config: Dict = custom_instance.build_config()
+        build_config: dict = custom_instance.build_config()
 
         for field_name, field in build_config.copy().items():
             # Allow user to build Input as well
@@ -358,7 +358,7 @@ def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code):
 
 
 def build_custom_component_template_from_inputs(
-    custom_component: Union[Component, CustomComponent], user_id: Optional[Union[str, UUID]] = None
+    custom_component: Component | CustomComponent, user_id: str | UUID | None = None
 ):
     # The List of Inputs fills the role of the build_config and the entrypoint_args
     cc_instance = get_component_instance(custom_component, user_id=user_id)
@@ -384,8 +384,8 @@ def build_custom_component_template_from_inputs(
 
 def build_custom_component_template(
     custom_component: CustomComponent,
-    user_id: Optional[Union[str, UUID]] = None,
-) -> Tuple[Dict[str, Any], CustomComponent | Component]:
+    user_id: str | UUID | None = None,
+) -> tuple[dict[str, Any], CustomComponent | Component]:
     """Build a custom component template"""
     try:
         if not hasattr(custom_component, "template_config"):
@@ -442,7 +442,7 @@ def create_component_template(component):
     return component_template, component_instance
 
 
-def build_custom_components(components_paths: List[str]):
+def build_custom_components(components_paths: list[str]):
     """Build custom components from the specified paths."""
     if not components_paths:
         return {}
@@ -467,7 +467,7 @@ def build_custom_components(components_paths: List[str]):
     return custom_components_from_file
 
 
-async def abuild_custom_components(components_paths: List[str]):
+async def abuild_custom_components(components_paths: list[str]):
     """Build custom components from the specified paths."""
     if not components_paths:
         return {}
@@ -494,10 +494,10 @@ async def abuild_custom_components(components_paths: List[str]):
 
 def update_field_dict(
     custom_component_instance: "CustomComponent",
-    field_dict: Dict,
-    build_config: Dict,
-    update_field: Optional[str] = None,
-    update_field_value: Optional[Any] = None,
+    field_dict: dict,
+    build_config: dict,
+    update_field: str | None = None,
+    update_field_value: Any | None = None,
     call: bool = False,
 ):
     """Update the field dictionary by calling options() or value() if they are callable"""
@@ -523,7 +523,7 @@ def update_field_dict(
     return build_config
 
 
-def sanitize_field_config(field_config: Union[Dict, Input]):
+def sanitize_field_config(field_config: dict | Input):
     # If any of the already existing keys are in field_config, remove them
     if isinstance(field_config, Input):
         field_dict = field_config.to_dict()

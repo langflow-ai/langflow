@@ -2,6 +2,7 @@ import json
 from collections import namedtuple
 from uuid import UUID, uuid4
 
+from langflow.services.database.models.folder.model import FolderCreate
 import orjson
 import pytest
 from fastapi.testclient import TestClient
@@ -73,10 +74,11 @@ def test_read_flows(client: TestClient, json_flow: str, active_user, logged_in_h
     assert len(response.json()) > 0
 
 
-def test_read_flow(client: TestClient, json_flow: str, active_user, logged_in_headers):
+def test_read_flow(client: TestClient, json_flow: str, logged_in_headers):
     flow = orjson.loads(json_flow)
     data = flow["data"]
-    flow = FlowCreate(name="Test Flow", description="description", data=data)
+    unique_name = str(uuid4())
+    flow = FlowCreate(name=unique_name, description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     flow_id = response.json()["id"]  # flow_id should be a UUID but is a string
     # turn it into a UUID
@@ -195,14 +197,85 @@ async def test_delete_flows_with_transaction_and_build(
         assert response.json() == {"vertex_builds": {}}
 
 
+@pytest.mark.asyncio
+async def test_delete_folder_with_flows_with_transaction_and_build(
+    client: TestClient, json_flow: str, active_user, logged_in_headers
+):
+    # Create a new folder
+    folder_name = f"Test Folder {uuid4()}"
+    folder = FolderCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
+
+    response = client.post("/api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201, f"Expected status code 201, but got {response.status_code}"
+
+    created_folder = response.json()
+    folder_id = created_folder["id"]
+
+    # Create ten flows
+    number_of_flows = 10
+    flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
+    flow_ids = []
+    for flow in flows:
+        flow.folder_id = folder_id
+        response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+        flow_ids.append(response.json()["id"])
+
+    # Create a transaction for each flow
+    for flow_id in flow_ids:
+        VertexTuple = namedtuple("VertexTuple", ["id"])
+
+        await log_transaction(
+            str(flow_id), source=VertexTuple(id="vid"), target=VertexTuple(id="tid"), status="success"
+        )
+
+    # Create a build for each flow
+    for flow_id in flow_ids:
+        build = {
+            "valid": True,
+            "params": {},
+            "data": ResultDataResponse(),
+            "artifacts": {},
+            "vertex_id": "vid",
+            "flow_id": flow_id,
+        }
+        log_vertex_build(
+            flow_id=build["flow_id"],
+            vertex_id=build["vertex_id"],
+            valid=build["valid"],
+            params=build["params"],
+            data=build["data"],
+            artifacts=build.get("artifacts"),
+        )
+
+    response = client.request("DELETE", f"api/v1/folders/{folder_id}", headers=logged_in_headers)
+    assert response.status_code == 204
+
+    for flow_id in flow_ids:
+        response = client.request(
+            "GET", "api/v1/monitor/transactions", params={"flow_id": flow_id}, headers=logged_in_headers
+        )
+        assert response.status_code == 200
+        assert response.json() == []
+
+    for flow_id in flow_ids:
+        response = client.request(
+            "GET", "api/v1/monitor/builds", params={"flow_id": flow_id}, headers=logged_in_headers
+        )
+        assert response.status_code == 200
+        assert response.json() == {"vertex_builds": {}}
+
+
 def test_create_flows(client: TestClient, session: Session, json_flow: str, logged_in_headers):
     flow = orjson.loads(json_flow)
     data = flow["data"]
     # Create test data
+    flow_unique_name = str(uuid4())
+    flow_2_unique_name = str(uuid4())
     flow_list = FlowListCreate(
         flows=[
-            FlowCreate(name="Flow 1", description="description", data=data),
-            FlowCreate(name="Flow 2", description="description", data=data),
+            FlowCreate(name=flow_unique_name, description="description", data=data),
+            FlowCreate(name=flow_2_unique_name, description="description", data=data),
         ]
     )
     # Make request to endpoint
@@ -212,10 +285,10 @@ def test_create_flows(client: TestClient, session: Session, json_flow: str, logg
     # Check response data
     response_data = response.json()
     assert len(response_data) == 2
-    assert response_data[0]["name"] == "Flow 1"
+    assert flow_unique_name in response_data[0]["name"]
     assert response_data[0]["description"] == "description"
     assert response_data[0]["data"] == data
-    assert response_data[1]["name"] == "Flow 2"
+    assert response_data[1]["name"] == flow_2_unique_name
     assert response_data[1]["description"] == "description"
     assert response_data[1]["data"] == data
 
@@ -224,10 +297,12 @@ def test_upload_file(client: TestClient, session: Session, json_flow: str, logge
     flow = orjson.loads(json_flow)
     data = flow["data"]
     # Create test data
+    flow_unique_name = str(uuid4())
+    flow_2_unique_name = str(uuid4())
     flow_list = FlowListCreate(
         flows=[
-            FlowCreate(name="Flow 1", description="description", data=data),
-            FlowCreate(name="Flow 2", description="description", data=data),
+            FlowCreate(name=flow_unique_name, description="description", data=data),
+            FlowCreate(name=flow_2_unique_name, description="description", data=data),
         ]
     )
     file_contents = orjson_dumps(flow_list.dict())
@@ -241,10 +316,10 @@ def test_upload_file(client: TestClient, session: Session, json_flow: str, logge
     # Check response data
     response_data = response.json()
     assert len(response_data) == 2
-    assert response_data[0]["name"] == "Flow 1"
+    assert flow_unique_name in response_data[0]["name"]
     assert response_data[0]["description"] == "description"
     assert response_data[0]["data"] == data
-    assert response_data[1]["name"] == "Flow 2"
+    assert response_data[1]["name"] == flow_2_unique_name
     assert response_data[1]["description"] == "description"
     assert response_data[1]["data"] == data
 
@@ -259,10 +334,12 @@ def test_download_file(
     flow = orjson.loads(json_flow)
     data = flow["data"]
     # Create test data
+    flow_unique_name = str(uuid4())
+    flow_2_unique_name = str(uuid4())
     flow_list = FlowListCreate(
         flows=[
-            FlowCreate(name="Flow 1", description="description", data=data),
-            FlowCreate(name="Flow 2", description="description", data=data),
+            FlowCreate(name=flow_unique_name, description="description", data=data),
+            FlowCreate(name=flow_2_unique_name, description="description", data=data),
         ]
     )
     db_manager = get_db_service()
@@ -407,7 +484,7 @@ def test_migrate_transactions_no_duckdb(client: TestClient):
 def test_sqlite_pragmas():
     db_service = get_db_service()
 
-    with db_service as session:
+    with db_service.with_session() as session:
         from sqlalchemy import text
 
         assert "wal" == session.execute(text("PRAGMA journal_mode;")).fetchone()[0]

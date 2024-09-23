@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.92"
+version = "0.0.96"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -32,7 +32,7 @@ httpx = "*"
 uvicorn = "^0.30.0"
 gunicorn = "^22.0.0"
 langchain = "~0.2.0"
-langchain-core = "^0.2.24"
+langchain-core = "^0.2.32"
 langchainhub = "~0.1.15"
 sqlmodel = "^0.0.18"
 loguru = "^0.7.1"
@@ -60,7 +60,7 @@ jq = { version = "^1.7.0", markers = "sys_platform != 'win32'" }
 pypdf = "^4.2.0"
 nest-asyncio = "^1.6.0"
 emoji = "^2.12.0"
-cryptography = "^42.0.5"
+cryptography = ">=42.0.5,<44.0.0"
 asyncer = "^0.0.5"
 pyperclip = "^1.8.2"
 uncurl = "^0.0.11"
@@ -76,6 +76,12 @@ aiofiles = "^24.1.0"
 setuptools = ">=70"
 nanoid = "^2.0.0"
 filelock = "^3.15.4"
+grandalf = "^0.8.0"
+crewai = "^0.36.0"
+spider-client = "^0.0.27"
+diskcache = "^5.6.3"
+clickhouse-connect = "0.7.19"
+
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
@@ -99,7 +105,6 @@ types-pillow = "^10.2.0.20240213"
 types-pyyaml = "^6.0.12.8"
 types-python-jose = "^3.3.4.8"
 types-passlib = "^1.7.7.13"
-locust = "^2.23.1"
 pytest-mock = "^3.14.0"
 pytest-xdist = "^3.6.0"
 types-pywin32 = "^306.0.0.4"
@@ -114,6 +119,8 @@ vulture = "^2.11"
 dictdiffer = "^0.9.0"
 pytest-split = "^0.9.0"
 devtools = "^0.12.2"
+pytest-flakefinder = "^1.1.0"
+types-markdown = "^3.7.0.20240822"
 
 
 [tool.pytest.ini_options]

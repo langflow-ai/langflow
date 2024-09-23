@@ -1,3 +1,5 @@
+from abc import ABC, ABCMeta, abstractmethod
+from functools import wraps
 from typing import List, cast
 
 from langchain_core.documents import Document
@@ -10,7 +12,48 @@ from langflow.io import Output
 from langflow.schema import Data
 
 
-class LCVectorStoreComponent(Component):
+def check_cached_vector_store(f):
+    """
+    Decorator to check for cached vector stores, and returns them if they exist.
+    """
+
+    @wraps(f)
+    def check_cached(self, *args, **kwargs):
+        if self._cached_vector_store is not None:
+            return self._cached_vector_store
+
+        result = f(self, *args, **kwargs)
+        self._cached_vector_store = result
+        return result
+
+    check_cached._is_cached_vector_store_checked = True
+    return check_cached
+
+
+class EnforceCacheDecoratorMeta(ABCMeta):
+    """
+    Enforces that abstract methods marked with @check_cached_vector_store are implemented with the decorator.
+    """
+
+    def __init__(cls, name, bases, dct):
+        for name, value in dct.items():
+            if hasattr(value, "__isabstractmethod__"):
+                cls._check_method_decorator(name, cls)
+        super().__init__(name, bases, dct)
+
+    @staticmethod
+    def _check_method_decorator(name, cls):
+        method = getattr(cls, name)
+
+        # Check if the method has been marked as decorated by `check_cached_vector_store`
+        if not getattr(method, "_is_cached_vector_store_checked", False):
+            raise TypeError(f"Concrete implementation of '{name}' must use '@check_cached_vector_store' decorator.")
+
+
+class LCVectorStoreComponent(Component, ABC, metaclass=EnforceCacheDecoratorMeta):
+    # Used to ensure a single vector store is built for each run of the flow
+    _cached_vector_store: VectorStore | None = None
+
     trace_type = "retriever"
     outputs = [
         Output(
@@ -32,7 +75,11 @@ class LCVectorStoreComponent(Component):
 
     def _validate_outputs(self):
         # At least these three outputs must be defined
-        required_output_methods = ["build_base_retriever", "search_documents", "build_vector_store"]
+        required_output_methods = [
+            "build_base_retriever",
+            "search_documents",
+            "build_vector_store",
+        ]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
@@ -75,17 +122,16 @@ class LCVectorStoreComponent(Component):
     def cast_vector_store(self) -> VectorStore:
         return cast(VectorStore, self.build_vector_store())
 
-    def build_vector_store(self) -> VectorStore:
-        """
-        Builds the Vector Store object.c
-        """
-        raise NotImplementedError("build_vector_store method must be implemented.")
-
     def build_base_retriever(self) -> Retriever:  # type: ignore[type-var]
         """
         Builds the BaseRetriever object.
         """
-        vector_store = self.build_vector_store()
+        if self._cached_vector_store is not None:
+            vector_store = self._cached_vector_store
+        else:
+            vector_store = self.build_vector_store()
+            self._cached_vector_store = vector_store
+
         if hasattr(vector_store, "as_retriever"):
             retriever = vector_store.as_retriever(**self.get_retriever_kwargs())
             if self.status is None:
@@ -103,7 +149,11 @@ class LCVectorStoreComponent(Component):
             self.status = ""
             return []
 
-        vector_store = self.build_vector_store()
+        if self._cached_vector_store is not None:
+            vector_store = self._cached_vector_store
+        else:
+            vector_store = self.build_vector_store()
+            self._cached_vector_store = vector_store
 
         logger.debug(f"Search input: {search_query}")
         logger.debug(f"Search type: {self.search_type}")
@@ -120,3 +170,11 @@ class LCVectorStoreComponent(Component):
         Get the retriever kwargs. Implementations can override this method to provide custom retriever kwargs.
         """
         return {}
+
+    @abstractmethod
+    @check_cached_vector_store
+    def build_vector_store(self) -> VectorStore:
+        """
+        Builds the Vector Store object.
+        """
+        raise NotImplementedError("build_vector_store method must be implemented.")

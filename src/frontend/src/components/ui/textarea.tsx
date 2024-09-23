@@ -12,8 +12,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="h-full w-full">
         <textarea
+          data-testid="textarea"
           className={cn(
-            "nopan nodelete nodrag noflow textarea-primary",
+            "nopan nodelete nodrag noflow textarea-primary nowheel",
             className,
             password ? "password" : "",
           )}

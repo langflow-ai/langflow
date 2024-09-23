@@ -6,6 +6,7 @@
 
 @layer base {
   :root {
+    --node-selected: 243 75% 59%;
     --background: 0 0% 100%; /* hsl(0 0% 100%) */
     --foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
     --muted: 210 40% 98%; /* hsl(210 40% 98%) */
@@ -56,6 +57,8 @@
     --hover: #f2f4f5;
     --disabled-run: #6366f1;
 
+    --filter-foreground: #4f46e5;
+    --filter-background: #eef2ff;
     /* Colors that are shared in dark and light mode */
     --blur-shared: #151923de;
     --build-trigger: #dc735b;
@@ -68,9 +71,20 @@
     --status-blue: #2563eb;
     --status-gray: #6b7280;
     --connection: #555;
+    --note-indigo: #e0e7ff;
+    --note-emerald: #d1fae5;
+    --note-amber: #fef3c7;
+    --note-red: #fee2e2;
   }
 
   .dark {
+    --note-indigo: #312e81;
+    --note-emerald: #064e3b;
+    --note-amber: #78350f;
+    --note-red: #7f1d1d;
+    --note-placeholder: 216 12% 84%; /* hsl(216 12% 84%) */
+
+    --node-selected: 234 89% 74%;
     --background: 224 28% 7.5%; /* hsl(224 10% 7.5%) */
     --foreground: 213 31% 80%; /* hsl(213 31% 91%) */
     --ice: #60a5fa;
@@ -101,6 +115,9 @@
 
     --destructive: 0 60% 25%; /* hsl(0 60% 25%) */
     --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
+
+    --filter-foreground: #eef2ff;
+    --filter-background: #4e46e599;
 
     --ring: 216 24% 30%; /* hsl(216 24% 30%) */
 

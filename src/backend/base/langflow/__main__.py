@@ -8,6 +8,8 @@ from typing import Optional
 
 import click
 import httpx
+from langflow.utils.version import get_version_info, fetch_latest_version
+from langflow.utils.version import is_pre_release as langflow_is_pre_release
 import typer
 from dotenv import load_dotenv
 from multiprocess import cpu_count  # type: ignore
@@ -20,13 +22,15 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
-from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
+from langflow.services.database.models.folder.utils import (
+    create_default_folder_if_it_doesnt_exist,
+)
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
-from langflow.utils.logger import configure, logger
 from langflow.utils.util import update_settings
 
 console = Console()
@@ -120,6 +124,21 @@ def run(
         help="Enables the store features.",
         envvar="LANGFLOW_STORE",
     ),
+    auto_saving: bool = typer.Option(
+        True,
+        help="Defines if the auto save is enabled.",
+        envvar="LANGFLOW_AUTO_SAVING",
+    ),
+    auto_saving_interval: int = typer.Option(
+        1000,
+        help="Defines the debounce time for the auto save.",
+        envvar="LANGFLOW_AUTO_SAVING_INTERVAL",
+    ),
+    health_check_max_retries: bool = typer.Option(
+        True,
+        help="Defines the number of retries for the health check.",
+        envvar="LANGFLOW_HEALTH_CHECK_MAX_RETRIES",
+    ),
 ):
     """
     Run Langflow.
@@ -137,6 +156,9 @@ def run(
         cache=cache,
         components_path=components_path,
         store=store,
+        auto_saving=auto_saving,
+        auto_saving_interval=auto_saving_interval,
+        health_check_max_retries=health_check_max_retries,
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
@@ -241,13 +263,6 @@ def get_free_port(port):
     return port
 
 
-def version_is_prerelease(version: str):
-    """
-    Check if a version is a pre-release version.
-    """
-    return "a" in version or "b" in version or "rc" in version
-
-
 def get_letter_from_version(version: str):
     """
     Get the letter from a pre-release version.
@@ -261,63 +276,10 @@ def get_letter_from_version(version: str):
     return None
 
 
-def build_new_version_notice(current_version: str, package_name: str):
-    """
-    Build a new version notice.
-    """
-    # The idea here is that we want to show a notice to the user
-    # when a new version of Langflow is available.
-    # The key is that if the version the user has is a pre-release
-    # e.g 0.0.0a1, then we find the latest version that is pre-release
-    # otherwise we find the latest stable version.
-    # we will show the notice either way, but only if the version
-    # the user has is not the latest version.
-    if version_is_prerelease(current_version):
-        # curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1
-        # this command will give us the latest pre-release version
-        package_info = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()
-        # 4.0.0a1 or 4.0.0b1 or 4.0.0rc1
-        # find which type of pre-release version we have
-        # could be a1, b1, rc1
-        # we want the a, b, or rc and the number
-        suffix_letter = get_letter_from_version(current_version)
-        number_version = current_version.split(suffix_letter)[0]
-        latest_version = sorted(
-            package_info["releases"].keys(),
-            key=lambda x: x.split(suffix_letter)[-1] and number_version in x,
-        )[-1]
-        if version_is_prerelease(latest_version) and latest_version != current_version:
-            return (
-                True,
-                f"A new pre-release version of {package_name} is available: {latest_version}",
-            )
-    else:
-        latest_version = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()["info"]["version"]
-        if not version_is_prerelease(latest_version):
-            return (
-                False,
-                f"A new version of {package_name} is available: {latest_version}",
-            )
-    return False, ""
-
-
-def is_prerelease(version: str) -> bool:
-    return "a" in version or "b" in version or "rc" in version
-
-
-def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optional[str]:
-    response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
-    versions = response.json()["releases"].keys()
-    valid_versions = [v for v in versions if include_prerelease or not is_prerelease(v)]
-    if not valid_versions:
-        return None  # Handle case where no valid versions are found
-    return max(valid_versions, key=lambda v: pkg_version.parse(v))
-
-
 def build_version_notice(current_version: str, package_name: str) -> str:
-    latest_version = fetch_latest_version(package_name, is_prerelease(current_version))
+    latest_version = fetch_latest_version(package_name, langflow_is_pre_release(current_version))
     if latest_version and pkg_version.parse(current_version) < pkg_version.parse(latest_version):
-        release_type = "pre-release" if is_prerelease(latest_version) else "version"
+        release_type = "pre-release" if langflow_is_pre_release(latest_version) else "version"
         return f"A new {release_type} of {package_name} is available: {latest_version}"
     return ""
 
@@ -346,35 +308,17 @@ def print_banner(host: str, port: int):
     is_pre_release = False  # Track if any package is a pre-release
     package_name = ""
 
-    try:
-        from langflow.version import __version__ as langflow_version  # type: ignore
+    # Use langflow.utils.version to get the version info
+    version_info = get_version_info()
+    langflow_version = version_info["version"]
+    package_name = version_info["package"]
+    is_pre_release |= langflow_is_pre_release(langflow_version)  # Update pre-release status
 
-        is_pre_release |= is_prerelease(langflow_version)  # Update pre-release status
-        notice = build_version_notice(langflow_version, "langflow")
-        notice = stylize_text(notice, "langflow", is_pre_release)
-        if notice:
-            notices.append(notice)
-        package_names.append("langflow")
-        package_name = "Langflow"
-    except ImportError:
-        langflow_version = None
-
-    # Attempt to handle langflow-base similarly
-    if langflow_version is None:  # This means langflow.version was not imported
-        try:
-            from importlib import metadata
-
-            langflow_base_version = metadata.version("langflow-base")
-            is_pre_release |= is_prerelease(langflow_base_version)  # Update pre-release status
-            notice = build_version_notice(langflow_base_version, "langflow-base")
-            notice = stylize_text(notice, "langflow-base", is_pre_release)
-            if notice:
-                notices.append(notice)
-            package_names.append("langflow-base")
-            package_name = "Langflow Base"
-        except ImportError as e:
-            logger.exception(e)
-            raise e
+    notice = build_version_notice(langflow_version, package_name)
+    notice = stylize_text(notice, package_name, is_pre_release)
+    if notice:
+        notices.append(notice)
+    package_names.append(package_name)
 
     # Generate pip command based on the collected data
     pip_command = generate_pip_command(package_names, is_pre_release)
@@ -543,7 +487,10 @@ def api_key(
             typer.echo("Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled.")
             return
         from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
-        from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
+        from langflow.services.database.models.api_key.crud import (
+            create_api_key,
+            delete_api_key,
+        )
 
         api_key = session.exec(select(ApiKey).where(ApiKey.user_id == superuser.id)).first()
         if api_key:

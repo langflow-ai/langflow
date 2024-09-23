@@ -1,9 +1,11 @@
+import { ColDef } from "ag-grid-community";
 import { useEffect, useState } from "react";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Button } from "../../../../components/ui/button";
 import { defaultShortcuts } from "../../../../constants/constants";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
+import CellRenderShortcuts from "./CellRenderWrapper";
 import EditShortcutButton from "./EditShortcutButton";
 
 export default function ShortcutsPage() {
@@ -12,7 +14,7 @@ export default function ShortcutsPage() {
   const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
 
   // Column Definitions: Defines the columns to be displayed.
-  const colDefs = [
+  const colDefs: ColDef[] = [
     {
       headerName: "Functionality",
       field: "name",
@@ -26,6 +28,7 @@ export default function ShortcutsPage() {
       flex: 2,
       editable: false,
       resizable: false,
+      cellRenderer: CellRenderShortcuts,
     },
   ];
 
@@ -54,7 +57,7 @@ export default function ShortcutsPage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
-      <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
+      <div className="flex w-full items-start justify-between gap-6">
         <div className="flex w-full flex-col">
           <h2 className="flex items-center text-lg font-semibold tracking-tight">
             Shortcuts
@@ -68,12 +71,11 @@ export default function ShortcutsPage() {
           </p>
         </div>
         <div>
-          <div className="align-end mb-4 flex w-full justify-end">
+          <div className="align-end flex w-full justify-end">
             <div className="justify center flex items-center">
               {open && (
                 <EditShortcutButton
                   disable={selectedRows.length === 0}
-                  defaultCombination={combinationToEdit[0]?.shortcut}
                   shortcut={selectedRows}
                   defaultShortcuts={shortcuts}
                   open={open}

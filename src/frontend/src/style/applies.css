@@ -135,9 +135,6 @@
   .border-frozen {
     @apply border shadow-frozen-ring;
   }
-  .frosted {
-    @apply rounded-md bg-frozen-blue backdrop-blur-xs;
-  }
   .frozen {
     position: relative;
     overflow: hidden;
@@ -196,7 +193,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply form-input block w-full rounded-md border-border bg-muted px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
+    @apply form-input block w-full rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
   }
 
   .input-edit-node {
@@ -218,9 +215,6 @@
   .round-button-form {
     @apply flex h-12 w-12 cursor-pointer justify-center rounded-full bg-border px-3 py-1 shadow-md;
   }
-  .round-button-div {
-    @apply flex items-center gap-3;
-  }
   .build-trigger-loading-icon {
     @apply stroke-build-trigger;
   }
@@ -237,7 +231,7 @@
     @apply fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1;
   }
   .parent-disclosure-arrangement {
-    @apply flex w-full select-none items-center justify-between bg-background px-3 py-1;
+    @apply flex w-full select-none items-center justify-between bg-background px-5 py-3;
   }
   .components-disclosure-arrangement {
     @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
@@ -245,9 +239,6 @@
   .components-disclosure-arrangement-child {
     /* different color than the non child */
     @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
-  }
-  .parent-disclosure-title {
-    @apply p-2 px-2 text-sm font-medium;
   }
   .components-disclosure-title {
     @apply flex items-center text-sm text-primary;
@@ -342,7 +333,7 @@
     @apply h-8 w-8 rounded;
   }
   .generic-node-tooltip-div {
-    @apply ml-2 max-w-[220px] truncate;
+    @apply ml-2 flex w-full truncate;
   }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;
@@ -397,7 +388,7 @@
     @apply hover:text-accent-foreground hover:transition-all;
   }
   .generic-node-desc {
-    @apply mb-4 h-full w-full px-5 text-foreground;
+    @apply h-full w-full px-5 pb-4 text-foreground;
   }
   .generic-node-desc-text {
     @apply w-full text-sm text-muted-foreground;
@@ -568,7 +559,7 @@
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium;
   }
   .header-menu-bar-display {
-    @apply flex max-w-[115px] cursor-pointer items-center gap-2 lg:max-w-[145px];
+    @apply flex max-w-[110px] cursor-pointer items-center gap-2 lg:max-w-[150px];
   }
   .header-menu-flow-name {
     @apply flex-1 truncate;
@@ -581,7 +572,7 @@
     @apply flex-max-width h-12 items-center justify-between border-b border-border bg-muted;
   }
   .header-start-display {
-    @apply flex items-center justify-start gap-2;
+    @apply flex items-center gap-2;
   }
   .header-end-division {
     @apply flex justify-end px-2;
@@ -1084,7 +1075,7 @@
     @apply text-base text-muted-foreground;
   }
   .langflow-chat-input-div {
-    @apply flex-max-width flex-col items-center justify-between px-8 pb-6;
+    @apply flex-max-width flex-col items-center justify-between px-8 pb-3;
   }
   .langflow-chat-input {
     @apply relative w-full rounded-md shadow-sm;
@@ -1184,5 +1175,8 @@
 
   .store-beta-icon {
     @apply relative bottom-3 left-1 ml-2 rounded-full bg-beta-background px-2 py-1 text-center text-xs font-semibold text-beta-foreground;
+  }
+  .color-option-container {
+    @apply w-fit;
   }
 }

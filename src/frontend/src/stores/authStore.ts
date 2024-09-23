@@ -1,10 +1,8 @@
 // authStore.js
 import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { AuthStoreType } from "@/types/zustand/auth";
 import Cookies from "universal-cookie";
 import { create } from "zustand";
-import { useFolderStore } from "../stores/foldersStore";
 
 const cookies = new Cookies();
 const useAuthStore = create<AuthStoreType>((set, get) => ({
@@ -12,7 +10,7 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
   isAuthenticated: !!cookies.get(LANGFLOW_ACCESS_TOKEN),
   accessToken: cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
   userData: null,
-  autoLogin: false,
+  autoLogin: null,
   apiKey: cookies.get("apikey_tkn_lflw"),
   authenticationErrorCount: 0,
 
@@ -37,36 +35,7 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
       autoLogin: false,
       apiKey: null,
     });
-
-    window.location.href = "/login";
   },
-  //   getUser: () => {
-  //     const setLoading = useAlertStore.getState().setLoading;
-  //     const getFoldersApi = useFolderStore.getState().getFoldersApi;
-  //     const checkHasStore = useStoreStore.getState().checkHasStore;
-  //     const fetchApiData = useStoreStore.getState().fetchApiData;
-
-  //     getLoggedUser()
-  //       .then(async (user) => {
-  //         set({ userData: user, isAdmin: user.is_superuser });
-  //         getFoldersApi(true, true);
-  //         checkHasStore();
-  //         fetchApiData();
-  //       })
-  //       .catch((error) => {
-  //         setLoading(false);
-  //       });
-  //   },
-
-  //   login: (newAccessToken) => {
-  //     set({ accessToken: newAccessToken, isAuthenticated: true });
-  //     get().getUser();
-  //   },
-
-  //   storeApiKey: (apikey) => {
-  //     cookies.set('apikey_tkn_lflw', apikey, { path: '/' });
-  //     set({ apiKey: apikey });
-  //   },
 }));
 
 export default useAuthStore;

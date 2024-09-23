@@ -1,3 +1,4 @@
+import copy
 from textwrap import dedent
 
 import pytest
@@ -26,7 +27,7 @@ def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent(_id="file-123")
     file_component.set(path="test.txt")
-    file_component.set_output_value("data", Data(text="This is a test file."))
+    file_component.set_on_output(name="data", value=Data(text="This is a test file."), cache=True)
     text_splitter = SplitTextComponent(_id="text-splitter-123")
     text_splitter.set(data_inputs=file_component.load_file)
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-123")
@@ -40,9 +41,9 @@ def ingestion_graph():
         api_endpoint="https://astra.example.com",
         token="token",
     )
-    vector_store.set_output_value("vector_store", "mock_vector_store")
-    vector_store.set_output_value("base_retriever", "mock_retriever")
-    vector_store.set_output_value("search_results", [Data(text="This is a test file.")])
+    vector_store.set_on_output(name="vector_store", value="mock_vector_store", cache=True)
+    vector_store.set_on_output(name="base_retriever", value="mock_retriever", cache=True)
+    vector_store.set_on_output(name="search_results", value=[Data(text="This is a test file.")], cache=True)
 
     ingestion_graph = Graph(file_component, vector_store)
     return ingestion_graph
@@ -62,10 +63,16 @@ def rag_graph():
         embedding=openai_embeddings.build_embeddings,
     )
     # Mock search_documents
-    rag_vector_store.get_output("search_results").value = [
-        Data(data={"text": "Hello, world!"}),
-        Data(data={"text": "Goodbye, world!"}),
-    ]
+    rag_vector_store.set_on_output(
+        name="search_results",
+        value=[
+            Data(data={"text": "Hello, world!"}),
+            Data(data={"text": "Goodbye, world!"}),
+        ],
+        cache=True,
+    )
+    rag_vector_store.set_on_output(name="vector_store", value="mock_vector_store", cache=True)
+    rag_vector_store.set_on_output(name="base_retriever", value="mock_retriever", cache=True)
     parse_data = ParseDataComponent(_id="parse-data-123")
     parse_data.set(data=rag_vector_store.search_documents)
     prompt_component = PromptComponent(_id="prompt-123")
@@ -81,7 +88,7 @@ def rag_graph():
 
     openai_component = OpenAIModelComponent(_id="openai-123")
     openai_component.set(api_key="sk-123", openai_api_base="https://api.openai.com/v1")
-    openai_component.set_output_value("text_output", "Hello, world!")
+    openai_component.set_on_output(name="text_output", value="Hello, world!", cache=True)
     openai_component.set(input_value=prompt_component.build_prompt)
 
     chat_output = ChatOutput(_id="chatoutput-123")
@@ -128,6 +135,7 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
 
     ingestion_data = ingestion_graph_dump["data"]
     ingestion_nodes = ingestion_data["nodes"]
+    assert len(ingestion_nodes) == 4
     ingestion_edges = ingestion_data["edges"]
 
     # Sort nodes by id to check components
@@ -209,6 +217,73 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
         source = edge["source"]
         target = edge["target"]
         assert (source, target) in expected_rag_edges, f"Edge {source} -> {target} not found"
+
+
+def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
+    ingestion_graph_copy = copy.deepcopy(ingestion_graph)
+    rag_graph_copy = copy.deepcopy(rag_graph)
+    ingestion_graph_copy += rag_graph_copy
+
+    assert (
+        len(ingestion_graph_copy.vertices) == len(ingestion_graph.vertices) + len(rag_graph.vertices)
+    ), f"Vertices mismatch: {len(ingestion_graph_copy.vertices)} != {len(ingestion_graph.vertices)} + {len(rag_graph.vertices)}"
+    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(
+        rag_graph.edges
+    ), f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
+
+    combined_graph_dump = ingestion_graph_copy.dump(
+        name="Combined Graph", description="Graph for data ingestion and RAG", endpoint_name="combined"
+    )
+
+    combined_data = combined_graph_dump["data"]
+    combined_nodes = combined_data["nodes"]
+    combined_edges = combined_data["edges"]
+
+    # Sort nodes by id to check components
+    combined_nodes = sorted(combined_nodes, key=lambda x: x["id"])
+
+    # Expected components in the combined graph (both ingestion and RAG nodes)
+    expected_nodes = sorted(
+        [
+            {"id": "file-123", "type": "File"},
+            {"id": "openai-embeddings-123", "type": "OpenAIEmbeddings"},
+            {"id": "text-splitter-123", "type": "SplitText"},
+            {"id": "vector-store-123", "type": "AstraDB"},
+            {"id": "chatinput-123", "type": "ChatInput"},
+            {"id": "chatoutput-123", "type": "ChatOutput"},
+            {"id": "openai-123", "type": "OpenAIModel"},
+            {"id": "openai-embeddings-124", "type": "OpenAIEmbeddings"},
+            {"id": "parse-data-123", "type": "ParseData"},
+            {"id": "prompt-123", "type": "Prompt"},
+            {"id": "rag-vector-store-123", "type": "AstraDB"},
+        ],
+        key=lambda x: x["id"],
+    )
+
+    for expected_node, combined_node in zip(expected_nodes, combined_nodes):
+        assert combined_node["data"]["type"] == expected_node["type"]
+        assert combined_node["id"] == expected_node["id"]
+
+    # Expected edges in the combined graph (both ingestion and RAG edges)
+    expected_combined_edges = [
+        ("file-123", "text-splitter-123"),
+        ("text-splitter-123", "vector-store-123"),
+        ("openai-embeddings-123", "vector-store-123"),
+        ("chatinput-123", "rag-vector-store-123"),
+        ("openai-embeddings-124", "rag-vector-store-123"),
+        ("chatinput-123", "prompt-123"),
+        ("rag-vector-store-123", "parse-data-123"),
+        ("parse-data-123", "prompt-123"),
+        ("prompt-123", "openai-123"),
+        ("openai-123", "chatoutput-123"),
+    ]
+
+    assert len(combined_edges) == len(expected_combined_edges), combined_edges
+
+    for edge in combined_edges:
+        source = edge["source"]
+        target = edge["target"]
+        assert (source, target) in expected_combined_edges, f"Edge {source} -> {target} not found"
 
 
 def test_vector_store_rag_dump(ingestion_graph, rag_graph):

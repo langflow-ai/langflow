@@ -2,12 +2,28 @@ name: Python tests
 
 on:
   workflow_call:
-  workflow_dispatch:
     inputs:
-      branch:
-        description: "(Optional) Branch to checkout"
+      python-versions:
+        description: "(Optional) Python versions to test"
+        required: true
+        type: string
+        default: "['3.10', '3.11', '3.12']"
+      ref:
+        description: "(Optional) ref to checkout"
         required: false
         type: string
+      nightly:
+        description: "Whether run is from the nightly build"
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      python-versions:
+        description: "(Optional) Python versions to test"
+        required: true
+        type: string
+        default: "['3.10', '3.11', '3.12']"
 env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "21"
@@ -18,18 +34,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version:
-          - "3.12"
-          - "3.11"
-          - "3.10"
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12"]' ) }}
         splitCount: [5]
         group: [1, 2, 3, 4, 5]
-    env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.ref || github.ref }}
       - name: Setup Node.js
         uses: actions/setup-node@v4
         id: setup-node
@@ -44,6 +55,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           poetry env use ${{ matrix.python-version }}
+          poetry lock --no-update
           poetry install
       - name: Run unit tests
         uses: nick-fields/retry@v3
@@ -51,32 +63,76 @@ jobs:
           timeout_minutes: 12
           max_attempts: 2
           command: make unit_tests async=false args="--splits ${{ matrix.splitCount }} --group ${{ matrix.group }}"
-
-  test-cli:
-    name: Test CLI - Python ${{ matrix.python-version }}
+  integration-tests:
+    name: Integration Tests - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version:
-          - "3.12"
-          - "3.11"
-          - "3.10"
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12"]' ) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:
           python-version: ${{ matrix.python-version }}
           poetry-version: ${{ env.POETRY_VERSION }}
           cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install Python dependencies
+        run: |
+          poetry env use ${{ matrix.python-version }}
+          poetry lock --no-update
+          poetry install
+      - name: Run integration tests
+        run: make integration_tests_no_api_keys
+
+  test-cli:
+    name: Test CLI - Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12"]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Check Version
+        id: check-version
+        run: |
+          version=$(cd src/backend/base && poetry version --short)
+          url="https://pypi.org/pypi/langflow-base/json"
+          if [ ${{ inputs.nightly }} == true ]; then
+            url="https://pypi.org/pypi/langflow-base-nightly/json"
+          fi
+
+          last_released_version=$(curl -s $url | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+          if [ "$version" != "$last_released_version" ]; then
+            echo "Version $version has not been released yet. Skipping the rest of the job."
+            echo skipped=true >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+            echo skipped=false >> $GITHUB_OUTPUT
+          fi
       - name: Build wheel
+        if: steps.check-version.outputs.skipped == 'false'
         run: |
           poetry env use ${{ matrix.python-version }}
           make build main=true
       - name: Install wheel
+        if: steps.check-version.outputs.skipped == 'false'
         run: |
           python -m pip install dist/*.whl
       - name: Test CLI
+        if: steps.check-version.outputs.skipped == 'false'
         run: |
           python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!

@@ -215,6 +215,9 @@ export function isValidConnection(
   nodes: Node[],
   edges: Edge[],
 ) {
+  if (source === target) {
+    return false;
+  }
   const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle!);
   const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle!);
   if (
@@ -306,7 +309,7 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
   return { data: savedComponents, flows: DbData };
 };
 
-const needsLayout = (nodes: NodeType[]) => {
+export const needsLayout = (nodes: NodeType[]) => {
   return nodes.some((node) => !node.position);
 };
 
@@ -636,7 +639,7 @@ export function handleKeyDown(
   e:
     | React.KeyboardEvent<HTMLInputElement>
     | React.KeyboardEvent<HTMLTextAreaElement>,
-  inputValue: string | string[] | null,
+  inputValue: string | number | string[] | null | undefined,
   block: string,
 ) {
   //condition to fix bug control+backspace on Windows/Linux
@@ -789,7 +792,10 @@ export function checkEdgeWithoutEscapedHandleIds(edges: Edge[]): boolean {
 }
 
 export function checkOldNodesOutput(nodes: NodeType[]): boolean {
-  return nodes.some((node) => !node.data.node?.outputs);
+  return nodes.some(
+    (node) =>
+      node.data.node?.outputs === undefined && node.type === "genericNode",
+  );
 }
 
 export function customStringify(obj: any): string {

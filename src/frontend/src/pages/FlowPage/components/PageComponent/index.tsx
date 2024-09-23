@@ -1,7 +1,14 @@
+import { DefaultEdge } from "@/CustomEdges";
+import NoteNode from "@/CustomNodes/NoteNode";
+import IconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
+import ShadTooltip from "@/components/shadTooltipComponent";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
+import { track } from "@/customization/utils/analytics";
+import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { getInputsAndOutputs } from "@/utils/storeUtils";
+import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
+
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -15,10 +22,10 @@ import { useHotkeys } from "react-hotkeys-hook";
 import ReactFlow, {
   Background,
   Connection,
+  ControlButton,
   Controls,
   Edge,
   NodeDragHandler,
-  OnMove,
   OnSelectionChangeParams,
   SelectionDragHandler,
   updateEdge,
@@ -36,10 +43,9 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
-import { FlowType, NodeType } from "../../../../types/flow";
+import { NodeType } from "../../../../types/flow";
 import {
   checkOldComponents,
-  cleanEdges,
   generateFlow,
   generateNodeFromFlow,
   getNodeId,
@@ -55,19 +61,12 @@ import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
 const nodeTypes = {
   genericNode: GenericNode,
+  noteNode: NoteNode,
 };
 
-export default function Page({
-  flow,
-  view,
-}: {
-  flow: FlowType;
-  view?: boolean;
-}): JSX.Element {
+export default function Page({ view }: { view?: boolean }): JSX.Element {
   const uploadFlow = useUploadFlow();
-  const autoSaveCurrentFlow = useFlowsManagerStore(
-    (state) => state.autoSaveCurrentFlow,
-  );
+  const autoSaveFlow = useAutoSaveFlow();
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
@@ -83,7 +82,6 @@ export default function Page({
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
-  const cleanFlow = useFlowStore((state) => state.cleanFlow);
   const deleteNode = useFlowStore((state) => state.deleteNode);
   const deleteEdge = useFlowStore((state) => state.deleteEdge);
   const undo = useFlowsManagerStore((state) => state.undo);
@@ -97,22 +95,16 @@ export default function Page({
     (state) => state.setLastCopiedSelection,
   );
   const onConnect = useFlowStore((state) => state.onConnect);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
   const edgeUpdateSuccessful = useRef(true);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
-
-  const setFlowState = useFlowStore((state) => state.setFlowState);
-  const setInputs = useFlowStore((state) => state.setInputs);
-  const setOutputs = useFlowStore((state) => state.setOutputs);
-  const setHasIO = useFlowStore((state) => state.setHasIO);
-  const { inputs, outputs } = getInputsAndOutputs(flow.data!.nodes);
-  const viewport = flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 };
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   function handleGroupNode() {
     takeSnapshot();
@@ -159,13 +151,7 @@ export default function Page({
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
-  useEffect(() => {
-    if (reactFlowInstance && currentFlowId) {
-      reactFlowInstance!.setViewport(viewport);
-    }
-  }, [currentFlowId, reactFlowInstance]);
-
-  const { isFetching, refetch } = useGetBuildsQuery({});
+  const { isFetching } = useGetBuildsQuery({ flowId: currentFlowId });
 
   const showCanvas =
     Object.keys(templates).length > 0 &&
@@ -173,19 +159,7 @@ export default function Page({
     !isFetching;
 
   useEffect(() => {
-    if (!isFetching) {
-      let newEdges = cleanEdges(flow.data!.nodes, flow.data!.edges);
-      setNodes(flow.data!.nodes);
-      setEdges(newEdges);
-      setFlowState(undefined);
-      setInputs(inputs);
-      setOutputs(outputs);
-      setHasIO(inputs.length > 0 || outputs.length > 0);
-    }
-  }, [isFetching]);
-
-  useEffect(() => {
-    if (checkOldComponents({ nodes: flow?.data?.nodes ?? [] })) {
+    if (checkOldComponents({ nodes })) {
       setNoticeData({
         title:
           "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
@@ -194,11 +168,8 @@ export default function Page({
   }, [currentFlowId]);
 
   useEffect(() => {
-    refetch();
-    return () => {
-      cleanFlow();
-    };
-  }, [currentFlowId]);
+    useFlowStore.setState({ autoSaveFlow });
+  });
 
   function handleUndo(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {
@@ -324,6 +295,7 @@ export default function Page({
     (params: Connection) => {
       takeSnapshot();
       onConnect(params);
+      track("New Component Connection Added");
     },
     [takeSnapshot, onConnect],
   );
@@ -335,14 +307,10 @@ export default function Page({
   }, [takeSnapshot]);
 
   const onNodeDragStop: NodeDragHandler = useCallback(() => {
-    autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
-    // 👉 you can place your event handlers here
-  }, [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
-
-  const onMoveEnd: OnMove = useCallback(() => {
     // 👇 make moving the canvas undoable
-    autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
-  }, [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
+    autoSaveFlow();
+    updateCurrentFlow({ nodes });
+  }, [takeSnapshot, autoSaveFlow, nodes, edges, reactFlowInstance]);
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
@@ -351,7 +319,7 @@ export default function Page({
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-    if (event.dataTransfer.types.some((types) => types === "nodedata")) {
+    if (event.dataTransfer.types.some((types) => isSupportedNodeTypes(types))) {
       event.dataTransfer.dropEffect = "move";
     } else {
       event.dataTransfer.dropEffect = "copy";
@@ -361,19 +329,25 @@ export default function Page({
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-      if (event.dataTransfer.types.some((types) => types === "nodedata")) {
+      if (event.dataTransfer.types.some((type) => isSupportedNodeTypes(type))) {
         takeSnapshot();
+
+        const datakey = event.dataTransfer.types.find((type) =>
+          isSupportedNodeTypes(type),
+        );
 
         // Extract the data from the drag event and parse it as a JSON object
         const data: { type: string; node?: APIClassType } = JSON.parse(
-          event.dataTransfer.getData("nodedata"),
+          event.dataTransfer.getData(datakey!),
         );
+
+        track(`Component Added: ${data.node?.display_name}`);
 
         const newId = getNodeId(data.type);
 
         const newNode: NodeType = {
           id: newId,
-          type: "genericNode",
+          type: getNodeRenderType(datakey!),
           position: { x: 0, y: 0 },
           data: {
             ...data,
@@ -459,22 +433,9 @@ export default function Page({
     [],
   );
 
-  const onPaneClick = useCallback((flow) => {
+  const onPaneClick = useCallback(() => {
     setFilterEdge([]);
   }, []);
-
-  function onMouseAction(edge: Edge, color: string): void {
-    const edges = useFlowStore.getState().edges;
-    const newEdges = _.cloneDeep(edges);
-    const style = { stroke: color, transition: "stroke 0.25s" };
-    const updatedEdges = newEdges.map((obj) => {
-      if (obj.id === edge.id) {
-        return { ...obj, style };
-      }
-      return obj;
-    });
-    setEdges(updatedEdges);
-  }
 
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
@@ -493,13 +454,14 @@ export default function Page({
             onEdgeUpdateStart={onEdgeUpdateStart}
             onEdgeUpdateEnd={onEdgeUpdateEnd}
             onNodeDragStart={onNodeDragStart}
-            onNodeDragStop={onNodeDragStop}
             onSelectionDragStart={onSelectionDragStart}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
+            connectionRadius={25}
+            edgeTypes={{ default: DefaultEdge }}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
-            onMoveEnd={onMoveEnd}
+            onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
@@ -515,7 +477,60 @@ export default function Page({
           >
             <Background className="" />
             {!view && (
-              <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border"></Controls>
+              <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border">
+                <ControlButton
+                  data-testid="add_note"
+                  onClick={() => {
+                    const wrapper = reactFlowWrapper.current!;
+                    const viewport = reactFlowInstance?.getViewport();
+                    const x = wrapper.getBoundingClientRect().width / 2;
+                    const y = wrapper.getBoundingClientRect().height / 2;
+                    const nodePosition =
+                      reactFlowInstance?.screenToFlowPosition({ x, y })!;
+
+                    const data = {
+                      node: {
+                        description: "",
+                        display_name: "",
+                        documentation: "",
+                        template: {},
+                      },
+                      type: "note",
+                    };
+                    const newId = getNodeId(data.type);
+
+                    const newNode: NodeType = {
+                      id: newId,
+                      type: "noteNode",
+                      position: { x: 0, y: 0 },
+                      data: {
+                        ...data,
+                        id: newId,
+                      },
+                    };
+                    paste(
+                      { nodes: [newNode], edges: [] },
+                      {
+                        x: nodePosition.x,
+                        y: nodePosition?.y,
+                        paneX: wrapper.getBoundingClientRect().x,
+                        paneY: wrapper.getBoundingClientRect().y,
+                      },
+                    );
+                  }}
+                  className="postion react-flow__controls absolute -top-10"
+                >
+                  <ShadTooltip content="Add note">
+                    <div>
+                      <IconComponent
+                        name="SquarePen"
+                        aria-hidden="true"
+                        className="scale-125"
+                      />
+                    </div>
+                  </ShadTooltip>
+                </ControlButton>
+              </Controls>
             )}
             <SelectionMenu
               lastSelection={lastSelection}

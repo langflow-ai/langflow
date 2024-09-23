@@ -51,7 +51,7 @@ Subsequently, clicking the 🌐 button in a Text field will display the new vari
 
 :::tip
 
-You can also create global variables in Settings &gt; Variables and Secrets.
+You can also create global variables in Settings &gt; Global Variables.
 
 :::
 
@@ -61,7 +61,7 @@ You can also create global variables in Settings &gt; Variables and Secrets.
 ![](./418277339.png)
 
 
-To view and manage your project's global environment variables, visit **Settings** &gt; **Variables and Secrets**.
+To view and manage your project's global environment variables, visit **Settings** &gt; **Global Variables**.
 
 
 ### Configure Environment Variables in your .env file {#76844a93dbbc4d1ba551ea1a4a89ccdd}
@@ -111,3 +111,53 @@ The default list of variables includes the ones below and more:
 
 <ReactPlayer controls url="https://youtu.be/RedPOCsYNAM" />
 
+
+### Precautions
+
+Global variables are stored in the database, and their values are protected by encryption using a secret
+key. To preserve access to your global variables and avoid losing them, you should take a few precautions:
+
+1. Keep your secret key safe: Even if your database is secure, it won’t be of much use if you can't decrypt
+the values. Ideally, you can set your own secret key using the `LANGFLOW_SECRET_KEY` environment variable. If
+you don't provide a custom value for the secret key, one will be generated randomly and saved in the Langflow
+installation directory.
+
+2. We use SQLite as the default database, and Langflow saves the database file in the installation directory.
+To ensure the security of your data, it’s a good practice to regularly back up this file. If needed, you can
+also change the database location by setting the `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` environment variable to true
+and configuring `LANGFLOW_CONFIG_DIR` to point to a directory of your choice. Alternatively, you can opt to use
+an external database such as PostgreSQL, in which case these configurations are no longer necessary.
+
+For your convenience, if you’re running Langflow directly on your system or in a virtual environment
+via a pip installation, you can set these values by providing Langflow with a .env file containing these
+environment variables, using the following command:
+
+```bash
+langflow run --env-file .env
+```
+
+If you’re running Langflow in a Docker container, you can set these values by providing Langflow with:
+
+```bash
+docker run \
+        --privileged \
+        --user 1000:0 \
+        -p 7860:7860 \
+        -e LANGFLOW_SECRET_KEY=<YOUR_SECRET_KEY_VALUE> \
+        -e LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true \
+        -e LANGFLOW_CONFIG_DIR=/app/container_path \
+        -v $(PWD)/your_path:/app/container_path \
+        langflowai/langflow:latest
+```
+
+or
+
+```bash
+docker run \
+	--privileged \
+	--user 1000:0 \
+	-p 7860:7860 \
+	--env-file .env \
+	-v $(PWD)/your_path:/app/container_path \
+    langflowai/langflow:latest
+```
