@@ -788,8 +788,7 @@ class Vertex:
                     self.update_raw_params({"session_id": inputs.get("session")}, overwrite=True)
             if self._is_chat_input() and (inputs or files):
                 chat_input = {}
-                # aqui paizao fica na sua
-                if inputs:
+                if inputs and hasattr(inputs, "input_value"):
                     chat_input.update({"input_value": inputs.get(INPUT_FIELD_NAME, "")})
                 if files:
                     chat_input.update({"files": files})
