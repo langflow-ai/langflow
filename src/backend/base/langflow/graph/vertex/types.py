@@ -8,7 +8,7 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, log_transaction, log_vertex_build, serialize_field
+from langflow.graph.utils import UnbuiltObject, log_transaction, log_vertex_build, rewrite_file_path, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.exceptions import NoComponentInstance
 from langflow.graph.vertex.schema import NodeData
@@ -256,6 +256,10 @@ class InterfaceVertex(ComponentVertex):
         sender = self.params.get("sender", None)
         sender_name = self.params.get("sender_name", None)
         message = self.params.get(INPUT_FIELD_NAME, None)
+        files = self.params.get("files", [])
+        treat_file_path = files is not None and not isinstance(files, list) and isinstance(files, str)
+        if treat_file_path:
+            self.params["files"] = rewrite_file_path(files)
         files = [{"path": file} if isinstance(file, str) else file for file in self.params.get("files", [])]
         if isinstance(message, str):
             message = unescape_string(message)
@@ -381,6 +385,12 @@ class InterfaceVertex(ComponentVertex):
                 message = message.text if hasattr(message, "text") else message
                 yield message
                 complete_message += message
+
+        files = self.params.get("files", [])
+
+        treat_file_path = files is not None and not isinstance(files, list) and isinstance(files, str)
+        if treat_file_path:
+            self.params["files"] = rewrite_file_path(files)
 
         if hasattr(self.params.get("sender_name"), "get_text"):
             sender_name = self.params.get("sender_name").get_text()
