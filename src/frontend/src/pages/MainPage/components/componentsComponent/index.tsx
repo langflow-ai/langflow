@@ -1,5 +1,4 @@
 import { usePostDownloadMultipleFlows } from "@/controllers/API/queries/flows";
-import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useLocation, useParams } from "react-router-dom";
@@ -29,10 +28,12 @@ export default function ComponentsComponent({
   type = "all",
   currentFolder,
   isLoading,
+  deleteFlow,
 }: {
   type?: string;
   currentFolder?: FolderType;
   isLoading: boolean;
+  deleteFlow: ({ id }: { id: string[] }) => Promise<void>;
 }) {
   const { folderId } = useParams();
 
@@ -175,8 +176,6 @@ export default function ComponentsComponent({
     handleDuplicate,
     handleExport,
   );
-
-  const deleteFlow = useDeleteFlow();
 
   const handleDeleteMultiple = () => {
     deleteFlow({ id: selectedFlowsComponentsCards })

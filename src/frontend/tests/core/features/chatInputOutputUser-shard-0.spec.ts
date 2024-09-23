@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import { readFileSync } from "fs";
 import path from "path";
