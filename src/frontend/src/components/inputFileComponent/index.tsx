@@ -1,9 +1,11 @@
+import { maxSizeFilesInBytes } from "@/constants/constants";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { useEffect } from "react";
 import {
   CONSOLE_ERROR_MSG,
   INVALID_FILE_ALERT,
+  INVALID_FILE_SIZE_ALERT,
 } from "../../constants/alerts_constants";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -45,6 +47,12 @@ export default function InputFileComponent({
     createFileUpload({ multiple: false, accept: fileTypes?.join(",") }).then(
       (files) => {
         const file = files[0];
+        if (file.size > maxSizeFilesInBytes) {
+          setErrorData({
+            title: INVALID_FILE_SIZE_ALERT(10),
+          });
+          return;
+        }
         if (file) {
           if (checkFileType(file.name)) {
             // Upload the file
