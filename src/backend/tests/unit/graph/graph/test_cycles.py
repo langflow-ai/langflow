@@ -166,7 +166,7 @@ def test_updated_graph_with_prompts():
     router = ConditionalRouterComponent(_id="router").set(
         input_text=openai_component_1.text_response,
         match_text=chat_input.message_response,
-        operator="equals",
+        operator="contains",
         message=openai_component_1.text_response,
     )
 
@@ -184,16 +184,12 @@ def test_updated_graph_with_prompts():
 
     prompt_component_1.set(hint=openai_component_2.text_response, last_try=router.false_response)
 
-    # First chat output for OpenAI response from component 1
+    # chat output for the final OpenAI response
     chat_output_1 = ChatOutput(_id="chat_output_1")
-    chat_output_1.set(input_value=openai_component_1.text_response)
-
-    # Second chat output for the final OpenAI response
-    chat_output_2 = ChatOutput(_id="chat_output_2")
-    chat_output_2.set(input_value=router.true_response)
+    chat_output_1.set(input_value=router.true_response)
 
     # Build the graph without concatenate
-    graph = Graph(chat_input, chat_output_2)
+    graph = Graph(chat_input, chat_output_1)
 
     # Assertions for graph cyclicity and correctness
     assert graph.is_cyclic is True, "Graph should contain cycles."
@@ -201,16 +197,15 @@ def test_updated_graph_with_prompts():
     # Run and validate the execution of the graph
     results = []
     max_iterations = 20
-    snapshots = [graph._snapshot()]
+    snapshots = [graph.get_snapshot()]
 
     for result in graph.start(max_iterations=max_iterations, config={"output": {"cache": False}}):
-        snapshots.append(graph._snapshot())
+        snapshots.append(graph.get_snapshot())
         results.append(result)
 
+    assert len(snapshots) > 2, "Graph should have more than one snapshot"
     # Extract the vertex IDs for analysis
     results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
-    assert (
-        "chat_output_1" in results_ids and "chat_output_2" in results_ids
-    ), f"Expected outputs not in results: {results_ids}"
+    assert "chat_output_1" in results_ids, f"Expected outputs not in results: {results_ids}"
 
     print(f"Execution completed with results: {results_ids}")
