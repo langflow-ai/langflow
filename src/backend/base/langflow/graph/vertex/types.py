@@ -108,7 +108,7 @@ class ComponentVertex(Vertex):
                 )
             if default_value is not UNDEFINED:
                 return default_value
-            raise ValueError(f"Component {self.display_name} has not been built yet")
+            raise ValueError(f"Component {self.display_name} ({self.id}) has not been built yet")
 
         if requester is None:
             raise ValueError("Requester Vertex is None")
