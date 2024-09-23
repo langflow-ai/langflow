@@ -61,9 +61,15 @@ help: ## show this help message
 # INSTALL PROJECT
 ######################
 
+reinstall_backend: ## forces reinstall all dependencies (no caching)
+	@echo 'Installing backend dependencies'
+	#@poetry install > /dev/null 2>&1
+	@cd src/backend/base && uv sync -n --reinstall && cd ../../ && uv sync -n --reinstall > /dev/null 2>&1
+
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@poetry install > /dev/null 2>&1
+	#@poetry install > /dev/null 2>&1
+	@cd src/backend/base && uv sync && cd ../../ && uv sync > /dev/null 2>&1
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
