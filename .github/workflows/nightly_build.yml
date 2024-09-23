@@ -149,7 +149,9 @@ jobs:
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests/core"
-    secrets: inherit
+    secrets: 
+      OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
+      STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
 
   backend-unit-tests:
     if: github.repository == 'langflow-ai/langflow'
