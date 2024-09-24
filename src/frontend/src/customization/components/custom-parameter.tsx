@@ -47,3 +47,17 @@ export function getCustomParameterTitle({
 }) {
   return title;
 }
+
+export function CustomParameterLabel({
+  name,
+  nodeId,
+  templateValue,
+  nodeClass,
+}: {
+  name: string;
+  nodeId: string;
+  templateValue: any;
+  nodeClass: APIClassType;
+}) {
+  return <></>;
+}
