@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Union, get_args
+from typing import Any, get_args
 from collections.abc import AsyncIterator, Iterator
 
 from pydantic import Field, field_validator
@@ -38,7 +38,7 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
             raise ValueError(f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list.")
 
         for item in v:
-            if not isinstance(item, (dict, Data)):
+            if not isinstance(item, dict | Data):
                 raise ValueError(
                     f"TableInput value must be a list of dictionaries or Data. Item '{item}' is not a dictionary or Data."
                 )
@@ -194,7 +194,7 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
                     f"The input to '{input_name}' must contain the key '{v.text_key}'."
                     f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
                 )
-        elif isinstance(v, (AsyncIterator, Iterator)):
+        elif isinstance(v, AsyncIterator | Iterator):
             value = v
         else:
             raise ValueError(f"Invalid value type {type(v)}")
@@ -276,7 +276,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
                     f"The input to '{input_name}' must contain the key '{v.text_key}'."
                     f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
                 )
-        elif isinstance(v, (AsyncIterator, Iterator)):
+        elif isinstance(v, AsyncIterator | Iterator):
             value = v
         elif v is None:
             value = None
@@ -315,7 +315,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
 
-        if v and not isinstance(v, (int, float)):
+        if v and not isinstance(v, int | float):
             raise ValueError(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
         if isinstance(v, float):
             v = int(v)
@@ -351,7 +351,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
-        if v and not isinstance(v, (int, float)):
+        if v and not isinstance(v, int | float):
             raise ValueError(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
         if isinstance(v, int):
             v = float(v)
@@ -485,30 +485,30 @@ class DefaultPromptField(Input):
     value: Any = ""  # Set the value to empty string
 
 
-InputTypes = Union[
-    Input,
-    DefaultPromptField,
-    BoolInput,
-    DataInput,
-    DictInput,
-    DropdownInput,
-    MultiselectInput,
-    FileInput,
-    FloatInput,
-    HandleInput,
-    IntInput,
-    MultilineInput,
-    MultilineSecretInput,
-    NestedDictInput,
-    PromptInput,
-    CodeInput,
-    SecretStrInput,
-    StrInput,
-    MessageTextInput,
-    MessageInput,
-    TableInput,
-    LinkInput,
-]
+InputTypes = (
+    Input
+    | DefaultPromptField
+    | BoolInput
+    | DataInput
+    | DictInput
+    | DropdownInput
+    | MultiselectInput
+    | FileInput
+    | FloatInput
+    | HandleInput
+    | IntInput
+    | MultilineInput
+    | MultilineSecretInput
+    | NestedDictInput
+    | PromptInput
+    | CodeInput
+    | SecretStrInput
+    | StrInput
+    | MessageTextInput
+    | MessageInput
+    | TableInput
+    | LinkInput
+)
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
 

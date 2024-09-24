@@ -3,7 +3,7 @@ import pickle
 import threading
 import time
 from collections import OrderedDict
-from typing import Generic, Optional
+from typing import Generic
 
 from loguru import logger
 
@@ -50,7 +50,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
         self.max_size = max_size
         self.expiration_time = expiration_time
 
-    def get(self, key, lock: Optional[threading.Lock] = None):
+    def get(self, key, lock: threading.Lock | None = None):
         """
         Retrieve an item from the cache.
 
@@ -81,7 +81,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
                 self.delete(key)
         return None
 
-    def set(self, key, value, lock: Optional[threading.Lock] = None):
+    def set(self, key, value, lock: threading.Lock | None = None):
         """
         Add an item to the cache.
 
@@ -102,7 +102,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
 
             self._cache[key] = {"value": value, "time": time.time()}
 
-    def upsert(self, key, value, lock: Optional[threading.Lock] = None):
+    def upsert(self, key, value, lock: threading.Lock | None = None):
         """
         Inserts or updates a value in the cache.
         If the existing value and the new value are both dictionaries, they are merged.
@@ -119,7 +119,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
 
             self.set(key, value)
 
-    def get_or_set(self, key, value, lock: Optional[threading.Lock] = None):
+    def get_or_set(self, key, value, lock: threading.Lock | None = None):
         """
         Retrieve an item from the cache. If the item does not exist,
         set it with the provided value.
@@ -137,7 +137,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
             self.set(key, value)
             return value
 
-    def delete(self, key, lock: Optional[threading.Lock] = None):
+    def delete(self, key, lock: threading.Lock | None = None):
         """
         Remove an item from the cache.
 
@@ -147,7 +147,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
         with lock or self._lock:
             self._cache.pop(key, None)
 
-    def clear(self, lock: Optional[threading.Lock] = None):
+    def clear(self, lock: threading.Lock | None = None):
         """
         Clear all items from the cache.
         """
@@ -337,7 +337,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type
         self.max_size = max_size
         self.expiration_time = expiration_time
 
-    async def get(self, key, lock: Optional[asyncio.Lock] = None):
+    async def get(self, key, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 return await self._get(key)
@@ -355,7 +355,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type
                 await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS
 
-    async def set(self, key, value, lock: Optional[asyncio.Lock] = None):
+    async def set(self, key, value, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 await self._set(
@@ -374,7 +374,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type
         self.cache[key] = {"value": value, "time": time.time()}
         self.cache.move_to_end(key)
 
-    async def delete(self, key, lock: Optional[asyncio.Lock] = None):
+    async def delete(self, key, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 await self._delete(key)
@@ -385,7 +385,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type
         if key in self.cache:
             del self.cache[key]
 
-    async def clear(self, lock: Optional[asyncio.Lock] = None):
+    async def clear(self, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 await self._clear()
@@ -395,7 +395,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type
     async def _clear(self):
         self.cache.clear()
 
-    async def upsert(self, key, value, lock: Optional[asyncio.Lock] = None):
+    async def upsert(self, key, value, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 await self._upsert(key, value)

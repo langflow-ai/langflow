@@ -7,7 +7,7 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Awaitable
+from collections.abc import Awaitable
 from uuid import UUID
 
 import orjson

@@ -1,4 +1,5 @@
-from typing import Callable, Dict, TypeAlias, TypeVar, Union
+from typing import TypeAlias, TypeVar
+from collections.abc import Callable
 
 from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain
@@ -20,7 +21,7 @@ from langchain_text_splitters import TextSplitter
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 
-NestedDict: TypeAlias = Dict[str, Union[str, Dict]]
+NestedDict: TypeAlias = dict[str, str | dict]
 LanguageModel = TypeVar("LanguageModel", BaseLanguageModel, BaseLLM, BaseChatModel)
 ToolEnabledLanguageModel = TypeVar("ToolEnabledLanguageModel", BaseLanguageModel, BaseLLM, BaseChatModel)
 Retriever = TypeVar(

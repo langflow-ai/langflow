@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import HTTPException
 from langchain_core.prompts import PromptTemplate
@@ -199,7 +199,7 @@ def update_input_variables_field(input_variables, template):
 
 
 def process_prompt_template(
-    template: str, name: str, custom_fields: Optional[Dict[str, List[str]]], frontend_node_template: Dict[str, Any]
+    template: str, name: str, custom_fields: dict[str, list[str]] | None, frontend_node_template: dict[str, Any]
 ):
     """Process and validate prompt template, update template and custom fields."""
     # Validate the prompt template and extract input variables

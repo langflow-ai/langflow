@@ -3,7 +3,6 @@ from langflow.custom import Component
 from langflow.io import MessageTextInput, Output, SecretStrInput
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-from typing import List, Optional
 
 # TODO: remove ignore once the google package is published with types
 from google.ai.generativelanguage_v1beta.types import (
@@ -44,13 +43,13 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
 
             def embed_documents(
                 self,
-                texts: List[str],
+                texts: list[str],
                 *,
                 batch_size: int = 100,
-                task_type: Optional[str] = None,
-                titles: Optional[List[str]] = None,
-                output_dimensionality: Optional[int] = 1536,
-            ) -> List[List[float]]:
+                task_type: str | None = None,
+                titles: list[str] | None = None,
+                output_dimensionality: int | None = 1536,
+            ) -> list[list[float]]:
                 """Embed a list of strings. Google Generative AI currently
                 sets a max batch size of 100 strings.
 
@@ -65,7 +64,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 Returns:
                     List of embeddings, one for each text.
                 """
-                embeddings: List[List[float]] = []
+                embeddings: list[list[float]] = []
                 batch_start_index = 0
                 for batch in GoogleGenerativeAIEmbeddings._prepare_batches(texts, batch_size):
                     if titles:
@@ -96,10 +95,10 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
             def embed_query(
                 self,
                 text: str,
-                task_type: Optional[str] = None,
-                title: Optional[str] = None,
-                output_dimensionality: Optional[int] = 1536,
-            ) -> List[float]:
+                task_type: str | None = None,
+                title: str | None = None,
+                output_dimensionality: int | None = 1536,
+            ) -> list[float]:
                 """Embed a text.
 
                 Args:

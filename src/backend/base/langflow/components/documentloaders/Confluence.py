@@ -1,4 +1,3 @@
-from typing import List
 from langflow.custom import Component
 from langflow.io import StrInput, SecretStrInput, BoolInput, DropdownInput, Output, IntInput
 from langflow.schema import Data
@@ -77,7 +76,7 @@ class ConfluenceComponent(Component):
         )
         return loader
 
-    def load_documents(self) -> List[Data]:
+    def load_documents(self) -> list[Data]:
         confluence = self.build_confluence()
         documents = confluence.load()
         data = [Data.from_document(doc) for doc in documents]  # Using the from_document method of Data

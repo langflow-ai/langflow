@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import yaml
 from cachetools import TTLCache
@@ -69,7 +71,7 @@ class CustomComponent(BaseComponent):
     """The default frozen state of the component. Defaults to False."""
     build_parameters: dict | None = None
     """The build parameters of the component. Defaults to None."""
-    _vertex: Optional["Vertex"] = None
+    _vertex: Vertex | None = None
     """The edge target parameter of the component. Defaults to None."""
     _code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
@@ -81,7 +83,7 @@ class CustomComponent(BaseComponent):
     _outputs: list[OutputValue] = []
     _logs: list[Log] = []
     _output_logs: dict[str, Log] = {}
-    _tracing_service: Optional["TracingService"] = None
+    _tracing_service: TracingService | None = None
     _tree: dict | None = None
 
     def __init__(self, **data):
@@ -464,7 +466,7 @@ class CustomComponent(BaseComponent):
         """
         return validate.create_function(self._code, self._function_entrypoint_name)
 
-    async def load_flow(self, flow_id: str, tweaks: dict | None = None) -> "Graph":
+    async def load_flow(self, flow_id: str, tweaks: dict | None = None) -> Graph:
         if not self.user_id:
             raise ValueError("Session is invalid")
         return await load_flow(user_id=str(self._user_id), flow_id=flow_id, tweaks=tweaks)
@@ -517,7 +519,7 @@ class CustomComponent(BaseComponent):
         )
         return frontend_node
 
-    def get_langchain_callbacks(self) -> list["BaseCallbackHandler"]:
+    def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
         if self._tracing_service:
             return self._tracing_service.get_langchain_callbacks()
         return []

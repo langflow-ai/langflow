@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_community.graph_vectorstores import CassandraGraphVectorStore
 from loguru import logger
 from uuid import UUID
@@ -197,7 +195,7 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
         else:
             return "traversal"
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         logger.debug(f"Search input: {self.search_query}")

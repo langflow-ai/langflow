@@ -141,7 +141,8 @@ mypy_path = "langflow"
 ignore_missing_imports = true
 
 [tool.ruff]
-exclude = ["src/backend/langflow/alembic/*"]
+target-version = "py310"
+exclude = ["langflow/alembic"]
 line-length = 120
 
 [tool.ruff.lint]

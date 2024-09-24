@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -12,8 +14,6 @@ from langflow.services.deps import get_monitor_service
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
-
-from typing import Dict, List
 
 
 def migrate_messages_from_monitor_service_to_database(session: Session) -> bool:
@@ -34,7 +34,7 @@ def migrate_messages_from_monitor_service_to_database(session: Session) -> bool:
         logger.info("No messages to migrate.")
         return True
 
-    original_messages: List[Dict] = messages_df.to_dict(orient="records")
+    original_messages: list[dict] = messages_df.to_dict(orient="records")
 
     db_messages = session.exec(select(MessageTable)).all()
     db_messages = [msg[0] for msg in db_messages]  # type: ignore
@@ -130,7 +130,7 @@ def initialize_database(fix_migration: bool = False):
 
 
 @contextmanager
-def session_getter(db_service: "DatabaseService"):
+def session_getter(db_service: DatabaseService):
     try:
         session = Session(db_service.engine)
         yield session

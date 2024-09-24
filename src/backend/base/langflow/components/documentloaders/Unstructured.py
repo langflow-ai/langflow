@@ -1,5 +1,3 @@
-from typing import List
-
 from langflow.custom import Component
 from langflow.inputs import FileInput, SecretStrInput
 from langflow.template import Output
@@ -47,7 +45,7 @@ class UnstructuredComponent(Component):
 
         return loader
 
-    def load_documents(self) -> List[Data]:
+    def load_documents(self) -> list[Data]:
         unstructured = self.build_unstructured()
 
         documents = unstructured.load()

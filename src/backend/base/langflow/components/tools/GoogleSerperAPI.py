@@ -1,5 +1,3 @@
-from typing import Union
-
 from langchain_community.utilities.google_serper import GoogleSerperAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -22,7 +20,7 @@ class GoogleSerperAPIComponent(LCToolComponent):
         IntInput(name="k", display_name="Number of results", value=4, required=True),
     ]
 
-    def run_model(self) -> Union[Data, list[Data]]:
+    def run_model(self) -> Data | list[Data]:
         wrapper = self._build_wrapper()
         results = wrapper.results(query=self.input_value)
         list_results = results.get("organic", [])

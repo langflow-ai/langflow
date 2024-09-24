@@ -1,5 +1,6 @@
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING
+from collections.abc import Generator
 from loguru import logger
 from langflow.services.schema import ServiceType
 

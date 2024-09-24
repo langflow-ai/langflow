@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List
 import re
 
 from langchain_community.document_loaders.git import GitLoader
@@ -108,7 +107,7 @@ class GitLoaderComponent(Component):
         )
         return loader
 
-    def load_documents(self) -> List[Data]:
+    def load_documents(self) -> list[Data]:
         gitloader = self.build_gitloader()
         documents = list(gitloader.lazy_load())
         data = [Data.from_document(doc) for doc in documents]

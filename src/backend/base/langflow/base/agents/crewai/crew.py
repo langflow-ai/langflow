@@ -1,4 +1,5 @@
-from typing import Callable, List, Tuple, Union, cast
+from typing import cast
+from collections.abc import Callable
 
 from crewai import Agent, Crew, Process, Task  # type: ignore
 from crewai.task import TaskOutput  # type: ignore
@@ -62,7 +63,7 @@ class BaseCrewComponent(Component):
     def get_step_callback(
         self,
     ) -> Callable:
-        def step_callback(agent_output: Union[AgentFinish, List[Tuple[AgentAction, str]]]):
+        def step_callback(agent_output: AgentFinish | list[tuple[AgentAction, str]]):
             _id = self._vertex.id if self._vertex else self.display_name
             if isinstance(agent_output, AgentFinish):
                 messages = agent_output.messages

@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 import nanoid  # type: ignore
@@ -64,9 +66,9 @@ class LangWatchTracer(BaseTracer):
         trace_id: str,
         trace_name: str,
         trace_type: str,
-        inputs: Dict[str, Any],
-        metadata: Dict[str, Any] | None = None,
-        vertex: Optional["Vertex"] = None,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+        vertex: Vertex | None = None,
     ):
         if not self._ready:
             return
@@ -97,7 +99,7 @@ class LangWatchTracer(BaseTracer):
         self,
         trace_id: str,
         trace_name: str,
-        outputs: Dict[str, Any] | None = None,
+        outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: list[Log | dict] = [],
     ):
@@ -109,7 +111,7 @@ class LangWatchTracer(BaseTracer):
     def end(
         self,
         inputs: dict[str, Any],
-        outputs: Dict[str, Any],
+        outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -127,7 +129,7 @@ class LangWatchTracer(BaseTracer):
         if self.trace.api_key or self._client.api_key:
             self.trace.deferred_send_spans()
 
-    def _convert_to_langwatch_types(self, io_dict: Optional[Dict[str, Any]]):
+    def _convert_to_langwatch_types(self, io_dict: dict[str, Any] | None):
         from langwatch.utils import autoconvert_typed_values
 
         if io_dict is None:
@@ -163,7 +165,7 @@ class LangWatchTracer(BaseTracer):
             value = cast(dict, value.to_lc_document())
         return value
 
-    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
+    def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if self.trace is None:
             return None
 

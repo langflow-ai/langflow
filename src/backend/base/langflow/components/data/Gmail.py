@@ -1,7 +1,8 @@
 import base64
 import re
 import json
-from typing import Any, Iterator, List, Optional
+from typing import Any
+from collections.abc import Iterator
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from langflow.custom import Component
@@ -64,7 +65,7 @@ class GmailLoaderComponent(Component):
     def load_emails(self) -> Data:
         class CustomGMailLoader(GMailLoader):
             def __init__(
-                self, creds: Any, n: int = 100, label_ids: Optional[List[str]] = None, raise_error: bool = False
+                self, creds: Any, n: int = 100, label_ids: list[str] | None = None, raise_error: bool = False
             ) -> None:
                 super().__init__(creds, n, raise_error)
                 self.label_ids = label_ids if label_ids is not None else ["SENT"]

@@ -4,7 +4,6 @@ import sys
 import time
 import warnings
 from pathlib import Path
-from typing import Optional
 
 import click
 import httpx
@@ -84,7 +83,7 @@ def run(
     workers: int = typer.Option(1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"),
     timeout: int = typer.Option(300, help="Worker timeout in seconds.", envvar="LANGFLOW_WORKER_TIMEOUT"),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
-    components_path: Optional[Path] = typer.Option(
+    components_path: Path | None = typer.Option(
         Path(__file__).parent / "components",
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENTS_PATH",
@@ -93,7 +92,7 @@ def run(
     env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
     log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
     log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"),
-    cache: Optional[str] = typer.Option(
+    cache: str | None = typer.Option(
         envvar="LANGFLOW_LANGCHAIN_CACHE",
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
         default=None,
@@ -161,7 +160,7 @@ def run(
         health_check_max_retries=health_check_max_retries,
     )
     # create path object if path is provided
-    static_files_dir: Optional[Path] = Path(path) if path else None
+    static_files_dir: Path | None = Path(path) if path else None
     settings_service = get_settings_service()
     settings_service.set("backend_only", backend_only)
     app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)

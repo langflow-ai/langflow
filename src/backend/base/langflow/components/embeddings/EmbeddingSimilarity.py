@@ -1,4 +1,3 @@
-from typing import List
 import numpy as np
 from langflow.custom import Component
 from langflow.io import DataInput, DropdownInput, Output
@@ -31,7 +30,7 @@ class EmbeddingSimilarityComponent(Component):
     ]
 
     def compute_similarity(self) -> Data:
-        embedding_vectors: List[Data] = self.embedding_vectors
+        embedding_vectors: list[Data] = self.embedding_vectors
 
         # Assert that the list contains exactly two Data objects
         assert len(embedding_vectors) == 2, "Exactly two embedding vectors are required."

@@ -1,6 +1,5 @@
 import ast
 import operator
-from typing import List
 from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import MessageTextInput
@@ -26,7 +25,7 @@ class CalculatorToolComponent(LCToolComponent):
     class CalculatorToolSchema(BaseModel):
         expression: str = Field(..., description="The arithmetic expression to evaluate.")
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         return self._evaluate_expression(self.expression)
 
     def build_tool(self) -> Tool:
@@ -37,7 +36,7 @@ class CalculatorToolComponent(LCToolComponent):
             args_schema=self.CalculatorToolSchema,
         )
 
-    def _evaluate_expression(self, expression: str) -> List[Data]:
+    def _evaluate_expression(self, expression: str) -> list[Data]:
         try:
             # Define the allowed operators
             operators = {

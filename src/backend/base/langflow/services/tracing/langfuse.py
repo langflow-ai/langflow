@@ -1,5 +1,5 @@
 import os
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 from datetime import datetime
 
@@ -64,8 +64,8 @@ class LangFuseTracer(BaseTracer):
         trace_id: str,
         trace_name: str,
         trace_type: str,
-        inputs: Dict[str, Any],
-        metadata: Dict[str, Any] | None = None,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
         vertex: Optional["Vertex"] = None,
     ):
         start_time = datetime.utcnow()
@@ -96,7 +96,7 @@ class LangFuseTracer(BaseTracer):
         self,
         trace_id: str,
         trace_name: str,
-        outputs: Dict[str, Any] | None = None,
+        outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: list[Log | dict] = [],
     ):
@@ -116,7 +116,7 @@ class LangFuseTracer(BaseTracer):
     def end(
         self,
         inputs: dict[str, Any],
-        outputs: Dict[str, Any],
+        outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):

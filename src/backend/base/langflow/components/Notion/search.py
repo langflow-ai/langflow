@@ -1,5 +1,5 @@
 import requests
-from typing import Dict, Any, List
+from typing import Any
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -48,7 +48,7 @@ class NotionSearch(LCToolComponent):
         filter_value: str = Field(default="page", description="Filter type: 'page' or 'database'.")
         sort_direction: str = Field(default="descending", description="Sort direction: 'ascending' or 'descending'.")
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         results = self._search_notion(self.query, self.filter_value, self.sort_direction)
         records = []
         combined_text = f"Results found: {len(results)}\n\n"
@@ -88,7 +88,7 @@ class NotionSearch(LCToolComponent):
 
     def _search_notion(
         self, query: str, filter_value: str = "page", sort_direction: str = "descending"
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         url = "https://api.notion.com/v1/search"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from loguru import logger
@@ -34,7 +34,7 @@ def get_langfuse_callback(trace_id):
     return None
 
 
-def flush_langfuse_callback_if_present(callbacks: List[Union[BaseCallbackHandler, "CallbackHandler"]]):
+def flush_langfuse_callback_if_present(callbacks: list[Union[BaseCallbackHandler, "CallbackHandler"]]):
     """
     If langfuse callback is present, run callback.langfuse.flush()
     """

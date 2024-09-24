@@ -2,7 +2,8 @@ import base64
 import random
 import warnings
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Coroutine, Optional, Union
+from typing import Annotated
+from collections.abc import Coroutine
 from uuid import UUID
 
 from cryptography.fernet import Fernet
@@ -32,9 +33,9 @@ async def api_key_security(
     query_param: str = Security(api_key_query),
     header_param: str = Security(api_key_header),
     db: Session = Depends(get_session),
-) -> Optional[UserRead]:
+) -> UserRead | None:
     settings_service = get_settings_service()
-    result: Optional[Union[ApiKey, User]] = None
+    result: ApiKey | User | None = None
     if settings_service.auth_settings.AUTO_LOGIN:
         # Get the first user
         if not settings_service.auth_settings.SUPERUSER:
@@ -154,7 +155,7 @@ async def get_current_user_for_websocket(
     websocket: WebSocket,
     db: Session = Depends(get_session),
     query_param: str = Security(api_key_query),
-) -> Optional[User]:
+) -> User | None:
     token = websocket.query_params.get("token")
     api_key = websocket.query_params.get("x-api-key")
     if token:
@@ -325,7 +326,7 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
         ) from e
 
 
-def authenticate_user(username: str, password: str, db: Session = Depends(get_session)) -> Optional[User]:
+def authenticate_user(username: str, password: str, db: Session = Depends(get_session)) -> User | None:
     user = get_user_by_username(db, username)
 
     if not user:

@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Any, Union
+from typing import Any
 from markdown import markdown
 from bs4 import BeautifulSoup
 import requests
@@ -53,7 +53,7 @@ class AddContentToPage(LCToolComponent):
             args_schema=self.AddContentToPageSchema,
         )
 
-    def _add_content_to_page(self, markdown_text: str, block_id: str) -> Union[Dict[str, Any], str]:
+    def _add_content_to_page(self, markdown_text: str, block_id: str) -> dict[str, Any] | str:
         try:
             html_text = markdown(markdown_text)
             soup = BeautifulSoup(html_text, "html.parser")
@@ -208,7 +208,7 @@ class AddContentToPage(LCToolComponent):
 
         return blocks
 
-    def create_block(self, block_type: str, content: str, **kwargs) -> Dict[str, Any]:
+    def create_block(self, block_type: str, content: str, **kwargs) -> dict[str, Any]:
         block: dict[str, Any] = {
             "object": "block",
             "type": block_type,

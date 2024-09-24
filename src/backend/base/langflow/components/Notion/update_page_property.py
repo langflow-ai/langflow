@@ -1,6 +1,6 @@
 import json
 import requests
-from typing import Dict, Any, Union
+from typing import Any
 from pydantic import BaseModel, Field
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import SecretStrInput, StrInput, MultilineInput
@@ -37,7 +37,7 @@ class NotionPageUpdate(LCToolComponent):
 
     class NotionPageUpdateSchema(BaseModel):
         page_id: str = Field(..., description="The ID of the Notion page to update.")
-        properties: Union[str, Dict[str, Any]] = Field(
+        properties: str | dict[str, Any] = Field(
             ..., description="The properties to update on the page (as a JSON string or a dictionary)."
         )
 
@@ -61,7 +61,7 @@ class NotionPageUpdate(LCToolComponent):
             args_schema=self.NotionPageUpdateSchema,
         )
 
-    def _update_notion_page(self, page_id: str, properties: Union[str, Dict[str, Any]]) -> Union[Dict[str, Any], str]:
+    def _update_notion_page(self, page_id: str, properties: str | dict[str, Any]) -> dict[str, Any] | str:
         url = f"https://api.notion.com/v1/pages/{page_id}"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",

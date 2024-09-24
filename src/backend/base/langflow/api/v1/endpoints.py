@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from asyncio import Lock
 from http import HTTPStatus
@@ -62,7 +64,7 @@ router = APIRouter(tags=["Base"])
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all(
     settings_service=Depends(get_settings_service),
-    cache_service: "CacheService" = Depends(dependency=get_cache_service),
+    cache_service: CacheService = Depends(dependency=get_cache_service),
     force_refresh: bool = False,
 ):
     from langflow.interface.types import get_and_cache_all_types_dict
@@ -181,7 +183,7 @@ async def simplified_run_flow(
     input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
     stream: bool = False,
     api_key_user: UserRead = Depends(api_key_security),
-    telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
+    telemetry_service: TelemetryService = Depends(get_telemetry_service),
 ):
     """
     Executes a specified flow by ID with input customization, performance enhancements through caching, and optional data streaming.
@@ -290,7 +292,7 @@ async def webhook_run_flow(
     user: Annotated[User, Depends(get_user_by_flow_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
-    telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
+    telemetry_service: TelemetryService = Depends(get_telemetry_service),
 ):
     """
     Run a flow using a webhook request.
@@ -484,7 +486,7 @@ async def process(
     tweaks: dict | None = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[None | str, Body(embed=True)] = None,  # noqa: F821
-    task_service: "TaskService" = Depends(get_task_service),
+    task_service: TaskService = Depends(get_task_service),
     api_key_user: UserRead = Depends(api_key_security),
     sync: Annotated[bool, Body(embed=True)] = True,  # noqa: F821
     session_service: SessionService = Depends(get_session_service),

@@ -1,7 +1,7 @@
 import httpx
 import json
 
-from typing import Any, Dict, Optional, Union
+from typing import Any
 from urllib.parse import urljoin
 
 from langchain_core.pydantic_v1 import BaseModel
@@ -34,7 +34,7 @@ class GleanSearchAPIComponent(LCToolComponent):
 
         return Tool(name="glean_search_api", description="Search with the Glean API", func=wrapper.run)
 
-    def run_model(self) -> Union[Data, list[Data]]:
+    def run_model(self) -> Data | list[Data]:
         wrapper = self._build_wrapper()
 
         results = wrapper.results(
@@ -68,7 +68,7 @@ class GleanSearchAPIComponent(LCToolComponent):
                 self,
                 query: str,
                 page_size: int = 10,
-                request_options: Optional[Dict[str, Any]] = None,
+                request_options: dict[str, Any] | None = None,
             ) -> dict:
                 # Ensure there's a trailing slash
                 url = self.glean_api_url
@@ -98,7 +98,7 @@ class GleanSearchAPIComponent(LCToolComponent):
 
                 return results
 
-            def _search_api_results(self, query: str, **kwargs: Any) -> Dict[str, Any]:
+            def _search_api_results(self, query: str, **kwargs: Any) -> dict[str, Any]:
                 request_details = self._prepare_request(query, **kwargs)
 
                 response = httpx.post(

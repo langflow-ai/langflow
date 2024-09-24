@@ -1,7 +1,8 @@
 import threading
 import warnings
 from enum import Enum
-from typing import Any, Dict, Mapping, Tuple, Union
+from typing import Any
+from collections.abc import Mapping
 from weakref import WeakValueDictionary
 
 from opentelemetry import metrics
@@ -43,7 +44,7 @@ class ObservableGaugeWrapper:
     """
 
     def __init__(self, name: str, description: str, unit: str):
-        self._values: Dict[Tuple[Tuple[str, str], ...], float] = {}
+        self._values: dict[tuple[tuple[str, str], ...], float] = {}
         self._meter = metrics.get_meter(langflow_meter_name)
         self._gauge = self._meter.create_observable_gauge(
             name=name, description=description, unit=unit, callbacks=[self._callback]
@@ -64,7 +65,7 @@ class Metric:
         name: str,
         description: str,
         type: MetricType,
-        labels: Dict[str, bool],
+        labels: dict[str, bool],
         unit: str = "",
     ):
         self.name = name
@@ -108,9 +109,9 @@ class ThreadSafeSingletonMetaUsingWeakref(type):
 
 
 class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
-    _metrics_registry: Dict[str, Metric] = dict()
+    _metrics_registry: dict[str, Metric] = dict()
 
-    def _add_metric(self, name: str, description: str, unit: str, metric_type: MetricType, labels: Dict[str, bool]):
+    def _add_metric(self, name: str, description: str, unit: str, metric_type: MetricType, labels: dict[str, bool]):
         metric = Metric(name=name, description=description, type=metric_type, unit=unit, labels=labels)
         self._metrics_registry[name] = metric
         if labels is None or len(labels) == 0:
@@ -136,7 +137,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             labels={"flow_id": mandatory_label},
         )
 
-    _metrics: Dict[str, Union[Counter, ObservableGaugeWrapper, Histogram, UpDownCounter]] = {}
+    _metrics: dict[str, Counter | ObservableGaugeWrapper | Histogram | UpDownCounter] = {}
 
     def __init__(self, prometheus_enabled: bool = True):
         self._register_metric()
