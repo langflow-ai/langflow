@@ -16,6 +16,8 @@ interface SwitchOutputViewProps {
   outputName: string;
   type: "Outputs" | "Logs";
 }
+const MAX_TEXT_LENGTH = 99999;
+
 const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   nodeId,
   outputName,
@@ -35,6 +37,16 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   if (resultMessage?.raw) {
     resultMessage = resultMessage.raw;
   }
+
+  if (
+    typeof resultMessage === "string" &&
+    resultMessage.length > MAX_TEXT_LENGTH
+  ) {
+    resultMessage = `${resultMessage.substring(0, MAX_TEXT_LENGTH)}
+
+The text is too long. Displaying the first ${MAX_TEXT_LENGTH + 1} characters...`;
+  }
+
   return type === "Outputs" ? (
     <>
       <Case condition={!resultType || resultType === "unknown"}>
@@ -57,7 +69,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
               ? (resultMessage as Array<any>).every((item) => item.data)
                 ? (resultMessage as Array<any>).map((item) => item.data)
                 : resultMessage
-              : Object.keys(resultMessage).length > 0
+              : resultMessage
                 ? [resultMessage]
                 : []
           }

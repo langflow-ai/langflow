@@ -47,14 +47,22 @@ class VertexBuildBase(SQLModel):
         paths_to_truncate = [
             (['artifacts', 'data', 'raw'], 'text'),
             (['artifacts', 'data'], 'repr'),
-            (['outputs', 'data', 'message'], 'text'),
+            (['artifacts', 'text'], 'raw'),
+            (['artifacts', 'text'], 'repr'),
+            (['artifacts', 'prompt'], 'repr'),
+            (['artifacts', 'prompt'], 'raw'),
+
             (['message', 'data', 'raw'], 'text'),
             (['message', 'data'], 'repr'),
-            (['outputs', 'text'], 'message'),
             (['message', 'text'], 'raw'),
             (['message', 'text'], 'repr'),
-            (['artifacts', 'text'], 'raw'),
-            (['artifacts', 'text'], 'repr')
+            (['message', 'prompt'], 'repr'),
+            (['message', 'prompt'], 'raw'),
+
+            (['outputs', 'data', 'message'], 'text'),
+            (['outputs', 'text'], 'message'),
+            (['outputs', 'prompt'], 'message'),
+
         ]
 
         for path, key in paths_to_truncate:
@@ -67,8 +75,11 @@ class VertexBuildBase(SQLModel):
     def serialize_artifacts(self, data) -> dict:
         paths_to_truncate = [
             (['data', 'raw'], 'text'),
+            (['data'], 'repr'),
             (['text'], 'raw'),
-            (['text'], 'repr')
+            (['text'], 'repr'),
+            (['prompt'], 'raw'),
+            (['prompt'], 'repr'),
         ]
 
         for path, key in paths_to_truncate:
@@ -106,4 +117,4 @@ def truncate_text(data, path: list, key: str):
         target = target[p]
 
     if key in target and isinstance(target[key], str):
-        target[key] = target[key][:99999]
+        target[key] = target[key][:10]

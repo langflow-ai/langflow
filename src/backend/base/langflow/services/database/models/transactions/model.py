@@ -36,13 +36,22 @@ class TransactionBase(SQLModel):
     def serialize_outputs(self, data) -> dict:
         paths_to_truncate = [
             (['artifacts', 'data', 'raw'], 'text'),
-            (['outputs', 'data', 'message'], 'text'),
-            (['messsage', 'data', 'raw'], 'text'),
-            (['outputs', 'text'], 'message'),
+
+            (['artifacts', 'text'], 'raw'),
+            (['artifacts', 'text'], 'repr'),
+
+            (['artifacts', 'prompt'], 'raw'),
+            (['artifacts', 'prompt'], 'repr'),
+
+            (['artifacts', 'data'], 'repr'),
+
             (['message', 'text'], 'raw'),
             (['message', 'text'], 'repr'),
-            (['artifacts', 'text'], 'raw'),
-            (['artifacts', 'text'], 'repr')
+            (['messsage', 'data', 'raw'], 'text'),
+
+            (['outputs', 'data', 'message'], 'text'),
+            (['outputs', 'text'], 'message'),
+            (['outputs', 'prompt'], 'message'),
         ]
 
         for path, key in paths_to_truncate:
@@ -70,4 +79,4 @@ def truncate_text(data, path: list, key: str):
         target = target[p]
 
     if key in target and isinstance(target[key], str):
-        target[key] = target[key][:99999]
+        target[key] = target[key][:10]

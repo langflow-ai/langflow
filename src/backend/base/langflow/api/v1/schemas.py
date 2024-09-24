@@ -370,4 +370,4 @@ def truncate_text(data, path: list, key: str):
         target = target[p]
 
     if key in target and isinstance(target[key], str):
-        target[key] = target[key][:99999]
+        target[key] = target[key][:10]
