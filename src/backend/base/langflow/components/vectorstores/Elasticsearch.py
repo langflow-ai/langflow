@@ -7,7 +7,7 @@ from langflow.base.vectorstores.model import (
     check_cached_vector_store,
 )
 from langflow.io import (
-    BoolInput,
+    BoolInput,  # noqa: F401
     DataInput,
     HandleInput,
     IntInput,
@@ -18,7 +18,7 @@ from langflow.io import (
     SecretStrInput,
 )
 from langflow.schema import Data
-import traceback
+import traceback  # noqa: F401
 
 if TYPE_CHECKING:
     from langchain_elasticsearch import ElasticsearchStore
