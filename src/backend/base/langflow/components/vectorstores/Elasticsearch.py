@@ -15,7 +15,7 @@ from langflow.io import (
     MultilineInput,
     DropdownInput,
     FloatInput,
-    SecretStrInput
+    SecretStrInput,
 )
 from langflow.schema import Data
 import traceback
@@ -31,9 +31,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "Elasticsearch"
     description: str = "Elasticsearch Vector Store with with advanced, customizable search capabilities."
-    documentation = (
-        "https://python.langchain.com/docs/integrations/vectorstores/elasticsearch"
-    )
+    documentation = "https://python.langchain.com/docs/integrations/vectorstores/elasticsearch"
     name = "Elasticsearch"
     icon = "ElasticsearchStore"
 
@@ -43,13 +41,13 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             display_name="Elasticsearch URL",
             value="http://localhost:9200",
             info="URL for self-managed Elasticsearch deployments (e.g., http://localhost:9200). "
-                 "Do not use with Elastic Cloud deployments, use Elastic Cloud ID instead."
+            "Do not use with Elastic Cloud deployments, use Elastic Cloud ID instead.",
         ),
         SecretStrInput(
             name="cloud_id",
             display_name="Elastic Cloud ID",
             value="",
-            info="Use this for Elastic Cloud deployments. Do not use together with 'Elasticsearch URL'."
+            info="Use this for Elastic Cloud deployments. Do not use together with 'Elasticsearch URL'.",
         ),
         StrInput(
             name="index_name",
@@ -67,14 +65,14 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             display_name="Username",
             value="",
             advanced=False,
-            info="Elasticsearch username (e.g., 'elastic'). Required for both local and Elastic Cloud setups unless API keys are used."
+            info="Elasticsearch username (e.g., 'elastic'). Required for both local and Elastic Cloud setups unless API keys are used.",
         ),
         SecretStrInput(
             name="password",
             display_name="Password",
             value="",
             advanced=False,
-            info="Elasticsearch password for the specified user. Required for both local and Elastic Cloud setups unless API keys are used."
+            info="Elasticsearch password for the specified user. Required for both local and Elastic Cloud setups unless API keys are used.",
         ),
         DataInput(
             name="ingest_data",
@@ -112,7 +110,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             display_name="Elastic API Key",
             value="",
             advanced=True,
-            info="API Key for Elastic Cloud authentication. If used, 'username' and 'password' are not required."
+            info="API Key for Elastic Cloud authentication. If used, 'username' and 'password' are not required.",
         ),
     ]
 
@@ -122,8 +120,10 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         Builds the Elasticsearch Vector Store object.
         """
         if self.cloud_id and self.elasticsearch_url:
-            raise ValueError("Both 'cloud_id' and 'elasticsearch_url' provided. "
-                             "Please use only one based on your deployment (Cloud or Local).")
+            raise ValueError(
+                "Both 'cloud_id' and 'elasticsearch_url' provided. "
+                "Please use only one based on your deployment (Cloud or Local)."
+            )
 
         es_params = {
             "index_name": self.index_name,
@@ -197,15 +197,19 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
                     raise ValueError(f"Invalid search type: {self.search_type}")
             except Exception as e:
                 logger.error(f"Search query failed: {str(e)}")
-                raise Exception("Error occurred while querying the Elasticsearch VectorStore, there is no Data into the VectorStore.")
-            return [{"page_content": doc.page_content, "metadata": doc.metadata, "score": score} for doc, score in results]
+                raise Exception(
+                    "Error occurred while querying the Elasticsearch VectorStore, there is no Data into the VectorStore."
+                )
+            return [
+                {"page_content": doc.page_content, "metadata": doc.metadata, "score": score} for doc, score in results
+            ]
         else:
             results = self.get_all_documents(vector_store, **search_kwargs)
-            return [{"page_content": doc.page_content, "metadata": doc.metadata, "score": score} for doc, score in results]
+            return [
+                {"page_content": doc.page_content, "metadata": doc.metadata, "score": score} for doc, score in results
+            ]
 
-    def get_all_documents(
-        self, vector_store: ElasticsearchStore, **kwargs
-    ) -> List[Tuple[Document, float]]:
+    def get_all_documents(self, vector_store: ElasticsearchStore, **kwargs) -> List[Tuple[Document, float]]:
         """
         Retrieve all documents from the vector store.
         """
