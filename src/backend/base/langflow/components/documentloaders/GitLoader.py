@@ -1,8 +1,9 @@
+import re
 from pathlib import Path
 from typing import List
-import re
 
 from langchain_community.document_loaders.git import GitLoader
+
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Data

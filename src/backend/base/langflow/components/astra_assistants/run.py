@@ -1,9 +1,10 @@
-from astra_assistants import patch  # type: ignore
 from typing import Any, Optional
 
-from langflow.custom import Component
+from astra_assistants import patch  # type: ignore
 from openai import OpenAI
 from openai.lib.streaming import AssistantEventHandler
+
+from langflow.custom import Component
 from langflow.inputs import MultilineInput
 from langflow.schema import dotdict
 from langflow.schema.message import Message

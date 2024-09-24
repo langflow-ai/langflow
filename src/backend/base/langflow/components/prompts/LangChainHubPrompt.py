@@ -1,12 +1,10 @@
+import re
 from typing import List
 
 from langflow.custom import Component
-from langflow.inputs import StrInput, SecretStrInput, DefaultPromptField
+from langflow.inputs import DefaultPromptField, SecretStrInput, StrInput
 from langflow.io import Output
 from langflow.schema.message import Message
-
-
-import re
 
 
 class LangChainHubPromptComponent(Component):

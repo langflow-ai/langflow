@@ -1,10 +1,11 @@
-from typing import Optional, List
+from typing import List, Optional
 
 from langchain.agents import create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate
+
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MultilineInput
-from langflow.inputs.inputs import HandleInput, DataInput
+from langflow.inputs.inputs import DataInput, HandleInput
 from langflow.schema import Data
 
 
