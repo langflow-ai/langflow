@@ -16,7 +16,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "02e8c952e7ca"
-down_revision: Union[str, None] = "4522eb831f5c"
+down_revision: Union[str, None] = "e5a65ecff2cd"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
