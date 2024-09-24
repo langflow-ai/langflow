@@ -73,12 +73,16 @@ async def get_messages(
 
 @router.delete("/messages", status_code=204)
 async def delete_messages(
-    message_ids: list[UUID],
+    message_ids: list[UUID] | None,
+    flow_id: str | None = Query(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
 ):
     try:
-        session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore
+        if flow_id:
+            session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
+        else:
+            session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore
         session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
