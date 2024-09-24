@@ -59,7 +59,7 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "is_input": getattr_return_bool,
     "is_output": getattr_return_bool,
     "conditional_paths": getattr_return_list_of_str,
-    "_outputs_maps": getattr_return_list_of_values_from_dict,
+    "_outputs_map": getattr_return_list_of_values_from_dict,
     "_inputs": getattr_return_list_of_values_from_dict,
     "outputs": getattr_return_list_of_object,
     "inputs": getattr_return_list_of_object,
