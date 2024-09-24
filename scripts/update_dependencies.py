@@ -65,9 +65,10 @@ if __name__ == "__main__":
     with open(pyproject_path, "r") as original, open(pyproject_path.with_name("pyproject.toml.bak"), "w") as backup:
         backup.write(original.read())
     # Now backup poetry.lock
-    with open(pyproject_path.with_name("poetry.lock"), "r") as original, open(
-        pyproject_path.with_name("poetry.lock.bak"), "w"
-    ) as backup:
+    with (
+        open(pyproject_path.with_name("poetry.lock"), "r") as original,
+        open(pyproject_path.with_name("poetry.lock.bak"), "w") as backup,
+    ):
         backup.write(original.read())
 
     # Reading version and updating pyproject.toml
