@@ -12,8 +12,7 @@ env:
 
 jobs:
   create-nightly-tag:
-    # if: github.repository == 'langflow-ai/langflow'
-    if: false
+    if: github.repository == 'langflow-ai/langflow'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -146,15 +145,14 @@ jobs:
   frontend-tests:
     if: github.repository == 'langflow-ai/langflow'
     name: Run Frontend Tests
-    # needs: create-nightly-tag
+    needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests"
     secrets: inherit
 
   backend-unit-tests:
-    # if: github.repository == 'langflow-ai/langflow'
-    if: false
+    if: github.repository == 'langflow-ai/langflow'
     name: Run Backend Unit Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
@@ -173,8 +171,7 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    # if: github.repository == 'langflow-ai/langflow'
-    if: false
+    if: github.repository == 'langflow-ai/langflow'
     name: Run Nightly Langflow Build
     needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
     uses: ./.github/workflows/release_nightly.yml
