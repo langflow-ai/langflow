@@ -1,3 +1,4 @@
+import os
 from langflow.base.memory.model import LCChatMemoryComponent
 from langflow.inputs import MessageTextInput, StrInput, SecretStrInput
 from langflow.field_typing import BaseChatMessageHistory
@@ -59,5 +60,6 @@ class AstraDBChatMemory(LCChatMemoryComponent):
             token=self.token,
             api_endpoint=self.api_endpoint,
             namespace=self.namespace or None,
+            environment=os.getenv('ASTRA_ENVIRONMENT', 'prod'),
         )
         return memory
