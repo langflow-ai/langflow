@@ -318,7 +318,7 @@ For more information, see the [MongoDB Atlas documentation](https://www.mongodb.
 
 ### Parameters
 
-###### Inputs
+#### Inputs
 
 | Name                     | Type         | Description                               |
 | ------------------------ | ------------ | ----------------------------------------- |
@@ -346,7 +346,7 @@ For more information, see the [PGVector documentation](https://github.com/pgvect
 
 ### Parameters
 
-###### Inputs
+#### Inputs
 
 | Name            | Type         | Description                               |
 | --------------- | ------------ | ----------------------------------------- |
