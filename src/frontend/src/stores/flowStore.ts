@@ -2,6 +2,7 @@ import {
   BROKEN_EDGES_WARNING,
   componentsToIgnoreUpdate,
 } from "@/constants/constants";
+import { track } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { cloneDeep, zip } from "lodash";
 import {
@@ -271,6 +272,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           : !nodeId.includes(node.id),
       ),
     );
+    track("Component Deleted", { nodeId });
   },
   deleteEdge: (edgeId) => {
     get().setEdges(
@@ -280,6 +282,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           : !edgeId.includes(edge.id),
       ),
     );
+    track("Component Connection Deleted", { edgeId });
   },
   paste: (selection, position) => {
     if (

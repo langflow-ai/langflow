@@ -1,4 +1,5 @@
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -44,6 +45,8 @@ const useHandleOnNewValue = ({
   const handleOnNewValue: handleOnNewValueType = async (changes, options?) => {
     const newNode = cloneDeep(node);
     const template = newNode.template;
+
+    track("Component Edited", { nodeId });
 
     if (!template) {
       setErrorData({ title: "Template not found in the component" });
