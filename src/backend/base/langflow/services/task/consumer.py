@@ -12,8 +12,8 @@ async def consume_tasks(should_stop: bool):
     while not should_stop:
         notifications = task_orchestration_service.get_notifications()
         for notification in notifications:
-            if notification["event_type"] == "task_created":
-                task = task_orchestration_service.get_task(notification["task_id"])
+            if notification.event_type == "task_created":
+                task = task_orchestration_service.get_task(notification.task_id)
                 task_orchestration_service.consume_task(task.id)
         await asyncio.sleep(1)
 
