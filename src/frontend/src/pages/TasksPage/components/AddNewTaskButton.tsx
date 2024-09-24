@@ -1,3 +1,4 @@
+import Dropdown from "@/components/dropdownComponent";
 import IconComponent from "@/components/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePostTask } from "@/controllers/API/queries/tasks";
 import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { Task } from "@/types/Task";
 import { useState } from "react";
 
@@ -29,11 +31,17 @@ export default function AddNewTaskButton({
   const [assigneeId, setAssigneeId] = useState("");
   const [category, setCategory] = useState("");
   const [state, setState] = useState("");
-  const [status, setStatus] = useState("pending");
+  const [status, setStatus] = useState<
+    "pending" | "processing" | "completed" | "failed"
+  >("pending");
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { mutate: mutateAddTask } = usePostTask();
+  const flows = useFlowsManagerStore((state) => state.flows);
+
+  // Use flow IDs as options for author and assignee
+  const flowOptions = flows?.map((flow) => flow.id);
 
   function handleSaveTask() {
     const newTask: Partial<Task> = {
@@ -79,7 +87,7 @@ export default function AddNewTaskButton({
     <BaseModal
       open={open}
       setOpen={setOpen}
-      size="medium"
+      size="x-small"
       onSubmit={handleSaveTask}
     >
       <BaseModal.Header description="Create a new task to manage your workflow.">
@@ -92,18 +100,20 @@ export default function AddNewTaskButton({
       </BaseModal.Header>
       <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
       <BaseModal.Content>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="col-span-2">
-            <Label>Title</Label>
+            <Label htmlFor="title">Title</Label>
             <Input
+              id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter task title..."
             />
           </div>
           <div className="col-span-2">
-            <Label>Description</Label>
+            <Label htmlFor="description">Description</Label>
             <Textarea
+              id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Enter task description..."
@@ -111,49 +121,61 @@ export default function AddNewTaskButton({
             />
           </div>
           <div className="col-span-2">
-            <Label>Attachments</Label>
+            <Label htmlFor="attachments">Attachments</Label>
             <Input
+              id="attachments"
               value={attachments.join(", ")}
               onChange={(e) => setAttachments(e.target.value.split(", "))}
               placeholder="Enter attachments (comma-separated)..."
             />
           </div>
           <div>
-            <Label>Author ID</Label>
-            <Input
+            <Label htmlFor="authorId">Author</Label>
+            <Dropdown
+              options={flowOptions || []}
               value={authorId}
-              onChange={(e) => setAuthorId(e.target.value)}
-              placeholder="Enter author ID..."
+              onSelect={setAuthorId}
+              editNode={false}
             />
           </div>
           <div>
-            <Label>Assignee ID</Label>
-            <Input
+            <Label htmlFor="assigneeId">Assignee</Label>
+            <Dropdown
+              options={flowOptions || []}
               value={assigneeId}
-              onChange={(e) => setAssigneeId(e.target.value)}
-              placeholder="Enter assignee ID..."
+              onSelect={setAssigneeId}
+              editNode={false}
             />
           </div>
           <div>
-            <Label>Category</Label>
+            <Label htmlFor="category">Category</Label>
             <Input
+              id="category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               placeholder="Enter category..."
             />
           </div>
           <div>
-            <Label>State</Label>
+            <Label htmlFor="state">State</Label>
             <Input
+              id="state"
               value={state}
               onChange={(e) => setState(e.target.value)}
               placeholder="Enter state..."
             />
           </div>
           <div className="col-span-2">
-            <Label>Status</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger>
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={status}
+              onValueChange={(value) =>
+                setStatus(
+                  value as "pending" | "processing" | "completed" | "failed",
+                )
+              }
+            >
+              <SelectTrigger id="status">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
@@ -167,7 +189,11 @@ export default function AddNewTaskButton({
         </div>
       </BaseModal.Content>
       <BaseModal.Footer
-        submit={{ label: "Save Task", dataTestId: "save-task-btn" }}
+        submit={{
+          label: "Save Task",
+          dataTestId: "save-task-btn",
+          onClick: handleSaveTask,
+        }}
       />
     </BaseModal>
   );
