@@ -146,7 +146,7 @@ jobs:
   frontend-tests:
     if: github.repository == 'langflow-ai/langflow'
     name: Run Frontend Tests
-    needs: create-nightly-tag
+    # needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests"
