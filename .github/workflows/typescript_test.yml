@@ -7,6 +7,12 @@ on:
         required: true
       STORE_API_KEY:
         required: true
+      SEARCH_API_KEY:
+        required: true
+      ASTRA_DB_APPLICATION_TOKEN:
+        required: true
+      ASTRA_DB_API_ENDPOINT:
+        required: true
     inputs:
       tests_folder:
         description: "(Optional) Tests to run"
@@ -43,11 +49,11 @@ jobs:
         shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         shardTotal: [10]
     env:
-      OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
-      STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
-      SEARCH_API_KEY: "${{ secrets.SEARCH_API_KEY }}"
-      ASTRA_DB_APPLICATION_TOKEN: "${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}"
-      ASTRA_DB_API_ENDPOINT: "${{ secrets.ASTRA_DB_API_ENDPOINT }}"
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
+      SEARCH_API_KEY: ${{ secrets.SEARCH_API_KEY }}
+      ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
+      ASTRA_DB_API_ENDPOINT: ${{ secrets.ASTRA_DB_API_ENDPOINT }}
     outputs:
       failed: ${{ steps.check-failure.outputs.failed }}
     steps:
