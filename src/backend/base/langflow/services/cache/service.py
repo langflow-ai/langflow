@@ -3,7 +3,7 @@ import pickle
 import threading
 import time
 from collections import OrderedDict
-from typing import Generic
+from typing import Generic, Union
 
 from loguru import logger
 
@@ -50,7 +50,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
         self.max_size = max_size
         self.expiration_time = expiration_time
 
-    def get(self, key, lock: threading.Lock | None = None):
+    def get(self, key, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """
         Retrieve an item from the cache.
 
@@ -81,7 +81,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
                 self.delete(key)
         return None
 
-    def set(self, key, value, lock: threading.Lock | None = None):
+    def set(self, key, value, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """
         Add an item to the cache.
 
@@ -102,7 +102,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
 
             self._cache[key] = {"value": value, "time": time.time()}
 
-    def upsert(self, key, value, lock: threading.Lock | None = None):
+    def upsert(self, key, value, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """
         Inserts or updates a value in the cache.
         If the existing value and the new value are both dictionaries, they are merged.
@@ -119,7 +119,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
 
             self.set(key, value)
 
-    def get_or_set(self, key, value, lock: threading.Lock | None = None):
+    def get_or_set(self, key, value, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """
         Retrieve an item from the cache. If the item does not exist,
         set it with the provided value.
@@ -137,7 +137,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
             self.set(key, value)
             return value
 
-    def delete(self, key, lock: threading.Lock | None = None):
+    def delete(self, key, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """
         Remove an item from the cache.
 
@@ -147,7 +147,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
         with lock or self._lock:
             self._cache.pop(key, None)
 
-    def clear(self, lock: threading.Lock | None = None):
+    def clear(self, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """
         Clear all items from the cache.
         """
