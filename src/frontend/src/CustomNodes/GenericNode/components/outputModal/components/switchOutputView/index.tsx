@@ -96,7 +96,7 @@ The text is too long. Displaying the first ${MAX_TEXT_LENGTH + 1} characters...`
               ? (resultMessageMemoized as Array<any>).every((item) => item.data)
                 ? (resultMessageMemoized as Array<any>).map((item) => item.data)
                 : resultMessageMemoized
-              : resultMessageMemoized
+              : Object.keys(resultMessageMemoized).length > 0
                 ? [resultMessageMemoized]
                 : []
           }

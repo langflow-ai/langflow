@@ -51,6 +51,8 @@ class VertexBuildBase(SQLModel):
             (['artifacts', 'text'], 'repr'),
             (['artifacts', 'prompt'], 'repr'),
             (['artifacts', 'prompt'], 'raw'),
+            (['artifacts', 'base_retriever'], 'repr'),
+            (['artifacts', 'base_retriever', 'raw'[0], 'data'], 'text'),
 
             (['message', 'data', 'raw'], 'text'),
             (['message', 'data'], 'repr'),
@@ -62,6 +64,9 @@ class VertexBuildBase(SQLModel):
             (['outputs', 'data', 'message'], 'text'),
             (['outputs', 'text'], 'message'),
             (['outputs', 'prompt'], 'message'),
+            (['outputs', 'base_retriever', 'message'[0], 'data'], 'text'),
+            (['outputs', 'message', 'base_retriever'], 'repr'),
+            (['outputs', 'message', 'base_retriever', 'raw'[0], 'data'], 'text'),
 
         ]
 
@@ -80,6 +85,8 @@ class VertexBuildBase(SQLModel):
             (['text'], 'repr'),
             (['prompt'], 'raw'),
             (['prompt'], 'repr'),
+            (['base_retriever', 'raw'[0], 'data'], 'text'),
+            (['base_retriever'], 'repr'),
         ]
 
         for path, key in paths_to_truncate:
