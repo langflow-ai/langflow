@@ -1,9 +1,27 @@
 import pytest
 
+from langflow.components.astra_assistants import AstraAssistantManager
 from tests.integration.utils import run_single_component
 
+@pytest.mark.api_key_required
+@pytest.mark.asyncio
+async def test_manager():
+    from langflow.components.astra_assistants import AssistantsListAssistants
 
-async def test_list_assistants():
+    results = await run_single_component(
+        AstraAssistantManager,
+        inputs={
+            "instructions": "reply only with ascii art",
+            "model_name": "gpt-4o-mini",
+            "user_message": "Make a simple RAG app"
+        },
+    )
+    assert results['assistant_response'].text is not None
+
+
+
+
+async def list_assistants():
     from langflow.components.astra_assistants import AssistantsListAssistants
 
     results = await run_single_component(
@@ -29,7 +47,7 @@ async def test_create_assistants():
     )
     assistant_id = results["assistant_id"].text
     assert assistant_id is not None
-    await test_list_assistants()
+    await list_assistants()
     await get_assistant_name(assistant_id)
     thread_id = await test_create_thread()
     await run_assistant(assistant_id, thread_id)
