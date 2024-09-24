@@ -65,9 +65,26 @@ This component dynamically creates a record with a specified number of fields.
 
 Use this component as a template to create your custom component.
 
+For more, see [Custom Components](components-custom-components).
+
 ## Filter Data
 
-This component converts LangChain documents into Data.
+This component filters a Data object based on a list of keys.
+
+### Parameters
+
+#### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | Data object to filter. |
+| filter_criteria | Filter Criteria | List of keys to filter by. |
+
+#### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| filtered_data | Filtered Data | A new Data object containing only the key-value pairs that match the filter criteria. |
 
 ## Hierarchical Task
 
@@ -103,7 +120,45 @@ This component generates a unique ID.
 |------|--------------|------|
 | value | Value | Unique ID generated. |
 
+## Parse JSON
+
+This component converts and extracts JSON fields using JQ queries.
+
+### Parameters
+
+#### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_value | Input | Data object to filter. Can be a Message or Data object. |
+| query | JQ Query | JQ Query to filter the data. The input is always a JSON list. |
+
+#### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| filtered_data | Filtered Data | Filtered data as a list of Data objects. |
+
 ## Merge Data
+
+This component combines multiple data sources into a single unified Data object.
+
+The component iterates through the input list of Data objects, merging them into a single Data object. If the input list is empty, it returns an empty Data object. If there's only one input Data object, it returns that object unchanged. The merging process uses the addition operator to combine Data objects.
+
+### Parameters
+
+#### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | A list of Data objects to be merged |
+
+#### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| merged_data | Merged Data | A single Data object containing the combined information from all input Data objects |
+
 
 ## Parse Data
 
