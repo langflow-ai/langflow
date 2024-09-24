@@ -417,7 +417,17 @@ export default function IOModal({
                 <TabsContent value={"0"} className="api-modal-tabs-content">
                   {sessions.map((session, index) => {
                     return (
-                      <div key={index} className="file-component-accordion-div">
+                      <div key={index} className="file-component-accordion-div cursor-pointer"                               onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setvisibleSessions((prev) =>
+                          prev.includes(session)
+                            ? prev.filter((item) => item !== session)
+                            : SessionInFlow
+                              ? [...prev, session]
+                              : [session],
+                        );
+                      }}>
                         <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3.5 align-middle">
                           <ShadTooltip styleClasses="z-50" content={session}>
                             <div className="flex min-w-0">
@@ -436,17 +446,6 @@ export default function IOModal({
                             <Button
                               unstyled
                               size="icon"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setvisibleSessions((prev) =>
-                                  prev.includes(session)
-                                    ? prev.filter((item) => item !== session)
-                                    : SessionInFlow
-                                      ? [...prev, session]
-                                      : [session],
-                                );
-                              }}
                             >
                               <ShadTooltip
                                 styleClasses="z-50"
