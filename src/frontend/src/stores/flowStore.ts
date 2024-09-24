@@ -282,7 +282,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           : !edgeId.includes(edge.id),
       ),
     );
-    track('Component Connection Deleted', { edgeId });
+    track("Component Connection Deleted", { edgeId });
   },
   paste: (selection, position) => {
     if (

@@ -347,7 +347,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
           event.dataTransfer.getData(datakey!),
         );
 
-        track('Component Added', { componentType: data.node?.display_name });
+        track("Component Added", { componentType: data.node?.display_name });
 
         const newId = getNodeId(data.type);
 

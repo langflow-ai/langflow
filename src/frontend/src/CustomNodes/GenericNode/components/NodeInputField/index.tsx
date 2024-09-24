@@ -105,7 +105,7 @@ export default function NodeInputField({
     >
       {displayHandle && Handle}
       <div className="flex w-full flex-col gap-2">
-      <div className="flex w-full justify-between items-center text-sm">
+        <div className="flex w-full items-center justify-between text-sm">
           <div className="flex w-full items-center truncate">
             {proxy ? (
               <ShadTooltip content={<span>{proxy.id}</span>}>

@@ -59,7 +59,5 @@ export function CustomParameterLabel({
   templateValue: any;
   nodeClass: APIClassType;
 }) {
-  return (
-    <></>
-  );
+  return <></>;
 }
