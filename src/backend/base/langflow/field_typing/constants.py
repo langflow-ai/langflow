@@ -1,4 +1,4 @@
-from typing import TypeAlias, TypeVar
+from typing import Text, TypeAlias, TypeVar
 from collections.abc import Callable
 
 from langchain.agents.agent import AgentExecutor
@@ -67,7 +67,7 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     "NestedDict": NestedDict,
     "Data": Data,
     "Message": Message,
-    "Text": str,
+    "Text": Text,  # noqa: UP019
     "Object": Object,
     "Callable": Callable,
     "LanguageModel": LanguageModel,
