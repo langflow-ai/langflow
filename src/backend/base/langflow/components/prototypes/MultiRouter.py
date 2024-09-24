@@ -1,4 +1,3 @@
-# src/backend/base/langflow/components/prototypes/ConditionalRouter.py
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, MessageInput, MessageTextInput, Output
 from langflow.schema.message import Message
@@ -102,9 +101,6 @@ class MultiConditionalRouterComponent(Component):
         case_1_result = self.evaluate_condition(self.input_text, self.case_1_text, self.operator, self.case_sensitive)
         case_2_result = self.evaluate_condition(self.input_text, self.case_2_text, self.operator, self.case_sensitive)
         case_3_result = self.evaluate_condition(self.input_text, self.case_3_text, self.operator, self.case_sensitive)
-        print(
-            f"case_1_result: {case_1_result}, case_2_result: {case_2_result}, case_3_result: {case_3_result} Combined: {case_1_result or case_2_result or case_3_result}"
-        )
         if not (case_1_result or case_2_result or case_3_result):
             self.status = self.message
             return self.message
