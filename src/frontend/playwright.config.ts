@@ -55,7 +55,37 @@ export default defineConfig({
         },
       },
     },
-
+    // {
+    //   name: "firefox",
+    //   use: {
+    //     ...devices["Desktop Firefox"],
+    //     launchOptions: {
+    //       // headless: false,
+    //       firefoxUserPrefs: {
+    //         "dom.events.asyncClipboard.readText": true,
+    //         "dom.events.testing.asyncClipboard": true,
+    //       },
+    //     },
+    //   },
+    // },
+    // {
+    //   name: "safari",
+    //   use: {
+    //     ...devices["Desktop Safari"],
+    //     launchOptions: {
+    //       // headless: false,
+    //     },
+    //   },
+    // },
+    // {
+    //   name: "arc",
+    //   use: {
+    //     ...devices["Desktop Arc"],
+    //     launchOptions: {
+    //       // headless: false,
+    //     },
+    //   },
+    // },
     // {
     //   name: "firefox",
     //   use: {
