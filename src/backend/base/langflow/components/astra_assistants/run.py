@@ -13,6 +13,7 @@ from langflow.template import Output
 class AssistantsRun(Component):
     display_name = "Run Assistant"
     description = "Executes an Assistant Run against a thread"
+    client = patch(OpenAI())
 
     def update_build_config(
         self,

@@ -9,6 +9,7 @@ from langflow.template import Output
 class AssistantsCreateThread(Component):
     display_name = "Create Assistant Thread"
     description = "Creates a thread and returns the thread id"
+    client = patch(OpenAI())
 
     inputs = [
         MultilineInput(
@@ -23,9 +24,7 @@ class AssistantsCreateThread(Component):
     ]
 
     def process_inputs(self) -> Message:
-        client = patch(OpenAI())
-
-        thread = client.beta.threads.create()
+        thread = self.client.beta.threads.create()
         thread_id = thread.id
 
         message = Message(text=thread_id)
