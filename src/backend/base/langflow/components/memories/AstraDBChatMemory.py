@@ -60,6 +60,6 @@ class AstraDBChatMemory(LCChatMemoryComponent):
             token=self.token,
             api_endpoint=self.api_endpoint,
             namespace=self.namespace or None,
-            environment=os.getenv('ASTRA_ENVIRONMENT', 'prod'),
+            environment=os.getenv("ASTRA_ENVIRONMENT", "prod"),
         )
         return memory

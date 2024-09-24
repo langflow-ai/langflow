@@ -396,7 +396,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             "token": self.token,
             "api_endpoint": self.api_endpoint,
             "namespace": self.namespace or None,
-            "environment": os.getenv('ASTRA_ENVIRONMENT', 'prod'),
+            "environment": os.getenv("ASTRA_ENVIRONMENT", "prod"),
             "metric": self.metric or None,
             "batch_size": self.batch_size or None,
             "bulk_insert_batch_concurrency": self.bulk_insert_batch_concurrency or None,
