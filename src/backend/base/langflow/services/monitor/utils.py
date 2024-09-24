@@ -88,7 +88,7 @@ def new_duckdb_locked_connection(db_path: str | Path, read_only=False):
 def add_row_to_table(
     conn: duckdb.DuckDBPyConnection,
     table_name: str,
-    model: type,
+    model: type[BaseModel],
     monitor_data: dict[str, Any] | BaseModel,
 ):
     # Validate the data with the Pydantic model

@@ -1,7 +1,9 @@
+from typing import TypeAlias
+
 from pydantic import BaseModel
 from typing_extensions import Protocol
 
-LoggableType = str | dict | list | int | float | bool | None | BaseModel
+LoggableType: TypeAlias = str | dict | list | int | float | bool | None | BaseModel
 
 
 class LogFunctionType(Protocol):
