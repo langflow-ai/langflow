@@ -10,6 +10,7 @@ class AssistantsCreateAssistant(Component):
     icon = "bot"
     display_name = "Create Assistant"
     description = "Creates an Assistant and returns it's id"
+    client = patch(OpenAI())
 
     inputs = [
         StrInput(
@@ -45,8 +46,7 @@ class AssistantsCreateAssistant(Component):
 
     def process_inputs(self) -> Message:
         print(f"env_set is {self.env_set}")
-        client = patch(OpenAI())
-        assistant = client.beta.assistants.create(
+        assistant = self.client.beta.assistants.create(
             name=self.assistant_name,
             instructions=self.instructions,
             model=self.model,
