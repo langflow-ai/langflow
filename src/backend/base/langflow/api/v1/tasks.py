@@ -11,25 +11,20 @@ from langflow.services.task_orchestration.service import TaskOrchestrationServic
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 
-@router.post("/", response_model=TaskRead)
+@router.post("/", response_model=TaskRead, status_code=201)
 async def create_task(
     task_create: TaskCreate,
     session: Session = Depends(get_session),
     task_orchestration_service: TaskOrchestrationService = Depends(get_task_orchestration_service),
 ):
     try:
-        new_task = Task.model_validate(task_create)
-        session.add(new_task)
-        session.commit()
-        session.refresh(new_task)
-
         # Attempt to orchestrate the task, but continue if it fails
         try:
-            task_orchestration_service.orchestrate_task(new_task)
-        except Exception:
-            pass
+            task_read = task_orchestration_service.create_task(task_create)
+        except Exception as e:
+            print(e)
 
-        return new_task
+        return task_read
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=400, detail=str(e))
