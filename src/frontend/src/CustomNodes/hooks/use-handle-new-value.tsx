@@ -4,6 +4,7 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { NodeType } from "@/types/flow";
+import { track } from "@/customization/utils/analytics";
 import { cloneDeep } from "lodash";
 import { mutateTemplate } from "../helpers/mutate-template";
 
@@ -44,6 +45,8 @@ const useHandleOnNewValue = ({
   const handleOnNewValue: handleOnNewValueType = async (changes, options?) => {
     const newNode = cloneDeep(node);
     const template = newNode.template;
+
+    track("Component Edited", { nodeId });
 
     if (!template) {
       setErrorData({ title: "Template not found in the component" });

@@ -259,6 +259,12 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
       takeSnapshot();
+      if (lastSelection.edges?.length) {
+        track("Component Connection Deleted");
+      }
+      if (lastSelection.nodes?.length) {
+        track("Component Deleted");
+      }
       deleteNode(lastSelection.nodes.map((node) => node.id));
       deleteEdge(lastSelection.edges.map((edge) => edge.id));
     }
@@ -341,7 +347,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
           event.dataTransfer.getData(datakey!),
         );
 
-        track(`Component Added: ${data.node?.display_name}`);
+        track('Component Added', { componentType: data.node?.display_name });
 
         const newId = getNodeId(data.type);
 
