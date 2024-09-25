@@ -416,20 +416,16 @@ update: ## update dependencies
 	uv sync --upgrade
 
 publish_base:
-	#TODO: replace with uvx twine upload dist/*
-	cd src/backend/base && poetry publish --skip-existing
+	cd src/backend/base && uv publish --skip-existing
 
 publish_langflow:
-	#TODO: replace with uvx twine upload dist/*
-	poetry publish
+	uv publish
 
 publish_base_testpypi:
-	#TODO: replace with uvx twine upload dist/*
-	cd src/backend/base && poetry publish --skip-existing -r test-pypi
+	cd src/backend/base && uv publish --skip-existing -r test-pypi
 
 publish_langflow_testpypi:
-	#TODO: replace with uvx twine upload dist/*
-	poetry publish -r test-pypi
+	uv publish -r test-pypi
 
 publish: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
