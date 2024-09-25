@@ -1,12 +1,14 @@
 import ast
 import operator
 from typing import List
+
+from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
+
 from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
 from langflow.inputs import MessageTextInput
 from langflow.schema import Data
-from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
 
 
 class CalculatorToolComponent(LCToolComponent):

@@ -1,11 +1,13 @@
-from typing import Dict, Any, List
-from pydantic import BaseModel, Field
-from langchain_community.tools import DuckDuckGoSearchRun
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import MessageTextInput, IntInput
-from langflow.schema import Data
-from langflow.field_typing import Tool
+from typing import Any, Dict, List
+
 from langchain.tools import StructuredTool
+from langchain_community.tools import DuckDuckGoSearchRun
+from pydantic import BaseModel, Field
+
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
+from langflow.inputs import IntInput, MessageTextInput
+from langflow.schema import Data
 
 
 class DuckDuckGoSearchComponent(LCToolComponent):

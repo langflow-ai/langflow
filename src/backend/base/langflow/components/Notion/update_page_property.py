@@ -1,13 +1,15 @@
 import json
+from typing import Any, Dict, Union
+
 import requests
-from typing import Dict, Any, Union
-from pydantic import BaseModel, Field
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput, MultilineInput
-from langflow.schema import Data
-from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 from loguru import logger
+from pydantic import BaseModel, Field
+
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
+from langflow.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
 class NotionPageUpdate(LCToolComponent):
