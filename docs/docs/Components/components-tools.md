@@ -297,3 +297,48 @@ This component does not have any input parameters.
 | Name | Type | Description                                  |
 |------|------|----------------------------------------------|
 | tool | Tool | Yahoo Finance News tool for use in LangChain |
+
+
+## Astra DB Tool
+
+The `Astra DB Tool` allows agents to connect to and query data from Astra DB Collections.
+
+### Parameters
+
+#### Inputs
+
+| Name              | Type   | Description                                                                                                                      |
+|-------------------|--------|----------------------------------------------------------------------------------------------------------------------------------|
+| Tool Name         | String | The name used to reference the tool in the agent's prompt.                                                                       |
+| Tool Description  | String | A brief description of the tool. This helps the model decide when to use it.                                                     |
+| Collection Name   | String | The name of the Astra DB collection to query.                                                                                    |
+| Token             | SecretString | The authentication token for accessing Astra DB.                                                                                 |
+| API Endpoint      | String | The Astra DB API endpoint.                                                                                                       |
+| Projection Fields | String | The attributes to return, separated by commas. Default: "*".                                                                     |
+| Tool Parameters   | Dict   | Parameters the model needs to fill to execute the tool. For required parameters, use an exclamation mark (e.g., "!customer_id"). |
+| Static Filters    | Dict   | Attribute-value pairs used to filter query results.                                                                              |
+| Limit             | String | The number of documents to return.                                                                                               |
+
+
+
+## Astra DB CQL Tool
+
+The `Astra DB CQL Tool` allows agents to query data from CQL Tables in Astra DB.
+
+### Parameters
+
+#### Inputs
+
+| Name              | Type   | Description                                                                                                                                        |
+|-------------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| Tool Name         | String | The name used to reference the tool in the agent's prompt.                                                                                         |
+| Tool Description  | String | A brief description of the tool to guide the model in using it.                                                                                    |
+| Keyspace          | String | The name of the keyspace.                                                                                                                          |
+| Table Name        | String | The name of the Astra DB CQL table to query.                                                                                                       |
+| Token             | SecretString | The authentication token for Astra DB.                                                                                                             |
+| API Endpoint      | String | The Astra DB API endpoint.                                                                                                                         |
+| Projection Fields | String | The attributes to return, separated by commas. Default: "*".                                                                                       |
+| Partition Keys    | Dict   | Required parameters that the model must fill to query the tool.                                                                                    |
+| Clustering Keys   | Dict   | Optional parameters the model can fill to refine the query. Required parameters should be marked with an  exclamation mark (e.g., "!customer_id"). |
+| Static Filters    | Dict   | Attribute-value pairs used to filter query results.                                                                                                |
+| Limit             | String | The number of records to return.                                                                                                                   |

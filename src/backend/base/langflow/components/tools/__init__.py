@@ -11,7 +11,8 @@ from .SerpAPI import SerpAPIComponent
 from .WikipediaAPI import WikipediaAPIComponent
 from .WolframAlphaAPI import WolframAlphaAPIComponent
 from .Calculator import CalculatorToolComponent
-
+from .AstraTool import AstraToolComponent
+from .AstraCQLTool import AstraCQLToolComponent
 
 __all__ = [
     "RetrieverToolComponent",
@@ -27,4 +28,6 @@ __all__ = [
     "WikipediaAPIComponent",
     "WolframAlphaAPIComponent",
     "CalculatorToolComponent",
+    "AstraToolComponent",
+    "AstraCQLToolComponent"
 ]
