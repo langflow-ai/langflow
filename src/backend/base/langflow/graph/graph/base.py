@@ -333,6 +333,8 @@ class Graph:
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
     ) -> Generator:
+        if self.is_cyclic and max_iterations is None:
+            raise ValueError("You must specify a max_iterations if the graph is cyclic")
         if config is not None:
             self.__apply_config(config)
         #! Change this ASAP
