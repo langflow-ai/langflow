@@ -7,14 +7,14 @@ from langflow.api.v1 import (
     endpoints_router,
     files_router,
     flows_router,
+    folders_router,
     login_router,
     monitor_router,
+    starter_projects_router,
     store_router,
     users_router,
     validate_router,
     variables_router,
-    folders_router,
-    starter_projects_router,
 )
 
 router = APIRouter(

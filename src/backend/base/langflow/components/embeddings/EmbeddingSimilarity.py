@@ -1,5 +1,7 @@
 from typing import List
+
 import numpy as np
+
 from langflow.custom import Component
 from langflow.io import DataInput, DropdownInput, Output
 from langflow.schema import Data

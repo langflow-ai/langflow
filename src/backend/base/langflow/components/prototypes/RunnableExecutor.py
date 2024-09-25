@@ -1,8 +1,9 @@
+from langchain.agents import AgentExecutor
+
 from langflow.custom import Component
-from langflow.inputs import HandleInput, MessageTextInput, BoolInput
+from langflow.inputs import BoolInput, HandleInput, MessageTextInput
 from langflow.schema.message import Message
 from langflow.template import Output
-from langchain.agents import AgentExecutor
 
 
 class RunnableExecComponent(Component):

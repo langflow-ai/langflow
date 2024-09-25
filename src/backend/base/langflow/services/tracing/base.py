@@ -5,8 +5,9 @@ from uuid import UUID
 from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
     from langchain.callbacks.base import BaseCallbackHandler
+
+    from langflow.graph.vertex.base import Vertex
 
 
 class BaseTracer(ABC):

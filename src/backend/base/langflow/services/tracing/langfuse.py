@@ -1,7 +1,7 @@
 import os
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, Optional
 from uuid import UUID
-from datetime import datetime
 
 from loguru import logger
 
@@ -9,8 +9,9 @@ from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
     from langchain.callbacks.base import BaseCallbackHandler
+
+    from langflow.graph.vertex.base import Vertex
 
 
 class LangFuseTracer(BaseTracer):

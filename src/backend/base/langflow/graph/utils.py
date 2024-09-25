@@ -1,7 +1,7 @@
 import json
+from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional
-from collections.abc import Generator
 from uuid import UUID
 
 from langchain_core.documents import Document

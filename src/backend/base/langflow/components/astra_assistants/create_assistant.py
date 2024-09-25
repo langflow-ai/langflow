@@ -1,9 +1,10 @@
 from astra_assistants import patch  # type: ignore
 from openai import OpenAI
+
 from langflow.custom import Component
-from langflow.inputs import StrInput, MultilineInput
-from langflow.template import Output
+from langflow.inputs import MultilineInput, StrInput
 from langflow.schema.message import Message
+from langflow.template import Output
 
 
 class AssistantsCreateAssistant(Component):

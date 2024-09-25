@@ -1,9 +1,10 @@
 from abc import abstractmethod
 
-from langflow.custom import Component
-from langflow.field_typing import BaseChatMessageHistory, BaseChatMemory
-from langflow.template import Output
 from langchain.memory import ConversationBufferMemory
+
+from langflow.custom import Component
+from langflow.field_typing import BaseChatMemory, BaseChatMessageHistory
+from langflow.template import Output
 
 
 class LCChatMemoryComponent(Component):

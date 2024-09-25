@@ -1,7 +1,8 @@
 from langchain_community.utilities.sql_database import SQLDatabase
-from langflow.custom import CustomComponent
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
+
+from langflow.custom import CustomComponent
 
 
 class SQLDatabaseComponent(CustomComponent):

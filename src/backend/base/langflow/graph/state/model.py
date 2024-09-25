@@ -1,5 +1,5 @@
-from typing import Any, get_type_hints
 from collections.abc import Callable
+from typing import Any, get_type_hints
 
 from pydantic import ConfigDict, computed_field, create_model
 from pydantic.fields import FieldInfo

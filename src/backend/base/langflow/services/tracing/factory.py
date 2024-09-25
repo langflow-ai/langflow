@@ -4,8 +4,8 @@ from langflow.services.factory import ServiceFactory
 from langflow.services.tracing.service import TracingService
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
     from langflow.services.monitor.service import MonitorService
+    from langflow.services.settings.service import SettingsService
 
 
 class TracingServiceFactory(ServiceFactory):

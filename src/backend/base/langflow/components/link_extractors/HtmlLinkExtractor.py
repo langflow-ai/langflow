@@ -1,10 +1,10 @@
 from typing import Any
 
-from langchain_community.graph_vectorstores.extractors import LinkExtractorTransformer, HtmlLinkExtractor
+from langchain_community.graph_vectorstores.extractors import HtmlLinkExtractor, LinkExtractorTransformer
 from langchain_core.documents import BaseDocumentTransformer
 
 from langflow.base.document_transformers.model import LCDocumentTransformerComponent
-from langflow.inputs import DataInput, StrInput, BoolInput
+from langflow.inputs import BoolInput, DataInput, StrInput
 
 
 class HtmlLinkExtractorComponent(LCDocumentTransformerComponent):

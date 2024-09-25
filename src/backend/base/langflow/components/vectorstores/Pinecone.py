@@ -5,13 +5,13 @@ from langchain_pinecone import Pinecone
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
+    DataInput,
     DropdownInput,
     HandleInput,
     IntInput,
-    StrInput,
-    SecretStrInput,
-    DataInput,
     MultilineInput,
+    SecretStrInput,
+    StrInput,
 )
 from langflow.schema import Data
 

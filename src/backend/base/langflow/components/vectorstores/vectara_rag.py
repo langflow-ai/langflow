@@ -1,6 +1,6 @@
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, StrInput, SecretStrInput, Output
+from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, Output, SecretStrInput, StrInput
 from langflow.schema.message import Message
 
 

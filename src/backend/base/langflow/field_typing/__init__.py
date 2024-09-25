@@ -18,6 +18,7 @@ from .constants import (
     Data,
     Document,
     Embeddings,
+    LanguageModel,
     NestedDict,
     Object,
     PromptTemplate,
@@ -26,7 +27,6 @@ from .constants import (
     TextSplitter,
     Tool,
     VectorStore,
-    LanguageModel,
 )
 from .range_spec import RangeSpec
 

@@ -1,10 +1,11 @@
 import json
 import re
 import unicodedata
+
 from langflow.custom import Component
-from langflow.inputs import MessageTextInput, BoolInput
-from langflow.template import Output
+from langflow.inputs import BoolInput, MessageTextInput
 from langflow.schema.message import Message
+from langflow.template import Output
 
 
 class JSONCleaner(Component):
