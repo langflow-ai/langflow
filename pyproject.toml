@@ -22,9 +22,10 @@ include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
 documentation = "https://docs.langflow.org"
 
 [tool.uv.sources]
-langflow-frontend = {path = "src/backend/langflow/*"}
-#langflow-base = {path = "src/backend/base/*"}
+langflow-base = {path = "src/backend/base"}
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/backend/langflow"]
 
 [project]
 name = "langflow"
@@ -33,7 +34,7 @@ description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 # Define your main dependencies here
 dependencies = [
-    "langflow-base @ file://./src/backend/base",  # Local editable package
+    "langflow-base==0.0.96",  # Local editable package
     "beautifulsoup4>=4.12.2",
     "google-search-results>=2.4.1",
     "google-api-python-client>=2.130.0",
@@ -359,5 +360,5 @@ mypy_path = "langflow"
 ignore_missing_imports = true
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
