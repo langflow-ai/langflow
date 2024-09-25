@@ -16,7 +16,7 @@ from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
 from langflow.services.tracing.schema import Log
-from langflow.utils.util import truncate_long_strings
+from langflow.utils.util_strings import truncate_long_strings
 
 
 class BuildStatus(Enum):
