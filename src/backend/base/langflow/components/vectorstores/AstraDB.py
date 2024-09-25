@@ -1,4 +1,3 @@
-import os
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -15,7 +14,7 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import Data
-
+from astrapy.admin import parse_api_endpoint
 
 class AstraVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB"
@@ -354,7 +353,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             "collection_embedding_api_key": self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key"),
         }
 
-    @check_cached_vector_store
+    # @check_cached_vector_store
     def build_vector_store(self, vectorize_options=None):
         try:
             from langchain_astradb import AstraDBVectorStore
@@ -396,7 +395,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             "token": self.token,
             "api_endpoint": self.api_endpoint,
             "namespace": self.namespace or None,
-            "environment": os.getenv("ASTRA_ENVIRONMENT", "prod"),
+            "environment": parse_api_endpoint(self.api_endpoint).environment,
             "metric": self.metric or None,
             "batch_size": self.batch_size or None,
             "bulk_insert_batch_concurrency": self.bulk_insert_batch_concurrency or None,
