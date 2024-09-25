@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import cast
 
 from langchain_community.retrievers import MetalRetriever
 from metal_sdk.metal import Metal  # type: ignore
@@ -21,7 +21,7 @@ class MetalRetrieverComponent(CustomComponent):
             "code": {"show": False},
         }
 
-    def build(self, api_key: str, client_id: str, index_id: str, params: Optional[dict] = None) -> Retriever:  # type: ignore[type-var]
+    def build(self, api_key: str, client_id: str, index_id: str, params: dict | None = None) -> Retriever:  # type: ignore[type-var]
         try:
             metal = Metal(api_key=api_key, client_id=client_id, index_id=index_id)
         except Exception as e:

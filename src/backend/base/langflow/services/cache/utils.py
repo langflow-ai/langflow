@@ -4,7 +4,7 @@ import hashlib
 import os
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
 
 from fastapi import UploadFile
 from platformdirs import user_cache_dir
@@ -12,7 +12,7 @@ from platformdirs import user_cache_dir
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import BuildStatus
 
-CACHE: Dict[str, Any] = {}
+CACHE: dict[str, Any] = {}
 
 CACHE_DIR = user_cache_dir("langflow", "langflow")
 

@@ -1,13 +1,11 @@
-from typing import List
-
-from langflow.custom import Component
-from langflow.inputs import StrInput, SecretStrInput, DefaultPromptField
-from langflow.io import Output
-from langflow.schema.message import Message
+import re
 
 from langchain_core.prompts import HumanMessagePromptTemplate
 
-import re
+from langflow.custom import Component
+from langflow.inputs import DefaultPromptField, SecretStrInput, StrInput
+from langflow.io import Output
+from langflow.schema.message import Message
 
 
 class LangChainHubPromptComponent(Component):
@@ -56,7 +54,7 @@ class LangChainHubPromptComponent(Component):
             pattern = r"\{(.*?)\}"
 
             # Get all the custom fields
-            custom_fields: List[str] = []
+            custom_fields: list[str] = []
             full_template = ""
             for message in prompt_template:
                 # Find all matches
