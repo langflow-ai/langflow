@@ -1229,18 +1229,6 @@ wheels = [
 ]
 
 [[package]]
-name = "deepdiff"
-version = "8.0.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "orderly-set" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/62/ba/aced1d6a7d988ca1b6f9b274faed7dafc7356a733e45a457819bddcf2dbc/deepdiff-8.0.1.tar.gz", hash = "sha256:245599a4586ab59bb599ca3517a9c42f3318ff600ded5e80a3432693c8ec3c4b", size = 427721 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/46/01673060e83277a863baf0909b387cd809865cba2d5e7213db76516bedd9/deepdiff-8.0.1-py3-none-any.whl", hash = "sha256:42e99004ce603f9a53934c634a57b04ad5900e0d8ed0abb15e635767489cbc05", size = 82741 },
-]
-
-[[package]]
 name = "defusedxml"
 version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2915,15 +2903,6 @@ wheels = [
 ]
 
 [[package]]
-name = "jsonpath-python"
-version = "1.0.6"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b5/49/e582e50b0c54c1b47e714241c4a4767bf28758bf90212248aea8e1ce8516/jsonpath-python-1.0.6.tar.gz", hash = "sha256:dd5be4a72d8a2995c3f583cf82bf3cd1a9544cfdabf2d22595b67aff07349666", size = 18121 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/16/8a/d63959f4eff03893a00e6e63592e3a9f15b9266ed8e0275ab77f8c7dbc94/jsonpath_python-1.0.6-py3-none-any.whl", hash = "sha256:1e3b78df579f5efc23565293612decee04214609208a2335884b3ee3f786b575", size = 7552 },
-]
-
-[[package]]
 name = "jsonpointer"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3362,19 +3341,6 @@ wheels = [
 ]
 
 [[package]]
-name = "langchain-unstructured"
-version = "0.1.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "langchain-core" },
-    { name = "unstructured-client" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/4f/4257ead731e6bd07d8d38d820faca3976e267352f3f1aeecf29ed2f8de43/langchain_unstructured-0.1.2.tar.gz", hash = "sha256:55f0a0de7829df37f5bc42f83b495fb879cf55b551e49a4ee4704a40614ed071", size = 6120 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/88/79/febeeca80fcdedd2f05ff0b046b6369f985e7e67ebfda995897ff6ae8442/langchain_unstructured-0.1.2-py3-none-any.whl", hash = "sha256:d8212adcbd9c2ca37ada10b65425042f7b609e9b0588279218bc54a8518ef3c3", size = 6699 },
-]
-
-[[package]]
 name = "langchainhub"
 version = "0.1.21"
 source = { registry = "https://pypi.org/simple" }
@@ -3432,7 +3398,6 @@ dependencies = [
     { name = "langchain-nvidia-ai-endpoints" },
     { name = "langchain-openai" },
     { name = "langchain-pinecone" },
-    { name = "langchain-unstructured" },
     { name = "langflow-base" },
     { name = "langfuse" },
     { name = "langsmith" },
@@ -4958,15 +4923,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/dc/0b/425040287cd9411db6708cfa5baf36acd9374f52caaca9f90da1f3f3b46b/optuna-4.0.0.tar.gz", hash = "sha256:844949f09e2a7353ab414e9cfd783cf0a647a65fc32a7236212ed6a37fe08973", size = 280224 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4e/41/2a2f5ed6c997367ab7055185cf66d536c228b15a12b8e112a274808f48b5/optuna-4.0.0-py3-none-any.whl", hash = "sha256:a825c32d13f6085bcb2229b2724a5078f2e0f61a7533e800e580ce41a8c6c10d", size = 362751 },
-]
-
-[[package]]
-name = "orderly-set"
-version = "5.2.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c8/71/5408fee86ce5408132a3ece6eff61afa2c25d5b37cd76bc100a9a4a4d8dd/orderly_set-5.2.2.tar.gz", hash = "sha256:52a18b86aaf3f5d5a498bbdb27bf3253a4e5c57ab38e5b7a56fa00115cd28448", size = 19103 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/69/71/6f9554919da608cb5bcf709822a9644ba4785cc7856e01ea375f6d808774/orderly_set-5.2.2-py3-none-any.whl", hash = "sha256:f7a37c95a38c01cdfe41c3ffb62925a318a2286ea0a41790c057fc802aec54da", size = 11621 },
 ]
 
 [[package]]
