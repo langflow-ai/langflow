@@ -8,7 +8,7 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
 
-from langflow.utils.util import truncate_long_strings
+from langflow.utils.util_strings import truncate_long_strings
 
 
 class TransactionBase(SQLModel):
