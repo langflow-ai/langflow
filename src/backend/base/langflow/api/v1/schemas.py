@@ -16,7 +16,8 @@ from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
 from langflow.services.tracing.schema import Log
-MAX_TEXT_LENGTH=99999
+from langflow.utils.util import truncate_long_strings
+
 
 
 class BuildStatus(Enum):
@@ -347,22 +348,3 @@ class ConfigResponse(BaseModel):
     auto_saving: bool
     auto_saving_interval: int
     health_check_max_retries: int
-
-def truncate_long_strings(data, max_length=MAX_TEXT_LENGTH):
-    """
-    Recursively traverse the dictionary or list and truncate strings longer than max_length.
-    """
-    if isinstance(data, dict):
-        for key, value in data.items():
-            if isinstance(value, str) and len(value) > max_length:
-                data[key] = value[:max_length] + '...'
-            elif isinstance(value, (dict, list)):
-                truncate_long_strings(value, max_length)
-    elif isinstance(data, list):
-        for index, item in enumerate(data):
-            if isinstance(item, str) and len(item) > max_length:
-                data[index] = item[:max_length] + '...'
-            elif isinstance(item, (dict, list)):
-                truncate_long_strings(item, max_length)
-
-    return data

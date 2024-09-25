@@ -8,7 +8,7 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
 
-MAX_TEXT_LENGTH=99999
+from langflow.utils.util import truncate_long_strings
 
 class VertexBuildBase(SQLModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -72,23 +72,3 @@ class VertexBuildMapModel(BaseModel):
                 vertex_build_map[vertex_build.id] = []
             vertex_build_map[vertex_build.id].append(vertex_build)
         return cls(vertex_builds=vertex_build_map)
-
-
-def truncate_long_strings(data, max_length=MAX_TEXT_LENGTH):
-    """
-    Recursively traverse the dictionary or list and truncate strings longer than max_length.
-    """
-    if isinstance(data, dict):
-        for key, value in data.items():
-            if isinstance(value, str) and len(value) > max_length:
-                data[key] = value[:max_length] + '...'
-            elif isinstance(value, (dict, list)):
-                truncate_long_strings(value, max_length)
-    elif isinstance(data, list):
-        for index, item in enumerate(data):
-            if isinstance(item, str) and len(item) > max_length:
-                data[index] = item[:max_length] + '...'
-            elif isinstance(item, (dict, list)):
-                truncate_long_strings(item, max_length)
-
-    return data
