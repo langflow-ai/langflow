@@ -18,13 +18,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
     icon: str = "AstraDB"
 
     inputs = [
-        StrInput(
-            name="tool_name",
-            display_name="Tool Name",
-            info="The name of the tool.",
-            required=True
-
-        ),
+        StrInput(name="tool_name", display_name="Tool Name", info="The name of the tool.", required=True),
         StrInput(
             name="tool_description",
             display_name="Tool Description",
@@ -39,7 +33,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
             required=True,
         ),
         StrInput(
-            name="table",
+            name="table_name",
             display_name="Table Name",
             info="The name of the table within Astra DB where the data is stored.",
             required=True,
@@ -108,61 +102,53 @@ class AstraDBCQLToolComponent(LCToolComponent):
                 key.append("none")
 
         # Clustering keys are optional
-        for k in self.clustering_keys.keys():
-            if k in args.keys():
+        for k in self.clustering_keys:
+            if k in args:
                 key.append(args[k])
-            elif self.static_filters[k] != None:
+            elif self.static_filters[k] is not None:
                 key.append(self.static_filters[k])
 
-        url = f'{ASTRA_URL}{"/".join(key)}?page-size={self.limit}'
+        url = f'{ASTRA_URL}{"/".join(key)}?page-size={self.number_of_results}'
 
-        if self.projection != "*":
-            url += f'&fields={urllib.parse.quote(self.projection.replace(" ","")) }'
+        if self.projection_fields != "*":
+            url += f'&fields={urllib.parse.quote(self.projection_fields.replace(" ","")) }'
 
-        print("="*10)
-        print(url)
+        res = requests.request("GET", url=url, headers=headers)
 
-        res = requests.request(
-            "GET", url=url, headers=headers)
-
-        if int(res.status_code) >= 400:
+        if int(res.status_code) >= HTTPStatus.BAD_REQUEST:
             return res.text
 
         try:
             res_data = res.json()
-            return res_data['data']
+            return res_data["data"]
         except ValueError:
-            res_data = res.status_code
-            return res_data
+            return res.status_code
 
-    def create_args_schema(self) -> Dict[str, BaseModel]:
-        args: Dict[str, Tuple[Any, Field]] = {}
+    def create_args_schema(self) -> dict[str, BaseModel]:
+        args: dict[str, tuple[Any, Field]] = {}
 
-        for key in self.partition_keys.keys():
+        for key in self.partition_keys:
             # Partition keys are mandatory is it doesn't have a static filter
-            if key not in self.static_filters.keys():
-                args[key] = (str, Field(
-                    description=self.partition_keys[key]))
+            if key not in self.static_filters:
+                args[key] = (str, Field(description=self.partition_keys[key]))
 
-        for key in self.clustering_keys.keys():
+        for key in self.clustering_keys:
             # Partition keys are mandatory if has the exclamation mark and doesn't have a static filter
-            if key not in self.static_filters.keys():
-                if key.startswith('!'):  # Mandatory
-                    args[key[1:]] = (str, Field(
-                        description=self.clustering_keys[key]))
+            if key not in self.static_filters:
+                if key.startswith("!"):  # Mandatory
+                    args[key[1:]] = (str, Field(description=self.clustering_keys[key]))
                 else:  # Optional
-                    args[key] = (Optional[str], Field(
-                        description=self.clustering_keys[key], default=None))
+                    args[key] = (str | None, Field(description=self.clustering_keys[key], default=None))
 
-        model = create_model('ToolInput', **args,  __base__=BaseModel)
-        return {'ToolInput': model}
+        model = create_model("ToolInput", **args, __base__=BaseModel)
+        return {"ToolInput": model}
 
     def build_tool(self) -> StructuredTool:
         """
         Builds a Astra DB CQL Table tool.
 
         Args:
-            name (str, optional): The name of the tool. 
+            name (str, optional): The name of the tool.
 
         Returns:
             Tool: The built AstraDB tool.
@@ -170,25 +156,26 @@ class AstraDBCQLToolComponent(LCToolComponent):
         schema_dict = self.create_args_schema()
         return StructuredTool.from_function(
             name=self.tool_name,
-            args_schema=schema_dict['ToolInput'],
+            args_schema=schema_dict["ToolInput"],
             description=self.tool_description,
             func=self.run_model,
-            return_direct=False
+            return_direct=False,
         )
 
     def projection_args(self, input_str: str) -> dict:
-        elements = input_str.split(',')
+        elements = input_str.split(",")
         result = {}
 
         for element in elements:
-            if element.startswith('!'):
+            if element.startswith("!"):
                 result[element[1:]] = False
             else:
                 result[element] = True
 
         return result
 
-    def run_model(self, **args) -> Union[Data, list[Data]]:
+    def run_model(self, **args) -> Data | list[Data]:
         results = self.astra_rest(args)
-        self.status = results
+        data: list[Data] = [Data(data=doc) for doc in results]
+        self.status = data
         return results
