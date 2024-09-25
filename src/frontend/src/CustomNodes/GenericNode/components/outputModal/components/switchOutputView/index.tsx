@@ -44,9 +44,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
       typeof resultMessage === "string" &&
       resultMessage.length > MAX_TEXT_LENGTH
     ) {
-      resultMessage = `${resultMessage.substring(0, MAX_TEXT_LENGTH)}
-
-The text is too long. Displaying the first ${MAX_TEXT_LENGTH + 1} characters...`;
+      resultMessage = `${resultMessage.substring(0, MAX_TEXT_LENGTH)}...`;
     }
 
     if (Array.isArray(resultMessage)) {
@@ -55,12 +53,7 @@ The text is too long. Displaying the first ${MAX_TEXT_LENGTH + 1} characters...`
           const truncatedData = Object.fromEntries(
             Object.entries(item.data).map(([key, value]) => {
               if (typeof value === "string" && value.length > MAX_TEXT_LENGTH) {
-                return [
-                  key,
-                  `${value.substring(0, MAX_TEXT_LENGTH)}
-
-The text is too long. Displaying the first ${MAX_TEXT_LENGTH + 1} characters...`,
-                ];
+                return [key, `${value.substring(0, MAX_TEXT_LENGTH)}...`];
               }
               return [key, value];
             }),
