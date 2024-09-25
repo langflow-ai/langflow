@@ -58,6 +58,7 @@ class Component(CustomComponent):
         self._parameters = inputs or {}
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
+        self._call_inputs: dict[str, Any] = {}
         self._current_output = ""
         self._event_manager: EventManager | None = None
         self._state_model = None
@@ -81,6 +82,9 @@ class Component(CustomComponent):
         # Set output types
         self._set_output_types()
         self.set_class_code()
+
+    def _set_call_inputs(self, key: str, value: Any):
+        self._call_inputs[key] = value
 
     def set_event_manager(self, event_manager: EventManager | None = None):
         self._event_manager = event_manager
@@ -363,6 +367,7 @@ class Component(CustomComponent):
             self._connect_to_component(key, value, _input)
         else:
             self._set_parameter_or_attribute(key, value)
+        self._set_call_inputs(key, value)
 
     def _process_connection_or_parameters(self, key, value):
         # if value is a list of components, we need to process each component

@@ -53,8 +53,8 @@ class Graph:
 
     def __init__(
         self,
-        start: Optional["Component"] = None,
-        end: Optional["Component"] = None,
+        entry: Optional["Component"] = None,
+        exit: Optional["Component"] = None,
         flow_id: str | None = None,
         flow_name: str | None = None,
         description: str | None = None,
@@ -110,6 +110,8 @@ class Graph:
         self._first_layer: list[str] = []
         self._lock = asyncio.Lock()
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
+        self._entry = None
+        self._exit = None
         self._is_cyclic: bool | None = None
         self._cycles: list[tuple[str, str]] | None = None
         self._call_order: list[str] = []
@@ -119,10 +121,10 @@ class Graph:
         except Exception as exc:
             logger.error(f"Error getting tracing service: {exc}")
             self.tracing_service = None
-        if start is not None and end is not None:
-            self._set_start_and_end(start, end)
-            self.prepare(start_component_id=start._id)
-        if (start is not None and end is None) or (start is None and end is not None):
+        if entry is not None and exit is not None:
+            self._set_entry_and_exit(entry, exit)
+            self.prepare(start_component_id=entry._id)
+        if (entry is not None and exit is None) or (entry is None and exit is not None):
             raise ValueError("You must provide both input and output components")
 
     @property
@@ -225,13 +227,60 @@ class Graph:
 
         return component_id
 
-    def _set_start_and_end(self, start: "Component", end: "Component"):
-        if not hasattr(start, "to_frontend_node"):
-            raise TypeError(f"start must be a Component. Got {type(start)}")
-        if not hasattr(end, "to_frontend_node"):
-            raise TypeError(f"end must be a Component. Got {type(end)}")
-        self.add_component(start, start._id)
-        self.add_component(end, end._id)
+    def _find_entry(self):
+        # Find a vertex with a "ChatInput" component, overriding a "TextInput" component
+        found_entry = None
+        for vertex_id in self._is_input_vertices:
+            if "ChatInput" in vertex_id:
+                found_entry = vertex_id
+                break
+            elif found_entry is None and "TextInput" in vertex_id:
+                found_entry = vertex_id
+        vertex = self.get_vertex(found_entry) if found_entry else None
+        return vertex.get_component_instance() if vertex else None
+
+    @property
+    def entry(self):
+        if self._entry is None:
+            if entry := self._find_entry():
+                self._entry = entry
+            else:
+                raise ValueError(
+                    "Graph has no entry component or couldn't find a suitable entry component (e.g. ChatInput)"
+                )
+        return self._entry
+
+    def _find_exit(self):
+        # Find a vertex with a "ChatOutput" component, overriding a "TextOutput" component
+        found_exit = None
+        for vertex_id in self._is_output_vertices:
+            if "ChatOutput" in vertex_id:
+                found_exit = vertex_id
+                break
+            elif found_exit is None and "TextOutput" in vertex_id:
+                found_exit = vertex_id
+        vertex = self.get_vertex(found_exit) if found_exit else None
+
+        return vertex.get_component_instance() if vertex else None
+
+    @property
+    def exit(self):
+        if self._exit is None:
+            if _exit := self._find_exit():
+                self._exit = _exit
+            else:
+                raise ValueError("Graph has no exit component")
+        return self._exit
+
+    def _set_entry_and_exit(self, entry: "Component", exit: "Component"):
+        if not hasattr(entry, "to_frontend_node"):
+            raise TypeError(f"start must be a Component. Got {type(entry)}")
+        if not hasattr(exit, "to_frontend_node"):
+            raise TypeError(f"end must be a Component. Got {type(exit)}")
+        self._entry = entry
+        self._exit = exit
+        self.add_component(entry._id, entry)
+        self.add_component(exit._id, exit)
 
     def add_component_edge(self, source_id: str, output_input_tuple: tuple[str, str], target_id: str):
         source_vertex = self.get_vertex(source_id)
@@ -1886,12 +1935,12 @@ class Graph:
         vertex_ids = sort_up_to_vertex(dictionaryized_graph, vertex_id, is_start)
         return [self.get_vertex(vertex_id) for vertex_id in vertex_ids]
 
-    def sort_vertices(
+    def _sort_vertices(
         self,
         stop_component_id: str | None = None,
         start_component_id: str | None = None,
-    ) -> list[str]:
-        """Sorts the vertices in the graph."""
+        flatten: bool = False,
+    ):
         self.mark_all_vertices("ACTIVE")
         if stop_component_id is not None:
             self.stop_vertex = stop_component_id
@@ -1912,6 +1961,32 @@ class Graph:
         # Now we should sort each layer in a way that we make sure
         # vertex V does not depend on vertex V+1
         vertices_layers = self.sort_layer_by_dependency(vertices_layers)
+        if flatten:
+            vertices_layers = chain.from_iterable(vertices_layers)
+        return vertices_layers
+
+    def sort_components(
+        self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None
+    ) -> List[str]:
+        """Sorts the vertices in the graph."""
+        vertices_layers = self._sort_vertices(
+            stop_component_id=stop_component_id, start_component_id=start_component_id, flatten=True
+        )
+        # Now get all the vertices instances
+        vertices = [self.get_vertex(vertex_id) for vertex_id in vertices_layers]
+        # Now we need to get the components
+        components = [vertex.get_component_instance() for vertex in vertices if hasattr(vertex, "_custom_component")]
+        return components
+
+    def sort_vertices(
+        self,
+        stop_component_id: Optional[str] = None,
+        start_component_id: Optional[str] = None,
+    ) -> List[str]:
+        """Sorts the vertices in the graph."""
+        vertices_layers = self._sort_vertices(
+            stop_component_id=stop_component_id, start_component_id=start_component_id
+        )
         self.increment_run_count()
         self._sorted_vertices_layers = vertices_layers
         first_layer = vertices_layers[0]

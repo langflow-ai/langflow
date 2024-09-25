@@ -2,6 +2,7 @@ from collections import deque
 
 import pytest
 
+from langflow.code_gen.graph import generate_script_from_graph
 from langflow.components.helpers.Memory import MemoryComponent
 from langflow.components.inputs.ChatInput import ChatInput
 from langflow.components.models.OpenAIModel import OpenAIModelComponent
@@ -132,3 +133,29 @@ def test_memory_chatbot_dump_components_and_edges(memory_chatbot_graph: Graph):
         source = edge["source"]
         target = edge["target"]
         assert (source, target) in expected_edges, edge
+
+
+def test_memory_chatbot_generate_script(memory_chatbot_graph: Graph):
+    script = generate_script_from_graph(memory_chatbot_graph)
+    expected_script = """from langflow.components.inputs.ChatInput import ChatInput
+from langflow.components.outputs.ChatOutput import ChatOutput
+from langflow.components.helpers.Memory import MemoryComponent
+from langflow.components.prompts.Prompt import PromptComponent
+from langflow.components.models.OpenAIModel import OpenAIModelComponent
+
+chat_input = ChatInput(_id='chat_input')
+chat_memory = MemoryComponent(_id='chat_memory')
+prompt = PromptComponent(_id='prompt')
+openai = OpenAIModelComponent(_id='openai')
+chat_output = ChatOutput(_id='chat_output')
+
+# Setting up the components
+chat_memory.set(session_id='test_session_id')
+prompt.set(template='{context}\\n\\nUser: {user_message}\\nAI: ', user_message=chat_input.message_response, context=chat_memory.retrieve_messages_as_text)
+openai.set(input_value=prompt.build_prompt, max_tokens=100, temperature=0.1, api_key='test_api_key')
+chat_output.set(input_value=openai.text_response)
+
+# Building the graph
+graph = Graph(entry=chat_input, exit=chat_output)
+"""
+    assert script == expected_script
