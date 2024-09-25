@@ -9,76 +9,64 @@
 
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
-FROM python:3.12.3-slim as builder-base
+# Use a Python image with uv pre-installed
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    \
-    # pip
-    PIP_DISABLE_PIP_VERSION_CHECK=on \
-    PIP_DEFAULT_TIMEOUT=100 \
-    \
-    # poetry
-    # https://python-poetry.org/docs/configuration/#using-environment-variables
-    POETRY_VERSION=1.8.2 \
-    # make poetry install to this location
-    POETRY_HOME="/opt/poetry" \
-    # make poetry create the virtual environment in the project's root
-    # it gets named `.venv`
-    POETRY_VIRTUALENVS_IN_PROJECT=true \
-    # do not ask any interactive question
-    POETRY_NO_INTERACTION=1 \
-    \
-    # paths
-    # this is where our requirements + virtual environment will live
-    PYSETUP_PATH="/opt/pysetup" \
-    VENV_PATH="/opt/pysetup/.venv"
+# Install the project into `/app`
+WORKDIR /app
+
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
+
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
 
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
     # deps for installing poetry
     curl \
     # deps for building python deps
-    build-essential npm \
+    build-essential \
+    # npm
+    npm \
     # gcc
     gcc \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+# Install the project's dependencies using the lockfile and settings
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=README.md,target=README.md \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
+    --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
+    --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev
 
-RUN --mount=type=cache,target=/root/.cache \
-    curl -sSL https://install.python-poetry.org | python3 -
+ADD ./src /app/src
 
-WORKDIR /app
-COPY pyproject.toml poetry.lock README.md ./
-COPY src/ ./src
-COPY scripts/ ./scripts
-RUN python -m pip install requests --user && cd ./scripts && python update_dependencies.py
+COPY src/frontend/package.json /tmp/package.json
+RUN cd /tmp && npm install \
+    && rm -rf src/frontend/node_modules \
+    && cp -a /tmp/node_modules /app/src/frontend \
+    && cd /app/src/frontend && npm run build \
+    && cp -r /app/src/frontend/build /app/src/backend/base/langflow/frontend
 
-# 1. Install the dependencies using the current poetry.lock file to create reproducible builds
-# 2. Do not install dev dependencies
-# 3. Install all the extras to ensure all optionals are installed as well
-# 4. --sync to ensure nothing else is in the environment
-# 5. Build the wheel and install "langflow" package (mainly for version)
+ADD ./pyproject.toml /app/pyproject.toml
+ADD ./uv.lock /app/uv.lock
 
-# Note: moving to build and installing the wheel will make the docker images not reproducible.
-RUN $POETRY_HOME/bin/poetry lock --no-update \
-      # install current lock file with fixed dependencies versions \
-      # do not install dev dependencies \
-      && $POETRY_HOME/bin/poetry install --without dev --sync -E deploy -E couchbase -E cassio \
-      && $POETRY_HOME/bin/poetry build -f wheel \
-      && $POETRY_HOME/bin/poetry run pip install dist/*.whl
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
+# Place executables in the environment at the front of the path
+ENV PATH="/app/.venv/bin:$PATH"
+# Reset the entrypoint, don't invoke `uv`
+ENTRYPOINT []
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-# 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
-FROM python:3.12.3-slim as runtime
 
-RUN apt-get -y update \
-    && apt-get install --no-install-recommends -y \
-    curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']
@@ -86,14 +74,8 @@ LABEL org.opencontainers.image.licenses=MIT
 LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
 LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
 
-RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
-COPY --from=builder-base --chown=1000 /app/.venv /app/.venv
-ENV PATH="/app/.venv/bin:${PATH}"
-
-USER user
-WORKDIR /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
 
-CMD ["python", "-m", "langflow", "run"]
+CMD ["langflow", "run"]
