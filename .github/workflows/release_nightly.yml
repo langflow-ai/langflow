@@ -69,6 +69,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version-file: "pyproject.toml"
+      - name: Set up Nodejs 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
       - name: Restore uv cache
         uses: actions/cache@v4
         with:
@@ -83,8 +87,8 @@ jobs:
       - name: Verify Nightly Name and Version
         working-directory: src/backend/base
         run: |
-          name=$(poetry version | cut -d' ' -f1)
-          version=v$(poetry version --short)
+          name=$(uv tree | grep 'langflow-base' | awk '{print $2}')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
           if [ "$name" != "langflow-base-nightly" ]; then
             echo "Name $name does not match langflow-base-nightly. Exiting the workflow."
             exit 1
