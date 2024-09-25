@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
 from langflow.utils.util import truncate_long_strings
 
+
 class VertexBuildBase(SQLModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     id: str = Field(nullable=False)
@@ -39,20 +40,15 @@ class VertexBuildBase(SQLModel):
             value = value.replace(tzinfo=timezone.utc)
         return value
 
-
-
-
     @field_serializer("data")
     def serialize_data(self, data: dict) -> dict:
         truncated_data = truncate_long_strings(data)
         return truncated_data
 
-
     @field_serializer("artifacts")
     def serialize_artifacts(self, data) -> dict:
         truncated_data = truncate_long_strings(data)
         return truncated_data
-
 
 
 class VertexBuildTable(VertexBuildBase, table=True):  # type: ignore

@@ -39,6 +39,7 @@ class TransactionBase(SQLModel):
         truncated_data = truncate_long_strings(data)
         return truncated_data
 
+
 class TransactionTable(TransactionBase, table=True):  # type: ignore
     __tablename__ = "transaction"
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
