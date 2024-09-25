@@ -136,8 +136,10 @@ jobs:
             uv-${{ runner.os }}
       - name: Check Version
         id: check-version
+        # We need to print $3 because langflow-base is a dependency of langflow
+        # For langlow we'd use print $2
         run: |
-          version=$(cd src/backend/base && poetry version --short)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
           url="https://pypi.org/pypi/langflow-base/json"
           if [ ${{ inputs.nightly }} == true ]; then
             url="https://pypi.org/pypi/langflow-base-nightly/json"
