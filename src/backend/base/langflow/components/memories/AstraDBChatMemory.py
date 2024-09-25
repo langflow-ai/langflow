@@ -6,7 +6,7 @@ from langflow.inputs import MessageTextInput, SecretStrInput, StrInput
 
 
 class AstraDBChatMemory(LCChatMemoryComponent):
-    display_name = "hello"
+    display_name = "Astra DB Chat Memory"
     description = "Retrieves and store chat messages from Astra DB."
     name = "AstraDBChatMemory"
     icon: str = "AstraDB"
