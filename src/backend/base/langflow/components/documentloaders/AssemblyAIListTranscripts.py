@@ -1,5 +1,3 @@
-from typing import List
-
 import assemblyai as aai
 
 from langflow.custom import Component
@@ -48,7 +46,7 @@ class AssemblyAIListTranscripts(Component):
         Output(display_name="Transcript List", name="transcript_list", method="list_transcripts"),
     ]
 
-    def list_transcripts(self) -> List[Data]:
+    def list_transcripts(self) -> list[Data]:
         aai.settings.api_key = self.api_key
 
         params = aai.ListTranscriptParameters()

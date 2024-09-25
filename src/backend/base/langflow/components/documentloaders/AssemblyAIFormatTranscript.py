@@ -1,5 +1,4 @@
 import datetime
-from typing import Dict, List
 
 from langflow.custom import Component
 from langflow.io import DataInput, Output
@@ -49,7 +48,7 @@ class AssemblyAITranscriptionParser(Component):
             self.status = error_message
             return Data(data={"error": error_message})
 
-    def parse_with_speakers(self, utterances: List[Dict]) -> str:
+    def parse_with_speakers(self, utterances: list[dict]) -> str:
         parsed_result = []
         for utterance in utterances:
             speaker = utterance["speaker"]
