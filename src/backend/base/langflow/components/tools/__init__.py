@@ -1,3 +1,5 @@
+from .AstraCQLTool import AstraCQLToolComponent
+from .AstraTool import AstraToolComponent
 from .BingSearchAPI import BingSearchAPIComponent
 from .Calculator import CalculatorToolComponent
 from .GleanSearchAPI import GleanSearchAPIComponent
@@ -11,9 +13,6 @@ from .SearXNGTool import SearXNGToolComponent
 from .SerpAPI import SerpAPIComponent
 from .WikipediaAPI import WikipediaAPIComponent
 from .WolframAlphaAPI import WolframAlphaAPIComponent
-from .Calculator import CalculatorToolComponent
-from .AstraTool import AstraToolComponent
-from .AstraCQLTool import AstraCQLToolComponent
 
 __all__ = [
     "RetrieverToolComponent",

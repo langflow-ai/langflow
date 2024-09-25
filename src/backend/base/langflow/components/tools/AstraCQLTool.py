@@ -1,12 +1,13 @@
-import requests
 import urllib
-from langflow.schema import Data
-from typing import Union, Dict
-from typing import Optional
-from langflow.base.langchain_utilities.model import LCToolComponent
+from typing import Dict, Optional, Union
+
+import requests
 from langchain.pydantic_v1 import BaseModel, Field, create_model
 from langchain_core.tools import StructuredTool
-from langflow.io import DictInput, SecretStrInput, StrInput, IntInput
+
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.io import DictInput, IntInput, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
 class AstraCQLToolComponent(LCToolComponent):
