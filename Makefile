@@ -202,7 +202,7 @@ format: ## run code formatters
 	@cd src/frontend && npm run format
 
 lint: install_backend ## run linters
-	@uvx run mypy --namespace-packages -p "langflow"
+	@uv run mypy --namespace-packages -p "langflow"
 
 install_frontendci:
 	@cd src/frontend && npm ci > /dev/null 2>&1
