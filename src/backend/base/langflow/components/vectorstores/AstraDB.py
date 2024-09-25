@@ -1,3 +1,4 @@
+from astrapy.admin import parse_api_endpoint
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -14,7 +15,7 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import Data
-from astrapy.admin import parse_api_endpoint
+
 
 class AstraVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB"

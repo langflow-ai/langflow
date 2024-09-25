@@ -1,7 +1,9 @@
+from astrapy.admin import parse_api_endpoint
+
 from langflow.base.memory.model import LCChatMemoryComponent
 from langflow.field_typing import BaseChatMessageHistory
 from langflow.inputs import MessageTextInput, SecretStrInput, StrInput
-from astrapy.admin import parse_api_endpoint
+
 
 class AstraDBChatMemory(LCChatMemoryComponent):
     display_name = "Astra DB Chat Memory"
