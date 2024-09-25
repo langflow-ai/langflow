@@ -1,13 +1,14 @@
-import requests
 import json
-from typing import Dict, Any, List, Optional
+from typing import Any
+
+import requests
+from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput, MultilineInput
-from langflow.schema import Data
 from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
+from langflow.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
 class NotionListPages(LCToolComponent):
@@ -42,12 +43,12 @@ class NotionListPages(LCToolComponent):
 
     class NotionListPagesSchema(BaseModel):
         database_id: str = Field(..., description="The ID of the Notion database to query.")
-        query_json: Optional[str] = Field(
+        query_json: str | None = Field(
             default="",
             description="A JSON string containing the filters and sorts for querying the database. Leave empty for no filters or sorts.",
         )
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         result = self._query_notion_database(self.database_id, self.query_json)
 
         if isinstance(result, str):
@@ -88,7 +89,7 @@ class NotionListPages(LCToolComponent):
             args_schema=self.NotionListPagesSchema,
         )
 
-    def _query_notion_database(self, database_id: str, query_json: Optional[str] = None) -> List[Dict[str, Any]] | str:
+    def _query_notion_database(self, database_id: str, query_json: str | None = None) -> list[dict[str, Any]] | str:
         url = f"https://api.notion.com/v1/databases/{database_id}/query"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",

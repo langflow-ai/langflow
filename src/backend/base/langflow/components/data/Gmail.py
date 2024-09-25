@@ -1,19 +1,22 @@
 import base64
-import re
 import json
-from typing import Any, Iterator, List, Optional
+import re
+from collections.abc import Iterator
+from json.decoder import JSONDecodeError
+from typing import Any
+
+from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from langchain_core.chat_sessions import ChatSession
+from langchain_core.messages import HumanMessage
+from langchain_google_community.gmail.loader import GMailLoader
+
 from langflow.custom import Component
 from langflow.inputs import MessageTextInput
 from langflow.io import SecretStrInput
-from langflow.template import Output
 from langflow.schema import Data
-from langchain_google_community.gmail.loader import GMailLoader
-from langchain_core.chat_sessions import ChatSession
-from langchain_core.messages import HumanMessage
-from json.decoder import JSONDecodeError
-from google.auth.exceptions import RefreshError
+from langflow.template import Output
 
 
 class GmailLoaderComponent(Component):
@@ -27,7 +30,7 @@ class GmailLoaderComponent(Component):
             display_name="JSON String of the Service Account Token",
             info="JSON string containing OAuth 2.0 access token information for service account access",
             required=True,
-            value=str("""{
+            value="""{
                 "account": "",
                 "client_id": "",
                 "client_secret": "",
@@ -39,7 +42,7 @@ class GmailLoaderComponent(Component):
                 "token": "",
                 "token_uri": "https://oauth2.googleapis.com/token",
                 "universe_domain": "googleapis.com"
-            }"""),
+            }""",
         ),
         MessageTextInput(
             name="label_ids",
@@ -64,7 +67,7 @@ class GmailLoaderComponent(Component):
     def load_emails(self) -> Data:
         class CustomGMailLoader(GMailLoader):
             def __init__(
-                self, creds: Any, n: int = 100, label_ids: Optional[List[str]] = None, raise_error: bool = False
+                self, creds: Any, n: int = 100, label_ids: list[str] | None = None, raise_error: bool = False
             ) -> None:
                 super().__init__(creds, n, raise_error)
                 self.label_ids = label_ids if label_ids is not None else ["SENT"]

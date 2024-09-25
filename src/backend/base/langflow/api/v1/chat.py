@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import time
@@ -72,9 +74,9 @@ async def retrieve_vertices_order(
     data: Annotated[FlowDataRequest | None, Body(embed=True)] | None = None,
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
-    chat_service: "ChatService" = Depends(get_chat_service),
+    chat_service: ChatService = Depends(get_chat_service),
     session=Depends(get_session),
-    telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
+    telemetry_service: TelemetryService = Depends(get_telemetry_service),
 ):
     """
     Retrieve the vertices order for a given flow.
@@ -148,12 +150,12 @@ async def build_flow(
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
     log_builds: bool | None = True,
-    chat_service: "ChatService" = Depends(get_chat_service),
+    chat_service: ChatService = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
-    telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
+    telemetry_service: TelemetryService = Depends(get_telemetry_service),
     session=Depends(get_session),
 ):
-    async def build_graph_and_get_order() -> tuple[list[str], list[str], "Graph"]:
+    async def build_graph_and_get_order() -> tuple[list[str], list[str], Graph]:
         start_time = time.perf_counter()
         components_count = None
         try:
@@ -205,7 +207,7 @@ async def build_flow(
             logger.exception(exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    async def _build_vertex(vertex_id: str, graph: "Graph", event_manager: "EventManager") -> VertexBuildResponse:
+    async def _build_vertex(vertex_id: str, graph: Graph, event_manager: EventManager) -> VertexBuildResponse:
         flow_id_str = str(flow_id)
 
         next_runnable_vertices = []
@@ -320,11 +322,11 @@ async def build_flow(
 
     async def build_vertices(
         vertex_id: str,
-        graph: "Graph",
+        graph: Graph,
         client_consumed_queue: asyncio.Queue,
-        event_manager: "EventManager",
+        event_manager: EventManager,
     ) -> None:
-        build_task = asyncio.create_task(await asyncio.to_thread(_build_vertex, vertex_id, graph, event_manager))
+        build_task = asyncio.create_task(asyncio.to_thread(asyncio.run, _build_vertex(vertex_id, graph, event_manager)))
         try:
             await build_task
         except asyncio.CancelledError as exc:
@@ -359,7 +361,7 @@ async def build_flow(
     async def event_generator(event_manager: EventManager, client_consumed_queue: asyncio.Queue) -> None:
         if not data:
             # using another thread since the DB query is I/O bound
-            vertices_task = asyncio.create_task(await asyncio.to_thread(build_graph_and_get_order))
+            vertices_task = asyncio.create_task(asyncio.to_thread(asyncio.run, build_graph_and_get_order()))
             try:
                 await vertices_task
             except asyncio.CancelledError:
@@ -457,9 +459,9 @@ async def build_vertex(
     background_tasks: BackgroundTasks,
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
     files: list[str] | None = None,
-    chat_service: "ChatService" = Depends(get_chat_service),
+    chat_service: ChatService = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
-    telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
+    telemetry_service: TelemetryService = Depends(get_telemetry_service),
 ):
     """Build a vertex instead of the entire graph.
 
@@ -489,7 +491,7 @@ async def build_vertex(
         if not cache:
             # If there's no cache
             logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-            graph: "Graph" = await build_graph_from_db(
+            graph: Graph = await build_graph_from_db(
                 flow_id=flow_id_str, session=next(get_session()), chat_service=chat_service
             )
         else:
@@ -609,8 +611,8 @@ async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
     session_id: str | None = None,
-    chat_service: "ChatService" = Depends(get_chat_service),
-    session_service: "SessionService" = Depends(get_session_service),
+    chat_service: ChatService = Depends(get_chat_service),
+    session_service: SessionService = Depends(get_session_service),
 ):
     """Build a vertex instead of the entire graph.
 
@@ -650,7 +652,7 @@ async def build_vertex_stream(
                 else:
                     graph = cache.get("result")
 
-                vertex: "InterfaceVertex" = graph.get_vertex(vertex_id)
+                vertex: InterfaceVertex = graph.get_vertex(vertex_id)
                 if not hasattr(vertex, "stream"):
                     raise ValueError(f"Vertex {vertex_id} does not support streaming")
                 if isinstance(vertex._built_result, str) and vertex._built_result:

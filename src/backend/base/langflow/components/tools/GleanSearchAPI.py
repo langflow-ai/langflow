@@ -1,15 +1,16 @@
-import httpx
 import json
 
 from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
-from pydantic import BaseModel, Field
+from pydantic.v1 import Field
 
 from langchain.tools import StructuredTool
+import httpx
+from langchain_core.pydantic_v1 import BaseModel
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput, NestedDictInput, IntInput
 from langflow.field_typing import Tool
+from langflow.inputs import IntInput, NestedDictInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -63,7 +64,7 @@ class GleanSearchAPIComponent(LCToolComponent):
                 },
             }
 
-        def results(self, query: str, **kwargs: Any) -> List[Dict]:
+        def results(self, query: str, **kwargs: Any) -> List[Dict[str, Any]]:
             results = self._search_api_results(query, **kwargs)
 
             if len(results) == 0:
@@ -71,7 +72,7 @@ class GleanSearchAPIComponent(LCToolComponent):
 
             return results
 
-        def run(self, query: str, **kwargs: Any) -> List[Dict]:
+        def run(self, query: str, **kwargs: Any) -> List[Dict[str, Any]]:
             results = self.results(query, **kwargs)
 
             processed_results = []
@@ -85,7 +86,7 @@ class GleanSearchAPIComponent(LCToolComponent):
 
             return processed_results
 
-        def _search_api_results(self, query: str, **kwargs: Any) -> Dict[str, Any]:
+        def _search_api_results(self, query: str, **kwargs: Any) -> List[Dict[str, Any]]:
             request_details = self._prepare_request(query, **kwargs)
 
             response = httpx.post(
