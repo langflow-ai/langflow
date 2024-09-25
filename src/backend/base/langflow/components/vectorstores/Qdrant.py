@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain.embeddings.base import Embeddings
 from langchain_community.vectorstores import Qdrant
 
@@ -99,7 +97,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         return qdrant
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():

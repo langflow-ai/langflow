@@ -141,11 +141,12 @@ mypy_path = "langflow"
 ignore_missing_imports = true
 
 [tool.ruff]
+target-version = "py310"
 exclude = ["langflow/alembic"]
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I"]
+select = ["E4", "E7", "E9", "F", "I", "UP"]
 
 [build-system]
 requires = ["poetry-core"]

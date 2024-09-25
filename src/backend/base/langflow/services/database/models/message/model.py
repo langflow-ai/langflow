@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
@@ -63,9 +63,9 @@ class MessageBase(SQLModel):
 class MessageTable(MessageBase, table=True):  # type: ignore
     __tablename__ = "message"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    flow_id: Optional[UUID] = Field(default=None, foreign_key="flow.id")
+    flow_id: UUID | None = Field(default=None, foreign_key="flow.id")
     flow: "Flow" = Relationship(back_populates="messages")
-    files: List[str] = Field(sa_column=Column(JSON))
+    files: list[str] = Field(sa_column=Column(JSON))
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -83,7 +83,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore
 
 class MessageRead(MessageBase):
     id: UUID
-    flow_id: Optional[UUID] = Field()
+    flow_id: UUID | None = Field()
 
 
 class MessageCreate(MessageBase):
@@ -91,8 +91,8 @@ class MessageCreate(MessageBase):
 
 
 class MessageUpdate(SQLModel):
-    text: Optional[str] = None
-    sender: Optional[str] = None
-    sender_name: Optional[str] = None
-    session_id: Optional[str] = None
-    files: Optional[list[str]] = None
+    text: str | None = None
+    sender: str | None = None
+    sender_name: str | None = None
+    session_id: str | None = None
+    files: list[str] | None = None

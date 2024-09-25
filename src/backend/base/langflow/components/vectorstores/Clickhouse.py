@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_community.vectorstores import Clickhouse, ClickhouseSettings
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -117,7 +115,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
 
         return clickhouse_vs
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():

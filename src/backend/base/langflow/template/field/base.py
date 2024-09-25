@@ -155,7 +155,7 @@ class Input(BaseModel):
         # If the user passes CustomComponent as a type insteado of "CustomComponent" we need to convert it to a string
         # this should be done for all types
         # How to check if v is a type?
-        if isinstance(v, (type, _GenericAlias, GenericAlias, _UnionGenericAlias)):
+        if isinstance(v, type | _GenericAlias | GenericAlias | _UnionGenericAlias):
             v = post_process_type(v)[0]
             v = format_type(v)
         elif not isinstance(v, str):

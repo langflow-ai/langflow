@@ -1,5 +1,3 @@
-from typing import Dict, List
-
 import requests
 from langchain.tools import StructuredTool
 from pydantic import BaseModel
@@ -28,7 +26,7 @@ class NotionUserList(LCToolComponent):
     class NotionUserListSchema(BaseModel):
         pass
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         users = self._list_users()
         records = []
         combined_text = ""
@@ -53,7 +51,7 @@ class NotionUserList(LCToolComponent):
             args_schema=self.NotionUserListSchema,
         )
 
-    def _list_users(self) -> List[Dict]:
+    def _list_users(self) -> list[dict]:
         url = "https://api.notion.com/v1/users"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",

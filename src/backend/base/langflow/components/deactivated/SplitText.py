@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_text_splitters import CharacterTextSplitter
 
 from langflow.custom import Component
@@ -52,7 +50,7 @@ class SplitTextComponent(Component):
             data.append(Data(text=doc.page_content, data=doc.metadata))
         return data
 
-    def split_text(self) -> List[Data]:
+    def split_text(self) -> list[Data]:
         separator = unescape_string(self.separator)
 
         documents = []

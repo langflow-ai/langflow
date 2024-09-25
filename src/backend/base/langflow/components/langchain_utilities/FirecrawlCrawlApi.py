@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from langflow.custom import CustomComponent
 from langflow.schema import Data
@@ -51,9 +50,9 @@ class FirecrawlCrawlApi(CustomComponent):
         api_key: str,
         url: str,
         timeout: int = 30000,
-        crawlerOptions: Optional[Data] = None,
-        pageOptions: Optional[Data] = None,
-        idempotency_key: Optional[str] = None,
+        crawlerOptions: Data | None = None,
+        pageOptions: Data | None = None,
+        idempotency_key: str | None = None,
     ) -> Data:
         try:
             from firecrawl.firecrawl import FirecrawlApp  # type: ignore

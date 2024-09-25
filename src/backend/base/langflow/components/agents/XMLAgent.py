@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from langchain.agents import create_xml_agent
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate
 
@@ -52,7 +50,7 @@ Question: {input}
         ),
     ]
 
-    def get_chat_history_data(self) -> Optional[List[Data]]:
+    def get_chat_history_data(self) -> list[Data] | None:
         return self.chat_history
 
     def create_agent_runnable(self):

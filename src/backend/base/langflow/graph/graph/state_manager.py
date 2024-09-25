@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -12,7 +14,7 @@ if TYPE_CHECKING:
 class GraphStateManager:
     def __init__(self):
         try:
-            self.state_service: "StateService" = get_state_service()
+            self.state_service: StateService = get_state_service()
         except Exception as e:
             logger.debug(f"Error getting state service. Defaulting to InMemoryStateService: {e}")
             from langflow.services.state.service import InMemoryStateService
