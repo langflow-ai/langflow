@@ -1,5 +1,6 @@
-import requests
 from typing import List
+
+import requests
 from langchain_groq import ChatGroq
 from pydantic.v1 import SecretStr
 

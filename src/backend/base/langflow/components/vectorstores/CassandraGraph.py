@@ -1,8 +1,8 @@
 from typing import List
+from uuid import UUID
 
 from langchain_community.graph_vectorstores import CassandraGraphVectorStore
 from loguru import logger
-from uuid import UUID
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
