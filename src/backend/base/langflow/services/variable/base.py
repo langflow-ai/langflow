@@ -1,5 +1,4 @@
 import abc
-from typing import Optional, Union
 from uuid import UUID
 
 from sqlmodel import Session
@@ -16,7 +15,7 @@ class VariableService(Service):
     name = "variable_service"
 
     @abc.abstractmethod
-    def initialize_user_variables(self, user_id: Union[UUID, str], session: Session) -> None:
+    def initialize_user_variables(self, user_id: UUID | str, session: Session) -> None:
         """
         Initialize user variables.
 
@@ -26,7 +25,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def get_variable(self, user_id: Union[UUID, str], name: str, field: str, session: Session) -> str:
+    def get_variable(self, user_id: UUID | str, name: str, field: str, session: Session) -> str:
         """
         Get a variable value.
 
@@ -41,7 +40,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def list_variables(self, user_id: Union[UUID, str], session: Session) -> list[Optional[str]]:
+    def list_variables(self, user_id: UUID | str, session: Session) -> list[str | None]:
         """
         List all variables.
 
@@ -54,7 +53,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def update_variable(self, user_id: Union[UUID, str], name: str, value: str, session: Session) -> Variable:
+    def update_variable(self, user_id: UUID | str, name: str, value: str, session: Session) -> Variable:
         """
         Update a variable.
 
@@ -69,7 +68,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def delete_variable(self, user_id: Union[UUID, str], name: str, session: Session) -> None:
+    def delete_variable(self, user_id: UUID | str, name: str, session: Session) -> None:
         """
         Delete a variable.
 
@@ -83,7 +82,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def delete_variable_by_id(self, user_id: Union[UUID, str], variable_id: UUID, session: Session) -> None:
+    def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: Session) -> None:
         """
         Delete a variable by ID.
 
@@ -96,7 +95,7 @@ class VariableService(Service):
     @abc.abstractmethod
     def create_variable(
         self,
-        user_id: Union[UUID, str],
+        user_id: UUID | str,
         name: str,
         value: str,
         default_fields: list[str],

@@ -1,5 +1,5 @@
-from typing import cast
 from collections.abc import Callable
+from typing import cast
 
 from pydantic import BaseModel, Field, model_serializer
 

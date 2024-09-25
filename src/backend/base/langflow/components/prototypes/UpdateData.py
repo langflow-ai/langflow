@@ -1,10 +1,9 @@
 from typing import Any
 
 from langflow.custom import Component
-from langflow.inputs.inputs import IntInput, MessageTextInput, DictInput, DataInput, BoolInput
-from langflow.io import Output
-
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.inputs.inputs import BoolInput, DataInput, DictInput, IntInput, MessageTextInput
+from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
