@@ -485,6 +485,7 @@ def find_closest_match(string: str, list_of_strings: list[str]) -> str | None:
         return closest_match[0]
     return None
 
+
 def truncate_long_strings(data, max_length=constants.MAX_TEXT_LENGTH):
     """
     Recursively traverse the dictionary or list and truncate strings longer than max_length.
@@ -492,13 +493,13 @@ def truncate_long_strings(data, max_length=constants.MAX_TEXT_LENGTH):
     if isinstance(data, dict):
         for key, value in data.items():
             if isinstance(value, str) and len(value) > max_length:
-                data[key] = value[:max_length] + '...'
+                data[key] = value[:max_length] + "..."
             elif isinstance(value, (dict, list)):
                 truncate_long_strings(value, max_length)
     elif isinstance(data, list):
         for index, item in enumerate(data):
             if isinstance(item, str) and len(item) > max_length:
-                data[index] = item[:max_length] + '...'
+                data[index] = item[:max_length] + "..."
             elif isinstance(item, (dict, list)):
                 truncate_long_strings(item, max_length)
 
