@@ -8,8 +8,6 @@ from typing import Optional
 
 import click
 import httpx
-from langflow.utils.version import get_version_info, fetch_latest_version
-from langflow.utils.version import is_pre_release as langflow_is_pre_release
 import typer
 from dotenv import load_dotenv
 from multiprocess import cpu_count  # type: ignore
@@ -32,6 +30,8 @@ from langflow.services.deps import get_db_service, get_settings_service, session
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
 from langflow.utils.util import update_settings
+from langflow.utils.version import fetch_latest_version, get_version_info
+from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
 console = Console()
 

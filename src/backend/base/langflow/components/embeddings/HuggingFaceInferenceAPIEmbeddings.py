@@ -1,9 +1,9 @@
 from urllib.parse import urlparse
-from tenacity import retry, stop_after_attempt, wait_fixed
 
 import requests
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
 from pydantic.v1.types import SecretStr
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings

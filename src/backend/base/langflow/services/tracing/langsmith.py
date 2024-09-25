@@ -12,8 +12,9 @@ from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
     from langchain.callbacks.base import BaseCallbackHandler
+
+    from langflow.graph.vertex.base import Vertex
 
 
 class LangSmithTracer(BaseTracer):

@@ -1,6 +1,7 @@
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
+
 from langflow.custom import Component
-from langflow.inputs import HandleInput, MultilineInput, MessageTextInput
+from langflow.inputs import HandleInput, MessageTextInput, MultilineInput
 from langflow.template import Output
 
 

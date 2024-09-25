@@ -1,19 +1,21 @@
 import base64
-import re
 import json
+import re
+from json.decoder import JSONDecodeError
 from typing import Any, Iterator, List, Optional
+
+from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from langchain_core.chat_sessions import ChatSession
+from langchain_core.messages import HumanMessage
+from langchain_google_community.gmail.loader import GMailLoader
+
 from langflow.custom import Component
 from langflow.inputs import MessageTextInput
 from langflow.io import SecretStrInput
-from langflow.template import Output
 from langflow.schema import Data
-from langchain_google_community.gmail.loader import GMailLoader
-from langchain_core.chat_sessions import ChatSession
-from langchain_core.messages import HumanMessage
-from json.decoder import JSONDecodeError
-from google.auth.exceptions import RefreshError
+from langflow.template import Output
 
 
 class GmailLoaderComponent(Component):

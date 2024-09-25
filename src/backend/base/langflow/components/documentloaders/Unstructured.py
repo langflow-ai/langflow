@@ -1,11 +1,11 @@
 from typing import List
 
+from langchain_unstructured import UnstructuredLoader
+
 from langflow.custom import Component
 from langflow.inputs import FileInput, SecretStrInput
-from langflow.template import Output
 from langflow.schema import Data
-
-from langchain_unstructured import UnstructuredLoader
+from langflow.template import Output
 
 
 class UnstructuredComponent(Component):
