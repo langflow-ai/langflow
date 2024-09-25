@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import re
 import warnings
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from langchain_core.tools import BaseTool
 from langchain_core.tools.structured import StructuredTool
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
     from langflow.io import Output
 
 
-def _get_input_type(input: "InputTypes"):
+def _get_input_type(input: InputTypes):
     if input.input_types:
         if len(input.input_types) == 1:
             return input.input_types[0]
@@ -24,7 +25,7 @@ def _get_input_type(input: "InputTypes"):
     return input.field_type
 
 
-def build_description(component: "Component", output: "Output"):
+def build_description(component: Component, output: Output):
     if not output.required_inputs:
         warnings.warn(f"Output {output.name} does not have required inputs defined")
 
@@ -36,7 +37,7 @@ def build_description(component: "Component", output: "Output"):
     return f"{output.method}({args}) - {component.description}"
 
 
-def _build_output_function(component: "Component", output_method: Callable):
+def _build_output_function(component: Component, output_method: Callable):
     def output_function(*args, **kwargs):
         component.set(*args, **kwargs)
         return output_method()
@@ -51,7 +52,7 @@ def _format_tool_name(name: str):
 
 
 class ComponentToolkit:  # type: ignore
-    def __init__(self, component: "Component"):
+    def __init__(self, component: Component):
         self.component = component
 
     def get_tools(self) -> list[BaseTool]:
