@@ -337,7 +337,6 @@ build_langflow_backup:
 	uv lock && uv build
 
 build_langflow:
-	cd ./scripts && uv run python update_dependencies.py
 	uv lock --no-upgrade
 	uv build
 ifdef restore
