@@ -18,7 +18,9 @@ export default function getJsApiCode({
   if (tweaksBuildedObject)
     tweaksString = JSON.stringify(tweaksBuildedObject, null, 2);
 
-  return `class LangflowClient {
+  return `const EventSource = require('eventsource');
+
+  class LangflowClient {
     constructor(baseURL, apiKey) {
         this.baseURL = baseURL;
         this.apiKey = apiKey;
@@ -125,7 +127,7 @@ export default function getJsApiCode({
     args[0], // inputValue
     args[1], // inputType
     args[2], // outputType
-    args[3] === 'true' // stream
+    args[3] === 'false' // streaming
   );
   `;
 }
