@@ -179,3 +179,5 @@ jobs:
           else
             echo "Server terminated successfully"
           fi
+      - name: Minimize uv cache
+        run: uv cache prune --ci
