@@ -208,6 +208,10 @@ export default function ComponentsComponent({
 
   const totalRowsCount = filteredFlows?.length;
 
+  const handleOpenModal = () => {
+    setOpenModal(true);
+  };
+
   return (
     <>
       <div className="flex w-full gap-4 pb-5">
@@ -233,11 +237,7 @@ export default function ComponentsComponent({
         >
           <div className="flex w-full flex-col gap-4">
             {!isLoading && data?.length === 0 ? (
-              <EmptyComponent
-                handleOpenModal={() => {
-                  setOpenModal(true);
-                }}
-              />
+              <EmptyComponent handleOpenModal={handleOpenModal} />
             ) : (
               <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
                 {data?.length > 0 ? (
