@@ -1,8 +1,9 @@
+import datetime
+from typing import Dict, List
+
 from langflow.custom import Component
 from langflow.io import DataInput, Output
 from langflow.schema import Data
-from typing import Dict, List
-import datetime
 
 
 class AssemblyAITranscriptionParser(Component):

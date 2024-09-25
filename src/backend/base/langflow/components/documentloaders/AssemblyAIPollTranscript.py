@@ -1,6 +1,7 @@
 import assemblyai as aai
+
 from langflow.custom import Component
-from langflow.io import FloatInput, SecretStrInput, DataInput, Output
+from langflow.io import DataInput, FloatInput, Output, SecretStrInput
 from langflow.schema import Data
 
 

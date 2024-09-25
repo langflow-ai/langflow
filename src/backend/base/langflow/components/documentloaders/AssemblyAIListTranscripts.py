@@ -1,7 +1,9 @@
-import assemblyai as aai
 from typing import List
+
+import assemblyai as aai
+
 from langflow.custom import Component
-from langflow.io import SecretStrInput, IntInput, DropdownInput, Output, BoolInput, MessageTextInput
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema import Data
 
 
