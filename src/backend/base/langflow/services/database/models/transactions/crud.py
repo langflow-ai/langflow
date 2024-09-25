@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select, col
+from sqlmodel import Session, col, select
 
 from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 

@@ -1,11 +1,11 @@
 import requests
+from langchain.tools import StructuredTool
 from pydantic import BaseModel
 
 from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
 from langflow.inputs import SecretStrInput
 from langflow.schema import Data
-from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
 
 
 class NotionUserList(LCToolComponent):

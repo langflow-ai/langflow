@@ -1,6 +1,6 @@
 import traceback
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 import anyio
 from loguru import logger

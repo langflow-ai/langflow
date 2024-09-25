@@ -11,10 +11,10 @@ from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
+    from langchain.callbacks.base import BaseCallbackHandler
     from langwatch.tracer import ContextSpan
 
     from langflow.graph.vertex.base import Vertex
-    from langchain.callbacks.base import BaseCallbackHandler
 
 
 class LangWatchTracer(BaseTracer):

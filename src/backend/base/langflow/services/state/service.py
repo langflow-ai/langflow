@@ -1,6 +1,6 @@
 from collections import defaultdict
-from threading import Lock
 from collections.abc import Callable
+from threading import Lock
 
 from loguru import logger
 

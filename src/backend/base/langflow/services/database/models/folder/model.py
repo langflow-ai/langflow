@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import UniqueConstraint, Text
-from sqlmodel import Field, Relationship, SQLModel, Column
+from sqlalchemy import Text, UniqueConstraint
+from sqlmodel import Column, Field, Relationship, SQLModel
 
 from langflow.services.database.models.flow.model import FlowRead
 

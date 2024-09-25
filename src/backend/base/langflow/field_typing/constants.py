@@ -1,5 +1,5 @@
-from typing import Text, TypeAlias, TypeVar
 from collections.abc import Callable
+from typing import Text, TypeAlias, TypeVar
 
 from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain

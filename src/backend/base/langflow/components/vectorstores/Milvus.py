@@ -1,16 +1,16 @@
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
-    DataInput,
-    StrInput,
-    IntInput,
-    FloatInput,
     BoolInput,
+    DataInput,
     DictInput,
-    MultilineInput,
     DropdownInput,
-    SecretStrInput,
+    FloatInput,
     HandleInput,
+    IntInput,
+    MultilineInput,
+    SecretStrInput,
+    StrInput,
 )
 from langflow.schema import Data
 

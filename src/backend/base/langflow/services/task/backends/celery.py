@@ -1,8 +1,7 @@
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 from celery.result import AsyncResult  # type: ignore
-
 
 from langflow.services.task.backends.base import TaskBackend
 from langflow.worker import celery_app

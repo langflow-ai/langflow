@@ -1,8 +1,8 @@
 from langflow.custom import Component
-from langflow.inputs import MessageInput, StrInput, HandleInput
+from langflow.inputs import HandleInput, MessageInput, StrInput
+from langflow.memory import get_messages, store_message
 from langflow.schema.message import Message
 from langflow.template import Output
-from langflow.memory import get_messages, store_message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
 

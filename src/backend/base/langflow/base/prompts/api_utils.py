@@ -5,9 +5,8 @@ from fastapi import HTTPException
 from langchain_core.prompts import PromptTemplate
 from loguru import logger
 
-from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.inputs.inputs import DefaultPromptField
-
+from langflow.interface.utils import extract_input_variables_from_prompt
 
 _INVALID_CHARACTERS = {
     " ",

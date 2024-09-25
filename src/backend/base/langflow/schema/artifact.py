@@ -1,5 +1,5 @@
-from enum import Enum
 from collections.abc import Generator
+from enum import Enum
 
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel

@@ -1,8 +1,8 @@
 import threading
 import warnings
+from collections.abc import Mapping
 from enum import Enum
 from typing import Any
-from collections.abc import Mapping
 from weakref import WeakValueDictionary
 
 from opentelemetry import metrics

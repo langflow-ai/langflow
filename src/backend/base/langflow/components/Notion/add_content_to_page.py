@@ -1,15 +1,16 @@
 import json
 from typing import Any
-from markdown import markdown
-from bs4 import BeautifulSoup
+
 import requests
+from bs4 import BeautifulSoup
+from langchain.tools import StructuredTool
+from markdown import markdown
+from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput, MultilineInput
-from langflow.schema import Data
 from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
-from pydantic import BaseModel, Field
+from langflow.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
 class AddContentToPage(LCToolComponent):

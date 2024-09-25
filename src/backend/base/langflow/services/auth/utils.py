@@ -1,9 +1,9 @@
 import base64
 import random
 import warnings
+from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
-from collections.abc import Coroutine
 from uuid import UUID
 
 from cryptography.fernet import Fernet

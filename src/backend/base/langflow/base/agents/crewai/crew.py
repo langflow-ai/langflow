@@ -1,5 +1,5 @@
-from typing import cast
 from collections.abc import Callable
+from typing import cast
 
 from crewai import Agent, Crew, Process, Task  # type: ignore
 from crewai.task import TaskOutput  # type: ignore

@@ -1,7 +1,7 @@
 import asyncio
+from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
 from typing import Annotated, Any
-from collections.abc import AsyncIterator, Iterator
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder

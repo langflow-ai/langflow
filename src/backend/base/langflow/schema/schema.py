@@ -1,6 +1,6 @@
+from collections.abc import AsyncIterator, Generator, Iterator
 from enum import Enum
 from typing import Literal
-from collections.abc import AsyncIterator, Generator, Iterator
 
 from pydantic import BaseModel
 from typing_extensions import TypedDict

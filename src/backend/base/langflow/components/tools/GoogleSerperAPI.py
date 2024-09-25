@@ -1,9 +1,9 @@
 from langchain_community.utilities.google_serper import GoogleSerperAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, MultilineInput, IntInput
-from langflow.schema import Data
 from langflow.field_typing import Tool
+from langflow.inputs import IntInput, MultilineInput, SecretStrInput
+from langflow.schema import Data
 
 
 class GoogleSerperAPIComponent(LCToolComponent):

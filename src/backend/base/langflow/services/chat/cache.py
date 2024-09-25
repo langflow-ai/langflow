@@ -1,6 +1,6 @@
+from collections.abc import Awaitable, Callable
 from contextlib import contextmanager
 from typing import Any
-from collections.abc import Awaitable, Callable
 
 import pandas as pd
 from PIL import Image

@@ -1,8 +1,8 @@
 import unicodedata
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from concurrent import futures
 from pathlib import Path
-from collections.abc import Callable
 
 import chardet
 import orjson
