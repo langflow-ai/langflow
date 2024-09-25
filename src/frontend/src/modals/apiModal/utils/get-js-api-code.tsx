@@ -127,7 +127,7 @@ export default function getJsApiCode({
     args[0], // inputValue
     args[1], // inputType
     args[2], // outputType
-    args[3] === 'false' // streaming
+    args[3] === 'true' // streaming
   );
   `;
 }
