@@ -157,7 +157,6 @@ jobs:
       - name: Build wheel
         if: steps.check-version.outputs.skipped == 'false'
         run: |
-          poetry env use ${{ matrix.python-version }}
           make build main=true
       - name: Install wheel
         if: steps.check-version.outputs.skipped == 'false'
