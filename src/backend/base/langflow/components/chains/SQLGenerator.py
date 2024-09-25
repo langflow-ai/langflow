@@ -1,9 +1,10 @@
 from langchain.chains import create_sql_query_chain
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import Runnable
+
 from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
-from langflow.inputs import MultilineInput, HandleInput, IntInput
+from langflow.inputs import HandleInput, IntInput, MultilineInput
 from langflow.template import Output
 
 

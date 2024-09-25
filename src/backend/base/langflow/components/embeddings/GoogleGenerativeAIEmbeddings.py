@@ -1,21 +1,20 @@
 # from langflow.field_typing import Data
-from langflow.custom import Component
-from langflow.io import MessageTextInput, Output, SecretStrInput
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-
 from typing import List, Optional
+
+import numpy as np
 
 # TODO: remove ignore once the google package is published with types
 from google.ai.generativelanguage_v1beta.types import (
     BatchEmbedContentsRequest,
 )
 from langchain_core.embeddings import Embeddings
-
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_google_genai._common import (
     GoogleGenerativeAIError,
 )
 
-import numpy as np
+from langflow.custom import Component
+from langflow.io import MessageTextInput, Output, SecretStrInput
 
 
 class GoogleGenerativeAIEmbeddingsComponent(Component):

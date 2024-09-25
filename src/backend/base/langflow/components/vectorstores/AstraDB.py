@@ -322,20 +322,20 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
     def build_vectorize_options(self, **kwargs):
         for attribute in [
             "provider",
-            "z_00_api_key_name",
-            "z_01_model_name",
-            "z_02_authentication",
+            "z_00_model_name",
+            "z_01_model_parameters",
+            "z_02_api_key_name",
             "z_03_provider_api_key",
-            "z_04_model_parameters",
+            "z_04_authentication",
         ]:
             if not hasattr(self, attribute):
                 setattr(self, attribute, None)
 
         # Fetch values from kwargs if any self.* attributes are None
         provider_value = self.VECTORIZE_PROVIDERS_MAPPING.get(self.provider, [None])[0] or kwargs.get("provider")
-        authentication = {**(self.z_02_authentication or kwargs.get("z_02_authentication", {}))}
+        authentication = {**(self.z_04_authentication or kwargs.get("z_04_authentication", {}))}
 
-        api_key_name = self.z_00_api_key_name or kwargs.get("z_00_api_key_name")
+        api_key_name = self.z_02_api_key_name or kwargs.get("z_02_api_key_name")
         provider_key_name = self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key")
         if provider_key_name:
             authentication["providerKey"] = provider_key_name
@@ -346,9 +346,9 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             # must match astrapy.info.CollectionVectorServiceOptions
             "collection_vector_service_options": {
                 "provider": provider_value,
-                "modelName": self.z_01_model_name or kwargs.get("z_01_model_name"),
+                "modelName": self.z_00_model_name or kwargs.get("z_00_model_name"),
                 "authentication": authentication,
-                "parameters": self.z_04_model_parameters or kwargs.get("z_04_model_parameters", {}),
+                "parameters": self.z_01_model_parameters or kwargs.get("z_01_model_parameters", {}),
             },
             "collection_embedding_api_key": self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key"),
         }

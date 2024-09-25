@@ -1,6 +1,6 @@
 import warnings
-from typing import Any, Union, get_args
 from collections.abc import AsyncIterator, Iterator
+from typing import Any, Union, get_args
 
 from pydantic import Field, field_validator
 
@@ -16,13 +16,13 @@ from .input_mixin import (
     FieldTypes,
     FileMixin,
     InputTraceMixin,
+    LinkMixin,
     ListableInputMixin,
     MetadataTraceMixin,
     MultilineMixin,
     RangeMixin,
     SerializableFieldTypes,
     TableMixin,
-    LinkMixin,
 )
 
 

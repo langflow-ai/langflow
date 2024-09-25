@@ -1,12 +1,13 @@
+from typing import Any, Dict, List
+
 import requests
-from typing import Dict, Any, List
+from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput, DropdownInput
-from langflow.schema import Data
 from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
+from langflow.inputs import DropdownInput, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
 class NotionSearch(LCToolComponent):

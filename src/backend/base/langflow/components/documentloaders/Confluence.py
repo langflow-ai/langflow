@@ -1,9 +1,11 @@
 from typing import List
-from langflow.custom import Component
-from langflow.io import StrInput, SecretStrInput, BoolInput, DropdownInput, Output, IntInput
-from langflow.schema import Data
+
 from langchain_community.document_loaders import ConfluenceLoader
 from langchain_community.document_loaders.confluence import ContentFormat
+
+from langflow.custom import Component
+from langflow.io import BoolInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
 class ConfluenceComponent(Component):
