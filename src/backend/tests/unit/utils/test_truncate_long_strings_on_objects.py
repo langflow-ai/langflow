@@ -12,7 +12,6 @@ import pytest
         ({"outer": {"inner": "b" * 100}}, 5, {"outer": {"inner": "b" * 5 + "..."}}),
         # Test case 3: List of strings
         (["short", "a" * 100, "also short"], 7, ["short", "a" * 7 + "...", "also sh" + "..."]),
-
         # Test case 4: Mixed nested structure
         (
             {"key1": ["a" * 100, {"nested": "b" * 100}], "key2": "c" * 100},
@@ -77,17 +76,20 @@ def test_truncate_long_strings_invalid_input():
     result = truncate_long_strings(input_string, 10)
     assert result == input_string  # The function should return the input unchanged
 
+
 # Updated test for negative max_length
 def test_truncate_long_strings_negative_max_length():
     input_data = {"key": "value"}
     result = truncate_long_strings(input_data, -1)
     assert result == input_data  # Assuming the function ignores negative max_length
 
+
 # Additional test for zero max_length
 def test_truncate_long_strings_zero_max_length():
     input_data = {"key": "value"}
     result = truncate_long_strings(input_data, 0)
     assert result == {"key": "..."}  # Assuming the function truncates to just "..."
+
 
 # Test for very small positive max_length
 def test_truncate_long_strings_small_max_length():
