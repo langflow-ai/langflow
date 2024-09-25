@@ -25,6 +25,9 @@ documentation = "https://docs.langflow.org"
 [tool.poetry.scripts]
 langflow-base = "langflow.__main__:main"
 
+[tool.hatch.build.targets.wheel]
+packages = ["langflow"]
+
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 fastapi = "^0.111.0"
@@ -149,9 +152,8 @@ line-length = 120
 select = ["E4", "E7", "E9", "F", "I", "UP"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 
 [project]
