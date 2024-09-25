@@ -37,7 +37,8 @@ export const usePatchUpdateFlow: useMutationFunctionType<
       onSettled: () => {
         //check the actual browser url to check f has /flow
         // if it does not, then refetch the flows
-        if (!window.location.pathname.includes("/flow")) queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
+        if (!window.location.pathname.includes("/flow"))
+          queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
       },
       ...options,
     });
