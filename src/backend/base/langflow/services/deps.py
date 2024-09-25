@@ -1,5 +1,6 @@
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING
 
 from loguru import logger
 

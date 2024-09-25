@@ -1,5 +1,6 @@
 import re
-from typing import List
+
+from langchain_core.prompts import HumanMessagePromptTemplate
 
 from langchain_core.prompts import HumanMessagePromptTemplate
 
@@ -55,7 +56,7 @@ class LangChainHubPromptComponent(Component):
             pattern = r"\{(.*?)\}"
 
             # Get all the custom fields
-            custom_fields: List[str] = []
+            custom_fields: list[str] = []
             full_template = ""
             for message in prompt_template:
                 # Find all matches

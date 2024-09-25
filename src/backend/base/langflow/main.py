@@ -5,7 +5,6 @@ import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
@@ -220,7 +219,7 @@ def get_static_files_dir():
     return frontend_path / "frontend"
 
 
-def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = False) -> FastAPI:
+def setup_app(static_files_dir: Path | None = None, backend_only: bool = False) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     logger.info(f"Setting up app with static files directory {static_files_dir}")

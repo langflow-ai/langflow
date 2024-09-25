@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from langchain.tools import StructuredTool
 from langchain_community.utilities.searchapi import SearchApiAPIWrapper
@@ -30,7 +30,7 @@ class SearchAPIComponent(LCToolComponent):
 
     class SearchAPISchema(BaseModel):
         query: str = Field(..., description="The search query")
-        params: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional search parameters")
+        params: dict[str, Any] | None = Field(default_factory=dict, description="Additional search parameters")
         max_results: int = Field(5, description="Maximum number of results to return")
         max_snippet_length: int = Field(100, description="Maximum length of each result snippet")
 
@@ -41,8 +41,8 @@ class SearchAPIComponent(LCToolComponent):
         wrapper = self._build_wrapper()
 
         def search_func(
-            query: str, params: Optional[Dict[str, Any]] = None, max_results: int = 5, max_snippet_length: int = 100
-        ) -> List[Dict[str, Any]]:
+            query: str, params: dict[str, Any] | None = None, max_results: int = 5, max_snippet_length: int = 100
+        ) -> list[dict[str, Any]]:
             params = params or {}
             full_results = wrapper.results(query=query, **params)
             organic_results = full_results.get("organic_results", [])[:max_results]
@@ -68,7 +68,7 @@ class SearchAPIComponent(LCToolComponent):
         self.status = f"Search API Tool created with engine: {self.engine}"
         return tool
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         tool = self.build_tool()
         results = tool.run(
             {

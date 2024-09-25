@@ -24,7 +24,7 @@ class OpenAPIAgentComponent(LCAgentComponent):
 
     def build_agent(self) -> AgentExecutor:
         if self.path.endswith("yaml") or self.path.endswith("yml"):
-            with open(self.path, "r") as file:
+            with open(self.path) as file:
                 yaml_dict = yaml.load(file, Loader=yaml.FullLoader)
             spec = JsonSpec(dict_=yaml_dict)
         else:

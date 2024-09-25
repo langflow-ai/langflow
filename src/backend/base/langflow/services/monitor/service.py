@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 from platformdirs import user_cache_dir
 
@@ -85,7 +85,7 @@ class MonitorService(Service):
 
         return df.to_dict(orient="records")
 
-    def delete_transactions(self, ids: List[int]) -> None:
+    def delete_transactions(self, ids: list[int]) -> None:
         with new_duckdb_locked_connection(self.db_path, read_only=False) as conn:
             conn.execute(f"DELETE FROM transactions WHERE index in ({','.join(map(str, ids))})")
             conn.commit()
