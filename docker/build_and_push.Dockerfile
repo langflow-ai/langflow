@@ -10,7 +10,7 @@
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
 # Install the project into `/app`
 WORKDIR /app
@@ -33,7 +33,7 @@ RUN apt-get update \
     gcc \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-# Install the project's dependencies using the lockfile and settings
+
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=README.md,target=README.md \
@@ -45,19 +45,24 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 ADD ./src /app/src
 
-COPY src/frontend/package.json /tmp/package.json
-RUN cd /tmp && npm install \
-    && rm -rf src/frontend/node_modules \
-    && cp -a /tmp/node_modules /app/src/frontend \
-    && cd /app/src/frontend && npm run build \
-    && cp -r /app/src/frontend/build /app/src/backend/base/langflow/frontend
+COPY src/frontend /tmp/src/frontend
+WORKDIR /tmp/src/frontend
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci \
+    && npm run build \
+    && cp -r build /app/src/backend/langflow/frontend \
+    && rm -rf /tmp/src/frontend
 
+WORKDIR /app
 ADD ./pyproject.toml /app/pyproject.toml
 ADD ./uv.lock /app/uv.lock
 
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
 
+RUN --mount=type=cache,target=/root/.cache/uv \
+uv sync --frozen --no-dev
+FROM python:3.12.3-slim AS runtime
+
+COPY --from=builder /app/.venv /app/.venv
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 # Reset the entrypoint, don't invoke `uv`
