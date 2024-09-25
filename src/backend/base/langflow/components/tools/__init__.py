@@ -29,5 +29,5 @@ __all__ = [
     "WolframAlphaAPIComponent",
     "CalculatorToolComponent",
     "AstraToolComponent",
-    "AstraCQLToolComponent"
+    "AstraCQLToolComponent",
 ]
