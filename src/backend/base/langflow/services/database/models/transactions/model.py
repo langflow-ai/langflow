@@ -7,6 +7,7 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
+MAX_TEXT_LENGTH=99999
 
 
 class TransactionBase(SQLModel):
@@ -34,30 +35,8 @@ class TransactionBase(SQLModel):
 
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict:
-        paths_to_truncate = [
-            (['artifacts', 'data', 'raw'], 'text'),
-
-            (['artifacts', 'text'], 'raw'),
-            (['artifacts', 'text'], 'repr'),
-
-            (['artifacts', 'prompt'], 'raw'),
-            (['artifacts', 'prompt'], 'repr'),
-
-            (['artifacts', 'data'], 'repr'),
-
-            (['message', 'text'], 'raw'),
-            (['message', 'text'], 'repr'),
-            (['messsage', 'data', 'raw'], 'text'),
-
-            (['outputs', 'data', 'message'], 'text'),
-            (['outputs', 'text'], 'message'),
-            (['outputs', 'prompt'], 'message'),
-        ]
-
-        for path, key in paths_to_truncate:
-            truncate_text(data, path, key)
-
-        return data
+        truncated_data = truncate_long_strings(data)
+        return truncated_data
 
 class TransactionTable(TransactionBase, table=True):  # type: ignore
     __tablename__ = "transaction"
@@ -70,13 +49,21 @@ class TransactionReadResponse(TransactionBase):
     flow_id: UUID
 
 
-def truncate_text(data, path: list, key: str):
-    """Helper function to safely truncate text in nested dictionaries."""
-    target = data
-    for p in path:
-        if not isinstance(target, dict) or p not in target:
-            return  # Exit if path is invalid
-        target = target[p]
+def truncate_long_strings(data, max_length=MAX_TEXT_LENGTH):
+    """
+    Recursively traverse the dictionary or list and truncate strings longer than max_length.
+    """
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if isinstance(value, str) and len(value) > max_length:
+                data[key] = value[:max_length] + '...'
+            elif isinstance(value, (dict, list)):
+                truncate_long_strings(value, max_length)
+    elif isinstance(data, list):
+        for index, item in enumerate(data):
+            if isinstance(item, str) and len(item) > max_length:
+                data[index] = item[:max_length] + '...'
+            elif isinstance(item, (dict, list)):
+                truncate_long_strings(item, max_length)
 
-    if key in target and isinstance(target[key], str):
-        target[key] = target[key][:10]
+    return data
