@@ -1,12 +1,11 @@
 import json
-
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import urljoin
-from pydantic.v1 import Field
 
-from langchain.tools import StructuredTool
 import httpx
+from langchain.tools import StructuredTool
 from langchain_core.pydantic_v1 import BaseModel
+from pydantic.v1 import Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
@@ -44,7 +43,7 @@ class GleanSearchAPIComponent(LCToolComponent):
             self,
             query: str,
             page_size: int = 10,
-            request_options: Optional[Dict[str, Any]] = None,
+            request_options: dict[str, Any] | None = None,
         ) -> dict:
             # Ensure there's a trailing slash
             url = self.glean_api_url
@@ -64,7 +63,7 @@ class GleanSearchAPIComponent(LCToolComponent):
                 },
             }
 
-        def results(self, query: str, **kwargs: Any) -> List[Dict[str, Any]]:
+        def results(self, query: str, **kwargs: Any) -> list[dict[str, Any]]:
             results = self._search_api_results(query, **kwargs)
 
             if len(results) == 0:
@@ -72,7 +71,7 @@ class GleanSearchAPIComponent(LCToolComponent):
 
             return results
 
-        def run(self, query: str, **kwargs: Any) -> List[Dict[str, Any]]:
+        def run(self, query: str, **kwargs: Any) -> list[dict[str, Any]]:
             results = self.results(query, **kwargs)
 
             processed_results = []
@@ -86,7 +85,7 @@ class GleanSearchAPIComponent(LCToolComponent):
 
             return processed_results
 
-        def _search_api_results(self, query: str, **kwargs: Any) -> List[Dict[str, Any]]:
+        def _search_api_results(self, query: str, **kwargs: Any) -> list[dict[str, Any]]:
             request_details = self._prepare_request(query, **kwargs)
 
             response = httpx.post(
@@ -107,7 +106,7 @@ class GleanSearchAPIComponent(LCToolComponent):
     class GleanSearchAPISchema(BaseModel):
         query: str = Field(..., description="The search query")
         page_size: int = Field(10, description="Maximum number of results to return")
-        request_options: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Request Options")
+        request_options: dict[str, Any] | None = Field(default_factory=dict, description="Request Options")
 
     def build_tool(self) -> Tool:
         wrapper = self._build_wrapper(
@@ -126,7 +125,7 @@ class GleanSearchAPIComponent(LCToolComponent):
 
         return tool
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         tool = self.build_tool()
 
         results = tool.run(
