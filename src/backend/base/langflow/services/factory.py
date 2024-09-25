@@ -1,6 +1,6 @@
 import importlib
 import inspect
-from typing import TYPE_CHECKING, Type, get_type_hints
+from typing import TYPE_CHECKING, get_type_hints
 
 from cachetools import LRUCache, cached
 from loguru import logger
@@ -23,7 +23,7 @@ class ServiceFactory:
         raise self.service_class(*args, **kwargs)
 
 
-def hash_factory(factory: Type[ServiceFactory]) -> str:
+def hash_factory(factory: type[ServiceFactory]) -> str:
     return factory.service_class.__name__
 
 
@@ -31,14 +31,14 @@ def hash_dict(d: dict) -> str:
     return str(d)
 
 
-def hash_infer_service_types_args(factory_class: Type[ServiceFactory], available_services=None) -> str:
+def hash_infer_service_types_args(factory_class: type[ServiceFactory], available_services=None) -> str:
     factory_hash = hash_factory(factory_class)
     services_hash = hash_dict(available_services)
     return f"{factory_hash}_{services_hash}"
 
 
 @cached(cache=LRUCache(maxsize=10), key=hash_infer_service_types_args)
-def infer_service_types(factory_class: Type[ServiceFactory], available_services=None) -> list["ServiceType"]:
+def infer_service_types(factory_class: type[ServiceFactory], available_services=None) -> list["ServiceType"]:
     create_method = factory_class.create
     type_hints = get_type_hints(create_method, globalns=available_services)
     service_types = []

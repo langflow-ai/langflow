@@ -1,5 +1,4 @@
 import importlib
-from typing import List, Union
 
 from langchain.tools import StructuredTool
 from langchain_experimental.utilities import PythonREPL
@@ -46,7 +45,7 @@ class PythonREPLToolComponent(LCToolComponent):
     class PythonREPLSchema(BaseModel):
         code: str = Field(..., description="The Python code to execute.")
 
-    def get_globals(self, global_imports: Union[str, List[str]]) -> dict:
+    def get_globals(self, global_imports: str | list[str]) -> dict:
         global_dict = {}
         if isinstance(global_imports, str):
             modules = [module.strip() for module in global_imports.split(",")]
@@ -83,7 +82,7 @@ class PythonREPLToolComponent(LCToolComponent):
         self.status = f"Python REPL Tool created with global imports: {self.global_imports}"
         return tool
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         tool = self.build_tool()
         result = tool.run(self.code)
         return [Data(data={"result": result})]

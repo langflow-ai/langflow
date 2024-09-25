@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Iterator, Optional, Union
+from collections.abc import AsyncIterator, Iterator
 
 from langflow.custom import Component
 from langflow.memory import store_message
@@ -54,7 +54,7 @@ class ChatComponent(Component):
 
     def _stream_message(self, message: Message, message_id: str) -> str:
         iterator = message.text
-        if not isinstance(iterator, (AsyncIterator, Iterator)):
+        if not isinstance(iterator, AsyncIterator | Iterator):
             raise ValueError("The message must be an iterator or an async iterator.")
 
         if isinstance(iterator, AsyncIterator):
@@ -68,12 +68,12 @@ class ChatComponent(Component):
 
     def build_with_data(
         self,
-        sender: Optional[str] = "User",
-        sender_name: Optional[str] = "User",
-        input_value: Optional[Union[str, Data, Message]] = None,
-        files: Optional[list[str]] = None,
-        session_id: Optional[str] = None,
-        return_message: Optional[bool] = False,
+        sender: str | None = "User",
+        sender_name: str | None = "User",
+        input_value: str | Data | Message | None = None,
+        files: list[str] | None = None,
+        session_id: str | None = None,
+        return_message: bool | None = False,
     ) -> Message:
         message: Message | None = None
 

@@ -1,5 +1,3 @@
-from typing import Optional
-
 from langflow.custom import CustomComponent
 from langflow.schema import Data
 
@@ -46,8 +44,8 @@ class FirecrawlScrapeApi(CustomComponent):
         api_key: str,
         url: str,
         timeout: int = 10000,
-        pageOptions: Optional[Data] = None,
-        extractorOptions: Optional[Data] = None,
+        pageOptions: Data | None = None,
+        extractorOptions: Data | None = None,
     ) -> Data:
         try:
             from firecrawl.firecrawl import FirecrawlApp  # type: ignore

@@ -1,6 +1,5 @@
 import json
 from json.decoder import JSONDecodeError
-from typing import Optional
 
 from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
@@ -37,7 +36,7 @@ class GoogleDriveComponent(Component):
 
     def load_documents(self) -> Data:
         class CustomGoogleDriveLoader(GoogleDriveLoader):
-            creds: Optional[Credentials] = None
+            creds: Credentials | None = None
             """Credentials object to be passed directly."""
 
             def _load_credentials(self):

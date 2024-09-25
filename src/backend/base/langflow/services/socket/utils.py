@@ -1,5 +1,5 @@
 import time
-from typing import Callable
+from collections.abc import Callable
 
 import socketio  # type: ignore
 from sqlmodel import select

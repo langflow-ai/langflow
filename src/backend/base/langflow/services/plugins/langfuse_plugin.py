@@ -65,7 +65,7 @@ class LangfusePlugin(CallbackPlugin):
     def get(self):
         return LangfuseInstance.get()
 
-    def get_callback(self, _id: Optional[str] = None):
+    def get_callback(self, _id: str | None = None):
         if _id is None:
             _id = "default"
 

@@ -1,6 +1,7 @@
 import asyncio
+from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import Annotated, Any, AsyncIterator, Iterator, List, Optional
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
@@ -38,15 +39,15 @@ class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
     text_key: str = "text"
-    text: Optional[str | AsyncIterator | Iterator] = Field(default="")
-    sender: Optional[str] = None
-    sender_name: Optional[str] = None
-    files: Optional[list[str | Image]] = Field(default=[])
-    session_id: Optional[str] = Field(default="")
+    text: str | AsyncIterator | Iterator | None = Field(default="")
+    sender: str | None = None
+    sender_name: str | None = None
+    files: list[str | Image] | None = Field(default=[])
+    session_id: str | None = Field(default="")
     timestamp: Annotated[str, BeforeValidator(_timestamp_to_str)] = Field(
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     )
-    flow_id: Optional[str | UUID] = None
+    flow_id: str | UUID | None = None
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -71,7 +72,7 @@ class Message(Data):
         return value
 
     def model_post_init(self, __context: Any) -> None:
-        new_files: List[Any] = []
+        new_files: list[Any] = []
         for file in self.files or []:
             if is_image_file(file):
                 new_files.append(Image(path=file))

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 import httpx
 
@@ -15,7 +15,7 @@ def process_tags_for_post(component_dict):
 
 
 async def update_components_with_user_data(
-    components: List["ListComponentResponse"],
+    components: list["ListComponentResponse"],
     store_service: "StoreService",
     store_api_key: str,
     liked: bool,

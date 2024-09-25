@@ -153,13 +153,13 @@ def parse_context(curl_command):
     # proxy_auth = parsed_args.proxy_user
     if parsed_args.proxy and parsed_args.proxy_user:
         proxies = {
-            "http": "http://{}@{}/".format(parsed_args.proxy_user, parsed_args.proxy),
-            "https": "http://{}@{}/".format(parsed_args.proxy_user, parsed_args.proxy),
+            "http": f"http://{parsed_args.proxy_user}@{parsed_args.proxy}/",
+            "https": f"http://{parsed_args.proxy_user}@{parsed_args.proxy}/",
         }
     elif parsed_args.proxy:
         proxies = {
-            "http": "http://{}/".format(parsed_args.proxy),
-            "https": "http://{}/".format(parsed_args.proxy),
+            "http": f"http://{parsed_args.proxy}/",
+            "https": f"http://{parsed_args.proxy}/",
         }
 
     return ParsedContext(

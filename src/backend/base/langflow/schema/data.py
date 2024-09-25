@@ -1,6 +1,6 @@
 import copy
 import json
-from typing import Optional, cast
+from typing import cast
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -21,7 +21,7 @@ class Data(BaseModel):
 
     text_key: str = "text"
     data: dict = {}
-    default_value: Optional[str] = ""
+    default_value: str | None = ""
 
     @model_validator(mode="before")
     @classmethod

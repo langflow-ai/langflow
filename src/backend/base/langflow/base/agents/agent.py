@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, Optional, Union, cast
+from typing import cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
@@ -20,7 +20,7 @@ from langflow.utils.constants import MESSAGE_SENDER_AI
 
 class LCAgentComponent(Component):
     trace_type = "agent"
-    _base_inputs: List[InputTypes] = [
+    _base_inputs: list[InputTypes] = [
         MessageTextInput(name="input_value", display_name="Input"),
         BoolInput(
             name="handle_parsing_errors",
@@ -89,7 +89,7 @@ class LCAgentComponent(Component):
             }
         return {**base, "agent_executor_kwargs": agent_kwargs}
 
-    def get_chat_history_data(self) -> Optional[List[Data]]:
+    def get_chat_history_data(self) -> list[Data] | None:
         # might be overridden in subclasses
         return None
 
@@ -128,7 +128,7 @@ class LCToolsAgentComponent(LCAgentComponent):
 
     async def run_agent(
         self,
-        agent: Union[Runnable, BaseSingleActionAgent, BaseMultiActionAgent, AgentExecutor],
+        agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
     ) -> Text:
         if isinstance(agent, AgentExecutor):
             runnable = agent

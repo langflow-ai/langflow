@@ -13,7 +13,7 @@ def is_image_file(file_path):
         with PILImage.open(file_path) as img:
             img.verify()  # Verify that it is, in fact, an image
         return True
-    except (IOError, SyntaxError):
+    except (OSError, SyntaxError):
         return False
 
 

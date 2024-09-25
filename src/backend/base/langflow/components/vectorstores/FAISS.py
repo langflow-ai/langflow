@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_community.vectorstores import FAISS
 from loguru import logger
 
@@ -79,7 +77,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
 
         return faiss
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         """
         Search for documents in the FAISS vector store.
         """

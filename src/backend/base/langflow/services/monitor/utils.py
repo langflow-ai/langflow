@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Type, Union
+from typing import TYPE_CHECKING, Any
 
 import duckdb
 from loguru import logger
@@ -22,7 +22,7 @@ def get_table_schema_as_dict(conn: duckdb.DuckDBPyConnection, table_name: str) -
     return schema
 
 
-def model_to_sql_column_definitions(model: Type[BaseModel]) -> dict:
+def model_to_sql_column_definitions(model: type[BaseModel]) -> dict:
     columns = {}
     for field_name, field_type in model.model_fields.items():
         if hasattr(field_type.annotation, "__args__") and field_type.annotation is not None:
@@ -48,7 +48,7 @@ def model_to_sql_column_definitions(model: Type[BaseModel]) -> dict:
     return columns
 
 
-def drop_and_create_table_if_schema_mismatch(db_path: str, table_name: str, model: Type[BaseModel]):
+def drop_and_create_table_if_schema_mismatch(db_path: str, table_name: str, model: type[BaseModel]):
     with new_duckdb_locked_connection(db_path) as conn:
         # Get the current schema from the database
         try:
@@ -79,7 +79,7 @@ def drop_and_create_table_if_schema_mismatch(db_path: str, table_name: str, mode
 
 
 @contextmanager
-def new_duckdb_locked_connection(db_path: Union[str, Path], read_only=False):
+def new_duckdb_locked_connection(db_path: str | Path, read_only=False):
     with worker_lock_manager.lock("duckdb"):
         with duckdb.connect(str(db_path), read_only=read_only) as conn:
             yield conn
@@ -88,8 +88,8 @@ def new_duckdb_locked_connection(db_path: Union[str, Path], read_only=False):
 def add_row_to_table(
     conn: duckdb.DuckDBPyConnection,
     table_name: str,
-    model: Type,
-    monitor_data: Union[Dict[str, Any], BaseModel],
+    model: type[BaseModel],
+    monitor_data: dict[str, Any] | BaseModel,
 ):
     # Validate the data with the Pydantic model
     if isinstance(monitor_data, model):

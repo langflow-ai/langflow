@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, List, Optional, Type
+from typing import Any
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, ToolException
@@ -15,10 +15,10 @@ from langflow.utils.async_helpers import run_until_complete
 class FlowTool(BaseTool):
     name: str
     description: str
-    graph: Optional[Graph] = None
-    flow_id: Optional[str] = None
-    user_id: Optional[str] = None
-    inputs: List["Vertex"] = []
+    graph: Graph | None = None
+    flow_id: str | None = None
+    user_id: str | None = None
+    inputs: list["Vertex"] = []
     get_final_results_only: bool = True
 
     @property
@@ -26,7 +26,7 @@ class FlowTool(BaseTool):
         schema = self.get_input_schema()
         return schema.schema()["properties"]
 
-    def get_input_schema(self, config: Optional[RunnableConfig] = None) -> Type[BaseModel]:
+    def get_input_schema(self, config: RunnableConfig | None = None) -> type[BaseModel]:
         """The tool's input schema."""
         if self.args_schema is not None:
             return self.args_schema
@@ -68,7 +68,7 @@ class FlowTool(BaseTool):
                     data.extend(build_data_from_result_data(output, get_final_results_only=self.get_final_results_only))
         return format_flow_output_data(data)
 
-    def validate_inputs(self, args_names: List[dict[str, str]], args: Any, kwargs: Any):
+    def validate_inputs(self, args_names: list[dict[str, str]], args: Any, kwargs: Any):
         """Validate the inputs."""
 
         if len(args) > 0 and len(args) != len(args_names):

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -25,7 +27,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
     def __init__(self, session_id: str):
         self.chat_service = get_chat_service()
         self.client_id = session_id
-        self.socketio_service: "SocketIOService" = get_socket_service()
+        self.socketio_service: SocketIOService = get_socket_service()
         self.sid = session_id
         # self.socketio_service = self.chat_service.active_connections[self.client_id]
 

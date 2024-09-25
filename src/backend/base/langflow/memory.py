@@ -1,5 +1,5 @@
 import warnings
-from typing import List, Sequence
+from collections.abc import Sequence
 from uuid import UUID
 
 from langchain_core.messages import BaseMessage
@@ -21,7 +21,7 @@ def get_messages(
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
-) -> List[Message]:
+) -> list[Message]:
     """
     Retrieves messages from the monitor service based on the provided filters.
 
@@ -147,7 +147,7 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
         self.session_id = session_id
 
     @property
-    def messages(self) -> List[BaseMessage]:
+    def messages(self) -> list[BaseMessage]:
         messages = get_messages(
             session_id=self.session_id,
         )

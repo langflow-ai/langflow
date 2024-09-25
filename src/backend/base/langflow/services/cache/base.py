@@ -1,7 +1,7 @@
 import abc
 import asyncio
 import threading
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from langflow.services.base import Service
 
@@ -17,7 +17,7 @@ class CacheService(Service, Generic[LockType]):
     name = "cache_service"
 
     @abc.abstractmethod
-    def get(self, key, lock: Optional[LockType] = None):
+    def get(self, key, lock: LockType | None = None):
         """
         Retrieve an item from the cache.
 
@@ -29,7 +29,7 @@ class CacheService(Service, Generic[LockType]):
         """
 
     @abc.abstractmethod
-    def set(self, key, value, lock: Optional[LockType] = None):
+    def set(self, key, value, lock: LockType | None = None):
         """
         Add an item to the cache.
 
@@ -39,7 +39,7 @@ class CacheService(Service, Generic[LockType]):
         """
 
     @abc.abstractmethod
-    def upsert(self, key, value, lock: Optional[LockType] = None):
+    def upsert(self, key, value, lock: LockType | None = None):
         """
         Add an item to the cache if it doesn't exist, or update it if it does.
 
@@ -49,7 +49,7 @@ class CacheService(Service, Generic[LockType]):
         """
 
     @abc.abstractmethod
-    def delete(self, key, lock: Optional[LockType] = None):
+    def delete(self, key, lock: LockType | None = None):
         """
         Remove an item from the cache.
 
@@ -58,7 +58,7 @@ class CacheService(Service, Generic[LockType]):
         """
 
     @abc.abstractmethod
-    def clear(self, lock: Optional[LockType] = None):
+    def clear(self, lock: LockType | None = None):
         """
         Clear all items from the cache.
         """
@@ -112,7 +112,7 @@ class AsyncBaseCacheService(Service, Generic[AsyncLockType]):
     name = "cache_service"
 
     @abc.abstractmethod
-    async def get(self, key, lock: Optional[AsyncLockType] = None):
+    async def get(self, key, lock: AsyncLockType | None = None):
         """
         Retrieve an item from the cache.
 
@@ -124,7 +124,7 @@ class AsyncBaseCacheService(Service, Generic[AsyncLockType]):
         """
 
     @abc.abstractmethod
-    async def set(self, key, value, lock: Optional[AsyncLockType] = None):
+    async def set(self, key, value, lock: AsyncLockType | None = None):
         """
         Add an item to the cache.
 
@@ -134,7 +134,7 @@ class AsyncBaseCacheService(Service, Generic[AsyncLockType]):
         """
 
     @abc.abstractmethod
-    async def upsert(self, key, value, lock: Optional[AsyncLockType] = None):
+    async def upsert(self, key, value, lock: AsyncLockType | None = None):
         """
         Add an item to the cache if it doesn't exist, or update it if it does.
 
@@ -144,7 +144,7 @@ class AsyncBaseCacheService(Service, Generic[AsyncLockType]):
         """
 
     @abc.abstractmethod
-    async def delete(self, key, lock: Optional[AsyncLockType] = None):
+    async def delete(self, key, lock: AsyncLockType | None = None):
         """
         Remove an item from the cache.
 
@@ -153,7 +153,7 @@ class AsyncBaseCacheService(Service, Generic[AsyncLockType]):
         """
 
     @abc.abstractmethod
-    async def clear(self, lock: Optional[AsyncLockType] = None):
+    async def clear(self, lock: AsyncLockType | None = None):
         """
         Clear all items from the cache.
         """

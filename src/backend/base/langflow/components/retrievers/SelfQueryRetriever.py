@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
 
@@ -53,7 +51,7 @@ class SelfQueryRetrieverComponent(Component):
         Output(display_name="Retrieved Documents", name="documents", method="retrieve_documents"),
     ]
 
-    def retrieve_documents(self) -> List[Data]:
+    def retrieve_documents(self) -> list[Data]:
         metadata_field_infos = [AttributeInfo(**value.data) for value in self.attribute_infos]
         self_query_retriever = SelfQueryRetriever.from_llm(
             llm=self.llm,

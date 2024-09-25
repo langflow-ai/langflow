@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from langflow.schema.data import Data
 
@@ -27,7 +27,7 @@ def convert_to_langchain_type(value):
     return value
 
 
-def convert_to_langchain_types(io_dict: Dict[str, Any]):
+def convert_to_langchain_types(io_dict: dict[str, Any]):
     converted = {}
     for key, value in io_dict.items():
         converted[key] = convert_to_langchain_type(value)

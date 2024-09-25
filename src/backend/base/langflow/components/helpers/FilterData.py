@@ -1,5 +1,3 @@
-from typing import List
-
 from langflow.custom import Component
 from langflow.io import DataInput, MessageTextInput, Output
 from langflow.schema import Data
@@ -31,7 +29,7 @@ class FilterDataComponent(Component):
     ]
 
     def filter_data(self) -> Data:
-        filter_criteria: List[str] = self.filter_criteria
+        filter_criteria: list[str] = self.filter_criteria
         data = self.data.data if isinstance(self.data, Data) else {}
 
         # Filter the data

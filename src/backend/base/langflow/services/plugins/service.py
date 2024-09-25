@@ -1,7 +1,7 @@
 import importlib
 import inspect
 import os
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
@@ -45,7 +45,7 @@ class PluginService(Service):
         self.plugins[plugin_name] = plugin_instance
         plugin_instance.initialize()
 
-    def get_plugin(self, plugin_name) -> Union[BasePlugin, None]:
+    def get_plugin(self, plugin_name) -> BasePlugin | None:
         return self.plugins.get(plugin_name)
 
     def get(self, plugin_name):

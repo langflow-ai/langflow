@@ -1,7 +1,6 @@
 import json
 import warnings
 from abc import abstractmethod
-from typing import List, Optional, Union
 
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -20,7 +19,7 @@ class LCModelComponent(Component):
     description: str = "Model Description"
     trace_type = "llm"
 
-    _base_inputs: List[InputTypes] = [
+    _base_inputs: list[InputTypes] = [
         MessageInput(name="input_value", display_name="Input"),
         MessageTextInput(
             name="system_message",
@@ -138,9 +137,9 @@ class LCModelComponent(Component):
         runnable: LanguageModel,
         stream: bool,
         input_value: str | Message,
-        system_message: Optional[str] = None,
+        system_message: str | None = None,
     ):
-        messages: list[Union[BaseMessage]] = []
+        messages: list[BaseMessage] = []
         if not input_value and not system_message:
             raise ValueError("The message you want to send to the model is empty.")
         system_message_added = False
@@ -161,7 +160,7 @@ class LCModelComponent(Component):
 
         if system_message and not system_message_added:
             messages.append(SystemMessage(content=system_message))
-        inputs: Union[list, dict] = messages or {}
+        inputs: list | dict = messages or {}
         try:
             runnable = runnable.with_config(  # type: ignore
                 {

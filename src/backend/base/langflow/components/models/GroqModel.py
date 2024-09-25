@@ -1,5 +1,3 @@
-from typing import List
-
 import requests
 from langchain_groq import ChatGroq
 from pydantic.v1 import SecretStr
@@ -55,7 +53,7 @@ class GroqModel(LCModelComponent):
         ),
     ]
 
-    def get_models(self) -> List[str]:
+    def get_models(self) -> list[str]:
         api_key = self.groq_api_key
         base_url = self.groq_api_base or "https://api.groq.com"
         url = f"{base_url}/openai/v1/models"

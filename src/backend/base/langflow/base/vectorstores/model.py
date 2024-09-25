@@ -1,6 +1,6 @@
 from abc import ABC, ABCMeta, abstractmethod
 from functools import wraps
-from typing import List, cast
+from typing import cast
 
 from langchain_core.documents import Document
 from loguru import logger
@@ -94,7 +94,7 @@ class LCVectorStoreComponent(Component, ABC, metaclass=EnforceCacheDecoratorMeta
         vector_store: VectorStore,
         k=10,
         **kwargs,
-    ) -> List[Data]:
+    ) -> list[Data]:
         """
         Search for data in the vector store based on the input value and search type.
 
@@ -110,7 +110,7 @@ class LCVectorStoreComponent(Component, ABC, metaclass=EnforceCacheDecoratorMeta
             ValueError: If invalid inputs are provided.
         """
 
-        docs: List[Document] = []
+        docs: list[Document] = []
         if input_value and isinstance(input_value, str) and hasattr(vector_store, "search"):
             docs = vector_store.search(query=input_value, search_type=search_type.lower(), k=k, **kwargs)
         else:
@@ -140,7 +140,7 @@ class LCVectorStoreComponent(Component, ABC, metaclass=EnforceCacheDecoratorMeta
         else:
             raise ValueError(f"Vector Store {vector_store.__class__.__name__} does not have an as_retriever method.")
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         """
         Search for documents in the vector store.
         """

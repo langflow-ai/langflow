@@ -1,5 +1,3 @@
-from typing import Dict, Union
-
 import requests
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
@@ -50,7 +48,7 @@ class NotionDatabaseProperties(LCToolComponent):
             args_schema=self.NotionDatabasePropertiesSchema,
         )
 
-    def _fetch_database_properties(self, database_id: str) -> Union[Dict, str]:
+    def _fetch_database_properties(self, database_id: str) -> dict | str:
         url = f"https://api.notion.com/v1/databases/{database_id}"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",

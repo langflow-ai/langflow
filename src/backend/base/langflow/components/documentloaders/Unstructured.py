@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_unstructured import UnstructuredLoader
 
 from langflow.custom import Component
@@ -47,7 +45,7 @@ class UnstructuredComponent(Component):
 
         return loader
 
-    def load_documents(self) -> List[Data]:
+    def load_documents(self) -> list[Data]:
         unstructured = self.build_unstructured()
 
         documents = unstructured.load()

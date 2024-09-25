@@ -1,5 +1,3 @@
-from typing import Optional
-
 from langflow.custom import CustomComponent
 from langflow.schema import Data
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
@@ -45,6 +43,6 @@ class BaseMemoryComponent(CustomComponent):
         raise NotImplementedError
 
     def add_message(
-        self, sender: str, sender_name: str, text: str, session_id: str, metadata: Optional[dict] = None, **kwargs
+        self, sender: str, sender_name: str, text: str, session_id: str, metadata: dict | None = None, **kwargs
     ):
         raise NotImplementedError

@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_community.vectorstores import Cassandra
 from loguru import logger
 
@@ -219,7 +217,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
         else:
             return "similarity"
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         logger.debug(f"Search input: {self.search_query}")

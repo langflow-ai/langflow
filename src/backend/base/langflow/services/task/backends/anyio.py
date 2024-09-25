@@ -1,5 +1,6 @@
 import traceback
-from typing import Any, Callable, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import anyio
 from loguru import logger
@@ -51,7 +52,7 @@ class AnyIOBackend(TaskBackend):
 
     async def launch_task(
         self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
-    ) -> Tuple[Optional[str], Optional[AnyIOTaskResult]]:
+    ) -> tuple[str | None, AnyIOTaskResult | None]:
         """
         Launch a new task in an asynchronous manner.
 

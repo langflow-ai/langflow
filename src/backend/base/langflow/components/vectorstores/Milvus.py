@@ -1,5 +1,3 @@
-from typing import List
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
@@ -108,7 +106,7 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
 
         return milvus_store
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
