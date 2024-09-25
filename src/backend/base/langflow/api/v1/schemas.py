@@ -284,7 +284,8 @@ class VertexBuildResponse(BaseModel):
 
     @field_serializer("data")
     def serialize_data(self, data: ResultDataResponse) -> dict:
-        truncated_data = truncate_long_strings(data)
+        data_dict = data.model_dump() if isinstance(data, BaseModel) else data
+        truncated_data = truncate_long_strings(data_dict)
         return truncated_data
 
 
