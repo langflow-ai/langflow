@@ -18,7 +18,7 @@ class AstraDBChatMemory(LCChatMemoryComponent):
             info="Authentication token for accessing Astra DB.",
             value="ASTRA_DB_APPLICATION_TOKEN",
             required=True,
-            advanced=os.getenv("ASTRA_ENHANCED", "false").lower() == "true"
+            advanced=os.getenv("ASTRA_ENHANCED", "false").lower() == "true",
         ),
         SecretStrInput(
             name="api_endpoint",
