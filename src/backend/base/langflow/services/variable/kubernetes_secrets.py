@@ -1,10 +1,9 @@
+from base64 import b64decode, b64encode
+from uuid import UUID
+
 from kubernetes import client, config  # type: ignore
 from kubernetes.client.rest import ApiException  # type: ignore
-from base64 import b64encode, b64decode
-
 from loguru import logger
-from typing import Union
-from uuid import UUID
 
 
 class KubernetesSecretManager:
@@ -160,7 +159,7 @@ class KubernetesSecretManager:
 
 # utility function to encode user_id to base64 lower case and numbers only
 # this is required by kubernetes secret name restrictions
-def encode_user_id(user_id: Union[UUID | str]) -> str:
+def encode_user_id(user_id: UUID | str) -> str:
     # Handle UUID
     if isinstance(user_id, UUID):
         return f"uuid-{str(user_id).lower()}"[:253]

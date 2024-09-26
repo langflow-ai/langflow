@@ -1,4 +1,5 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { AthenaIcon } from "@/icons/athena/index";
@@ -174,6 +175,7 @@ import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { AssemblyAIIcon } from "../icons/AssemblyAI";
 import { AstraDBIcon } from "../icons/AstraDB";
 import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
@@ -388,6 +390,7 @@ export const nodeIconsLucide: iconsType = {
   Amazon: AWSIcon,
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
+  AssemblyAI: AssemblyAIIcon,
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
@@ -627,4 +630,5 @@ export const nodeIconsLucide: iconsType = {
   OptionIcon: OptionIcon,
   Option: OptionIcon,
   Perplexity,
+  DuckDuckGo: DuckDuckGoIcon,
 };

@@ -1,13 +1,18 @@
+from __future__ import annotations
+
 import uuid
 import warnings
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
+from sqlalchemy import delete
 from sqlmodel import Session
 
 from langflow.graph.graph.base import Graph
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.store.schema import StoreComponentCreate
 from langflow.services.store.utils import get_lf_version_from_pypi
 
@@ -66,7 +71,7 @@ def build_input_keys_response(langchain_object, artifacts):
     return input_keys_response
 
 
-def validate_is_component(flows: list["Flow"]):
+def validate_is_component(flows: list[Flow]):
     for flow in flows:
         if not flow.data or flow.is_component is not None:
             continue
@@ -149,7 +154,7 @@ async def build_graph_from_db_no_cache(flow_id: str, session: Session):
     return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
 
 
-async def build_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
+async def build_graph_from_db(flow_id: str, session: Session, chat_service: ChatService):
     graph = await build_graph_from_db_no_cache(flow_id, session)
     await chat_service.set_cache(flow_id, graph)
     return graph
@@ -157,7 +162,7 @@ async def build_graph_from_db(flow_id: str, session: Session, chat_service: "Cha
 
 async def build_and_cache_graph_from_data(
     flow_id: str,
-    chat_service: "ChatService",
+    chat_service: ChatService,
     graph_data: dict,
 ):  # -> Graph | Any:
     """Build and cache the graph."""
@@ -241,3 +246,12 @@ def parse_value(value: Any, input_type: str) -> Any:
         return float(value) if value is not None else None
     else:
         return value
+
+
+async def cascade_delete_flow(session: Session, flow: Flow):
+    try:
+        session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))  # type: ignore
+        session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))  # type: ignore
+        session.exec(delete(Flow).where(Flow.id == flow.id))  # type: ignore
+    except Exception as e:
+        raise RuntimeError(f"Unable to cascade delete flow: ${flow.id}", e)

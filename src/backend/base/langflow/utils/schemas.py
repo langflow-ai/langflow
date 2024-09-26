@@ -1,5 +1,4 @@
 import enum
-from typing import Dict, List, Optional, Union
 
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, field_validator, model_validator
@@ -20,13 +19,13 @@ class File(TypedDict):
 class ChatOutputResponse(BaseModel):
     """Chat output response schema."""
 
-    message: Union[str, List[Union[str, Dict]]]
-    sender: Optional[str] = MESSAGE_SENDER_AI
-    sender_name: Optional[str] = MESSAGE_SENDER_NAME_AI
-    session_id: Optional[str] = None
-    stream_url: Optional[str] = None
-    component_id: Optional[str] = None
-    files: List[File] = []
+    message: str | list[str | dict]
+    sender: str | None = MESSAGE_SENDER_AI
+    sender_name: str | None = MESSAGE_SENDER_NAME_AI
+    session_id: str | None = None
+    stream_url: str | None = None
+    component_id: str | None = None
+    files: list[File] = []
     type: str
 
     @field_validator("files", mode="before")
@@ -72,8 +71,8 @@ class ChatOutputResponse(BaseModel):
     def from_message(
         cls,
         message: BaseMessage,
-        sender: Optional[str] = MESSAGE_SENDER_AI,
-        sender_name: Optional[str] = MESSAGE_SENDER_NAME_AI,
+        sender: str | None = MESSAGE_SENDER_AI,
+        sender_name: str | None = MESSAGE_SENDER_NAME_AI,
     ):
         """Build chat output response from message."""
         content = message.content
@@ -101,7 +100,7 @@ class ChatOutputResponse(BaseModel):
 class DataOutputResponse(BaseModel):
     """Data output response schema."""
 
-    data: List[Optional[Dict]]
+    data: list[dict | None]
 
 
 class ContainsEnumMeta(enum.EnumMeta):

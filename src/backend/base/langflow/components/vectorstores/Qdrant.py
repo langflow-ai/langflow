@@ -1,19 +1,18 @@
-from typing import List
-
+from langchain.embeddings.base import Embeddings
 from langchain_community.vectorstores import Qdrant
+
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
+    DataInput,
     DropdownInput,
     HandleInput,
     IntInput,
-    StrInput,
-    SecretStrInput,
-    DataInput,
     MultilineInput,
+    SecretStrInput,
+    StrInput,
 )
 from langflow.schema import Data
-from langchain.embeddings.base import Embeddings
 
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
@@ -98,7 +97,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         return qdrant
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():

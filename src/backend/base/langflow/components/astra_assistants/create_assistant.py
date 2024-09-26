@@ -1,15 +1,17 @@
 from astra_assistants import patch  # type: ignore
 from openai import OpenAI
+
 from langflow.custom import Component
-from langflow.inputs import StrInput, MultilineInput
-from langflow.template import Output
+from langflow.inputs import MultilineInput, StrInput
 from langflow.schema.message import Message
+from langflow.template import Output
 
 
 class AssistantsCreateAssistant(Component):
     icon = "bot"
     display_name = "Create Assistant"
     description = "Creates an Assistant and returns it's id"
+    client = patch(OpenAI())
 
     inputs = [
         StrInput(
@@ -45,8 +47,7 @@ class AssistantsCreateAssistant(Component):
 
     def process_inputs(self) -> Message:
         print(f"env_set is {self.env_set}")
-        client = patch(OpenAI())
-        assistant = client.beta.assistants.create(
+        assistant = self.client.beta.assistants.create(
             name=self.assistant_name,
             instructions=self.instructions,
             model=self.model,

@@ -1,24 +1,25 @@
 from langflow.inputs import (
     BoolInput,
+    CodeInput,
     DataInput,
+    DefaultPromptField,
     DictInput,
     DropdownInput,
-    MultiselectInput,
     FileInput,
     FloatInput,
     HandleInput,
     IntInput,
+    LinkInput,
     MessageInput,
     MessageTextInput,
     MultilineInput,
     MultilineSecretInput,
+    MultiselectInput,
     NestedDictInput,
     PromptInput,
-    CodeInput,
     SecretStrInput,
     StrInput,
     TableInput,
-    DefaultPromptField,
 )
 from langflow.template import Output
 
@@ -44,4 +45,5 @@ __all__ = [
     "Output",
     "TableInput",
     "DefaultPromptField",
+    "LinkInput",
 ]

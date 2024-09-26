@@ -1,11 +1,11 @@
 import requests
-from typing import Dict, Union
+from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
+
 from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
 from langflow.inputs import SecretStrInput, StrInput
 from langflow.schema import Data
-from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
 
 
 class NotionDatabaseProperties(LCToolComponent):
@@ -48,7 +48,7 @@ class NotionDatabaseProperties(LCToolComponent):
             args_schema=self.NotionDatabasePropertiesSchema,
         )
 
-    def _fetch_database_properties(self, database_id: str) -> Union[Dict, str]:
+    def _fetch_database_properties(self, database_id: str) -> dict | str:
         url = f"https://api.notion.com/v1/databases/{database_id}"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",

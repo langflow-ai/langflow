@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import Any, List, Optional
+from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import httpx
@@ -104,8 +104,8 @@ class APIRequestComponent(Component):
         client: httpx.AsyncClient,
         method: str,
         url: str,
-        headers: Optional[dict] = None,
-        body: Optional[dict] = None,
+        headers: dict | None = None,
+        body: dict | None = None,
         timeout: int = 5,
     ) -> Data:
         method = method.upper()
@@ -162,7 +162,7 @@ class APIRequestComponent(Component):
         url_parts[4] = urlencode(query)
         return urlunparse(url_parts)
 
-    async def make_requests(self) -> List[Data]:
+    async def make_requests(self) -> list[Data]:
         method = self.method
         urls = [url.strip() for url in self.urls if url.strip()]
         curl = self.curl

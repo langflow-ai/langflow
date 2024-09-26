@@ -2,6 +2,7 @@ import json
 from collections import namedtuple
 from uuid import UUID, uuid4
 
+from langflow.services.database.models.folder.model import FolderCreate
 import orjson
 import pytest
 from fastapi.testclient import TestClient
@@ -12,15 +13,8 @@ from langflow.graph.utils import log_transaction, log_vertex_build
 from langflow.initial_setup.setup import load_flows_from_directory, load_starter_projects
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
-from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
-from langflow.services.database.utils import migrate_transactions_from_monitor_service_to_database, session_getter
-from langflow.services.deps import get_db_service, get_monitor_service, session_scope
-from langflow.services.monitor.schema import TransactionModel
-from langflow.services.monitor.utils import (
-    add_row_to_table,
-    drop_and_create_table_if_schema_mismatch,
-    new_duckdb_locked_connection,
-)
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service
 
 
 @pytest.fixture(scope="module")
@@ -180,6 +174,75 @@ async def test_delete_flows_with_transaction_and_build(
     response = client.request("DELETE", "api/v1/flows/", headers=logged_in_headers, json=flow_ids)
     assert response.status_code == 200, response.content
     assert response.json().get("deleted") == number_of_flows
+
+    for flow_id in flow_ids:
+        response = client.request(
+            "GET", "api/v1/monitor/transactions", params={"flow_id": flow_id}, headers=logged_in_headers
+        )
+        assert response.status_code == 200
+        assert response.json() == []
+
+    for flow_id in flow_ids:
+        response = client.request(
+            "GET", "api/v1/monitor/builds", params={"flow_id": flow_id}, headers=logged_in_headers
+        )
+        assert response.status_code == 200
+        assert response.json() == {"vertex_builds": {}}
+
+
+@pytest.mark.asyncio
+async def test_delete_folder_with_flows_with_transaction_and_build(
+    client: TestClient, json_flow: str, active_user, logged_in_headers
+):
+    # Create a new folder
+    folder_name = f"Test Folder {uuid4()}"
+    folder = FolderCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
+
+    response = client.post("/api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201, f"Expected status code 201, but got {response.status_code}"
+
+    created_folder = response.json()
+    folder_id = created_folder["id"]
+
+    # Create ten flows
+    number_of_flows = 10
+    flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
+    flow_ids = []
+    for flow in flows:
+        flow.folder_id = folder_id
+        response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+        flow_ids.append(response.json()["id"])
+
+    # Create a transaction for each flow
+    for flow_id in flow_ids:
+        VertexTuple = namedtuple("VertexTuple", ["id"])
+
+        await log_transaction(
+            str(flow_id), source=VertexTuple(id="vid"), target=VertexTuple(id="tid"), status="success"
+        )
+
+    # Create a build for each flow
+    for flow_id in flow_ids:
+        build = {
+            "valid": True,
+            "params": {},
+            "data": ResultDataResponse(),
+            "artifacts": {},
+            "vertex_id": "vid",
+            "flow_id": flow_id,
+        }
+        log_vertex_build(
+            flow_id=build["flow_id"],
+            vertex_id=build["vertex_id"],
+            valid=build["valid"],
+            params=build["params"],
+            data=build["data"],
+            artifacts=build.get("artifacts"),
+        )
+
+    response = client.request("DELETE", f"api/v1/folders/{folder_id}", headers=logged_in_headers)
+    assert response.status_code == 204
 
     for flow_id in flow_ids:
         response = client.request(
@@ -357,58 +420,6 @@ def test_load_flows(client: TestClient, load_flows_dir):
     response = client.get("api/v1/flows/c54f9130-f2fa-4a3e-b22a-3856d946351b")
     assert response.status_code == 200
     assert response.json()["name"] == "BasicExample"
-
-
-@pytest.mark.load_flows
-def test_migrate_transactions(client: TestClient):
-    monitor_service = get_monitor_service()
-    drop_and_create_table_if_schema_mismatch(str(monitor_service.db_path), "transactions", TransactionModel)
-    flow_id = "c54f9130-f2fa-4a3e-b22a-3856d946351b"
-    data = {
-        "vertex_id": "vid",
-        "target_id": "tid",
-        "inputs": {"input_value": True},
-        "outputs": {"output_value": True},
-        "timestamp": "2021-10-10T10:10:10",
-        "status": "success",
-        "error": None,
-        "flow_id": flow_id,
-    }
-    with new_duckdb_locked_connection(str(monitor_service.db_path), read_only=False) as conn:
-        add_row_to_table(conn, "transactions", TransactionModel, data)
-    assert 1 == len(monitor_service.get_transactions())
-
-    with session_scope() as session:
-        migrate_transactions_from_monitor_service_to_database(session)
-        new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
-        assert 1 == len(new_trans)
-        t = new_trans[0]
-        assert t.error is None
-        assert t.inputs == data["inputs"]
-        assert t.outputs == data["outputs"]
-        assert t.status == data["status"]
-        assert str(t.timestamp) == "2021-10-10 10:10:10"
-        assert t.vertex_id == data["vertex_id"]
-        assert t.target_id == data["target_id"]
-        assert t.flow_id == UUID(flow_id)
-
-        assert 0 == len(monitor_service.get_transactions())
-
-        client.request("DELETE", f"api/v1/flows/{flow_id}")
-    with session_scope() as session:
-        new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
-        assert 0 == len(new_trans)
-
-
-@pytest.mark.load_flows
-def test_migrate_transactions_no_duckdb(client: TestClient):
-    flow_id = "c54f9130-f2fa-4a3e-b22a-3856d946351b"
-    get_monitor_service()
-
-    with session_scope() as session:
-        migrate_transactions_from_monitor_service_to_database(session)
-        new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
-        assert 0 == len(new_trans)
 
 
 def test_sqlite_pragmas():
