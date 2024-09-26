@@ -104,7 +104,6 @@ dependencies = [
     "composio-langchain==0.5.9",
     "spider-client>=0.0.27",
     "nltk>=3.9.1",
-    "bson>=0.5.10",
     "lark>=1.2.2",
     "jq>=1.8.0",
     "pydantic-settings==2.4.0",
@@ -219,7 +218,6 @@ astra-assistants = "^2.1.2"
 composio-langchain = "0.5.9"
 spider-client = "^0.0.27"
 nltk = "^3.9.1"
-bson = "^0.5.10"
 lark = "^1.2.2"
 jq = "^1.8.0"
 clickhouse-connect = {version = "0.7.19", optional = true, extras = ["clickhouse-connect"]}
