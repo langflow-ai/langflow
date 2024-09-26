@@ -718,15 +718,29 @@ export const RUN_TIMESTAMP_PREFIX = "Last Run: ";
 export const STARTER_FOLDER_NAME = "Starter Projects";
 export const PRIORITY_SIDEBAR_ORDER = [
   "saved_components",
-  "inputs",
-  "outputs",
-  "prompts",
+
+  "agents",
+  "astra_assistants",
+  "chains",
   "data",
-  "prompt",
-  "models",
-  "helpers",
-  "vectorstores",
+  "documentloaders",
   "embeddings",
+  "helpers",
+  "inputs",
+  "langchain_utilities",
+  "link_extractors",
+  "memories",
+  "models",
+  "notion",
+  "outputs",
+  "prompt",
+  "prompts",
+  "prototypes",
+  "retrievers",
+  "textsplitters",
+  "toolkits",
+  "tools",
+  "vectorstores",
 ];
 
 export const BUNDLES_SIDEBAR_FOLDER_NAMES = ["notion", "Notion"];
