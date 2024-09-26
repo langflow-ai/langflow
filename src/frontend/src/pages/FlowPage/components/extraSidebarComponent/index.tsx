@@ -1,7 +1,7 @@
 import { ENABLE_MVPS } from "@/customization/feature-flags";
 import { useStoreStore } from "@/stores/storeStore";
 import { cloneDeep } from "lodash";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
@@ -29,12 +29,28 @@ export default function ExtraSidebar(): JSX.Element {
   const hasStore = useStoreStore((state) => state.hasStore);
   const filterType = useFlowStore((state) => state.filterType);
 
-  const arrayData = convertStructureToArray(data);
+  const arrayData = useMemo(() => convertStructureToArray(data), [data]);
+
+  const fuse = useMemo(
+    () =>
+      new Fuse(arrayData, {
+        keys: ["key", "searchableDisplayNames"],
+        threshold: 0.4,
+        ignoreLocation: true,
+      }),
+    [arrayData],
+  );
 
   function convertStructureToArray(structure) {
     return Object.entries(structure).map(([key, value]) => {
       if (typeof value === "object" && value !== null) {
-        return { key, value };
+        return {
+          key,
+          value,
+          searchableDisplayNames: Object.values(value)
+            .map((v) => v.display_name)
+            .filter(Boolean),
+        };
       } else {
         return { key, value: {} };
       }
@@ -44,6 +60,7 @@ export default function ExtraSidebar(): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(arrayData);
   const [search, setSearch] = useState("");
+
   function onDragStart(
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType },
@@ -60,8 +77,6 @@ export default function ExtraSidebar(): JSX.Element {
     event.dataTransfer.setData("genericNode", JSON.stringify(data));
   }
 
-  const fuse = new Fuse(arrayData, { keys: ["key", "value"] });
-
   // Handle showing components after use search input
   function handleSearchInput(e: string) {
     if (e === "") {
@@ -69,7 +84,6 @@ export default function ExtraSidebar(): JSX.Element {
       return;
     }
     const searchValues = fuse.search(e);
-
     setFilterData(searchValues.map((item) => item.item));
   }
 
@@ -214,6 +228,7 @@ export default function ExtraSidebar(): JSX.Element {
         <Separator />
         {dataFilter
           .filter((item) => PRIORITY_SIDEBAR_ORDER.includes(item.key))
+          .sort((a, b) => sortKeys(a.key, b.key))
           .map((item, index) =>
             Object.keys(item.value).length > 0 ? (
               <SidebarCategoryComponent
@@ -300,17 +315,19 @@ export default function ExtraSidebar(): JSX.Element {
               }}
               testId="bundle-extended-disclosure"
             >
-              {Object.keys(dataFilter)
-                .sort(sortKeys)
-                .filter((x) => BUNDLES_SIDEBAR_FOLDER_NAMES.includes(x))
-                .map((SBSectionName: keyof APIObjectType, index) =>
-                  Object.keys(dataFilter[SBSectionName]).length > 0 ? (
+              {dataFilter
+                .sort((a, b) => sortKeys(a.key, b.key))
+                .filter((item) =>
+                  BUNDLES_SIDEBAR_FOLDER_NAMES.includes(item.key),
+                )
+                .map((item, index) =>
+                  Object.keys(item.value).length > 0 ? (
                     <SidebarCategoryComponent
                       key={`DisclosureComponent${index + search + JSON.stringify(getFilterEdge)}`}
                       search={search}
                       getFilterEdge={getFilterEdge}
-                      category={dataFilter[SBSectionName]}
-                      name={SBSectionName}
+                      category={item.value}
+                      name={item.key}
                       onDragStart={onDragStart}
                     />
                   ) : (
