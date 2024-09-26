@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://www.googletagmanager.com">
 <script>window.dataLayer=window.dataLayer||[]</script>
 <script>!function(e,t,a,n,g){e[n]=e[n]||[],e[n].push({"gtm.start":(new Date).getTime(),event:"gtm.js"});var m=t.getElementsByTagName(a)[0],r=t.createElement(a);r.async=!0,r.src="https://www.googletagmanager.com/gtm.js?id=GTM-NK5M4ZT8",m.parentNode.insertBefore(r,m)}(window,document,"script","dataLayer")</script><link rel="stylesheet" href="/assets/css/styles.0752b4d1.css">
-<script src="/assets/js/runtime~main.53d7527e.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.5f537a01.js" defer="defer"></script>
 <script src="/assets/js/main.2ccefa45.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -45,7 +45,7 @@ For more information and instructions, see <a href="https://docs.datastax.com/en
 <p>This component generates embeddings using Azure OpenAI models.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="parameters-3">Parameters<a class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" href="/components-embedding-models#parameters-3">​</a></h3>
 <h4 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="inputs-3">Inputs<a class="hash-link" aria-label="Direct link to Inputs" title="Direct link to Inputs" href="/components-embedding-models#inputs-3">​</a></h4>
-<table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Azure Endpoint</td><td>String</td><td>Your Azure endpoint, including the resource. Example: <code>https://example-resource.azure.openai.com/</code></td></tr><tr><td>Deployment Name</td><td>String</td><td>The name of the deployment</td></tr><tr><td>API Version</td><td>String</td><td>The API version to use, options include various dates</td></tr><tr><td>API Key</td><td>String</td><td>The API key to access the Azure OpenAI service</td></tr></tbody></table>
+<table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Model</td><td>String</td><td>Name of the model to use (default: <code>text-embedding-3-small</code>)</td></tr><tr><td>Azure Endpoint</td><td>String</td><td>Your Azure endpoint, including the resource. Example: <code>https://example-resource.azure.openai.com/</code></td></tr><tr><td>Deployment Name</td><td>String</td><td>The name of the deployment</td></tr><tr><td>API Version</td><td>String</td><td>The API version to use, options include various dates</td></tr><tr><td>API Key</td><td>String</td><td>The API key to access the Azure OpenAI service</td></tr></tbody></table>
 <h4 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="outputs-3">Outputs<a class="hash-link" aria-label="Direct link to Outputs" title="Direct link to Outputs" href="/components-embedding-models#outputs-3">​</a></h4>
 <table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>embeddings</td><td>Embeddings</td><td>An instance for generating embeddings using Azure OpenAI</td></tr></tbody></table>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="cohere-embeddings">Cohere Embeddings<a class="hash-link" aria-label="Direct link to Cohere Embeddings" title="Direct link to Cohere Embeddings" href="/components-embedding-models#cohere-embeddings">​</a></h2>
