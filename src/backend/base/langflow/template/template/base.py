@@ -1,5 +1,5 @@
-from typing import cast
 from collections.abc import Callable
+from typing import cast
 
 from pydantic import BaseModel, Field, model_serializer
 
@@ -56,6 +56,9 @@ class Template(BaseModel):
                     _input = Input(**value)
 
                 data["fields"].append(_input)
+        # Handles components with no inputs
+        if "fields" not in data:
+            data["fields"] = []
         return cls(**data)
 
     # For backwards compatibility

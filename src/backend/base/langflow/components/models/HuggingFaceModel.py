@@ -1,11 +1,12 @@
-from tenacity import retry, stop_after_attempt, wait_fixed
+from typing import Any
+
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 # TODO: langchain_community.llms.huggingface_endpoint is depreciated. Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import DictInput, DropdownInput, SecretStrInput, StrInput, IntInput, FloatInput
-from typing import Any, Dict, Optional
+from langflow.io import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
@@ -83,15 +84,15 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     def create_huggingface_endpoint(
         self,
         model_id: str,
-        task: Optional[str],
-        huggingfacehub_api_token: Optional[str],
-        model_kwargs: Dict[str, Any],
+        task: str | None,
+        huggingfacehub_api_token: str | None,
+        model_kwargs: dict[str, Any],
         max_new_tokens: int,
-        top_k: Optional[int],
+        top_k: int | None,
         top_p: float,
-        typical_p: Optional[float],
-        temperature: Optional[float],
-        repetition_penalty: Optional[float],
+        typical_p: float | None,
+        temperature: float | None,
+        repetition_penalty: float | None,
     ) -> HuggingFaceEndpoint:
         retry_attempts = self.retry_attempts
         endpoint_url = self.get_api_url()

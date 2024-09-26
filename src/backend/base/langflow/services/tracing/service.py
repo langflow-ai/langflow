@@ -2,7 +2,7 @@ import asyncio
 import os
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
 from loguru import logger
@@ -153,8 +153,8 @@ class TracingService(Service):
         trace_id: str,
         trace_name: str,
         trace_type: str,
-        inputs: Dict[str, Any],
-        metadata: Optional[Dict[str, Any]] = None,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
         vertex: Optional["Vertex"] = None,
     ):
         inputs = self._cleanup_inputs(inputs)
@@ -205,8 +205,8 @@ class TracingService(Service):
         self,
         component: "Component",
         trace_name: str,
-        inputs: Dict[str, Any],
-        metadata: Optional[Dict[str, Any]] = None,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
     ):
         trace_id = trace_name
         if component._vertex:
@@ -235,20 +235,20 @@ class TracingService(Service):
     def set_outputs(
         self,
         trace_name: str,
-        outputs: Dict[str, Any],
-        output_metadata: Dict[str, Any] | None = None,
+        outputs: dict[str, Any],
+        output_metadata: dict[str, Any] | None = None,
     ):
         self.outputs[trace_name] |= outputs or {}
         self.outputs_metadata[trace_name] |= output_metadata or {}
 
-    def _cleanup_inputs(self, inputs: Dict[str, Any]):
+    def _cleanup_inputs(self, inputs: dict[str, Any]):
         inputs = inputs.copy()
         for key in inputs.keys():
             if "api_key" in key:
                 inputs[key] = "*****"  # avoid logging api_keys for security reasons
         return inputs
 
-    def get_langchain_callbacks(self) -> List["BaseCallbackHandler"]:
+    def get_langchain_callbacks(self) -> list["BaseCallbackHandler"]:
         callbacks = []
         for tracer in self._tracers.values():
             if not tracer.ready:  # type: ignore

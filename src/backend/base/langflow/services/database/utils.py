@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -5,7 +7,6 @@ from typing import TYPE_CHECKING
 from alembic.util.exc import CommandError
 from loguru import logger
 from sqlmodel import Session, text
-
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -15,7 +16,7 @@ def initialize_database(fix_migration: bool = False):
     logger.debug("Initializing database")
     from langflow.services.deps import get_db_service
 
-    database_service: "DatabaseService" = get_db_service()
+    database_service: DatabaseService = get_db_service()
     try:
         database_service.create_db_and_tables()
     except Exception as exc:
@@ -55,7 +56,7 @@ def initialize_database(fix_migration: bool = False):
 
 
 @contextmanager
-def session_getter(db_service: "DatabaseService"):
+def session_getter(db_service: DatabaseService):
     try:
         session = Session(db_service.engine)
         yield session

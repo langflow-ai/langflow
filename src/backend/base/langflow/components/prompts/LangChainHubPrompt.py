@@ -1,12 +1,11 @@
-from typing import List
+import re
+
+from langchain_core.prompts import HumanMessagePromptTemplate
 
 from langflow.custom import Component
-from langflow.inputs import StrInput, SecretStrInput, DefaultPromptField
+from langflow.inputs import DefaultPromptField, SecretStrInput, StrInput
 from langflow.io import Output
 from langflow.schema.message import Message
-
-
-import re
 
 
 class LangChainHubPromptComponent(Component):
@@ -40,16 +39,22 @@ class LangChainHubPromptComponent(Component):
         if field_name == "langchain_hub_prompt":
             template = self._fetch_langchain_hub_template()
 
+            # Get the template's messages
+            if hasattr(template, "messages"):
+                template_messages = template.messages
+            else:
+                template_messages = [HumanMessagePromptTemplate(prompt=template)]
+
             # Extract the messages from the prompt data
             prompt_template = []
-            for message_data in template.messages:
+            for message_data in template_messages:
                 prompt_template.append(message_data.prompt)
 
             # Regular expression to find all instances of {<string>}
             pattern = r"\{(.*?)\}"
 
             # Get all the custom fields
-            custom_fields: List[str] = []
+            custom_fields: list[str] = []
             full_template = ""
             for message in prompt_template:
                 # Find all matches
@@ -102,6 +107,10 @@ class LangChainHubPromptComponent(Component):
 
     def _fetch_langchain_hub_template(self):
         import langchain.hub
+
+        # Check if the api key is provided
+        if not self.langchain_api_key:
+            raise ValueError("Please provide a LangChain API Key")
 
         # Pull the prompt from LangChain Hub
         prompt_data = langchain.hub.pull(self.langchain_hub_prompt, api_key=self.langchain_api_key)

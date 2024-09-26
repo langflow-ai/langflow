@@ -1,5 +1,5 @@
+from collections.abc import Generator
 from enum import Enum
-from typing import Generator
 
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
@@ -64,7 +64,7 @@ def post_process_raw(raw, artifact_type: str):
                 _raw.append(str(item))
         raw = _raw
     elif artifact_type == ArtifactType.UNKNOWN.value and raw is not None:
-        if isinstance(raw, (BaseModel, dict)):
+        if isinstance(raw, BaseModel | dict):
             try:
                 raw = jsonable_encoder(raw)
                 artifact_type = ArtifactType.OBJECT.value

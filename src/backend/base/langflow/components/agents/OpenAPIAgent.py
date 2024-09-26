@@ -3,12 +3,12 @@ from pathlib import Path
 import yaml
 from langchain.agents import AgentExecutor
 from langchain_community.agent_toolkits import create_openapi_agent
-from langchain_community.tools.json.tool import JsonSpec
 from langchain_community.agent_toolkits.openapi.toolkit import OpenAPIToolkit
+from langchain_community.tools.json.tool import JsonSpec
+from langchain_community.utilities.requests import TextRequestsWrapper
 
 from langflow.base.agents.agent import LCAgentComponent
-from langflow.inputs import BoolInput, HandleInput, FileInput
-from langchain_community.utilities.requests import TextRequestsWrapper
+from langflow.inputs import BoolInput, FileInput, HandleInput
 
 
 class OpenAPIAgentComponent(LCAgentComponent):
@@ -24,7 +24,7 @@ class OpenAPIAgentComponent(LCAgentComponent):
 
     def build_agent(self) -> AgentExecutor:
         if self.path.endswith("yaml") or self.path.endswith("yml"):
-            with open(self.path, "r") as file:
+            with open(self.path) as file:
                 yaml_dict = yaml.load(file, Loader=yaml.FullLoader)
             spec = JsonSpec(dict_=yaml_dict)
         else:
