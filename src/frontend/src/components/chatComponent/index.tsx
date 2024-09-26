@@ -1,3 +1,4 @@
+import FeatureFlags from "@/../feature-config.json";
 import { ENABLE_API } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { Transition } from "@headlessui/react";
@@ -173,17 +174,19 @@ export default function FlowToolbar(): JSX.Element {
                 </div>
               </>
             )}
-            <div className="flex items-center gap-2">
-              <div
-                className={`side-bar-button ${
-                  !hasApiKey || !validApiKey || !hasStore
-                    ? "cursor-not-allowed"
-                    : "cursor-pointer"
-                }`}
-              >
-                {ModalMemo}
+            {FeatureFlags.ENABLE_LANGFLOW_STORE && (
+              <div className="flex items-center gap-2">
+                <div
+                  className={`side-bar-button ${
+                    !hasApiKey || !validApiKey || !hasStore
+                      ? "cursor-not-allowed"
+                      : "cursor-pointer"
+                  }`}
+                >
+                  {ModalMemo}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </Transition>
