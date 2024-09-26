@@ -22,7 +22,10 @@ include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
 documentation = "https://docs.langflow.org"
 
 [tool.uv.sources]
-langflow-base = {path = "src/backend/base"}
+langflow-base = {workspace = true}
+
+[tool.uv.workspace]
+members = ["src/backend/base", "."]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
