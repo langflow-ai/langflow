@@ -325,7 +325,7 @@ ifdef main
 	make install_frontendci
 	make build_frontend
 	make build_langflow_base
-	make build_langflow
+	make build_langflow args="$(args)"
 endif
 
 build_langflow_base:
@@ -337,7 +337,7 @@ build_langflow_backup:
 
 build_langflow:
 	uv lock --no-upgrade
-	uv build
+	uv build $(args)
 ifdef restore
 	mv pyproject.toml.bak pyproject.toml
 	mv uv.lock.bak uv.lock
