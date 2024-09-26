@@ -69,8 +69,7 @@ reinstall_backend: ## forces reinstall all dependencies (no caching)
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	#@poetry install > /dev/null 2>&1
-	@cd src/backend/base && uv sync && cd ../../../ && uv sync > /dev/null 2>&1
+	@cd src/backend/base && uv sync --frozen && cd ../../../ && uv sync --frozen > /dev/null 2>&1
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
