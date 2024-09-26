@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
+
 import { newFlowModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
+import GetStartedComponent from "./components/GetStartedComponent";
 import { Nav } from "./components/navComponent";
+import TemplateContent from "./components/TemplateContent";
 
 // New interface for nav items
 interface NavItem {
@@ -23,7 +25,6 @@ export default function TemplatesModal({
   open,
   setOpen,
 }: newFlowModalPropsType): JSX.Element {
-  const examples = useFlowsManagerStore((state) => state.examples);
   const [currentTab, setCurrentTab] = useState("get-started");
 
   // Define categories and their items
@@ -54,12 +55,7 @@ export default function TemplatesModal({
   ];
 
   return (
-    <BaseModal
-      size="large-h-full"
-      open={open}
-      setOpen={setOpen}
-      className="p-0"
-    >
+    <BaseModal size="templates" open={open} setOpen={setOpen} className="p-0">
       <BaseModal.Content overflowHidden className="flex flex-col p-0">
         <div className="flex h-full">
           <div className="flex w-60 flex-col gap-4 p-6 pl-4">
@@ -79,23 +75,14 @@ export default function TemplatesModal({
             ))}
           </div>
           <Separator className="h-auto" orientation="vertical" />
-          <div className="flex flex-1 flex-col gap-4 overflow-hidden p-6">
-            <BaseModal.Header description="Start building with templates that highlight Langflow’s capabilities across Chatbot, RAG, and Agent use cases.">
-              Get Started
-            </BaseModal.Header>
-            <div className="grid min-h-[500px] flex-1 grid-cols-3 gap-4 py-4">
-              <div className="h-full w-full rounded-3xl border p-3">
-                Memory Chatbot
-              </div>
-              <div className="h-full w-full rounded-3xl border p-3">
-                Vector RAG
-              </div>
-              <div className="h-full w-full rounded-3xl border p-3">
-                Multi-Agent
-              </div>
-            </div>
+          <div className="flex flex-1 flex-col gap-8 overflow-hidden p-6">
+            {currentTab === "get-started" ? (
+              <GetStartedComponent />
+            ) : (
+              <TemplateContent currentTab={currentTab} />
+            )}
             <BaseModal.Footer>
-              <div className="flex w-full items-center justify-between">
+              <div className="flex w-full items-center justify-between pb-4">
                 <div className="flex flex-col items-start justify-center">
                   <div className="font-semibold">Start from scratch</div>
                   <div className="text-sm text-muted-foreground">
