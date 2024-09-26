@@ -1,3 +1,8 @@
+import {
+  SHADOW_COLOR_OPTIONS,
+  NOTE_NODE_MIN_HEIGHT,
+  NOTE_NODE_MIN_WIDTH,
+} from "@/constants/constants";
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import IconComponent from "@/components/genericIconComponent";
@@ -444,6 +449,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const onPaneClick = useCallback((event: React.MouseEvent) => {
     setFilterEdge([]);
     if (isAddingNote) {
+      const shadowBox = document.getElementById('shadow-box');
+      if (shadowBox) {
+        shadowBox.style.display = 'none';
+      }
       const position = reactFlowInstance?.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
@@ -472,6 +481,17 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
       setIsAddingNote(false);
     }
   }, [isAddingNote, setNodes, reactFlowInstance, getNodeId, setFilterEdge]);
+
+  const onPaneMouseMove = useCallback((event: React.MouseEvent) => {
+    if (isAddingNote) {
+      const shadowBox = document.getElementById('shadow-box');
+      if (shadowBox) {
+        shadowBox.style.display = 'block';
+        shadowBox.style.left = `${event.clientX + 10}px`;
+        shadowBox.style.top = `${event.clientY + 10}px`;
+      }
+    }
+  }, [isAddingNote]);
 
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
@@ -510,6 +530,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             panActivationKeyCode={""}
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}
+            onPaneMouseMove={onPaneMouseMove}
           >
             <Background className="" />
             {!view && (
@@ -542,6 +563,13 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
               }}
             />
           </ReactFlow>
+          <div id="shadow-box" style={{ 
+            position: 'absolute', 
+            width: `${NOTE_NODE_MIN_WIDTH/2}px`, 
+            height: `${NOTE_NODE_MIN_HEIGHT/2}px`, 
+            backgroundColor: `${SHADOW_COLOR_OPTIONS[Object.keys(SHADOW_COLOR_OPTIONS)[0]]}`}
+          }>
+          </div>
         </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
