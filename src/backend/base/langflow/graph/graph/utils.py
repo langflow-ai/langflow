@@ -253,7 +253,7 @@ def get_successors(graph: dict[str, dict[str, list[str]]], vertex_id: str) -> li
 
 
 def get_root_of_group_node(
-    graph: dict[str, dict[str, list[str]]], vertex_id: str, parent_node_map: dict[str, str]
+    graph: dict[str, dict[str, list[str]]], vertex_id: str, parent_node_map: dict[str, str | None]
 ) -> str:
     """Returns the root of a group node."""
     if vertex_id in parent_node_map.values():
@@ -273,7 +273,7 @@ def get_root_of_group_node(
 def sort_up_to_vertex(
     graph: dict[str, dict[str, list[str]]],
     vertex_id: str,
-    parent_node_map: dict[str, str],
+    parent_node_map: dict[str, str | None],
     is_start: bool = False,
 ) -> list[str]:
     """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
