@@ -1,13 +1,13 @@
-import {
-  SHADOW_COLOR_OPTIONS,
-  NOTE_NODE_MIN_HEIGHT,
-  NOTE_NODE_MIN_WIDTH,
-} from "@/constants/constants";
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import IconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
+import {
+  NOTE_NODE_MIN_HEIGHT,
+  NOTE_NODE_MIN_WIDTH,
+  SHADOW_COLOR_OPTIONS,
+} from "@/constants/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
@@ -446,52 +446,58 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     [],
   );
 
-  const onPaneClick = useCallback((event: React.MouseEvent) => {
-    setFilterEdge([]);
-    if (isAddingNote) {
-      const shadowBox = document.getElementById('shadow-box');
-      if (shadowBox) {
-        shadowBox.style.display = 'none';
-      }
-      const position = reactFlowInstance?.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-      const data = {
-        node: {
-          description: "",
-          display_name: "",
-          documentation: "",
-          template: {},
-        },
-        type: "note",
-      };
-      const newId = getNodeId(data.type);
+  const onPaneClick = useCallback(
+    (event: React.MouseEvent) => {
+      setFilterEdge([]);
+      if (isAddingNote) {
+        const shadowBox = document.getElementById("shadow-box");
+        if (shadowBox) {
+          shadowBox.style.display = "none";
+        }
+        const position = reactFlowInstance?.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        const data = {
+          node: {
+            description: "",
+            display_name: "",
+            documentation: "",
+            template: {},
+          },
+          type: "note",
+        };
+        const newId = getNodeId(data.type);
 
-      const newNode: NodeType = {
-        id: newId,
-        type: "noteNode",
-        position: position || { x: 0, y: 0 },
-        data: {
-          ...data,
+        const newNode: NodeType = {
           id: newId,
-        },
-      };
-      setNodes((nds) => nds.concat(newNode));
-      setIsAddingNote(false);
-    }
-  }, [isAddingNote, setNodes, reactFlowInstance, getNodeId, setFilterEdge]);
-
-  const onPaneMouseMove = useCallback((event: React.MouseEvent) => {
-    if (isAddingNote) {
-      const shadowBox = document.getElementById('shadow-box');
-      if (shadowBox) {
-        shadowBox.style.display = 'block';
-        shadowBox.style.left = `${event.clientX + 10}px`;
-        shadowBox.style.top = `${event.clientY + 10}px`;
+          type: "noteNode",
+          position: position || { x: 0, y: 0 },
+          data: {
+            ...data,
+            id: newId,
+          },
+        };
+        setNodes((nds) => nds.concat(newNode));
+        setIsAddingNote(false);
       }
-    }
-  }, [isAddingNote]);
+    },
+    [isAddingNote, setNodes, reactFlowInstance, getNodeId, setFilterEdge],
+  );
+
+  const onPaneMouseMove = useCallback(
+    (event: React.MouseEvent) => {
+      if (isAddingNote) {
+        const shadowBox = document.getElementById("shadow-box");
+        if (shadowBox) {
+          shadowBox.style.display = "block";
+          shadowBox.style.left = `${event.clientX + 10}px`;
+          shadowBox.style.top = `${event.clientY + 10}px`;
+        }
+      }
+    },
+    [isAddingNote],
+  );
 
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
@@ -538,7 +544,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                 <ControlButton
                   data-testid="add_note"
                   onClick={() => {
-                    setIsAddingNote(true)
+                    setIsAddingNote(true);
                   }}
                   className="postion react-flow__controls absolute -top-10"
                 >
@@ -563,13 +569,15 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
               }}
             />
           </ReactFlow>
-          <div id="shadow-box" style={{ 
-            position: 'absolute', 
-            width: `${NOTE_NODE_MIN_WIDTH/2}px`, 
-            height: `${NOTE_NODE_MIN_HEIGHT/2}px`, 
-            backgroundColor: `${SHADOW_COLOR_OPTIONS[Object.keys(SHADOW_COLOR_OPTIONS)[0]]}`}
-          }>
-          </div>
+          <div
+            id="shadow-box"
+            style={{
+              position: "absolute",
+              width: `${NOTE_NODE_MIN_WIDTH / 2}px`,
+              height: `${NOTE_NODE_MIN_HEIGHT / 2}px`,
+              backgroundColor: `${SHADOW_COLOR_OPTIONS[Object.keys(SHADOW_COLOR_OPTIONS)[0]]}`,
+            }}
+          ></div>
         </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
