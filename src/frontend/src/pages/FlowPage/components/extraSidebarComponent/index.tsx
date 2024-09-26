@@ -47,6 +47,10 @@ export default function ExtraSidebar(): JSX.Element {
     event.dataTransfer.setData("genericNode", JSON.stringify(data));
   }
 
+  function normalizeString(str: string): string {
+    return str.toLowerCase().replace(/_/g, " ").replace(/\s+/g, "");
+  }
+
   // Handle showing components after use search input
   function handleSearchInput(e: string) {
     if (e === "") {
@@ -59,8 +63,11 @@ export default function ExtraSidebar(): JSX.Element {
         ret[d] = {};
         let keys = Object.keys(data[d]).filter(
           (nd) =>
-            nd.toLowerCase().includes(e.toLowerCase()) ||
-            data[d][nd].display_name?.toLowerCase().includes(e.toLowerCase()),
+            normalizeString(nd).includes(normalizeString(e)) ||
+            normalizeString(data[d][nd].display_name).includes(
+              normalizeString(e),
+            ) ||
+            normalizeString(d.toString()).includes(normalizeString(e)),
         );
         keys.forEach((element) => {
           ret[d][element] = data[d][element];
@@ -105,43 +112,6 @@ export default function ExtraSidebar(): JSX.Element {
   useEffect(() => {
     handleSearchInput(search);
   }, [data]);
-
-  useEffect(() => {
-    if (getFilterEdge?.length > 0) {
-      setFilterData((_) => {
-        let dataClone = cloneDeep(data);
-        let ret = {};
-        Object.keys(dataClone).forEach((d: keyof APIObjectType, i) => {
-          ret[d] = {};
-          if (getFilterEdge.some((x) => x.family === d)) {
-            ret[d] = dataClone[d];
-
-            const filtered = getFilterEdge
-              .filter((x) => x.family === d)
-              .pop()
-              .type.split(",");
-
-            for (let i = 0; i < filtered.length; i++) {
-              filtered[i] = filtered[i].trimStart();
-            }
-
-            if (filtered.some((x) => x !== "")) {
-              let keys = Object.keys(dataClone[d]).filter((nd) =>
-                filtered.includes(nd),
-              );
-              Object.keys(dataClone[d]).forEach((element) => {
-                if (!keys.includes(element)) {
-                  delete ret[d][element];
-                }
-              });
-            }
-          }
-        });
-        setSearch("");
-        return ret;
-      });
-    }
-  }, [getFilterEdge]);
 
   useEffect(() => {
     if (getFilterEdge?.length > 0) {
