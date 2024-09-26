@@ -415,15 +415,17 @@ update: ## update dependencies
 	uv sync --upgrade
 
 publish_base:
-	cd src/backend/base && uv publish --skip-existing
+	cd src/backend/base && uv publish
 
 publish_langflow:
 	uv publish
 
 publish_base_testpypi:
-	cd src/backend/base && uv publish --skip-existing -r test-pypi
+	# TODO: update this to use the test-pypi repository
+	cd src/backend/base && uv publish -r test-pypi
 
 publish_langflow_testpypi:
+	# TODO: update this to use the test-pypi repository
 	uv publish -r test-pypi
 
 publish: ## build the frontend static files and package the project and publish it to PyPI
