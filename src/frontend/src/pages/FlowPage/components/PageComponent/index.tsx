@@ -9,6 +9,7 @@ import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
 
+import { useQueryClient } from "@tanstack/react-query";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -58,7 +59,6 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
-import { useQueryClient } from "@tanstack/react-query";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -74,7 +74,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const querieClient = useQueryClient();
   useEffect(() => {
-    querieClient.removeQueries({queryKey: ["useGetFolder"]});
+    querieClient.removeQueries({ queryKey: ["useGetFolder"] });
   }, []);
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
