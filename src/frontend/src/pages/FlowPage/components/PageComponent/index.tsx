@@ -58,6 +58,7 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
+import { useQueryClient } from "@tanstack/react-query";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -71,6 +72,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const querieClient = useQueryClient();
+  useEffect(() => {
+    querieClient.removeQueries({queryKey: ["useGetFolder"]});
+  }, []);
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
