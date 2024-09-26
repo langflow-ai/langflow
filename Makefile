@@ -139,7 +139,7 @@ coverage: ## run the tests and generate a coverage report
 	#@poetry run coverage erase
 
 unit_tests: ## run unit tests
-	cd src/backend/base && uv sync --extra dev && cd ../../../ && uv sync --extra dev > /dev/null 2>&1
+	@uv sync --extra dev --frozen
 ifeq ($(async), true)
 	uv run pytest src/backend/tests \
 		--ignore=src/backend/tests/integration \
