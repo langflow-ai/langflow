@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 from tenacity import retry, stop_after_attempt, wait_fixed
@@ -84,15 +84,15 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     def create_huggingface_endpoint(
         self,
         model_id: str,
-        task: Optional[str],
-        huggingfacehub_api_token: Optional[str],
-        model_kwargs: Dict[str, Any],
+        task: str | None,
+        huggingfacehub_api_token: str | None,
+        model_kwargs: dict[str, Any],
         max_new_tokens: int,
-        top_k: Optional[int],
+        top_k: int | None,
         top_p: float,
-        typical_p: Optional[float],
-        temperature: Optional[float],
-        repetition_penalty: Optional[float],
+        typical_p: float | None,
+        temperature: float | None,
+        repetition_penalty: float | None,
     ) -> HuggingFaceEndpoint:
         retry_attempts = self.retry_attempts
         endpoint_url = self.get_api_url()

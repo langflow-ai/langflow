@@ -1,5 +1,5 @@
 import json
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import httpx
@@ -27,11 +27,11 @@ if TYPE_CHECKING:
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 
-user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar("user_data", default=None)
+user_data_var: ContextVar[dict[str, Any] | None] = ContextVar("user_data", default=None)
 
 
 @asynccontextmanager
-async def user_data_context(store_service: "StoreService", api_key: Optional[str] = None):
+async def user_data_context(store_service: "StoreService", api_key: str | None = None):
     # Fetch and set user data to the context variable
     if api_key:
         try:
@@ -49,7 +49,7 @@ async def user_data_context(store_service: "StoreService", api_key: Optional[str
         user_data_var.set(None)
 
 
-def get_id_from_search_string(search_string: str) -> Optional[str]:
+def get_id_from_search_string(search_string: str) -> str | None:
     """
     Extracts the ID from a search string.
 
@@ -59,7 +59,7 @@ def get_id_from_search_string(search_string: str) -> Optional[str]:
     Returns:
         Optional[str]: The extracted ID, or None if no ID is found.
     """
-    possible_id: Optional[str] = search_string
+    possible_id: str | None = search_string
     if "www.langflow.store/store/" in search_string:
         possible_id = search_string.split("/")[-1]
 
@@ -121,8 +121,8 @@ class StoreService(Service):
             raise ValueError(f"Unexpected error: {exc}")
 
     async def _get(
-        self, url: str, api_key: Optional[str] = None, params: Optional[Dict[str, Any]] = None
-    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        self, url: str, api_key: str | None = None, params: dict[str, Any] | None = None
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         """Utility method to perform GET requests."""
         if api_key:
             headers = {"Authorization": f"Bearer {api_key}"}
@@ -162,17 +162,17 @@ class StoreService(Service):
         except Exception as exc:
             logger.debug(f"Webhook failed: {exc}")
 
-    def build_tags_filter(self, tags: List[str]):
-        tags_filter: Dict[str, Any] = {"tags": {"_and": []}}
+    def build_tags_filter(self, tags: list[str]):
+        tags_filter: dict[str, Any] = {"tags": {"_and": []}}
         for tag in tags:
             tags_filter["tags"]["_and"].append({"_some": {"tags_id": {"name": {"_eq": tag}}}})
         return tags_filter
 
     async def count_components(
         self,
-        filter_conditions: List[Dict[str, Any]],
-        api_key: Optional[str] = None,
-        use_api_key: Optional[bool] = False,
+        filter_conditions: list[dict[str, Any]],
+        api_key: str | None = None,
+        use_api_key: bool | None = False,
     ) -> int:
         params = {"aggregate": json.dumps({"count": "*"})}
         if filter_conditions:
@@ -187,7 +187,7 @@ class StoreService(Service):
     def build_search_filter_conditions(query: str):
         # instead of build the param ?search=query, we will build the filter
         # that will use _icontains (case insensitive)
-        conditions: Dict[str, Any] = {"_or": []}
+        conditions: dict[str, Any] = {"_or": []}
         conditions["_or"].append({"name": {"_icontains": query}})
         conditions["_or"].append({"description": {"_icontains": query}})
         conditions["_or"].append({"tags": {"tags_id": {"name": {"_icontains": query}}}})
@@ -196,14 +196,14 @@ class StoreService(Service):
 
     def build_filter_conditions(
         self,
-        component_id: Optional[str] = None,
-        search: Optional[str] = None,
-        private: Optional[bool] = None,
-        tags: Optional[List[str]] = None,
-        is_component: Optional[bool] = None,
-        filter_by_user: Optional[bool] = False,
-        liked: Optional[bool] = False,
-        store_api_key: Optional[str] = None,
+        component_id: str | None = None,
+        search: str | None = None,
+        private: bool | None = None,
+        tags: list[str] | None = None,
+        is_component: bool | None = None,
+        filter_by_user: bool | None = False,
+        liked: bool | None = False,
+        store_api_key: str | None = None,
     ):
         filter_conditions = []
 
@@ -251,15 +251,15 @@ class StoreService(Service):
 
     async def query_components(
         self,
-        api_key: Optional[str] = None,
-        sort: Optional[List[str]] = None,
+        api_key: str | None = None,
+        sort: list[str] | None = None,
         page: int = 1,
         limit: int = 15,
-        fields: Optional[List[str]] = None,
-        filter_conditions: Optional[List[Dict[str, Any]]] = None,
-        use_api_key: Optional[bool] = False,
-    ) -> Tuple[List[ListComponentResponse], Dict[str, Any]]:
-        params: Dict[str, Any] = {
+        fields: list[str] | None = None,
+        filter_conditions: list[dict[str, Any]] | None = None,
+        use_api_key: bool | None = False,
+    ) -> tuple[list[ListComponentResponse], dict[str, Any]]:
+        params: dict[str, Any] = {
             "page": page,
             "limit": limit,
             "fields": ",".join(fields) if fields is not None else ",".join(self.default_fields),
@@ -288,7 +288,7 @@ class StoreService(Service):
 
         return results_objects, metadata
 
-    async def get_liked_by_user_components(self, component_ids: List[str], api_key: str) -> List[str]:
+    async def get_liked_by_user_components(self, component_ids: list[str], api_key: str) -> list[str]:
         # Get fields id
         # filter should be "id is in component_ids AND liked_by directus_users_id token is api_key"
         # return the ids
@@ -310,7 +310,7 @@ class StoreService(Service):
         return [result["id"] for result in results]
 
     # Which of the components is parent of the user's components
-    async def get_components_in_users_collection(self, component_ids: List[str], api_key: str):
+    async def get_components_in_users_collection(self, component_ids: list[str], api_key: str):
         user_data = user_data_var.get()
         if not user_data:
             raise ValueError("No user data")
@@ -418,13 +418,13 @@ class StoreService(Service):
                     pass
             raise ValueError(f"Upload failed: {exc}")
 
-    async def get_tags(self) -> List[Dict[str, Any]]:
+    async def get_tags(self) -> list[dict[str, Any]]:
         url = f"{self.base_url}/items/tags"
         params = {"fields": ",".join(["id", "name"])}
         tags, _ = await self._get(url, api_key=None, params=params)
         return tags
 
-    async def get_user_likes(self, api_key: str) -> List[Dict[str, Any]]:
+    async def get_user_likes(self, api_key: str) -> list[dict[str, Any]]:
         url = f"{self.base_url}/users/me"
         params = {
             "fields": ",".join(["id", "likes"]),
@@ -432,7 +432,7 @@ class StoreService(Service):
         likes, _ = await self._get(url, api_key, params)
         return likes
 
-    async def get_component_likes_count(self, component_id: str, api_key: Optional[str] = None) -> int:
+    async def get_component_likes_count(self, component_id: str, api_key: str | None = None) -> int:
         url = f"{self.components_url}/{component_id}"
 
         params = {
@@ -485,21 +485,21 @@ class StoreService(Service):
 
     async def get_list_component_response_model(
         self,
-        component_id: Optional[str] = None,
-        search: Optional[str] = None,
-        private: Optional[bool] = None,
-        tags: Optional[List[str]] = None,
-        is_component: Optional[bool] = None,
-        fields: Optional[List[str]] = None,
+        component_id: str | None = None,
+        search: str | None = None,
+        private: bool | None = None,
+        tags: list[str] | None = None,
+        is_component: bool | None = None,
+        fields: list[str] | None = None,
         filter_by_user: bool = False,
         liked: bool = False,
-        store_api_key: Optional[str] = None,
-        sort: Optional[List[str]] = None,
+        store_api_key: str | None = None,
+        sort: list[str] | None = None,
         page: int = 1,
         limit: int = 15,
     ):
         async with user_data_context(api_key=store_api_key, store_service=self):
-            filter_conditions: List[Dict[str, Any]] = self.build_filter_conditions(
+            filter_conditions: list[dict[str, Any]] = self.build_filter_conditions(
                 component_id=component_id,
                 search=search,
                 private=private,
@@ -510,9 +510,9 @@ class StoreService(Service):
                 store_api_key=store_api_key,
             )
 
-            result: List[ListComponentResponse] = []
+            result: list[ListComponentResponse] = []
             authorized = False
-            metadata: Dict = {}
+            metadata: dict = {}
             comp_count = 0
             try:
                 result, metadata = await self.query_components(

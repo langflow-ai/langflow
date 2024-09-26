@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 import warnings
 from typing import TYPE_CHECKING, Any
@@ -69,7 +71,7 @@ def build_input_keys_response(langchain_object, artifacts):
     return input_keys_response
 
 
-def validate_is_component(flows: list["Flow"]):
+def validate_is_component(flows: list[Flow]):
     for flow in flows:
         if not flow.data or flow.is_component is not None:
             continue
@@ -152,7 +154,7 @@ async def build_graph_from_db_no_cache(flow_id: str, session: Session):
     return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
 
 
-async def build_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
+async def build_graph_from_db(flow_id: str, session: Session, chat_service: ChatService):
     graph = await build_graph_from_db_no_cache(flow_id, session)
     await chat_service.set_cache(flow_id, graph)
     return graph
@@ -160,7 +162,7 @@ async def build_graph_from_db(flow_id: str, session: Session, chat_service: "Cha
 
 async def build_and_cache_graph_from_data(
     flow_id: str,
-    chat_service: "ChatService",
+    chat_service: ChatService,
     graph_data: dict,
 ):  # -> Graph | Any:
     """Build and cache the graph."""

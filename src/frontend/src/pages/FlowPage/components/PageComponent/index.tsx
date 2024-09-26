@@ -69,6 +69,10 @@ const nodeTypes = {
   noteNode: NoteNode,
 };
 
+const edgeTypes = {
+  default: DefaultEdge,
+};
+
 export default function Page({ view }: { view?: boolean }): JSX.Element {
   const uploadFlow = useUploadFlow();
   const autoSaveFlow = useAutoSaveFlow();
@@ -520,7 +524,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
             connectionRadius={25}
-            edgeTypes={{ default: DefaultEdge }}
+            edgeTypes={edgeTypes}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
             onNodeDragStop={onNodeDragStop}

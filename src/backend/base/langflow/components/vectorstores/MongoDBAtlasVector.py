@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_community.vectorstores import MongoDBAtlasVectorSearch
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -75,8 +73,8 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
 
         return vector_store
 
-    def search_documents(self) -> List[Data]:
-        from bson import ObjectId
+    def search_documents(self) -> list[Data]:
+        from bson.objectid import ObjectId
 
         vector_store = self.build_vector_store()
 
