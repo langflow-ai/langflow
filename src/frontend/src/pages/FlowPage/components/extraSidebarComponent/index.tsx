@@ -17,6 +17,7 @@ import { nodeIconsLucide } from "../../../../utils/styleUtils";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import { SidebarCategoryComponent } from "./SidebarCategoryComponent";
 
+import Fuse from "fuse.js";
 import { SidebarFilterComponent } from "./sidebarFilterComponent";
 import { sortKeys } from "./utils";
 
@@ -28,8 +29,20 @@ export default function ExtraSidebar(): JSX.Element {
   const hasStore = useStoreStore((state) => state.hasStore);
   const filterType = useFlowStore((state) => state.filterType);
 
+  const arrayData = convertStructureToArray(data);
+
+  function convertStructureToArray(structure) {
+    return Object.entries(structure).map(([key, value]) => {
+      if (typeof value === "object" && value !== null) {
+        return { key, value };
+      } else {
+        return { key, value: {} };
+      }
+    });
+  }
+
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const [dataFilter, setFilterData] = useState(data);
+  const [dataFilter, setFilterData] = useState(arrayData);
   const [search, setSearch] = useState("");
   function onDragStart(
     event: React.DragEvent<any>,
@@ -47,27 +60,17 @@ export default function ExtraSidebar(): JSX.Element {
     event.dataTransfer.setData("genericNode", JSON.stringify(data));
   }
 
+  const fuse = new Fuse(arrayData, { keys: ["key", "value"] });
+
   // Handle showing components after use search input
   function handleSearchInput(e: string) {
     if (e === "") {
-      setFilterData(data);
+      setFilterData(arrayData);
       return;
     }
-    setFilterData((_) => {
-      let ret = {};
-      Object.keys(data).forEach((d: keyof APIObjectType, i) => {
-        ret[d] = {};
-        let keys = Object.keys(data[d]).filter(
-          (nd) =>
-            nd.toLowerCase().includes(e.toLowerCase()) ||
-            data[d][nd].display_name?.toLowerCase().includes(e.toLowerCase()),
-        );
-        keys.forEach((element) => {
-          ret[d][element] = data[d][element];
-        });
-      });
-      return ret;
-    });
+    const searchValues = fuse.search(e);
+
+    setFilterData(searchValues.map((item) => item.item));
   }
 
   useEffect(() => {
@@ -85,7 +88,7 @@ export default function ExtraSidebar(): JSX.Element {
   function handleBlur() {
     // check if search is search to reset fitler on click input
     if ((!search && search === "") || search === "search") {
-      setFilterData(data);
+      setFilterData(arrayData);
       setFilterEdge([]);
       setSearch("");
     }
@@ -98,7 +101,7 @@ export default function ExtraSidebar(): JSX.Element {
 
     if (getFilterEdge.length === 0 && search === "") {
       setSearch("");
-      setFilterData(data);
+      setFilterData(arrayData);
     }
   }, [getFilterEdge, data]);
 
@@ -109,71 +112,41 @@ export default function ExtraSidebar(): JSX.Element {
   useEffect(() => {
     if (getFilterEdge?.length > 0) {
       setFilterData((_) => {
-        let dataClone = cloneDeep(data);
-        let ret = {};
-        Object.keys(dataClone).forEach((d: keyof APIObjectType, i) => {
-          ret[d] = {};
-          if (getFilterEdge.some((x) => x.family === d)) {
-            ret[d] = dataClone[d];
+        let dataClone = cloneDeep(arrayData);
+        let ret: { key: string; value: any }[] = [];
 
-            const filtered = getFilterEdge
-              .filter((x) => x.family === d)
-              .pop()
-              .type.split(",");
+        dataClone.forEach((item) => {
+          let newItem: { key: string; value: any } = {
+            key: item.key,
+            value: {},
+          };
+          if (getFilterEdge.some((x) => x.family === item.key)) {
+            newItem.value = item.value;
 
-            for (let i = 0; i < filtered.length; i++) {
-              filtered[i] = filtered[i].trimStart();
-            }
+            const filtered =
+              getFilterEdge
+                .filter((x) => x.family === item.key)
+                .pop()
+                ?.type.split(",")
+                .map((x) => x.trimStart())
+                .filter((x) => x !== "") || [];
 
-            if (filtered.some((x) => x !== "")) {
-              let keys = Object.keys(dataClone[d]).filter((nd) =>
+            if (filtered.length > 0) {
+              let keys = Object.keys(item.value).filter((nd) =>
                 filtered.includes(nd),
               );
-              Object.keys(dataClone[d]).forEach((element) => {
-                if (!keys.includes(element)) {
-                  delete ret[d][element];
-                }
-              });
-            }
-          }
-        });
-        setSearch("");
-        return ret;
-      });
-    }
-  }, [getFilterEdge]);
-
-  useEffect(() => {
-    if (getFilterEdge?.length > 0) {
-      setFilterData((_) => {
-        let dataClone = cloneDeep(data);
-        let ret = {};
-        Object.keys(dataClone).forEach((d: keyof APIObjectType, i) => {
-          ret[d] = {};
-          if (getFilterEdge.some((x) => x.family === d)) {
-            ret[d] = dataClone[d];
-
-            const filtered = getFilterEdge
-              .filter((x) => x.family === d)
-              .pop()
-              .type.split(",");
-
-            for (let i = 0; i < filtered.length; i++) {
-              filtered[i] = filtered[i].trimStart();
-            }
-
-            if (filtered.some((x) => x !== "")) {
-              let keys = Object.keys(dataClone[d]).filter((nd) =>
-                filtered.includes(nd),
+              newItem.value = Object.fromEntries(
+                Object.entries(item.value).filter(([key]) =>
+                  keys.includes(key),
+                ),
               );
-              Object.keys(dataClone[d]).forEach((element) => {
-                if (!keys.includes(element)) {
-                  delete ret[d][element];
-                }
-              });
             }
           }
+          if (Object.keys(newItem.value).length > 0) {
+            ret.push(newItem);
+          }
         });
+
         setSearch("");
         return ret;
       });
@@ -206,7 +179,7 @@ export default function ExtraSidebar(): JSX.Element {
           className="search-icon"
           onClick={() => {
             if (search) {
-              setFilterData(data);
+              setFilterData(arrayData);
               setSearch("");
             }
           }}
@@ -232,30 +205,56 @@ export default function ExtraSidebar(): JSX.Element {
                 type={filterType.type}
                 resetFilters={() => {
                   setFilterEdge([]);
-                  setFilterData(data);
+                  setFilterData(arrayData);
                 }}
               />
             )}
           </div>
         </div>
         <Separator />
-        {Object.keys(dataFilter)
-          .sort(sortKeys)
-          .filter((x) => PRIORITY_SIDEBAR_ORDER.includes(x))
-          .map((SBSectionName: keyof APIObjectType, index) =>
-            Object.keys(dataFilter[SBSectionName]).length > 0 ? (
+        {dataFilter
+          .filter((item) => PRIORITY_SIDEBAR_ORDER.includes(item.key))
+          .map((item, index) =>
+            Object.keys(item.value).length > 0 ? (
               <SidebarCategoryComponent
                 key={`DisclosureComponent${index + search + JSON.stringify(getFilterEdge)}`}
                 search={search}
                 getFilterEdge={getFilterEdge}
-                category={dataFilter[SBSectionName]}
-                name={SBSectionName}
+                category={item.value}
+                name={item.key}
                 onDragStart={onDragStart}
               />
             ) : (
               <div key={index}></div>
             ),
           )}
+        {hasStore && (
+          <a
+            target={"_blank"}
+            href="https://langflow.store"
+            className="components-disclosure-arrangement"
+            draggable="false"
+          >
+            <div className="flex gap-4">
+              {/* BUG ON THIS ICON */}
+              <IconComponent
+                name="Sparkles"
+                strokeWidth={1.5}
+                className="w-[22px] text-primary"
+              />
+
+              <span className="components-disclosure-title">Discover More</span>
+            </div>
+            <div className="components-disclosure-div">
+              <div>
+                <IconComponent
+                  name="Link"
+                  className="h-4 w-4 text-foreground"
+                />
+              </div>
+            </div>
+          </a>
+        )}
         <ParentDisclosureComponent
           defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
           key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Advanced`}
@@ -266,56 +265,27 @@ export default function ExtraSidebar(): JSX.Element {
           }}
           testId="extended-disclosure"
         >
-          {Object.keys(dataFilter)
-            .sort(sortKeys)
+          {dataFilter
+            .sort((a, b) => sortKeys(a.key, b.key))
             .filter(
-              (x) =>
-                !PRIORITY_SIDEBAR_ORDER.includes(x) &&
-                !BUNDLES_SIDEBAR_FOLDER_NAMES.includes(x),
+              (item) =>
+                !PRIORITY_SIDEBAR_ORDER.includes(item.key) &&
+                !BUNDLES_SIDEBAR_FOLDER_NAMES.includes(item.key),
             )
-            .map((SBSectionName: keyof APIObjectType, index) =>
-              Object.keys(dataFilter[SBSectionName]).length > 0 ? (
+            .map((item, index) =>
+              Object.keys(item.value).length > 0 ? (
                 <SidebarCategoryComponent
                   key={`DisclosureComponent${index + search + JSON.stringify(getFilterEdge)}`}
                   search={search}
                   getFilterEdge={getFilterEdge}
-                  category={dataFilter[SBSectionName]}
-                  name={SBSectionName}
+                  category={item.value}
+                  name={item.key}
                   onDragStart={onDragStart}
                 />
               ) : (
                 <div key={index}></div>
               ),
             )}
-          {hasStore && (
-            <a
-              target={"_blank"}
-              href="https://langflow.store"
-              className="components-disclosure-arrangement"
-              draggable="false"
-            >
-              <div className="flex gap-4">
-                {/* BUG ON THIS ICON */}
-                <IconComponent
-                  name="Sparkles"
-                  strokeWidth={1.5}
-                  className="w-[22px] text-primary"
-                />
-
-                <span className="components-disclosure-title">
-                  Discover More
-                </span>
-              </div>
-              <div className="components-disclosure-div">
-                <div>
-                  <IconComponent
-                    name="Link"
-                    className="h-4 w-4 text-foreground"
-                  />
-                </div>
-              </div>
-            </a>
-          )}
         </ParentDisclosureComponent>
         {ENABLE_MVPS && (
           <>
