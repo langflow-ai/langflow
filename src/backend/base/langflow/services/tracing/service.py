@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
     from langflow.custom.custom_component.component import Component
     from langflow.graph.vertex.base import Vertex
-    from langflow.services.monitor.service import MonitorService
     from langflow.services.settings.service import SettingsService
 
 
@@ -41,9 +40,8 @@ def _get_langfuse_tracer():
 class TracingService(Service):
     name = "tracing_service"
 
-    def __init__(self, settings_service: "SettingsService", monitor_service: "MonitorService"):
+    def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
-        self.monitor_service = monitor_service
         self.inputs: dict[str, dict] = defaultdict(dict)
         self.inputs_metadata: dict[str, dict] = defaultdict(dict)
         self.outputs: dict[str, dict] = defaultdict(dict)

@@ -57,7 +57,6 @@ docstring-parser = "^0.16"
 python-jose = "^3.3.0"
 pandas = "2.2.2"
 multiprocess = "^0.70.14"
-duckdb = "^1.0.0"
 python-docx = "^1.1.0"
 jq = { version = "^1.7.0", markers = "sys_platform != 'win32'" }
 pypdf = "^4.2.0"
