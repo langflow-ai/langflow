@@ -126,6 +126,7 @@ def read_flows(
     session: Session = Depends(get_session),
     settings_service: "SettingsService" = Depends(get_settings_service),
     remove_example_flows: bool = False,
+    components_only: bool = False,
 ):
     """
     Retrieve a list of flows.
@@ -135,7 +136,7 @@ def read_flows(
         session (Session): The database session.
         settings_service (SettingsService): The settings service.
         remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
-
+        components_only (bool, optional): Whether to return only components. Defaults to False.
 
     Returns:
         List[Dict]: A list of flows in JSON format.
@@ -144,18 +145,22 @@ def read_flows(
     try:
         auth_settings = settings_service.auth_settings
         if auth_settings.AUTO_LOGIN:
-            flows = session.exec(
-                select(Flow).where(
-                    (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa
-                )
-            ).all()
+            stmt = select(Flow).where(
+                (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa
+            )
+            if components_only:
+                stmt = stmt.where(Flow.is_component == True)  # noqa
+            flows = session.exec(stmt).all()
+
         else:
             flows = current_user.flows
 
         flows = validate_is_component(flows)  # type: ignore
+        if components_only:
+            flows = [flow for flow in flows if flow.is_component]
         flow_ids = [flow.id for flow in flows]
         # with the session get the flows that DO NOT have a user_id
-        if not remove_example_flows:
+        if not remove_example_flows or not components_only:
             try:
                 folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
 
