@@ -10,7 +10,7 @@
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
 # Install the project into `/app`
 WORKDIR /app
@@ -53,10 +53,13 @@ WORKDIR /app/src/backend/base
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
+FROM python:3.12.3-slim AS runtime
+
+COPY --from=builder /app/src/backend/base/.venv /app/src/backend/base/.venv
+# Place executables in the environment at the front of the path
 # Place executables in the environment at the front of the path
 ENV PATH="/app/src/backend/base/.venv/bin:$PATH"
-# Reset the entrypoint, don't invoke `uv`
-ENTRYPOINT []
+
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']
