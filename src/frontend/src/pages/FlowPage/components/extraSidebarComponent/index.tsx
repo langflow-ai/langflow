@@ -113,8 +113,6 @@ export default function ExtraSidebar(): JSX.Element {
     handleSearchInput(search);
   }, [data]);
 
-  console.log(data);
-
   useEffect(() => {
     if (getFilterEdge?.length > 0) {
       setFilterData((_) => {
