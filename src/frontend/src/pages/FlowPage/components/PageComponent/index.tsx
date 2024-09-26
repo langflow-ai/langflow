@@ -106,6 +106,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     useState<OnSelectionChangeParams | null>(null);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
+  const [isAddingNote, setIsAddingNote] = useState(false);
+
   function handleGroupNode() {
     takeSnapshot();
     if (validateSelection(lastSelection!, edges).length === 0) {
@@ -439,9 +441,52 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     [],
   );
 
-  const onPaneClick = useCallback(() => {
+  const onPaneClick = useCallback((event: React.MouseEvent) => {
     setFilterEdge([]);
-  }, []);
+    if (isAddingNote) {
+      const position = reactFlowInstance?.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      const data = {
+        node: {
+          description: "",
+          display_name: "",
+          documentation: "",
+          template: {},
+        },
+        type: "note",
+      };
+      const newId = getNodeId(data.type);
+
+      const newNode: NodeType = {
+        id: newId,
+        type: "noteNode",
+        position: position || { x: 0, y: 0 },
+        data: {
+          ...data,
+          id: newId,
+        },
+      };
+      // const newNode: NodeType = {
+      //   id: getNodeId("noteNode"),
+      //   type: "noteNode",
+      //   position: position || { x: 0, y: 0 },
+      //   data: {
+      //     id: getNodeId("noteNode"),
+      //     type: "note",
+      //     node: {
+      //       description: "",
+      //       display_name: "",
+      //       documentation: "",
+      //       template: {},
+      //     },
+      //   },
+      // };
+      setNodes((nds) => nds.concat(newNode));
+      setIsAddingNote(false);
+    }
+  }, [isAddingNote, setNodes, reactFlowInstance, getNodeId, setFilterEdge]);
 
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
@@ -487,42 +532,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                 <ControlButton
                   data-testid="add_note"
                   onClick={() => {
-                    const wrapper = reactFlowWrapper.current!;
-                    const viewport = reactFlowInstance?.getViewport();
-                    const x = wrapper.getBoundingClientRect().width / 2;
-                    const y = wrapper.getBoundingClientRect().height / 2;
-                    const nodePosition =
-                      reactFlowInstance?.screenToFlowPosition({ x, y })!;
-
-                    const data = {
-                      node: {
-                        description: "",
-                        display_name: "",
-                        documentation: "",
-                        template: {},
-                      },
-                      type: "note",
-                    };
-                    const newId = getNodeId(data.type);
-
-                    const newNode: NodeType = {
-                      id: newId,
-                      type: "noteNode",
-                      position: { x: 0, y: 0 },
-                      data: {
-                        ...data,
-                        id: newId,
-                      },
-                    };
-                    paste(
-                      { nodes: [newNode], edges: [] },
-                      {
-                        x: nodePosition.x,
-                        y: nodePosition?.y,
-                        paneX: wrapper.getBoundingClientRect().x,
-                        paneY: wrapper.getBoundingClientRect().y,
-                      },
-                    );
+                    setIsAddingNote(true)
                   }}
                   className="postion react-flow__controls absolute -top-10"
                 >

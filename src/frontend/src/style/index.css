@@ -71,6 +71,7 @@
     --status-blue: #2563eb;
     --status-gray: #6b7280;
     --connection: #555;
+    --note-default: #f1f5f9;
     --note-indigo: #e0e7ff;
     --note-emerald: #d1fae5;
     --note-amber: #fef3c7;
@@ -78,6 +79,7 @@
   }
 
   .dark {
+    --note-default: #0f172a;
     --note-indigo: #312e81;
     --note-emerald: #064e3b;
     --note-amber: #78350f;
