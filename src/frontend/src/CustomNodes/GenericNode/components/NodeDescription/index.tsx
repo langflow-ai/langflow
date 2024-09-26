@@ -36,10 +36,6 @@ export default function NodeDescription({
     //timeout to wait for the dom to update
     setTimeout(() => {
       if (overflowRef.current) {
-        console.log(
-          overflowRef.current.clientHeight,
-          overflowRef.current.scrollHeight,
-        );
         if (
           overflowRef.current.clientHeight < overflowRef.current.scrollHeight
         ) {
