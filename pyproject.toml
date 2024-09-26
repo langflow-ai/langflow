@@ -48,7 +48,7 @@ dependencies = [
     "pyarrow>=14.0.0",
     "wikipedia>=1.4.0",
     "qdrant-client>=1.9.0",
-    "weaviate-client",
+    "weaviate-client>=4.8",
     "cohere>=5.5.3",
     "faiss-cpu>=1.8.0",
     "types-cachetools>=5.3.0.5",
@@ -131,7 +131,7 @@ local = [
     "ctransformers>=0.2.10"
 ]
 clickhouse-connect = [
-    "clickhouse-connect[clickhouse-connect]==0.7.19"
+    "clickhouse-connect==0.7.19"
 ]
 
 [project.scripts]
@@ -275,7 +275,7 @@ dev-dependencies = [
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
     "ruff>=0.6.2,<0.7.0",
-    "httpx",
+    "httpx>=0.27.0",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",
     "requests>=2.32.0",
