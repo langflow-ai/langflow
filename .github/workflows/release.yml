@@ -155,7 +155,7 @@ jobs:
       - name: Check if pre-release
         if: inputs.pre_release == 'true'
         run: |
-          version=$(poetry version --short)
+          version=$(uv tree | grep 'langflow' | awk '{print $2}' | sed 's/^v//')
           if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post)([0-9]+))$ ]]; then
             echo "Pre-release version detected. Continuing with the release."
           else
@@ -165,7 +165,7 @@ jobs:
       - name: Check Version
         id: check-version
         run: |
-          version=$(poetry version --short)
+          version=$(uv tree | grep 'langflow' | awk '{print $2}' | sed 's/^v//')
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
