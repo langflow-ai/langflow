@@ -59,14 +59,14 @@ ADD ./uv.lock /app/uv.lock
 
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-uv sync --frozen --no-dev
+    uv sync --frozen --no-dev
+
 FROM python:3.12.3-slim AS runtime
 
 COPY --from=builder /app/.venv /app/.venv
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
-# Reset the entrypoint, don't invoke `uv`
-ENTRYPOINT []
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
