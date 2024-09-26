@@ -161,6 +161,7 @@ interface BaseModalProps {
     | "three-cards"
     | "large-thin"
     | "large-h-full"
+    | "templates"
     | "small-h-full"
     | "medium-h-full"
     | "md-thin"
