@@ -357,7 +357,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             "collection_embedding_api_key": self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key"),
         }
 
-    # @check_cached_vector_store
+    @check_cached_vector_store
     def build_vector_store(self, vectorize_options=None):
         try:
             from langchain_astradb import AstraDBVectorStore
