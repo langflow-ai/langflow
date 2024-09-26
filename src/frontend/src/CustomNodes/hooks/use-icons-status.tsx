@@ -10,9 +10,10 @@ const useIconStatus = (
   validationStatus: VertexBuildTypeAPI | null,
 ) => {
   const conditionSuccess =
-    !(!buildStatus || buildStatus === BuildStatus.TO_BUILD) &&
+    buildStatus === BuildStatus.BUILT ||
+    (!(!buildStatus || buildStatus === BuildStatus.TO_BUILD) &&
     validationStatus &&
-    validationStatus.valid;
+    validationStatus.valid);
   const conditionError = buildStatus === BuildStatus.ERROR;
   const conditionInactive = buildStatus === BuildStatus.INACTIVE;
 
