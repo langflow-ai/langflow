@@ -104,8 +104,8 @@ class Component(CustomComponent):
             self.map_outputs(self.outputs)
         # Set output types
         self._set_output_types()
-        self._set_output_required_inputs()
         self.set_class_code()
+        self._set_output_required_inputs()
 
     def set_event_manager(self, event_manager: EventManager | None = None):
         self._event_manager = event_manager
