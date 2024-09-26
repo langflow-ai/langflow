@@ -440,16 +440,6 @@ wheels = [
 ]
 
 [[package]]
-name = "bson"
-version = "0.5.10"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "python-dateutil" },
-    { name = "six" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4d/53/7c534a38850f2252275d7f949aed2219095e90df1e2d180a9c8ed139e499/bson-0.5.10.tar.gz", hash = "sha256:d6511b2ab051139a9123c184de1a04227262173ad593429d21e443d6462d6590", size = 10363 }
-
-[[package]]
 name = "build"
 version = "1.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3397,7 +3387,6 @@ dependencies = [
     { name = "astra-assistants" },
     { name = "beautifulsoup4" },
     { name = "boto3" },
-    { name = "bson" },
     { name = "certifi" },
     { name = "chromadb" },
     { name = "cohere" },
@@ -3531,7 +3520,6 @@ requires-dist = [
     { name = "astra-assistants", specifier = ">=2.1.2" },
     { name = "beautifulsoup4", specifier = ">=4.12.2" },
     { name = "boto3", specifier = "~=1.34.162" },
-    { name = "bson", specifier = ">=0.5.10" },
     { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
     { name = "celery", extras = ["redis"], marker = "extra == 'deploy'", specifier = ">=5.3.6" },
     { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
