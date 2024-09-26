@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 OPENAI_MODELS = [
     "text-davinci-003",
@@ -65,7 +65,7 @@ DIRECT_TYPES = [
 ]
 
 
-LOADERS_INFO: List[Dict[str, Any]] = [
+LOADERS_INFO: list[dict[str, Any]] = [
     {
         "loader": "AirbyteJSONLoader",
         "name": "Airbyte JSON (.jsonl)",

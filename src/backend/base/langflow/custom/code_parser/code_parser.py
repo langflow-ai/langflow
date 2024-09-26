@@ -41,7 +41,7 @@ def find_class_ast_node(class_obj):
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef) and node.name == class_obj.__name__:
             class_node = node
-        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+        elif isinstance(node, ast.Import | ast.ImportFrom):
             import_nodes.append(node)
 
     return class_node, import_nodes
@@ -275,7 +275,7 @@ class CodeParser:
                     or any(has_return(child) for child in node.handlers)
                     or any(has_return(child) for child in node.finalbody)
                 )
-            elif isinstance(node, (ast.For, ast.While)):
+            elif isinstance(node, ast.For | ast.While):
                 return any(has_return(child) for child in node.body) or any(has_return(child) for child in node.orelse)
             elif isinstance(node, ast.With):
                 return any(has_return(child) for child in node.body)
@@ -365,7 +365,7 @@ class CodeParser:
             elif isinstance(stmt, ast.AnnAssign):
                 if attr := self.parse_ann_assign(stmt):
                     class_details.attributes.append(attr)
-            elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            elif isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef):
                 method, is_init = self.parse_function_def(stmt)
                 if is_init:
                     class_details.init = method

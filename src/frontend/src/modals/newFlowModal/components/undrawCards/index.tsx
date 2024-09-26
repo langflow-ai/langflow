@@ -145,7 +145,7 @@ export default function UndrawCardComponent({
         addFlow({ flow }).then((id) => {
           navigate(`/flow/${id}/folder/${folderIdUrl}`);
         });
-        track(`New Flow Created: ${flow.name} Template`);
+        track("New Flow Created", { template: `${flow.name} Template` });
       }}
       className="h-64 w-80 cursor-pointer bg-background pt-4"
     >

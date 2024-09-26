@@ -1,6 +1,6 @@
-from typing import Any, List, Optional, Type
+import warnings
+from typing import Any
 
-from asyncer import syncify
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, ToolException
 from pydantic.v1 import BaseModel
@@ -9,15 +9,16 @@ from langflow.base.flow_processing.utils import build_data_from_result_data, for
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import build_schema_from_inputs, get_arg_names, get_flow_inputs, run_flow
+from langflow.utils.async_helpers import run_until_complete
 
 
 class FlowTool(BaseTool):
     name: str
     description: str
-    graph: Optional[Graph] = None
-    flow_id: Optional[str] = None
-    user_id: Optional[str] = None
-    inputs: List["Vertex"] = []
+    graph: Graph | None = None
+    flow_id: str | None = None
+    user_id: str | None = None
+    inputs: list["Vertex"] = []
     get_final_results_only: bool = True
 
     @property
@@ -25,7 +26,7 @@ class FlowTool(BaseTool):
         schema = self.get_input_schema()
         return schema.schema()["properties"]
 
-    def get_input_schema(self, config: Optional[RunnableConfig] = None) -> Type[BaseModel]:
+    def get_input_schema(self, config: RunnableConfig | None = None) -> type[BaseModel]:
         """The tool's input schema."""
         if self.args_schema is not None:
             return self.args_schema
@@ -49,10 +50,12 @@ class FlowTool(BaseTool):
             )
         tweaks = {arg["component_name"]: kwargs[arg["arg_name"]] for arg in args_names}
 
-        run_outputs = syncify(run_flow, raise_sync_error=False)(
-            tweaks={key: {"input_value": value} for key, value in tweaks.items()},
-            flow_id=self.flow_id,
-            user_id=self.user_id,
+        run_outputs = run_until_complete(
+            run_flow(
+                tweaks={key: {"input_value": value} for key, value in tweaks.items()},
+                flow_id=self.flow_id,
+                user_id=self.user_id,
+            )
         )
         if not run_outputs:
             return "No output"
@@ -65,7 +68,7 @@ class FlowTool(BaseTool):
                     data.extend(build_data_from_result_data(output, get_final_results_only=self.get_final_results_only))
         return format_flow_output_data(data)
 
-    def validate_inputs(self, args_names: List[dict[str, str]], args: Any, kwargs: Any):
+    def validate_inputs(self, args_names: list[dict[str, str]], args: Any, kwargs: Any):
         """Validate the inputs."""
 
         if len(args) > 0 and len(args) != len(args_names):
@@ -95,7 +98,11 @@ class FlowTool(BaseTool):
     ) -> str:
         """Use the tool asynchronously."""
         tweaks = self.build_tweaks_dict(args, kwargs)
-        run_id = self.graph.run_id if self.graph else None
+        try:
+            run_id = self.graph.run_id if self.graph else None
+        except Exception as e:
+            warnings.warn(f"Failed to set run_id: {e}")
+            run_id = None
         run_outputs = await run_flow(
             tweaks={key: {"input_value": value} for key, value in tweaks.items()},
             flow_id=self.flow_id,

@@ -1,8 +1,8 @@
 from langflow.custom import Component
-from langflow.io import HandleInput, MessageInput, Output
 from langflow.field_typing import Embeddings
-from langflow.schema.message import Message
+from langflow.io import HandleInput, MessageInput, Output
 from langflow.schema import Data
+from langflow.schema.message import Message
 
 
 class TextEmbedderComponent(Component):

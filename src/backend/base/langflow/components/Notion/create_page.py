@@ -1,12 +1,14 @@
 import json
-from typing import Dict, Any, Union
+from typing import Any
+
 import requests
-from pydantic import BaseModel, Field
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput, MultilineInput
-from langflow.schema import Data
-from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
+from pydantic import BaseModel, Field
+
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
+from langflow.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
 class NotionPageCreator(LCToolComponent):
@@ -58,7 +60,7 @@ class NotionPageCreator(LCToolComponent):
             args_schema=self.NotionPageCreatorSchema,
         )
 
-    def _create_notion_page(self, database_id: str, properties_json: str) -> Union[Dict[str, Any], str]:
+    def _create_notion_page(self, database_id: str, properties_json: str) -> dict[str, Any] | str:
         if not database_id or not properties_json:
             return "Invalid input. Please provide 'database_id' and 'properties_json'."
 

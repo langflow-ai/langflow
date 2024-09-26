@@ -1,16 +1,16 @@
 import warnings
-from typing import List, Sequence
+from collections.abc import Sequence
 from uuid import UUID
 
+from langchain_core.messages import BaseMessage
 from loguru import logger
 from sqlalchemy import delete
 from sqlmodel import Session, col, select
 
+from langflow.field_typing import BaseChatMessageHistory
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
 from langflow.services.deps import session_scope
-from langflow.field_typing import BaseChatMessageHistory
-from langchain_core.messages import BaseMessage
 
 
 def get_messages(
@@ -21,7 +21,7 @@ def get_messages(
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
-) -> List[Message]:
+) -> list[Message]:
     """
     Retrieves messages from the monitor service based on the provided filters.
 
@@ -147,7 +147,7 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
         self.session_id = session_id
 
     @property
-    def messages(self) -> List[BaseMessage]:
+    def messages(self) -> list[BaseMessage]:
         messages = get_messages(
             session_id=self.session_id,
         )
