@@ -1,5 +1,5 @@
 import { usePostDownloadMultipleFlows } from "@/controllers/API/queries/flows";
-import NewFlowModal from "@/modals/newFlowModal";
+import TemplatesModal from "@/modals/templatesModal";
 import { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useLocation, useParams } from "react-router-dom";
@@ -291,7 +291,7 @@ export default function ComponentsComponent({
           <></>
         </DeleteConfirmationModal>
       )}
-      <NewFlowModal open={openModal} setOpen={setOpenModal} />
+      <TemplatesModal open={openModal} setOpen={setOpenModal} />
     </>
   );
 }
