@@ -468,21 +468,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
           id: newId,
         },
       };
-      // const newNode: NodeType = {
-      //   id: getNodeId("noteNode"),
-      //   type: "noteNode",
-      //   position: position || { x: 0, y: 0 },
-      //   data: {
-      //     id: getNodeId("noteNode"),
-      //     type: "note",
-      //     node: {
-      //       description: "",
-      //       display_name: "",
-      //       documentation: "",
-      //       template: {},
-      //     },
-      //   },
-      // };
       setNodes((nds) => nds.concat(newNode));
       setIsAddingNote(false);
     }
