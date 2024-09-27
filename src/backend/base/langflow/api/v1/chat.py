@@ -448,7 +448,9 @@ class DisconnectHandlerStreamingResponse(StreamingResponse):
             message = await receive()
             if message["type"] == "http.disconnect":
                 if self.on_disconnect:
-                    await self.on_disconnect()
+                    coro = self.on_disconnect()
+                    if asyncio.iscoroutine(coro):
+                        await coro
                 break
 
 

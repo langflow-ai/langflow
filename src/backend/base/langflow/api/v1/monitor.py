@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import delete
 from sqlmodel import Session, col, select
 
+from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
 from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
@@ -15,7 +16,6 @@ from langflow.services.database.models.vertex_builds.crud import (
 )
 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
 from langflow.services.deps import get_session
-from langflow.services.monitor.schema import MessageModelResponse
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
@@ -43,7 +43,7 @@ async def delete_vertex_builds(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/messages", response_model=list[MessageModelResponse])
+@router.get("/messages", response_model=list[MessageResponse])
 async def get_messages(
     flow_id: str | None = Query(None),
     session_id: str | None = Query(None),
@@ -66,7 +66,7 @@ async def get_messages(
             col = getattr(MessageTable, order_by).asc()
             stmt = stmt.order_by(col)
         messages = session.exec(stmt)
-        return [MessageModelResponse.model_validate(d, from_attributes=True) for d in messages]
+        return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

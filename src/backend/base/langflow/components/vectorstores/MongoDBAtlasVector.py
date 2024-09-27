@@ -74,7 +74,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         return vector_store
 
     def search_documents(self) -> list[Data]:
-        from bson import ObjectId
+        from bson.objectid import ObjectId
 
         vector_store = self.build_vector_store()
 
