@@ -28,6 +28,7 @@ class FlowBase(SQLModel):
     description: str | None = Field(default=None, sa_column=Column(Text, index=True, nullable=True))
     icon: str | None = Field(default=None, nullable=True)
     icon_bg_color: str | None = Field(default=None, nullable=True)
+    gradient: str | None = Field(default=None, nullable=True)
     data: dict | None = Field(default=None, nullable=True)
     is_component: bool | None = Field(default=False, nullable=True)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
