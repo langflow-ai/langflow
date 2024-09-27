@@ -2,7 +2,7 @@ from typing import Any, cast
 
 from langchain.retrievers import ContextualCompressionRetriever
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.field_typing import Retriever, VectorStore
 from langflow.io import DropdownInput, HandleInput, MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data
@@ -77,5 +77,6 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
         self.status = data
         return data
 
+    @check_cached_vector_store
     def build_vector_store(self) -> VectorStore:
         raise NotImplementedError("NVIDIA Rerank does not support vector stores.")
