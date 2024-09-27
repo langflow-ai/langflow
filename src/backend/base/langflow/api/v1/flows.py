@@ -160,7 +160,7 @@ def read_flows(
             flows = [flow for flow in flows if flow.is_component]
         flow_ids = [flow.id for flow in flows]
         # with the session get the flows that DO NOT have a user_id
-        if not remove_example_flows or not components_only:
+        if not remove_example_flows and not components_only:
             try:
                 folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
 
