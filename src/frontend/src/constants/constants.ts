@@ -916,6 +916,4 @@ export const COLOR_OPTIONS = {
   red: "var(--note-red)",
 };
 
-export const maxSizeFilesInBytes =
-  (Number(process.env.MAX_FILE_SIZE) ?? 100) * 1024 * 1024; //Default 100MB in bytes
 export const MAX_TEXT_LENGTH = 99999;
