@@ -80,5 +80,6 @@ class CohereRerankComponent(LCVectorStoreComponent):
         self.status = data
         return data
 
+    @check_cached_vector_store
     def build_vector_store(self) -> VectorStore:
         raise NotImplementedError("Cohere Rerank does not support vector stores.")

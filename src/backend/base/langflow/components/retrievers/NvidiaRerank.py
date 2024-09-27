@@ -77,5 +77,6 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
         self.status = data
         return data
 
+    @check_cached_vector_store
     def build_vector_store(self) -> VectorStore:
         raise NotImplementedError("NVIDIA Rerank does not support vector stores.")
