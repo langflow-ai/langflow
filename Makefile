@@ -420,13 +420,13 @@ publish_base:
 publish_langflow:
 	uv publish
 
-publish_base_testpypi:
-	# TODO: update this to use the test-pypi repository
-	cd src/backend/base && uv publish -r test-pypi
+# TODO: update these to publish to testpypi
+# TODO: maybe using twine
+# publish_base_testpypi:
+# 	cd src/backend/base && uv publish -r test-pypi
 
-publish_langflow_testpypi:
-	# TODO: update this to use the test-pypi repository
-	uv publish -r test-pypi
+# publish_langflow_testpypi:
+# 	uv publish -r test-pypi
 
 publish: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
