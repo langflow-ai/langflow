@@ -28,12 +28,12 @@ export default function HomePage(): JSX.Element {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
-  const querieClient = useQueryClient();
+  const queryClient = useQueryClient();
 
   // cleanup the query cache when the component unmounts
   // prevent unnecessary queries on flow update
   useEffect(() => {
-    return () => querieClient.removeQueries({ queryKey: ["useGetFolder"] });
+    return () => queryClient.removeQueries({ queryKey: ["useGetFolder"] });
   }, []);
 
   const dropdownOptions = useDropdownOptions({
