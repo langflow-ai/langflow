@@ -1,7 +1,4 @@
-
-from typing import List
-
-import weaviate  
+import weaviate
 from langchain_community.vectorstores import Weaviate
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
