@@ -2,7 +2,6 @@ import json
 from collections import namedtuple
 from uuid import UUID, uuid4
 
-from langflow.services.database.models.folder.model import FolderCreate
 import orjson
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +12,7 @@ from langflow.graph.utils import log_transaction, log_vertex_build
 from langflow.initial_setup.setup import load_flows_from_directory, load_starter_projects
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
+from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 
@@ -65,6 +65,14 @@ def test_read_flows(client: TestClient, json_flow: str, active_user, logged_in_h
     response = client.get("api/v1/flows/", headers=logged_in_headers)
     assert response.status_code == 200
     assert len(response.json()) > 0
+
+
+def test_read_flows_components_only(client: TestClient, flow_component: dict, logged_in_headers):
+    response = client.get("api/v1/flows/", headers=logged_in_headers, params={"components_only": True})
+    assert response.status_code == 200
+    names = [flow["name"] for flow in response.json()]
+    assert any("Chat Input Component" in name for name in names)
+    assert all(flow["is_component"] is True for flow in response.json()), [flow["name"] for flow in response.json()]
 
 
 def test_read_flow(client: TestClient, json_flow: str, logged_in_headers):

@@ -926,3 +926,4 @@ export const SHADOW_COLOR_OPTIONS = {
 };
 
 export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes
+export const MAX_TEXT_LENGTH = 99999;
