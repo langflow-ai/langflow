@@ -1,11 +1,12 @@
+
 from typing import List
 
-import weaviate
+import weaviate  
 from langchain_community.vectorstores import Weaviate
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.io import BoolInput, DataInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -84,7 +85,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
             by_text=self.search_by_text,
         )
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():

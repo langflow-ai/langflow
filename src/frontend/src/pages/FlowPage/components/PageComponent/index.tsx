@@ -8,7 +8,6 @@ import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
-
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -62,6 +61,10 @@ import isWrappedWithClass from "./utils/is-wrapped-with-class";
 const nodeTypes = {
   genericNode: GenericNode,
   noteNode: NoteNode,
+};
+
+const edgeTypes = {
+  default: DefaultEdge,
 };
 
 export default function Page({ view }: { view?: boolean }): JSX.Element {
@@ -259,6 +262,12 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
       takeSnapshot();
+      if (lastSelection.edges?.length) {
+        track("Component Connection Deleted");
+      }
+      if (lastSelection.nodes?.length) {
+        track("Component Deleted");
+      }
       deleteNode(lastSelection.nodes.map((node) => node.id));
       deleteEdge(lastSelection.edges.map((edge) => edge.id));
     }
@@ -341,7 +350,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
           event.dataTransfer.getData(datakey!),
         );
 
-        track(`Component Added: ${data.node?.display_name}`);
+        track("Component Added", { componentType: data.node?.display_name });
 
         const newId = getNodeId(data.type);
 
@@ -458,7 +467,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
             connectionRadius={25}
-            edgeTypes={{ default: DefaultEdge }}
+            edgeTypes={edgeTypes}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
             onNodeDragStop={onNodeDragStop}
@@ -518,7 +527,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                       },
                     );
                   }}
-                  className="postion absolute -top-10 rounded-sm"
+                  className="postion react-flow__controls absolute -top-10"
                 >
                   <ShadTooltip content="Add note">
                     <div>

@@ -7,39 +7,42 @@ slug: /components-vector-stores
 
 Vector databases are used to store and search for vectors. They can be used to store embeddings, search for similar vectors, and perform other vector operations.
 
-## Astra DB Serverless
+## Astra DB Vector Store
 
-This component creates an Astra DB Vector Store with search capabilities.
+This component implements a Vector Store using Astra DB with search capabilities.
+
 For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
 
 ### Parameters
 
-#### Intputs
+#### Inputs
 
-| Name                 | Type             | Description                                           |
-|----------------------|------------------|-------------------------------------------------------|
-| collection_name       | String           | Name of the collection in Astra DB                    |
-| token                 | SecretString     | Astra DB Application Token                            |
-| api_endpoint          | SecretString     | API endpoint URL for Astra DB                         |
-| search_input          | String           | Query for similarity search                           |
-| ingest_data           | Data             | Data to be ingested into the vector store             |
-| namespace             | String           | Optional namespace within Astra DB                    |
-| metric                | String           | Distance metric for vector comparisons                |
-| batch_size            | Integer          | Number of data to process in a single batch           |
-| setup_mode            | String           | Configuration mode for setting up the vector store    |
-| pre_delete_collection | Boolean          | Whether to delete the collection before creating a new one |
-| embedding             | Embeddings/Dict  | Embedding model or Astra Vectorize configuration      |
-| number_of_results     | Integer          | Number of results to return in search                 |
-| search_type           | String           | Type of search to perform                             |
-| search_score_threshold| Float            | Minimum similarity score for search results           |
-| search_filter         | Dict             | Metadata filters for search query                     |
+| Name | Display Name | Info |
+|------|--------------|------|
+| collection_name | Collection Name | The name of the collection within Astra DB where the vectors will be stored (required) |
+| token | Astra DB Application Token | Authentication token for accessing Astra DB (required) |
+| api_endpoint | API Endpoint | API endpoint URL for the Astra DB service (required) |
+| search_input | Search Input | Query string for similarity search |
+| ingest_data | Ingest Data | Data to be ingested into the vector store |
+| namespace | Namespace | Optional namespace within Astra DB to use for the collection |
+| embedding_service | Embedding Model or Astra Vectorize | Determines whether to use an Embedding Model or Astra Vectorize for the collection |
+| embedding | Embedding Model | Allows an embedding model configuration (when using Embedding Model) |
+| provider | Vectorize Provider | Provider for Astra Vectorize (when using Astra Vectorize) |
+| metric | Metric | Optional distance metric for vector comparisons |
+| batch_size | Batch Size | Optional number of data to process in a single batch |
+| setup_mode | Setup Mode | Configuration mode for setting up the vector store (options: "Sync", "Async", "Off", default: "Sync") |
+| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one |
+| number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
+| search_type | Search Type | Search type to use (options: "Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)") |
+| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results |
+| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
 
 #### Outputs
 
-| Name           | Type      | Description                       |
-|----------------|-----------|-----------------------------------|
-| vector_store   | AstraDB   | Astra DB vector store instance    |
-| search_results | List[Data]| Results of similarity search      |
+| Name | Display Name | Info |
+|------|--------------|------|
+| vector_store | Vector Store | Built Astra DB vector store |
+| search_results | Search Results | Results of the similarity search as a list of Data objects |
 
 ## Cassandra
 
@@ -48,35 +51,68 @@ For more information, see the [Cassandra documentation](https://cassandra.apache
 
 ### Parameters
 
-#### Intputs
+#### Inputs
 
-| Name                | Type           | Description                                        |
-|---------------------|----------------|----------------------------------------------------|
-| database_ref         | String         | Contact points for the database or AstraDB database ID |
-| username             | String         | Username for the database (leave empty for AstraDB) |
-| token                | SecretString   | User password for the database or AstraDB token     |
-| keyspace             | String         | Table Keyspace or AstraDB namespace                 |
-| table_name           | String         | Name of the table or AstraDB collection             |
-| ttl_seconds          | Integer        | Time-to-live for added texts                        |
-| batch_size           | Integer        | Number of data to process in a single batch         |
-| setup_mode           | String         | Configuration mode for setting up the Cassandra table |
-| cluster_kwargs       | Dict           | Additional keyword arguments for the Cassandra cluster |
-| search_query         | String         | Query for similarity search                         |
-| ingest_data          | Data           | Data to be ingested into the vector store           |
-| embedding            | Embeddings     | Embedding function to use                           |
-| number_of_results    | Integer        | Number of results to return in search               |
-| search_type          | String         | Type of search to perform                           |
-| search_score_threshold| Float         | Minimum similarity score for search results         |
-| search_filter        | Dict           | Metadata filters for search query                   |
-| body_search          | String         | Document textual search terms                       |
-| enable_body_search   | Boolean        | Flag to enable body search                          |
+| Name | Type | Description |
+|------|------|-------------|
+| database_ref | String | Contact points for the database or AstraDB database ID |
+| username | String | Username for the database (leave empty for AstraDB) |
+| token | SecretString | User password for the database or AstraDB token |
+| keyspace | String | Table Keyspace or AstraDB namespace |
+| table_name | String | Name of the table or AstraDB collection |
+| ttl_seconds | Integer | Time-to-live for added texts |
+| batch_size | Integer | Number of data to process in a single batch |
+| setup_mode | String | Configuration mode for setting up the Cassandra table |
+| cluster_kwargs | Dict | Additional keyword arguments for the Cassandra cluster |
+| search_query | String | Query for similarity search |
+| ingest_data | Data | Data to be ingested into the vector store |
+| embedding | Embeddings | Embedding function to use |
+| number_of_results | Integer | Number of results to return in search |
+| search_type | String | Type of search to perform |
+| search_score_threshold | Float | Minimum similarity score for search results |
+| search_filter | Dict | Metadata filters for search query |
+| body_search | String | Document textual search terms |
+| enable_body_search | Boolean | Flag to enable body search |
 
 #### Outputs
 
-| Name           | Type       | Description                      |
-|----------------|------------|----------------------------------|
-| vector_store   | Cassandra  | Cassandra vector store instance  |
-| search_results | List[Data] | Results of similarity search     |
+| Name | Type | Description |
+|------|------|-------------|
+| vector_store | Cassandra | Cassandra vector store instance |
+| search_results | List[Data] | Results of similarity search |
+
+## Cassandra Graph Vector Store
+
+This component implements a Cassandra Graph Vector Store with search capabilities.
+
+### Parameters
+
+#### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| database_ref | Contact Points / Astra Database ID | Contact points for the database or AstraDB database ID (required) |
+| username | Username | Username for the database (leave empty for AstraDB) |
+| token | Password / AstraDB Token | User password for the database or AstraDB token (required) |
+| keyspace | Keyspace | Table Keyspace or AstraDB namespace (required) |
+| table_name | Table Name | The name of the table or AstraDB collection where vectors will be stored (required) |
+| setup_mode | Setup Mode | Configuration mode for setting up the Cassandra table (options: "Sync", "Off", default: "Sync") |
+| cluster_kwargs | Cluster arguments | Optional dictionary of additional keyword arguments for the Cassandra cluster |
+| search_query | Search Query | Query string for similarity search |
+| ingest_data | Ingest Data | Data to be ingested into the vector store (list of Data objects) |
+| embedding | Embedding | Embedding model to use |
+| number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
+| search_type | Search Type | Search type to use (options: "Traversal", "MMR traversal", "Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)", default: "Traversal") |
+| depth | Depth of traversal | The maximum depth of edges to traverse (for "Traversal" or "MMR traversal" search types, default: 1) |
+| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results (for "Similarity with score threshold" search type) |
+| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
+
+#### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| vector_store | Vector Store | Built Cassandra Graph vector store |
+| search_results | Search Results | Results of the similarity search as a list of Data objects |
 
 ## Chroma DB
 
@@ -85,7 +121,7 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 
 ### Parameters
 
-#### Intputs
+#### Inputs
 
 | Name                         | Type          | Description                                      |
 |------------------------------|---------------|--------------------------------------------------|
@@ -111,6 +147,41 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 | vector_store   | Chroma        | Chroma vector store instance   |
 | search_results | List[Data]    | Results of similarity search   |
 
+## Clickhouse
+
+This component implements a Clickhouse Vector Store with search capabilities.
+For more information, see the [CLickhouse Documentation](https://clickhouse.com/docs/en/intro).
+
+### Parameters
+
+#### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| host | hostname | Clickhouse server hostname (required, default: "localhost") |
+| port | port | Clickhouse server port (required, default: 8123) |
+| database | database | Clickhouse database name (required) |
+| table | Table name | Clickhouse table name (required) |
+| username | The ClickHouse user name. | Username for authentication (required) |
+| password | The password for username. | Password for authentication (required) |
+| index_type | index_type | Type of the index (options: "annoy", "vector_similarity", default: "annoy") |
+| metric | metric | Metric to compute distance (options: "angular", "euclidean", "manhattan", "hamming", "dot", default: "angular") |
+| secure | Use https/TLS | Overrides inferred values from the interface or port arguments (default: false) |
+| index_param | Param of the index | Index parameters (default: "'L2Distance',100") |
+| index_query_params | index query params | Additional index query parameters |
+| search_query | Search Query | Query string for similarity search |
+| ingest_data | Ingest Data | Data to be ingested into the vector store |
+| embedding | Embedding | Embedding model to use |
+| number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
+| score_threshold | Score threshold | Threshold for similarity scores |
+
+#### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| vector_store | Vector Store | Built Clickhouse vector store |
+| search_results | Search Results | Results of the similarity search as a list of Data objects |
+
 ## Couchbase
 
 This component creates a Couchbase Vector Store with search capabilities.
@@ -118,7 +189,7 @@ For more information, see the [Couchbase documentation](https://docs.couchbase.c
 
 ### Parameters
 
-#### Intputs
+#### Inputs
 
 | Name                    | Type          | Description                                      |
 |-------------------------|---------------|--------------------------------------------------|
@@ -147,7 +218,7 @@ For more information, see the [FAISS documentation](https://faiss.ai/index.html)
 
 ### Parameters
 
-#### Intputs
+#### Inputs
 
 | Name                      | Type          | Description                                      |
 |---------------------------|---------------|--------------------------------------------------|
@@ -165,6 +236,46 @@ For more information, see the [FAISS documentation](https://faiss.ai/index.html)
 |----------------|------------------------|--------------------------------|
 | vector_store   | FAISS                  | A FAISS vector store instance configured with the specified parameters. |
 
+## Hyper-Converged Database (HCD) Vector Store
+
+This component implements a Vector Store using HCD.
+
+### Parameters
+
+#### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| collection_name | Collection Name | The name of the collection within HCD where the vectors will be stored (required) |
+| username | HCD Username | Authentication username for accessing HCD (default: "hcd-superuser", required) |
+| password | HCD Password | Authentication password for accessing HCD (required) |
+| api_endpoint | HCD API Endpoint | API endpoint URL for the HCD service (required) |
+| search_input | Search Input | Query string for similarity search |
+| ingest_data | Ingest Data | Data to be ingested into the vector store |
+| namespace | Namespace | Optional namespace within HCD to use for the collection (default: "default_namespace") |
+| ca_certificate | CA Certificate | Optional CA certificate for TLS connections to HCD |
+| metric | Metric | Optional distance metric for vector comparisons (options: "cosine", "dot_product", "euclidean") |
+| batch_size | Batch Size | Optional number of data to process in a single batch |
+| bulk_insert_batch_concurrency | Bulk Insert Batch Concurrency | Optional concurrency level for bulk insert operations |
+| bulk_insert_overwrite_concurrency | Bulk Insert Overwrite Concurrency | Optional concurrency level for bulk insert operations that overwrite existing data |
+| bulk_delete_concurrency | Bulk Delete Concurrency | Optional concurrency level for bulk delete operations |
+| setup_mode | Setup Mode | Configuration mode for setting up the vector store (options: "Sync", "Async", "Off", default: "Sync") |
+| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one |
+| metadata_indexing_include | Metadata Indexing Include | Optional list of metadata fields to include in the indexing |
+| embedding | Embedding or Astra Vectorize | Allows either an embedding model or an Astra Vectorize configuration |
+| metadata_indexing_exclude | Metadata Indexing Exclude | Optional list of metadata fields to exclude from the indexing |
+| collection_indexing_policy | Collection Indexing Policy | Optional dictionary defining the indexing policy for the collection |
+| number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
+| search_type | Search Type | Search type to use (options: "Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)", default: "Similarity") |
+| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results (default: 0) |
+| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
+
+#### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| vector_store | Vector Store | Built HCD vector store instance |
+| search_results | Search Results | Results of similarity search as a list of Data objects |
 
 ## Milvus
 
@@ -173,7 +284,7 @@ For more information, see the [Milvus documentation](https://milvus.io/docs).
 
 ### Parameters
 
-#### Intputs
+#### Inputs
 
 | Name                    | Type          | Description                                      |
 |-------------------------|---------------|--------------------------------------------------|
@@ -207,7 +318,7 @@ For more information, see the [MongoDB Atlas documentation](https://www.mongodb.
 
 ### Parameters
 
-###### Intputs
+#### Inputs
 
 | Name                     | Type         | Description                               |
 | ------------------------ | ------------ | ----------------------------------------- |
@@ -235,7 +346,7 @@ For more information, see the [PGVector documentation](https://github.com/pgvect
 
 ### Parameters
 
-###### Intputs
+#### Inputs
 
 | Name            | Type         | Description                               |
 | --------------- | ------------ | ----------------------------------------- |
@@ -349,7 +460,7 @@ For more information, see the [Redis documentation](https://redis.io/docs/latest
 
 ## Supabase
 
-This component creates a Supabase Vector Store with search capabilities.
+This component creates a connection to a Supabase Vector Store with search capabilities.
 For more information, see the [Supabase documentation](https://supabase.com/docs/guides/ai).
 
 ### Parameters

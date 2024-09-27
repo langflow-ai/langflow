@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 from collections.abc import Callable
 from copy import deepcopy
@@ -29,15 +31,16 @@ if TYPE_CHECKING:
     from langflow.inputs.inputs import InputTypes
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
-CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name"]
+CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name", "_metadata"]
 
 
 class Component(CustomComponent):
-    inputs: list["InputTypes"] = []
+    inputs: list[InputTypes] = []
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
     _current_output: str = ""
+    _metadata: dict = {}
 
     def __init__(self, **kwargs):
         # if key starts with _ it is a config
@@ -51,7 +54,7 @@ class Component(CustomComponent):
                 config[key[1:]] = value
             else:
                 inputs[key] = value
-        self._inputs: dict[str, "InputTypes"] = {}
+        self._inputs: dict[str, InputTypes] = {}
         self._outputs_map: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
@@ -179,7 +182,7 @@ class Component(CustomComponent):
         """
         return await self._run()
 
-    def set_vertex(self, vertex: "Vertex"):
+    def set_vertex(self, vertex: Vertex):
         """
         Sets the vertex for the component.
 
@@ -258,7 +261,7 @@ class Component(CustomComponent):
             # allows each instance of each component to modify its own output
             self._outputs_map[output.name] = deepcopy(output)
 
-    def map_inputs(self, inputs: list["InputTypes"]):
+    def map_inputs(self, inputs: list[InputTypes]):
         """
         Maps the given inputs to the component.
 
@@ -325,7 +328,7 @@ class Component(CustomComponent):
             text += f"{output.name}[{','.join(output.types)}]->{input_.name}[{','.join(input_.input_types or [])}]\n"
         return text
 
-    def _find_matching_output_method(self, value: "Component"):
+    def _find_matching_output_method(self, value: Component):
         # get all outputs of the value component
         outputs = value._outputs_map.values()
         # check if the any of the types in the output.types matches ONLY one input in the current component
@@ -652,7 +655,7 @@ class Component(CustomComponent):
                         output.value = result
 
                     custom_repr = self.custom_repr()
-                    if custom_repr is None and isinstance(result, (dict, Data, str)):
+                    if custom_repr is None and isinstance(result, dict | Data | str):
                         custom_repr = result
                     if not isinstance(custom_repr, str):
                         custom_repr = str(custom_repr)
@@ -670,7 +673,7 @@ class Component(CustomComponent):
 
                     elif hasattr(raw, "model_dump") and raw is not None:
                         raw = raw.model_dump()
-                    if raw is None and isinstance(result, (dict, Data, str)):
+                    if raw is None and isinstance(result, dict | Data | str):
                         raw = result.data if isinstance(result, Data) else result
                     artifact_type = get_artifact_type(artifact_value, result)
                     raw, artifact_type = post_process_raw(raw, artifact_type)
