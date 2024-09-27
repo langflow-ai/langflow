@@ -1,12 +1,13 @@
 from langflow.utils import constants
 
 
-def truncate_long_strings(data, max_length=constants.MAX_TEXT_LENGTH):
+def truncate_long_strings(data, max_length = None):
     """
     Recursively traverse the dictionary or list and truncate strings longer than max_length.
     """
 
-    max_length = max_length if max_length is not None else constants.MAX_TEXT_LENGTH
+    if max_length is None:
+    	max_length = constants.MAX_TEXT_LENGTH
 
     if max_length < 0 or not isinstance(data, dict | list):
         return data
