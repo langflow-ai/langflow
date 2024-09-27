@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.inputs import HandleInput, MessageInput, StrInput
+from langflow.inputs import HandleInput, MessageInput
 from langflow.memory import get_messages, store_message
 from langflow.schema.message import Message
 from langflow.template import Output
