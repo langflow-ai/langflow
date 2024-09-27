@@ -21,7 +21,7 @@ def test_component_tool():
     chat_input = ChatInput()
     component_toolkit = ComponentToolkit(component=chat_input)
     component_tool = component_toolkit.get_tools()[0]
-    assert component_tool.name == "ChatInput.message_response"
+    assert component_tool.name == "ChatInput-message_response"
     assert (
         component_tool.description
         == "message_response(files: file, input_value: Message, sender: str, sender_name: Message, session_id: Message, should_store_message: bool) - Get chat inputs from the Playground."
@@ -88,4 +88,4 @@ def test_component_tool_with_api_key(client):
     assert g is not None
     results = list(g.start())
     assert len(results) == 4
-    assert "message_response" in tool_calling_agent.outputs[1].value.get_text()
+    assert "message_response" in tool_calling_agent._outputs_map["response"].value.get_text()
