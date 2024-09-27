@@ -40,7 +40,6 @@ export default defineConfig(({ mode }) => {
         env.ACCESS_TOKEN_EXPIRE_SECONDS,
       ),
       "process.env.CI": JSON.stringify(env.CI),
-      "process.env.MAX_FILE_SIZE": JSON.stringify(env.MAX_FILE_SIZE),
     },
     plugins: [react(), svgr(), tsconfigPaths()],
     server: {
