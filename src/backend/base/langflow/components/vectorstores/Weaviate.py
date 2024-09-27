@@ -1,7 +1,4 @@
-
-from typing import List
-
-import weaviate  
+import weaviate
 from langchain_community.vectorstores import Weaviate
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -24,7 +21,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
             name="index_name",
             display_name="Index Name",
             required=True,
-            info="Please use capitalized index name. Weaviate requires the index name to be capitalized.",
+            info="Requires capitalized index name.",
         ),
         StrInput(name="text_key", display_name="Text Key", value="text", advanced=True),
         MultilineInput(name="search_query", display_name="Search Query"),
@@ -43,11 +40,10 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
         ),
         BoolInput(name="search_by_text", display_name="Search By Text", advanced=True),
     ]
-    index_name: str
 
-    def get_valid_index_name(self, client: weaviate.Client, index_name: str) -> str:
-        capitalized_name = index_name.capitalize()
-        if index_name != capitalized_name:
+    def get_valid_index_name(self, client: weaviate.Client) -> str:
+        capitalized_name = self.index_name.capitalize()
+        if self.index_name != capitalized_name:
             raise ValueError(f"Weaviate requires the index name to be capitalized. Use: {capitalized_name}")
         return capitalized_name
 
@@ -59,7 +55,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
         else:
             client = weaviate.Client(url=self.url)
 
-        self.index_name = self.get_valid_index_name(client, self.index_name)
+        self.index_name = self.get_valid_index_name(client)
 
         documents = []
         for _input in self.ingest_data or []:
