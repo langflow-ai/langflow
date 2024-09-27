@@ -1,6 +1,8 @@
 import base64
+from pathlib import Path
 
 from PIL import Image as PILImage
+from platformdirs import user_cache_dir
 from pydantic import BaseModel
 
 from langflow.services.deps import get_storage_service
@@ -10,6 +12,8 @@ IMAGE_ENDPOINT = "/files/images/"
 
 def is_image_file(file_path):
     try:
+        cache_dir = Path(user_cache_dir("langflow"))
+        file_path = cache_dir / file_path
         with PILImage.open(file_path) as img:
             img.verify()  # Verify that it is, in fact, an image
         return True
