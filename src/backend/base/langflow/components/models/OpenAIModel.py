@@ -2,7 +2,6 @@ import operator
 from functools import reduce
 
 from langchain_openai import ChatOpenAI
-from langflow.inputs.inputs import HandleInput
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
@@ -18,6 +17,7 @@ from langflow.inputs import (
     SecretStrInput,
     StrInput,
 )
+from langflow.inputs.inputs import HandleInput
 
 
 class OpenAIModelComponent(LCModelComponent):

@@ -1,8 +1,8 @@
-from langflow.inputs.inputs import HandleInput
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
+from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 
 

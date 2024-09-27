@@ -1,5 +1,4 @@
 from langchain_openai import ChatOpenAI
-from langflow.inputs.inputs import HandleInput
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.aiml_constants import AIML_CHAT_MODELS
@@ -14,6 +13,7 @@ from langflow.inputs import (
     SecretStrInput,
     StrInput,
 )
+from langflow.inputs.inputs import HandleInput
 
 
 class AIMLModelComponent(LCModelComponent):
