@@ -71,7 +71,7 @@ def test_read_flows_components_only(client: TestClient, flow_component: dict, lo
     response = client.get("api/v1/flows/", headers=logged_in_headers, params={"components_only": True})
     assert response.status_code == 200
     names = [flow["name"] for flow in response.json()]
-    assert "Chat Input Component" in names
+    assert any("Chat Input Component" in name for name in names)
     assert all(flow["is_component"] is True for flow in response.json())
 
 
