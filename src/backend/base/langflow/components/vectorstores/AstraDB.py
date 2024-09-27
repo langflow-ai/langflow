@@ -1,5 +1,6 @@
 import os
 
+from astrapy.admin import parse_api_endpoint
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -397,6 +398,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             "token": self.token,
             "api_endpoint": self.api_endpoint,
             "namespace": self.namespace or None,
+            "environment": parse_api_endpoint(self.api_endpoint).environment,
             "metric": self.metric or None,
             "batch_size": self.batch_size or None,
             "bulk_insert_batch_concurrency": self.bulk_insert_batch_concurrency or None,
