@@ -29,11 +29,17 @@ def build_description(component: Component, output: Output):
     if not output.required_inputs:
         warnings.warn(f"Output {output.name} does not have required inputs defined")
 
-    args = ", ".join(
-        sorted(
-            [f"{input_name}: {_get_input_type(component._inputs[input_name])}" for input_name in output.required_inputs]
+    if output.required_inputs:
+        args = ", ".join(
+            sorted(
+                [
+                    f"{input_name}: {_get_input_type(component._inputs[input_name])}"
+                    for input_name in output.required_inputs
+                ]
+            )
         )
-    )
+    else:
+        args = ""
     return f"{output.method}({args}) - {component.description}"
 
 
