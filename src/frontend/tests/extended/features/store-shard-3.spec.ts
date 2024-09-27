@@ -78,30 +78,63 @@ test("should filter by type", async ({ page }) => {
   await page.getByTestId("button-store").click();
   await page.waitForTimeout(1000);
 
+  await page.waitForSelector('[data-testid="likes-Website Content QA"]', {
+    timeout: 100000,
+  });
+
   await page.getByText("Website Content QA").isVisible();
 
+  await page.waitForSelector('[data-testid="flows-button-store"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("flows-button-store").click();
-  await page.waitForTimeout(8000);
+  await page.waitForTimeout(1000);
+
+  await page.waitForSelector('[data-testid="icon-Group"]', {
+    timeout: 100000,
+  });
 
   let iconGroup = await page.getByTestId("icon-Group")?.count();
   expect(iconGroup).not.toBe(0);
 
   await page.getByText("icon-ToyBrick").last().isHidden();
 
+  await page.waitForSelector('[data-testid="components-button-store"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("components-button-store").click();
-  await page.waitForTimeout(8000);
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("icon-Group").last().isHidden();
+
+  await page.waitForSelector('[data-testid="icon-ToyBrick"]', {
+    timeout: 100000,
+  });
+
   let toyBrick = await page.getByTestId("icon-ToyBrick")?.count();
   expect(toyBrick).not.toBe(0);
 
+  await page.waitForSelector('[data-testid="all-button-store"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("all-button-store").click();
-  await page.waitForTimeout(10000);
+  await page.waitForTimeout(1000);
+
+  await page.waitForSelector('[data-testid="icon-Group"]', {
+    timeout: 100000,
+  });
+
+  await page.waitForSelector('[data-testid="icon-ToyBrick"]', {
+    timeout: 100000,
+  });
 
   let iconGroupAllCount = await page.getByTestId("icon-Group")?.count();
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(500);
   let toyBrickAllCount = await page.getByTestId("icon-ToyBrick")?.count();
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(500);
 
   if (iconGroupAllCount === 0 || toyBrickAllCount === 0) {
     expect(false).toBe(true);
