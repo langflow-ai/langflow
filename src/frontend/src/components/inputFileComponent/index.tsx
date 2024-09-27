@@ -1,5 +1,6 @@
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
+import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect } from "react";
 import {
@@ -23,7 +24,8 @@ export default function InputFileComponent({
 }: FileComponentType): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const maxFileSizeUpload = useUtilityStore((state) => state.maxFileSizeUpload);
+  const { validateFileSize } = useFileSizeValidator(setErrorData);
+
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
@@ -47,13 +49,11 @@ export default function InputFileComponent({
     createFileUpload({ multiple: false, accept: fileTypes?.join(",") }).then(
       (files) => {
         const file = files[0];
-        if (file.size > maxFileSizeUpload) {
-          setErrorData({
-            title: INVALID_FILE_SIZE_ALERT(maxFileSizeUpload / 1024 / 1024),
-          });
-          return;
-        }
         if (file) {
+          if (!validateFileSize(file)) {
+            return;
+          }
+
           if (checkFileType(file.name)) {
             // Upload the file
             mutate(
