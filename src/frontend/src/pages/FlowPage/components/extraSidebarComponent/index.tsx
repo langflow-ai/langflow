@@ -46,29 +46,48 @@ export default function ExtraSidebar(): JSX.Element {
     event.dataTransfer.setDragImage(crt, 0, 0);
     event.dataTransfer.setData("genericNode", JSON.stringify(data));
   }
-
   function normalizeString(str: string): string {
     return str.toLowerCase().replace(/_/g, " ").replace(/\s+/g, "");
   }
 
-  // Handle showing components after use search input
+  function searchInMetadata(metadata: any, searchTerm: string): boolean {
+    if (!metadata || typeof metadata !== "object") return false;
+
+    return Object.entries(metadata).some(([key, value]) => {
+      if (typeof value === "string") {
+        return (
+          normalizeString(key).includes(searchTerm) ||
+          normalizeString(value).includes(searchTerm)
+        );
+      }
+      if (typeof value === "object") {
+        return searchInMetadata(value, searchTerm);
+      }
+      return false;
+    });
+  }
+
   function handleSearchInput(e: string) {
     if (e === "") {
       setFilterData(data);
       return;
     }
+
+    const searchTerm = normalizeString(e);
+
     setFilterData((_) => {
-      let ret = {};
-      Object.keys(data).forEach((d: keyof APIObjectType, i) => {
+      let ret: APIObjectType = {};
+      Object.keys(data).forEach((d: keyof APIObjectType) => {
         ret[d] = {};
-        let keys = Object.keys(data[d]).filter(
-          (nd) =>
-            normalizeString(nd).includes(normalizeString(e)) ||
-            normalizeString(data[d][nd].display_name).includes(
-              normalizeString(e),
-            ) ||
-            normalizeString(d.toString()).includes(normalizeString(e)),
-        );
+        let keys = Object.keys(data[d]).filter((nd) => {
+          const item = data[d][nd];
+          return (
+            normalizeString(nd).includes(searchTerm) ||
+            normalizeString(item.display_name).includes(searchTerm) ||
+            normalizeString(d.toString()).includes(searchTerm) ||
+            (item.metadata && searchInMetadata(item.metadata, searchTerm))
+          );
+        });
         keys.forEach((element) => {
           ret[d][element] = data[d][element];
         });

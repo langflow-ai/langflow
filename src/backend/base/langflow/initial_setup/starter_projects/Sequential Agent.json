@@ -390,6 +390,7 @@
             "frozen": false,
             "icon": "CrewAI",
             "lf_version": "1.0.15",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -587,6 +588,7 @@
             "frozen": false,
             "icon": "OpenAI",
             "lf_version": "1.0.15",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -878,6 +880,7 @@
             "frozen": false,
             "icon": "ChatOutput",
             "lf_version": "1.0.15",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1161,6 +1164,7 @@
             "frozen": false,
             "icon": "prompts",
             "lf_version": "1.0.15",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1281,6 +1285,7 @@
             "frozen": false,
             "icon": "prompts",
             "lf_version": "1.0.15",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1401,6 +1406,7 @@
             "frozen": false,
             "icon": "prompts",
             "lf_version": "1.0.15",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1528,6 +1534,7 @@
             "frozen": false,
             "icon": "CrewAI",
             "lf_version": "1.0.15",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1878,6 +1885,7 @@
             "frozen": false,
             "icon": "CrewAI",
             "lf_version": "1.0.15",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -2228,6 +2236,7 @@
             "frozen": false,
             "icon": "CrewAI",
             "lf_version": "1.0.15",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -2562,6 +2571,7 @@
             "field_order": [],
             "frozen": false,
             "lf_version": "1.0.15",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
