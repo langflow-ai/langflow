@@ -159,6 +159,7 @@
             "frozen": false,
             "icon": "ChatInput",
             "lf_version": "1.0.16",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -380,6 +381,7 @@
             "frozen": false,
             "icon": "ChatOutput",
             "lf_version": "1.0.16",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -588,6 +590,7 @@
             "frozen": false,
             "icon": "OpenAI",
             "lf_version": "1.0.16",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1166,6 +1169,7 @@
             "frozen": false,
             "icon": "calculator",
             "lf_version": "1.0.16",
+            "metadata": {},
             "official": false,
             "output_types": [],
             "outputs": [
@@ -1277,6 +1281,7 @@
               "code"
             ],
             "frozen": false,
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {

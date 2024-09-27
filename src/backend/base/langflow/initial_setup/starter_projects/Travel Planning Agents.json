@@ -399,6 +399,7 @@
             "frozen": false,
             "icon": "ChatInput",
             "lf_version": "1.0.15",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -620,6 +621,7 @@
             "frozen": false,
             "icon": "ChatOutput",
             "lf_version": "1.0.15",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -827,6 +829,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1405,6 +1408,7 @@
             ],
             "frozen": false,
             "lf_version": "1.0.15",
+            "metadata": {},
             "official": false,
             "output_types": [],
             "outputs": [
@@ -2265,6 +2269,7 @@
             "frozen": false,
             "icon": "calculator",
             "lf_version": "1.0.15",
+            "metadata": {},
             "official": false,
             "output_types": [],
             "outputs": [
