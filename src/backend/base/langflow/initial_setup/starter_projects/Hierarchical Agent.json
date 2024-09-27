@@ -326,6 +326,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -574,6 +575,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -868,6 +870,7 @@
             ],
             "frozen": false,
             "icon": "ChatOutput",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1058,6 +1061,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1202,6 +1206,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1460,6 +1465,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1721,6 +1727,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -2019,6 +2026,7 @@
             "is_composition": null,
             "is_input": null,
             "is_output": null,
+            "metadata": {},
             "name": "",
             "output_types": [],
             "outputs": [
@@ -2137,6 +2145,7 @@
             ],
             "frozen": false,
             "icon": "ChatInput",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -2356,6 +2365,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -2606,6 +2616,7 @@
               "search_params"
             ],
             "frozen": false,
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -2668,7 +2679,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any, Dict, List, Optional\n\nfrom langchain.tools import StructuredTool\nfrom langchain_community.utilities.searchapi import SearchApiAPIWrapper\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import DictInput, IntInput, MessageTextInput, MultilineInput, SecretStrInput\nfrom langflow.schema import Data\n\n\nclass SearchAPIComponent(LCToolComponent):\n    display_name: str = \"Search API\"\n    description: str = \"Call the searchapi.io API with result limiting\"\n    name = \"SearchAPI\"\n    documentation: str = \"https://www.searchapi.io/docs/google\"\n\n    inputs = [\n        MessageTextInput(name=\"engine\", display_name=\"Engine\", value=\"google\"),\n        SecretStrInput(name=\"api_key\", display_name=\"SearchAPI API Key\", required=True),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n        ),\n        DictInput(name=\"search_params\", display_name=\"Search parameters\", advanced=True, is_list=True),\n        IntInput(name=\"max_results\", display_name=\"Max Results\", value=5, advanced=True),\n        IntInput(name=\"max_snippet_length\", display_name=\"Max Snippet Length\", value=100, advanced=True),\n    ]\n\n    class SearchAPISchema(BaseModel):\n        query: str = Field(..., description=\"The search query\")\n        params: Optional[Dict[str, Any]] = Field(default_factory=dict, description=\"Additional search parameters\")\n        max_results: int = Field(5, description=\"Maximum number of results to return\")\n        max_snippet_length: int = Field(100, description=\"Maximum length of each result snippet\")\n\n    def _build_wrapper(self):\n        return SearchApiAPIWrapper(engine=self.engine, searchapi_api_key=self.api_key)\n\n    def build_tool(self) -> Tool:\n        wrapper = self._build_wrapper()\n\n        def search_func(\n            query: str, params: Optional[Dict[str, Any]] = None, max_results: int = 5, max_snippet_length: int = 100\n        ) -> List[Dict[str, Any]]:\n            params = params or {}\n            full_results = wrapper.results(query=query, **params)\n            organic_results = full_results.get(\"organic_results\", [])[:max_results]\n\n            limited_results = []\n            for result in organic_results:\n                limited_result = {\n                    \"title\": result.get(\"title\", \"\")[:max_snippet_length],\n                    \"link\": result.get(\"link\", \"\"),\n                    \"snippet\": result.get(\"snippet\", \"\")[:max_snippet_length],\n                }\n                limited_results.append(limited_result)\n\n            return limited_results\n\n        tool = StructuredTool.from_function(\n            name=\"search_api\",\n            description=\"Search for recent results using searchapi.io with result limiting\",\n            func=search_func,\n            args_schema=self.SearchAPISchema,\n        )\n\n        self.status = f\"Search API Tool created with engine: {self.engine}\"\n        return tool\n\n    def run_model(self) -> List[Data]:\n        tool = self.build_tool()\n        results = tool.run(\n            {\n                \"query\": self.input_value,\n                \"params\": self.search_params or {},\n                \"max_results\": self.max_results,\n                \"max_snippet_length\": self.max_snippet_length,\n            }\n        )\n\n        data_list = [Data(data=result, text=result.get(\"snippet\", \"\")) for result in results]\n\n        self.status = data_list\n        return data_list\n"
+                "value": "from typing import Any\n\nfrom langchain.tools import StructuredTool\nfrom langchain_community.utilities.searchapi import SearchApiAPIWrapper\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import DictInput, IntInput, MessageTextInput, MultilineInput, SecretStrInput\nfrom langflow.schema import Data\n\n\nclass SearchAPIComponent(LCToolComponent):\n    display_name: str = \"Search API\"\n    description: str = \"Call the searchapi.io API with result limiting\"\n    name = \"SearchAPI\"\n    documentation: str = \"https://www.searchapi.io/docs/google\"\n\n    inputs = [\n        MessageTextInput(name=\"engine\", display_name=\"Engine\", value=\"google\"),\n        SecretStrInput(name=\"api_key\", display_name=\"SearchAPI API Key\", required=True),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n        ),\n        DictInput(name=\"search_params\", display_name=\"Search parameters\", advanced=True, is_list=True),\n        IntInput(name=\"max_results\", display_name=\"Max Results\", value=5, advanced=True),\n        IntInput(name=\"max_snippet_length\", display_name=\"Max Snippet Length\", value=100, advanced=True),\n    ]\n\n    class SearchAPISchema(BaseModel):\n        query: str = Field(..., description=\"The search query\")\n        params: dict[str, Any] | None = Field(default_factory=dict, description=\"Additional search parameters\")\n        max_results: int = Field(5, description=\"Maximum number of results to return\")\n        max_snippet_length: int = Field(100, description=\"Maximum length of each result snippet\")\n\n    def _build_wrapper(self):\n        return SearchApiAPIWrapper(engine=self.engine, searchapi_api_key=self.api_key)\n\n    def build_tool(self) -> Tool:\n        wrapper = self._build_wrapper()\n\n        def search_func(\n            query: str, params: dict[str, Any] | None = None, max_results: int = 5, max_snippet_length: int = 100\n        ) -> list[dict[str, Any]]:\n            params = params or {}\n            full_results = wrapper.results(query=query, **params)\n            organic_results = full_results.get(\"organic_results\", [])[:max_results]\n\n            limited_results = []\n            for result in organic_results:\n                limited_result = {\n                    \"title\": result.get(\"title\", \"\")[:max_snippet_length],\n                    \"link\": result.get(\"link\", \"\"),\n                    \"snippet\": result.get(\"snippet\", \"\")[:max_snippet_length],\n                }\n                limited_results.append(limited_result)\n\n            return limited_results\n\n        tool = StructuredTool.from_function(\n            name=\"search_api\",\n            description=\"Search for recent results using searchapi.io with result limiting\",\n            func=search_func,\n            args_schema=self.SearchAPISchema,\n        )\n\n        self.status = f\"Search API Tool created with engine: {self.engine}\"\n        return tool\n\n    def run_model(self) -> list[Data]:\n        tool = self.build_tool()\n        results = tool.run(\n            {\n                \"query\": self.input_value,\n                \"params\": self.search_params or {},\n                \"max_results\": self.max_results,\n                \"max_snippet_length\": self.max_snippet_length,\n            }\n        )\n\n        data_list = [Data(data=result, text=result.get(\"snippet\", \"\")) for result in results]\n\n        self.status = data_list\n        return data_list\n"
               },
               "engine": {
                 "advanced": false,

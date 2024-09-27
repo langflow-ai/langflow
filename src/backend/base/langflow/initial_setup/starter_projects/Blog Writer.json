@@ -156,6 +156,7 @@
             ],
             "frozen": false,
             "icon": "layout-template",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -287,6 +288,7 @@
             ],
             "frozen": false,
             "icon": "braces",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -423,6 +425,7 @@
             ],
             "frozen": false,
             "icon": "prompts",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -664,6 +667,7 @@
             ],
             "frozen": false,
             "icon": "ChatOutput",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -865,6 +869,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {

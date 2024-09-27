@@ -8,7 +8,6 @@ import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
-
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -62,6 +61,10 @@ import isWrappedWithClass from "./utils/is-wrapped-with-class";
 const nodeTypes = {
   genericNode: GenericNode,
   noteNode: NoteNode,
+};
+
+const edgeTypes = {
+  default: DefaultEdge,
 };
 
 export default function Page({ view }: { view?: boolean }): JSX.Element {
@@ -464,7 +467,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
             connectionRadius={25}
-            edgeTypes={{ default: DefaultEdge }}
+            edgeTypes={edgeTypes}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
             onNodeDragStop={onNodeDragStop}

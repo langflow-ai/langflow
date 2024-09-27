@@ -64,12 +64,11 @@ help: ## show this help message
 
 reinstall_backend: ## forces reinstall all dependencies (no caching)
 	@echo 'Installing backend dependencies'
-	#@poetry install > /dev/null 2>&1
-	@cd src/backend/base && uv sync -n --reinstall && cd ../../../ && uv sync -n --reinstall > /dev/null 2>&1
+	@uv sync -n --reinstall --frozen
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@cd src/backend/base && uv sync --frozen && cd ../../../ && uv sync --frozen > /dev/null 2>&1
+	@uv sync --frozen
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
@@ -140,7 +139,7 @@ coverage: ## run the tests and generate a coverage report
 	#@poetry run coverage erase
 
 unit_tests: ## run unit tests
-	cd src/backend/base && uv sync --extra dev && cd ../../../ && uv sync --extra dev > /dev/null 2>&1
+	@uv sync --extra dev --frozen
 ifeq ($(async), true)
 	uv run pytest src/backend/tests \
 		--ignore=src/backend/tests/integration \
