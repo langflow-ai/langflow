@@ -82,6 +82,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   isBuilding: false,
   stopBuilding: () => {
     get().buildController.abort();
+    get().updateEdgesRunningByNodes(
+      get().nodes.map((n) => n.id),
+      false,
+    );
     set({ isBuilding: false });
   },
   isPending: true,
