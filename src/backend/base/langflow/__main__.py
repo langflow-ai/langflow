@@ -138,6 +138,11 @@ def run(
         help="Defines the number of retries for the health check.",
         envvar="LANGFLOW_HEALTH_CHECK_MAX_RETRIES",
     ),
+    max_file_size_upload: int = typer.Option(
+        100,
+        help="Defines the maximum file size for the upload in MB.",
+        envvar="LANGFLOW_MAX_FILE_SIZE_UPLOAD",
+    ),
 ):
     """
     Run Langflow.
@@ -158,6 +163,7 @@ def run(
         auto_saving=auto_saving,
         auto_saving_interval=auto_saving_interval,
         health_check_max_retries=health_check_max_retries,
+        max_file_size_upload=max_file_size_upload,
     )
     # create path object if path is provided
     static_files_dir: Path | None = Path(path) if path else None
