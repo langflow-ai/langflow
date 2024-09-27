@@ -431,6 +431,7 @@ def update_settings(
     auto_saving: bool = True,
     auto_saving_interval: int = 1000,
     health_check_max_retries: int = 5,
+    max_file_size_upload: int = 100,
 ):
     """Update the settings from a config file."""
     from langflow.services.utils import initialize_settings_service
@@ -463,6 +464,9 @@ def update_settings(
     if health_check_max_retries is not None:
         logger.debug(f"Setting health_check_max_retries to {health_check_max_retries}")
         settings_service.settings.update_settings(health_check_max_retries=health_check_max_retries)
+    if max_file_size_upload is not None:
+        logger.debug(f"Setting max_file_size_upload to {max_file_size_upload}")
+        settings_service.settings.update_settings(max_file_size_upload=max_file_size_upload)
 
 
 def is_class_method(func, cls):

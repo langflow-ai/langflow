@@ -2,6 +2,8 @@ import { Button } from "../../../../../../components/ui/button";
 
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
+import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
+import useAlertStore from "@/stores/alertStore";
 import { useEffect, useState } from "react";
 import IconComponent from "../../../../../../components/genericIconComponent";
 import {
@@ -18,6 +20,8 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [filePath, setFilePath] = useState("");
   const [image, setImage] = useState<string | null>(null);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { validateFileSize } = useFileSizeValidator(setErrorData);
 
   useEffect(() => {
     if (filePath) {
@@ -74,6 +78,9 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
 
   const upload = async (file) => {
     if (file) {
+      if (!validateFileSize(file)) {
+        return;
+      }
       // Check if a file was selected
       const fileReader = new FileReader();
       fileReader.onload = (event) => {
@@ -93,7 +100,11 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
             const { file_path } = data;
             setFilePath(file_path);
           },
-          onError: () => {
+          onError: (error) => {
+            setErrorData({
+              title: "Error uploading file",
+              list: [error.response?.data?.detail],
+            });
             console.error("Error occurred while uploading file");
           },
         },
