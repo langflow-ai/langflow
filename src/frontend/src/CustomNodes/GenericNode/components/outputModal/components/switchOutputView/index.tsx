@@ -1,3 +1,4 @@
+import { MAX_TEXT_LENGTH } from "@/constants/constants";
 import { LogsLogType, OutputLogType } from "@/types/api";
 import { useMemo } from "react";
 import DataOutputComponent from "../../../../../../components/dataOutputComponent";
@@ -17,7 +18,6 @@ interface SwitchOutputViewProps {
   outputName: string;
   type: "Outputs" | "Logs";
 }
-const MAX_TEXT_LENGTH = 99999;
 
 const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   nodeId,
