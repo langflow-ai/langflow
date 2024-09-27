@@ -204,7 +204,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
-    @check_cached_vector_store
     def insert_in_dict(self, build_config, field_name, new_parameters):
         # Insert the new key-value pair after the found key
         for new_field_name, new_parameter in new_parameters.items():
