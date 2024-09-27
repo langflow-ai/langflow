@@ -1886,7 +1886,9 @@ class Graph:
     def __filter_vertices(self, vertex_id: str, is_start: bool = False):
         dictionaryized_graph = self.__to_dict()
         parent_node_map = {vertex.id: vertex.parent_node_id for vertex in self.vertices}
-        vertex_ids = sort_up_to_vertex(dictionaryized_graph, vertex_id, parent_node_map, is_start)
+        vertex_ids = sort_up_to_vertex(
+            graph=dictionaryized_graph, vertex_id=vertex_id, parent_node_map=parent_node_map, is_start=is_start
+        )
         return [self.get_vertex(vertex_id) for vertex_id in vertex_ids]
 
     def sort_vertices(
