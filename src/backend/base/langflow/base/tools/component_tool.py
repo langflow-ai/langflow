@@ -47,8 +47,8 @@ def _build_output_function(component: Component, output_method: Callable):
 
 def _format_tool_name(name: str):
     # format to '^[a-zA-Z0-9_-]+$'."
-    # to do that we must remove all non-alphanumeric characters
-    return re.sub(r"[^a-zA-Z0-9_-]", "-", name)
+    # Replace non-alphanumeric characters except '.' with '-'
+    return re.sub(r"[^a-zA-Z0-9_.-]", "-", name)
 
 
 class ComponentToolkit:  # type: ignore
