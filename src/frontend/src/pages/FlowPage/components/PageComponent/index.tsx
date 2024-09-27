@@ -8,8 +8,6 @@ import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
-
-import { useQueryClient } from "@tanstack/react-query";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -72,10 +70,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const querieClient = useQueryClient();
-  useEffect(() => {
-    querieClient.removeQueries({ queryKey: ["useGetFolder"] });
-  }, []);
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
