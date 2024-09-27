@@ -69,8 +69,7 @@ reinstall_backend: ## forces reinstall all dependencies (no caching)
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	#@poetry install > /dev/null 2>&1
-	@cd src/backend/base && uv sync && cd ../../../ && uv sync > /dev/null 2>&1
+	@cd src/backend/base && uv sync --frozen && cd ../../../ && uv sync --frozen > /dev/null 2>&1
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
@@ -326,7 +325,7 @@ ifdef main
 	make install_frontendci
 	make build_frontend
 	make build_langflow_base
-	make build_langflow
+	make build_langflow args="$(args)"
 endif
 
 build_langflow_base:
@@ -338,7 +337,7 @@ build_langflow_backup:
 
 build_langflow:
 	uv lock --no-upgrade
-	uv build
+	uv build $(args)
 ifdef restore
 	mv pyproject.toml.bak pyproject.toml
 	mv uv.lock.bak uv.lock
@@ -416,20 +415,18 @@ update: ## update dependencies
 	uv sync --upgrade
 
 publish_base:
-	#TODO: replace with uvx twine upload dist/*
-	cd src/backend/base && poetry publish --skip-existing
+	cd src/backend/base && uv publish
 
 publish_langflow:
-	#TODO: replace with uvx twine upload dist/*
-	poetry publish
+	uv publish
 
 publish_base_testpypi:
-	#TODO: replace with uvx twine upload dist/*
-	cd src/backend/base && poetry publish --skip-existing -r test-pypi
+	# TODO: update this to use the test-pypi repository
+	cd src/backend/base && uv publish -r test-pypi
 
 publish_langflow_testpypi:
-	#TODO: replace with uvx twine upload dist/*
-	poetry publish -r test-pypi
+	# TODO: update this to use the test-pypi repository
+	uv publish -r test-pypi
 
 publish: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
