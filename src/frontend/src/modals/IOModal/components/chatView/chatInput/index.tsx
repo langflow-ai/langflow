@@ -1,7 +1,6 @@
-import { INVALID_FILE_SIZE_ALERT } from "@/constants/alerts_constants";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
@@ -38,12 +37,12 @@ export default function ChatInput({
   const [inputFocus, setInputFocus] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const maxFileSizeUpload = useUtilityStore((state) => state.maxFileSizeUpload);
+  const { validateFileSize } = useFileSizeValidator(setErrorData);
 
   useFocusOnUnlock(lockChat, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
 
-  const { mutate, isPending } = usePostUploadFile();
+  const { mutate } = usePostUploadFile();
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
@@ -68,10 +67,7 @@ export default function ChatInput({
     if (file) {
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
-      if (file.size > maxFileSizeUpload) {
-        setErrorData({
-          title: INVALID_FILE_SIZE_ALERT(maxFileSizeUpload / 1024 / 1024),
-        });
+      if (!validateFileSize(file)) {
         return;
       }
 

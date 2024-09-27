@@ -1,10 +1,9 @@
 import { Button } from "../../../../../../components/ui/button";
 
-import { INVALID_FILE_SIZE_ALERT } from "@/constants/alerts_constants";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
+import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useState } from "react";
 import IconComponent from "../../../../../../components/genericIconComponent";
 import {
@@ -22,7 +21,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
   const [filePath, setFilePath] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const maxFileSizeUpload = useUtilityStore((state) => state.maxFileSizeUpload);
+  const { validateFileSize } = useFileSizeValidator(setErrorData);
 
   useEffect(() => {
     if (filePath) {
@@ -79,13 +78,9 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
 
   const upload = async (file) => {
     if (file) {
-      if (file.size > maxFileSizeUpload) {
-        setErrorData({
-          title: INVALID_FILE_SIZE_ALERT(maxFileSizeUpload / 1024 / 1024),
-        });
+      if (!validateFileSize(file)) {
         return;
       }
-
       // Check if a file was selected
       const fileReader = new FileReader();
       fileReader.onload = (event) => {
