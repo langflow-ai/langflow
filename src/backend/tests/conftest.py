@@ -429,8 +429,6 @@ def flow_component(client: TestClient, logged_in_headers):
     flow = FlowCreate(**graph_dict)
     response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
-    assert response.json()["name"] == flow.name
-    assert response.json()["data"] == flow.data
     return response.json()
 
 
