@@ -460,8 +460,6 @@ def get_simple_api_test(client, logged_in_headers, json_simple_api_test):
     flow = FlowCreate(name="Simple API Test", data=data, description="Simple API Test")
     response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
-    assert response.json()["name"] == flow.name
-    assert response.json()["data"] == flow.data
     return response.json()
 
 

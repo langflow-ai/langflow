@@ -72,7 +72,7 @@ def test_read_flows_components_only(client: TestClient, flow_component: dict, lo
     assert response.status_code == 200
     names = [flow["name"] for flow in response.json()]
     assert any("Chat Input Component" in name for name in names)
-    assert all(flow["is_component"] is True for flow in response.json())
+    assert all(flow["is_component"] is True for flow in response.json()), [flow["name"] for flow in response.json()]
 
 
 def test_read_flow(client: TestClient, json_flow: str, logged_in_headers):
