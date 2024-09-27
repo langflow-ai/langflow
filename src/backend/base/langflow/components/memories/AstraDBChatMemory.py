@@ -1,5 +1,7 @@
 import os
 
+from astrapy.admin import parse_api_endpoint
+
 from langflow.base.memory.model import LCChatMemoryComponent
 from langflow.field_typing import BaseChatMessageHistory
 from langflow.inputs import MessageTextInput, SecretStrInput, StrInput
@@ -62,5 +64,6 @@ class AstraDBChatMemory(LCChatMemoryComponent):
             token=self.token,
             api_endpoint=self.api_endpoint,
             namespace=self.namespace or None,
+            environment=parse_api_endpoint(self.api_endpoint).environment,
         )
         return memory
