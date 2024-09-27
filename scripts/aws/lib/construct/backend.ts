@@ -75,6 +75,16 @@ export class BackEndCluster extends Construct {
         "host": ecs.Secret.fromSecretsManager(secretsDB, 'host'),
         "password": ecs.Secret.fromSecretsManager(secretsDB, 'password'),
       },
+      // To enable remote exec https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ecs/execute-command.html
+      // aws ecs execute-command \
+      // --cluster <cluster-name> \
+      // --task <task-id> \
+      // --container <container-name> \
+      // --interactive \
+      // --command "/bin/sh"
+      linuxParameters: new ecs.LinuxParameters(this, 'Langflow-Remote-Exec', {
+        initProcessEnabled: true,
+      }),
     });
     
     const backendService = new ecs.FargateService(this, 'BackEndService', {
