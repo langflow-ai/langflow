@@ -3,7 +3,7 @@ from typing import cast
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain_cohere import CohereRerank
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.field_typing import Retriever, VectorStore
 from langflow.io import (
     DropdownInput,
@@ -80,5 +80,6 @@ class CohereRerankComponent(LCVectorStoreComponent):
         self.status = data
         return data
 
+    @check_cached_vector_store
     def build_vector_store(self) -> VectorStore:
         raise NotImplementedError("Cohere Rerank does not support vector stores.")
