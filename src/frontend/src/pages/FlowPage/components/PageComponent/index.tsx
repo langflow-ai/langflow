@@ -13,7 +13,6 @@ import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
-
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
