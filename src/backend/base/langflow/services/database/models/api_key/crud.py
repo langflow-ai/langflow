@@ -1,7 +1,6 @@
 import datetime
 import secrets
 import threading
-from typing import List, Optional
 from uuid import UUID
 
 from sqlmodel import Session, select
@@ -10,7 +9,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
 
 
-def get_api_keys(session: Session, user_id: UUID) -> List[ApiKeyRead]:
+def get_api_keys(session: Session, user_id: UUID) -> list[ApiKeyRead]:
     query: SelectOfScalar = select(ApiKey).where(ApiKey.user_id == user_id)
     api_keys = session.exec(query).all()
     return [ApiKeyRead.model_validate(api_key) for api_key in api_keys]
@@ -43,10 +42,10 @@ def delete_api_key(session: Session, api_key_id: UUID) -> None:
     session.commit()
 
 
-def check_key(session: Session, api_key: str) -> Optional[ApiKey]:
+def check_key(session: Session, api_key: str) -> ApiKey | None:
     """Check if the API key is valid."""
     query: SelectOfScalar = select(ApiKey).where(ApiKey.api_key == api_key)
-    api_key_object: Optional[ApiKey] = session.exec(query).first()
+    api_key_object: ApiKey | None = session.exec(query).first()
     if api_key_object is not None:
         threading.Thread(
             target=update_total_uses,

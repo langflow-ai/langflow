@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 from langchain_community.vectorstores import Vectara
 from loguru import logger
@@ -93,7 +93,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             logger.debug("No documents to add to Vectara.")
             self.status = "No valid documents to add to Vectara"
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():

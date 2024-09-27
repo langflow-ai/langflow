@@ -915,3 +915,5 @@ export const COLOR_OPTIONS = {
   amber: "var(--note-amber)",
   red: "var(--note-red)",
 };
+
+export const MAX_TEXT_LENGTH = 99999;

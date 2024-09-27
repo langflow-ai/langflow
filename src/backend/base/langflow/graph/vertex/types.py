@@ -1,14 +1,14 @@
 import asyncio
 import json
-from typing import TYPE_CHECKING, Any, cast
 from collections.abc import AsyncIterator, Generator, Iterator
+from typing import TYPE_CHECKING, Any, cast
 
 import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, log_transaction, log_vertex_build, serialize_field
+from langflow.graph.utils import UnbuiltObject, log_transaction, log_vertex_build, rewrite_file_path, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.exceptions import NoComponentInstance
 from langflow.graph.vertex.schema import NodeData
@@ -256,6 +256,10 @@ class InterfaceVertex(ComponentVertex):
         sender = self.params.get("sender", None)
         sender_name = self.params.get("sender_name", None)
         message = self.params.get(INPUT_FIELD_NAME, None)
+        files = self.params.get("files", [])
+        treat_file_path = files is not None and not isinstance(files, list) and isinstance(files, str)
+        if treat_file_path:
+            self.params["files"] = rewrite_file_path(files)
         files = [{"path": file} if isinstance(file, str) else file for file in self.params.get("files", [])]
         if isinstance(message, str):
             message = unescape_string(message)
@@ -266,7 +270,7 @@ class InterfaceVertex(ComponentVertex):
             text_output = self.results["message"].text
         else:
             text_output = message
-        if isinstance(text_output, (AIMessage, AIMessageChunk)):
+        if isinstance(text_output, AIMessage | AIMessageChunk):
             artifacts = ChatOutputResponse.from_message(
                 text_output,
                 sender=sender,
@@ -279,7 +283,7 @@ class InterfaceVertex(ComponentVertex):
                 message = dict_to_codeblock(text_output)
             elif isinstance(text_output, Data):
                 message = text_output.text
-            elif isinstance(message, (AsyncIterator, Iterator)):
+            elif isinstance(message, AsyncIterator | Iterator):
                 stream_url = self.build_stream_url()
                 message = ""
                 self.results["text"] = message
@@ -353,7 +357,7 @@ class InterfaceVertex(ComponentVertex):
                 message = self._process_chat_component()
             elif self.vertex_type in RECORDS_COMPONENTS:
                 message = self._process_data_component()
-            if isinstance(self._built_object, (AsyncIterator, Iterator)):
+            if isinstance(self._built_object, AsyncIterator | Iterator):
                 if self.params.get("return_data", False):
                     self._built_object = Data(text=message, data=self.artifacts)
                 else:
@@ -365,7 +369,7 @@ class InterfaceVertex(ComponentVertex):
 
     async def stream(self):
         iterator = self.params.get(INPUT_FIELD_NAME, None)
-        if not isinstance(iterator, (AsyncIterator, Iterator)):
+        if not isinstance(iterator, AsyncIterator | Iterator):
             raise ValueError("The message must be an iterator or an async iterator.")
         is_async = isinstance(iterator, AsyncIterator)
         complete_message = ""
@@ -381,6 +385,12 @@ class InterfaceVertex(ComponentVertex):
                 message = message.text if hasattr(message, "text") else message
                 yield message
                 complete_message += message
+
+        files = self.params.get("files", [])
+
+        treat_file_path = files is not None and not isinstance(files, list) and isinstance(files, str)
+        if treat_file_path:
+            self.params["files"] = rewrite_file_path(files)
 
         if hasattr(self.params.get("sender_name"), "get_text"):
             sender_name = self.params.get("sender_name").get_text()
@@ -405,7 +415,7 @@ class InterfaceVertex(ComponentVertex):
         self.params[INPUT_FIELD_NAME] = complete_message
         if isinstance(self._built_object, dict):
             for key, value in self._built_object.items():
-                if hasattr(value, "text") and (isinstance(value.text, (AsyncIterator, Iterator)) or value.text == ""):
+                if hasattr(value, "text") and (isinstance(value.text, AsyncIterator | Iterator) or value.text == ""):
                     self._built_object[key] = message
         else:
             self._built_object = message
@@ -420,7 +430,7 @@ class InterfaceVertex(ComponentVertex):
         for edge in edges:
             origin_vertex = self.graph.get_vertex(edge.source_id)
             for key, value in origin_vertex.results.items():
-                if isinstance(value, (AsyncIterator, Iterator)):
+                if isinstance(value, AsyncIterator | Iterator):
                     origin_vertex.results[key] = complete_message
         if self._custom_component:
             if hasattr(self._custom_component, "should_store_message") and hasattr(

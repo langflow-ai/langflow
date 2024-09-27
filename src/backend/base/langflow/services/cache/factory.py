@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 
+from langflow.logging.logger import logger
 from langflow.services.cache.disk import AsyncDiskCache
 from langflow.services.cache.service import AsyncInMemoryCache, CacheService, RedisCache, ThreadingInMemoryCache
 from langflow.services.factory import ServiceFactory
-from langflow.logging.logger import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService

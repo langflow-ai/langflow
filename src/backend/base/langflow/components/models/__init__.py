@@ -8,8 +8,8 @@ from .GoogleGenerativeAIModel import GoogleGenerativeAIComponent
 from .HuggingFaceModel import HuggingFaceEndpointsComponent
 from .OllamaModel import ChatOllamaComponent
 from .OpenAIModel import OpenAIModelComponent
-from .VertexAiModel import ChatVertexAIComponent
 from .PerplexityModel import PerplexityComponent
+from .VertexAiModel import ChatVertexAIComponent
 
 __all__ = [
     "AIMLModelComponent",

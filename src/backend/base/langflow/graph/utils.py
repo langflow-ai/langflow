@@ -1,7 +1,7 @@
 import json
+from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional
-from collections.abc import Generator
 from uuid import UUID
 
 from langchain_core.documents import Document
@@ -70,7 +70,7 @@ def serialize_field(value):
     """Unified serialization function for handling both BaseModel and Document types,
     including handling lists of these types."""
 
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [serialize_field(v) for v in value]
     elif isinstance(value, Document):
         return value.to_json()
@@ -126,12 +126,12 @@ def _vertex_to_primitive_dict(target: "Vertex") -> dict:
     """
     # Removes all keys that the values aren't python types like str, int, bool, etc.
     params = {
-        key: value for key, value in target.params.items() if isinstance(value, (str, int, bool, float, list, dict))
+        key: value for key, value in target.params.items() if isinstance(value, str | int | bool | float | list | dict)
     }
     # if it is a list we need to check if the contents are python types
     for key, value in params.items():
         if isinstance(value, list):
-            params[key] = [item for item in value if isinstance(item, (str, int, bool, float, list, dict))]
+            params[key] = [item for item in value if isinstance(item, str | int | bool | float | list | dict)]
     return params
 
 
@@ -185,3 +185,19 @@ def log_vertex_build(
             logger.debug(f"Logged vertex build: {inserted.build_id}")
     except Exception as e:
         logger.exception(f"Error logging vertex build: {e}")
+
+
+def rewrite_file_path(file_path: str):
+    file_path = file_path.replace("\\", "/")
+
+    if ":" in file_path:
+        file_path = file_path.split(":", 1)[-1]
+
+    file_path_split = [part for part in file_path.split("/") if part]
+
+    if len(file_path_split) >= 2:
+        consistent_file_path = f"{file_path_split[-2]}/{file_path_split[-1]}"
+    else:
+        consistent_file_path = "/".join(file_path_split)
+
+    return [consistent_file_path]

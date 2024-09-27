@@ -150,7 +150,7 @@ class Vertex:
             result = self._built_object
             # if it is not a dict or a string and hasattr model_dump then
             # return the model_dump
-            if not isinstance(result, (dict, str)) and hasattr(result, "content"):
+            if not isinstance(result, dict | str) and hasattr(result, "content"):
                 return result.content
             return result
         if isinstance(self._built_object, str):
@@ -502,7 +502,7 @@ class Vertex:
             component_id = self.id
             _type = self.artifacts_type
 
-            if isinstance(sender_name, (Data, Message)):
+            if isinstance(sender_name, Data | Message):
                 sender_name = sender_name.get_text()
 
             messages = [
@@ -737,7 +737,7 @@ class Vertex:
                 message += " Make sure your build method returns a component."
 
             logger.warning(message)
-        elif isinstance(self._built_object, (Iterator, AsyncIterator)):
+        elif isinstance(self._built_object, Iterator | AsyncIterator):
             if self.display_name in ["Text Output"]:
                 raise ValueError(f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead.")
 

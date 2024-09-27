@@ -1,9 +1,10 @@
-from astra_assistants import patch  # type: ignore
-from typing import Any, Optional
+from typing import Any
 
-from langflow.custom import Component
+from astra_assistants import patch  # type: ignore
 from openai import OpenAI
 from openai.lib.streaming import AssistantEventHandler
+
+from langflow.custom import Component
 from langflow.inputs import MultilineInput
 from langflow.schema import dotdict
 from langflow.schema.message import Message
@@ -13,12 +14,13 @@ from langflow.template import Output
 class AssistantsRun(Component):
     display_name = "Run Assistant"
     description = "Executes an Assistant Run against a thread"
+    client = patch(OpenAI())
 
     def update_build_config(
         self,
         build_config: dotdict,
         field_value: Any,
-        field_name: Optional[str] = None,
+        field_name: str | None = None,
     ):
         if field_name == "thread_id":
             if field_value is None:

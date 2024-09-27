@@ -53,6 +53,8 @@ class FrontendNode(BaseModel):
     """Error message for the frontend node."""
     edited: bool = False
     """Whether the frontend node has been edited."""
+    metadata: dict = {}
+    """Metadata for the component node."""
 
     def set_documentation(self, documentation: str) -> None:
         """Sets the documentation of the frontend node."""
@@ -174,8 +176,8 @@ class FrontendNode(BaseModel):
         """Create a frontend node from inputs."""
         if "inputs" not in kwargs:
             raise ValueError("Missing 'inputs' argument.")
-        if "_outputs_maps" in kwargs:
-            kwargs["outputs"] = kwargs.pop("_outputs_maps")
+        if "_outputs_map" in kwargs:
+            kwargs["outputs"] = kwargs.pop("_outputs_map")
         inputs = kwargs.pop("inputs")
         template = Template(type_name="Component", fields=inputs)
         kwargs["template"] = template

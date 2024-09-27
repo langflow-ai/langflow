@@ -1,9 +1,11 @@
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect } from "react";
 import {
   CONSOLE_ERROR_MSG,
   INVALID_FILE_ALERT,
+  INVALID_FILE_SIZE_ALERT,
 } from "../../constants/alerts_constants";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -21,7 +23,7 @@ export default function InputFileComponent({
 }: FileComponentType): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-
+  const maxFileSizeUpload = useUtilityStore((state) => state.maxFileSizeUpload);
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
@@ -45,6 +47,12 @@ export default function InputFileComponent({
     createFileUpload({ multiple: false, accept: fileTypes?.join(",") }).then(
       (files) => {
         const file = files[0];
+        if (file.size > maxFileSizeUpload) {
+          setErrorData({
+            title: INVALID_FILE_SIZE_ALERT(maxFileSizeUpload / 1024 / 1024),
+          });
+          return;
+        }
         if (file) {
           if (checkFileType(file.name)) {
             // Upload the file
@@ -60,8 +68,12 @@ export default function InputFileComponent({
                   // sets the value to the user
                   handleOnNewValue({ value: file.name, file_path });
                 },
-                onError: () => {
+                onError: (error) => {
                   console.error(CONSOLE_ERROR_MSG);
+                  setErrorData({
+                    title: "Error uploading file",
+                    list: [error.response?.data?.detail],
+                  });
                 },
               },
             );

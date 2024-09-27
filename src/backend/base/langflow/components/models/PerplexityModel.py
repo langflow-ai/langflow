@@ -4,7 +4,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import FloatInput, SecretStrInput, DropdownInput, IntInput
+from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput
 
 
 class PerplexityComponent(LCModelComponent):
