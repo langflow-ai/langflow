@@ -339,9 +339,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         authentication = {**(self.z_04_authentication or kwargs.get("z_04_authentication", {}))}
 
         api_key_name = self.z_02_api_key_name or kwargs.get("z_02_api_key_name")
-        provider_key_name = self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key")
-        if provider_key_name:
-            authentication["providerKey"] = provider_key_name
+        provider_key = self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key")
         if api_key_name:
             authentication["providerKey"] = api_key_name
 
@@ -353,7 +351,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 "authentication": authentication,
                 "parameters": self.z_01_model_parameters or kwargs.get("z_01_model_parameters", {}),
             },
-            "collection_embedding_api_key": self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key"),
+            "collection_embedding_api_key": provider_key,
         }
 
     @check_cached_vector_store
