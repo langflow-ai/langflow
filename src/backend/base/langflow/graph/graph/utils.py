@@ -273,14 +273,16 @@ def get_root_of_group_node(
 def sort_up_to_vertex(
     graph: dict[str, dict[str, list[str]]],
     vertex_id: str,
-    parent_node_map: dict[str, str | None],
+    parent_node_map: dict[str, str | None] | None = None,
     is_start: bool = False,
 ) -> list[str]:
     """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
     try:
         stop_or_start_vertex = graph[vertex_id]
     except KeyError:
-        vertex_id = get_root_of_group_node(graph, vertex_id, parent_node_map)
+        if parent_node_map is None:
+            raise ValueError("Parent node map is required to find the root of a group node")
+        vertex_id = get_root_of_group_node(graph=graph, vertex_id=vertex_id, parent_node_map=parent_node_map)
         if vertex_id not in graph:
             raise ValueError(f"Vertex {vertex_id} not found into graph")
         stop_or_start_vertex = graph[vertex_id]
