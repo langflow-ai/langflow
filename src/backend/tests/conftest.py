@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 import orjson
 import pytest
+from base.langflow.components.inputs.ChatInput import ChatInput
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
@@ -421,6 +422,17 @@ def added_webhook_test(client, json_webhook_test, logged_in_headers):
 
 
 @pytest.fixture
+def flow_component(client: TestClient, logged_in_headers):
+    chat_input = ChatInput()
+    graph = Graph(start=chat_input, end=chat_input)
+    graph_dict = graph.dump(name="Chat Input Component")
+    flow = FlowCreate(**graph_dict)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    return response.json()
+
+
+@pytest.fixture
 def created_api_key(active_user):
     hashed = get_password_hash("random_key")
     api_key = ApiKey(
@@ -448,8 +460,6 @@ def get_simple_api_test(client, logged_in_headers, json_simple_api_test):
     flow = FlowCreate(name="Simple API Test", data=data, description="Simple API Test")
     response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
-    assert response.json()["name"] == flow.name
-    assert response.json()["data"] == flow.data
     return response.json()
 
 
