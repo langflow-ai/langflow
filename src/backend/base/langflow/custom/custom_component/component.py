@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from langflow.inputs.inputs import InputTypes
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
-CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name"]
+CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name", "_metadata"]
 
 
 class Component(CustomComponent):
@@ -40,6 +40,7 @@ class Component(CustomComponent):
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
     _current_output: str = ""
+    _metadata: dict = {}
 
     def __init__(self, **kwargs):
         # if key starts with _ it is a config

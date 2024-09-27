@@ -335,14 +335,14 @@ wheels = [
 
 [[package]]
 name = "authlib"
-version = "1.3.2"
+version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f3/75/47dbab150ef6f9298e227a40c93c7fed5f3ffb67c9fb62cd49f66285e46e/authlib-1.3.2.tar.gz", hash = "sha256:4b16130117f9eb82aa6eec97f6dd4673c3f960ac0283ccdae2897ee4bc030ba2", size = 147313 }
+sdist = { url = "https://files.pythonhosted.org/packages/09/47/df70ecd34fbf86d69833fe4e25bb9ecbaab995c8e49df726dd416f6bb822/authlib-1.3.1.tar.gz", hash = "sha256:7ae843f03c06c5c0debd63c9db91f9fda64fa62a42a77419fa15fbb7e7a58917", size = 146074 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/4c/9aa0416a403d5cc80292cb030bcd2c918cce2755e314d8c1aa18656e1e12/Authlib-1.3.2-py2.py3-none-any.whl", hash = "sha256:ede026a95e9f5cdc2d4364a52103f5405e75aa156357e831ef2bfd0bc5094dfc", size = 225111 },
+    { url = "https://files.pythonhosted.org/packages/87/1f/bc95e43ffb57c05b8efcc376dd55a0240bf58f47ddf5a0f92452b6457b75/Authlib-1.3.1-py2.py3-none-any.whl", hash = "sha256:d35800b973099bbadc49b42b256ecb80041ad56b7fe1216a362c7943c088f377", size = 223827 },
 ]
 
 [[package]]
@@ -2322,6 +2322,19 @@ wheels = [
 ]
 
 [[package]]
+name = "grpcio-health-checking"
+version = "1.62.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "grpcio" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/eb/9f/09df9b02fc8eafa3031d878c8a4674a0311293c8c6f1c942cdaeec204126/grpcio-health-checking-1.62.3.tar.gz", hash = "sha256:5074ba0ce8f0dcfe328408ec5c7551b2a835720ffd9b69dade7fa3e0dc1c7a93", size = 15640 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/40/4c/ee3173906196b741ac6ba55a9788ba9ebf2cd05f91715a49b6c3bfbb9d73/grpcio_health_checking-1.62.3-py3-none-any.whl", hash = "sha256:f29da7dd144d73b4465fe48f011a91453e9ff6c8af0d449254cf80021cab3e0d", size = 18547 },
+]
+
+[[package]]
 name = "grpcio-status"
 version = "1.62.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2484,7 +2497,7 @@ wheels = [
 
 [[package]]
 name = "httpx"
-version = "0.27.2"
+version = "0.27.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -2493,9 +2506,9 @@ dependencies = [
     { name = "idna" },
     { name = "sniffio" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/78/82/08f8c936781f67d9e6b9eeb8a0c8b4e406136ea4c3d1f89a5db71d42e0e6/httpx-0.27.2.tar.gz", hash = "sha256:f7c2be1d2f3c3c3160d441802406b206c2b76f5947b11115e6df10c6c65e66c2", size = 144189 }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/2d/3da5bdf4408b8b2800061c339f240c1802f2e82d55e50bd39c5a881f47f0/httpx-0.27.0.tar.gz", hash = "sha256:a0cb88a46f32dc874e04ee956e4c2764aba2aa228f650b06788ba6bda2962ab5", size = 126413 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/95/9377bcb415797e44274b51d46e3249eba641711cf3348050f76ee7b15ffc/httpx-0.27.2-py3-none-any.whl", hash = "sha256:7bb2708e112d8fdd7829cd4243970f0c223274051cb35ee80c03301ee29a3df0", size = 76395 },
+    { url = "https://files.pythonhosted.org/packages/41/7b/ddacf6dcebb42466abd03f368782142baa82e08fc0c1f8eaa05b4bae87d5/httpx-0.27.0-py3-none-any.whl", hash = "sha256:71d5465162c13681bff01ad59b2cc68dd838ea1f10e51574bac27103f00c91a5", size = 75590 },
 ]
 
 [package.optional-dependencies]
@@ -3528,7 +3541,7 @@ requires-dist = [
     { name = "celery", extras = ["redis"], marker = "extra == 'deploy'", specifier = ">=5.3.6" },
     { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
     { name = "chromadb", specifier = ">=0.4" },
-    { name = "clickhouse-connect", extras = ["clickhouse-connect"], marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
+    { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
     { name = "cohere", specifier = ">=5.5.3" },
     { name = "composio-langchain", specifier = "==0.5.9" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
@@ -3597,7 +3610,7 @@ requires-dist = [
     { name = "supabase", specifier = ">=2.3.0" },
     { name = "types-cachetools", specifier = ">=5.3.0.5" },
     { name = "upstash-vector", specifier = ">=0.5.0" },
-    { name = "weaviate-client" },
+    { name = "weaviate-client", specifier = ">=4.8" },
     { name = "wikipedia", specifier = ">=1.4.0" },
     { name = "wolframalpha", specifier = ">=5.1.3" },
     { name = "yfinance", specifier = ">=0.2.40" },
@@ -3608,7 +3621,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "dictdiffer", specifier = ">=0.9.0" },
-    { name = "httpx" },
+    { name = "httpx", specifier = ">=0.27.0" },
     { name = "ipykernel", specifier = ">=6.29.0" },
     { name = "mypy", specifier = ">=1.11.0" },
     { name = "packaging", specifier = ">=23.2,<24.0" },
@@ -3697,7 +3710,6 @@ dependencies = [
     { name = "typer" },
     { name = "uncurl" },
     { name = "uvicorn" },
-    { name = "websockets" },
 ]
 
 [package.optional-dependencies]
@@ -3759,14 +3771,14 @@ requires-dist = [
     { name = "asyncer", specifier = ">=0.0.5" },
     { name = "bcrypt", specifier = "==4.0.1" },
     { name = "cachetools", specifier = ">=5.3.1" },
-    { name = "celery", marker = "extra == 'all'" },
-    { name = "celery", marker = "extra == 'deploy'" },
+    { name = "celery", marker = "extra == 'all'", specifier = ">=5.3.1" },
+    { name = "celery", marker = "extra == 'deploy'", specifier = ">=5.3.1" },
     { name = "chardet", specifier = ">=5.2.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
     { name = "crewai", specifier = ">=0.36.0" },
     { name = "cryptography", specifier = ">=42.0.5,<44.0.0" },
-    { name = "ctransformers", marker = "extra == 'all'" },
-    { name = "ctransformers", marker = "extra == 'local'" },
+    { name = "ctransformers", marker = "extra == 'all'", specifier = ">=0.2" },
+    { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2" },
     { name = "devtools", marker = "extra == 'dev'", specifier = ">=0.12.2" },
     { name = "dictdiffer", marker = "extra == 'dev'", specifier = ">=0.9.0" },
     { name = "diskcache", specifier = ">=5.6.3" },
@@ -3776,20 +3788,20 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.111.0" },
     { name = "filelock", specifier = ">=3.15.4" },
     { name = "firecrawl-py", specifier = ">=0.0.16" },
-    { name = "flower", marker = "extra == 'all'" },
-    { name = "flower", marker = "extra == 'deploy'" },
+    { name = "flower", marker = "extra == 'all'", specifier = ">=1.0.0" },
+    { name = "flower", marker = "extra == 'deploy'", specifier = ">=1.0.0" },
     { name = "grandalf", specifier = ">=0.8.0" },
     { name = "gunicorn", specifier = ">=22.0.0" },
-    { name = "httpx" },
-    { name = "httpx", marker = "extra == 'dev'" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.0" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0" },
     { name = "langchain", specifier = "~=0.2.0" },
     { name = "langchain-core", specifier = ">=0.2.32" },
     { name = "langchain-experimental", specifier = ">=0.0.61" },
     { name = "langchainhub", specifier = "~=0.1.15" },
-    { name = "llama-cpp-python", marker = "extra == 'all'" },
-    { name = "llama-cpp-python", marker = "extra == 'local'" },
+    { name = "llama-cpp-python", marker = "extra == 'all'", specifier = ">=0.2.0" },
+    { name = "llama-cpp-python", marker = "extra == 'local'", specifier = ">=0.2.0" },
     { name = "loguru", specifier = ">=0.7.1" },
     { name = "multiprocess", specifier = ">=0.70.14" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.0" },
@@ -3824,14 +3836,14 @@ requires-dist = [
     { name = "python-docx", specifier = ">=1.1.0" },
     { name = "python-jose", specifier = ">=3.3.0" },
     { name = "python-multipart", specifier = ">=0.0.7" },
-    { name = "redis", marker = "extra == 'all'" },
-    { name = "redis", marker = "extra == 'deploy'" },
+    { name = "redis", marker = "extra == 'all'", specifier = ">=4.6.0" },
+    { name = "redis", marker = "extra == 'deploy'", specifier = ">=4.6.0" },
     { name = "requests", marker = "extra == 'dev'", specifier = ">=2.32.0" },
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21.1" },
     { name = "rich", specifier = ">=13.7.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.5" },
-    { name = "sentence-transformers", marker = "extra == 'all'" },
-    { name = "sentence-transformers", marker = "extra == 'local'" },
+    { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.0.0" },
+    { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
     { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1" },
     { name = "setuptools", specifier = ">=70" },
     { name = "spider-client", specifier = ">=0.0.27" },
@@ -3849,7 +3861,6 @@ requires-dist = [
     { name = "uncurl", specifier = ">=0.0.11" },
     { name = "uvicorn", specifier = ">=0.30.0" },
     { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.11" },
-    { name = "websockets" },
 ]
 
 [[package]]
@@ -7876,16 +7887,21 @@ wheels = [
 
 [[package]]
 name = "weaviate-client"
-version = "3.26.7"
+version = "4.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "authlib" },
+    { name = "grpcio" },
+    { name = "grpcio-health-checking" },
+    { name = "grpcio-tools" },
+    { name = "httpx" },
+    { name = "pydantic" },
     { name = "requests" },
     { name = "validators" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f8/2e/9588bae34c1d67d05ccc07d74a4f5d73cce342b916f79ab3a9114c6607bb/weaviate_client-3.26.7.tar.gz", hash = "sha256:ea538437800abc6edba21acf213accaf8a82065584ee8b914bae4a4ad4ef6b70", size = 210480 }
+sdist = { url = "https://files.pythonhosted.org/packages/4f/4d/650831937f25b8e788870b46a693a6e141d9d3d72bfd708ce88b0b01d69f/weaviate_client-4.8.1.tar.gz", hash = "sha256:2756996a2205bb991f258c064fc502011fc78a40e8786cb072208b1d3d7c9932", size = 681877 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2a/95/fb326052bc1d73cb3c19fcfaf6ebb477f896af68de07eaa1337e27ee57fa/weaviate_client-3.26.7-py3-none-any.whl", hash = "sha256:48b8d4b71df881b4e5e15964d7ac339434338ccee73779e3af7eab698a92083b", size = 120051 },
+    { url = "https://files.pythonhosted.org/packages/c8/d8/88610f5aaaffd3d2447fe755b86a8bb06b79472e45ec999baa5040dea9a3/weaviate_client-4.8.1-py3-none-any.whl", hash = "sha256:c16453ebfd9bd4045675f8e50841d1af21aa9af1332f379d0418c4531c03bd44", size = 374526 },
 ]
 
 [[package]]

@@ -31,6 +31,7 @@ __all__ = [
     "link_extractors",
     "memories",
     "outputs",
+    "output_parsers",
     "retrievers",
     "textsplitters",
     "toolkits",
