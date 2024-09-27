@@ -53,7 +53,7 @@ def test_get_successors_z(graph):
 
     result = utils.get_successors(graph, vertex_id)
 
-    assert set(result) == {}
+    assert len(result) == 0
 
 
 def test_sort_up_to_vertex_n_is_start(graph):
