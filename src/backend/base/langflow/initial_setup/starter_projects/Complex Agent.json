@@ -629,6 +629,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -874,6 +875,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1164,6 +1166,7 @@
             ],
             "frozen": false,
             "icon": "ChatOutput",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1349,6 +1352,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1488,6 +1492,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1742,6 +1747,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -2001,6 +2007,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -2295,6 +2302,7 @@
             "is_composition": null,
             "is_input": null,
             "is_output": null,
+            "metadata": {},
             "name": "",
             "output_types": [],
             "outputs": [
@@ -2409,6 +2417,7 @@
             ],
             "frozen": false,
             "icon": "ChatInput",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -2616,6 +2625,7 @@
             "edited": false,
             "field_order": [],
             "frozen": false,
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -2733,6 +2743,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -3147,6 +3158,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -3585,6 +3597,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -3881,6 +3894,7 @@
             "is_composition": null,
             "is_input": null,
             "is_output": null,
+            "metadata": {},
             "name": "",
             "output_types": [],
             "outputs": [
@@ -4047,6 +4061,7 @@
               "search_params"
             ],
             "frozen": false,
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {

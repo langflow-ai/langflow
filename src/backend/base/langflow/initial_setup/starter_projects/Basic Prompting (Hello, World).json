@@ -108,6 +108,7 @@
             ],
             "frozen": false,
             "icon": "ChatInput",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -323,6 +324,7 @@
             ],
             "frozen": false,
             "icon": "prompts",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -443,6 +445,7 @@
             ],
             "frozen": false,
             "icon": "ChatOutput",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -644,6 +647,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
