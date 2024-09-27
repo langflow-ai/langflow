@@ -4,6 +4,7 @@ from abc import abstractmethod
 
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.output_parsers import BaseOutputParser
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.custom import Component
@@ -18,6 +19,9 @@ class LCModelComponent(Component):
     display_name: str = "Model Name"
     description: str = "Model Description"
     trace_type = "llm"
+
+    # Optional output parser to pass to the runnable. Subclasses may allow the user to input an `output_parser`
+    output_parser: BaseOutputParser | None = None
 
     _base_inputs: list[InputTypes] = [
         MessageInput(name="input_value", display_name="Input"),
@@ -162,6 +166,9 @@ class LCModelComponent(Component):
             messages.append(SystemMessage(content=system_message))
         inputs: list | dict = messages or {}
         try:
+            if self.output_parser is not None:
+                runnable = runnable | self.output_parser
+
             runnable = runnable.with_config(  # type: ignore
                 {
                     "run_name": self.display_name,
