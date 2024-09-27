@@ -3,7 +3,7 @@ from typing import cast
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain_cohere import CohereRerank
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.field_typing import Retriever, VectorStore
 from langflow.io import (
     DropdownInput,

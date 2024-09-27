@@ -2,7 +2,7 @@ from typing import Any, cast
 
 from langchain.retrievers import ContextualCompressionRetriever
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.field_typing import Retriever, VectorStore
 from langflow.io import DropdownInput, HandleInput, MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data

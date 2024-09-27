@@ -168,8 +168,8 @@ class LCVectorStoreComponent(Component):
         """
         return {}
 
-    @check_cached_vector_store
     @abstractmethod
+    @check_cached_vector_store
     def build_vector_store(self) -> VectorStore:
         """
         Builds the Vector Store object.
