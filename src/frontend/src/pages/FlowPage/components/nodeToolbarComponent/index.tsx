@@ -42,6 +42,7 @@ import {
 import useShortcuts from "./hooks/use-shortcuts";
 import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import CodeAreaModal from "@/modals/codeAreaModal";
 
 export default function NodeToolbarComponent({
   data,
@@ -638,22 +639,17 @@ export default function NodeToolbarComponent({
           {hasCode && (
             <div className="hidden">
               {openModal && (
-                <CodeAreaComponent
+                <CodeAreaModal
+                  setValue={handleOnNewValue}
                   open={openModal}
                   setOpen={setOpenModal}
-                  readonly={
-                    data.node?.flow && data.node.template[name].dynamic
-                      ? true
-                      : false
-                  }
-                  dynamic={data.node?.template[name].dynamic ?? false}
+                  dynamic={true}
                   setNodeClass={handleNodeClass}
                   nodeClass={data.node}
-                  disabled={false}
                   value={data.node?.template[name].value ?? ""}
-                  onChange={handleOnNewValue}
-                  id={"code-input-node-toolbar-" + name}
-                />
+                >
+                  <></>
+                </CodeAreaModal>
               )}
             </div>
           )}
