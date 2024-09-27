@@ -341,7 +341,8 @@ class Component(CustomComponent):
         if len(matching_pairs) > 1:
             matching_pairs_str = self._build_error_string_from_matching_pairs(matching_pairs)
             raise ValueError(
-                f"There are multiple outputs from {value.__class__.__name__} that can connect to inputs in {self.__class__.__name__}: {matching_pairs_str}"
+                f"There are multiple outputs from {value.__class__.__name__} "
+                f"that can connect to inputs in {self.__class__.__name__}: {matching_pairs_str}"
             )
         output, input_ = matching_pairs[0]
         if not isinstance(output.method, str):

@@ -41,7 +41,8 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         BoolInput(
             name="allow_dangerous_deserialization",
             display_name="Allow Dangerous Deserialization",
-            info="Set to True to allow loading pickle files from untrusted sources. Only enable this if you trust the source of the data.",
+            info="Set to True to allow loading pickle files from untrusted sources. "
+            "Only enable this if you trust the source of the data.",
             advanced=True,
             value=True,
         ),
