@@ -143,7 +143,7 @@ export function ParameterRenderComponent({
         ) : templateData.type === "code" ? (
           <CodeAreaComponent
             readonly={nodeClass.flow && templateData.dynamic ? true : false}
-            dynamic={templateData.dynamic ?? false}
+            dynamic={false}
             setNodeClass={handleNodeClass}
             nodeClass={nodeClass}
             disabled={disabled}
