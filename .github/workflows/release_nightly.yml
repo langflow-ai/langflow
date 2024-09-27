@@ -87,8 +87,8 @@ jobs:
       - name: Verify Nightly Name and Version
         working-directory: src/backend/base
         run: |
-          name=$(uv tree | grep 'langflow-base' | awk '{print $2}')
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
+          name=$(uv tree | grep 'langflow-base' | awk '{print $1}')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $2}')
           if [ "$name" != "langflow-base-nightly" ]; then
             echo "Name $name does not match langflow-base-nightly. Exiting the workflow."
             exit 1
@@ -164,6 +164,18 @@ jobs:
       - name: Install the project
         run: uv sync --dev
 
+      - name: Verify Nightly Name and Version
+        run: |
+          name=$(uv tree | grep 'langflow' | awk '{print $1}')
+          version=$(uv tree | grep 'langflow' | awk '{print $2}')
+          if [ "$name" != "langflow-nightly" ]; then
+            echo "Name $name does not match langflow-nightly. Exiting the workflow."
+            exit 1
+          fi
+          if [ "$version" != "${{ inputs.nightly_tag_base }}" ]; then
+            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_base }}. Exiting the workflow."
+            exit 1
+          fi
       - name: Wait for PyPI Propagation
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation of base
 
