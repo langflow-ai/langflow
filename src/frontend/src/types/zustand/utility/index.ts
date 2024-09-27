@@ -5,4 +5,6 @@ export type UtilityStoreType = {
   setHealthCheckTimeout: (timeout: string | null) => void;
   playgroundScrollBehaves: ScrollBehavior;
   setPlaygroundScrollBehaves: (behaves: ScrollBehavior) => void;
+  maxFileSizeUpload: number;
+  setMaxFileSizeUpload: (maxFileSizeUpload: number) => void;
 };
