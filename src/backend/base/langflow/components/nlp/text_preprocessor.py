@@ -1,13 +1,15 @@
 # File: langflow/components/nlp/text_preprocessor.py
 
-from typing import Any
 import re
+
 from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
+from nltk.tokenize import word_tokenize
+
 from langflow.custom import Component
 from langflow.io import DataInput, Output
 from langflow.schema.message import Message
+
 
 class NaturalLanguageTextPreprocessorComponent(Component):
     display_name = "Text Preprocessor"
@@ -38,21 +40,21 @@ class NaturalLanguageTextPreprocessorComponent(Component):
     def preprocess_text(self) -> Message:
         try:
             input_data = self.data_input
-            if hasattr(input_data, 'text'):
+            if hasattr(input_data, "text"):
                 input_data = input_data.text
 
             text = input_data.lower()
-            text = re.sub(r'[^a-zA-Z\s]', '', text)
-            text = re.sub(r'\s+', ' ', text)
+            text = re.sub(r"[^a-zA-Z\s]", "", text)
+            text = re.sub(r"\s+", " ", text)
 
             stop_words = set(stopwords.words(self.stopwords_language.lower()))
             word_tokens = word_tokenize(text)
             filtered_text = [word for word in word_tokens if word not in stop_words]
-            text = ' '.join(filtered_text)
+            text = " ".join(filtered_text)
 
             lemmatizer = WordNetLemmatizer()
             lemmatized_text = [lemmatizer.lemmatize(word) for word in word_tokenize(text)]
-            text = ' '.join(lemmatized_text)
+            text = " ".join(lemmatized_text)
 
             return Message(text=text)
         except Exception as e:
