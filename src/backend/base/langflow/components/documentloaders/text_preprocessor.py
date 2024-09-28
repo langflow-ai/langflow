@@ -1,5 +1,3 @@
-# File: langflow/components/nlp/text_preprocessor.py
-
 import re
 
 from nltk.corpus import stopwords
