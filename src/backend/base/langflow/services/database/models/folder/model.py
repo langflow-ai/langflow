@@ -22,7 +22,7 @@ class Folder(FolderBase, table=True):  # type: ignore
 
     parent: Optional["Folder"] = Relationship(
         back_populates="children",
-        sa_relationship_kwargs=dict(remote_side="Folder.id"),
+        sa_relationship_kwargs={"remote_side": "Folder.id"},
     )
     children: list["Folder"] = Relationship(back_populates="parent")
     user_id: UUID | None = Field(default=None, foreign_key="user.id")
