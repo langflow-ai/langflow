@@ -12,9 +12,7 @@ This flow is "dynamic" because it uses the **Chat input** component's text to de
 
 ## Prerequisites
 
-To use this flow, you need an [OpenAI API key](https://platform.openai.com/).
-
-To use this flow, you need a [Search API key](https://www.searchapi.io/).
+To use this flow, you need an [OpenAI API key](https://platform.openai.com/) and a [Search API key](https://www.searchapi.io/).
 
 ## Open Langflow and start a new project
 
@@ -45,7 +43,7 @@ This task can be **sequential** or **hierarchical** depending on the Crew's conf
    - Click **Save Variable**.
 2. In the **Chat output** component, click ▶️ Play to start the end-to-end application flow.
    A **Chat output built successfully** message and a ✅ Check on all components indicate that the flow ran successfully.
-3. Click Playground **Playground** to start a chat session.
+3. Click **Playground** to start a chat session.
    You should receive a detailed, helpful answer to the question defined in the **Chat input** component.
 
 Now that your query has completed the journey from **Chat input** to **Chat output**, you have completed the **Dynamic Agent** flow.

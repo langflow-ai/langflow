@@ -35,7 +35,7 @@ The **Simple Agent** flow consists of these components:
 1. Add your credentials to the Open AI component.
 2. In the **Chat output** component, click ▶️ Play to start the end-to-end application flow.
    A **Chat output built successfully** message and a ✅ Check on all components indicate that the flow ran successfully.
-3. Click Playground **Playground** to start a chat session.
+3. Click **Playground** to start a chat session.
 4. Enter a simple math problem, like `2 + 2`, and then make sure the bot responds with the correct answer.
 5. To confirm the REPL interpreter is working, prompt the `math` library directly with `math.sqrt(4)` and see if the bot responds with `4`.
 6. The agent will also reason through more complex word problems. For example, prompt the agent with the following math problem:

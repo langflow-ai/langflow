@@ -1,0 +1,44 @@
+# Travel Planning Agent
+
+Build a **Travel Planning Agent** flow for an agentic application using the multiple Tool-calling agents.
+
+An **agent** uses an LLM as its "brain" to select among the connected tools and complete its tasks.
+
+In this flow, multiple **Tool-calling agents** reason using an **Open AI** LLM to plan a travel journey. Each agent is given a different responsibility defined by its **System Prompt** field.
+
+The **Chat input** defines where the user wants to go, and passes the result to the **City Selection** agent. The **Local Expert** agent then adds information based on the selected cities, and the **Travel Concierge** assembles a seven day travel plan in Markdown.
+
+All agents have access to the **Search API** and **URL Content Fetcher** components, while only the Travel Concierge can use the **Calculator** for computing the trip costs.
+
+## Prerequisites
+
+To use this flow, you need an [OpenAI API key](https://platform.openai.com/) and a [Search API key](https://www.searchapi.io/).
+
+## Open Langflow and start a new project
+
+Click **New Project**, and then select the **Travel Planning Agent** project.
+
+This opens a starter project with the necessary components to run an agentic application using multiple Tool-calling agents.
+
+## Travel Planning Agent flow
+
+![](./starter-flow-travel-planning-agent.png)
+
+The **Travel Planning Agent** flow consists of these components:
+
+* Multiple **Tool calling agent** components that use the connected LLM to reason through the user's input and select among the connected tools to complete their tasks.
+* The **Calculator** component performs basic arithmetic operations.
+* The **URL Content Fetcher** component scrapes content from a given URL.
+* The **Chat Input** component accepts user input to the chat.
+* The **Chat Output** component prints the flow's output to the chat.
+* The **OpenAI** model component sends the user input and prompt to the OpenAI API and receives a response.
+
+## Run the Travel Planning Agent flow
+
+1. Add your credentials to the Open AI and Search API components.
+2. In the **Chat output** component, click ▶️ Play to start the end-to-end application flow.
+   A **Chat output built successfully** message and a ✅ Check on all components indicate that the flow ran successfully.
+3. Click **Playground** to start a chat session.
+   You should receive a detailed, helpful answer to the journey defined in the **Chat input** component.
+
+Now that your query has completed the journey from **Chat input** to **Chat output**, you have completed the **Travel Planning Agent** flow.
