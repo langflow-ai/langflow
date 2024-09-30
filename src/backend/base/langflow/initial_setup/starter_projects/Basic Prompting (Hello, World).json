@@ -431,7 +431,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Display a chat message in the Playground.",
+            "description": "Display a chat message in the Playground.\n\n💡 Click the ▶️ to run the flow.",
             "display_name": "Chat Output",
             "documentation": "",
             "edited": false,
