@@ -111,7 +111,6 @@ const config = {
         ice: "var(--ice)",
         selected: "var(--selected)",
         hover: "var(--hover)",
-        white: "var(--white)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

@@ -36,10 +36,10 @@ const TemplateCard: React.FC<CardData> = ({
         <img
           src={spiralImage}
           alt={`${title} Spiral`}
-          className="h-full w-full object-cover transition-all duration-300 group-hover:scale-105"
+          className="h-full w-full object-cover opacity-25 transition-all duration-300 group-hover:scale-[102%] group-hover:opacity-60"
         />
       </div>
-      <div className="absolute inset-2 flex h-[calc(100%-16px)] w-[calc(100%-16px)] flex-col items-start gap-4 rounded-2xl p-4 py-6 text-white">
+      <div className="card-shine-effect absolute inset-2 flex h-[calc(100%-16px)] w-[calc(100%-16px)] flex-col items-start gap-4 rounded-2xl p-4 py-6 text-white">
         <div className="flex items-center gap-2 text-white mix-blend-overlay">
           <ForwardedIconComponent name={icon} className="h-4 w-4" />
           <span className="font-mono text-xs font-semibold uppercase tracking-wider">

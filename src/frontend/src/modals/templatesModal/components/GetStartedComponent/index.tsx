@@ -1,11 +1,11 @@
 import BaseModal from "@/modals/baseModal";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import memoryChatbotSpiral from "../../../../assets/artwork-spiral-1-def.svg";
+import vectorRagSpiral from "../../../../assets/artwork-spiral-2-def.svg";
+import multiAgentSpiral from "../../../../assets/artwork-spiral-3-def.svg";
 import memoryChatbotBg from "../../../../assets/memory-chatbot-bg.png";
-import memoryChatbotSpiral from "../../../../assets/memory-chatbot-spiral.png";
 import multiAgentBg from "../../../../assets/multi-agent-bg.png";
-import multiAgentSpiral from "../../../../assets/multi-agent-spiral.png";
 import vectorRagBg from "../../../../assets/vector-rag-bg.png";
-import vectorRagSpiral from "../../../../assets/vector-rag-spiral.png";
 import TemplateCard from "../TemplateCardComponent";
 
 // New interface for the card data

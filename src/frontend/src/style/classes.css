@@ -192,3 +192,39 @@ textarea[class^="ag-"]:focus {
 .react-flow__node-noteNode:not(.selected) {
   z-index: -1 !important;
 }
+
+.card-shine-effect {
+  --shine-deg: 135deg;
+  position: relative;
+  overflow: hidden;
+  padding: 4rem 2rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 28rem;
+
+  background-repeat: no-repeat;
+  background-position:
+    100% 100%,
+    0 0;
+
+  background-image: linear-gradient(
+    var(--shine-deg),
+    transparent 20%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.2) 55%,
+    transparent 70%,
+    transparent 100%
+  );
+
+  background-size:
+    250% 250%,
+    100% 100%;
+  transition: background-position 0s ease;
+}
+
+.card-shine-effect:hover {
+  background-position:
+    -100% -100%,
+    0 0;
+  transition-duration: 1.5s;
+}
