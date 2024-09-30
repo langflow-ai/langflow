@@ -599,9 +599,9 @@
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [
+                  "input_value",
                   "stream",
-                  "system_message",
-                  "input_value"
+                  "system_message"
                 ],
                 "selected": "Message",
                 "types": [
@@ -616,14 +616,14 @@
                 "name": "model_output",
                 "required_inputs": [
                   "api_key",
+                  "json_mode",
+                  "max_tokens",
+                  "model_kwargs",
+                  "model_name",
                   "openai_api_base",
-                  "temperature",
                   "output_schema",
                   "seed",
-                  "max_tokens",
-                  "model_name",
-                  "json_mode",
-                  "model_kwargs"
+                  "temperature"
                 ],
                 "selected": "LanguageModel",
                 "types": [
@@ -1331,10 +1331,10 @@
                 "method": "run_model",
                 "name": "api_run_model",
                 "required_inputs": [
-                  "name",
-                  "description",
                   "code",
-                  "global_imports"
+                  "description",
+                  "global_imports",
+                  "name"
                 ],
                 "selected": "Data",
                 "types": [
@@ -1348,10 +1348,10 @@
                 "method": "build_tool",
                 "name": "api_build_tool",
                 "required_inputs": [
-                  "name",
-                  "description",
                   "code",
-                  "global_imports"
+                  "description",
+                  "global_imports",
+                  "name"
                 ],
                 "selected": "Tool",
                 "types": [

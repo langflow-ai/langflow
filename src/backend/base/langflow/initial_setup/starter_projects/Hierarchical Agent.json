@@ -585,9 +585,9 @@
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [
+                  "input_value",
                   "stream",
-                  "system_message",
-                  "input_value"
+                  "system_message"
                 ],
                 "selected": "Message",
                 "types": [
@@ -602,14 +602,14 @@
                 "name": "model_output",
                 "required_inputs": [
                   "api_key",
+                  "json_mode",
+                  "max_tokens",
+                  "model_kwargs",
+                  "model_name",
                   "openai_api_base",
-                  "temperature",
                   "output_schema",
                   "seed",
-                  "max_tokens",
-                  "model_name",
-                  "json_mode",
-                  "model_kwargs"
+                  "temperature"
                 ],
                 "selected": "LanguageModel",
                 "types": [
@@ -1772,9 +1772,9 @@
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [
+                  "input_value",
                   "stream",
-                  "system_message",
-                  "input_value"
+                  "system_message"
                 ],
                 "selected": "Message",
                 "types": [
@@ -1789,14 +1789,14 @@
                 "name": "model_output",
                 "required_inputs": [
                   "api_key",
+                  "json_mode",
+                  "max_tokens",
+                  "model_kwargs",
+                  "model_name",
                   "openai_api_base",
-                  "temperature",
                   "output_schema",
                   "seed",
-                  "max_tokens",
-                  "model_name",
-                  "json_mode",
-                  "model_kwargs"
+                  "temperature"
                 ],
                 "selected": "LanguageModel",
                 "types": [
@@ -2697,9 +2697,9 @@
                 "name": "api_run_model",
                 "required_inputs": [
                   "api_key",
+                  "engine",
                   "input_value",
                   "max_results",
-                  "engine",
                   "max_snippet_length",
                   "search_params"
                 ],
@@ -2716,9 +2716,9 @@
                 "name": "api_build_tool",
                 "required_inputs": [
                   "api_key",
+                  "engine",
                   "input_value",
                   "max_results",
-                  "engine",
                   "max_snippet_length",
                   "search_params"
                 ],

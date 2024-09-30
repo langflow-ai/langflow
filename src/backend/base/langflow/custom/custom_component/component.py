@@ -335,7 +335,7 @@ class Component(CustomComponent):
 
             visitor = RequiredInputsVisitor(self._inputs)
             visitor.visit(ast_tree)
-            output.required_inputs = list(visitor.required_inputs)
+            output.required_inputs = sorted(list(visitor.required_inputs))
 
     def get_output_by_method(self, method: Callable):
         # method is a callable and output.method is a string
