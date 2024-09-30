@@ -12,14 +12,13 @@ To use this flow, you need an OpenAI API key.
 
 ## Open Langflow and start a new project
 
-1. In the Astra Portal header, switch your active app from Astra DB to Langflow.
-2. In Langflow, click **New Project**, and then select the **Simple Agent** project.
+Click **New Project**, and then select the **Simple Agent** project.
 
 This opens a starter project with the necessary components to run an agentic application using the Tool-calling agent.
 
 ## Simple Agent flow
 
-Simple Agent flow
+![](./starter-flow-simple-agent.png)
 
 The **Simple Agent** flow consists of these components:
 
@@ -34,8 +33,8 @@ The **Simple Agent** flow consists of these components:
 ## Run the Simple Agent flow
 
 1. Add your credentials to the Open AI component.
-2. In the **Chat output** component, click [▶️ Play](#) to start the end-to-end application flow.
-   A **Chat output built successfully** message and a [✅ Check](#) on all components indicate that the flow ran successfully.
+2. In the **Chat output** component, click ▶️ Play to start the end-to-end application flow.
+   A **Chat output built successfully** message and a ✅ Check on all components indicate that the flow ran successfully.
 3. Click Playground **Playground** to start a chat session.
 4. Enter a simple math problem, like `2 + 2`, and then make sure the bot responds with the correct answer.
 5. To confirm the REPL interpreter is working, prompt the `math` library directly with `math.sqrt(4)` and see if the bot responds with `4`.
