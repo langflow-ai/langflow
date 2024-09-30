@@ -65,7 +65,7 @@ class LangChainHubPromptComponent(Component):
                 full_template = full_template + "\n" + message.template
 
             # No need to reprocess if we have them already
-            if all(["param_" + custom_field in build_config for custom_field in custom_fields]):
+            if all("param_" + custom_field in build_config for custom_field in custom_fields):
                 return build_config
 
             # Easter egg: Show template in info popup

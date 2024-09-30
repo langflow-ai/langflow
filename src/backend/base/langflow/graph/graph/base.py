@@ -1875,7 +1875,7 @@ class Graph:
 
     def __to_dict(self) -> dict[str, dict[str, list[str]]]:
         """Converts the graph to a dictionary."""
-        result: dict = dict()
+        result: dict = {}
         for vertex in self.vertices:
             vertex_id = vertex.id
             sucessors = [i.id for i in self.get_all_successors(vertex)]
@@ -1922,7 +1922,7 @@ class Graph:
         first_layer = vertices_layers[0]
         # save the only the rest
         self.vertices_layers = vertices_layers[1:]
-        self.vertices_to_run = {vertex_id for vertex_id in chain.from_iterable(vertices_layers)}
+        self.vertices_to_run = set(chain.from_iterable(vertices_layers))
         self.build_run_map()
         # Return just the first layer
         self._first_layer = first_layer

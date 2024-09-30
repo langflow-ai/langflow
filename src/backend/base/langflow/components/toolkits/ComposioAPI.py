@@ -28,7 +28,7 @@ class ComposioAPIComponent(LCToolComponent):
         DropdownInput(
             name="app_names",
             display_name="App Name",
-            options=[app_name for app_name in App.__annotations__],
+            options=list(App.__annotations__),
             value="",
             info="The app name to use. Please refresh after selecting app name",
             refresh_button=True,
@@ -128,7 +128,7 @@ class ComposioAPIComponent(LCToolComponent):
     def _get_connected_app_names_for_entity(self) -> list[str]:
         toolset = self._build_wrapper()
         connections = toolset.client.get_entity(id=self.entity_id).get_connections()
-        return list(set(connection.appUniqueId for connection in connections))
+        return list({connection.appUniqueId for connection in connections})
 
     def _update_app_names_with_connected_status(self, build_config: dict) -> dict:
         connected_app_names = self._get_connected_app_names_for_entity()
@@ -157,7 +157,7 @@ class ComposioAPIComponent(LCToolComponent):
                 build_config["auth_status_config"]["value"] = self._check_for_authorization(
                     self._get_normalized_app_name()
                 )
-            all_action_names = [action_name for action_name in Action.__annotations__]
+            all_action_names = list(Action.__annotations__)
             app_action_names = [
                 action_name
                 for action_name in all_action_names

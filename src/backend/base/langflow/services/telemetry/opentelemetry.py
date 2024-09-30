@@ -74,7 +74,7 @@ class Metric:
         self.unit = unit
         self.labels = labels
         self.mandatory_labels = [label for label, required in labels.items() if required]
-        self.allowed_labels = [label for label in labels.keys()]
+        self.allowed_labels = list(labels.keys())
 
     def validate_labels(self, labels: Mapping[str, str]):
         """
@@ -109,7 +109,7 @@ class ThreadSafeSingletonMetaUsingWeakref(type):
 
 
 class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
-    _metrics_registry: dict[str, Metric] = dict()
+    _metrics_registry: dict[str, Metric] = {}
 
     def _add_metric(self, name: str, description: str, unit: str, metric_type: MetricType, labels: dict[str, bool]):
         metric = Metric(name=name, description=description, type=metric_type, unit=unit, labels=labels)

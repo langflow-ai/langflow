@@ -56,7 +56,7 @@ class SizedLogBuffer:
         return len(self.buffer)
 
     def get_after_timestamp(self, timestamp: int, lines: int = 5) -> dict[int, str]:
-        rc = dict()
+        rc = {}
 
         self._rsemaphore.acquire()
         try:
