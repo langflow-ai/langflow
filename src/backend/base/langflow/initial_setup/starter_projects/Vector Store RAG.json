@@ -1250,7 +1250,7 @@
       },
       {
         "data": {
-          "description": "Display a chat message in the Playground. 💡 Click the ▶️ to run the flow",
+          "description": "Display a chat message in the Playground. \n💡 Click the ▶️ to run the flow",
           "display_name": "Chat Output",
           "id": "ChatOutput-oPZbw",
           "node": {
@@ -1260,7 +1260,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Display a chat message in the Playground. 💡 Click the ▶️ to run the flow",
+            "description": "Display a chat message in the Playground. \n💡 Click the ▶️ to run the flow",
             "display_name": "Chat Output",
             "documentation": "",
             "edited": false,
@@ -3124,7 +3124,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Generates text using OpenAI LLMs.",
+            "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
             "display_name": "OpenAI",
             "documentation": "",
             "edited": false,
