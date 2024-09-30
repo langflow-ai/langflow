@@ -48,22 +48,24 @@ This component is used to load embedding models from [Amazon Bedrock](https://aw
 |------|------|-------------|
 | embeddings | Embeddings | An instance for generating embeddings using Amazon Bedrock |
 
+## Astra DB vectorize
 
-## Astra vectorize
+Connect this component to the **Embeddings** port of the [Astra DB vector store component](components-vector-stores#astra-db-serverless) to generate embeddings.
 
-This component is used to generate server-side embeddings using [DataStax Astra](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
+This component requires that your Astra DB database has a collection that uses a vectorize embedding provider integration.
+For more information and instructions, see [Embedding Generation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
 
 ### Parameters
 
 #### Inputs
 
-| Name | Type | Description |
-|------|------|-------------|
-| provider | String | The embedding provider to use |
-| model_name | String | The embedding model to use |
-| authentication | Dict | Authentication parameters. Use the Astra Portal to add the embedding provider integration to your Astra organization |
-| provider_api_key | String | An alternative to the Astra Authentication that lets you use directly the API key of the provider |
-| model_parameters | Dict | Additional model parameters |
+| Name | Display Name | Info |
+|------|--------------|------|
+| provider | Embedding Provider | The embedding provider to use |
+| model_name | Model Name | The embedding model to use |
+| authentication | Authentication | The name of the API key in Astra that stores your [vectorize embedding provider credentials](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html#embedding-provider-authentication). (Not required if using an [Astra-hosted embedding provider](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html#supported-embedding-providers).) |
+| provider_api_key | Provider API Key | As an alternative to `authentication`, directly provide your embedding provider credentials. |
+| model_parameters | Model Parameters | Additional model parameters |
 
 #### Outputs
 
@@ -81,6 +83,7 @@ This component generates embeddings using Azure OpenAI models.
 
 | Name | Type | Description |
 |------|------|-------------|
+| Model | String | Name of the model to use (default: `text-embedding-3-small`) |
 | Azure Endpoint | String | Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/` |
 | Deployment Name | String | The name of the deployment |
 | API Version | String | The API version to use, options include various dates |
@@ -112,29 +115,86 @@ This component is used to load embedding models from [Cohere](https://cohere.com
 |------|------|-------------|
 | embeddings | Embeddings | An instance for generating embeddings using Cohere |
 
-## Hugging Face Inference API Embeddings
+## Embedding similarity
 
-This component generates embeddings using Hugging Face Inference API models.
+This component computes selected forms of similarity between two embedding vectors.
 
 ### Parameters
 
 #### Inputs
 
-| Name | Type | Description |
-|------|------|-------------|
-| API Key | String | API key for accessing the Hugging Face Inference API |
-| API URL | String | URL of the Hugging Face Inference API (default: `http://localhost:8080`) |
-| Model Name | String | Name of the model to use for embeddings (default: `BAAI/bge-large-en-v1.5`) |
-| Cache Folder | String | Folder path to cache Hugging Face models |
-| Encode Kwargs | Dict | Additional arguments for the encoding process |
-| Model Kwargs | Dict | Additional arguments for the model |
-| Multi Process | Boolean | Whether to use multiple processes (default: `False`) |
+| Name | Display Name | Info |
+|------|--------------|------|
+| embedding_vectors | Embedding Vectors | A list containing exactly two data objects with embedding vectors to compare. |
+| similarity_metric | Similarity Metric | Select the similarity metric to use. Options: "Cosine Similarity", "Euclidean Distance", "Manhattan Distance". |
 
 #### Outputs
 
-| Name | Type | Description |
-|------|------|-------------|
-| embeddings | Embeddings | An instance for generating embeddings using Hugging Face Inference API |
+| Name | Display Name | Info |
+|------|--------------|------|
+| similarity_data | Similarity Data | Data object containing the computed similarity score and additional information. |
+
+## Google generative AI embeddings
+
+This component connects to Google's generative AI embedding service using the GoogleGenerativeAIEmbeddings class from the `langchain-google-genai` package.
+
+### Parameters
+
+#### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| api_key | API Key | Secret API key for accessing Google's generative AI service (required) |
+| model_name | Model Name | Name of the embedding model to use (default: "models/text-embedding-004") |
+
+#### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | Built GoogleGenerativeAIEmbeddings object |
+
+## Hugging Face Embeddings
+
+:::note
+This component is deprecated as of Langflow version 1.0.18.
+Instead, use the [Hugging Face API Embeddings component](#hugging-face-embeddings-inference-api).
+:::
+
+This component loads embedding models from HuggingFace.
+
+Use this component to generate embeddings using locally downloaded Hugging Face models. Ensure you have sufficient computational resources to run the models.
+
+### Parameters
+
+#### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| Cache Folder | Cache Folder | Folder path to cache HuggingFace models |
+| Encode Kwargs | Encoding Arguments | Additional arguments for the encoding process |
+| Model Kwargs | Model Arguments | Additional arguments for the model |
+| Model Name | Model Name | Name of the HuggingFace model to use |
+| Multi Process | Multi-Process | Whether to use multiple processes |
+
+## Hugging Face embeddings Inference API
+
+This component generates embeddings using Hugging Face Inference API models.
+
+Use this component to create embeddings with Hugging Face's hosted models. Ensure you have a valid Hugging Face API key.
+
+### Parameters
+
+#### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| API Key | API Key | API key for accessing the Hugging Face Inference API |
+| API URL | API URL | URL of the Hugging Face Inference API |
+| Model Name | Model Name | Name of the model to use for embeddings |
+| Cache Folder | Cache Folder | Folder path to cache Hugging Face models |
+| Encode Kwargs | Encoding Arguments | Additional arguments for the encoding process |
+| Model Kwargs | Model Arguments | Additional arguments for the model |
+| Multi Process | Multi-Process | Whether to use multiple processes |
 
 ## MistralAI
 
@@ -239,6 +299,25 @@ This component is used to load embedding models from [OpenAI](https://openai.com
 |------|------|-------------|
 | embeddings | Embeddings | An instance for generating embeddings using OpenAI |
 
+## Text embedder
+
+This component generates embeddings for a given message using a specified embedding model.
+
+### Parameters
+
+#### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embedding_model | Embedding Model | The embedding model to use for generating embeddings. |
+| message | Message | The message for which to generate embeddings. |
+
+#### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embedding Data | Data object containing the original text and its embedding vector. |
+
 ## VertexAI Embeddings
 
 This component is a wrapper around [Google Vertex AI](https://cloud.google.com/vertex-ai) [Embeddings API](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings).
@@ -266,6 +345,4 @@ This component is a wrapper around [Google Vertex AI](https://cloud.google.com/v
 | Name | Type | Description |
 |------|------|-------------|
 | embeddings | Embeddings | An instance for generating embeddings using VertexAI |
-
-[Previous Vector Stores](/components-vector-stores)
 

@@ -2,8 +2,8 @@ import re
 
 from langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader
 
-from langflow.helpers.data import data_to_text
 from langflow.custom import Component
+from langflow.helpers.data import data_to_text
 from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.schema import Data
 from langflow.schema.message import Message

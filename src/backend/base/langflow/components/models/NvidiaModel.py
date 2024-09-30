@@ -3,6 +3,7 @@ from typing import Any
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.inputs.inputs import HandleInput
 from langflow.schema.dotdict import dotdict
 
 
@@ -46,6 +47,13 @@ class NVIDIAModelComponent(LCModelComponent):
             info="The seed controls the reproducibility of the job.",
             advanced=True,
             value=1,
+        ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 

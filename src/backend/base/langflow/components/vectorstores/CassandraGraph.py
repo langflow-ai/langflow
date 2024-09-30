@@ -1,8 +1,7 @@
-from typing import List
+from uuid import UUID
 
 from langchain_community.graph_vectorstores import CassandraGraphVectorStore
 from loguru import logger
-from uuid import UUID
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
@@ -197,7 +196,7 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
         else:
             return "traversal"
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         logger.debug(f"Search input: {self.search_query}")

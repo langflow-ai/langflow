@@ -1,5 +1,5 @@
 import json
-from typing import List, cast
+from typing import cast
 
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
@@ -40,7 +40,7 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
         vectorstore: VectorStore,
         document_content_description: str,
         llm: LanguageModel,
-        metadata_field_info: List[str],
+        metadata_field_info: list[str],
     ) -> Retriever:  # type: ignore
         metadata_field_obj = []
 
