@@ -23,8 +23,6 @@ ENV UV_LINK_MODE=copy
 
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
-    # deps for installing poetry
-    curl \
     # deps for building python deps
     build-essential \
     # npm
@@ -38,7 +36,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    cd src/backend/base && uv sync --frozen --no-install-project --no-dev
+    cd src/backend/base && uv sync --frozen --no-install-project --no-dev --no-editable
 
 ADD ./src /app/src
 
@@ -51,15 +49,19 @@ RUN npm install \
 
 WORKDIR /app/src/backend/base
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev --no-editable
 
+################################
+# RUNTIME
+# Setup user, utilities and copy the virtual environment only
+################################
 FROM python:3.12.3-slim AS runtime
 
-COPY --from=builder /app/src/backend/base/.venv /app/src/backend/base/.venv
-# Place executables in the environment at the front of the path
+RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
+COPY --from=builder --chown=1000 /app/src/backend/base/.venv /app/src/backend/base/.venv
+
 # Place executables in the environment at the front of the path
 ENV PATH="/app/src/backend/base/.venv/bin:$PATH"
-
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']
@@ -67,6 +69,8 @@ LABEL org.opencontainers.image.licenses=MIT
 LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
 LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
 
+USER user
+WORKDIR /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
