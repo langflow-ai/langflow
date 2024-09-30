@@ -672,15 +672,15 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "json_mode",
-                  "seed",
+                  "api_key",
                   "openai_api_base",
-                  "model_name",
                   "temperature",
                   "output_schema",
-                  "model_kwargs",
-                  "api_key",
-                  "max_tokens"
+                  "seed",
+                  "max_tokens",
+                  "model_name",
+                  "json_mode",
+                  "model_kwargs"
                 ],
                 "selected": "LanguageModel",
                 "types": [

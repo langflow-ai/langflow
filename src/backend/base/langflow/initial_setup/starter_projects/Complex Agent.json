@@ -901,15 +901,15 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "json_mode",
-                  "seed",
+                  "api_key",
                   "openai_api_base",
-                  "model_name",
                   "temperature",
                   "output_schema",
-                  "model_kwargs",
-                  "api_key",
-                  "max_tokens"
+                  "seed",
+                  "max_tokens",
+                  "model_name",
+                  "json_mode",
+                  "model_kwargs"
                 ],
                 "selected": "LanguageModel",
                 "types": [
@@ -2068,15 +2068,15 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "json_mode",
-                  "seed",
+                  "api_key",
                   "openai_api_base",
-                  "model_name",
                   "temperature",
                   "output_schema",
-                  "model_kwargs",
-                  "api_key",
-                  "max_tokens"
+                  "seed",
+                  "max_tokens",
+                  "model_name",
+                  "json_mode",
+                  "model_kwargs"
                 ],
                 "selected": "LanguageModel",
                 "types": [
@@ -2839,15 +2839,15 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "json_mode",
-                  "seed",
+                  "api_key",
                   "openai_api_base",
-                  "model_name",
                   "temperature",
                   "output_schema",
-                  "model_kwargs",
-                  "api_key",
-                  "max_tokens"
+                  "seed",
+                  "max_tokens",
+                  "model_name",
+                  "json_mode",
+                  "model_kwargs"
                 ],
                 "selected": "LanguageModel",
                 "types": [
@@ -3289,15 +3289,15 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "json_mode",
-                  "seed",
+                  "api_key",
                   "openai_api_base",
-                  "model_name",
                   "temperature",
                   "output_schema",
-                  "model_kwargs",
-                  "api_key",
-                  "max_tokens"
+                  "seed",
+                  "max_tokens",
+                  "model_name",
+                  "json_mode",
+                  "model_kwargs"
                 ],
                 "selected": "LanguageModel",
                 "types": [
@@ -3763,15 +3763,15 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "json_mode",
-                  "seed",
+                  "api_key",
                   "openai_api_base",
-                  "model_name",
                   "temperature",
                   "output_schema",
-                  "model_kwargs",
-                  "api_key",
-                  "max_tokens"
+                  "seed",
+                  "max_tokens",
+                  "model_name",
+                  "json_mode",
+                  "model_kwargs"
                 ],
                 "selected": "LanguageModel",
                 "types": [
@@ -4246,12 +4246,12 @@
                 "method": "run_model",
                 "name": "api_run_model",
                 "required_inputs": [
-                  "input_value",
-                  "max_snippet_length",
-                  "max_results",
-                  "search_params",
                   "api_key",
-                  "engine"
+                  "input_value",
+                  "max_results",
+                  "engine",
+                  "max_snippet_length",
+                  "search_params"
                 ],
                 "selected": "Data",
                 "types": [
@@ -4265,12 +4265,12 @@
                 "method": "build_tool",
                 "name": "api_build_tool",
                 "required_inputs": [
-                  "input_value",
-                  "max_snippet_length",
-                  "max_results",
-                  "search_params",
                   "api_key",
-                  "engine"
+                  "input_value",
+                  "max_results",
+                  "engine",
+                  "max_snippet_length",
+                  "search_params"
                 ],
                 "selected": "Tool",
                 "types": [
