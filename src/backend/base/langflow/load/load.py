@@ -1,25 +1,24 @@
 import json
 from pathlib import Path
-from typing import List, Optional, Union
 
 from dotenv import load_dotenv
 from loguru import logger
 
 from langflow.graph import Graph
 from langflow.graph.schema import RunOutputs
-from langflow.processing.process import process_tweaks, run_graph
 from langflow.logging.logger import configure
+from langflow.processing.process import process_tweaks, run_graph
 from langflow.utils.util import update_settings
 
 
 def load_flow_from_json(
-    flow: Union[Path, str, dict],
-    tweaks: Optional[dict] = None,
-    log_level: Optional[str] = None,
-    log_file: Optional[str] = None,
-    env_file: Optional[str] = None,
-    cache: Optional[str] = None,
-    disable_logs: Optional[bool] = True,
+    flow: Path | str | dict,
+    tweaks: dict | None = None,
+    log_level: str | None = None,
+    log_file: str | None = None,
+    env_file: str | None = None,
+    cache: str | None = None,
+    disable_logs: bool | None = True,
 ) -> Graph:
     """
     Load a flow graph from a JSON file or a JSON object.
@@ -53,8 +52,8 @@ def load_flow_from_json(
     # Update settings with cache and components path
     update_settings(cache=cache)
 
-    if isinstance(flow, (str, Path)):
-        with open(flow, "r", encoding="utf-8") as f:
+    if isinstance(flow, str | Path):
+        with open(flow, encoding="utf-8") as f:
             flow_graph = json.load(f)
     # If input is a dictionary, assume it's a JSON object
     elif isinstance(flow, dict):
@@ -71,19 +70,19 @@ def load_flow_from_json(
 
 
 def run_flow_from_json(
-    flow: Union[Path, str, dict],
+    flow: Path | str | dict,
     input_value: str,
-    tweaks: Optional[dict] = None,
+    tweaks: dict | None = None,
     input_type: str = "chat",
     output_type: str = "chat",
-    output_component: Optional[str] = None,
-    log_level: Optional[str] = None,
-    log_file: Optional[str] = None,
-    env_file: Optional[str] = None,
-    cache: Optional[str] = None,
-    disable_logs: Optional[bool] = True,
+    output_component: str | None = None,
+    log_level: str | None = None,
+    log_file: str | None = None,
+    env_file: str | None = None,
+    cache: str | None = None,
+    disable_logs: bool | None = True,
     fallback_to_env_vars: bool = False,
-) -> List[RunOutputs]:
+) -> list[RunOutputs]:
     """
     Run a flow from a JSON file or dictionary.
 

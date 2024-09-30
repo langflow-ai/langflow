@@ -1,6 +1,10 @@
+import os
+
+from astrapy.admin import parse_api_endpoint
+
 from langflow.base.memory.model import LCChatMemoryComponent
-from langflow.inputs import MessageTextInput, StrInput, SecretStrInput
 from langflow.field_typing import BaseChatMessageHistory
+from langflow.inputs import MessageTextInput, SecretStrInput, StrInput
 
 
 class AstraDBChatMemory(LCChatMemoryComponent):
@@ -10,24 +14,25 @@ class AstraDBChatMemory(LCChatMemoryComponent):
     icon: str = "AstraDB"
 
     inputs = [
-        StrInput(
-            name="collection_name",
-            display_name="Collection Name",
-            info="The name of the collection within Astra DB where the vectors will be stored.",
-            required=True,
-        ),
         SecretStrInput(
             name="token",
             display_name="Astra DB Application Token",
             info="Authentication token for accessing Astra DB.",
             value="ASTRA_DB_APPLICATION_TOKEN",
             required=True,
+            advanced=os.getenv("ASTRA_ENHANCED", "false").lower() == "true",
         ),
         SecretStrInput(
             name="api_endpoint",
             display_name="API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
+            required=True,
+        ),
+        StrInput(
+            name="collection_name",
+            display_name="Collection Name",
+            info="The name of the collection within Astra DB where the vectors will be stored.",
             required=True,
         ),
         StrInput(
@@ -59,5 +64,6 @@ class AstraDBChatMemory(LCChatMemoryComponent):
             token=self.token,
             api_endpoint=self.api_endpoint,
             namespace=self.namespace or None,
+            environment=parse_api_endpoint(self.api_endpoint).environment,
         )
         return memory

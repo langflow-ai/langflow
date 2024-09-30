@@ -1,15 +1,15 @@
 import asyncio
 import json
 import os
+import re
 import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -129,6 +129,39 @@ def create_app():
     app.add_middleware(JavaScriptMIMETypeMiddleware)
 
     @app.middleware("http")
+    async def check_boundary(request: Request, call_next):
+        if "/api/v1/files/upload" in request.url.path:
+            content_type = request.headers.get("Content-Type")
+
+            if not content_type or "multipart/form-data" not in content_type or "boundary=" not in content_type:
+                return JSONResponse(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    content={"detail": "Content-Type header must be 'multipart/form-data' with a boundary parameter."},
+                )
+
+            boundary = content_type.split("boundary=")[-1].strip()
+
+            if not re.match(r"^[\w\-]{1,70}$", boundary):
+                return JSONResponse(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    content={"detail": "Invalid boundary format"},
+                )
+
+            body = await request.body()
+
+            boundary_start = f"--{boundary}".encode()
+            boundary_end = f"--{boundary}--\r\n".encode()
+
+            if not body.startswith(boundary_start) or not body.endswith(boundary_end):
+                return JSONResponse(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    content={"detail": "Invalid multipart formatting"},
+                )
+
+        response = await call_next(request)
+        return response
+
+    @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
@@ -220,7 +253,7 @@ def get_static_files_dir():
     return frontend_path / "frontend"
 
 
-def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = False) -> FastAPI:
+def setup_app(static_files_dir: Path | None = None, backend_only: bool = False) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     logger.info(f"Setting up app with static files directory {static_files_dir}")

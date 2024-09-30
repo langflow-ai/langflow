@@ -1,5 +1,6 @@
+from collections.abc import AsyncIterator, Generator, Iterator
 from enum import Enum
-from typing import AsyncIterator, Generator, Iterator, Literal, Union
+from typing import Literal
 
 from pydantic import BaseModel
 from typing_extensions import TypedDict
@@ -33,7 +34,7 @@ class ErrorLog(TypedDict):
 
 
 class OutputValue(BaseModel):
-    message: Union[ErrorLog, StreamURL, dict, list, str]
+    message: ErrorLog | StreamURL | dict | list | str
     type: str
 
 
@@ -73,14 +74,14 @@ def get_message(payload):
     elif hasattr(payload, "model_dump"):
         message = payload.model_dump()
 
-    if message is None and isinstance(payload, (dict, str, Data)):
+    if message is None and isinstance(payload, dict | str | Data):
         message = payload.data if isinstance(payload, Data) else payload
 
     return message or payload
 
 
 def build_output_logs(vertex, result) -> dict:
-    outputs: dict[str, OutputValue] = dict()
+    outputs: dict[str, OutputValue] = {}
     component_instance = result[0]
     for index, output in enumerate(vertex.outputs):
         if component_instance.status is None:
@@ -126,7 +127,7 @@ def recursive_serialize_or_str(obj):
                 obj_dict = obj.dict()  # type: ignore
             return {k: recursive_serialize_or_str(v) for k, v in obj_dict.items()}
 
-        elif isinstance(obj, (AsyncIterator, Generator, Iterator)):
+        elif isinstance(obj, AsyncIterator | Generator | Iterator):
             # contain memory addresses
             # without consuming the iterator
             # return list(obj) consumes the iterator

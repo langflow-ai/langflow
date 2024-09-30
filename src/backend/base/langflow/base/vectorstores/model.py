@@ -1,6 +1,6 @@
-from abc import ABC, ABCMeta, abstractmethod
+from abc import abstractmethod
 from functools import wraps
-from typing import List, cast
+from typing import cast
 
 from langchain_core.documents import Document
 from loguru import logger
@@ -15,6 +15,11 @@ from langflow.schema import Data
 def check_cached_vector_store(f):
     """
     Decorator to check for cached vector stores, and returns them if they exist.
+
+    Note: caching only occurs during the execution of a component - they do not persist
+    across separate invocations of the component. This method exists so that components with
+    multiple output methods share the same vector store during the same invocation of the
+    component.
     """
 
     @wraps(f)
@@ -30,29 +35,21 @@ def check_cached_vector_store(f):
     return check_cached
 
 
-class EnforceCacheDecoratorMeta(ABCMeta):
-    """
-    Enforces that abstract methods marked with @check_cached_vector_store are implemented with the decorator.
-    """
-
-    def __init__(cls, name, bases, dct):
-        for name, value in dct.items():
-            if hasattr(value, "__isabstractmethod__"):
-                cls._check_method_decorator(name, cls)
-        super().__init__(name, bases, dct)
-
-    @staticmethod
-    def _check_method_decorator(name, cls):
-        method = getattr(cls, name)
-
-        # Check if the method has been marked as decorated by `check_cached_vector_store`
-        if not getattr(method, "_is_cached_vector_store_checked", False):
-            raise TypeError(f"Concrete implementation of '{name}' must use '@check_cached_vector_store' decorator.")
-
-
-class LCVectorStoreComponent(Component, ABC, metaclass=EnforceCacheDecoratorMeta):
+class LCVectorStoreComponent(Component):
     # Used to ensure a single vector store is built for each run of the flow
     _cached_vector_store: VectorStore | None = None
+
+    def __init_subclass__(cls, **kwargs):
+        """
+        Enforces the check cached decorator on all subclasses
+        """
+        super().__init_subclass__(**kwargs)
+        if hasattr(cls, "build_vector_store"):
+            method = cls.build_vector_store
+            if not hasattr(method, "_is_cached_vector_store_checked"):
+                raise TypeError(
+                    f"The method 'build_vector_store' in class {cls.__name__} must be decorated with @check_cached_vector_store"
+                )
 
     trace_type = "retriever"
     outputs = [
@@ -94,7 +91,7 @@ class LCVectorStoreComponent(Component, ABC, metaclass=EnforceCacheDecoratorMeta
         vector_store: VectorStore,
         k=10,
         **kwargs,
-    ) -> List[Data]:
+    ) -> list[Data]:
         """
         Search for data in the vector store based on the input value and search type.
 
@@ -110,7 +107,7 @@ class LCVectorStoreComponent(Component, ABC, metaclass=EnforceCacheDecoratorMeta
             ValueError: If invalid inputs are provided.
         """
 
-        docs: List[Document] = []
+        docs: list[Document] = []
         if input_value and isinstance(input_value, str) and hasattr(vector_store, "search"):
             docs = vector_store.search(query=input_value, search_type=search_type.lower(), k=k, **kwargs)
         else:
@@ -140,7 +137,7 @@ class LCVectorStoreComponent(Component, ABC, metaclass=EnforceCacheDecoratorMeta
         else:
             raise ValueError(f"Vector Store {vector_store.__class__.__name__} does not have an as_retriever method.")
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         """
         Search for documents in the vector store.
         """

@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from langflow.custom import Component
 from langflow.field_typing import Tool
@@ -24,7 +24,7 @@ class LCToolComponent(Component):
                 raise ValueError(f"Method '{method_name}' must be defined.")
 
     @abstractmethod
-    def run_model(self) -> Union[Data, list[Data]]:
+    def run_model(self) -> Data | list[Data]:
         """
         Run model and return the output.
         """

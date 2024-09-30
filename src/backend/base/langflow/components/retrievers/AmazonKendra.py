@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import cast
 
 from langchain_community.retrievers import AmazonKendraRetriever
 
@@ -33,10 +33,10 @@ class AmazonKendraRetrieverComponent(CustomComponent):
         self,
         index_id: str,
         top_k: int = 3,
-        region_name: Optional[str] = None,
-        credentials_profile_name: Optional[str] = None,
-        attribute_filter: Optional[dict] = None,
-        user_context: Optional[dict] = None,
+        region_name: str | None = None,
+        credentials_profile_name: str | None = None,
+        attribute_filter: dict | None = None,
+        user_context: dict | None = None,
     ) -> Retriever:  # type: ignore[type-var]
         try:
             output = AmazonKendraRetriever(
