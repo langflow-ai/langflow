@@ -369,23 +369,55 @@ class Component(CustomComponent):
         return text
 
     def _find_matching_output_method(self, input_name: str, value: Component):
-        # get all outputs of the value component
+        """
+        Find the output method from the given component (`value`) that matches the specified input (`input_name`)
+        in the current component.
+
+        This method searches through all outputs of the provided component to find outputs whose types match
+        the input types of the specified input in the current component. If exactly one matching output is found,
+        it returns the corresponding method. If multiple matching outputs are found, it raises an error indicating
+        ambiguity. If no matching outputs are found, it raises an error indicating that no suitable output was found.
+
+        Args:
+            input_name (str): The name of the input in the current component to match.
+            value (Component): The component whose outputs are to be considered.
+
+        Returns:
+            Callable: The method corresponding to the matching output.
+
+        Raises:
+            ValueError: If multiple matching outputs are found, if no matching outputs are found,
+                        or if the output method is invalid.
+        """
+        # Retrieve all outputs from the given component
         outputs = value._outputs_map.values()
-        # check if the any of the types in the output.types matches ONLY one input in the current component
+        # Prepare to collect matching output-input pairs
         matching_pairs = []
+        # Get the input object from the current component
         input_ = self._inputs[input_name]
+        # Iterate over outputs to find matches based on types
         for output in outputs:
             for output_type in output.types:
+                # Check if the output type matches the input's accepted types
                 if input_.input_types and output_type in input_.input_types:
                     matching_pairs.append((output, input_))
+        # If multiple matches are found, raise an error indicating ambiguity
         if len(matching_pairs) > 1:
             matching_pairs_str = self._build_error_string_from_matching_pairs(matching_pairs)
             raise ValueError(
                 f"There are multiple outputs from {value.__class__.__name__} that can connect to inputs in {self.__class__.__name__}: {matching_pairs_str}"
             )
+        # If no matches are found, raise an error indicating no suitable output
+        if not matching_pairs:
+            raise ValueError(
+                f"No matching output from {value.__class__.__name__} found for input '{input_name}' in {self.__class__.__name__}."
+            )
+        # Get the matching output and input pair
         output, input_ = matching_pairs[0]
+        # Ensure that the output method is a valid method name (string)
         if not isinstance(output.method, str):
             raise ValueError(f"Method {output.method} is not a valid output of {value.__class__.__name__}")
+        # Retrieve and return the method from the component by its name
         return getattr(value, output.method)
 
     def _process_connection_or_parameter(self, key, value):
