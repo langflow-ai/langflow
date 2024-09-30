@@ -53,6 +53,8 @@ class FrontendNode(BaseModel):
     """Error message for the frontend node."""
     edited: bool = False
     """Whether the frontend node has been edited."""
+    metadata: dict = {}
+    """Metadata for the component node."""
 
     def set_documentation(self, documentation: str) -> None:
         """Sets the documentation of the frontend node."""
@@ -62,7 +64,7 @@ class FrontendNode(BaseModel):
     def process_base_classes(self, base_classes: list[str]) -> list[str]:
         """Removes unwanted base classes from the list of base classes."""
 
-        sorted_base_classes = sorted(list(set(base_classes)), key=lambda x: x.lower())
+        sorted_base_classes = sorted(set(base_classes), key=lambda x: x.lower())
         return sorted_base_classes
 
     @field_serializer("display_name")
@@ -121,7 +123,7 @@ class FrontendNode(BaseModel):
         input_names = [input_.name for input_ in self.template.fields]
         overlap = set(output_names).intersection(input_names)
         if overlap:
-            overlap_str = ", ".join(map(lambda x: f"'{x}'", overlap))
+            overlap_str = ", ".join(f"'{x}'" for x in overlap)
             raise ValueError(
                 f"There should be no overlap between input and output names. Names {overlap_str} are duplicated."
             )
@@ -149,10 +151,10 @@ class FrontendNode(BaseModel):
         input_overlap = set(input_names).intersection(attributes)
         error_message = ""
         if output_overlap:
-            output_overlap_str = ", ".join(map(lambda x: f"'{x}'", output_overlap))
+            output_overlap_str = ", ".join(f"'{x}'" for x in output_overlap)
             error_message += f"Output names {output_overlap_str} are reserved attributes.\n"
         if input_overlap:
-            input_overlap_str = ", ".join(map(lambda x: f"'{x}'", input_overlap))
+            input_overlap_str = ", ".join(f"'{x}'" for x in input_overlap)
             error_message += f"Input names {input_overlap_str} are reserved attributes."
 
     def add_base_class(self, base_class: str | list[str]) -> None:

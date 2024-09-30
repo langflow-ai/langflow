@@ -1,5 +1,6 @@
 import os
 
+from astrapy.admin import parse_api_endpoint
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -70,7 +71,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         ),
         SecretStrInput(
             name="api_endpoint",
-            display_name="API Endpoint",
+            display_name="Database" if os.getenv("ASTRA_ENHANCED", "false").lower() == "true" else "API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
             required=True,
@@ -204,7 +205,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
-    @check_cached_vector_store
     def insert_in_dict(self, build_config, field_name, new_parameters):
         # Insert the new key-value pair after the found key
         for new_field_name, new_parameter in new_parameters.items():
@@ -339,9 +339,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         authentication = {**(self.z_04_authentication or kwargs.get("z_04_authentication", {}))}
 
         api_key_name = self.z_02_api_key_name or kwargs.get("z_02_api_key_name")
-        provider_key_name = self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key")
-        if provider_key_name:
-            authentication["providerKey"] = provider_key_name
+        provider_key = self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key")
         if api_key_name:
             authentication["providerKey"] = api_key_name
 
@@ -353,7 +351,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 "authentication": authentication,
                 "parameters": self.z_01_model_parameters or kwargs.get("z_01_model_parameters", {}),
             },
-            "collection_embedding_api_key": self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key"),
+            "collection_embedding_api_key": provider_key,
         }
 
     @check_cached_vector_store
@@ -398,6 +396,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             "token": self.token,
             "api_endpoint": self.api_endpoint,
             "namespace": self.namespace or None,
+            "environment": parse_api_endpoint(self.api_endpoint).environment,
             "metric": self.metric or None,
             "batch_size": self.batch_size or None,
             "bulk_insert_batch_concurrency": self.bulk_insert_batch_concurrency or None,
