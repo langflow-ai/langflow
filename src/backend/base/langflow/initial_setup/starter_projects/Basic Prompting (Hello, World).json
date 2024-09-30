@@ -301,7 +301,7 @@
       },
       {
         "data": {
-          "description": "Create a prompt template with dynamic variables.",
+          "description": "Create a prompt template with dynamic variables. If using an OutputParser, you must include {format_instructions} as an additional variable.",
           "display_name": "Prompt",
           "id": "Prompt-bHLxK",
           "node": {
