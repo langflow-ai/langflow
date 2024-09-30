@@ -6,7 +6,8 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 # TODO: langchain_community.llms.huggingface_endpoint is depreciated. Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.inputs.inputs import HandleInput
+from langflow.io import DictInput, DropdownInput, IntInput, SecretStrInput, StrInput
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
@@ -37,41 +38,12 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         SecretStrInput(name="huggingfacehub_api_token", display_name="API Token", password=True),
         DictInput(name="model_kwargs", display_name="Model Keyword Arguments", advanced=True),
         IntInput(name="retry_attempts", display_name="Retry Attempts", value=1, advanced=True),
-        IntInput(
-            name="max_new_tokens", display_name="Max New Tokens", value=512, info="Maximum number of generated tokens"
-        ),
-        IntInput(
-            name="top_k",
-            display_name="Top K",
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
             advanced=True,
-            info="The number of highest probability vocabulary tokens to keep for top-k-filtering",
-        ),
-        FloatInput(
-            name="top_p",
-            display_name="Top P",
-            value=0.95,
-            advanced=True,
-            info="If set to < 1, only the smallest set of most probable tokens with probabilities that add up to `top_p` or higher are kept for generation",
-        ),
-        FloatInput(
-            name="typical_p",
-            display_name="Typical P",
-            value=0.95,
-            advanced=True,
-            info="Typical Decoding mass.",
-        ),
-        FloatInput(
-            name="temperature",
-            display_name="Temperature",
-            value=0.8,
-            advanced=True,
-            info="The value used to module the logits distribution",
-        ),
-        FloatInput(
-            name="repetition_penalty",
-            display_name="Repetition Penalty",
-            advanced=True,
-            info="The parameter for repetition penalty. 1.0 means no penalty.",
+            input_types=["OutputParser"],
         ),
     ]
 
