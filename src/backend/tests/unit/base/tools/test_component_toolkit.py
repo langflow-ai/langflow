@@ -17,6 +17,13 @@ def client():
     pass
 
 
+@pytest.fixture
+def add_toolkit_output():
+    FEATURE_FLAGS.add_toolkit_output = True
+    yield
+    FEATURE_FLAGS.add_toolkit_output = False
+
+
 def test_component_tool():
     chat_input = ChatInput()
     component_toolkit = ComponentToolkit(component=chat_input)
@@ -74,8 +81,7 @@ def test_component_tool():
 
 
 @pytest.mark.api_key_required
-def test_component_tool_with_api_key(client):
-    FEATURE_FLAGS.add_toolkit_output = True
+def test_component_tool_with_api_key(client, add_toolkit_output):
     chat_output = ChatOutput()
     openai_llm = OpenAIModelComponent()
     openai_llm.set(api_key=os.environ["OPENAI_API_KEY"])
