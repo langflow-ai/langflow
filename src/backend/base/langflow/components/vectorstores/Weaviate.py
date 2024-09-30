@@ -41,12 +41,6 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
         BoolInput(name="search_by_text", display_name="Search By Text", advanced=True),
     ]
 
-    def valid_index_name(self) -> str:
-        capitalized_name = self.index_name.capitalize()
-        if self.index_name != capitalized_name:
-            raise ValueError(f"Weaviate requires the index name to be capitalized. Use: {capitalized_name}")
-        return capitalized_name
-
     @check_cached_vector_store
     def build_vector_store(self) -> Weaviate:
         if self.api_key:
