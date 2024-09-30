@@ -28,9 +28,7 @@ class OutputParserComponent(Component):
             info="Pass to a prompt template to include formatting instructions for LLM responses.",
             method="format_instructions",
         ),
-        Output(
-            display_name="Output Parser", name="output_parser", method="build_parser"
-        ),
+        Output(display_name="Output Parser", name="output_parser", method="build_parser"),
     ]
 
     def build_parser(self) -> OutputParser:
