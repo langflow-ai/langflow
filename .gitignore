@@ -273,3 +273,5 @@ src/frontend/temp
 *-shm
 *-wal
 .history
+
+.dspy_cache/
