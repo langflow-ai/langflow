@@ -64,13 +64,13 @@ export default function TemplateContent({ currentTab }: TemplateContentProps) {
           {filteredExamples.map((example, index) => (
             <div
               key={index}
-              className="flex cursor-pointer flex-col gap-4 overflow-hidden"
+              className="group flex cursor-pointer flex-col gap-4 overflow-hidden"
               onClick={() => handleCardClick(example)}
             >
               <div className="relative h-40 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 p-4">
                 <IconComponent
                   name={example.icon || "FileText"}
-                  className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 stroke-1 text-primary"
+                  className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 stroke-1 text-primary opacity-50 duration-300 group-hover:scale-105 group-hover:opacity-100"
                 />
               </div>
               <div className="flex flex-1 flex-col justify-between">
