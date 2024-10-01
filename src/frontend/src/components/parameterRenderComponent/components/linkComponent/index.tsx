@@ -1,8 +1,8 @@
 import { LinkComponentType } from "@/types/components";
 import { useCallback, useEffect, useState } from "react";
-import { classNames } from "../../utils/utils";
-import IconComponent from "../genericIconComponent";
-import { Button } from "../ui/button";
+import { classNames } from "../../../../utils/utils";
+import IconComponent from "../../../genericIconComponent";
+import { Button } from "../../../ui/button";
 
 const DEFAULT_ICON = "ExternalLink";
 

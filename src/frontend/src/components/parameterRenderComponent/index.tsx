@@ -9,7 +9,7 @@ import FloatComponent from "./components/floatComponent";
 import InputFileComponent from "./components/inputFileComponent";
 import IntComponent from "./components/intComponent";
 import KeypairListComponent from "../keypairListComponent";
-import LinkComponent from "../linkComponent";
+import LinkComponent from "./components/linkComponent";
 import PromptAreaComponent from "./components/promptComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
 import { RefreshParameterComponent } from "./components/refreshParameterComponent";
@@ -131,7 +131,7 @@ export function ParameterRenderComponent({
       case "file":
         return (
           <InputFileComponent
-          {...baseInputProps}
+            {...baseInputProps}
             fileTypes={templateData.fileTypes}
             id={`inputfile_${id}`}
           />
