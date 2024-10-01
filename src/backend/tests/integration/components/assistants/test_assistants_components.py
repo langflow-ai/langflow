@@ -11,7 +11,7 @@ async def test_manager():
     results = await run_single_component(
         AstraAssistantManager,
         inputs={
-            "instructions": "reply only with ascii art",
+            "instructions": "you're a langflow expert",
             "model_name": "gpt-4o-mini",
             "user_message": "Make a simple RAG app"
         },

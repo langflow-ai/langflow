@@ -1,6 +1,7 @@
 from openai.types.beta.threads.run_submit_tool_outputs_params import ToolOutput
-
 from langflow.components.astra_assistants.tools.flowgen import FlowgenTool
+from langflow.components.astra_assistants.util import get_patched_openai_client, litellm_model_names, tool_names, \
+    tools_and_names
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, StrInput, MultilineInput
 from langflow.schema.message import Message
@@ -25,14 +26,15 @@ class AstraAssistantManager(Component):
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            options=["gpt-4o-mini"],
+            options=litellm_model_names,
+            #options=["gpt-4o-mini"],
             value="gpt-4o-mini",
         ),
         DropdownInput(
             display_name="Tools",
             name="tools",
-            options=["flowgen"],
-            value="flowgen",
+            options=tool_names,
+            #options=["flowgen"],
         ),
         MultilineInput(
             name="user_message",
@@ -41,13 +43,13 @@ class AstraAssistantManager(Component):
         ),
         StrInput(
             name="thread_id",
-            display_name="Thread ID",
-            info="ID of the thread optional",
+            display_name="Thread ID (optional)",
+            info="ID of the thread",
         ),
         StrInput(
             name="assistant_id",
             display_name="Assistant ID (optional)",
-            info="Thread",
+            info="ID of the assistant",
         ),
         MultilineInput(
             name="env_set",
@@ -61,16 +63,18 @@ class AstraAssistantManager(Component):
 
     async def process_inputs(self) -> Message:
         print(f"env_set is {self.env_set}")
-        flowgen_tool = FlowgenTool()
+        print(self.tools)
+        tool_cls = tools_and_names[self.tools]
+        tool_obj = tool_cls()
         #TODO: make tools dynamic
-        tools = [flowgen_tool]
         #TODO: maybe pass thread_id and assistant_id
-        assistant_manager = AssistantManager(instructions=self.instructions, model=self.model_name, name="managed_assistant", tools=tools)
+        client = get_patched_openai_client()
+        assistant_manager = AssistantManager(instructions=self.instructions, model=self.model_name, name="managed_assistant", tools=[tool_obj], client=client)
 
         content=self.user_message
         result: ToolOutput = await assistant_manager.run_thread(
             content=content,
-            tool=flowgen_tool
+            tool=tool_obj
         )
-        message = Message(text=result)
+        message = Message(text=result['text'])
         return message
