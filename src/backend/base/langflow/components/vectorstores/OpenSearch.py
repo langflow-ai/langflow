@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Optional, Dict, Any
+from typing import TYPE_CHECKING, Optional, Any
 from langchain_community.vectorstores import OpenSearchVectorSearch
 from loguru import logger
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -121,10 +121,10 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         try:
             from langchain_community.vectorstores import OpenSearchVectorSearch
         except ImportError as e:
-            logger.error(f"Failed to import required modules: {str(e)}")
+            error_message = f"Failed to import required modules: {str(e)}"
+            logger.error(error_message)
             raise ImportError("Please ensure opensearch-py and langchain_community are installed.") from e
 
-        # Create OpenSearchVectorSearch instance without documents
         try:
             opensearch = OpenSearchVectorSearch(
                 index_name=self.index_name,
@@ -137,10 +137,10 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 ssl_show_warn=False,
             )
         except Exception as e:
-            logger.error(f"Failed to create OpenSearchVectorSearch instance: {str(e)}")
-            raise RuntimeError(f"Check your connection and credentials: {str(e)}") from e
+            error_message = f"Failed to create OpenSearchVectorSearch instance: {str(e)}"
+            logger.error(error_message)
+            raise RuntimeError(f"Check your connection and credentials: {error_message}") from e
 
-        # If there are documents to ingest, add them to the vector store
         if self.ingest_data:
             self._add_documents_to_vector_store(opensearch)
 
@@ -167,11 +167,11 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 error_message = f"Error adding documents to Vector Store: {str(e)}"
                 logger.error(error_message)
                 logger.error(f"Traceback: {traceback.format_exc()}")
-                raise RuntimeError(f"An error occurred while adding documents to the Vector Store: {str(e)}") from e
+                raise RuntimeError(error_message) from e
         else:
             logger.debug("No documents to add to the Vector Store.")
 
-    def search(self, query: Optional[str] = None) -> List[Dict[str, Any]]:
+    def search(self, query: Optional[str] = None) -> list[dict[str, Any]]:
         """
         Search for similar documents in the vector store or retrieve all documents if no query is provided.
         """
@@ -181,13 +181,12 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             query = query or ""
 
             if self.hybrid_search_query.strip():
-                # Use custom hybrid search query if provided
                 try:
                     hybrid_query = json.loads(self.hybrid_search_query)
-
                 except json.JSONDecodeError as e:
-                    logger.error(f"Invalid hybrid search query JSON after replacement: {str(e)}")
-                    raise ValueError(f"Invalid hybrid search query JSON after replacement: {str(e)}") from e
+                    error_message = f"Invalid hybrid search query JSON: {str(e)}"
+                    logger.error(error_message)
+                    raise ValueError(error_message) from e
 
                 results = vector_store.client.search(index=self.index_name, body=hybrid_query)
 
@@ -208,7 +207,6 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                     )
                 return processed_results
 
-            # If hybrid search query is not provided, continue with regular search
             search_kwargs = {"k": self.number_of_results}
             search_type = self.search_type.lower()
 
@@ -233,11 +231,12 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 raise ValueError(f"Invalid search type: {self.search_type}")
 
         except Exception as e:
-            logger.error(f"Error during search: {str(e)}")
+            error_message = f"Error during search: {str(e)}"
+            logger.error(error_message)
             logger.error(f"Traceback: {traceback.format_exc()}")
-            raise RuntimeError(f"An error occurred during the search operation: {str(e)}") from e
+            raise RuntimeError(error_message) from e
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         """
         Search for documents in the vector store based on the search input.
         If no search input is provided, retrieve all documents.
@@ -255,6 +254,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             self.status = retrieved_data
             return retrieved_data
         except Exception as e:
-            logger.error(f"Error during document search: {str(e)}")
+            error_message = f"Error during document search: {str(e)}"
+            logger.error(error_message)
             logger.error(f"Traceback: {traceback.format_exc()}")
-            raise RuntimeError(f"An error occurred during the document search operation: {str(e)}") from e
+            raise RuntimeError(error_message) from e
