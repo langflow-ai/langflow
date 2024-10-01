@@ -38,7 +38,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    uv sync --frozen --no-install-project --no-editable
+    uv sync --no-install-project --no-editable
 
 ADD ./src /app/src
 
@@ -55,7 +55,7 @@ ADD ./pyproject.toml /app/pyproject.toml
 ADD ./uv.lock /app/uv.lock
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-editable
+    uv sync --no-editable
 
 ################################
 # RUNTIME
