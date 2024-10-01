@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import TableNodeComponent from "./components/TableNodeComponent";
 import CodeAreaComponent from "./components/codeAreaComponent";
 import DictComponent from "../dictComponent";
-import FloatComponent from "../floatComponent";
+import FloatComponent from "./components/floatComponent";
 import InputFileComponent from "../inputFileComponent";
 import IntComponent from "../intComponent";
 import KeypairListComponent from "../keypairListComponent";
@@ -118,12 +118,9 @@ export function ParameterRenderComponent({
       case "float":
         return (
           <FloatComponent
-            disabled={disabled}
-            editNode={editNode}
-            rangeSpec={templateData.range_spec}
-            value={templateValue ?? ""}
-            onChange={onChange}
+            {...baseInputProps}
             id={`float_${id}`}
+            rangeSpec={templateData.range_spec}
           />
         );
       case "int":

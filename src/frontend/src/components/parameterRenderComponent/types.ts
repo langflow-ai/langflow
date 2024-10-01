@@ -1,5 +1,6 @@
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { APIClassType } from "@/types/api";
+import { RangeSpecType } from "@/types/components";
 import { ColumnField } from "@/types/utils/functions";
 
 // Base type for RefreshParameterComponent children
@@ -17,9 +18,13 @@ export type BaseInputProps<valueType = any> = {
 // Generic type for composing input props
 export type InputProps<valueType = any, T = {}> = BaseInputProps<valueType> & T;
 
-
 export type TableComponentType = {
-    description: string;
-    tableTitle: string;
-    columns?: ColumnField[];
-  };
+  description: string;
+  tableTitle: string;
+  columns?: ColumnField[];
+};
+
+export type FloatComponentType = {
+  rangeSpec: RangeSpecType;
+
+};

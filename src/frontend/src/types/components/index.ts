@@ -250,14 +250,6 @@ export type IntComponentType = {
   id?: string;
 };
 
-export type FloatComponentType = {
-  value: string;
-  disabled?: boolean;
-  onChange: (value: string, dbValue?: boolean, skipSnapshot?: boolean) => void;
-  rangeSpec: RangeSpecType;
-  editNode?: boolean;
-  id?: string;
-};
 
 export type FilePreviewType = {
   loading: boolean;
