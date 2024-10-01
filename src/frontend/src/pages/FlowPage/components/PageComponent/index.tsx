@@ -119,7 +119,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const zoomLevel = reactFlowInstance?.getZoom();
   const shadowBoxWidth = NOTE_NODE_MIN_WIDTH * (zoomLevel || 1);
   const shadowBoxHeight = NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1);
-  const shadowBoxBackgroundColor = SHADOW_COLOR_OPTIONS[Object.keys(SHADOW_COLOR_OPTIONS)[0]];
+  const shadowBoxBackgroundColor =
+    SHADOW_COLOR_OPTIONS[Object.keys(SHADOW_COLOR_OPTIONS)[0]];
 
   function handleGroupNode() {
     takeSnapshot();
