@@ -226,13 +226,11 @@ jobs:
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: always() && ${{ inputs.build_docker_base == 'true' }}
-    needs: [release-nightly-main]
+    needs: [release-nightly-base, release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      # The `main` version is the pushed nightly tag, which should contain
-      # the nightly version of the base package we're building.
       # Version should _not_ contain the leading `v`
-      version: ${{ needs.release-nightly-main.outputs.version }} 
+      version: ${{ needs.release-nightly-base.outputs.version }} 
       release_type: base
       nightly_tag_base: ${{ inputs.nightly_tag_base }}
       nightly_tag_main: ${{ inputs.nightly_tag_main }}
