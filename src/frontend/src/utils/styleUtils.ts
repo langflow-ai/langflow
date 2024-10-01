@@ -214,6 +214,7 @@ import { NotionIcon } from "../icons/Notion";
 import { NvidiaIcon } from "../icons/Nvidia";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
+import { OpenSearch } from "../icons/OpenSearch";
 import { PineconeIcon } from "../icons/Pinecone";
 import { PostgresIcon } from "../icons/Postgres";
 import { PythonIcon } from "../icons/Python";
@@ -236,8 +237,6 @@ import { HackerNewsIcon } from "../icons/hackerNews";
 import { MistralIcon } from "../icons/mistral";
 import { SupabaseIcon } from "../icons/supabase";
 import { iconsType } from "../types/components";
-import { OpenSearch } from "../icons/OpenSearch";
-
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",

@@ -1,21 +1,23 @@
-from typing import TYPE_CHECKING, Optional, Any
+import json
+import traceback
+from typing import TYPE_CHECKING, Any
+
 from langchain_community.vectorstores import OpenSearchVectorSearch
 from loguru import logger
+
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.io import (
     BoolInput,
     DataInput,
-    HandleInput,
-    IntInput,
-    StrInput,
-    MultilineInput,
     DropdownInput,
     FloatInput,
+    HandleInput,
+    IntInput,
+    MultilineInput,
     SecretStrInput,
+    StrInput,
 )
 from langflow.schema import Data
-import traceback
-import json
 
 if TYPE_CHECKING:
     from langchain_community.vectorstores import OpenSearchVectorSearch
@@ -48,7 +50,10 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         MultilineInput(
             name="search_input",
             display_name="Search Input",
-            info="Enter a search query. Leave empty to retrieve all documents. If you need a more advanced search consider using Hybrid Search Query instead.",
+            info=(
+                "Enter a search query. Leave empty to retrieve all documents. "
+                "If you need a more advanced search consider using Hybrid Search Query instead."
+            ),
             value="",
         ),
         DataInput(
@@ -108,7 +113,8 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             value="",
             advanced=True,
             info=(
-                "Provide a custom hybrid search query in JSON format. This allows you to combine vector similarity and keyword matching."
+                "Provide a custom hybrid search query in JSON format. This allows you to combine "
+                "vector similarity and keyword matching."
             ),
         ),
     ]
@@ -123,7 +129,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         except ImportError as e:
             error_message = f"Failed to import required modules: {str(e)}"
             logger.error(error_message)
-            raise ImportError("Please ensure opensearch-py and langchain_community are installed.") from e
+            raise ImportError(error_message) from e
 
         try:
             opensearch = OpenSearchVectorSearch(
@@ -139,7 +145,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         except Exception as e:
             error_message = f"Failed to create OpenSearchVectorSearch instance: {str(e)}"
             logger.error(error_message)
-            raise RuntimeError(f"Check your connection and credentials: {error_message}") from e
+            raise RuntimeError(error_message) from e
 
         if self.ingest_data:
             self._add_documents_to_vector_store(opensearch)
@@ -171,7 +177,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         else:
             logger.debug("No documents to add to the Vector Store.")
 
-    def search(self, query: Optional[str] = None) -> list[dict[str, Any]]:
+    def search(self, query: str | None = None) -> list[dict[str, Any]]:
         """
         Search for similar documents in the vector store or retrieve all documents if no query is provided.
         """
@@ -213,7 +219,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             if search_type == "similarity":
                 results = vector_store.similarity_search(query, **search_kwargs)
                 return [{"page_content": doc.page_content, "metadata": doc.metadata} for doc in results]
-            elif search_type == "similarity_score_threshold":
+            if search_type == "similarity_score_threshold":
                 search_kwargs["score_threshold"] = self.search_score_threshold
                 results = vector_store.similarity_search_with_relevance_scores(query, **search_kwargs)
                 return [
@@ -224,11 +230,13 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                     }
                     for doc, score in results
                 ]
-            elif search_type == "mmr":
+            if search_type == "mmr":
                 results = vector_store.max_marginal_relevance_search(query, **search_kwargs)
                 return [{"page_content": doc.page_content, "metadata": doc.metadata} for doc in results]
-            else:
-                raise ValueError(f"Invalid search type: {self.search_type}")
+
+            error_message = f"Invalid search type:: {self.search_type}"
+            logger.error(error_message)
+            raise ValueError(error_message)
 
         except Exception as e:
             error_message = f"Error during search: {str(e)}"

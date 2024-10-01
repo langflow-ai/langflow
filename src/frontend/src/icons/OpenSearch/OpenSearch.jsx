@@ -13,7 +13,8 @@ const OpenSearchSVG = (props) => (
   >
     <defs>
       <clipPath id="clip-corners">
-        <path d="
+        <path
+          d="
           M20,0
           H364
           L384,20
@@ -24,7 +25,8 @@ const OpenSearchSVG = (props) => (
           V20
           L20,0
           Z
-        " />
+        "
+        />
       </clipPath>
     </defs>
     <g clipPath="url(#clip-corners)">
