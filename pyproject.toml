@@ -229,6 +229,7 @@ langchain-unstructured = "^0.1.2"
 pydantic-settings = "2.4.0"
 ragstack-ai-knowledge-store = "^0.2.1"
 duckduckgo-search = "^6.2.12"
+opensearch-py = "^2.7.1"
 
 
 [tool.poetry.group.dev.dependencies]
