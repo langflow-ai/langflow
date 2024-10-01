@@ -3,7 +3,7 @@ import CodeAreaModal from "../../../../modals/codeAreaModal";
 import { cn } from "../../../../utils/utils";
 
 import IconComponent from "../../../genericIconComponent";
-import { CodeAreaComponentType, InputProps } from "../../types";
+import { InputProps } from "../../types";
 
 export default function CodeAreaComponent({
   value,
