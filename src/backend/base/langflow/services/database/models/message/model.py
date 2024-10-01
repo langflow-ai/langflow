@@ -37,7 +37,9 @@ class MessageBase(SQLModel):
                 if hasattr(file, "path") and hasattr(file, "url") and file.path:
                     session_id = message.session_id
                     image_paths.append(f"{session_id}{file.path.split(session_id)[1]}")
-            message.files = image_paths
+            if image_paths:
+                message.files = image_paths
+
         if isinstance(message.timestamp, str):
             timestamp = datetime.fromisoformat(message.timestamp)
         else:
