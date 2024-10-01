@@ -111,14 +111,14 @@ jobs:
         if: ${{ inputs.version == '' && inputs.release_type == 'base' }}
         id: get-version-base
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
           echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Main
         if: ${{ inputs.version == '' && inputs.release_type == 'main' }}
         id: get-version-main
         run: |
-          version=$(uv tree | grep 'langflow' | awk '{print $2}')
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
           echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
   setup:
