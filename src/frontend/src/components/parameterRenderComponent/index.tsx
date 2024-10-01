@@ -165,12 +165,7 @@ export function ParameterRenderComponent({
       case "code":
         return (
           <CodeAreaComponent
-            handleNodeClass={handleNodeClass}
-            nodeClass={nodeClass}
-            disabled={disabled}
-            editNode={editNode}
-            value={templateValue ?? ""}
-            handleOnNewValue={handleOnNewValue}
+            {...baseInputProps}
             id={`codearea_${id}`}
           />
         );
