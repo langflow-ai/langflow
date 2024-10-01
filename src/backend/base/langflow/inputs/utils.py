@@ -28,4 +28,5 @@ def instantiate_input(input_type: str, data: dict) -> InputTypes:
         data["field_type"] = data.pop("type")
     if input_type_class:
         return input_type_class(**data)
-    raise ValueError(f"Invalid input type: {input_type}")
+    msg = f"Invalid input type: {input_type}"
+    raise ValueError(msg)

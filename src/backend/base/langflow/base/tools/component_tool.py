@@ -69,7 +69,8 @@ class ComponentToolkit:  # type: ignore
                 continue
 
             if not output.method:
-                raise ValueError(f"Output {output.name} does not have a method defined")
+                msg = f"Output {output.name} does not have a method defined"
+                raise ValueError(msg)
 
             output_method: Callable = getattr(self.component, output.method)
             args_schema = None

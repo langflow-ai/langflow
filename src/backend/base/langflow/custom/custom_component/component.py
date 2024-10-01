@@ -343,7 +343,7 @@ class Component(CustomComponent):
 
             visitor = RequiredInputsVisitor(self._inputs)
             visitor.visit(ast_tree)
-            output.required_inputs = sorted(list(visitor.required_inputs))
+            output.required_inputs = sorted(visitor.required_inputs)
 
     def get_output_by_method(self, method: Callable):
         # method is a callable and output.method is a string
@@ -417,9 +417,11 @@ class Component(CustomComponent):
             )
         # If no matches are found, raise an error indicating no suitable output
         if not matching_pairs:
-            raise ValueError(
-                f"No matching output from {value.__class__.__name__} found for input '{input_name}' in {self.__class__.__name__}."
+            msg = (
+                f"No matching output from {value.__class__.__name__} found for input '{input_name}' "
+                f"in {self.__class__.__name__}."
             )
+            raise ValueError(msg)
         # Get the matching output and input pair
         output, input_ = matching_pairs[0]
         # Ensure that the output method is a valid method name (string)
