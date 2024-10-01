@@ -1,9 +1,15 @@
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
+import useAddFlow from "@/hooks/flows/use-add-flow";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
+import { useFolderStore } from "../../../../stores/foldersStore";
+import { updateIds } from "../../../../utils/reactflowUtils";
 
 interface TemplateContentProps {
   currentTab: string;
@@ -12,10 +18,24 @@ interface TemplateContentProps {
 export default function TemplateContent({ currentTab }: TemplateContentProps) {
   const examples = useFlowsManagerStore((state) => state.examples);
   const [searchQuery, setSearchQuery] = useState("");
+  const addFlow = useAddFlow();
+  const navigate = useCustomNavigate();
+  const { folderId } = useParams();
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+
+  const folderIdUrl = folderId ?? myCollectionId;
 
   const filteredExamples = examples.filter((example) =>
     example.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  const handleCardClick = (example) => {
+    updateIds(example.data);
+    addFlow({ flow: example }).then((id) => {
+      navigate(`/flow/${id}/folder/${folderIdUrl}`);
+    });
+    track("New Flow Created", { template: `${example.name} Template` });
+  };
 
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-hidden">
@@ -42,7 +62,11 @@ export default function TemplateContent({ currentTab }: TemplateContentProps) {
         </div>
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {filteredExamples.map((example, index) => (
-            <div key={index} className="flex flex-col gap-4 overflow-hidden">
+            <div
+              key={index}
+              className="flex cursor-pointer flex-col gap-4 overflow-hidden"
+              onClick={() => handleCardClick(example)}
+            >
               <div className="relative h-40 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 p-4">
                 <IconComponent
                   name={example.icon || "FileText"}
