@@ -54,6 +54,8 @@ jobs:
     defaults:
       run:
         shell: bash
+    outputs:
+      version: ${{ steps.verify.outputs.version }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
@@ -85,6 +87,7 @@ jobs:
         run: uv sync --dev
 
       - name: Verify Nightly Name and Version
+        id: verify
         working-directory: src/backend/base
         run: |
           name=$(uv tree | grep 'langflow-base' | awk '{print $2}')
@@ -97,6 +100,9 @@ jobs:
             echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_base }}. Exiting the workflow."
             exit 1
           fi
+          # Strip the leading `v` from the version
+          version=$(echo $version | sed 's/^v//')
+          echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Build project for distribution
         run: make build base=true args="--wheel"
@@ -136,6 +142,8 @@ jobs:
     name: Release Langflow Nightly Main
     needs: [release-nightly-base]
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.verify.outputs.version }}
     defaults:
       run:
         shell: bash
@@ -166,6 +174,7 @@ jobs:
         run: uv sync --dev
 
       - name: Verify Nightly Name and Version
+        id: verify
         run: |
           name=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $1}')
           version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}')
@@ -177,6 +186,9 @@ jobs:
             echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_main }}. Exiting the workflow."
             exit 1
           fi
+          # Strip the leading `v` from the version
+          version=$(echo $version | sed 's/^v//')
+          echo "version=$version" >> $GITHUB_OUTPUT
       - name: Wait for PyPI Propagation
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation of base
 
@@ -214,18 +226,16 @@ jobs:
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: always() && ${{ inputs.build_docker_base == 'true' }}
-    needs: [release-nightly-base]
+    needs: [release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
-    strategy:
-      matrix:
-        release_type:
-          - base
     with:
-      # version should be needs.release-base.outputs.version  if release_type is base
-      # version should be needs.release-main.outputs.version  if release_type is main
-      version: ""
-      release_type: ${{ matrix.release_type }}
+      # The `main` version is the pushed nightly tag, which should contain
+      # the nightly version of the base package we're building.
+      # Version should _not_ contain the leading `v`
+      version: ${{ needs.release-nightly-main.outputs.version }} 
+      release_type: base
       nightly_tag_base: ${{ inputs.nightly_tag_base }}
+      nightly_tag_main: ${{ inputs.nightly_tag_main }}
     secrets: inherit
 
   call_docker_build_main:
@@ -233,14 +243,9 @@ jobs:
     if: always() && ${{ inputs.build_docker_main == 'true' }}
     needs: [release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
-    strategy:
-      matrix:
-        release_type:
-          - main
     with:
-      # version should be needs.release-base.outputs.version  if release_type is base
-      # version should be needs.release-main.outputs.version  if release_type is main
-      version: ""
-      release_type: ${{ matrix.release_type }}
+      # Version should _not_ contain the leading `v`
+      version: ${{ needs.release-nightly-main.outputs.version }}
+      release_type: main
       nightly_tag_main: ${{ inputs.nightly_tag_main }}
     secrets: inherit
