@@ -212,7 +212,7 @@ textarea[class^="ag-"]:focus {
     transparent 40%,
     rgba(255, 255, 255, 0.2) 50%,
     rgba(255, 255, 255, 0.2) 55%,
-    transparent 70%,
+    transparent 60%,
     transparent 100%
   );
 
