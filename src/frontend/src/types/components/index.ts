@@ -181,16 +181,6 @@ export type TextAreaComponentType = {
   updateVisibility?: () => void;
 };
 
-export type TableComponentType = {
-  description: string;
-  tableTitle: string;
-  onChange: (value: any[]) => void;
-  value: any[];
-  editNode?: boolean;
-  id?: string;
-  columns?: ColumnField[];
-};
-
 export type outputComponentType = {
   types: string[];
   selected: string;

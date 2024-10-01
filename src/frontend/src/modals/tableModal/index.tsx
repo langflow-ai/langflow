@@ -10,15 +10,16 @@ import BaseModal from "../baseModal";
 interface TableModalProps extends TableComponentProps {
   tableTitle: string;
   description: string;
+  disabled?: boolean;
   children: React.ReactNode;
 }
 
 const TableModal = forwardRef<
   ElementRef<typeof TableComponent>,
   TableModalProps
->(({ tableTitle, description, children, ...props }: TableModalProps, ref) => {
+>(({ tableTitle, description, children, disabled, ...props }: TableModalProps, ref) => {
   return (
-    <BaseModal>
+    <BaseModal disable={disabled}>
       <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
       <BaseModal.Header description={description}>
         <span className="pr-2">{tableTitle}</span>
