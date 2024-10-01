@@ -11,7 +11,7 @@ import IntComponent from "./components/intComponent";
 import KeypairListComponent from "../keypairListComponent";
 import LinkComponent from "../linkComponent";
 import PromptAreaComponent from "../promptComponent";
-import ToggleShadComponent from "../toggleShadComponent";
+import ToggleShadComponent from "./components/toggleShadComponent";
 import { RefreshParameterComponent } from "./components/refreshParameterComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";

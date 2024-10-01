@@ -3,7 +3,7 @@ import ShadTooltip from "@/components/shadTooltipComponent";
 import useFlowStore from "@/stores/flowStore";
 import { isTargetHandleConnected } from "@/utils/reactflowUtils";
 import { CustomCellRendererProps } from "ag-grid-react";
-import ToggleShadComponent from "../../../toggleShadComponent";
+import ToggleShadComponent from "../../../parameterRenderComponent/components/toggleShadComponent";
 
 export default function TableAdvancedToggleCellRender({
   value: { nodeId, parameterId },

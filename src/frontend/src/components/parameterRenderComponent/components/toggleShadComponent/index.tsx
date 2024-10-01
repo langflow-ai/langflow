@@ -1,5 +1,5 @@
-import { ToggleComponentType } from "../../types/components";
-import { Switch } from "../ui/switch";
+import { ToggleComponentType } from "../../../../types/components";
+import { Switch } from "../../../ui/switch";
 
 export default function ToggleShadComponent({
   enabled,
