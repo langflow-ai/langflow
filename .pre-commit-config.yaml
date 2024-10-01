@@ -12,3 +12,13 @@ repos:
         args:
           - --fix=lf
       - id: trailing-whitespace
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        language: system
+        entry: bash -c "uv run ruff check"
+      - id: ruff-format
+        name: ruff format
+        language: system
+        entry: bash -c "uv run ruff format"
