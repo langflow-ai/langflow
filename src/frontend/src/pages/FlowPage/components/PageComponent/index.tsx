@@ -494,8 +494,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
         const shadowBox = document.getElementById("shadow-box");
         if (shadowBox) {
           shadowBox.style.display = "block";
-          shadowBox.style.left = `${event.clientX + 10}px`;
-          shadowBox.style.top = `${event.clientY + 10}px`;
+          shadowBox.style.left = `${event.clientX + 1}px`;
+          shadowBox.style.top = `${event.clientY + 1}px`;
         }
       }
     },
