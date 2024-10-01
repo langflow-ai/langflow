@@ -2,6 +2,8 @@ import { RefreshButton } from "@/components/ui/refreshButton";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
+import { APIClassType, InputFieldType } from "@/types/api";
+import { InputProps } from "../../types";
 
 export function RefreshParameterComponent({
   children,
@@ -12,6 +14,16 @@ export function RefreshParameterComponent({
   handleNodeClass,
   nodeId,
   name,
+}:
+{
+  children: React.ReactElement<InputProps>;
+  templateData: Partial<InputFieldType>
+  disabled: boolean;
+  nodeClass: APIClassType;
+  editNode: boolean;
+  handleNodeClass: (value: any, code?: string, type?: string) => void;
+  nodeId: string;
+  name: string;
 }) {
   const postTemplateValue = usePostTemplateValue({
     parameterId: name,
