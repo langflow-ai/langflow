@@ -30,11 +30,10 @@ class FlowTool(BaseTool):
         """The tool's input schema."""
         if self.args_schema is not None:
             return self.args_schema
-        elif self.graph is not None:
+        if self.graph is not None:
             return build_schema_from_inputs(self.name, get_flow_inputs(self.graph))
-        else:
-            msg = "No input schema available."
-            raise ToolException(msg)
+        msg = "No input schema available."
+        raise ToolException(msg)
 
     def _run(
         self,
@@ -88,8 +87,7 @@ class FlowTool(BaseTool):
     def build_tweaks_dict(self, args, kwargs):
         args_names = get_arg_names(self.inputs)
         kwargs = self.validate_inputs(args_names=args_names, args=args, kwargs=kwargs)
-        tweaks = {arg["component_name"]: kwargs[arg["arg_name"]] for arg in args_names}
-        return tweaks
+        return {arg["component_name"]: kwargs[arg["arg_name"]] for arg in args_names}
 
     async def _arun(
         self,

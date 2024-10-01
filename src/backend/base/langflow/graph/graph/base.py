@@ -616,7 +616,7 @@ class Graph:
                 continue
             # If the input_type is not any and the input_type is not in the vertex id
             # Example: input_type = "chat" and vertex.id = "OpenAI-19ddn"
-            elif input_type is not None and input_type != "any" and input_type not in vertex.id.lower():
+            if input_type is not None and input_type != "any" and input_type not in vertex.id.lower():
                 continue
             if vertex is None:
                 msg = f"Vertex {vertex_id} not found"
@@ -650,7 +650,7 @@ class Graph:
         if input_components and not isinstance(input_components, list):
             msg = f"Invalid components value: {input_components}. Expected list"
             raise ValueError(msg)
-        elif input_components is None:
+        if input_components is None:
             input_components = []
 
         if not isinstance(inputs.get(INPUT_FIELD_NAME, ""), str):
@@ -1386,10 +1386,9 @@ class Graph:
                 msg = f"No result found for vertex {vertex_id}"
                 raise ValueError(msg)
 
-            vertex_build_result = VertexBuildResult(
+            return VertexBuildResult(
                 result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
             )
-            return vertex_build_result
         except Exception as exc:
             if not isinstance(exc, ComponentBuildException):
                 logger.exception(f"Error building Component: \n\n{exc}")
@@ -1510,7 +1509,7 @@ class Graph:
                 for t in tasks[i + 1 :]:
                     t.cancel()
                 raise result
-            elif isinstance(result, tuple) and len(result) == 5:
+            if isinstance(result, tuple) and len(result) == 5:
                 vertices.append(result[4])
             else:
                 msg = f"Invalid result from task {task_name}: {result}"
@@ -1527,8 +1526,7 @@ class Graph:
         for v in vertices:
             next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
             results.extend(next_runnable_vertices)
-        no_duplicate_results = list(set(results))
-        return no_duplicate_results
+        return list(set(results))
 
     def topological_sort(self) -> list[Vertex]:
         """
@@ -1677,11 +1675,11 @@ class Graph:
         node_name = node_id.split("-")[0]
         if node_name in InterfaceComponentTypes:
             return InterfaceVertex
-        elif node_name in ["SharedState", "Notify", "Listen"]:
+        if node_name in ["SharedState", "Notify", "Listen"]:
             return StateVertex
-        elif node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+        if node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]
-        elif node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+        if node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_name]
 
         if node_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
@@ -1823,8 +1821,7 @@ class Graph:
                                 queue.append(predecessor)
 
             current_layer += 1  # Next layer
-        new_layers = self.refine_layers(layers)
-        return new_layers
+        return self.refine_layers(layers)
 
     def refine_layers(self, initial_layers):
         # Map each vertex to its current layer
@@ -1860,9 +1857,7 @@ class Graph:
                     refined_layers[layer_index].append(vertex_id)
 
         # Remove empty layers if any
-        refined_layers = [layer for layer in refined_layers if layer]
-
-        return refined_layers
+        return [layer for layer in refined_layers if layer]
 
     def sort_chat_inputs_first(self, vertices_layers: list[list[str]]) -> list[list[str]]:
         chat_inputs_first = []
@@ -1875,9 +1870,7 @@ class Graph:
         if not chat_inputs_first:
             return vertices_layers
 
-        vertices_layers = [chat_inputs_first] + vertices_layers
-
-        return vertices_layers
+        return [chat_inputs_first] + vertices_layers
 
     def sort_layer_by_dependency(self, vertices_layers: list[list[str]]) -> list[list[str]]:
         """Sorts the vertices in each layer by dependency, ensuring no vertex depends on a subsequent vertex."""
@@ -1894,9 +1887,7 @@ class Graph:
         # Build a map of each vertex to its index in the layer for quick lookup.
         index_map = {vertex: index for index, vertex in enumerate(layer)}
         # Create a sorted copy of the layer based on dependency order.
-        sorted_layer = sorted(layer, key=lambda vertex: self._max_dependency_index(vertex, index_map), reverse=True)
-
-        return sorted_layer
+        return sorted(layer, key=lambda vertex: self._max_dependency_index(vertex, index_map), reverse=True)
 
     def _max_dependency_index(self, vertex_id: str, index_map: dict[str, int]) -> int:
         """Finds the highest index a given vertex's dependencies occupy in the same layer."""
@@ -1969,14 +1960,13 @@ class Graph:
             return any(component.value in vertex for component in InterfaceComponentTypes)
 
         # Sort each inner list so that vertices containing ChatInput or ChatOutput come first
-        sorted_vertices = [
+        return [
             sorted(
                 inner_list,
                 key=lambda vertex: not contains_interface_component(vertex),
             )
             for inner_list in vertices_layers
         ]
-        return sorted_vertices
 
     def sort_by_avg_build_time(self, vertices_layers: list[list[str]]) -> list[list[str]]:
         """Sorts the vertices in the graph so that vertices with the lowest average build time come first."""
@@ -1989,8 +1979,7 @@ class Graph:
 
             return vertices_ids
 
-        sorted_vertices = [sort_layer_by_avg_build_time(layer) for layer in vertices_layers]
-        return sorted_vertices
+        return [sort_layer_by_avg_build_time(layer) for layer in vertices_layers]
 
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""

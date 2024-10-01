@@ -45,5 +45,4 @@ Blog:
     chat_output = ChatOutput()
     chat_output.set(input_value=openai_component.text_response)
 
-    graph = Graph(start=text_input, end=chat_output)
-    return graph
+    return Graph(start=text_input, end=chat_output)

@@ -36,9 +36,8 @@ class NotionDatabaseProperties(LCToolComponent):
         if isinstance(result, str):
             # An error occurred, return it as text
             return Data(text=result)
-        else:
-            # Success, return the properties
-            return Data(text=str(result), data=result)
+        # Success, return the properties
+        return Data(text=str(result), data=result)
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
@@ -58,8 +57,7 @@ class NotionDatabaseProperties(LCToolComponent):
             response = requests.get(url, headers=headers)
             response.raise_for_status()
             data = response.json()
-            properties = data.get("properties", {})
-            return properties
+            return data.get("properties", {})
         except requests.exceptions.RequestException as e:
             return f"Error fetching Notion database properties: {str(e)}"
         except ValueError as e:

@@ -90,14 +90,14 @@ class AssemblyAILeMUR(Component):
             error = "Either a Transcription Result or Transcript IDs must be provided"
             self.status = error
             return Data(data={"error": error})
-        elif self.transcription_result and self.transcription_result.data.get("error"):
+        if self.transcription_result and self.transcription_result.data.get("error"):
             # error message from the previous step
             self.status = self.transcription_result.data["error"]
             return self.transcription_result
-        elif self.endpoint == "task" and not self.prompt:
+        if self.endpoint == "task" and not self.prompt:
             self.status = "No prompt specified for the task endpoint"
             return Data(data={"error": "No prompt specified"})
-        elif self.endpoint == "question-answer" and not self.questions:
+        if self.endpoint == "question-answer" and not self.questions:
             error = "No Questions were provided for the question-answer endpoint"
             self.status = error
             return Data(data={"error": error})
@@ -172,12 +172,11 @@ class AssemblyAILeMUR(Component):
     def get_final_model(self, model_name: str) -> aai.LemurModel:
         if model_name == "claude3_5_sonnet":
             return aai.LemurModel.claude3_5_sonnet
-        elif model_name == "claude3_opus":
+        if model_name == "claude3_opus":
             return aai.LemurModel.claude3_opus
-        elif model_name == "claude3_haiku":
+        if model_name == "claude3_haiku":
             return aai.LemurModel.claude3_haiku
-        elif model_name == "claude3_sonnet":
+        if model_name == "claude3_sonnet":
             return aai.LemurModel.claude3_sonnet
-        else:
-            msg = f"Model name not supported: {model_name}"
-            raise ValueError(msg)
+        msg = f"Model name not supported: {model_name}"
+        raise ValueError(msg)

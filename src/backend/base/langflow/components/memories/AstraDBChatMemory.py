@@ -59,7 +59,7 @@ class AstraDBChatMemory(LCChatMemoryComponent):
             )
             raise ImportError(msg)
 
-        memory = AstraDBChatMessageHistory(
+        return AstraDBChatMessageHistory(
             session_id=self.session_id,
             collection_name=self.collection_name,
             token=self.token,
@@ -67,4 +67,3 @@ class AstraDBChatMemory(LCChatMemoryComponent):
             namespace=self.namespace or None,
             environment=parse_api_endpoint(self.api_endpoint).environment,
         )
-        return memory

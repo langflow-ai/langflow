@@ -24,7 +24,7 @@ class LCChatMemoryComponent(Component):
             if method_name not in output_names:
                 msg = f"Output with name '{method_name}' must be defined."
                 raise ValueError(msg)
-            elif not hasattr(self, method_name):
+            if not hasattr(self, method_name):
                 msg = f"Method '{method_name}' must be defined."
                 raise ValueError(msg)
 

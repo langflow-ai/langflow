@@ -84,9 +84,7 @@ class GmailLoaderComponent(Component):
                 message = re.sub(r"\s{2,}", " ", message)
 
                 # Trim leading and trailing whitespace
-                message = message.strip()
-
-                return message
+                return message.strip()
 
             def _extract_email_content(self, msg: Any) -> HumanMessage:
                 from_email = None
@@ -109,11 +107,10 @@ class GmailLoaderComponent(Component):
                         data = base64.urlsafe_b64decode(data).decode("utf-8")
                         pattern = re.compile(r"\r\nOn .+(\r\n)*wrote:\r\n")
                         newest_response = re.split(pattern, data)[0]
-                        message = HumanMessage(
+                        return HumanMessage(
                             content=self.clean_message_content(newest_response),
                             additional_kwargs={"sender": from_email},
                         )
-                        return message
                 msg = "No plain text part found in the email."
                 raise ValueError(msg)
 
@@ -147,8 +144,7 @@ class GmailLoaderComponent(Component):
                         raise ValueError(msg)
                     starter_content = self._extract_email_content(response_email)
                     return ChatSession(messages=[starter_content, message_content])
-                else:
-                    return ChatSession(messages=[message_content])
+                return ChatSession(messages=[message_content])
 
             def lazy_load(self) -> Iterator[ChatSession]:
                 service = build("gmail", "v1", credentials=self.creds)
