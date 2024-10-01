@@ -137,9 +137,9 @@ class OpenAIModelComponent(LCModelComponent):
         try:
             from openai import BadRequestError
         except ImportError:
-            return
+            return None
         if isinstance(e, BadRequestError):
             message = e.body.get("message")  # type: ignore
             if message:
                 return message
-        return
+        return None

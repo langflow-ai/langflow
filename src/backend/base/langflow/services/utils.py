@@ -22,30 +22,27 @@ def get_or_create_super_user(session: Session, username, password, is_default):
         if user.is_superuser:
             if verify_password(password, user.password):
                 return None
-            else:
-                # Superuser exists but password is incorrect
-                # which means that the user has changed the
-                # base superuser credentials.
-                # This means that the user has already created
-                # a superuser and changed the password in the UI
-                # so we don't need to do anything.
-                logger.debug(
-                    "Superuser exists but password is incorrect. "
-                    "This means that the user has changed the "
-                    "base superuser credentials."
-                )
-                return None
-        else:
-            logger.debug("User with superuser credentials exists but is not a superuser.")
+            # Superuser exists but password is incorrect
+            # which means that the user has changed the
+            # base superuser credentials.
+            # This means that the user has already created
+            # a superuser and changed the password in the UI
+            # so we don't need to do anything.
+            logger.debug(
+                "Superuser exists but password is incorrect. "
+                "This means that the user has changed the "
+                "base superuser credentials."
+            )
             return None
+        logger.debug("User with superuser credentials exists but is not a superuser.")
+        return None
 
     if user:
         if verify_password(password, user.password):
             msg = "User with superuser credentials exists but is not a superuser."
             raise ValueError(msg)
-        else:
-            msg = "Incorrect superuser credentials"
-            raise ValueError(msg)
+        msg = "Incorrect superuser credentials"
+        raise ValueError(msg)
 
     if is_default:
         logger.debug("Creating default superuser.")

@@ -32,8 +32,7 @@ class ChatService(Service):
         """
         if isinstance(self.cache_service, AsyncBaseCacheService):
             return self._async_cache_locks[key]
-        else:
-            return self._sync_cache_locks[key]
+        return self._sync_cache_locks[key]
 
     async def _perform_cache_operation(
         self, operation: str, key: str, data: Any = None, lock: asyncio.Lock | None = None
@@ -59,17 +58,22 @@ class ChatService(Service):
         if isinstance(self.cache_service, AsyncBaseCacheService):
             if operation == "upsert":
                 await self.cache_service.upsert(str(key), data, lock=lock)
-            elif operation == "get":
+                return None
+            if operation == "get":
                 return await self.cache_service.get(key, lock=lock)
-            elif operation == "delete":
+            if operation == "delete":
                 await self.cache_service.delete(key, lock=lock)
-        else:
-            if operation == "upsert":
-                self.cache_service.upsert(str(key), data, lock=lock)
-            elif operation == "get":
-                return self.cache_service.get(key, lock=lock)
-            elif operation == "delete":
-                self.cache_service.delete(key, lock=lock)
+                return None
+            return None
+        if operation == "upsert":
+            self.cache_service.upsert(str(key), data, lock=lock)
+            return None
+        if operation == "get":
+            return self.cache_service.get(key, lock=lock)
+        if operation == "delete":
+            self.cache_service.delete(key, lock=lock)
+            return None
+        return None
 
     async def set_cache(self, key: str, data: Any, lock: asyncio.Lock | None = None) -> bool:
         """

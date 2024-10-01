@@ -80,7 +80,7 @@ class NVIDIAModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         seed = self.seed
-        output = ChatNVIDIA(
+        return ChatNVIDIA(
             max_tokens=max_tokens or None,
             model=model_name,
             base_url=self.base_url,
@@ -88,4 +88,3 @@ class NVIDIAModelComponent(LCModelComponent):
             temperature=temperature or 0.1,
             seed=seed,
         )
-        return output  # type: ignore

@@ -50,7 +50,7 @@ class LCModelComponent(Component):
             if method_name not in output_names:
                 msg = f"Output with name '{method_name}' must be defined."
                 raise ValueError(msg)
-            elif not hasattr(self, method_name):
+            if not hasattr(self, method_name):
                 msg = f"Method '{method_name}' must be defined."
                 raise ValueError(msg)
 
@@ -181,18 +181,17 @@ class LCModelComponent(Component):
             )
             if stream:
                 return runnable.stream(inputs)  # type: ignore
+            message = runnable.invoke(inputs)  # type: ignore
+            result = message.content if hasattr(message, "content") else message
+            if isinstance(message, AIMessage):
+                status_message = self.build_status_message(message)
+                self.status = status_message
+            elif isinstance(result, dict):
+                result = json.dumps(message, indent=4)
+                self.status = result
             else:
-                message = runnable.invoke(inputs)  # type: ignore
-                result = message.content if hasattr(message, "content") else message
-                if isinstance(message, AIMessage):
-                    status_message = self.build_status_message(message)
-                    self.status = status_message
-                elif isinstance(result, dict):
-                    result = json.dumps(message, indent=4)
-                    self.status = result
-                else:
-                    self.status = result
-                return result
+                self.status = result
+            return result
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e

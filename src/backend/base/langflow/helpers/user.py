@@ -9,7 +9,6 @@ from langflow.services.deps import get_db_service
 
 
 def get_user_by_flow_id_or_endpoint_name(flow_id_or_name: str) -> UserRead | None:
-    user_read = None
     with get_db_service().with_session() as session:
         try:
             flow_id = UUID(flow_id_or_name)
@@ -25,5 +24,4 @@ def get_user_by_flow_id_or_endpoint_name(flow_id_or_name: str) -> UserRead | Non
         if user is None:
             raise HTTPException(status_code=404, detail=f"User for flow {flow_id_or_name} not found")
 
-        user_read = UserRead.model_validate(user, from_attributes=True)
-    return user_read
+        return UserRead.model_validate(user, from_attributes=True)

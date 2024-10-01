@@ -70,6 +70,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
                 "description": docs.short_description or "",
                 "base_classes": base_classes,
             }
+    return None
 
 
 def build_template_from_method(
@@ -131,6 +132,7 @@ def build_template_from_method(
                 "description": docs.short_description or "",
                 "base_classes": base_classes,
             }
+    return None
 
 
 def get_base_classes(cls):
@@ -316,7 +318,7 @@ def get_formatted_type(key: str, _type: str) -> str:
     if key == "allowed_tools":
         return "Tool"
 
-    elif key == "max_value_length":
+    if key == "max_value_length":
         return "int"
 
     return _type

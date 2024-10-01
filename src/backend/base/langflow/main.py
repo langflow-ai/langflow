@@ -59,8 +59,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
 
         if cancel_task in done:
             return Response("Request was cancelled", status_code=499)
-        else:
-            return await handler_task
+        return await handler_task
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
@@ -161,8 +160,7 @@ def create_app():
                     content={"detail": "Invalid multipart formatting"},
                 )
 
-        response = await call_next(request)
-        return response
+        return await call_next(request)
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
@@ -203,12 +201,11 @@ def create_app():
                 status_code=exc.status_code,
                 content={"message": str(exc.detail)},
             )
-        else:
-            logger.error(f"unhandled error: {exc}")
-            return JSONResponse(
-                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                content={"message": str(exc)},
-            )
+        logger.error(f"unhandled error: {exc}")
+        return JSONResponse(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            content={"message": str(exc)},
+        )
 
     FastAPIInstrumentor.instrument_app(app)
 

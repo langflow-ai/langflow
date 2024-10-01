@@ -51,8 +51,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     def get_api_url(self) -> str:
         if "huggingface" in self.inference_endpoint.lower():
             return f"{self.inference_endpoint}{self.model_id}"
-        else:
-            return self.inference_endpoint
+        return self.inference_endpoint
 
     def create_huggingface_endpoint(
         self,

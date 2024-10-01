@@ -318,18 +318,16 @@ class Component(CustomComponent):
     def _inherits_from_component(self, method: Callable):
         # check if the method is a method from a class that inherits from Component
         # and that it is an output of that class
-        inherits_from_component = hasattr(method, "__self__") and isinstance(method.__self__, Component)
-        return inherits_from_component
+        return hasattr(method, "__self__") and isinstance(method.__self__, Component)
 
     def _method_is_valid_output(self, method: Callable):
         # check if the method is a method from a class that inherits from Component
         # and that it is an output of that class
-        method_is_output = (
+        return (
             hasattr(method, "__self__")
             and isinstance(method.__self__, Component)
             and method.__self__.get_output_by_method(method)
         )
-        return method_is_output
 
     def _build_error_string_from_matching_pairs(self, matching_pairs: list[tuple[Output, Input]]):
         text = ""
@@ -558,7 +556,7 @@ class Component(CustomComponent):
 
         frontend_node.validate_component()
         frontend_node.set_base_classes_from_outputs()
-        data = {
+        return {
             "data": {
                 "node": frontend_node.to_dict(keep_name=False),
                 "type": self.name or self.__class__.__name__,
@@ -566,7 +564,6 @@ class Component(CustomComponent):
             },
             "id": self._id,
         }
-        return data
 
     def _validate_inputs(self, params: dict):
         # Params keys are the `name` attribute of the Input objects
@@ -732,8 +729,7 @@ class Component(CustomComponent):
         self.inputs = self.template_config.get("inputs", [])
         if not self.inputs:
             return {}
-        build_config = {_input.name: _input.model_dump(by_alias=True, exclude_none=True) for _input in self.inputs}
-        return build_config
+        return {_input.name: _input.model_dump(by_alias=True, exclude_none=True) for _input in self.inputs}
 
     def _get_field_order(self):
         try:

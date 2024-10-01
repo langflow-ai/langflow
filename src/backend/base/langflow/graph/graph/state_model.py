@@ -5,8 +5,7 @@ from langflow.helpers.base_model import BaseModel
 
 
 def camel_to_snake(camel_str: str) -> str:
-    snake_str = re.sub(r"(?<!^)(?=[A-Z])", "_", camel_str).lower()
-    return snake_str
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", camel_str).lower()
 
 
 def create_state_model_from_graph(graph: BaseModel) -> type[BaseModel]:

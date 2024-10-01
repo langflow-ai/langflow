@@ -256,9 +256,8 @@ def run_build_inputs(
 ):
     """Run the build inputs of a custom component."""
     try:
-        field_config = custom_component.build_inputs(user_id=user_id)
+        return custom_component.build_inputs(user_id=user_id)
         # add_extra_fields(frontend_node, field_config, field_config.values())
-        return field_config
     except Exception as exc:
         logger.error(f"Error running build inputs: {exc}")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -269,7 +268,7 @@ def get_component_instance(custom_component: CustomComponent, user_id: str | UUI
         if custom_component._code is None:
             msg = "Code is None"
             raise ValueError(msg)
-        elif isinstance(custom_component._code, str):
+        if isinstance(custom_component._code, str):
             custom_class = eval_custom_component_code(custom_component._code)
         else:
             msg = "Invalid code type"
@@ -285,8 +284,7 @@ def get_component_instance(custom_component: CustomComponent, user_id: str | UUI
         ) from exc
 
     try:
-        custom_instance = custom_class(_user_id=user_id, _code=custom_component._code)
-        return custom_instance
+        return custom_class(_user_id=user_id, _code=custom_component._code)
     except Exception as exc:
         logger.error(f"Error while instantiating custom component: {str(exc)}")
         if hasattr(exc, "detail") and "traceback" in exc.detail:
@@ -305,7 +303,7 @@ def run_build_config(
         if custom_component._code is None:
             msg = "Code is None"
             raise ValueError(msg)
-        elif isinstance(custom_component._code, str):
+        if isinstance(custom_component._code, str):
             custom_class = eval_custom_component_code(custom_component._code)
         else:
             msg = "Invalid code type"

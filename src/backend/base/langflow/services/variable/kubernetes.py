@@ -60,13 +60,11 @@ class KubernetesSecretService(VariableService, Service):
 
         if name in variables:
             return name, variables[name]
-        else:
-            credential_name = CREDENTIAL_TYPE + "_" + name
-            if credential_name in variables:
-                return credential_name, variables[credential_name]
-            else:
-                msg = f"user_id {user_id} variable name {name} not found."
-                raise ValueError(msg)
+        credential_name = CREDENTIAL_TYPE + "_" + name
+        if credential_name in variables:
+            return credential_name, variables[credential_name]
+        msg = f"user_id {user_id} variable name {name} not found."
+        raise ValueError(msg)
 
     def get_variable(
         self,
@@ -147,5 +145,4 @@ class KubernetesSecretService(VariableService, Service):
             value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
             default_fields=default_fields,
         )
-        variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
-        return variable
+        return Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})

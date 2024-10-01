@@ -90,5 +90,4 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

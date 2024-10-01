@@ -24,5 +24,4 @@ def memory_chatbot_graph(template: str | None = None):
     chat_output = ChatOutput()
     chat_output.set(input_value=openai_component.text_response)
 
-    graph = Graph(chat_input, chat_output)
-    return graph
+    return Graph(chat_input, chat_output)

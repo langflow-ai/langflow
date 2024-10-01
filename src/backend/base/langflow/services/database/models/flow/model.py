@@ -79,7 +79,7 @@ class FlowBase(SQLModel):
 
         if not v.startswith(":") and not v.endswith(":"):
             return v
-        elif not v.startswith(":") or not v.endswith(":"):
+        if not v.startswith(":") or not v.endswith(":"):
             # emoji should have both starting and ending colons
             # so if one of them is missing, we will raise
             msg = f"Invalid emoji. {v} is not a valid emoji."
@@ -141,7 +141,7 @@ class FlowBase(SQLModel):
     def validate_dt(cls, v):
         if v is None:
             return v
-        elif isinstance(v, datetime):
+        if isinstance(v, datetime):
             return v
 
         return datetime.fromisoformat(v)
@@ -167,8 +167,7 @@ class Flow(FlowBase, table=True):  # type: ignore
             "description": serialized.pop("description"),
             "updated_at": serialized.pop("updated_at"),
         }
-        record = Data(data=data)
-        return record
+        return Data(data=data)
 
     __table_args__ = (
         UniqueConstraint("user_id", "name", name="unique_flow_name"),
