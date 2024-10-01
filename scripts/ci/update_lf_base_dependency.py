@@ -23,6 +23,7 @@ def update_base_dep(pyproject_path: str, new_version: str) -> None:
     with open(filepath, "w") as file:
         file.write(content)
 
+
 def verify_pep440(version):
     """
     Verify if version is PEP440 compliant.
