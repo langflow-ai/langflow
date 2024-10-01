@@ -30,7 +30,8 @@ class AssistantsCreateAssistant(Component):
             info=(
                 "Model for the assistant.\n\n"
                 "Environment variables for provider credentials can be set with the Dotenv Component.\n\n"
-                "Models are supported via LiteLLM, see (https://docs.litellm.ai/docs/providers) for supported model names and env vars."
+                "Models are supported via LiteLLM, "
+                "see (https://docs.litellm.ai/docs/providers) for supported model names and env vars."
             ),
             # refresh_model=True
         ),

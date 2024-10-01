@@ -4,7 +4,8 @@ class dotdict(dict):
     It automatically converts nested dictionaries into dotdict instances, enabling dot notation on them as well.
 
     Note:
-        - Only keys that are valid attribute names (e.g., strings that could be variable names) are accessible via dot notation.
+        - Only keys that are valid attribute names (e.g., strings that could be variable names) are accessible via dot
+          notation.
         - Keys which are not valid Python attribute names or collide with the dict method names (like 'items', 'keys')
           should be accessed using the traditional dict['key'] notation.
     """

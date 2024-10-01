@@ -55,7 +55,8 @@ class NotionPageCreator(LCToolComponent):
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
             name="create_notion_page",
-            description="Create a new page in a Notion database. IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
+            description="Create a new page in a Notion database. "
+            "IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
             func=self._create_notion_page,
             args_schema=self.NotionPageCreatorSchema,
         )

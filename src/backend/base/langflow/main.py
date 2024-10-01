@@ -69,7 +69,10 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         except Exception as exc:
             if isinstance(exc, PydanticSerializationError):
-                message = "Something went wrong while serializing the response. Please share this error on our GitHub repository."
+                message = (
+                    "Something went wrong while serializing the response. "
+                    "Please share this error on our GitHub repository."
+                )
                 error_messages = json.dumps([message, str(exc)])
                 raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages) from exc
             raise exc

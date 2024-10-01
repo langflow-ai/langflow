@@ -31,11 +31,13 @@ class Edge:
                         if hasattr(target, "_custom_component"):
                             display_name = getattr(target._custom_component, "display_name", "")
                             raise ValueError(
-                                f"Component {display_name} field '{self._target_handle['fieldName']}' might not be a valid input."
+                                f"Component {display_name} field '{self._target_handle['fieldName']}' "
+                                "might not be a valid input."
                             ) from e
                         else:
                             raise ValueError(
-                                f"Field '{self._target_handle['fieldName']}' on {target.display_name} might not be a valid input."
+                                f"Field '{self._target_handle['fieldName']}' on {target.display_name} "
+                                "might not be a valid input."
                             ) from e
                     else:
                         raise e

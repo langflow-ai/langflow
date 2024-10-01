@@ -192,7 +192,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="search_score_threshold",
             display_name="Search Score Threshold",
-            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            info="Minimum similarity score threshold for search results. "
+            "(when using 'Similarity with score threshold')",
             value=0,
             advanced=True,
         ),
@@ -278,8 +279,10 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             new_parameter_0 = DropdownInput(
                 name="z_00_model_name",
                 display_name="Model Name",
-                info=f"The embedding model to use for the selected provider. Each provider has a different set of models "
-                f"available (full list at https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n{', '.join(model_options)}",
+                info="The embedding model to use for the selected provider. Each provider has a different set of "
+                "models available (full list at "
+                "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n"
+                f"{', '.join(model_options)}",
                 options=model_options,
                 required=True,
             ).to_dict()
@@ -293,13 +296,17 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             new_parameter_2 = MessageTextInput(
                 name="z_02_api_key_name",
                 display_name="API Key name",
-                info="The name of the embeddings provider API key stored on Astra. If set, it will override the 'ProviderKey' in the authentication parameters.",
+                info="The name of the embeddings provider API key stored on Astra. "
+                "If set, it will override the 'ProviderKey' in the authentication parameters.",
             ).to_dict()
 
             new_parameter_3 = SecretStrInput(
                 name="z_03_provider_api_key",
                 display_name="Provider API Key",
-                info="An alternative to the Astra Authentication that passes an API key for the provider with each request to Astra DB. This may be used when Vectorize is configured for the collection, but no corresponding provider secret is stored within Astra's key management system.",
+                info="An alternative to the Astra Authentication that passes an API key for the provider "
+                "with each request to Astra DB. "
+                "This may be used when Vectorize is configured for the collection, "
+                "but no corresponding provider secret is stored within Astra's key management system.",
             ).to_dict()
 
             new_parameter_4 = DictInput(

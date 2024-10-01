@@ -139,7 +139,10 @@ def generate_function_for_flow(
     """
     # Prepare function arguments with type hints and default values
     args = [
-        f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = {INPUT_TYPE_MAP[input_.base_name]['default']}"
+        (
+            f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = "
+            f"{INPUT_TYPE_MAP[input_.base_name]['default']}"
+        )
         for input_ in inputs
     ]
 
@@ -254,7 +257,8 @@ def get_arg_names(inputs: list["Vertex"]) -> list[dict[str, str]]:
         inputs (List[Vertex]): A list of Vertex objects representing the inputs.
 
     Returns:
-        List[dict[str, str]]: A list of dictionaries, where each dictionary contains the component name and its argument name.
+        List[dict[str, str]]: A list of dictionaries, where each dictionary contains the component name and its
+            argument name.
     """
     return [
         {"component_name": input_.display_name, "arg_name": input_.display_name.lower().replace(" ", "_")}

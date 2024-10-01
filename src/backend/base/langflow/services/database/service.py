@@ -71,7 +71,8 @@ class DatabaseService(Service):
                 # https://stackoverflow.com/questions/62688256/sqlalchemy-exc-nosuchmoduleerror-cant-load-plugin-sqlalchemy-dialectspostgre
                 self.database_url = self.database_url.replace("postgres://", "postgresql://")
                 logger.warning(
-                    "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. To avoid this warning, update the database URL."
+                    "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. "
+                    "To avoid this warning, update the database URL."
                 )
                 return self._create_engine()
             raise RuntimeError("Error creating database engine") from exc

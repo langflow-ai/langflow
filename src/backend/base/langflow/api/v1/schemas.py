@@ -298,7 +298,8 @@ class InputValueRequest(BaseModel):
     input_value: str | None = None
     type: InputType | None = Field(
         "any",
-        description="Defines on which components the input value should be applied. 'any' applies to all input components.",
+        description="Defines on which components the input value should be applied. "
+        "'any' applies to all input components.",
     )
 
     # add an example

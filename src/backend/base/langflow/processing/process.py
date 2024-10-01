@@ -162,7 +162,8 @@ def process_tweaks(
                        'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.
     :param tweaks: The dictionary containing the tweaks. The keys can be the node id or the name of the tweak.
                    The values can be a dictionary containing the tweaks for the node or the value of the tweak.
-    :param stream: A boolean flag indicating whether streaming should be deactivated across all components or not. Default is False.
+    :param stream: A boolean flag indicating whether streaming should be deactivated across all components or not.
+                   Default is False.
     :return: The modified graph_data dictionary.
     :raises ValueError: If the input is not in the expected format.
     """

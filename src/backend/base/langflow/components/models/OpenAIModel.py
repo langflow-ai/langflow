@@ -46,7 +46,9 @@ class OpenAIModelComponent(LCModelComponent):
             is_list=True,
             display_name="Schema",
             advanced=True,
-            info="The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
+            info="The schema for the Output of the model. "
+            "You must pass the word JSON in the prompt. "
+            "If left blank, JSON mode will be disabled.",
         ),
         DropdownInput(
             name="model_name",
@@ -59,7 +61,9 @@ class OpenAIModelComponent(LCModelComponent):
             name="openai_api_base",
             display_name="OpenAI API Base",
             advanced=True,
-            info="The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+            info="The base URL of the OpenAI API. "
+            "Defaults to https://api.openai.com/v1. "
+            "You can change this to use other APIs like JinaChat, LocalAI and Prem.",
         ),
         SecretStrInput(
             name="api_key",

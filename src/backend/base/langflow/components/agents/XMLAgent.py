@@ -43,7 +43,7 @@ Begin!
 Question: {input}
 
 {agent_scratchpad}
-            """,
+            """,  # noqa: E501
         ),
         MultilineInput(
             name="user_prompt", display_name="Prompt", info="This prompt must contain 'input' key.", value="{input}"

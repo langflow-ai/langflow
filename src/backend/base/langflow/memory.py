@@ -119,7 +119,8 @@ def store_message(
 
     Args:
         message (Message): The message to store.
-        flow_id (Optional[str]): The flow ID associated with the message. When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        flow_id (Optional[str]): The flow ID associated with the message.
+            When running from the CustomComponent you can access this using `self.graph.flow_id`.
 
     Returns:
         List[Message]: A list of data containing the stored message.

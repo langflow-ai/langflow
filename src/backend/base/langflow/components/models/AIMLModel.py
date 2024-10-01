@@ -43,7 +43,8 @@ class AIMLModelComponent(LCModelComponent):
             name="aiml_api_base",
             display_name="AIML API Base",
             advanced=True,
-            info="The base URL of the OpenAI API. Defaults to https://api.aimlapi.com . You can change this to use other APIs like JinaChat, LocalAI e Prem.",
+            info="The base URL of the OpenAI API. Defaults to https://api.aimlapi.com . "
+            "You can change this to use other APIs like JinaChat, LocalAI and Prem.",
         ),
         SecretStrInput(
             name="api_key",

@@ -62,7 +62,8 @@ class MemoryComponent(Component):
         MultilineInput(
             name="template",
             display_name="Template",
-            info="The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
+            info="The template to use for formatting the data. "
+            "It can contain the keys {text}, {sender} or any other key in the message data.",
             value="{sender_name}: {text}",
             advanced=True,
         ),

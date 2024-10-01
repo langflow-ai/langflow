@@ -58,7 +58,8 @@ class NotionPageUpdate(LCToolComponent):
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
             name="update_notion_page",
-            description="Update the properties of a Notion page. IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
+            description="Update the properties of a Notion page. "
+            "IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
             func=self._update_notion_page,
             args_schema=self.NotionPageUpdateSchema,
         )

@@ -82,7 +82,8 @@ class NotionSearch(LCToolComponent):
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
             name="notion_search",
-            description="Search Notion pages and databases. Input should include the search query and optionally filter type and sort direction.",
+            description="Search Notion pages and databases. "
+            "Input should include the search query and optionally filter type and sort direction.",
             func=self._search_notion,
             args_schema=self.NotionSearchSchema,
         )

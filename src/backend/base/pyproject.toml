@@ -148,7 +148,7 @@ exclude = ["langflow/alembic"]
 line-length = 120
 
 [tool.ruff.lint]
-select = ["C4", "E4", "E7", "E9", "F", "I", "UP"]
+select = ["C4", "E", "F", "I", "UP"]
 
 [build-system]
 requires = ["hatchling"]

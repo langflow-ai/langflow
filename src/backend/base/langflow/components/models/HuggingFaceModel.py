@@ -3,7 +3,8 @@ from typing import Any
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-# TODO: langchain_community.llms.huggingface_endpoint is depreciated. Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
+# TODO: langchain_community.llms.huggingface_endpoint is depreciated.
+#  Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs.inputs import HandleInput

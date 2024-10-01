@@ -44,7 +44,8 @@ class ChatService(Service):
         Args:
             operation (str): The type of cache operation to perform. Possible values are "upsert", "get", or "delete".
             key (str): The key associated with the cache operation.
-            data (Any, optional): The data to be stored in the cache. Only applicable for "upsert" operation. Defaults to None.
+            data (Any, optional): The data to be stored in the cache. Only applicable for "upsert" operation.
+                Defaults to None.
             lock (Optional[asyncio.Lock], optional): The lock to be used for the cache operation. Defaults to None.
 
         Returns:

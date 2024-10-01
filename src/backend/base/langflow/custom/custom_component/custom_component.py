@@ -240,7 +240,8 @@ class CustomComponent(BaseComponent):
             If the input data is a Langchain Document, text_key and data_key are ignored.
 
             keys (List[str], optional): The keys to access the text and data values in each item.
-                It should be a list of strings where the first element is the text key and the second element is the data key.
+                It should be a list of strings where the first element is the text key and the second element
+                is the data key.
                 Defaults to None, in which case the default keys "text" and "data" are used.
 
         Returns:

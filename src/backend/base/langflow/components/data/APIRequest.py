@@ -34,7 +34,8 @@ class APIRequestComponent(Component):
         MessageTextInput(
             name="curl",
             display_name="Curl",
-            info="Paste a curl command to populate the fields. This will fill in the dictionary fields for headers and body.",
+            info="Paste a curl command to populate the fields. "
+            "This will fill in the dictionary fields for headers and body.",
             advanced=False,
             refresh_button=True,
         ),
@@ -54,7 +55,8 @@ class APIRequestComponent(Component):
         NestedDictInput(
             name="body",
             display_name="Body",
-            info="The body to send with the request as a dictionary (for POST, PATCH, PUT). This is populated when using the CURL field.",
+            info="The body to send with the request as a dictionary (for POST, PATCH, PUT). "
+            "This is populated when using the CURL field.",
             input_types=["Data"],
         ),
         DataInput(

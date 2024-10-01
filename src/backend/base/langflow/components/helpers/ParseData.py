@@ -15,7 +15,8 @@ class ParseDataComponent(Component):
         MultilineInput(
             name="template",
             display_name="Template",
-            info="The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+            info="The template to use for formatting the data. "
+            "It can contain the keys {text}, {data} or any other key in the Data.",
             value="{text}",
         ),
         StrInput(name="sep", display_name="Separator", advanced=True, value="\n"),

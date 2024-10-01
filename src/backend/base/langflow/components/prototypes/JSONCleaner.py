@@ -10,7 +10,10 @@ from langflow.template import Output
 
 class JSONCleaner(Component):
     display_name = "JSON Cleaner"
-    description = "Cleans the messy and sometimes incorrect JSON strings produced by LLMs so that they are fully compliant with the JSON spec."
+    description = (
+        "Cleans the messy and sometimes incorrect JSON strings produced by LLMs "
+        "so that they are fully compliant with the JSON spec."
+    )
     icon = "custom_components"
 
     inputs = [

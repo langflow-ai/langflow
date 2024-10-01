@@ -9,7 +9,8 @@ def build_status_from_tool(tool: Tool):
         tool (Tool): The tool object to build the status for.
 
     Returns:
-        str: The status string representation of the tool, including its name, description, arguments (if any), and args_schema (if any).
+        str: The status string representation of the tool, including its name, description, arguments (if any),
+            and args_schema (if any).
     """
     description_repr = repr(tool.description).strip("'")
     args_str = "\n".join(
