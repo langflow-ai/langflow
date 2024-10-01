@@ -65,7 +65,8 @@ class SourceHandle(BaseModel):
             # 'OpenAIModel-u4iGV_text_output'
             splits = v.split("_", 1)
             if len(splits) != 2:
-                raise ValueError(f"Invalid source handle name {v}")
+                msg = f"Invalid source handle name {v}"
+                raise ValueError(msg)
             v = splits[1]
         return v
 

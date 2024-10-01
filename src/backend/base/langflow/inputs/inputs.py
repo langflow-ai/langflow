@@ -35,13 +35,16 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
     def validate_value(cls, v: Any, _info):
         # Check if value is a list of dicts
         if not isinstance(v, list):
-            raise ValueError(f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list.")
+            msg = f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list."
+            raise ValueError(msg)
 
         for item in v:
             if not isinstance(item, dict | Data):
-                raise ValueError(
-                    f"TableInput value must be a list of dictionaries or Data. Item '{item}' is not a dictionary or Data."
+                msg = (
+                    "TableInput value must be a list of dictionaries or Data. "
+                    f"Item '{item}' is not a dictionary or Data."
                 )
+                raise ValueError(msg)
         return v
 
 
@@ -104,7 +107,8 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
             # Keep the warning for now, but we should change it to an error
             if _info.data.get("input_types") and v.__class__.__name__ not in _info.data.get("input_types"):
                 warnings.warn(
-                    f"Invalid value type {type(v)} for input {_info.data.get('name')}. Expected types: {_info.data.get('input_types')}"
+                    f"Invalid value type {type(v)} for input {_info.data.get('name')}. "
+                    f"Expected types: {_info.data.get('input_types')}"
                 )
             else:
                 warnings.warn(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
@@ -147,17 +151,20 @@ class MessageInput(StrInput, InputTraceMixin):
             return v
         if isinstance(v, str):
             return Message(text=v)
-        raise ValueError(f"Invalid value type {type(v)}")
+        msg = f"Invalid value type {type(v)}"
+        raise ValueError(msg)
 
 
 class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
     """
     Represents a text input component for the Langflow system.
 
-    This component is used to handle text inputs in the Langflow system. It provides methods for validating and processing text values.
+    This component is used to handle text inputs in the Langflow system.
+    It provides methods for validating and processing text values.
 
     Attributes:
-        input_types (list[str]): A list of input types that this component supports. In this case, it supports the "Message" input type.
+        input_types (list[str]): A list of input types that this component supports.
+            In this case, it supports the "Message" input type.
     """
 
     input_types: list[str] = ["Message"]
@@ -190,14 +197,17 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
             else:
                 keys = ", ".join(v.data.keys())
                 input_name = _info.data["name"]
-                raise ValueError(
+                msg = (
                     f"The input to '{input_name}' must contain the key '{v.text_key}'."
-                    f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
+                    f"You can set `text_key` to one of the following keys: {keys} "
+                    "or set the value using another Component."
                 )
+                raise ValueError(msg)
         elif isinstance(v, AsyncIterator | Iterator):
             value = v
         else:
-            raise ValueError(f"Invalid value type {type(v)}")
+            msg = f"Invalid value type {type(v)}"
+            raise ValueError(msg)
         return value
 
 
@@ -272,16 +282,19 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
             else:
                 keys = ", ".join(v.data.keys())
                 input_name = _info.data["name"]
-                raise ValueError(
+                msg = (
                     f"The input to '{input_name}' must contain the key '{v.text_key}'."
-                    f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
+                    f"You can set `text_key` to one of the following keys: {keys} "
+                    "or set the value using another Component."
                 )
+                raise ValueError(msg)
         elif isinstance(v, AsyncIterator | Iterator):
             value = v
         elif v is None:
             value = None
         else:
-            raise ValueError(f"Invalid value type `{type(v)}` for input `{_info.data['name']}`")
+            msg = f"Invalid value type `{type(v)}` for input `{_info.data['name']}`"
+            raise ValueError(msg)
         return value
 
 
@@ -316,7 +329,8 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
         """
 
         if v and not isinstance(v, int | float):
-            raise ValueError(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
+            msg = f"Invalid value type {type(v)} for input {_info.data.get('name')}."
+            raise ValueError(msg)
         if isinstance(v, float):
             v = int(v)
         return v
@@ -352,7 +366,8 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
         if v and not isinstance(v, int | float):
-            raise ValueError(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
+            msg = f"Invalid value type {type(v)} for input {_info.data.get('name')}."
+            raise ValueError(msg)
         if isinstance(v, int):
             v = float(v)
         return v
@@ -447,10 +462,12 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
     def validate_value(cls, v: Any, _info):
         # Check if value is a list of dicts
         if not isinstance(v, list):
-            raise ValueError(f"MultiselectInput value must be a list. Value: '{v}'")
+            msg = f"MultiselectInput value must be a list. Value: '{v}'"
+            raise ValueError(msg)
         for item in v:
             if not isinstance(item, str):
-                raise ValueError(f"MultiselectInput value must be a list of strings. Item: '{item}' is not a string")
+                msg = f"MultiselectInput value must be a list of strings. Item: '{item}' is not a string"
+                raise ValueError(msg)
         return v
 
 
@@ -511,3 +528,14 @@ InputTypes = (
 )
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
+
+
+def instantiate_input(input_type: str, data: dict) -> InputTypes:
+    input_type_class = InputTypesMap.get(input_type)
+    if "type" in data:
+        # Replate with field_type
+        data["field_type"] = data.pop("type")
+    if input_type_class:
+        return input_type_class(**data)
+    msg = f"Invalid input type: {input_type}"
+    raise ValueError(msg)

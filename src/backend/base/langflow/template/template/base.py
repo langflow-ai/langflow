@@ -52,7 +52,8 @@ class Template(BaseModel):
                     try:
                         _input = instantiate_input(input_type, value)
                     except Exception as e:
-                        raise ValueError(f"Error instantiating input {input_type}: {e}")
+                        msg = f"Error instantiating input {input_type}: {e}"
+                        raise ValueError(msg)
                 else:
                     _input = Input(**value)
 
@@ -77,7 +78,8 @@ class Template(BaseModel):
         """Returns the field with the given name."""
         field = next((field for field in self.fields if field.name == field_name), None)
         if field is None:
-            raise ValueError(f"Field {field_name} not found in template {self.type_name}")
+            msg = f"Field {field_name} not found in template {self.type_name}"
+            raise ValueError(msg)
         return cast(Input, field)
 
     def update_field(self, field_name: str, field: Input) -> None:
@@ -86,7 +88,8 @@ class Template(BaseModel):
             if template_field.name == field_name:
                 self.fields[idx] = field
                 return
-        raise ValueError(f"Field {field_name} not found in template {self.type_name}")
+        msg = f"Field {field_name} not found in template {self.type_name}"
+        raise ValueError(msg)
 
     def upsert_field(self, field_name: str, field: Input) -> None:
         """Updates the field with the given name or adds it if it doesn't exist."""
