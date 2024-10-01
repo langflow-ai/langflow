@@ -367,7 +367,8 @@ def added_flow_with_prompt_and_history(client, json_flow_with_prompt_and_history
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
-    return response.json()
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture
@@ -379,7 +380,8 @@ def added_flow_chat_input(client, json_chat_input, logged_in_headers):
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
-    return response.json()
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture
@@ -391,7 +393,8 @@ def added_flow_two_outputs(client, json_two_outputs, logged_in_headers):
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
-    return response.json()
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture
@@ -403,7 +406,8 @@ def added_vector_store(client, json_vector_store, logged_in_headers):
     assert response.status_code == 201
     assert response.json()["name"] == vector_store.name
     assert response.json()["data"] == vector_store.data
-    return response.json()
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture
@@ -429,7 +433,8 @@ def flow_component(client: TestClient, logged_in_headers):
     flow = FlowCreate(**graph_dict)
     response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
-    return response.json()
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture
@@ -460,7 +465,8 @@ def get_simple_api_test(client, logged_in_headers, json_simple_api_test):
     flow = FlowCreate(name="Simple API Test", data=data, description="Simple API Test")
     response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
-    return response.json()
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture(name="starter_project")

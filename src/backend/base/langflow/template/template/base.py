@@ -3,7 +3,8 @@ from typing import cast
 
 from pydantic import BaseModel, Field, model_serializer
 
-from langflow.inputs.inputs import InputTypes, instantiate_input
+from langflow.inputs.inputs import InputTypes
+from langflow.inputs.utils import instantiate_input
 from langflow.template.field.base import Input
 from langflow.utils.constants import DIRECT_TYPES
 

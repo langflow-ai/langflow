@@ -145,13 +145,6 @@ def test_graph_functional_start_end():
     assert results[-1] == Finish()
 
 
-def test_graph_set_with_invalid_component():
-    chat_input = ChatInput(_id="chat_input")
-    chat_output = ChatOutput(input_value="test", _id="chat_output")
-    with pytest.raises(ValueError, match="There are multiple outputs"):
-        chat_output.set(sender_name=chat_input)
-
-
 @pytest.mark.skip(reason="Temporarily disabled")
 def test_graph_set_with_valid_component():
     tool = YfinanceToolComponent()

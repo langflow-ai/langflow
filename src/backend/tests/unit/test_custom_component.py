@@ -11,6 +11,7 @@ from langflow.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
 from langflow.custom.custom_component.base_component import BaseComponent, ComponentCodeNullError
 from langflow.custom.utils import build_custom_component_template
 from langflow.services.database.models.flow import FlowCreate
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 
 @pytest.fixture
@@ -541,6 +542,14 @@ def test_build_config_field_value_keys(component):
 def test_custom_component_multiple_outputs(code_component_with_multiple_outputs, active_user):
     frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
     assert frontnd_node_dict["outputs"][0]["types"] == ["Text"]
+
+
+def test_feature_flags_add_toolkit_output(active_user, code_component_with_multiple_outputs):
+    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
+    len_outputs = len(frontnd_node_dict["outputs"])
+    FEATURE_FLAGS.add_toolkit_output = True
+    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
+    assert len(frontnd_node_dict["outputs"]) == len_outputs + 1
 
 
 def test_custom_component_subclass_from_lctoolcomponent():
