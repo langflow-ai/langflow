@@ -173,8 +173,8 @@ jobs:
             echo "Name $name does not match langflow-nightly. Exiting the workflow."
             exit 1
           fi
-          if [ "$version" != "${{ inputs.nightly_tag_base }}" ]; then
-            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_base }}. Exiting the workflow."
+          if [ "$version" != "${{ inputs.nightly_tag_main }}" ]; then
+            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_main }}. Exiting the workflow."
             exit 1
           fi
       - name: Wait for PyPI Propagation
