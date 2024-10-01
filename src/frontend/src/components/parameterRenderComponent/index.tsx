@@ -6,7 +6,7 @@ import TableNodeComponent from "./components/TableNodeComponent";
 import CodeAreaComponent from "./components/codeAreaComponent";
 import DictComponent from "../dictComponent";
 import FloatComponent from "./components/floatComponent";
-import InputFileComponent from "../inputFileComponent";
+import InputFileComponent from "./components/inputFileComponent";
 import IntComponent from "./components/intComponent";
 import KeypairListComponent from "../keypairListComponent";
 import LinkComponent from "../linkComponent";

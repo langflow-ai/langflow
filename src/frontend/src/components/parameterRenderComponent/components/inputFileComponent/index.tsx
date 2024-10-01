@@ -6,12 +6,12 @@ import {
   CONSOLE_ERROR_MSG,
   INVALID_FILE_ALERT,
   INVALID_FILE_SIZE_ALERT,
-} from "../../constants/alerts_constants";
-import useAlertStore from "../../stores/alertStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { FileComponentType } from "../../types/components";
-import IconComponent from "../genericIconComponent";
-import { Button } from "../ui/button";
+} from "../../../../constants/alerts_constants";
+import useAlertStore from "../../../../stores/alertStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { FileComponentType } from "../../../../types/components";
+import IconComponent from "../../../genericIconComponent";
+import { Button } from "../../../ui/button";
 
 export default function InputFileComponent({
   value,
