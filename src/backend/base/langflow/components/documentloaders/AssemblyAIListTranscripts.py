@@ -29,16 +29,19 @@ class AssemblyAIListTranscripts(Component):
             options=["all", "queued", "processing", "completed", "error"],
             value="all",
             info="Filter by transcript status",
+            advanced=True,
         ),
         MessageTextInput(
             name="created_on",
             display_name="Created On",
             info="Only get transcripts created on this date (YYYY-MM-DD)",
+            advanced=True,
         ),
         BoolInput(
             name="throttled_only",
             display_name="Throttled Only",
             info="Only get throttled transcripts, overrides the status filter",
+            advanced=True,
         ),
     ]
 
