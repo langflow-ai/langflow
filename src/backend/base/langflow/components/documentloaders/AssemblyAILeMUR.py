@@ -101,7 +101,7 @@ class AssemblyAILeMUR(Component):
         if self.transcription_result and "id" in self.transcription_result.data:
             transcript_ids = [self.transcription_result.data["id"]]
         elif self.transcript_ids:
-            transcript_ids = self.transcript_ids.split(",")
+            transcript_ids = self.transcript_ids.split(",") or []
             transcript_ids = [t.strip() for t in transcript_ids]
 
         if not transcript_ids:
