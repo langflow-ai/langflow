@@ -42,14 +42,6 @@ export type InputComponentType = {
   isObjectOption?: boolean;
   onChangeFolderName?: (e: any) => void;
 };
-export type ToggleComponentType = {
-  enabled: boolean;
-  setEnabled: (state: boolean) => void;
-  disabled?: boolean | undefined;
-  size: "small" | "medium" | "large";
-  id?: string;
-  editNode?: boolean;
-};
 export type DropDownComponentType = {
   disabled?: boolean;
   isLoading?: boolean;
