@@ -50,7 +50,6 @@ class LCAgentComponent(Component):
     @abstractmethod
     def build_agent(self) -> AgentExecutor:
         """Create the agent."""
-        pass
 
     async def message_response(self) -> Message:
         """Run the agent and return the response."""
@@ -68,9 +67,11 @@ class LCAgentComponent(Component):
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
-                raise ValueError(f"Output with name '{method_name}' must be defined.")
-            elif not hasattr(self, method_name):
-                raise ValueError(f"Method '{method_name}' must be defined.")
+                msg = f"Output with name '{method_name}' must be defined."
+                raise ValueError(msg)
+            if not hasattr(self, method_name):
+                msg = f"Method '{method_name}' must be defined."
+                raise ValueError(msg)
 
     def get_agent_kwargs(self, flatten: bool = False) -> dict:
         base = {
@@ -103,7 +104,8 @@ class LCAgentComponent(Component):
         )
         self.status = result
         if "output" not in result:
-            raise ValueError("Output key not found in result. Tried 'output'.")
+            msg = "Output key not found in result. Tried 'output'."
+            raise ValueError(msg)
 
         return cast(str, result.get("output"))
 
@@ -149,11 +151,11 @@ class LCToolsAgentComponent(LCAgentComponent):
         )
         self.status = result
         if "output" not in result:
-            raise ValueError("Output key not found in result. Tried 'output'.")
+            msg = "Output key not found in result. Tried 'output'."
+            raise ValueError(msg)
 
         return cast(str, result.get("output"))
 
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
-        pass

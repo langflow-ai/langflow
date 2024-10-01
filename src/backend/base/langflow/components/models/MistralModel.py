@@ -83,7 +83,7 @@ class MistralAIModelComponent(LCModelComponent):
         else:
             api_key = None
 
-        output = ChatMistralAI(
+        return ChatMistralAI(
             max_tokens=max_tokens or None,
             model_name=model_name,
             endpoint=mistral_api_base,
@@ -96,5 +96,3 @@ class MistralAIModelComponent(LCModelComponent):
             random_seed=random_seed,
             safe_mode=safe_mode,
         )
-
-        return output  # type: ignore

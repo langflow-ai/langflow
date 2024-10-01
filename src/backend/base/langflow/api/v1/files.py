@@ -105,7 +105,7 @@ async def download_image(file_name: str, flow_id: UUID, storage_service: Storage
 
         if not content_type:
             raise HTTPException(status_code=500, detail=f"Content type not found for extension {extension}")
-        elif not content_type.startswith("image"):
+        if not content_type.startswith("image"):
             raise HTTPException(status_code=500, detail=f"Content type {content_type} is not an image")
 
         file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)

@@ -48,17 +48,17 @@ class NotionPageUpdate(LCToolComponent):
         if isinstance(result, str):
             # An error occurred, return it as text
             return Data(text=result)
-        else:
-            # Success, return the updated page data
-            output = "Updated page properties:\n"
-            for prop_name, prop_value in result.get("properties", {}).items():
-                output += f"{prop_name}: {prop_value}\n"
-            return Data(text=output, data=result)
+        # Success, return the updated page data
+        output = "Updated page properties:\n"
+        for prop_name, prop_value in result.get("properties", {}).items():
+            output += f"{prop_name}: {prop_value}\n"
+        return Data(text=output, data=result)
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
             name="update_notion_page",
-            description="Update the properties of a Notion page. IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
+            description="Update the properties of a Notion page. "
+            "IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
             func=self._update_notion_page,
             args_schema=self.NotionPageUpdateSchema,
         )

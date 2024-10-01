@@ -65,7 +65,8 @@ class URLComponent(Component):
         )
 
         if not url_regex.match(string):
-            raise ValueError(f"Invalid URL: {string}")
+            msg = f"Invalid URL: {string}"
+            raise ValueError(msg)
 
         return string
 

@@ -100,7 +100,7 @@ def run_graph(
         components.append(input_value_request.components or [])
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
         types.append(input_value_request.type)
-    run_outputs = graph.run(
+    return graph.run(
         inputs_list,
         components,
         types,
@@ -109,19 +109,20 @@ def run_graph(
         session_id="",
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    return run_outputs
 
 
 def validate_input(
     graph_data: dict[str, Any], tweaks: Union["Tweaks", dict[str, str | dict[str, Any]]]
 ) -> list[dict[str, Any]]:
     if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
-        raise ValueError("graph_data and tweaks should be dictionaries")
+        msg = "graph_data and tweaks should be dictionaries"
+        raise ValueError(msg)
 
     nodes = graph_data.get("data", {}).get("nodes") or graph_data.get("nodes")
 
     if not isinstance(nodes, list):
-        raise ValueError("graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key")
+        msg = "graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key"
+        raise ValueError(msg)
 
     return nodes
 
@@ -162,7 +163,8 @@ def process_tweaks(
                        'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.
     :param tweaks: The dictionary containing the tweaks. The keys can be the node id or the name of the tweak.
                    The values can be a dictionary containing the tweaks for the node or the value of the tweak.
-    :param stream: A boolean flag indicating whether streaming should be deactivated across all components or not. Default is False.
+    :param stream: A boolean flag indicating whether streaming should be deactivated across all components or not.
+                   Default is False.
     :return: The modified graph_data dictionary.
     :raises ValueError: If the input is not in the expected format.
     """

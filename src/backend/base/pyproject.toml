@@ -123,6 +123,7 @@ pytest-split = "^0.9.0"
 devtools = "^0.12.2"
 pytest-flakefinder = "^1.1.0"
 types-markdown = "^3.7.0.20240822"
+assemblyai = "^0.33.0"
 
 
 [tool.pytest.ini_options]
@@ -148,7 +149,36 @@ exclude = ["langflow/alembic"]
 line-length = 120
 
 [tool.ruff.lint]
-select = ["C4", "E4", "E7", "E9", "F", "I", "UP"]
+select = [
+    "ASYNC",
+    "C4",
+    "COM",
+    "DJ",
+    "E",
+    "EM",
+    "F",
+    "FLY",
+    "FURB",
+    "I",
+    "ICN",
+    "INT",
+    "LOG",
+    "NPY",
+    "PD",
+    "PIE",
+    "Q",
+    "RET",
+    "RSE",
+    "SLOT",
+    "T10",
+    "TID",
+    "UP",
+    "W",
+    "YTT"
+]
+ignore = [
+    "COM812", # Messes with the formatter
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -217,7 +247,8 @@ dependencies = [
     "crewai>=0.36.0",
     "spider-client>=0.0.27",
     "diskcache>=5.6.3",
-    "clickhouse-connect==0.7.19"
+    "clickhouse-connect==0.7.19",
+    "assemblyai>=0.33.0"
 ]
 
 # Optional dependencies for uv

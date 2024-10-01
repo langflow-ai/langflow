@@ -3,7 +3,8 @@ from typing import Any
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-# TODO: langchain_community.llms.huggingface_endpoint is depreciated. Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
+# TODO: langchain_community.llms.huggingface_endpoint is depreciated.
+#  Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs.inputs import HandleInput
@@ -50,8 +51,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     def get_api_url(self) -> str:
         if "huggingface" in self.inference_endpoint.lower():
             return f"{self.inference_endpoint}{self.model_id}"
-        else:
-            return self.inference_endpoint
+        return self.inference_endpoint
 
     def create_huggingface_endpoint(
         self,
@@ -112,6 +112,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
                 repetition_penalty=repetition_penalty,
             )
         except Exception as e:
-            raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
+            msg = "Could not connect to HuggingFace Endpoints API."
+            raise ValueError(msg) from e
 
         return llm
