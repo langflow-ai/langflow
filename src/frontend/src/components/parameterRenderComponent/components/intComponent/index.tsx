@@ -7,24 +7,24 @@ import {
   NumberInputStepper,
 } from "@chakra-ui/number-input";
 import { useEffect, useRef, useState } from "react";
-import { IntComponentType } from "../../types/components";
-import { handleKeyDown } from "../../utils/reactflowUtils";
+import { handleKeyDown } from "../../../../utils/reactflowUtils";
+import { InputProps, IntComponentType } from "../../types";
 
 export default function IntComponent({
   value,
-  onChange,
+  handleOnNewValue,
   rangeSpec,
   disabled,
   editNode = false,
   id = "",
-}: IntComponentType): JSX.Element {
+}: InputProps<number, IntComponentType>): JSX.Element {
   const min = -Infinity;
   // Clear component state
   useEffect(() => {
     if (disabled && value !== 0) {
-      onChange(0, undefined, true);
+      handleOnNewValue({value:0},{skipSnapshot:true});
     }
-  }, [disabled, onChange]);
+  }, [disabled, handleOnNewValue]);
 
   const [cursor, setCursor] = useState<number | null>(null);
   const ref = useRef<HTMLInputElement>(null);
@@ -35,7 +35,7 @@ export default function IntComponent({
 
   const handleChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCursor(e.target.selectionStart);
-    onChange(Number(e.target.value));
+    handleOnNewValue({value:Number(e.target.value)});
   };
 
   const getStepValue = () => {
@@ -58,7 +58,7 @@ export default function IntComponent({
   };
 
   const handleNumberChange = (newValue) => {
-    onChange(Number(newValue));
+    handleOnNewValue({value:Number(newValue)});
   };
 
   const handleInputChange = (event) => {
