@@ -1,8 +1,9 @@
 from astra_assistants import patch  # type: ignore
-from langflow.custom import Component
 from openai import OpenAI
 
-from langflow.inputs import StrInput, MultilineInput
+from langflow.components.astra_assistants.util import get_patched_openai_client
+from langflow.custom import Component
+from langflow.inputs import MultilineInput, StrInput
 from langflow.schema.message import Message
 from langflow.template import Output
 
@@ -10,7 +11,7 @@ from langflow.template import Output
 class AssistantsGetAssistantName(Component):
     display_name = "Get Assistant name"
     description = "Assistant by id"
-    client = patch(OpenAI())
+    client = get_patched_openai_client()
 
     inputs = [
         StrInput(

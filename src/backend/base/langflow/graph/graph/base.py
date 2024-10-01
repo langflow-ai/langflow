@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import copy
 import json
@@ -8,7 +10,7 @@ from collections.abc import Generator, Iterable
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import nest_asyncio
 from loguru import logger
@@ -55,8 +57,8 @@ class Graph:
 
     def __init__(
         self,
-        start: Optional["Component"] = None,
-        end: Optional["Component"] = None,
+        start: Component | None = None,
+        end: Component | None = None,
         flow_id: str | None = None,
         flow_name: str | None = None,
         description: str | None = None,
@@ -118,7 +120,7 @@ class Graph:
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         try:
-            self.tracing_service: "TracingService" | None = get_tracing_service()
+            self.tracing_service: TracingService | None = get_tracing_service()
         except Exception as exc:
             logger.error(f"Error getting tracing service: {exc}")
             self.tracing_service = None
@@ -206,7 +208,7 @@ class Graph:
         self._edges = self._graph_data["edges"]
         self.initialize()
 
-    def add_component(self, component: "Component", component_id: Optional[str] = None) -> str:
+    def add_component(self, component: Component, component_id: str | None = None) -> str:
         component_id = component_id or component._id
         if component_id in self.vertex_map:
             return component_id
@@ -228,7 +230,7 @@ class Graph:
 
         return component_id
 
-    def _set_start_and_end(self, start: "Component", end: "Component"):
+    def _set_start_and_end(self, start: Component, end: Component):
         if not hasattr(start, "to_frontend_node"):
             raise TypeError(f"start must be a Component. Got {type(start)}")
         if not hasattr(end, "to_frontend_node"):
@@ -618,7 +620,7 @@ class Graph:
         stream: bool,
         session_id: str,
         fallback_to_env_vars: bool,
-    ) -> list[Optional["ResultData"]]:
+    ) -> list[ResultData | None]:
         """
         Runs the graph with the given inputs.
 
@@ -813,7 +815,7 @@ class Graph:
             "flow_name": self.flow_name,
         }
 
-    def build_graph_maps(self, edges: list[CycleEdge] | None = None, vertices: list["Vertex"] | None = None):
+    def build_graph_maps(self, edges: list[CycleEdge] | None = None, vertices: list[Vertex] | None = None):
         """
         Builds the adjacency maps for the graph.
         """
@@ -883,7 +885,7 @@ class Graph:
                 return edge
         return None
 
-    def build_parent_child_map(self, vertices: list["Vertex"]):
+    def build_parent_child_map(self, vertices: list[Vertex]):
         parent_child_map = defaultdict(list)
         for vertex in vertices:
             parent_child_map[vertex.id] = [child.id for child in self.get_successors(vertex)]
@@ -982,7 +984,7 @@ class Graph:
         flow_id: str | None = None,
         flow_name: str | None = None,
         user_id: str | None = None,
-    ) -> "Graph":
+    ) -> Graph:
         """
         Creates a graph from a payload.
 
@@ -1021,7 +1023,7 @@ class Graph:
     # both graphs have the same vertices and edges
     # but the data of the vertices might be different
 
-    def update_edges_from_vertex(self, vertex: "Vertex", other_vertex: "Vertex") -> None:
+    def update_edges_from_vertex(self, vertex: Vertex, other_vertex: Vertex) -> None:
         """Updates the edges of a vertex in the Graph."""
         new_edges = []
         for edge in self.edges:
@@ -1031,13 +1033,13 @@ class Graph:
         new_edges += other_vertex.edges
         self.edges = new_edges
 
-    def vertex_data_is_identical(self, vertex: "Vertex", other_vertex: "Vertex") -> bool:
+    def vertex_data_is_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
         data_is_equivalent = vertex == other_vertex
         if not data_is_equivalent:
             return False
         return self.vertex_edges_are_identical(vertex, other_vertex)
 
-    def vertex_edges_are_identical(self, vertex: "Vertex", other_vertex: "Vertex") -> bool:
+    def vertex_edges_are_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
         same_length = len(vertex.edges) == len(other_vertex.edges)
         if not same_length:
             return False
@@ -1046,7 +1048,7 @@ class Graph:
                 return False
         return True
 
-    def update(self, other: "Graph") -> "Graph":
+    def update(self, other: Graph) -> Graph:
         # Existing vertices in self graph
         existing_vertex_ids = {vertex.id for vertex in self.vertices}
         # Vertex IDs in the other graph
@@ -1096,7 +1098,7 @@ class Graph:
         self.increment_update_count()
         return self
 
-    def update_vertex_from_another(self, vertex: "Vertex", other_vertex: "Vertex") -> None:
+    def update_vertex_from_another(self, vertex: Vertex, other_vertex: Vertex) -> None:
         """
         Updates a vertex from another vertex.
 
@@ -1134,12 +1136,12 @@ class Graph:
         self.vertices.append(vertex)
         self.vertex_map[vertex.id] = vertex
 
-    def add_vertex(self, vertex: "Vertex") -> None:
+    def add_vertex(self, vertex: Vertex) -> None:
         """Adds a new vertex to the graph."""
         self._add_vertex(vertex)
         self._update_edges(vertex)
 
-    def _update_edges(self, vertex: "Vertex") -> None:
+    def _update_edges(self, vertex: Vertex) -> None:
         """Updates the edges of a vertex."""
         # Vertex has edges, so we need to update the edges
         for edge in vertex.edges:
@@ -1189,19 +1191,19 @@ class Graph:
         for vertex in self.vertices:
             vertex._build_params()
 
-    def _validate_vertex(self, vertex: "Vertex") -> bool:
+    def _validate_vertex(self, vertex: Vertex) -> bool:
         """Validates a vertex."""
         # All vertices that do not have edges are invalid
         return len(self.get_vertex_edges(vertex.id)) > 0
 
-    def get_vertex(self, vertex_id: str, silent: bool = False) -> "Vertex":
+    def get_vertex(self, vertex_id: str, silent: bool = False) -> Vertex:
         """Returns a vertex by id."""
         try:
             return self.vertex_map[vertex_id]
         except KeyError:
             raise ValueError(f"Vertex {vertex_id} not found")
 
-    def get_root_of_group_node(self, vertex_id: str) -> "Vertex":
+    def get_root_of_group_node(self, vertex_id: str) -> Vertex:
         """Returns the root of a group node."""
         if vertex_id in self.top_level_vertices:
             # Get all vertices with vertex_id as .parent_node_id
@@ -1225,7 +1227,7 @@ class Graph:
 
     async def astep(
         self,
-        inputs: Optional["InputValueRequest"] = None,
+        inputs: InputValueRequest | None = None,
         files: list[str] | None = None,
         user_id: str | None = None,
         event_manager: EventManager | None = None,
@@ -1279,7 +1281,7 @@ class Graph:
 
     def step(
         self,
-        inputs: Optional["InputValueRequest"] = None,
+        inputs: InputValueRequest | None = None,
         files: list[str] | None = None,
         user_id: str | None = None,
     ):
@@ -1402,9 +1404,9 @@ class Graph:
             or (edge.target_id == vertex_id and is_target is not False)
         ]
 
-    def get_vertices_with_target(self, vertex_id: str) -> list["Vertex"]:
+    def get_vertices_with_target(self, vertex_id: str) -> list[Vertex]:
         """Returns the vertices connected to a vertex."""
-        vertices: list["Vertex"] = []
+        vertices: list[Vertex] = []
         for edge in self.edges:
             if edge.target_id == vertex_id:
                 vertex = self.get_vertex(edge.source_id)
@@ -1413,7 +1415,7 @@ class Graph:
                 vertices.append(vertex)
         return vertices
 
-    async def process(self, fallback_to_env_vars: bool, start_component_id: str | None = None) -> "Graph":
+    async def process(self, fallback_to_env_vars: bool, start_component_id: str | None = None) -> Graph:
         """Processes the graph with vertices in each layer run in parallel."""
 
         first_layer = self.sort_vertices(start_component_id=start_component_id)
@@ -1470,7 +1472,7 @@ class Graph:
 
         return list(next_runnable_vertices)
 
-    async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: "Vertex", cache: bool = True) -> list[str]:
+    async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: Vertex, cache: bool = True) -> list[str]:
         v_id = vertex.id
         v_successors_ids = vertex.successors_ids
         async with lock:
@@ -1491,7 +1493,7 @@ class Graph:
         """Executes tasks in parallel, handling exceptions for each task."""
         results = []
         completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
-        vertices: list["Vertex"] = []
+        vertices: list[Vertex] = []
 
         for i, result in enumerate(completed_tasks):
             task_name = tasks[i].get_name()
@@ -1520,7 +1522,7 @@ class Graph:
         no_duplicate_results = list(set(results))
         return no_duplicate_results
 
-    def topological_sort(self) -> list["Vertex"]:
+    def topological_sort(self) -> list[Vertex]:
         """
         Performs a topological sort of the vertices in the graph.
 
@@ -1553,7 +1555,7 @@ class Graph:
 
         return list(reversed(sorted_vertices))
 
-    def generator_build(self) -> Generator["Vertex", None, None]:
+    def generator_build(self) -> Generator[Vertex, None, None]:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
         logger.debug("There are %s vertices in the graph", len(sorted_vertices))
@@ -1563,7 +1565,7 @@ class Graph:
         """Returns the predecessors of a vertex."""
         return [self.get_vertex(source_id) for source_id in self.predecessor_map.get(vertex.id, [])]
 
-    def get_all_successors(self, vertex: "Vertex", recursive=True, flat=True, visited=None):
+    def get_all_successors(self, vertex: Vertex, recursive=True, flat=True, visited=None):
         if visited is None:
             visited = set()
 
@@ -1596,13 +1598,13 @@ class Graph:
 
         return successors_result
 
-    def get_successors(self, vertex: "Vertex") -> list["Vertex"]:
+    def get_successors(self, vertex: Vertex) -> list[Vertex]:
         """Returns the successors of a vertex."""
         return [self.get_vertex(target_id) for target_id in self.successor_map.get(vertex.id, [])]
 
-    def get_vertex_neighbors(self, vertex: "Vertex") -> dict["Vertex", int]:
+    def get_vertex_neighbors(self, vertex: Vertex) -> dict[Vertex, int]:
         """Returns the neighbors of a vertex."""
-        neighbors: dict["Vertex", int] = {}
+        neighbors: dict[Vertex, int] = {}
         for edge in self.edges:
             if edge.source_id == vertex.id:
                 neighbor = self.get_vertex(edge.target_id)
@@ -1665,7 +1667,7 @@ class Graph:
             new_edge = Edge(source, target, edge)
         return new_edge
 
-    def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> type["Vertex"]:
+    def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> type[Vertex]:
         """Returns the node class based on the node type."""
         # First we check for the node_base_type
         node_name = node_id.split("-")[0]
@@ -1682,9 +1684,9 @@ class Graph:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_type]
         return Vertex
 
-    def _build_vertices(self) -> list["Vertex"]:
+    def _build_vertices(self) -> list[Vertex]:
         """Builds the vertices of the graph."""
-        vertices: list["Vertex"] = []
+        vertices: list[Vertex] = []
         for frontend_data in self._vertices:
             if frontend_data.get("type") == NodeTypeEnum.NoteNode:
                 continue
@@ -1757,7 +1759,7 @@ class Graph:
 
     def layered_topological_sort(
         self,
-        vertices: list["Vertex"],
+        vertices: list[Vertex],
         filter_graphs: bool = False,
     ) -> list[list[str]]:
         """Performs a layered topological sort of the vertices in the graph."""
@@ -2013,7 +2015,7 @@ class Graph:
         runnable_vertices = []
         visited = set()
 
-        def find_runnable_predecessors(predecessor: "Vertex"):
+        def find_runnable_predecessors(predecessor: Vertex):
             predecessor_id = predecessor.id
             if predecessor_id in visited:
                 return

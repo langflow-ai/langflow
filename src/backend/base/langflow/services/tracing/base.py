@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
 from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
     from langchain.callbacks.base import BaseCallbackHandler
+
+    from langflow.graph.vertex.base import Vertex
 
 
 class BaseTracer(ABC):
@@ -24,8 +25,8 @@ class BaseTracer(ABC):
         trace_id: str,
         trace_name: str,
         trace_type: str,
-        inputs: Dict[str, Any],
-        metadata: Dict[str, Any] | None = None,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
         vertex: Optional["Vertex"] = None,
     ):
         raise NotImplementedError
@@ -35,7 +36,7 @@ class BaseTracer(ABC):
         self,
         trace_id: str,
         trace_name: str,
-        outputs: Dict[str, Any] | None = None,
+        outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: list[Log | dict] = [],
     ):
@@ -45,7 +46,7 @@ class BaseTracer(ABC):
     def end(
         self,
         inputs: dict[str, Any],
-        outputs: Dict[str, Any],
+        outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):

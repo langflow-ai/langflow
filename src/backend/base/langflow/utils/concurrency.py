@@ -2,8 +2,8 @@ import re
 import threading
 from contextlib import contextmanager
 from pathlib import Path
-from filelock import FileLock
 
+from filelock import FileLock
 from platformdirs import user_cache_dir
 
 

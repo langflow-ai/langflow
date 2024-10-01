@@ -1,16 +1,18 @@
 from astra_assistants import patch  # type: ignore
 from openai import OpenAI
+
+from langflow.components.astra_assistants.util import get_patched_openai_client
 from langflow.custom import Component
-from langflow.inputs import StrInput, MultilineInput
-from langflow.template import Output
+from langflow.inputs import MultilineInput, StrInput
 from langflow.schema.message import Message
+from langflow.template import Output
 
 
 class AssistantsCreateAssistant(Component):
     icon = "bot"
     display_name = "Create Assistant"
     description = "Creates an Assistant and returns it's id"
-    client = patch(OpenAI())
+    client = get_patched_openai_client()
 
     inputs = [
         StrInput(

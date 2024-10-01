@@ -1,6 +1,5 @@
 import httpx
 
-from typing import Optional
 from langflow.logging.logger import logger
 
 
@@ -69,7 +68,7 @@ def is_nightly(v: str) -> bool:
     return "dev" in v
 
 
-def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optional[str]:
+def fetch_latest_version(package_name: str, include_prerelease: bool) -> str | None:
     from packaging import version as pkg_version
 
     package_name = package_name.replace(" ", "-").lower()

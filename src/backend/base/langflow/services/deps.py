@@ -1,6 +1,9 @@
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING
+
 from loguru import logger
+
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -9,7 +12,6 @@ if TYPE_CHECKING:
     from langflow.services.cache.service import CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
-    from langflow.services.monitor.service import MonitorService
     from langflow.services.plugins.service import PluginService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
@@ -215,18 +217,6 @@ def get_session_service() -> "SessionService":
     from langflow.services.session.factory import SessionServiceFactory
 
     return get_service(ServiceType.SESSION_SERVICE, SessionServiceFactory())  # type: ignore
-
-
-def get_monitor_service() -> "MonitorService":
-    """
-    Retrieves the MonitorService instance from the service manager.
-
-    Returns:
-        MonitorService: The MonitorService instance.
-    """
-    from langflow.services.monitor.factory import MonitorServiceFactory
-
-    return get_service(ServiceType.MONITOR_SERVICE, MonitorServiceFactory())  # type: ignore
 
 
 def get_task_service() -> "TaskService":

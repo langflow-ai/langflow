@@ -1,0 +1,59 @@
+import os
+import threading
+import json
+
+import requests
+from astra_assistants import OpenAI, patch
+import pkgutil
+import importlib
+import inspect
+from astra_assistants.tools.tool_interface import ToolInterface
+import langflow.components.astra_assistants.tools as langflow_assistant_tools
+import astra_assistants.tools as astra_assistants_tools
+
+client_lock = threading.Lock()
+client = None
+
+def get_patched_openai_client():
+    os.environ["ASTRA_ASSISTANTS_QUIET"] = "true"
+    global client
+    with client_lock:
+        if client is None:
+            client = patch(OpenAI())
+    return client
+
+
+url = "https://raw.githubusercontent.com/BerriAI/litellm/refs/heads/main/model_prices_and_context_window.json"
+response = requests.get(url)
+data = json.loads(response.text)
+
+# Extract the model names into a Python list
+litellm_model_names = []
+for model, details in data.items():
+    if model != 'sample_spec':
+        #litellm_model_names.append(f"{details['litellm_provider']}/{model}")
+        litellm_model_names.append(model)
+
+
+# To store the class names that extend ToolInterface
+tool_names = []
+tools_and_names = {}
+
+def tools_from_package(your_package):
+    # Iterate over all modules in the package
+    package_name = your_package.__name__
+    for module_info in pkgutil.iter_modules(your_package.__path__):
+        module_name = f"{package_name}.{module_info.name}"
+
+        # Dynamically import the module
+        module = importlib.import_module(module_name)
+
+        # Iterate over all members of the module
+        for name, obj in inspect.getmembers(module, inspect.isclass):
+            # Check if the class is a subclass of ToolInterface and is not ToolInterface itself
+            if issubclass(obj, ToolInterface) and obj is not ToolInterface:
+                tool_names.append(name)
+                tools_and_names[name] = obj
+
+tools_from_package(astra_assistants_tools)
+tools_from_package(langflow_assistant_tools)

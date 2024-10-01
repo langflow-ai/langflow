@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 from shutil import copy2
-from typing import Any, List, Literal, Optional, Tuple, Type
+from typing import Any, Literal
 
 import orjson
 import yaml
@@ -59,7 +59,7 @@ class MyCustomSource(EnvSettingsSource):
 
 class Settings(BaseSettings):
     # Define the default LANGFLOW_DIR
-    config_dir: Optional[str] = None
+    config_dir: str | None = None
     # Define if langflow db should be saved in config dir or
     # in the langflow directory
     save_db_in_config_dir: bool = False
@@ -67,7 +67,7 @@ class Settings(BaseSettings):
 
     dev: bool = False
     """If True, Langflow will run in development mode."""
-    database_url: Optional[str] = None
+    database_url: str | None = None
     """Database URL for Langflow. If not provided, Langflow will use a SQLite database."""
     pool_size: int = 10
     """The number of connections to keep open in the connection pool. If not provided, the default is 10."""
@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the database."""
 
     # sqlite configuration
-    sqlite_pragmas: Optional[dict] = {"synchronous": "NORMAL", "journal_mode": "WAL"}
+    sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
     """SQLite pragmas to use when connecting to the database."""
 
     # cache configuration
@@ -95,28 +95,26 @@ class Settings(BaseSettings):
     """The port on which Langflow will expose Prometheus metrics. 9090 is the default port."""
 
     remove_api_keys: bool = False
-    components_path: List[str] = []
+    components_path: list[str] = []
     langchain_cache: str = "InMemoryCache"
-    load_flows_path: Optional[str] = None
+    load_flows_path: str | None = None
 
     # Redis
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_db: int = 0
-    redis_url: Optional[str] = None
+    redis_url: str | None = None
     redis_cache_expire: int = 3600
 
     # Sentry
-    sentry_dsn: Optional[str] = None
-    sentry_traces_sample_rate: Optional[float] = 1.0
-    sentry_profiles_sample_rate: Optional[float] = 1.0
+    sentry_dsn: str | None = None
+    sentry_traces_sample_rate: float | None = 1.0
+    sentry_profiles_sample_rate: float | None = 1.0
 
-    store: Optional[bool] = True
-    store_url: Optional[str] = "https://api.langflow.store"
-    download_webhook_url: Optional[str] = (
-        "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
-    )
-    like_webhook_url: Optional[str] = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
+    store: bool | None = True
+    store_url: str | None = "https://api.langflow.store"
+    download_webhook_url: str | None = "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
+    like_webhook_url: str | None = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     storage_type: str = "local"
 
@@ -339,12 +337,12 @@ class Settings(BaseSettings):
     @classmethod
     def settings_customise_sources(
         cls,
-        settings_cls: Type[BaseSettings],
+        settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
-    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
         return (MyCustomSource(settings_cls),)
 
 
@@ -362,7 +360,7 @@ def load_settings_from_yaml(file_path: str) -> Settings:
 
         file_path = os.path.join(current_path, file_path)
 
-    with open(file_path, "r") as f:
+    with open(file_path) as f:
         settings_dict = yaml.safe_load(f)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 
