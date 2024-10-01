@@ -1,6 +1,11 @@
 import ForwardedIconComponent from "@/components/genericIconComponent";
-import { Button } from "@/components/ui/button";
-import React from "react";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
+import useAddFlow from "@/hooks/flows/use-add-flow";
+import { useFolderStore } from "@/stores/foldersStore";
+import { FlowType } from "@/types/flow";
+import { updateIds } from "@/utils/reactflowUtils";
+import { useParams } from "react-router-dom";
 
 interface CardData {
   bgImage: string;
@@ -9,23 +14,41 @@ interface CardData {
   category: string;
   title: string;
   description: string;
-  onClick: () => void;
+  flow: FlowType | undefined;
 }
 
-const TemplateCard: React.FC<CardData> = ({
+export default function TemplateCard({
   bgImage,
   spiralImage,
   icon,
   category,
   title,
   description,
-  onClick,
-}) => {
+  flow,
+}: CardData) {
+  const addFlow = useAddFlow();
+  const navigate = useCustomNavigate();
+  const { folderId } = useParams();
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+
+  const folderIdUrl = folderId ?? myCollectionId;
+
+  const handleClick = () => {
+    if (flow) {
+      updateIds(flow.data!);
+      addFlow({ flow }).then((id) => {
+        navigate(`/flow/${id}/folder/${folderIdUrl}`);
+      });
+      track("New Flow Created", { template: `${flow.name} Template` });
+    } else {
+      console.error(`Flow template "${title}" not found`);
+    }
+  };
+
   return (
-    <Button
-      unstyled
-      onClick={onClick}
-      className="group relative h-full w-full overflow-hidden rounded-3xl border text-left"
+    <div
+      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-lg"
+      onClick={handleClick}
     >
       <img
         src={bgImage}
@@ -49,8 +72,6 @@ const TemplateCard: React.FC<CardData> = ({
         <h3 className="text-xl font-bold">{title}</h3>
         <p className="text-xs font-medium opacity-90">{description}</p>
       </div>
-    </Button>
+    </div>
   );
-};
-
-export default TemplateCard;
+}
