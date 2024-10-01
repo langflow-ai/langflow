@@ -55,7 +55,10 @@ class AssemblyAILeMUR(Component):
             display_name="Endpoint",
             options=["task", "summary", "question-answer"],
             value="task",
-            info="The LeMUR endpoint to use. For 'summary' and 'question-answer', no prompt input is needed. See https://www.assemblyai.com/docs/api-reference/lemur/ for more info.",
+            info=(
+                "The LeMUR endpoint to use. For 'summary' and 'question-answer',"
+                " no prompt input is needed. See https://www.assemblyai.com/docs/api-reference/lemur/ for more info."
+            ),
             advanced=True,
         ),
         MultilineInput(
@@ -67,7 +70,10 @@ class AssemblyAILeMUR(Component):
         MultilineInput(
             name="transcript_ids",
             display_name="Transcript IDs",
-            info="Comma-separated list of transcript IDs. LeMUR can perform actions over multiple transcripts. If provided, the Transcription Result is ignored.",
+            info=(
+                "Comma-separated list of transcript IDs. LeMUR can perform actions over multiple transcripts."
+                " If provided, the Transcription Result is ignored."
+            ),
             advanced=True,
         ),
     ]

@@ -92,10 +92,12 @@ class AssemblyAITranscriptionJobCreator(Component):
         MessageTextInput(
             name="language_code",
             display_name="Language",
-            info="""
+            info=(
+                """
             The language of the audio file. Can be set manually if automatic language detection is disabled.
-            See https://www.assemblyai.com/docs/getting-started/supported-languages for a list of supported language codes.
-            """,
+            See https://www.assemblyai.com/docs/getting-started/supported-languages """
+                "for a list of supported language codes."
+            ),
             advanced=True,
         ),
         BoolInput(
