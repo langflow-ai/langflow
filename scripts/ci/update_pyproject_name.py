@@ -16,9 +16,26 @@ def update_pyproject_name(pyproject_path: str, new_project_name: str) -> None:
 
     if not pattern.search(content):
         raise Exception(f'Project name not found in "{filepath}"')
-
     content = pattern.sub(new_project_name, content)
 
+
+
+    with open(filepath, "w") as file:
+        file.write(content)
+
+def update_base_dep(pyproject_path: str, new_version: str) -> None:
+    """Update the langflow-base dependency in pyproject.toml."""
+    filepath = os.path.join(BASE_DIR, pyproject_path)
+    with open(filepath, "r") as file:
+        content = file.read()
+
+    replacement = "langflow-base-nightly = { workspace = true }"
+
+    # Updates the dependency name for uv
+    pattern = re.compile(r'langflow-base = \{ workspace = true \}')
+    if not pattern.search(content):
+        raise Exception(f'langflow-base uv dependency not found in "{filepath}"')
+    content = pattern.sub(replacement, content)
     with open(filepath, "w") as file:
         file.write(content)
 
@@ -31,6 +48,7 @@ def main() -> None:
 
     if build_type == "base":
         update_pyproject_name("src/backend/base/pyproject.toml", new_project_name)
+        update_base_dep("pyproject.toml", new_project_name)
     elif build_type == "main":
         update_pyproject_name("pyproject.toml", new_project_name)
     else:
