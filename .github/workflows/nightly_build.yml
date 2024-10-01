@@ -85,9 +85,6 @@ jobs:
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
 
-          # WARNING: These scripts must be run in this order.
-          # Poetry will use a different cached virtual environment once the main pyproject.toml
-          # project-name is updated, which does not have dependencies installed.
           BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
           echo "Updating base project version to $BASE_TAG"
           uv run ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
