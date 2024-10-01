@@ -1,10 +1,11 @@
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { APIClassType } from "@/types/api";
+import { ColumnField } from "@/types/utils/functions";
 
 // Base type for RefreshParameterComponent children
-export type BaseInputProps = {
+export type BaseInputProps<valueType = any> = {
   id: string;
-  value: any;
+  value: valueType;
   editNode: boolean;
   handleOnNewValue: handleOnNewValueType;
   disabled: boolean;
@@ -14,4 +15,11 @@ export type BaseInputProps = {
 };
 
 // Generic type for composing input props
-export type InputProps<T = {}> = BaseInputProps & T;
+export type InputProps<valueType = any, T = {}> = BaseInputProps<valueType> & T;
+
+
+export type TableComponentType = {
+    description: string;
+    tableTitle: string;
+    columns?: ColumnField[];
+  };
