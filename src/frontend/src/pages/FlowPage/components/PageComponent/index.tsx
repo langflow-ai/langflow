@@ -116,6 +116,11 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const [isAddingNote, setIsAddingNote] = useState(false);
 
+  const zoomLevel = reactFlowInstance?.getZoom();
+  const shadowBoxWidth = NOTE_NODE_MIN_WIDTH * (zoomLevel || 1);
+  const shadowBoxHeight = NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1);
+  const shadowBoxBackgroundColor = SHADOW_COLOR_OPTIONS[Object.keys(SHADOW_COLOR_OPTIONS)[0]];
+
   function handleGroupNode() {
     takeSnapshot();
     if (validateSelection(lastSelection!, edges).length === 0) {
@@ -458,8 +463,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
           shadowBox.style.display = "none";
         }
         const position = reactFlowInstance?.screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY,
+          x: event.clientX - shadowBoxWidth / 2,
+          y: event.clientY - shadowBoxHeight / 2,
         });
         const data = {
           node: {
@@ -494,15 +499,13 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
         const shadowBox = document.getElementById("shadow-box");
         if (shadowBox) {
           shadowBox.style.display = "block";
-          shadowBox.style.left = `${event.clientX + 1}px`;
-          shadowBox.style.top = `${event.clientY + 1}px`;
+          shadowBox.style.left = `${event.clientX - shadowBoxWidth / 2}px`;
+          shadowBox.style.top = `${event.clientY - shadowBoxHeight / 2}px`;
         }
       }
     },
     [isAddingNote],
   );
-
-  const zoomLevel = reactFlowInstance?.getZoom();
 
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
@@ -578,9 +581,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             id="shadow-box"
             style={{
               position: "absolute",
-              width: `${NOTE_NODE_MIN_WIDTH * (zoomLevel || 1)}px`,
-              height: `${NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1)}px`,
-              backgroundColor: `${SHADOW_COLOR_OPTIONS[Object.keys(SHADOW_COLOR_OPTIONS)[0]]}`,
+              width: `${shadowBoxWidth}px`,
+              height: `${shadowBoxHeight}px`,
+              backgroundColor: `${shadowBoxBackgroundColor}`,
+              pointerEvents: "none",
             }}
           ></div>
         </div>
