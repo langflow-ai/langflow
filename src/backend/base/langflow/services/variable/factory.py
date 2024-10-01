@@ -20,5 +20,4 @@ class VariableServiceFactory(ServiceFactory):
             from langflow.services.variable.kubernetes import KubernetesSecretService
 
             return KubernetesSecretService(settings_service)
-        else:
-            return DatabaseVariableService(settings_service)
+        return DatabaseVariableService(settings_service)

@@ -28,5 +28,4 @@ class AssistantsCreateThread(Component):
         thread = self.client.beta.threads.create()
         thread_id = thread.id
 
-        message = Message(text=thread_id)
-        return message
+        return Message(text=thread_id)

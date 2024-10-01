@@ -62,6 +62,5 @@ class AssemblyAITranscriptionJobPoller(Component):
             data = Data(data=sorted_data)
             self.status = data
             return data
-        else:
-            self.status = transcript.error
-            return Data(data={"error": transcript.error})
+        self.status = transcript.error
+        return Data(data={"error": transcript.error})

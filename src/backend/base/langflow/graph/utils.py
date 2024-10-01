@@ -72,16 +72,15 @@ def serialize_field(value):
 
     if isinstance(value, list | tuple):
         return [serialize_field(v) for v in value]
-    elif isinstance(value, Document):
+    if isinstance(value, Document):
         return value.to_json()
-    elif isinstance(value, BaseModel):
+    if isinstance(value, BaseModel):
         return value.model_dump()
-    elif isinstance(value, V1BaseModel):
+    if isinstance(value, V1BaseModel):
         if hasattr(value, "to_json"):
             return value.to_json()
-        else:
-            return value.dict()
-    elif isinstance(value, str):
+        return value.dict()
+    if isinstance(value, str):
         return {"result": value}
     return value
 

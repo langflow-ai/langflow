@@ -177,10 +177,9 @@ class AssemblyAITranscriptionJobCreator(Component):
             if transcript.error:
                 self.status = transcript.error
                 return Data(data={"error": transcript.error})
-            else:
-                result = Data(data={"transcript_id": transcript.id})
-                self.status = result
-                return result
+            result = Data(data={"transcript_id": transcript.id})
+            self.status = result
+            return result
         except Exception as e:
             self.status = f"An error occurred: {str(e)}"
             return Data(data={"error": f"An error occurred: {str(e)}"})

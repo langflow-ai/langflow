@@ -53,5 +53,4 @@ class AssistantsCreateAssistant(Component):
             instructions=self.instructions,
             model=self.model,
         )
-        message = Message(text=assistant.id)
-        return message
+        return Message(text=assistant.id)

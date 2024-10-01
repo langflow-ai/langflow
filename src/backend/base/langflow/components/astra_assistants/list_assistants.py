@@ -18,8 +18,7 @@ class AssistantsListAssistants(Component):
     def process_inputs(self) -> Message:
         assistants = self.client.beta.assistants.list().data
         id_list = [assistant.id for assistant in assistants]
-        message = Message(
+        return Message(
             # get text from list
             text="\n".join(id_list)
         )
-        return message

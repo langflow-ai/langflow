@@ -27,6 +27,4 @@ class GetEnvVar(Component):
         if self.env_var_name not in os.environ:
             msg = f"Environment variable {self.env_var_name} not set"
             raise Exception(msg)
-        else:
-            message = Message(text=os.environ[self.env_var_name])
-            return message
+        return Message(text=os.environ[self.env_var_name])

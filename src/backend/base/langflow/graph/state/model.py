@@ -238,6 +238,4 @@ def create_state_model(model_name: str = "State", validate: bool = True, **kwarg
 
     # Create the model dynamically
     config_dict = ConfigDict(arbitrary_types_allowed=True, validate_assignment=True)
-    model = create_model(model_name, __config__=config_dict, **fields)
-
-    return model
+    return create_model(model_name, __config__=config_dict, **fields)

@@ -29,8 +29,7 @@ def get_user_store_api_key(
     if not user.store_api_key:
         raise HTTPException(status_code=400, detail="You must have a store API key set.")
     try:
-        decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
-        return decrypted
+        return auth_utils.decrypt_api_key(user.store_api_key, settings_service)
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to decrypt API key. Please set a new one.") from e
 
@@ -42,8 +41,7 @@ def get_optional_user_store_api_key(
     if not user.store_api_key:
         return None
     try:
-        decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
-        return decrypted
+        return auth_utils.decrypt_api_key(user.store_api_key, settings_service)
     except Exception as e:
         logger.error(f"Failed to decrypt API key: {e}")
         return user.store_api_key
@@ -82,8 +80,7 @@ async def share_component(
 ):
     try:
         await check_langflow_version(component)
-        result = await store_service.upload(store_api_key, component)
-        return result
+        return await store_service.upload(store_api_key, component)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -97,8 +94,7 @@ async def update_shared_component(
 ):
     try:
         await check_langflow_version(component)
-        result = await store_service.update(store_api_key, component_id, component)
-        return result
+        return await store_service.update(store_api_key, component_id, component)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

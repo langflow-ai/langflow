@@ -87,8 +87,7 @@ class DatabaseVariableService(VariableService, Service):
             raise TypeError(msg)
 
         # we decrypt the value
-        decrypted = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
-        return decrypted
+        return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
 
     def get_all(self, user_id: UUID | str, session: Session = Depends(get_session)) -> list[Variable | None]:
         return list(session.exec(select(Variable).where(Variable.user_id == user_id)).all())

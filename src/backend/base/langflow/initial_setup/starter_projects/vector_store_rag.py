@@ -24,8 +24,7 @@ def ingestion_graph():
         ingest_data=text_splitter.split_text,
     )
 
-    ingestion_graph = Graph(file_component, vector_store)
-    return ingestion_graph
+    return Graph(file_component, vector_store)
 
 
 def rag_graph():
@@ -57,8 +56,7 @@ def rag_graph():
     chat_output = ChatOutput()
     chat_output.set(input_value=openai_component.text_response)
 
-    graph = Graph(start=chat_input, end=chat_output)
-    return graph
+    return Graph(start=chat_input, end=chat_output)
 
 
 def vector_store_rag_graph():

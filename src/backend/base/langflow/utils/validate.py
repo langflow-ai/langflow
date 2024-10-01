@@ -244,8 +244,7 @@ def compile_class_code(class_code):
     :param class_code: AST node of the class
     :return: Compiled code object of the class
     """
-    code_obj = compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
-    return code_obj
+    return compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
 
 
 def build_class_constructor(compiled_class, exec_globals, class_name):
@@ -302,8 +301,7 @@ def find_names_in_code(code, names):
     :param names: A list of names to check for in the code.
     :return: A set of names that are found in the code.
     """
-    found_names = {name for name in names if name in code}
-    return found_names
+    return {name for name in names if name in code}
 
 
 def extract_function_name(code):

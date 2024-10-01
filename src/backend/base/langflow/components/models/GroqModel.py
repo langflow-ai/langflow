@@ -93,7 +93,7 @@ class GroqModel(LCModelComponent):
         n = self.n
         stream = self.stream
 
-        output = ChatGroq(  # type: ignore
+        return ChatGroq(  # type: ignore
             model=model_name,
             max_tokens=max_tokens or None,
             temperature=temperature,
@@ -102,5 +102,3 @@ class GroqModel(LCModelComponent):
             api_key=SecretStr(groq_api_key),
             streaming=stream,
         )
-
-        return output  # type: ignore

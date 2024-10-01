@@ -71,9 +71,7 @@ def retrieve_file_paths(
 
     glob = "**/*" if recursive else "*"
     paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
-    file_paths = [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
-
-    return file_paths
+    return [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
 
 def partition_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
@@ -92,8 +90,7 @@ def partition_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
     text = "\n\n".join([str(el) for el in elements])
     metadata = elements.metadata if hasattr(elements, "metadata") else {}
     metadata["file_path"] = file_path
-    record = Data(text=text, data=metadata)
-    return record
+    return Data(text=text, data=metadata)
 
 
 def read_text_file(file_path: str) -> str:
@@ -153,8 +150,7 @@ def parse_text_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
             raise ValueError(msg) from e
         return None
 
-    record = Data(data={"file_path": file_path, "text": text})
-    return record
+    return Data(data={"file_path": file_path, "text": text})
 
 
 # ! Removing unstructured dependency until

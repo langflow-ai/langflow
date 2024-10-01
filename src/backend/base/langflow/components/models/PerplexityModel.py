@@ -79,7 +79,7 @@ class PerplexityComponent(LCModelComponent):
         top_p = self.top_p
         n = self.n
 
-        output = ChatPerplexity(
+        return ChatPerplexity(
             model=model,
             temperature=temperature or 0.75,
             pplx_api_key=api_key,
@@ -88,5 +88,3 @@ class PerplexityComponent(LCModelComponent):
             n=n or 1,
             max_output_tokens=max_output_tokens,
         )
-
-        return output  # type: ignore

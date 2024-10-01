@@ -62,10 +62,9 @@ If it is just a general query (e.g a greeting) you can respond them directly."""
     chat_output = ChatOutput()
     chat_output.set(input_value=crew_component.build_output)
 
-    graph = Graph(
+    return Graph(
         start=chat_input,
         end=chat_output,
         flow_name="Sequential Tasks Agent",
         description="This Agent runs tasks in a predefined sequence.",
     )
-    return graph

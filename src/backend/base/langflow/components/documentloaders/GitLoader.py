@@ -100,13 +100,12 @@ class GitLoaderComponent(Component):
                 return False
             return all(f(path) for f in file_filters)
 
-        loader = GitLoader(
+        return GitLoader(
             repo_path=self.repo_path,
             clone_url=self.clone_url,
             branch=self.branch,
             file_filter=combined_filter,
         )
-        return loader
 
     def load_documents(self) -> list[Data]:
         gitloader = self.build_gitloader()

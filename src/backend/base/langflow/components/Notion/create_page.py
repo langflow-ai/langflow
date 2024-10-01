@@ -45,12 +45,11 @@ class NotionPageCreator(LCToolComponent):
         if isinstance(result, str):
             # An error occurred, return it as text
             return Data(text=result)
-        else:
-            # Success, return the created page data
-            output = "Created page properties:\n"
-            for prop_name, prop_value in result.get("properties", {}).items():
-                output += f"{prop_name}: {prop_value}\n"
-            return Data(text=output, data=result)
+        # Success, return the created page data
+        output = "Created page properties:\n"
+        for prop_name, prop_value in result.get("properties", {}).items():
+            output += f"{prop_name}: {prop_value}\n"
+        return Data(text=output, data=result)
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
@@ -84,8 +83,7 @@ class NotionPageCreator(LCToolComponent):
         try:
             response = requests.post("https://api.notion.com/v1/pages", headers=headers, json=data)
             response.raise_for_status()
-            result = response.json()
-            return result
+            return response.json()
         except requests.exceptions.RequestException as e:
             error_message = f"Failed to create Notion page. Error: {str(e)}"
             if hasattr(e, "response") and e.response is not None:

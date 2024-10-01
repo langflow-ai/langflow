@@ -84,7 +84,7 @@ class LCVectorStoreComponent(Component):
             if method_name not in output_names:
                 msg = f"Output with name '{method_name}' must be defined."
                 raise ValueError(msg)
-            elif not hasattr(self, method_name):
+            if not hasattr(self, method_name):
                 msg = f"Method '{method_name}' must be defined."
                 raise ValueError(msg)
 
@@ -139,9 +139,8 @@ class LCVectorStoreComponent(Component):
             if self.status is None:
                 self.status = "Retriever built successfully."
             return retriever
-        else:
-            msg = f"Vector Store {vector_store.__class__.__name__} does not have an as_retriever method."
-            raise ValueError(msg)
+        msg = f"Vector Store {vector_store.__class__.__name__} does not have an as_retriever method."
+        raise ValueError(msg)
 
     def search_documents(self) -> list[Data]:
         """

@@ -36,9 +36,8 @@ class NotionPageContent(LCToolComponent):
         if isinstance(result, str) and result.startswith("Error:"):
             # An error occurred, return it as text
             return Data(text=result)
-        else:
-            # Success, return the content
-            return Data(text=result, data={"content": result})
+        # Success, return the content
+        return Data(text=result, data={"content": result})
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(

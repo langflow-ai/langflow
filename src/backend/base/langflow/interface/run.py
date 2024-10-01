@@ -15,8 +15,7 @@ def get_memory_key(langchain_object):
     if hasattr(langchain_object.memory, "memory_key"):
         memory_key = langchain_object.memory.memory_key
         return mem_key_dict.get(memory_key)
-    else:
-        return None  # or some other default value or action
+    return None  # or some other default value or action
 
 
 def update_memory_keys(langchain_object, possible_new_mem_key):

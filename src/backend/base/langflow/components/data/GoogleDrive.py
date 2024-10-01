@@ -43,9 +43,8 @@ class GoogleDriveComponent(Component):
                 """Load credentials from the provided creds attribute or fallback to the original method."""
                 if self.creds:
                     return self.creds
-                else:
-                    msg = "No credentials provided."
-                    raise ValueError(msg)
+                msg = "No credentials provided."
+                raise ValueError(msg)
 
             class Config:
                 arbitrary_types_allowed = True

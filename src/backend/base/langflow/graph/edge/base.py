@@ -35,14 +35,12 @@ class Edge:
                                 "might not be a valid input."
                             )
                             raise ValueError(msg) from e
-                        else:
-                            msg = (
-                                f"Field '{self._target_handle['fieldName']}' on {target.display_name} "
-                                "might not be a valid input."
-                            )
-                            raise ValueError(msg) from e
-                    else:
-                        raise e
+                        msg = (
+                            f"Field '{self._target_handle['fieldName']}' on {target.display_name} "
+                            "might not be a valid input."
+                        )
+                        raise ValueError(msg) from e
+                    raise e
 
             else:
                 msg = "Target handle is not a dictionary"

@@ -116,9 +116,8 @@ class StoreService(Service):
         except HTTPStatusError as exc:
             if exc.response.status_code in [403, 401]:
                 return False
-            else:
-                msg = f"Unexpected status code: {exc.response.status_code}"
-                raise ValueError(msg)
+            msg = f"Unexpected status code: {exc.response.status_code}"
+            raise ValueError(msg)
         except Exception as exc:
             msg = f"Unexpected error: {exc}"
             raise ValueError(msg)
@@ -494,14 +493,12 @@ class StoreService(Service):
 
             if isinstance(result, list):
                 return True
-            elif isinstance(result, int):
+            if isinstance(result, int):
                 return False
-            else:
-                msg = f"Unexpected result: {result}"
-                raise ValueError(msg)
-        else:
-            msg = f"Unexpected status code: {response.status_code}"
+            msg = f"Unexpected result: {result}"
             raise ValueError(msg)
+        msg = f"Unexpected status code: {response.status_code}"
+        raise ValueError(msg)
 
     async def get_list_component_response_model(
         self,
@@ -550,7 +547,7 @@ class StoreService(Service):
                 if exc.response.status_code == 403:
                     msg = "You are not authorized to access this public resource"
                     raise ForbiddenError(msg) from exc
-                elif exc.response.status_code == 401:
+                if exc.response.status_code == 401:
                     msg = "You are not authorized to access this resource. Please check your API key."
                     raise APIKeyError(msg) from exc
             except Exception as exc:
@@ -572,7 +569,7 @@ class StoreService(Service):
                 if exc.response.status_code == 403:
                     msg = "You are not authorized to access this public resource"
                     raise ForbiddenError(msg)
-                elif exc.response.status_code == 401:
+                if exc.response.status_code == 401:
                     msg = "You are not authorized to access this resource. Please check your API key."
                     raise APIKeyError(msg)
 

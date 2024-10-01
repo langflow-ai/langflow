@@ -162,7 +162,7 @@ class Message(Data):
     def serialize_text(self, value):
         if isinstance(value, AsyncIterator):
             return ""
-        elif isinstance(value, Iterator):
+        if isinstance(value, Iterator):
             return ""
         return value
 
@@ -205,8 +205,7 @@ class Message(Data):
                     messages.append(AIMessage(content=message.get("content")))
 
         self.prompt["kwargs"]["messages"] = messages
-        loaded_prompt = load(self.prompt)
-        return loaded_prompt
+        return load(self.prompt)
 
     @classmethod
     def from_lc_prompt(

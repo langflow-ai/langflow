@@ -13,14 +13,12 @@ if TYPE_CHECKING:
 
 async def aget_all_types_dict(components_paths):
     """Get all types dictionary combining native and custom components."""
-    custom_components_from_file = await abuild_custom_components(components_paths=components_paths)
-    return custom_components_from_file
+    return await abuild_custom_components(components_paths=components_paths)
 
 
 def get_all_types_dict(components_paths):
     """Get all types dictionary combining native and custom components."""
-    custom_components_from_file = build_custom_components(components_paths=components_paths)
-    return custom_components_from_file
+    return build_custom_components(components_paths=components_paths)
 
 
 # TypeError: unhashable type: 'list'

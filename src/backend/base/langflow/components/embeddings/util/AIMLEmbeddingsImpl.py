@@ -54,8 +54,7 @@ class AIMLEmbeddingsImpl(BaseModel, Embeddings):
             json=payload,
         )
         response.raise_for_status()
-        result_data = response.json()
-        return result_data
+        return response.json()
 
     def embed_query(self, text: str) -> list[float]:
         return self.embed_documents([text])[0]

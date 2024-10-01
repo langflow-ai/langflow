@@ -114,6 +114,4 @@ class LangChainHubPromptComponent(Component):
             raise ValueError(msg)
 
         # Pull the prompt from LangChain Hub
-        prompt_data = langchain.hub.pull(self.langchain_hub_prompt, api_key=self.langchain_api_key)
-
-        return prompt_data
+        return langchain.hub.pull(self.langchain_hub_prompt, api_key=self.langchain_api_key)

@@ -88,8 +88,7 @@ class AssistantsRun(Component):
                 for part in stream.text_deltas:
                     text += part
                     print(part)
-            message = Message(text=text)
-            return message
+            return Message(text=text)
         except Exception as e:
             print(e)
             msg = f"Error running assistant: {e}"

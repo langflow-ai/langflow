@@ -77,8 +77,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
                 else:
                     value = item["value"]
                 return value
-            else:
-                self.delete(key)
+            self.delete(key)
         return None
 
     def set(self, key, value, lock: Union[threading.Lock, None] = None):  # noqa: UP007
@@ -353,9 +352,8 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type
             if time.time() - item["time"] < self.expiration_time:
                 self.cache.move_to_end(key)
                 return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
-            else:
-                logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
-                await self._delete(key)  # Log before deleting the expired item
+            logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
+            await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS
 
     async def set(self, key, value, lock: asyncio.Lock | None = None):

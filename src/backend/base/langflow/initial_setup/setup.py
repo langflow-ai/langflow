@@ -460,8 +460,7 @@ def create_new_project(
 
 
 def get_all_flows_similar_to_project(session, folder_id):
-    flows = session.exec(select(Folder).where(Folder.id == folder_id)).first().flows
-    return flows
+    return session.exec(select(Folder).where(Folder.id == folder_id)).first().flows
 
 
 def delete_start_projects(session, folder_id):
@@ -484,8 +483,7 @@ def create_starter_folder(session):
         session.commit()
         session.refresh(db_folder)
         return db_folder
-    else:
-        return session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+    return session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
 
 
 def _is_valid_uuid(val):

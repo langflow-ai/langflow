@@ -200,14 +200,13 @@ class PythonCodeStructuredTool(LCToolComponent):
         if schema_fields:
             PythonCodeToolSchema = create_model("PythonCodeToolSchema", **schema_fields)  # type: ignore
 
-        tool = StructuredTool.from_function(
+        return StructuredTool.from_function(
             func=_local[self.tool_function].run,
             args_schema=PythonCodeToolSchema,
             name=self.tool_name,
             description=self.tool_description,
             return_direct=self.return_direct,
         )
-        return tool  # type: ignore
 
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """

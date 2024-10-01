@@ -84,7 +84,7 @@ class AIMLModelComponent(LCModelComponent):
         else:
             openai_api_key = aiml_api_key
 
-        model = ChatOpenAI(
+        return ChatOpenAI(
             model=model_name,
             temperature=temperature,
             api_key=openai_api_key,
@@ -93,8 +93,6 @@ class AIMLModelComponent(LCModelComponent):
             seed=seed,
             **model_kwargs,
         )
-
-        return model  # type: ignore
 
     def _get_exception_message(self, e: Exception):
         """

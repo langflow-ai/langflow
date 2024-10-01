@@ -106,8 +106,7 @@ def patch_user(
         if not update_password:
             user_update.password = user_db.password
         return update_user(user_db, user_update, session)
-    else:
-        raise HTTPException(status_code=404, detail="User not found")
+    raise HTTPException(status_code=404, detail="User not found")
 
 
 @router.patch("/{user_id}/reset-password", response_model=UserRead)
@@ -146,7 +145,7 @@ def delete_user(
     """
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="You can't delete your own user account")
-    elif not current_user.is_superuser:
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Permission denied")
 
     user_db = session.exec(select(User).where(User.id == user_id)).first()

@@ -60,6 +60,5 @@ async def health_check(
 
     if response.has_error():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response.model_dump())
-    else:
-        response.status = "ok"
-        return response
+    response.status = "ok"
+    return response

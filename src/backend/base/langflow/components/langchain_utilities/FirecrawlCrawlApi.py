@@ -86,5 +86,4 @@ class FirecrawlCrawlApi(CustomComponent):
             idempotency_key,
         )
 
-        records = Data(data={"results": crawl_result})
-        return records
+        return Data(data={"results": crawl_result})

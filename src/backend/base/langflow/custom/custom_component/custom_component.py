@@ -531,10 +531,9 @@ class CustomComponent(BaseComponent):
         """
         This function is called after the code validation is done.
         """
-        frontend_node = update_frontend_node_with_template_values(
+        return update_frontend_node_with_template_values(
             frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node
         )
-        return frontend_node
 
     def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
         if self._tracing_service:

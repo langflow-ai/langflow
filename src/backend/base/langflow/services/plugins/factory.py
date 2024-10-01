@@ -12,5 +12,4 @@ class PluginServiceFactory(ServiceFactory):
         super().__init__(PluginService)
 
     def create(self, settings_service: "SettingsService"):
-        service = PluginService(settings_service)
-        return service
+        return PluginService(settings_service)

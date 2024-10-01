@@ -74,5 +74,4 @@ class FirecrawlScrapeApi(CustomComponent):
             },
         )
 
-        record = Data(data=results)
-        return record
+        return Data(data=results)

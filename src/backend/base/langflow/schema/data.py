@@ -39,8 +39,7 @@ class Data(BaseModel):
 
     @model_serializer(mode="plain", when_used="json")
     def serialize_model(self):
-        data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
-        return data
+        return {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
 
     def get_text(self):
         """

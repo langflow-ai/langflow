@@ -41,9 +41,7 @@ class CohereComponent(LCModelComponent):
         else:
             api_key = None
 
-        output = ChatCohere(
+        return ChatCohere(
             temperature=temperature or 0.75,
             cohere_api_key=api_key,
         )
-
-        return output  # type: ignore

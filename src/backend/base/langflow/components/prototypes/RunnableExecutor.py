@@ -123,8 +123,7 @@ class RunnableExecComponent(Component):
 
         if self.use_stream:
             return self.astream_events(input_dict)
-        else:
-            result = await self.runnable.ainvoke(input_dict)
+        result = await self.runnable.ainvoke(input_dict)
         result_value, _status = self.get_output(result, self.input_key, self.output_key)
         status += _status
         status += f"\n\nOutput: {result_value}\n\nRaw Output: {result}"

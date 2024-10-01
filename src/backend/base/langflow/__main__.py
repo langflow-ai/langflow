@@ -235,7 +235,7 @@ def run_on_windows(host, port, log_level, options, app):
     """
     print_banner(host, port)
     run_langflow(host, port, log_level, options, app)
-    return None
+    return
 
 
 def is_port_in_use(port, host="localhost"):
@@ -296,8 +296,7 @@ def generate_pip_command(package_names, is_pre_release):
     base_command = "pip install"
     if is_pre_release:
         return f"{base_command} {' '.join(package_names)} -U --pre"
-    else:
-        return f"{base_command} {' '.join(package_names)} -U"
+    return f"{base_command} {' '.join(package_names)} -U"
 
 
 def stylize_text(text: str, to_style: str, is_prerelease: bool) -> str:

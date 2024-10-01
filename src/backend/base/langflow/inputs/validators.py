@@ -12,9 +12,8 @@ def validate_boolean(value: bool) -> bool:
         return False
     if isinstance(value, bool):
         return value
-    else:
-        msg = "Value must be a boolean"
-        raise ValueError(msg)
+    msg = "Value must be a boolean"
+    raise ValueError(msg)
 
 
 CoalesceBool = Annotated[bool, PlainValidator(validate_boolean)]
