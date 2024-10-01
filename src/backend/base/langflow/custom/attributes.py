@@ -10,10 +10,11 @@ def validate_icon(value: str, *args, **kwargs):
 
     if not value.startswith(":") and not value.endswith(":"):
         return value
-    elif not value.startswith(":") or not value.endswith(":"):
+    if not value.startswith(":") or not value.endswith(":"):
         # emoji should have both starting and ending colons
         # so if one of them is missing, we will raise
-        raise ValueError(f"Invalid emoji. {value} is not a valid emoji.")
+        msg = f"Invalid emoji. {value} is not a valid emoji."
+        raise ValueError(msg)
 
     emoji_value = emoji.emojize(value, variant="emoji_type")
     if value == emoji_value:
@@ -29,6 +30,7 @@ def getattr_return_str(value):
 def getattr_return_bool(value):
     if isinstance(value, bool):
         return value
+    return None
 
 
 def getattr_return_list_of_str(value):

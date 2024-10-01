@@ -104,7 +104,8 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="search_score_threshold",
             display_name="Search Score Threshold",
-            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            info="Minimum similarity score threshold for search results. "
+            "(when using 'Similarity with score threshold')",
             value=0,
             advanced=True,
         ),
@@ -136,9 +137,8 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             import cassio
             from langchain_community.utilities.cassandra import SetupMode
         except ImportError:
-            raise ImportError(
-                "Could not import cassio integration package. " "Please install it with `pip install cassio`."
-            )
+            msg = "Could not import cassio integration package. " "Please install it with `pip install cassio`."
+            raise ImportError(msg)
 
         from uuid import UUID
 
@@ -212,10 +212,9 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     def _map_search_type(self):
         if self.search_type == "Similarity with score threshold":
             return "similarity_score_threshold"
-        elif self.search_type == "MMR (Max Marginal Relevance)":
+        if self.search_type == "MMR (Max Marginal Relevance)":
             return "mmr"
-        else:
-            return "similarity"
+        return "similarity"
 
     def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
@@ -234,19 +233,19 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
             except KeyError as e:
                 if "content" in str(e):
-                    raise ValueError(
-                        "You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'."
+                    msg = (
+                        "You should ingest data through Langflow (or LangChain) to query it in Langflow. "
+                        "Your collection does not contain a field name 'content'."
                     )
-                else:
-                    raise e
+                    raise ValueError(msg)
+                raise e
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []
 
     def _build_search_args(self):
         args = {
@@ -260,7 +259,8 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 args["filter"] = clean_filter
         if self.body_search:
             if not self.enable_body_search:
-                raise ValueError("You should enable body search when creating the table to search the body field.")
+                msg = "You should enable body search when creating the table to search the body field."
+                raise ValueError(msg)
             args["body_search"] = self.body_search
         return args
 

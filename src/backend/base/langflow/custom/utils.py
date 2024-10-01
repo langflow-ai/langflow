@@ -128,7 +128,7 @@ def get_field_properties(extra_field):
 
 
 def process_type(field_type: str):
-    if field_type.startswith("list") or field_type.startswith("List"):
+    if field_type.startswith(("list", "List")):
         return extract_inner_type(field_type)
 
     # field_type is a string can be Prompt or Code too
@@ -256,9 +256,8 @@ def run_build_inputs(
 ):
     """Run the build inputs of a custom component."""
     try:
-        field_config = custom_component.build_inputs(user_id=user_id)
+        return custom_component.build_inputs(user_id=user_id)
         # add_extra_fields(frontend_node, field_config, field_config.values())
-        return field_config
     except Exception as exc:
         logger.error(f"Error running build inputs: {exc}")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -267,11 +266,13 @@ def run_build_inputs(
 def get_component_instance(custom_component: CustomComponent, user_id: str | UUID | None = None):
     try:
         if custom_component._code is None:
-            raise ValueError("Code is None")
-        elif isinstance(custom_component._code, str):
+            msg = "Code is None"
+            raise ValueError(msg)
+        if isinstance(custom_component._code, str):
             custom_class = eval_custom_component_code(custom_component._code)
         else:
-            raise ValueError("Invalid code type")
+            msg = "Invalid code type"
+            raise ValueError(msg)
     except Exception as exc:
         logger.error(f"Error while evaluating custom component code: {str(exc)}")
         raise HTTPException(
@@ -283,8 +284,7 @@ def get_component_instance(custom_component: CustomComponent, user_id: str | UUI
         ) from exc
 
     try:
-        custom_instance = custom_class(_user_id=user_id, _code=custom_component._code)
-        return custom_instance
+        return custom_class(_user_id=user_id, _code=custom_component._code)
     except Exception as exc:
         logger.error(f"Error while instantiating custom component: {str(exc)}")
         if hasattr(exc, "detail") and "traceback" in exc.detail:
@@ -301,11 +301,13 @@ def run_build_config(
 
     try:
         if custom_component._code is None:
-            raise ValueError("Code is None")
-        elif isinstance(custom_component._code, str):
+            msg = "Code is None"
+            raise ValueError(msg)
+        if isinstance(custom_component._code, str):
             custom_class = eval_custom_component_code(custom_component._code)
         else:
-            raise ValueError("Invalid code type")
+            msg = "Invalid code type"
+            raise ValueError(msg)
     except Exception as exc:
         logger.error(f"Error while evaluating custom component code: {str(exc)}")
         raise HTTPException(
@@ -518,7 +520,8 @@ def update_field_dict(
                 build_config = dd_build_config
             except Exception as exc:
                 logger.error(f"Error while running update_build_config: {str(exc)}")
-                raise UpdateBuildConfigError(f"Error while running update_build_config: {str(exc)}") from exc
+                msg = f"Error while running update_build_config: {str(exc)}"
+                raise UpdateBuildConfigError(msg) from exc
 
     return build_config
 

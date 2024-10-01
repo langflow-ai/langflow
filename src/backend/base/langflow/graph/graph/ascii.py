@@ -181,5 +181,5 @@ def draw_graph(vertexes, edges, return_ascii=True):
         canvas.text(int(round(x - minx)) + 1, int(round(y - miny)) + 1, vertex.data)
     if return_ascii:
         return canvas.draws()
-    else:
-        canvas.draw()
+    canvas.draw()
+    return None

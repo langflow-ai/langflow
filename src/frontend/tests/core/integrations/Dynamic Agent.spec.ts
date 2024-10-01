@@ -94,7 +94,7 @@ test("Dynamic Agent", async ({ page }) => {
     timeout: 15000,
   });
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page.waitForTimeout(1000);
 

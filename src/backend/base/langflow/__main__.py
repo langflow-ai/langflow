@@ -72,7 +72,7 @@ def set_var_for_macos_issue():
         import os
 
         os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
-        # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa
+        # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa: E501
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
@@ -235,7 +235,7 @@ def run_on_windows(host, port, log_level, options, app):
     """
     print_banner(host, port)
     run_langflow(host, port, log_level, options, app)
-    return None
+    return
 
 
 def is_port_in_use(port, host="localhost"):
@@ -296,8 +296,7 @@ def generate_pip_command(package_names, is_pre_release):
     base_command = "pip install"
     if is_pre_release:
         return f"{base_command} {' '.join(package_names)} -U --pre"
-    else:
-        return f"{base_command} {' '.join(package_names)} -U"
+    return f"{base_command} {' '.join(package_names)} -U"
 
 
 def stylize_text(text: str, to_style: str, is_prerelease: bool) -> str:
@@ -336,8 +335,14 @@ def print_banner(host: str, port: int):
     styled_package_name = stylize_text(package_name, package_name, any("pre-release" in notice for notice in notices))
 
     title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
-    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
-    telemetry_text = "We collect anonymous usage data to improve Langflow.\nYou can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
+    info_text = (
+        "Collaborate, and contribute at our "
+        "[bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
+    )
+    telemetry_text = (
+        "We collect anonymous usage data to improve Langflow.\n"
+        "You can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
+    )
     access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
 
     panel_content = "\n\n".join([title, *styled_notices, info_text, telemetry_text, access_link])
@@ -397,7 +402,8 @@ def superuser(
             if result:
                 typer.echo("Default folder created successfully.")
             else:
-                raise RuntimeError("Could not create default folder.")
+                msg = "Could not create default folder."
+                raise RuntimeError(msg)
             typer.echo("Superuser created successfully.")
 
         else:
@@ -411,7 +417,8 @@ def copy_db():
     """
     Copy the database files to the current directory.
 
-    This function copies the 'langflow.db' and 'langflow-pre.db' files from the cache directory to the current directory.
+    This function copies the 'langflow.db' and 'langflow-pre.db' files from the cache directory to the current
+    directory.
     If the files exist in the cache directory, they will be copied to the same directory as this script (__main__.py).
 
     Returns:
@@ -454,7 +461,7 @@ def migration(
         if not typer.confirm(
             "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
         ):
-            raise typer.Abort()
+            raise typer.Abort
 
     initialize_services(fix_migration=fix)
     db_service = get_db_service()

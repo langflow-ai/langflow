@@ -42,13 +42,11 @@ class VertexBuildBase(SQLModel):
 
     @field_serializer("data")
     def serialize_data(self, data: dict) -> dict:
-        truncated_data = truncate_long_strings(data)
-        return truncated_data
+        return truncate_long_strings(data)
 
     @field_serializer("artifacts")
     def serialize_artifacts(self, data) -> dict:
-        truncated_data = truncate_long_strings(data)
-        return truncated_data
+        return truncate_long_strings(data)
 
 
 class VertexBuildTable(VertexBuildBase, table=True):  # type: ignore
