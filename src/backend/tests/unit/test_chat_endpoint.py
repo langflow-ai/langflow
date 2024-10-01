@@ -36,7 +36,7 @@ async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, l
     flow_data = response.json()
     flow_data["data"]["nodes"][0]["data"]["node"]["frozen"] = True
     response = await client.patch(
-        "api/v1/flows/" + str(flow_id),
+        f"api/v1/flows/{flow_id}",
         json=FlowUpdate(name="Flow", description="description", data=flow_data["data"]).model_dump(),
         headers=logged_in_headers,
     )
