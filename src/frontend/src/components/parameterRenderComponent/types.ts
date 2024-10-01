@@ -23,3 +23,17 @@ export type TableComponentType = {
     tableTitle: string;
     columns?: ColumnField[];
   };
+
+  export type CodeAreaComponentType = {
+    disabled: boolean;
+    onChange: (
+      value: string[] | string,
+      dbValue?: boolean,
+      skipSnapshot?: boolean,
+    ) => void;
+    value: string;
+    editNode?: boolean;
+    nodeClass?: APIClassType;
+    setNodeClass?: (value: APIClassType, type: string) => void;
+    id?: string;
+  };
