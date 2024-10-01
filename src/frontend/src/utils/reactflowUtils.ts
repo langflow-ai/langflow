@@ -471,7 +471,11 @@ Array<{ id: string; errors: Array<string> }> {
     ];
   }
   // validateNode(n, edges) returns an array of errors for the node
-  return nodes.map((n) => ({ id: n.id, errors: validateNode(n, edges) }));
+  const nodeMap = nodes.map((n) => ({
+    id: n.id,
+    errors: validateNode(n, edges),
+  }));
+  return nodeMap.filter((n) => n.errors?.length);
 }
 
 export function updateEdges(edges: Edge[]) {
