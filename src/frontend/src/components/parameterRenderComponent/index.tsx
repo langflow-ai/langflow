@@ -100,11 +100,8 @@ export function ParameterRenderComponent({
       case "bool":
         return (
           <ToggleShadComponent
-            id={`toggle_${id}`}
-            disabled={disabled}
-            enabled={templateValue}
-            setEnabled={onChange}
-            size={editNode ? "small" : "large"}
+          {...baseInputProps}
+          id={`toggle_${id}`}
           />
         );
       case "link":

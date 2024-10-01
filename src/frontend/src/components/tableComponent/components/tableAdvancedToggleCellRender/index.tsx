@@ -38,14 +38,13 @@ export default function TableAdvancedToggleCellRender({
         <div>
           <div className="flex h-full items-center">
             <ToggleShadComponent
-              id={"show" + parameterId}
               disabled={disabled}
-              enabled={!parameter.advanced}
-              setEnabled={(e) => {
-                handleOnNewValue({ advanced: !e });
-              }}
-              size="small"
+              value={!parameter.advanced}
+              handleOnNewValue={handleOnNewValue}
               editNode={true}
+              showToogle
+              size="small"
+              id={"show" + parameterId}
             />
           </div>
         </div>

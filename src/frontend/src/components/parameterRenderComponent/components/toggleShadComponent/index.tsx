@@ -1,13 +1,15 @@
-import { ToggleComponentType } from "../../../../types/components";
 import { Switch } from "../../../ui/switch";
+import { InputProps, ToggleComponentType } from "../../types";
 
 export default function ToggleShadComponent({
-  enabled,
-  setEnabled,
+  value,
+  editNode,
+  handleOnNewValue,
   disabled,
   size,
-  id = "",
-}: ToggleComponentType): JSX.Element {
+  showToogle,
+  id,
+}: InputProps<boolean, ToggleComponentType>): JSX.Element {
   let scaleX, scaleY;
   switch (size) {
     case "small":
@@ -23,8 +25,15 @@ export default function ToggleShadComponent({
       scaleY = 1;
       break;
     default:
-      scaleX = 1;
-      scaleY = 1;
+      if (editNode) {
+        scaleX = 0.6;
+        scaleY = 0.6;
+      }
+      else {
+        scaleX = 1;
+        scaleY = 1;
+      }
+      break;
   }
 
   return (
@@ -36,9 +45,10 @@ export default function ToggleShadComponent({
       }}
       disabled={disabled}
       className=""
-      checked={enabled}
+      checked={value}
       onCheckedChange={(isEnabled: boolean) => {
-        setEnabled(isEnabled);
+        const data = showToogle ? { advanced: !isEnabled } : { value: isEnabled };
+        handleOnNewValue(data);
       }}
     ></Switch>
   );
