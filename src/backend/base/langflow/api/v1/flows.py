@@ -160,16 +160,20 @@ def read_flows(
             flows = [flow for flow in flows if flow.is_component]
         flow_ids = [flow.id for flow in flows]
         # with the session get the flows that DO NOT have a user_id
+        folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+
         if not remove_example_flows and not components_only:
             try:
-                folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
-
                 example_flows = folder.flows if folder else []
                 for example_flow in example_flows:
                     if example_flow.id not in flow_ids:
                         flows.append(example_flow)  # type: ignore
             except Exception as e:
                 logger.error(e)
+
+        if remove_example_flows:
+            flows = [flow for flow in flows if flow.folder_id != folder.id]
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return [jsonable_encoder(flow) for flow in flows]
