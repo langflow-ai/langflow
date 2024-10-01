@@ -2,7 +2,7 @@ import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
-import TableNodeComponent from "../TableNodeComponent";
+import TableNodeComponent from "./components/TableNodeComponent";
 import CodeAreaComponent from "../codeAreaComponent";
 import DictComponent from "../dictComponent";
 import FloatComponent from "../floatComponent";
@@ -12,9 +12,9 @@ import KeypairListComponent from "../keypairListComponent";
 import LinkComponent from "../linkComponent";
 import PromptAreaComponent from "../promptComponent";
 import ToggleShadComponent from "../toggleShadComponent";
-import { RefreshParameterComponent } from "./component/refreshParameterComponent";
-import { StrRenderComponent } from "./component/strRenderComponent";
-import { EmptyParameterComponent } from "./component/emptyParameterComponent";
+import { RefreshParameterComponent } from "./components/refreshParameterComponent";
+import { StrRenderComponent } from "./components/strRenderComponent";
+import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import { InputProps } from "./types";
 
 export function ParameterRenderComponent({
@@ -50,6 +50,16 @@ export function ParameterRenderComponent({
   ).toLowerCase();
 
   const renderComponent = ():React.ReactElement<InputProps> => {
+    const baseInputProps: InputProps = {
+    id,
+    value: templateValue,
+    editNode,
+    handleOnNewValue,
+    disabled,
+    nodeClass,
+    handleNodeClass,
+    readonly: templateData.readonly,
+    };
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
       return (
         <StrRenderComponent
@@ -168,11 +178,10 @@ export function ParameterRenderComponent({
       case "table":
         return (
           <TableNodeComponent
+            {...baseInputProps}
             description={templateData.info || "Add or edit data"}
             columns={templateData?.table_schema?.columns}
-            onChange={onChange}
             tableTitle={templateData?.display_name ?? "Table"}
-            value={templateValue}
           />
         );
       default:
@@ -181,7 +190,7 @@ export function ParameterRenderComponent({
             id={id}
             value={templateValue}
             editNode={editNode}
-            onChange={onChange}
+            handleOnNewValue={onChange}
             disabled={disabled}
           />
         );
