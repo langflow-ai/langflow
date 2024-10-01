@@ -1,22 +1,22 @@
 import { useEffect } from "react";
-import { FloatComponentType } from "../../types/components";
-import { handleKeyDown } from "../../utils/reactflowUtils";
-import { Input } from "../ui/input";
+import { handleKeyDown } from "../../../../utils/reactflowUtils";
+import { Input } from "../../../ui/input";
+import { FloatComponentType, InputProps } from "../../types";
 
 export default function FloatComponent({
   value,
-  onChange,
   disabled,
   rangeSpec,
   editNode = false,
-}: FloatComponentType): JSX.Element {
+  handleOnNewValue,
+}: InputProps<string, FloatComponentType>): JSX.Element {
   const step = rangeSpec?.step ?? 0.1;
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
-      onChange("", undefined, true);
+      handleOnNewValue({value:""},{skipSnapshot:true});
     }
   }, [disabled]);
 
@@ -30,7 +30,7 @@ export default function FloatComponent({
   };
 
   const handleChange = (event) => {
-    onChange(event.target.value);
+    handleOnNewValue({value:event.target.value});
   };
 
   return (
