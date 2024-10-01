@@ -39,3 +39,7 @@ export type ToggleComponentType = {
 export type FileComponentType = {
     fileTypes: Array<string>;
  };
+
+ export type PromptAreaComponentType = {
+    field_name?: string;
+  };

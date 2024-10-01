@@ -183,22 +183,6 @@ export type outputComponentType = {
   proxy?: OutputFieldProxyType;
 };
 
-export type PromptAreaComponentType = {
-  field_name?: string;
-  nodeClass?: APIClassType;
-  setNodeClass?: (value: APIClassType) => void;
-  disabled: boolean;
-  onChange: (
-    value: string[] | string,
-    dbValue?: boolean,
-    skipSnapshot?: boolean,
-  ) => void;
-  value: string;
-  readonly?: boolean;
-  editNode?: boolean;
-  id?: string;
-};
-
 
 
 export type DisclosureComponentType = {
