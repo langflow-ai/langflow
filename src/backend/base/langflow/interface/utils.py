@@ -15,7 +15,8 @@ from langflow.services.deps import get_settings_service
 
 def load_file_into_dict(file_path: str) -> dict:
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
+        msg = f"File not found: {file_path}"
+        raise FileNotFoundError(msg)
 
     # Files names are UUID, so we can't find the extension
     with open(file_path) as file:
@@ -25,7 +26,8 @@ def load_file_into_dict(file_path: str) -> dict:
             file.seek(0)
             data = yaml.safe_load(file)
         except ValueError as exc:
-            raise ValueError("Invalid file type. Expected .json or .yaml.") from exc
+            msg = "Invalid file type. Expected .json or .yaml."
+            raise ValueError(msg) from exc
     return data
 
 

@@ -59,7 +59,8 @@ def load_flow_from_json(
     elif isinstance(flow, dict):
         flow_graph = flow
     else:
-        raise TypeError("Input must be either a file path (str) or a JSON object (dict)")
+        msg = "Input must be either a file path (str) or a JSON object (dict)"
+        raise TypeError(msg)
 
     graph_data = flow_graph["data"]
     if tweaks is not None:

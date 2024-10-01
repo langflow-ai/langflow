@@ -89,7 +89,8 @@ class SearXNGToolComponent(LCToolComponent):
             @staticmethod
             def search(query: str, categories: list[str] = []) -> list:
                 if not SearxSearch._categories and not categories:
-                    raise ValueError("No categories provided.")
+                    msg = "No categories provided."
+                    raise ValueError(msg)
                 all_categories = SearxSearch._categories + list(set(categories) - set(SearxSearch._categories))
                 try:
                     url = f"{SearxSearch._url}/"

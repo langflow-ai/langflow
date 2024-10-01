@@ -27,7 +27,8 @@ class Data(BaseModel):
     @classmethod
     def validate_data(cls, values):
         if not isinstance(values, dict):
-            raise ValueError("Data must be a dictionary")
+            msg = "Data must be a dictionary"
+            raise ValueError(msg)
         if not values.get("data"):
             values["data"] = {}
         # Any other keyword should be added to the data dictionary
@@ -130,7 +131,8 @@ class Data(BaseModel):
         # But first we check if all required keys are present in the data dictionary
         # they are: "text", "sender"
         if not all(key in self.data for key in ["text", "sender"]):
-            raise ValueError(f"Missing required keys ('text', 'sender') in Data: {self.data}")
+            msg = f"Missing required keys ('text', 'sender') in Data: {self.data}"
+            raise ValueError(msg)
         sender = self.data.get("sender", MESSAGE_SENDER_AI)
         text = self.data.get("text", "")
         files = self.data.get("files", [])
@@ -165,7 +167,8 @@ class Data(BaseModel):
             return self.data[key]
         except KeyError:
             # Fallback to default behavior to raise AttributeError for undefined attributes
-            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{key}'")
+            msg = f"'{type(self).__name__}' object has no attribute '{key}'"
+            raise AttributeError(msg)
 
     def __setattr__(self, key, value):
         """
