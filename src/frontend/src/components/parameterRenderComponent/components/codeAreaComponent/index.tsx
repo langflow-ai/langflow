@@ -1,30 +1,26 @@
 import { useEffect, useState } from "react";
-import CodeAreaModal from "../../modals/codeAreaModal";
-import { CodeAreaComponentType } from "../../types/components";
-import { cn } from "../../utils/utils";
+import CodeAreaModal from "../../../../modals/codeAreaModal";
+import { cn } from "../../../../utils/utils";
 
-import IconComponent from "../genericIconComponent";
+import IconComponent from "../../../genericIconComponent";
+import { CodeAreaComponentType, InputProps } from "../../types";
 
 export default function CodeAreaComponent({
   value,
-  onChange,
+  handleOnNewValue,
   disabled,
   editNode = false,
   nodeClass,
-  dynamic,
-  setNodeClass,
+  handleNodeClass,
   id = "",
-  readonly = false,
-  open,
-  setOpen,
-}: CodeAreaComponentType) {
+}: InputProps<string>) {
   const [componentValue, setComponentValue] = useState(
     typeof value == "string" ? value : JSON.stringify(value),
   );
   useEffect(() => {
     if (disabled && componentValue !== "") {
       setComponentValue("");
-      onChange("", undefined, true);
+      handleOnNewValue({value: ""});
     }
   }, [disabled]);
 
@@ -33,7 +29,7 @@ export default function CodeAreaComponent({
   }, [value]);
 
   const handleValueChange = (newValue) => {
-    onChange(newValue);
+    handleOnNewValue({value: newValue});
   };
 
   const renderInputText = () => (
@@ -68,13 +64,10 @@ export default function CodeAreaComponent({
   return (
     <div className={cn("w-full", disabled && "pointer-events-none")}>
       <CodeAreaModal
-        open={open}
-        setOpen={setOpen}
-        readonly={readonly}
-        dynamic={dynamic}
+        dynamic={false}
         value={value}
         nodeClass={nodeClass}
-        setNodeClass={setNodeClass!}
+        setNodeClass={handleNodeClass!}
         setValue={handleValueChange}
       >
         <div className="flex w-full items-center gap-3">

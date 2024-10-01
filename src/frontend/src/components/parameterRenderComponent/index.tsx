@@ -3,7 +3,7 @@ import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
 import TableNodeComponent from "./components/TableNodeComponent";
-import CodeAreaComponent from "../codeAreaComponent";
+import CodeAreaComponent from "./components/codeAreaComponent";
 import DictComponent from "../dictComponent";
 import FloatComponent from "../floatComponent";
 import InputFileComponent from "../inputFileComponent";
@@ -165,13 +165,12 @@ export function ParameterRenderComponent({
       case "code":
         return (
           <CodeAreaComponent
-            dynamic={false}
-            setNodeClass={handleNodeClass}
+            handleNodeClass={handleNodeClass}
             nodeClass={nodeClass}
             disabled={disabled}
             editNode={editNode}
             value={templateValue ?? ""}
-            onChange={onChange}
+            handleOnNewValue={handleOnNewValue}
             id={`codearea_${id}`}
           />
         );
@@ -187,11 +186,7 @@ export function ParameterRenderComponent({
       default:
         return (
           <EmptyParameterComponent
-            id={id}
-            value={templateValue}
-            editNode={editNode}
-            handleOnNewValue={onChange}
-            disabled={disabled}
+            {...baseInputProps}
           />
         );
     }
