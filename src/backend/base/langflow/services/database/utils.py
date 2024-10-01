@@ -24,12 +24,14 @@ def initialize_database(fix_migration: bool = False):
         # we can ignore it
         if "already exists" not in str(exc):
             logger.error(f"Error creating DB and tables: {exc}")
-            raise RuntimeError("Error creating DB and tables") from exc
+            msg = "Error creating DB and tables"
+            raise RuntimeError(msg) from exc
     try:
         database_service.check_schema_health()
     except Exception as exc:
         logger.error(f"Error checking schema health: {exc}")
-        raise RuntimeError("Error checking schema health") from exc
+        msg = "Error checking schema health"
+        raise RuntimeError(msg) from exc
     try:
         database_service.run_migrations(fix=fix_migration)
     except CommandError as exc:

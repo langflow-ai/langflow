@@ -124,9 +124,8 @@ class FrontendNode(BaseModel):
         overlap = set(output_names).intersection(input_names)
         if overlap:
             overlap_str = ", ".join(f"'{x}'" for x in overlap)
-            raise ValueError(
-                f"There should be no overlap between input and output names. Names {overlap_str} are duplicated."
-            )
+            msg = f"There should be no overlap between input and output names. Names {overlap_str} are duplicated."
+            raise ValueError(msg)
 
     def validate_attributes(self) -> None:
         # None of inputs, outputs, _artifacts, _results, logs, status, vertex, graph, display_name, description,
@@ -175,7 +174,8 @@ class FrontendNode(BaseModel):
     def from_inputs(cls, **kwargs):
         """Create a frontend node from inputs."""
         if "inputs" not in kwargs:
-            raise ValueError("Missing 'inputs' argument.")
+            msg = "Missing 'inputs' argument."
+            raise ValueError(msg)
         if "_outputs_map" in kwargs:
             kwargs["outputs"] = kwargs.pop("_outputs_map")
         inputs = kwargs.pop("inputs")

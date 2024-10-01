@@ -72,16 +72,18 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
         try:
             import clickhouse_connect  # type: ignore
         except ImportError as e:
-            raise ImportError(
+            msg = (
                 "Failed to import Clickhouse dependencies. "
                 "Install it using `pip install langflow[clickhouse-connect] --pre`"
-            ) from e
+            )
+            raise ImportError(msg) from e
 
         try:
             client = clickhouse_connect.get_client(host=self.host, username=self.username, password=self.password)
             client.command("SELECT 1")
         except Exception as e:
-            raise ValueError(f"Failed to connect to Clickhouse: {e}")
+            msg = f"Failed to connect to Clickhouse: {e}"
+            raise ValueError(msg)
 
         documents = []
         for _input in self.ingest_data or []:

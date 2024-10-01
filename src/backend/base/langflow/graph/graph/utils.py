@@ -173,7 +173,8 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node):
     new_edge["target"] = proxy_id
     _type = target_handle.get("type")
     if _type is None:
-        raise KeyError("The 'type' key must be present in target_handle.")
+        msg = "The 'type' key must be present in target_handle."
+        raise KeyError(msg)
 
     field = target_handle["proxy"]["field"]
     new_target_handle = {
@@ -267,7 +268,8 @@ def get_root_of_group_node(
             if not any(successor in child_vertices for successor in successors):
                 return child_id
 
-    raise ValueError(f"Vertex {vertex_id} is not a top level vertex or no root vertex found")
+    msg = f"Vertex {vertex_id} is not a top level vertex or no root vertex found"
+    raise ValueError(msg)
 
 
 def sort_up_to_vertex(
@@ -281,10 +283,12 @@ def sort_up_to_vertex(
         stop_or_start_vertex = graph[vertex_id]
     except KeyError:
         if parent_node_map is None:
-            raise ValueError("Parent node map is required to find the root of a group node")
+            msg = "Parent node map is required to find the root of a group node"
+            raise ValueError(msg)
         vertex_id = get_root_of_group_node(graph=graph, vertex_id=vertex_id, parent_node_map=parent_node_map)
         if vertex_id not in graph:
-            raise ValueError(f"Vertex {vertex_id} not found into graph")
+            msg = f"Vertex {vertex_id} not found into graph"
+            raise ValueError(msg)
         stop_or_start_vertex = graph[vertex_id]
 
     visited, excluded = set(), set()

@@ -44,7 +44,8 @@ class GoogleDriveComponent(Component):
                 if self.creds:
                     return self.creds
                 else:
-                    raise ValueError("No credentials provided.")
+                    msg = "No credentials provided."
+                    raise ValueError(msg)
 
             class Config:
                 arbitrary_types_allowed = True
@@ -53,7 +54,8 @@ class GoogleDriveComponent(Component):
 
         document_ids = [self.document_id]
         if len(document_ids) != 1:
-            raise ValueError("Expected a single document ID")
+            msg = "Expected a single document ID"
+            raise ValueError(msg)
 
         # TODO: Add validation to check if the document ID is valid
 
@@ -61,7 +63,8 @@ class GoogleDriveComponent(Component):
         try:
             token_info = json.loads(json_string)
         except JSONDecodeError as e:
-            raise ValueError("Invalid JSON string") from e
+            msg = "Invalid JSON string"
+            raise ValueError(msg) from e
 
         # Initialize the custom loader with the provided credentials and document IDs
         loader = CustomGoogleDriveLoader(
@@ -73,11 +76,11 @@ class GoogleDriveComponent(Component):
             docs = loader.load()
         # catch google.auth.exceptions.RefreshError
         except RefreshError as e:
-            raise ValueError(
-                "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."
-            ) from e
+            msg = "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."
+            raise ValueError(msg) from e
         except Exception as e:
-            raise ValueError(f"Error loading documents: {e}") from e
+            msg = f"Error loading documents: {e}"
+            raise ValueError(msg) from e
 
         assert len(docs) == 1, "Expected a single document to be loaded."
 
