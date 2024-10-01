@@ -128,7 +128,7 @@ def get_field_properties(extra_field):
 
 
 def process_type(field_type: str):
-    if field_type.startswith("list") or field_type.startswith("List"):
+    if field_type.startswith(("list", "List")):
         return extract_inner_type(field_type)
 
     # field_type is a string can be Prompt or Code too

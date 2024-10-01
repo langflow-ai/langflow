@@ -86,4 +86,3 @@ class S3StorageService(StorageService):
     async def teardown(self):
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for S3 storage at the moment.
-        pass

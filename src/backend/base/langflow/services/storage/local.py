@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from loguru import logger
@@ -33,9 +34,12 @@ class LocalStorageService(StorageService):
         folder_path.mkdir(parents=True, exist_ok=True)
         file_path = folder_path / file_name
 
-        try:
+        def write_file(file_path: Path, data: bytes) -> None:
             with open(file_path, "wb") as f:
                 f.write(data)
+
+        try:
+            await asyncio.get_event_loop().run_in_executor(None, write_file, file_path, data)
             logger.info(f"File {file_name} saved successfully in flow {flow_id}.")
         except Exception as e:
             logger.error(f"Error saving file {file_name} in flow {flow_id}: {e}")
@@ -55,9 +59,13 @@ class LocalStorageService(StorageService):
             logger.warning(f"File {file_name} not found in flow {flow_id}.")
             raise FileNotFoundError(f"File {file_name} not found in flow {flow_id}")
 
-        with open(file_path, "rb") as f:
-            logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
-            return f.read()
+        def read_file(file_path: Path) -> bytes:
+            with open(file_path, "rb") as f:
+                return f.read()
+
+        content = await asyncio.get_event_loop().run_in_executor(None, read_file, file_path)
+        logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
+        return content
 
     async def list_files(self, flow_id: str):
         """
@@ -92,4 +100,4 @@ class LocalStorageService(StorageService):
 
     async def teardown(self):
         """Perform any cleanup operations when the service is being torn down."""
-        pass  # No specific teardown actions required for local
+        # No specific teardown actions required for local

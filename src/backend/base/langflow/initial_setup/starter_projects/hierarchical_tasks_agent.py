@@ -37,7 +37,7 @@ def hierarchical_tasks_agent_graph():
         template="""User's query:
 {query}
 
-Respond to the user with as much as information as you can about the topic. Delete if needed. 
+Respond to the user with as much as information as you can about the topic. Delete if needed.
 If it is just a general query (e.g a greeting) you can respond them directly.""",
         query=chat_input.message_response,
     )

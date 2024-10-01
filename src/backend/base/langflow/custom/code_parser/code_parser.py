@@ -343,7 +343,6 @@ class CodeParser:
                 nodes.append(class_node)
             except Exception as exc:
                 logger.error(f"Error finding base class node: {exc}")
-                pass
         nodes.insert(0, node)
         class_details = ClassCodeDetails(
             name=node.name,

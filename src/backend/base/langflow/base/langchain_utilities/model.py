@@ -28,11 +28,9 @@ class LCToolComponent(Component):
         """
         Run model and return the output.
         """
-        pass
 
     @abstractmethod
     def build_tool(self) -> Tool | Sequence[Tool]:
         """
         Build the tool.
         """
-        pass
