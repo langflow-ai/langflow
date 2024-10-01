@@ -87,8 +87,8 @@ jobs:
       - name: Verify Nightly Name and Version
         working-directory: src/backend/base
         run: |
-          name=$(uv tree | grep 'langflow-base' | awk '{print $1}')
-          version=$(uv tree | grep 'langflow-base' | awk '{print $2}')
+          name=$(uv tree | grep 'langflow-base' | awk '{print $2}')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
           if [ "$name" != "langflow-base-nightly" ]; then
             echo "Name $name does not match langflow-base-nightly. Exiting the workflow."
             exit 1
@@ -166,8 +166,8 @@ jobs:
 
       - name: Verify Nightly Name and Version
         run: |
-          name=$(uv tree | grep 'langflow' | awk '{print $1}')
-          version=$(uv tree | grep 'langflow' | awk '{print $2}')
+          name=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $1}')
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}')
           if [ "$name" != "langflow-nightly" ]; then
             echo "Name $name does not match langflow-nightly. Exiting the workflow."
             exit 1
