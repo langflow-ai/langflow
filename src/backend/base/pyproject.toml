@@ -133,6 +133,8 @@ console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]
 log_cli = true
 markers = ["async_test"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
@@ -175,6 +177,11 @@ select = [
 ]
 ignore = [
     "COM812", # Messes with the formatter
+]
+
+[tool.uv]
+dev-dependencies = [
+    "asgi-lifespan>=2.1.0",
 ]
 
 [build-system]
