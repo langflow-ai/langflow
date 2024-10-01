@@ -78,3 +78,40 @@ async def test_delete_messages_session(client: AsyncClient, created_messages, lo
     response = await client.get("api/v1/monitor/messages", headers=logged_in_headers)
     assert response.status_code == 200
     assert len(response.json()) == 0
+
+
+# Successfully update session ID for all messages with the old session ID
+def test_successfully_update_session_id(client, session, logged_in_headers, created_messages):
+    old_session_id = "session_id2"
+    new_session_id = "new_session_id"
+
+    response = client.patch(
+        f"api/v1/monitor/messages/session/{old_session_id}",
+        params={"new_session_id": new_session_id},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, response.text
+    updated_messages = response.json()
+    assert len(updated_messages) == len(created_messages)
+    for message in updated_messages:
+        assert message["session_id"] == new_session_id
+
+    response = client.get("api/v1/monitor/messages", headers=logged_in_headers, params={"session_id": new_session_id})
+    assert response.status_code == 200
+    assert len(response.json()) == len(created_messages)
+    for message in response.json():
+        assert message["session_id"] == new_session_id
+
+
+# No messages found with the given session ID
+def test_no_messages_found_with_given_session_id(client, session, logged_in_headers):
+    old_session_id = "non_existent_session_id"
+    new_session_id = "new_session_id"
+
+    response = client.patch(
+        f"/messages/session/{old_session_id}", params={"new_session_id": new_session_id}, headers=logged_in_headers
+    )
+
+    assert response.status_code == 404, response.text
+    assert response.json()["detail"] == "Not Found"
