@@ -50,7 +50,6 @@ class LCAgentComponent(Component):
     @abstractmethod
     def build_agent(self) -> AgentExecutor:
         """Create the agent."""
-        pass
 
     async def message_response(self) -> Message:
         """Run the agent and return the response."""
@@ -156,4 +155,3 @@ class LCToolsAgentComponent(LCAgentComponent):
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
-        pass

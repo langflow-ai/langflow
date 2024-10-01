@@ -40,7 +40,8 @@ class GoogleGenerativeAIComponent(LCModelComponent):
         IntInput(
             name="n",
             display_name="N",
-            info="Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.",
+            info="Number of chat completions to generate for each prompt. "
+            "Note that the API may not return the full n completions if duplicates are generated.",
             advanced=True,
         ),
         IntInput(

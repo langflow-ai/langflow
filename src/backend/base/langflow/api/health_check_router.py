@@ -16,7 +16,8 @@ class HealthResponse(BaseModel):
     chat: str = "error check the server logs"
     db: str = "error check the server logs"
     """
-    Do not send exceptions and detailed error messages to the client because it might contain credentials and other sensitive server information.
+    Do not send exceptions and detailed error messages to the client because it might contain credentials and other
+    sensitive server information.
     """
 
     def has_error(self) -> bool:

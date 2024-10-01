@@ -42,7 +42,8 @@ class NaturalLanguageTextSplitterComponent(LCTextSplitterComponent):
         MessageTextInput(
             name="language",
             display_name="Language",
-            info='The language of the text. Default is "English". Supports multiple languages for better text boundary recognition.',
+            info='The language of the text. Default is "English". '
+            "Supports multiple languages for better text boundary recognition.",
         ),
     ]
 
