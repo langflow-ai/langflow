@@ -26,8 +26,8 @@ function NoteNode({
   useEffect(() => {
     if (nodeDiv.current) {
       setSize({
-        width: nodeDiv.current.offsetWidth - 43,
-        height: nodeDiv.current.offsetHeight - 80,
+        width: nodeDiv.current.offsetWidth - 25,
+        height: nodeDiv.current.offsetHeight - 25,
       });
     }
   }, []);
@@ -49,7 +49,7 @@ function NoteNode({
         maxWidth={NOTE_NODE_MAX_WIDTH}
         onResize={(_, params) => {
           const { width, height } = params;
-          setSize({ width: width - 43, height: height - 80 });
+          setSize({ width: width - 25, height: height - 25 });
         }}
         isVisible={selected}
         lineClassName="border-[3px] border-border"
