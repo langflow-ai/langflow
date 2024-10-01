@@ -16,11 +16,12 @@ class StorageService(Service):
         self.session_service = session_service
         self.set_ready()
 
-    def build_full_path(self, flow_id: str, file_name: str) -> str:
-        raise NotImplementedError
-
     def set_ready(self):
         self.ready = True
+
+    def build_full_path(self, flow_id: str, file_name: str) -> str:
+        """Build the full path of a file in the local storage."""
+        return str(self.data_dir / flow_id / file_name)
 
     @abstractmethod
     async def save_file(self, flow_id: str, file_name: str, data) -> None:

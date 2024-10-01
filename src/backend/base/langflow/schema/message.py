@@ -16,7 +16,7 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_serial
 
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
-from langflow.schema.image import Image, get_file_paths, is_image_file
+from langflow.schema.image import Image, get_file_paths, is_image_file, get_file_paths_sync
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
@@ -74,7 +74,8 @@ class Message(Data):
 
     def model_post_init(self, __context: Any) -> None:
         new_files: list[Any] = []
-        for file in self.files or []:
+        complete_paths = get_file_paths_sync(self.files)
+        for file in complete_paths or []:
             if is_image_file(file):
                 new_files.append(Image(path=file))
             else:
