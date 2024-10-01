@@ -14,6 +14,7 @@ import PromptAreaComponent from "../promptComponent";
 import ToggleShadComponent from "../toggleShadComponent";
 import { RefreshParameterComponent } from "./component/refreshParameterComponent";
 import { StrRenderComponent } from "./component/strRenderComponent";
+import { EmptyParameterComponent } from "./component/emptyParameterComponent";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -152,8 +153,6 @@ export function ParameterRenderComponent({
             onChange={onChange}
             id={`codearea_${id}`}
           />
-        ) : templateData.type === "Any" ? (
-          <>-</>
         ) : templateData.type === "table" ? (
           <TableNodeComponent
             description={templateData.info || "Add or edit data"}
@@ -163,7 +162,13 @@ export function ParameterRenderComponent({
             value={templateValue}
           />
         ) : (
-          String(templateValue)
+          <EmptyParameterComponent
+          id={id}
+          value={templateValue}
+          editNode={editNode}
+          onChange={onChange}
+          disabled={disabled}
+        />
         )}
       </RefreshParameterComponent>
     ),
