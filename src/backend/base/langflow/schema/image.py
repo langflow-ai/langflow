@@ -4,7 +4,9 @@ from PIL import Image as PILImage
 from pydantic import BaseModel
 
 from langflow.services.deps import get_storage_service
+
 IMAGE_ENDPOINT = "/files/images/"
+
 
 def is_image_file(file_path):
     try:
