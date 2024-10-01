@@ -330,7 +330,7 @@ class StoreService(Service):
 
     async def download(self, api_key: str, component_id: UUID) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"
-        params = {"fields": ",".join(["id", "name", "description", "data", "is_component", "metadata"])}
+        params = {"fields": "id,name,description,data,is_component,metadata"}
         if not self.download_webhook_url:
             raise ValueError("DOWNLOAD_WEBHOOK_URL is not set")
         component, _ = await self._get(url, api_key, params)
@@ -420,14 +420,14 @@ class StoreService(Service):
 
     async def get_tags(self) -> list[dict[str, Any]]:
         url = f"{self.base_url}/items/tags"
-        params = {"fields": ",".join(["id", "name"])}
+        params = {"fields": "id,name"}
         tags, _ = await self._get(url, api_key=None, params=params)
         return tags
 
     async def get_user_likes(self, api_key: str) -> list[dict[str, Any]]:
         url = f"{self.base_url}/users/me"
         params = {
-            "fields": ",".join(["id", "likes"]),
+            "fields": "id,likes",
         }
         likes, _ = await self._get(url, api_key, params)
         return likes
@@ -436,7 +436,7 @@ class StoreService(Service):
         url = f"{self.components_url}/{component_id}"
 
         params = {
-            "fields": ",".join(["id", "count(liked_by)"]),
+            "fields": "id,count(liked_by)",
         }
         result, _ = await self._get(url, api_key=api_key, params=params)
         if len(result) == 0:
