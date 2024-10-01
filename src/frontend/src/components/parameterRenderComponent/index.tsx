@@ -10,7 +10,7 @@ import InputFileComponent from "./components/inputFileComponent";
 import IntComponent from "./components/intComponent";
 import KeypairListComponent from "../keypairListComponent";
 import LinkComponent from "../linkComponent";
-import PromptAreaComponent from "../promptComponent";
+import PromptAreaComponent from "./components/promptComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
 import { RefreshParameterComponent } from "./components/refreshParameterComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
