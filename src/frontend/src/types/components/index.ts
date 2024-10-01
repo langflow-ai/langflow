@@ -200,15 +200,6 @@ export type PromptAreaComponentType = {
 };
 
 
-export type FileComponentType = {
-  IOInputProps?;
-  disabled: boolean;
-  handleOnNewValue: handleOnNewValueType;
-  value: string;
-  fileTypes: Array<string>;
-  editNode?: boolean;
-  id?: string;
-};
 
 export type DisclosureComponentType = {
   children: ReactNode;

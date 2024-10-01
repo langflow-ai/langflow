@@ -35,3 +35,7 @@ export type ToggleComponentType = {
   size?: "small" | "medium" | "large";
   showToogle?: boolean;
 };
+
+export type FileComponentType = {
+    fileTypes: Array<string>;
+ };
