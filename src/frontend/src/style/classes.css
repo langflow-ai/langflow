@@ -198,7 +198,6 @@ textarea[class^="ag-"]:focus {
   position: relative;
   overflow: hidden;
   padding: 4rem 2rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   max-width: 28rem;
 
   background-repeat: no-repeat;

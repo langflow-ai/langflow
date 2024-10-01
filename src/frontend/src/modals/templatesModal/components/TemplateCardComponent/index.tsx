@@ -47,7 +47,7 @@ export default function TemplateCard({
 
   return (
     <div
-      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-lg"
+      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-3xl border"
       onClick={handleClick}
     >
       <img
@@ -63,7 +63,7 @@ export default function TemplateCard({
         />
       </div>
       <div className="card-shine-effect absolute inset-2 flex h-[calc(100%-16px)] w-[calc(100%-16px)] flex-col items-start gap-4 rounded-2xl p-4 py-6 text-white">
-        <div className="flex items-center gap-2 text-white mix-blend-overlay">
+        <div className="flex items-center gap-2 text-white">
           <ForwardedIconComponent name={icon} className="h-4 w-4" />
           <span className="font-mono text-xs font-semibold uppercase tracking-wider">
             {category}
