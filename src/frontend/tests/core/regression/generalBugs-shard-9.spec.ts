@@ -106,6 +106,7 @@ User: {user_input}
 AI:
   `;
 
+  await page.getByTestId("title-Prompt").last().click();
   await page
     .getByTestId("promptarea_prompt_template-ExternalLink")
     .nth(0)
