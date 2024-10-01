@@ -65,20 +65,22 @@ class NVIDIAModelComponent(LCModelComponent):
                 build_config["model_name"]["options"] = ids
                 build_config["model_name"]["value"] = ids[0]
             except Exception as e:
-                raise ValueError(f"Error getting model names: {e}")
+                msg = f"Error getting model names: {e}"
+                raise ValueError(msg)
         return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
         except ImportError:
-            raise ImportError("Please install langchain-nvidia-ai-endpoints to use the NVIDIA model.")
+            msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
+            raise ImportError(msg)
         nvidia_api_key = self.nvidia_api_key
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         seed = self.seed
-        output = ChatNVIDIA(
+        return ChatNVIDIA(
             max_tokens=max_tokens or None,
             model=model_name,
             base_url=self.base_url,
@@ -86,4 +88,3 @@ class NVIDIAModelComponent(LCModelComponent):
             temperature=temperature or 0.1,
             seed=seed,
         )
-        return output  # type: ignore
