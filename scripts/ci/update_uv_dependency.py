@@ -20,7 +20,7 @@ def update_uv_dep(base_version: str) -> None:
 
     # Check if the pattern is found
     if not pattern.search(content):
-        raise Exception(f"{replacement} UV dependency not found in {pyproject_path}")
+        raise Exception(f"{pattern} UV dependency not found in {pyproject_path}")
 
     # Replace the matched pattern with the new one
     content = pattern.sub(replacement, content)
