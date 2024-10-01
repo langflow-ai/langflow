@@ -1,7 +1,7 @@
 import asyncio
 from collections import defaultdict
 from threading import RLock
-from typing import Any, Optional
+from typing import Any
 
 from langflow.services.base import Service
 from langflow.services.cache.base import AsyncBaseCacheService
@@ -36,7 +36,7 @@ class ChatService(Service):
             return self._sync_cache_locks[key]
 
     async def _perform_cache_operation(
-        self, operation: str, key: str, data: Any = None, lock: Optional[asyncio.Lock] = None
+        self, operation: str, key: str, data: Any = None, lock: asyncio.Lock | None = None
     ):
         """
         Perform a cache operation based on the given operation type.
@@ -70,7 +70,7 @@ class ChatService(Service):
             elif operation == "delete":
                 self.cache_service.delete(key, lock=lock)
 
-    async def set_cache(self, key: str, data: Any, lock: Optional[asyncio.Lock] = None) -> bool:
+    async def set_cache(self, key: str, data: Any, lock: asyncio.Lock | None = None) -> bool:
         """
         Set the cache for a client.
 
@@ -89,7 +89,7 @@ class ChatService(Service):
         await self._perform_cache_operation("upsert", key, result_dict, lock)
         return key in self.cache_service
 
-    async def get_cache(self, key: str, lock: Optional[asyncio.Lock] = None) -> Any:
+    async def get_cache(self, key: str, lock: asyncio.Lock | None = None) -> Any:
         """
         Get the cache for a client.
 
@@ -102,7 +102,7 @@ class ChatService(Service):
         """
         return await self._perform_cache_operation("get", key, lock=lock or self._get_lock(key))
 
-    async def clear_cache(self, key: str, lock: Optional[asyncio.Lock] = None):
+    async def clear_cache(self, key: str, lock: asyncio.Lock | None = None):
         """
         Clear the cache for a client.
 

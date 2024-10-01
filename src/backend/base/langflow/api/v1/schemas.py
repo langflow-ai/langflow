@@ -16,6 +16,7 @@ from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
 from langflow.services.tracing.schema import Log
+from langflow.utils.util_strings import truncate_long_strings
 
 
 class BuildStatus(Enum):
@@ -281,6 +282,12 @@ class VertexBuildResponse(BaseModel):
     timestamp: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
     """Timestamp of the build."""
 
+    @field_serializer("data")
+    def serialize_data(self, data: ResultDataResponse) -> dict:
+        data_dict = data.model_dump() if isinstance(data, BaseModel) else data
+        truncated_data = truncate_long_strings(data_dict)
+        return truncated_data
+
 
 class VerticesBuiltResponse(BaseModel):
     vertices: list[VertexBuildResponse]
@@ -341,3 +348,4 @@ class ConfigResponse(BaseModel):
     auto_saving: bool
     auto_saving_interval: int
     health_check_max_retries: int
+    max_file_size_upload: int

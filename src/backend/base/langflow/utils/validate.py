@@ -2,7 +2,7 @@ import ast
 import contextlib
 import importlib
 from types import FunctionType
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import ValidationError
 
@@ -57,7 +57,7 @@ def validate_code(code):
 
 def eval_function(function_string: str):
     # Create an empty dictionary to serve as a separate namespace
-    namespace: Dict = {}
+    namespace: dict = {}
 
     # Execute the code string in the new namespace
     exec(function_string, namespace)
@@ -276,8 +276,8 @@ def get_default_imports(code_string):
 
     default_imports = {
         "Optional": Optional,
-        "List": List,
-        "Dict": Dict,
+        "List": list,
+        "Dict": dict,
         "Union": Union,
     }
     langflow_imports = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())

@@ -1,11 +1,10 @@
 from datetime import timedelta
-from typing import List
 
 from langchain_community.vectorstores import CouchbaseVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.io import DataInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -92,7 +91,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
 
         return couchbase_vs
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():

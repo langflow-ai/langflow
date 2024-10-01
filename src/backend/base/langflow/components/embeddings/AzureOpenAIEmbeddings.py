@@ -1,6 +1,7 @@
 from langchain_openai import AzureOpenAIEmbeddings
 
 from langflow.base.models.model import LCModelComponent
+from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.field_typing import Embeddings
 from langflow.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 
@@ -22,6 +23,13 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
     ]
 
     inputs = [
+        DropdownInput(
+            name="model",
+            display_name="Model",
+            advanced=False,
+            options=OPENAI_EMBEDDING_MODEL_NAMES,
+            value=OPENAI_EMBEDDING_MODEL_NAMES[0],
+        ),
         MessageTextInput(
             name="azure_endpoint",
             display_name="Azure Endpoint",
@@ -60,6 +68,7 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
     def build_embeddings(self) -> Embeddings:
         try:
             embeddings = AzureOpenAIEmbeddings(
+                model=self.model,
                 azure_endpoint=self.azure_endpoint,
                 azure_deployment=self.azure_deployment,
                 api_version=self.api_version,
