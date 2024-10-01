@@ -1,5 +1,4 @@
 import enum
-from typing import Dict, List, Optional, Union
 
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, field_validator, model_validator
@@ -20,13 +19,13 @@ class File(TypedDict):
 class ChatOutputResponse(BaseModel):
     """Chat output response schema."""
 
-    message: Union[str, List[Union[str, Dict]]]
-    sender: Optional[str] = MESSAGE_SENDER_AI
-    sender_name: Optional[str] = MESSAGE_SENDER_NAME_AI
-    session_id: Optional[str] = None
-    stream_url: Optional[str] = None
-    component_id: Optional[str] = None
-    files: List[File] = []
+    message: str | list[str | dict]
+    sender: str | None = MESSAGE_SENDER_AI
+    sender_name: str | None = MESSAGE_SENDER_NAME_AI
+    session_id: str | None = None
+    stream_url: str | None = None
+    component_id: str | None = None
+    files: list[File] = []
     type: str
 
     @field_validator("files", mode="before")
@@ -37,14 +36,16 @@ class ChatOutputResponse(BaseModel):
 
         for file in files:
             if not isinstance(file, dict):
-                raise ValueError("Files must be a list of dictionaries.")
+                msg = "Files must be a list of dictionaries."
+                raise ValueError(msg)
 
             if not all(key in file for key in ["path", "name", "type"]):
                 # If any of the keys are missing, we should extract the
                 # values from the file path
                 path = file.get("path")
                 if not path:
-                    raise ValueError("File path is required.")
+                    msg = "File path is required."
+                    raise ValueError(msg)
 
                 name = file.get("name")
                 if not name:
@@ -63,7 +64,8 @@ class ChatOutputResponse(BaseModel):
                                 _type = file_type
                                 break
                     if not _type:
-                        raise ValueError("File type is required.")
+                        msg = "File type is required."
+                        raise ValueError(msg)
                 file["type"] = _type
 
         return files
@@ -72,8 +74,8 @@ class ChatOutputResponse(BaseModel):
     def from_message(
         cls,
         message: BaseMessage,
-        sender: Optional[str] = MESSAGE_SENDER_AI,
-        sender_name: Optional[str] = MESSAGE_SENDER_NAME_AI,
+        sender: str | None = MESSAGE_SENDER_AI,
+        sender_name: str | None = MESSAGE_SENDER_NAME_AI,
     ):
         """Build chat output response from message."""
         content = message.content
@@ -101,7 +103,7 @@ class ChatOutputResponse(BaseModel):
 class DataOutputResponse(BaseModel):
     """Data output response schema."""
 
-    data: List[Optional[Dict]]
+    data: list[dict | None]
 
 
 class ContainsEnumMeta(enum.EnumMeta):

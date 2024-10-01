@@ -1,8 +1,9 @@
+from langchain.agents import AgentExecutor
+
 from langflow.custom import Component
-from langflow.inputs import HandleInput, MessageTextInput, BoolInput
+from langflow.inputs import BoolInput, HandleInput, MessageTextInput
 from langflow.schema.message import Message
 from langflow.template import Output
-from langchain.agents import AgentExecutor
 
 
 class RunnableExecComponent(Component):
@@ -117,12 +118,12 @@ class RunnableExecComponent(Component):
     async def build_executor(self) -> Message:
         input_dict, status = self.get_input_dict(self.runnable, self.input_key, self.input_value)
         if not isinstance(self.runnable, AgentExecutor):
-            raise ValueError("The runnable must be an AgentExecutor")
+            msg = "The runnable must be an AgentExecutor"
+            raise ValueError(msg)
 
         if self.use_stream:
             return self.astream_events(input_dict)
-        else:
-            result = await self.runnable.ainvoke(input_dict)
+        result = await self.runnable.ainvoke(input_dict)
         result_value, _status = self.get_output(result, self.input_key, self.output_key)
         status += _status
         status += f"\n\nOutput: {result_value}\n\nRaw Output: {result}"

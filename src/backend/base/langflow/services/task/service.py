@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Any, Callable, Coroutine
+from collections.abc import Callable, Coroutine
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -65,7 +66,8 @@ class TaskService(Service):
         if not self.use_celery:
             return None, await task_func(*args, **kwargs)
         if not hasattr(task_func, "apply"):
-            raise ValueError(f"Task function {task_func} does not have an apply method")
+            msg = f"Task function {task_func} does not have an apply method"
+            raise ValueError(msg)
         task = task_func.apply(args=args, kwargs=kwargs)
 
         result = task.get()

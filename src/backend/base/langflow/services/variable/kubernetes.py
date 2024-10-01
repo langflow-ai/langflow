@@ -1,5 +1,4 @@
 import os
-from typing import Optional, Tuple, Union
 from uuid import UUID
 
 from loguru import logger
@@ -20,7 +19,7 @@ class KubernetesSecretService(VariableService, Service):
         # TODO: settings_service to set kubernetes namespace
         self.kubernetes_secrets = KubernetesSecretManager()
 
-    def initialize_user_variables(self, user_id: Union[UUID, str], session: Session):
+    def initialize_user_variables(self, user_id: UUID | str, session: Session):
         # Check for environment variables that should be stored in the database
         should_or_should_not = "Should" if self.settings_service.settings.store_environment_variables else "Should not"
         logger.info(f"{should_or_should_not} store environment variables in the kubernetes.")
@@ -51,25 +50,25 @@ class KubernetesSecretService(VariableService, Service):
     def resolve_variable(
         self,
         secret_name: str,
-        user_id: Union[UUID, str],
+        user_id: UUID | str,
         name: str,
-    ) -> Tuple[str, str]:
+    ) -> tuple[str, str]:
         variables = self.kubernetes_secrets.get_secret(name=secret_name)
         if not variables:
-            raise ValueError(f"user_id {user_id} variable not found.")
+            msg = f"user_id {user_id} variable not found."
+            raise ValueError(msg)
 
         if name in variables:
             return name, variables[name]
-        else:
-            credential_name = CREDENTIAL_TYPE + "_" + name
-            if credential_name in variables:
-                return credential_name, variables[credential_name]
-            else:
-                raise ValueError(f"user_id {user_id} variable name {name} not found.")
+        credential_name = CREDENTIAL_TYPE + "_" + name
+        if credential_name in variables:
+            return credential_name, variables[credential_name]
+        msg = f"user_id {user_id} variable name {name} not found."
+        raise ValueError(msg)
 
     def get_variable(
         self,
-        user_id: Union[UUID, str],
+        user_id: UUID | str,
         name: str,
         field: str,
         _session: Session,
@@ -77,17 +76,18 @@ class KubernetesSecretService(VariableService, Service):
         secret_name = encode_user_id(user_id)
         key, value = self.resolve_variable(secret_name, user_id, name)
         if key.startswith(CREDENTIAL_TYPE + "_") and field == "session_id":  # type: ignore
-            raise TypeError(
+            msg = (
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
                 "because its purpose is to prevent the exposure of values."
             )
+            raise TypeError(msg)
         return value
 
     def list_variables(
         self,
-        user_id: Union[UUID, str],
+        user_id: UUID | str,
         _session: Session,
-    ) -> list[Optional[str]]:
+    ) -> list[str | None]:
         variables = self.kubernetes_secrets.get_secret(name=encode_user_id(user_id))
         if not variables:
             return []
@@ -102,7 +102,7 @@ class KubernetesSecretService(VariableService, Service):
 
     def update_variable(
         self,
-        user_id: Union[UUID, str],
+        user_id: UUID | str,
         name: str,
         value: str,
         _session: Session,
@@ -111,19 +111,19 @@ class KubernetesSecretService(VariableService, Service):
         secret_key, _ = self.resolve_variable(secret_name, user_id, name)
         return self.kubernetes_secrets.update_secret(name=secret_name, data={secret_key: value})
 
-    def delete_variable(self, user_id: Union[UUID, str], name: str, _session: Session) -> None:
+    def delete_variable(self, user_id: UUID | str, name: str, _session: Session) -> None:
         secret_name = encode_user_id(user_id)
 
         secret_key, _ = self.resolve_variable(secret_name, user_id, name)
         self.kubernetes_secrets.delete_secret_key(name=secret_name, key=secret_key)
         return
 
-    def delete_variable_by_id(self, user_id: Union[UUID, str], variable_id: UUID | str, _session: Session) -> None:
+    def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID | str, _session: Session) -> None:
         self.delete_variable(user_id, _session, str(variable_id))
 
     def create_variable(
         self,
-        user_id: Union[UUID, str],
+        user_id: UUID | str,
         name: str,
         value: str,
         default_fields: list[str],
@@ -145,5 +145,4 @@ class KubernetesSecretService(VariableService, Service):
             value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
             default_fields=default_fields,
         )
-        variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
-        return variable
+        return Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})

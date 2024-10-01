@@ -175,7 +175,8 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node):
     new_edge["target"] = proxy_id
     _type = target_handle.get("type")
     if _type is None:
-        raise KeyError("The 'type' key must be present in target_handle.")
+        msg = "The 'type' key must be present in target_handle."
+        raise KeyError(msg)
 
     field = target_handle["proxy"]["field"]
     new_target_handle = {
@@ -248,17 +249,49 @@ def get_successors(graph: dict[str, dict[str, list[str]]], vertex_id: str) -> li
         if current_id in visited:
             continue
         visited.add(current_id)
-        successors_result.append(current_id)
+        if current_id != vertex_id:
+            successors_result.append(current_id)
         stack.extend(graph[current_id]["successors"])
     return successors_result
 
 
-def sort_up_to_vertex(graph: dict[str, dict[str, list[str]]], vertex_id: str, is_start: bool = False) -> list[str]:
+def get_root_of_group_node(
+    graph: dict[str, dict[str, list[str]]], vertex_id: str, parent_node_map: dict[str, str | None]
+) -> str:
+    """Returns the root of a group node."""
+    if vertex_id in parent_node_map.values():
+        # Get all vertices with vertex_id as their parent node
+        child_vertices = [v_id for v_id, parent_id in parent_node_map.items() if parent_id == vertex_id]
+
+        # Now go through successors of the child vertices
+        # and get the one that none of its successors is in child_vertices
+        for child_id in child_vertices:
+            successors = get_successors(graph, child_id)
+            if not any(successor in child_vertices for successor in successors):
+                return child_id
+
+    msg = f"Vertex {vertex_id} is not a top level vertex or no root vertex found"
+    raise ValueError(msg)
+
+
+def sort_up_to_vertex(
+    graph: dict[str, dict[str, list[str]]],
+    vertex_id: str,
+    parent_node_map: dict[str, str | None] | None = None,
+    is_start: bool = False,
+) -> list[str]:
     """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
     try:
         stop_or_start_vertex = graph[vertex_id]
     except KeyError:
-        raise ValueError(f"Vertex {vertex_id} not found into graph")
+        if parent_node_map is None:
+            msg = "Parent node map is required to find the root of a group node"
+            raise ValueError(msg)
+        vertex_id = get_root_of_group_node(graph=graph, vertex_id=vertex_id, parent_node_map=parent_node_map)
+        if vertex_id not in graph:
+            msg = f"Vertex {vertex_id} not found into graph"
+            raise ValueError(msg)
+        stop_or_start_vertex = graph[vertex_id]
 
     visited, excluded = set(), set()
     stack = [vertex_id]

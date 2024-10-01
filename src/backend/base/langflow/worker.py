@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from asgiref.sync import async_to_sync
 from celery.exceptions import SoftTimeLimitExceeded  # type: ignore
@@ -29,9 +29,10 @@ def build_vertex(self, vertex: "Vertex") -> "Vertex":
 
 @celery_app.task(acks_late=True)
 def process_graph_cached_task(
-    data_graph: Dict[str, Any],
-    inputs: Optional[Union[dict, List[dict]]] = None,
+    data_graph: dict[str, Any],
+    inputs: dict | list[dict] | None = None,
     clear_cache=False,
     session_id=None,
-) -> Dict[str, Any]:
-    raise NotImplementedError("This task is not implemented yet")
+) -> dict[str, Any]:
+    msg = "This task is not implemented yet"
+    raise NotImplementedError(msg)

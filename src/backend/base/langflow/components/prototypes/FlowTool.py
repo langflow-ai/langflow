@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, List, Optional
+from typing import Any
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.base.tools.flow_tool import FlowTool
@@ -19,11 +19,11 @@ class FlowToolComponent(LCToolComponent):
     name = "FlowTool"
     beta = True
 
-    def get_flow_names(self) -> List[str]:
+    def get_flow_names(self) -> list[str]:
         flow_datas = self.list_flows()
         return [flow_data.data["name"] for flow_data in flow_datas]
 
-    def get_flow(self, flow_name: str) -> Optional[Data]:
+    def get_flow(self, flow_name: str) -> Data | None:
         """
         Retrieves a flow by its name.
 
@@ -74,11 +74,13 @@ class FlowToolComponent(LCToolComponent):
     def build_tool(self) -> Tool:
         FlowTool.update_forward_refs()
         if "flow_name" not in self._attributes or not self._attributes["flow_name"]:
-            raise ValueError("Flow name is required")
+            msg = "Flow name is required"
+            raise ValueError(msg)
         flow_name = self._attributes["flow_name"]
         flow_data = self.get_flow(flow_name)
         if not flow_data:
-            raise ValueError("Flow not found.")
+            msg = "Flow not found."
+            raise ValueError(msg)
         graph = Graph.from_payload(flow_data.data["data"])
         try:
             graph.set_run_id(self.graph.run_id)

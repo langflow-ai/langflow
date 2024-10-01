@@ -5,7 +5,7 @@ import sys
 from collections import deque
 from pathlib import Path
 from threading import Lock, Semaphore
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 import orjson
 from loguru import logger
@@ -56,7 +56,7 @@ class SizedLogBuffer:
         return len(self.buffer)
 
     def get_after_timestamp(self, timestamp: int, lines: int = 5) -> dict[int, str]:
-        rc = dict()
+        rc = {}
 
         self._rsemaphore.acquire()
         try:
@@ -144,10 +144,10 @@ class LogConfig(TypedDict):
 
 
 def configure(
-    log_level: Optional[str] = None,
-    log_file: Optional[Path] = None,
-    disable: Optional[bool] = False,
-    log_env: Optional[str] = None,
+    log_level: str | None = None,
+    log_file: Path | None = None,
+    disable: bool | None = False,
+    log_env: str | None = None,
 ):
     if disable and log_level is None and log_file is None:
         logger.disable("langflow")

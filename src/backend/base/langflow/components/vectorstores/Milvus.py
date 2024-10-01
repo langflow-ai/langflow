@@ -1,18 +1,16 @@
-from typing import List
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
-    DataInput,
-    StrInput,
-    IntInput,
-    FloatInput,
     BoolInput,
+    DataInput,
     DictInput,
-    MultilineInput,
     DropdownInput,
-    SecretStrInput,
+    FloatInput,
     HandleInput,
+    IntInput,
+    MultilineInput,
+    SecretStrInput,
+    StrInput,
 )
 from langflow.schema import Data
 
@@ -76,9 +74,10 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
         try:
             from langchain_milvus.vectorstores import Milvus as LangchainMilvus
         except ImportError:
-            raise ImportError(
+            msg = (
                 "Could not import Milvus integration package. " "Please install it with `pip install langchain-milvus`."
             )
+            raise ImportError(msg)
         self.connection_args.update(uri=self.uri, token=self.password)
         milvus_store = LangchainMilvus(
             embedding_function=self.embedding,
@@ -108,7 +107,7 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
 
         return milvus_store
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
@@ -120,5 +119,4 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

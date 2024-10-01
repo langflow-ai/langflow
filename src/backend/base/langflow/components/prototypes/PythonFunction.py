@@ -1,4 +1,4 @@
-from typing import Callable, List
+from collections.abc import Callable
 
 from langflow.custom import Component
 from langflow.custom.utils import get_function
@@ -43,10 +43,9 @@ class PythonFunctionComponent(Component):
     def get_function_callable(self) -> Callable:
         function_code = self.function_code
         self.status = function_code
-        func = get_function(function_code)
-        return func
+        return get_function(function_code)
 
-    def execute_function(self) -> List[dotdict | str] | dotdict | str:
+    def execute_function(self) -> list[dotdict | str] | dotdict | str:
         function_code = self.function_code
 
         if not function_code:
@@ -58,16 +57,14 @@ class PythonFunctionComponent(Component):
         except Exception as e:
             return f"Error executing function: {str(e)}"
 
-    def execute_function_data(self) -> List[Data]:
+    def execute_function_data(self) -> list[Data]:
         results = self.execute_function()
         results = results if isinstance(results, list) else [results]
-        data = [(Data(text=x) if isinstance(x, str) else Data(**x)) for x in results]
-        return data
+        return [(Data(text=x) if isinstance(x, str) else Data(**x)) for x in results]
 
     def execute_function_message(self) -> Message:
         results = self.execute_function()
         results = results if isinstance(results, list) else [results]
         results_list = [str(x) for x in results]
         results_str = "\n".join(results_list)
-        data = Message(text=results_str)
-        return data
+        return Message(text=results_str)

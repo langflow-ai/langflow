@@ -1,12 +1,13 @@
 import json
-from typing import List
+
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+
 from langflow.custom import Component
-from langflow.inputs import MessageTextInput, DropdownInput
+from langflow.inputs import DropdownInput, MessageTextInput
 from langflow.io import SecretStrInput
-from langflow.template import Output
 from langflow.schema import Data
+from langflow.template import Output
 
 
 class GoogleDriveSearchComponent(Component):
@@ -97,16 +98,15 @@ class GoogleDriveSearchComponent(Component):
         """
         if mime_type == "application/vnd.google-apps.document":
             return f"https://docs.google.com/document/d/{file_id}/edit"
-        elif mime_type == "application/vnd.google-apps.spreadsheet":
+        if mime_type == "application/vnd.google-apps.spreadsheet":
             return f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
-        elif mime_type == "application/vnd.google-apps.presentation":
+        if mime_type == "application/vnd.google-apps.presentation":
             return f"https://docs.google.com/presentation/d/{file_id}/edit"
-        elif mime_type == "application/vnd.google-apps.drawing":
+        if mime_type == "application/vnd.google-apps.drawing":
             return f"https://docs.google.com/drawings/d/{file_id}/edit"
-        elif mime_type == "application/pdf":
+        if mime_type == "application/pdf":
             return f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
-        else:
-            return f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
+        return f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
 
     def search_files(self) -> dict:
         # Load the token information from the JSON string
@@ -144,13 +144,13 @@ class GoogleDriveSearchComponent(Component):
 
         return {"doc_urls": doc_urls, "doc_ids": doc_ids, "doc_titles_urls": doc_titles_urls, "doc_titles": doc_titles}
 
-    def search_doc_ids(self) -> List[str]:
+    def search_doc_ids(self) -> list[str]:
         return self.search_files()["doc_ids"]
 
-    def search_doc_urls(self) -> List[str]:
+    def search_doc_urls(self) -> list[str]:
         return self.search_files()["doc_urls"]
 
-    def search_doc_titles(self) -> List[str]:
+    def search_doc_titles(self) -> list[str]:
         return self.search_files()["doc_titles"]
 
     def search_data(self) -> Data:

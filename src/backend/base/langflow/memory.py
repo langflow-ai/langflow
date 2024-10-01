@@ -1,16 +1,16 @@
 import warnings
-from typing import List, Sequence
+from collections.abc import Sequence
 from uuid import UUID
 
+from langchain_core.messages import BaseMessage
 from loguru import logger
 from sqlalchemy import delete
 from sqlmodel import Session, col, select
 
+from langflow.field_typing import BaseChatMessageHistory
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
 from langflow.services.deps import session_scope
-from langflow.field_typing import BaseChatMessageHistory
-from langchain_core.messages import BaseMessage
 
 
 def get_messages(
@@ -21,7 +21,7 @@ def get_messages(
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
-) -> List[Message]:
+) -> list[Message]:
     """
     Retrieves messages from the monitor service based on the provided filters.
 
@@ -35,7 +35,6 @@ def get_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
-    messages_read: list[Message] = []
     with session_scope() as session:
         stmt = select(MessageTable)
         if sender:
@@ -55,9 +54,7 @@ def get_messages(
         if limit:
             stmt = stmt.limit(limit)
         messages = session.exec(stmt)
-        messages_read = [Message(**d.model_dump()) for d in messages]
-
-    return messages_read
+        return [Message(**d.model_dump()) for d in messages]
 
 
 def add_messages(messages: Message | list[Message], flow_id: str | None = None):
@@ -70,7 +67,8 @@ def add_messages(messages: Message | list[Message], flow_id: str | None = None):
 
         if not all(isinstance(message, Message) for message in messages):
             types = ", ".join([str(type(message)) for message in messages])
-            raise ValueError(f"The messages must be instances of Message. Found: {types}")
+            msg = f"The messages must be instances of Message. Found: {types}"
+            raise ValueError(msg)
 
         messages_models: list[MessageTable] = []
         for msg in messages:
@@ -119,7 +117,8 @@ def store_message(
 
     Args:
         message (Message): The message to store.
-        flow_id (Optional[str]): The flow ID associated with the message. When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        flow_id (Optional[str]): The flow ID associated with the message.
+            When running from the CustomComponent you can access this using `self.graph.flow_id`.
 
     Returns:
         List[Message]: A list of data containing the stored message.
@@ -132,7 +131,8 @@ def store_message(
         return []
 
     if not message.session_id or not message.sender or not message.sender_name:
-        raise ValueError("All of session_id, sender, and sender_name must be provided.")
+        msg = "All of session_id, sender, and sender_name must be provided."
+        raise ValueError(msg)
 
     return add_messages([message], flow_id=flow_id)
 
@@ -147,7 +147,7 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
         self.session_id = session_id
 
     @property
-    def messages(self) -> List[BaseMessage]:
+    def messages(self) -> list[BaseMessage]:
         messages = get_messages(
             session_id=self.session_id,
         )

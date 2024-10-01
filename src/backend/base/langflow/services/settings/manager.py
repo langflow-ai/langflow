@@ -25,18 +25,20 @@ class SettingsService(Service):
 
             file_path = os.path.join(current_path, file_path)
 
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             settings_dict = yaml.safe_load(f)
             settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 
             for key in settings_dict:
                 if key not in Settings.model_fields.keys():
-                    raise KeyError(f"Key {key} not found in settings")
+                    msg = f"Key {key} not found in settings"
+                    raise KeyError(msg)
                 logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
         settings = Settings(**settings_dict)
         if not settings.config_dir:
-            raise ValueError("CONFIG_DIR must be set in settings")
+            msg = "CONFIG_DIR must be set in settings"
+            raise ValueError(msg)
 
         auth_settings = AuthSettings(
             CONFIG_DIR=settings.config_dir,

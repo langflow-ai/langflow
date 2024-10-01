@@ -3,7 +3,8 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import FloatInput, SecretStrInput, DropdownInput, IntInput
+from langflow.inputs.inputs import HandleInput
+from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput
 
 
 class PerplexityComponent(LCModelComponent):
@@ -50,7 +51,8 @@ class PerplexityComponent(LCModelComponent):
         IntInput(
             name="n",
             display_name="N",
-            info="Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.",
+            info="Number of chat completions to generate for each prompt. "
+            "Note that the API may not return the full n completions if duplicates are generated.",
             advanced=True,
         ),
         IntInput(
@@ -58,6 +60,13 @@ class PerplexityComponent(LCModelComponent):
             display_name="Top K",
             info="Decode using top-k sampling: consider the set of top_k most probable tokens. Must be positive.",
             advanced=True,
+        ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 
@@ -70,7 +79,7 @@ class PerplexityComponent(LCModelComponent):
         top_p = self.top_p
         n = self.n
 
-        output = ChatPerplexity(
+        return ChatPerplexity(
             model=model,
             temperature=temperature or 0.75,
             pplx_api_key=api_key,
@@ -79,5 +88,3 @@ class PerplexityComponent(LCModelComponent):
             n=n or 1,
             max_output_tokens=max_output_tokens,
         )
-
-        return output  # type: ignore

@@ -1,13 +1,15 @@
 import json
+from typing import Any
+
 import requests
-from typing import Dict, Any, Union
-from pydantic import BaseModel, Field
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput, MultilineInput
-from langflow.schema import Data
-from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 from loguru import logger
+from pydantic import BaseModel, Field
+
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
+from langflow.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
 class NotionPageUpdate(LCToolComponent):
@@ -37,7 +39,7 @@ class NotionPageUpdate(LCToolComponent):
 
     class NotionPageUpdateSchema(BaseModel):
         page_id: str = Field(..., description="The ID of the Notion page to update.")
-        properties: Union[str, Dict[str, Any]] = Field(
+        properties: str | dict[str, Any] = Field(
             ..., description="The properties to update on the page (as a JSON string or a dictionary)."
         )
 
@@ -46,22 +48,22 @@ class NotionPageUpdate(LCToolComponent):
         if isinstance(result, str):
             # An error occurred, return it as text
             return Data(text=result)
-        else:
-            # Success, return the updated page data
-            output = "Updated page properties:\n"
-            for prop_name, prop_value in result.get("properties", {}).items():
-                output += f"{prop_name}: {prop_value}\n"
-            return Data(text=output, data=result)
+        # Success, return the updated page data
+        output = "Updated page properties:\n"
+        for prop_name, prop_value in result.get("properties", {}).items():
+            output += f"{prop_name}: {prop_value}\n"
+        return Data(text=output, data=result)
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
             name="update_notion_page",
-            description="Update the properties of a Notion page. IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
+            description="Update the properties of a Notion page. "
+            "IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
             func=self._update_notion_page,
             args_schema=self.NotionPageUpdateSchema,
         )
 
-    def _update_notion_page(self, page_id: str, properties: Union[str, Dict[str, Any]]) -> Union[Dict[str, Any], str]:
+    def _update_notion_page(self, page_id: str, properties: str | dict[str, Any]) -> dict[str, Any] | str:
         url = f"https://api.notion.com/v1/pages/{page_id}"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",

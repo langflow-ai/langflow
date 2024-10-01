@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
-from langflow.services.database.models.user.crud import get_user_by_id
 from sqlmodel import Session
 
 from langflow.api.v1.schemas import Token
@@ -11,6 +10,7 @@ from langflow.services.auth.utils import (
     create_user_tokens,
 )
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
+from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_session, get_settings_service, get_variable_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.variable.service import VariableService
@@ -71,12 +71,11 @@ async def login_to_get_access_token(
         # Create default folder for user if it doesn't exist
         create_default_folder_if_it_doesnt_exist(db, user.id)
         return tokens
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect username or password",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 @router.get("/auto_login")
@@ -156,12 +155,11 @@ async def refresh_token(
             domain=auth_settings.COOKIE_DOMAIN,
         )
         return tokens
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid refresh token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 @router.post("/logout")

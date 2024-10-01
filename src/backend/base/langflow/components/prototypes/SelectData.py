@@ -1,8 +1,7 @@
 from langflow.custom import Component
+from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import DataInput, IntInput
 from langflow.io import Output
-
-from langflow.field_typing.range_spec import RangeSpec
 from langflow.schema import Data
 
 
@@ -39,7 +38,8 @@ class SelectDataComponent(Component):
 
         # Validate that the selected index is within bounds
         if selected_index < 0 or selected_index >= len(self.data_list):
-            raise ValueError(f"Selected index {selected_index} is out of range.")
+            msg = f"Selected index {selected_index} is out of range."
+            raise ValueError(msg)
 
         # Return the selected Data object
         selected_data = self.data_list[selected_index]

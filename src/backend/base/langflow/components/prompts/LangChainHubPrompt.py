@@ -1,13 +1,11 @@
-from typing import List
-
-from langflow.custom import Component
-from langflow.inputs import StrInput, SecretStrInput, DefaultPromptField
-from langflow.io import Output
-from langflow.schema.message import Message
+import re
 
 from langchain_core.prompts import HumanMessagePromptTemplate
 
-import re
+from langflow.custom import Component
+from langflow.inputs import DefaultPromptField, SecretStrInput, StrInput
+from langflow.io import Output
+from langflow.schema.message import Message
 
 
 class LangChainHubPromptComponent(Component):
@@ -56,7 +54,7 @@ class LangChainHubPromptComponent(Component):
             pattern = r"\{(.*?)\}"
 
             # Get all the custom fields
-            custom_fields: List[str] = []
+            custom_fields: list[str] = []
             full_template = ""
             for message in prompt_template:
                 # Find all matches
@@ -67,7 +65,7 @@ class LangChainHubPromptComponent(Component):
                 full_template = full_template + "\n" + message.template
 
             # No need to reprocess if we have them already
-            if all(["param_" + custom_field in build_config for custom_field in custom_fields]):
+            if all("param_" + custom_field in build_config for custom_field in custom_fields):
                 return build_config
 
             # Easter egg: Show template in info popup
@@ -112,9 +110,8 @@ class LangChainHubPromptComponent(Component):
 
         # Check if the api key is provided
         if not self.langchain_api_key:
-            raise ValueError("Please provide a LangChain API Key")
+            msg = "Please provide a LangChain API Key"
+            raise ValueError(msg)
 
         # Pull the prompt from LangChain Hub
-        prompt_data = langchain.hub.pull(self.langchain_hub_prompt, api_key=self.langchain_api_key)
-
-        return prompt_data
+        return langchain.hub.pull(self.langchain_hub_prompt, api_key=self.langchain_api_key)

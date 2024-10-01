@@ -102,7 +102,8 @@ class Vertex:
 
     def set_input_value(self, name: str, value: Any):
         if self._custom_component is None:
-            raise ValueError(f"Vertex {self.id} does not have a component instance.")
+            msg = f"Vertex {self.id} does not have a component instance."
+            raise ValueError(msg)
         self._custom_component._set_input_value(name, value)
 
     def to_data(self):
@@ -151,7 +152,7 @@ class Vertex:
             result = self._built_object
             # if it is not a dict or a string and hasattr model_dump then
             # return the model_dump
-            if not isinstance(result, (dict, str)) and hasattr(result, "content"):
+            if not isinstance(result, dict | str) and hasattr(result, "content"):
                 return result.content
             return result
         if isinstance(self._built_object, str):
@@ -212,7 +213,8 @@ class Vertex:
         self.data = self._data["data"]
         if self.data["node"]["template"]["_type"] == "Component":
             if "outputs" not in self.data["node"]:
-                raise ValueError(f"Outputs not found for {self.display_name}")
+                msg = f"Outputs not found for {self.display_name}"
+                raise ValueError(msg)
             self.outputs = self.data["node"]["outputs"]
         else:
             self.outputs = self.data["node"].get("outputs", [])
@@ -256,7 +258,8 @@ class Vertex:
     def get_value_from_template_dict(self, key: str):
         template_dict = self.data.get("node", {}).get("template", {})
         if key not in template_dict:
-            raise ValueError(f"Key {key} not found in template dict")
+            msg = f"Key {key} not found in template dict"
+            raise ValueError(msg)
         return template_dict.get(key, {}).get("value")
 
     def get_task(self):
@@ -309,7 +312,8 @@ class Vertex:
         # and use that as the value for the param
 
         if self.graph is None:
-            raise ValueError("Graph not found")
+            msg = "Graph not found"
+            raise ValueError(msg)
 
         if self.updated_raw_params:
             self.updated_raw_params = False
@@ -407,7 +411,8 @@ class Vertex:
                     if isinstance(val, list) and all(isinstance(item, dict) for item in val):
                         params[field_name] = pd.DataFrame(val)
                     else:
-                        raise ValueError(f"Invalid value type {type(val)} for field {field_name}")
+                        msg = f"Invalid value type {type(val)} for field {field_name}"
+                        raise ValueError(msg)
                 elif val is not None and val != "":
                     params[field_name] = val
 
@@ -475,7 +480,8 @@ class Vertex:
         await self._build_each_vertex_in_params_dict(user_id)
 
         if self.base_type is None:
-            raise ValueError(f"Base type for vertex {self.display_name} not found")
+            msg = f"Base type for vertex {self.display_name} not found"
+            raise ValueError(msg)
 
         if not self._custom_component:
             custom_component, custom_params = await initialize.loading.instantiate_class(
@@ -516,7 +522,7 @@ class Vertex:
             component_id = self.id
             _type = self.artifacts_type
 
-            if isinstance(sender_name, (Data, Message)):
+            if isinstance(sender_name, Data | Message):
                 sender_name = sender_name.get_text()
 
             messages = [
@@ -632,7 +638,8 @@ class Vertex:
         if not self._built:
             if flow_id:
                 asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="error"))
-            raise ValueError(f"Component {self.display_name} has not been built yet")
+            msg = f"Component {self.display_name} has not been built yet"
+            raise ValueError(msg)
 
         result = self._built_result if self.use_result else self._built_object
         if flow_id:
@@ -676,10 +683,11 @@ class Vertex:
                     self.params[key].append(result)
                 except AttributeError as e:
                     logger.exception(e)
-                    raise ValueError(
+                    msg = (
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
                         f"Error building Component {self.display_name}: \n\n{str(e)}"
-                    ) from e
+                    )
+                    raise ValueError(msg) from e
 
     def _handle_func(self, key, result):
         """
@@ -719,7 +727,8 @@ class Vertex:
         except Exception as exc:
             tb = traceback.format_exc()
             logger.exception(exc)
-            raise ComponentBuildException(f"Error building Component {self.display_name}: \n\n{exc}", tb) from exc
+            msg = f"Error building Component {self.display_name}: \n\n{exc}"
+            raise ComponentBuildException(msg, tb) from exc
 
     def _update_built_object_and_artifacts(self, result: Any | tuple[Any, dict] | tuple["Component", Any, dict]):
         """
@@ -744,16 +753,18 @@ class Vertex:
         Checks if the built object is None and raises a ValueError if so.
         """
         if isinstance(self._built_object, UnbuiltObject):
-            raise ValueError(f"{self.display_name}: {self._built_object_repr()}")
-        elif self._built_object is None:
+            msg = f"{self.display_name}: {self._built_object_repr()}"
+            raise ValueError(msg)
+        if self._built_object is None:
             message = f"{self.display_name} returned None."
             if self.base_type == "custom_components":
                 message += " Make sure your build method returns a component."
 
             logger.warning(message)
-        elif isinstance(self._built_object, (Iterator, AsyncIterator)):
+        elif isinstance(self._built_object, Iterator | AsyncIterator):
             if self.display_name in ["Text Output"]:
-                raise ValueError(f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead.")
+                msg = f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
+                raise ValueError(msg)
 
     def _reset(self, params_update: dict[str, Any] | None = None):
         self._built = False
@@ -785,11 +796,11 @@ class Vertex:
             if self.state == VertexStates.INACTIVE:
                 # If the vertex is inactive, return None
                 self.build_inactive()
-                return
+                return None
 
             if self.frozen and self._built:
                 return await self.get_requester_result(requester)
-            elif self._built and requester is not None:
+            if self._built and requester is not None:
                 # This means that the vertex has already been built
                 # and we are just getting the result for the requester
                 return await self.get_requester_result(requester)
@@ -815,8 +826,7 @@ class Vertex:
 
             self._finalize_build()
 
-        result = await self.get_requester_result(requester)
-        return result
+        return await self.get_requester_result(requester)
 
     async def get_requester_result(self, requester: Optional["Vertex"]):
         # If the requester is None, this means that

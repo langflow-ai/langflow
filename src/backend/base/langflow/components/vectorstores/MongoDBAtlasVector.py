@@ -1,10 +1,8 @@
-from typing import List
-
 from langchain_community.vectorstores import MongoDBAtlasVectorSearch
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.io import DataInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -41,13 +39,15 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         try:
             from pymongo import MongoClient
         except ImportError:
-            raise ImportError("Please install pymongo to use MongoDB Atlas Vector Store")
+            msg = "Please install pymongo to use MongoDB Atlas Vector Store"
+            raise ImportError(msg)
 
         try:
             mongo_client: MongoClient = MongoClient(self.mongodb_atlas_cluster_uri)
             collection = mongo_client[self.db_name][self.collection_name]
         except Exception as e:
-            raise ValueError(f"Failed to connect to MongoDB Atlas: {e}")
+            msg = f"Failed to connect to MongoDB Atlas: {e}"
+            raise ValueError(msg)
 
         documents = []
         for _input in self.ingest_data or []:
@@ -75,8 +75,8 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
 
         return vector_store
 
-    def search_documents(self) -> List[Data]:
-        from bson import ObjectId
+    def search_documents(self) -> list[Data]:
+        from bson.objectid import ObjectId
 
         vector_store = self.build_vector_store()
 
@@ -93,5 +93,4 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

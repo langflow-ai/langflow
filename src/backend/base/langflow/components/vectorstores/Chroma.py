@@ -7,7 +7,7 @@ from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
-from langflow.io import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, StrInput, MultilineInput
+from langflow.io import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, MultilineInput, StrInput
 from langflow.schema import Data
 
 if TYPE_CHECKING:
@@ -107,9 +107,10 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             from chromadb import Client
             from langchain_chroma import Chroma
         except ImportError:
-            raise ImportError(
+            msg = (
                 "Could not import Chroma integration package. " "Please install it with `pip install langchain-chroma`."
             )
+            raise ImportError(msg)
         # Chroma settings
         chroma_settings = None
         client = None
@@ -163,7 +164,8 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                 if _input not in _stored_documents_without_id:
                     documents.append(_input.to_lc_document())
             else:
-                raise ValueError("Vector Store Inputs must be Data objects.")
+                msg = "Vector Store Inputs must be Data objects."
+                raise ValueError(msg)
 
         if documents and self.embedding is not None:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")

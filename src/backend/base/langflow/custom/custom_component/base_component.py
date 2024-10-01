@@ -1,7 +1,7 @@
 import operator
+import warnings
 from typing import Any, ClassVar
 from uuid import UUID
-import warnings
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
@@ -98,8 +98,7 @@ class BaseComponent:
 
         cc_class = eval_custom_component_code(self._code)
         component_instance = cc_class(_code=self._code)
-        template_config = self.get_template_config(component_instance)
-        return template_config
+        return self.get_template_config(component_instance)
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError

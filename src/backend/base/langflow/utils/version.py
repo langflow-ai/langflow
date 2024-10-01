@@ -1,6 +1,5 @@
 import httpx
 
-from typing import Optional
 from langflow.logging.logger import logger
 
 
@@ -47,7 +46,9 @@ def _get_version_info():
             pass
 
     if __version__ is None:
-        raise ValueError(f"Package not found from options {package_options}")
+        msg = f"Package not found from options {package_options}"
+        raise ValueError(msg)
+    return None
 
 
 VERSION_INFO = _get_version_info()
@@ -69,7 +70,7 @@ def is_nightly(v: str) -> bool:
     return "dev" in v
 
 
-def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optional[str]:
+def fetch_latest_version(package_name: str, include_prerelease: bool) -> str | None:
     from packaging import version as pkg_version
 
     package_name = package_name.replace(" ", "-").lower()

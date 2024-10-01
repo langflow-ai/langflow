@@ -1,6 +1,5 @@
 import concurrent.futures
 import json
-from typing import List
 
 import httpx
 from langchain_core.pydantic_v1 import BaseModel, SecretStr
@@ -15,7 +14,7 @@ class AIMLEmbeddingsImpl(BaseModel, Embeddings):
     api_key: SecretStr
     model: str
 
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
         embeddings = [None] * len(texts)
         headers = {
             "Content-Type": "application/json",
@@ -55,8 +54,7 @@ class AIMLEmbeddingsImpl(BaseModel, Embeddings):
             json=payload,
         )
         response.raise_for_status()
-        result_data = response.json()
-        return result_data
+        return response.json()
 
-    def embed_query(self, text: str) -> List[float]:
+    def embed_query(self, text: str) -> list[float]:
         return self.embed_documents([text])[0]

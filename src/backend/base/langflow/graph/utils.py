@@ -1,7 +1,7 @@
 import json
+from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional
-from collections.abc import Generator
 from uuid import UUID
 
 from langchain_core.documents import Document
@@ -70,18 +70,17 @@ def serialize_field(value):
     """Unified serialization function for handling both BaseModel and Document types,
     including handling lists of these types."""
 
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [serialize_field(v) for v in value]
-    elif isinstance(value, Document):
+    if isinstance(value, Document):
         return value.to_json()
-    elif isinstance(value, BaseModel):
+    if isinstance(value, BaseModel):
         return value.model_dump()
-    elif isinstance(value, V1BaseModel):
+    if isinstance(value, V1BaseModel):
         if hasattr(value, "to_json"):
             return value.to_json()
-        else:
-            return value.dict()
-    elif isinstance(value, str):
+        return value.dict()
+    if isinstance(value, str):
         return {"result": value}
     return value
 
@@ -126,12 +125,12 @@ def _vertex_to_primitive_dict(target: "Vertex") -> dict:
     """
     # Removes all keys that the values aren't python types like str, int, bool, etc.
     params = {
-        key: value for key, value in target.params.items() if isinstance(value, (str, int, bool, float, list, dict))
+        key: value for key, value in target.params.items() if isinstance(value, str | int | bool | float | list | dict)
     }
     # if it is a list we need to check if the contents are python types
     for key, value in params.items():
         if isinstance(value, list):
-            params[key] = [item for item in value if isinstance(item, (str, int, bool, float, list, dict))]
+            params[key] = [item for item in value if isinstance(item, str | int | bool | float | list | dict)]
     return params
 
 

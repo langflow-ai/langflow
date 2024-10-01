@@ -1,7 +1,7 @@
 import os
-from typing import TYPE_CHECKING, Any, Dict, Optional
-from uuid import UUID
 from datetime import datetime
+from typing import TYPE_CHECKING, Any, Optional
+from uuid import UUID
 
 from loguru import logger
 
@@ -9,8 +9,9 @@ from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
     from langchain.callbacks.base import BaseCallbackHandler
+
+    from langflow.graph.vertex.base import Vertex
 
 
 class LangFuseTracer(BaseTracer):
@@ -37,7 +38,8 @@ class LangFuseTracer(BaseTracer):
 
             config = self._get_config()
             if not all(config.values()):
-                raise ValueError("Missing Langfuse configuration")
+                msg = "Missing Langfuse configuration"
+                raise ValueError(msg)
 
             self._client = Langfuse(**config)
             self.trace = self._client.trace(id=str(self.trace_id), name=self.flow_id)
@@ -64,8 +66,8 @@ class LangFuseTracer(BaseTracer):
         trace_id: str,
         trace_name: str,
         trace_type: str,
-        inputs: Dict[str, Any],
-        metadata: Dict[str, Any] | None = None,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
         vertex: Optional["Vertex"] = None,
     ):
         start_time = datetime.utcnow()
@@ -96,7 +98,7 @@ class LangFuseTracer(BaseTracer):
         self,
         trace_id: str,
         trace_name: str,
-        outputs: Dict[str, Any] | None = None,
+        outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: list[Log | dict] = [],
     ):
@@ -116,7 +118,7 @@ class LangFuseTracer(BaseTracer):
     def end(
         self,
         inputs: dict[str, Any],
-        outputs: Dict[str, Any],
+        outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):
