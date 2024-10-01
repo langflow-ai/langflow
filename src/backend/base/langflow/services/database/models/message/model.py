@@ -29,7 +29,8 @@ class MessageBase(SQLModel):
     def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
         # first check if the record has all the required fields
         if message.text is None or not message.sender or not message.sender_name:
-            raise ValueError("The message does not have the required fields (text, sender, sender_name).")
+            msg = "The message does not have the required fields (text, sender, sender_name)."
+            raise ValueError(msg)
         if message.files:
             image_paths = []
             for file in message.files:

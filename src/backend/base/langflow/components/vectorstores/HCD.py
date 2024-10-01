@@ -181,18 +181,18 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode
         except ImportError:
-            raise ImportError(
+            msg = (
                 "Could not import langchain Astra DB integration package. "
                 "Please install it with `pip install langchain-astradb`."
             )
+            raise ImportError(msg)
 
         try:
             from astrapy.authentication import UsernamePasswordTokenProvider
             from astrapy.constants import Environment
         except ImportError:
-            raise ImportError(
-                "Could not import astrapy integration package. " "Please install it with `pip install astrapy`."
-            )
+            msg = "Could not import astrapy integration package. " "Please install it with `pip install astrapy`."
+            raise ImportError(msg)
 
         try:
             if not self.setup_mode:
@@ -200,7 +200,8 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
 
             setup_mode_value = SetupMode[self.setup_mode.upper()]
         except KeyError:
-            raise ValueError(f"Invalid setup mode: {self.setup_mode}")
+            msg = f"Invalid setup mode: {self.setup_mode}"
+            raise ValueError(msg)
 
         if not isinstance(self.embedding, dict):
             embedding_dict = {"embedding": self.embedding}
@@ -246,7 +247,8 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
         try:
             vector_store = AstraDBVectorStore(**vector_store_kwargs)
         except Exception as e:
-            raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
+            msg = f"Error initializing AstraDBVectorStore: {str(e)}"
+            raise ValueError(msg) from e
 
         self._add_documents_to_vector_store(vector_store)
         return vector_store
@@ -257,14 +259,16 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
-                raise ValueError("Vector Store Inputs must be Data objects.")
+                msg = "Vector Store Inputs must be Data objects."
+                raise ValueError(msg)
 
         if documents:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
             except Exception as e:
-                raise ValueError(f"Error adding documents to AstraDBVectorStore: {str(e)}") from e
+                msg = f"Error adding documents to AstraDBVectorStore: {str(e)}"
+                raise ValueError(msg) from e
         else:
             logger.debug("No documents to add to the Vector Store.")
 
@@ -302,7 +306,8 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
 
                 docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
             except Exception as e:
-                raise ValueError(f"Error performing search in AstraDBVectorStore: {str(e)}") from e
+                msg = f"Error performing search in AstraDBVectorStore: {str(e)}"
+                raise ValueError(msg) from e
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 

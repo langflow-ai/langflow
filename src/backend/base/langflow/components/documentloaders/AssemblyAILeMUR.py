@@ -164,7 +164,8 @@ class AssemblyAILeMUR(Component):
                 max_output_size=self.max_output_size,
             )
         else:
-            raise ValueError(f"Endpoint not supported: {endpoint}")
+            msg = f"Endpoint not supported: {endpoint}"
+            raise ValueError(msg)
 
         return result.dict()
 
@@ -178,4 +179,5 @@ class AssemblyAILeMUR(Component):
         elif model_name == "claude3_sonnet":
             return aai.LemurModel.claude3_sonnet
         else:
-            raise ValueError(f"Model name not supported: {model_name}")
+            msg = f"Model name not supported: {model_name}"
+            raise ValueError(msg)

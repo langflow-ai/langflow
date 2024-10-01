@@ -267,11 +267,13 @@ def run_build_inputs(
 def get_component_instance(custom_component: CustomComponent, user_id: str | UUID | None = None):
     try:
         if custom_component._code is None:
-            raise ValueError("Code is None")
+            msg = "Code is None"
+            raise ValueError(msg)
         elif isinstance(custom_component._code, str):
             custom_class = eval_custom_component_code(custom_component._code)
         else:
-            raise ValueError("Invalid code type")
+            msg = "Invalid code type"
+            raise ValueError(msg)
     except Exception as exc:
         logger.error(f"Error while evaluating custom component code: {str(exc)}")
         raise HTTPException(
@@ -301,11 +303,13 @@ def run_build_config(
 
     try:
         if custom_component._code is None:
-            raise ValueError("Code is None")
+            msg = "Code is None"
+            raise ValueError(msg)
         elif isinstance(custom_component._code, str):
             custom_class = eval_custom_component_code(custom_component._code)
         else:
-            raise ValueError("Invalid code type")
+            msg = "Invalid code type"
+            raise ValueError(msg)
     except Exception as exc:
         logger.error(f"Error while evaluating custom component code: {str(exc)}")
         raise HTTPException(
@@ -518,7 +522,8 @@ def update_field_dict(
                 build_config = dd_build_config
             except Exception as exc:
                 logger.error(f"Error while running update_build_config: {str(exc)}")
-                raise UpdateBuildConfigError(f"Error while running update_build_config: {str(exc)}") from exc
+                msg = f"Error while running update_build_config: {str(exc)}"
+                raise UpdateBuildConfigError(msg) from exc
 
     return build_config
 
