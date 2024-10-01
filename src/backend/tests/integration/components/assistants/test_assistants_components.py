@@ -3,22 +3,50 @@ import pytest
 from langflow.components.astra_assistants import AstraAssistantManager
 from tests.integration.utils import run_single_component
 
+
+
+
 @pytest.mark.api_key_required
 @pytest.mark.asyncio
 async def test_manager():
-    from langflow.components.astra_assistants import AssistantsListAssistants
+    system_prompt = "you're a very detailed ascii artist, take a few iterations to make the art perfect"
+    user_message = "draw a cat eating ice cream"
+    results = await iterate(system_prompt, user_message)
+    is_complete = results['assistant_response'].data['tool_output']['decision'].is_complete
+    i = 0
+    while is_complete and i < 10:
+        user_message = "continue"
+        results = await iterate(system_prompt, user_message)
+        is_complete = results['assistant_response'].data['tool_output']['decision'].is_complete
+        i += 1
 
+
+async def iterate(system_prompt, user_message):
     results = await run_single_component(
         AstraAssistantManager,
         inputs={
-            "instructions": "you're a langflow expert",
+            "instructions": system_prompt,
             "model_name": "gpt-4o-mini",
-            "user_message": "Make a simple RAG app"
+            "user_message": user_message,
+            "tool": "ReActThoughtTool",
         },
     )
     assert results['assistant_response'].text is not None
-
-
+    print(results['assistant_response'].text)
+    thread_id = results['assistant_response'].data['thread_id']
+    results = await run_single_component(
+        AstraAssistantManager,
+        inputs={
+            "instructions": system_prompt,
+            "model_name": "gpt-4o-mini",
+            "user_message": "check to see if you are finished",
+            "tool": "ReActDeciderTool",
+            "thread_id": thread_id,
+        },
+    )
+    assert results['assistant_response'].text is not None
+    print(results['assistant_response'].text)
+    return results
 
 
 async def list_assistants():
