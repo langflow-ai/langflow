@@ -10,7 +10,10 @@ from langflow.template import Output
 
 class JSONCleaner(Component):
     display_name = "JSON Cleaner"
-    description = "Cleans the messy and sometimes incorrect JSON strings produced by LLMs so that they are fully compliant with the JSON spec."
+    description = (
+        "Cleans the messy and sometimes incorrect JSON strings produced by LLMs "
+        "so that they are fully compliant with the JSON spec."
+    )
     icon = "custom_components"
 
     inputs = [
@@ -45,9 +48,8 @@ class JSONCleaner(Component):
         try:
             from json_repair import repair_json  # type: ignore
         except ImportError:
-            raise ImportError(
-                "Could not import the json_repair package." "Please install it with `pip install json_repair`."
-            )
+            msg = "Could not import the json_repair package." "Please install it with `pip install json_repair`."
+            raise ImportError(msg)
 
         """Clean the input JSON string based on provided options and return the cleaned JSON string."""
         json_str = self.json_str
@@ -59,7 +61,8 @@ class JSONCleaner(Component):
             start = json_str.find("{")
             end = json_str.rfind("}")
             if start == -1 or end == -1:
-                raise ValueError("Invalid JSON string: Missing '{' or '}'")
+                msg = "Invalid JSON string: Missing '{' or '}'"
+                raise ValueError(msg)
             json_str = json_str[start : end + 1]
 
             if remove_control_chars:
@@ -75,7 +78,8 @@ class JSONCleaner(Component):
             self.status = result
             return Message(text=result)
         except Exception as e:
-            raise ValueError(f"Error cleaning JSON string: {str(e)}")
+            msg = f"Error cleaning JSON string: {str(e)}"
+            raise ValueError(msg)
 
     def _remove_control_characters(self, s: str) -> str:
         """Remove control characters from the string."""
@@ -91,4 +95,5 @@ class JSONCleaner(Component):
             json.loads(s)
             return s
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON string: {str(e)}")
+            msg = f"Invalid JSON string: {str(e)}"
+            raise ValueError(msg)

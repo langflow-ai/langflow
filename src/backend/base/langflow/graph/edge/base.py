@@ -30,18 +30,23 @@ class Edge:
                         # Check if self._target_handle['fieldName']
                         if hasattr(target, "_custom_component"):
                             display_name = getattr(target._custom_component, "display_name", "")
-                            raise ValueError(
-                                f"Component {display_name} field '{self._target_handle['fieldName']}' might not be a valid input."
-                            ) from e
+                            msg = (
+                                f"Component {display_name} field '{self._target_handle['fieldName']}' "
+                                "might not be a valid input."
+                            )
+                            raise ValueError(msg) from e
                         else:
-                            raise ValueError(
-                                f"Field '{self._target_handle['fieldName']}' on {target.display_name} might not be a valid input."
-                            ) from e
+                            msg = (
+                                f"Field '{self._target_handle['fieldName']}' on {target.display_name} "
+                                "might not be a valid input."
+                            )
+                            raise ValueError(msg) from e
                     else:
                         raise e
 
             else:
-                raise ValueError("Target handle is not a dictionary")
+                msg = "Target handle is not a dictionary"
+                raise ValueError(msg)
             self.target_param = self.target_handle.field_name
             # validate handles
             self.validate_handles(source, target)
@@ -57,7 +62,8 @@ class Edge:
                 self.source_handle = None
                 self.target_handle = None
             else:
-                raise ValueError("Target handle is not a string")
+                msg = "Target handle is not a string"
+                raise ValueError(msg)
         # Validate in __init__ to fail fast
         self.validate_edge(source, target)
 
@@ -83,7 +89,8 @@ class Edge:
         if not self.valid_handles:
             logger.debug(self.source_handle)
             logger.debug(self.target_handle)
-            raise ValueError(f"Edge between {source.display_name} and {target.display_name} " f"has invalid handles")
+            msg = f"Edge between {source.display_name} and {target.display_name} " f"has invalid handles"
+            raise ValueError(msg)
 
     def _legacy_validate_handles(self, source, target) -> None:
         if self.target_handle.input_types is None:
@@ -96,7 +103,8 @@ class Edge:
         if not self.valid_handles:
             logger.debug(self.source_handle)
             logger.debug(self.target_handle)
-            raise ValueError(f"Edge between {source.vertex_type} and {target.vertex_type} " f"has invalid handles")
+            msg = f"Edge between {source.vertex_type} and {target.vertex_type} " f"has invalid handles"
+            raise ValueError(msg)
 
     def __setstate__(self, state):
         self.source_id = state["source_id"]
@@ -152,7 +160,8 @@ class Edge:
         if no_matched_type:
             logger.debug(self.source_types)
             logger.debug(self.target_reqs)
-            raise ValueError(f"Edge between {source.vertex_type} and {target.vertex_type} " f"has no matched type. ")
+            msg = f"Edge between {source.vertex_type} and {target.vertex_type} " f"has no matched type. "
+            raise ValueError(msg)
 
     def _legacy_validate_edge(self, source, target) -> None:
         # Validate that the outputs of the source node are valid inputs
@@ -173,7 +182,8 @@ class Edge:
         if no_matched_type:
             logger.debug(self.source_types)
             logger.debug(self.target_reqs)
-            raise ValueError(f"Edge between {source.vertex_type} and {target.vertex_type} " f"has no matched type")
+            msg = f"Edge between {source.vertex_type} and {target.vertex_type} " f"has no matched type"
+            raise ValueError(msg)
 
     def __repr__(self) -> str:
         if (hasattr(self, "source_handle") and self.source_handle) and (
@@ -219,7 +229,8 @@ class CycleEdge(Edge):
         if not source._built:
             # The system should be read-only, so we should not be building vertices
             # that are not already built.
-            raise ValueError(f"Source vertex {source.id} is not built.")
+            msg = f"Source vertex {source.id} is not built."
+            raise ValueError(msg)
 
         if self.matched_type == "Text":
             self.result = source._built_result

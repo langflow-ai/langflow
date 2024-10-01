@@ -13,6 +13,7 @@ from langflow.inputs import (
     SecretStrInput,
     StrInput,
 )
+from langflow.inputs.inputs import HandleInput
 
 
 class AIMLModelComponent(LCModelComponent):
@@ -42,7 +43,8 @@ class AIMLModelComponent(LCModelComponent):
             name="aiml_api_base",
             display_name="AIML API Base",
             advanced=True,
-            info="The base URL of the OpenAI API. Defaults to https://api.aimlapi.com . You can change this to use other APIs like JinaChat, LocalAI e Prem.",
+            info="The base URL of the OpenAI API. Defaults to https://api.aimlapi.com . "
+            "You can change this to use other APIs like JinaChat, LocalAI and Prem.",
         ),
         SecretStrInput(
             name="api_key",
@@ -58,6 +60,13 @@ class AIMLModelComponent(LCModelComponent):
             info="The seed controls the reproducibility of the job.",
             advanced=True,
             value=1,
+        ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 

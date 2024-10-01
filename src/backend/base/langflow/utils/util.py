@@ -30,7 +30,8 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
 
     # Raise error if name is not in chains
     if name not in classes:
-        raise ValueError(f"{name} not found")
+        msg = f"{name} not found"
+        raise ValueError(msg)
 
     for _type, v in type_to_loader_dict.items():
         if v.__annotations__["return"].__name__ == name:
@@ -81,7 +82,8 @@ def build_template_from_method(
 
     # Raise error if class_name is not in classes
     if class_name not in classes:
-        raise ValueError(f"{class_name} not found.")
+        msg = f"{class_name} not found."
+        raise ValueError(msg)
 
     for _type, v in type_to_cls_dict.items():
         if v.__name__ == class_name:
@@ -89,7 +91,8 @@ def build_template_from_method(
 
             # Check if the method exists in this class
             if not hasattr(_class, method_name):
-                raise ValueError(f"Method {method_name} not found in class {class_name}")
+                msg = f"Method {method_name} not found in class {class_name}"
+                raise ValueError(msg)
 
             # Get the method
             method = getattr(_class, method_name)
@@ -431,6 +434,7 @@ def update_settings(
     auto_saving: bool = True,
     auto_saving_interval: int = 1000,
     health_check_max_retries: int = 5,
+    max_file_size_upload: int = 100,
 ):
     """Update the settings from a config file."""
     from langflow.services.utils import initialize_settings_service
@@ -463,6 +467,9 @@ def update_settings(
     if health_check_max_retries is not None:
         logger.debug(f"Setting health_check_max_retries to {health_check_max_retries}")
         settings_service.settings.update_settings(health_check_max_retries=health_check_max_retries)
+    if max_file_size_upload is not None:
+        logger.debug(f"Setting max_file_size_upload to {max_file_size_upload}")
+        settings_service.settings.update_settings(max_file_size_upload=max_file_size_upload)
 
 
 def is_class_method(func, cls):

@@ -106,7 +106,8 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="search_score_threshold",
             display_name="Search Score Threshold",
-            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            info="Minimum similarity score threshold for search results. "
+            "(when using 'Similarity with score threshold')",
             value=0,
             advanced=True,
         ),
@@ -125,9 +126,8 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             import cassio
             from langchain_community.utilities.cassandra import SetupMode
         except ImportError:
-            raise ImportError(
-                "Could not import cassio integration package. " "Please install it with `pip install cassio`."
-            )
+            msg = "Could not import cassio integration package. " "Please install it with `pip install cassio`."
+            raise ImportError(msg)
 
         database_ref = self.database_ref
 
@@ -213,9 +213,11 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
                 docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
             except KeyError as e:
                 if "content" in str(e):
-                    raise ValueError(
-                        "You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'."
-                    ) from e
+                    msg = (
+                        "You should ingest data through Langflow (or LangChain) to query it in Langflow. "
+                        "Your collection does not contain a field name 'content'."
+                    )
+                    raise ValueError(msg) from e
                 else:
                     raise e
 

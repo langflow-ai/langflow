@@ -66,7 +66,8 @@ class CodeParser:
         self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
         if isinstance(code, type):
             if not inspect.isclass(code):
-                raise ValueError("The provided code must be a class.")
+                msg = "The provided code must be a class."
+                raise ValueError(msg)
             # If the code is a class, get its source code
             code = inspect.getsource(code)
         self.code = code
@@ -343,7 +344,6 @@ class CodeParser:
                 nodes.append(class_node)
             except Exception as exc:
                 logger.error(f"Error finding base class node: {exc}")
-                pass
         nodes.insert(0, node)
         class_details = ClassCodeDetails(
             name=node.name,

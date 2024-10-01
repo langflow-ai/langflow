@@ -123,7 +123,7 @@ class CustomComponent(Component):
   ];
 
   for (const text of allVisibleTexts) {
-    await expect(page.getByText(text)).toBeVisible();
+    await expect(page.getByText(text).last()).toBeVisible();
   }
 
   await page.locator(".ag-cell-value").first().click();

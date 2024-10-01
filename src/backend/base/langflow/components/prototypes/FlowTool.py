@@ -74,11 +74,13 @@ class FlowToolComponent(LCToolComponent):
     def build_tool(self) -> Tool:
         FlowTool.update_forward_refs()
         if "flow_name" not in self._attributes or not self._attributes["flow_name"]:
-            raise ValueError("Flow name is required")
+            msg = "Flow name is required"
+            raise ValueError(msg)
         flow_name = self._attributes["flow_name"]
         flow_data = self.get_flow(flow_name)
         if not flow_data:
-            raise ValueError("Flow not found.")
+            msg = "Flow not found."
+            raise ValueError(msg)
         graph = Graph.from_payload(flow_data.data["data"])
         try:
             graph.set_run_id(self.graph.run_id)

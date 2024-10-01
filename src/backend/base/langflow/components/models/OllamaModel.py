@@ -6,6 +6,7 @@ from langchain_community.chat_models import ChatOllama
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
+from langflow.inputs.inputs import HandleInput
 from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput
 
 
@@ -66,7 +67,8 @@ class ChatOllamaComponent(LCModelComponent):
                 model_names = [model["name"] for model in data.get("models", [])]
                 return model_names
         except Exception as e:
-            raise ValueError("Could not retrieve models. Please, make sure Ollama is running.") from e
+            msg = "Could not retrieve models. Please, make sure Ollama is running."
+            raise ValueError(msg) from e
 
     inputs = LCModelComponent._base_inputs + [
         StrInput(
@@ -204,6 +206,13 @@ class ChatOllamaComponent(LCModelComponent):
             info="Template to use for generating text.",
             advanced=True,
         ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -253,6 +262,7 @@ class ChatOllamaComponent(LCModelComponent):
         try:
             output = ChatOllama(**llm_params)  # type: ignore
         except Exception as e:
-            raise ValueError("Could not initialize Ollama LLM.") from e
+            msg = "Could not initialize Ollama LLM."
+            raise ValueError(msg) from e
 
         return output  # type: ignore

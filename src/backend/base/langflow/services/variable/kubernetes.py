@@ -55,7 +55,8 @@ class KubernetesSecretService(VariableService, Service):
     ) -> tuple[str, str]:
         variables = self.kubernetes_secrets.get_secret(name=secret_name)
         if not variables:
-            raise ValueError(f"user_id {user_id} variable not found.")
+            msg = f"user_id {user_id} variable not found."
+            raise ValueError(msg)
 
         if name in variables:
             return name, variables[name]
@@ -64,7 +65,8 @@ class KubernetesSecretService(VariableService, Service):
             if credential_name in variables:
                 return credential_name, variables[credential_name]
             else:
-                raise ValueError(f"user_id {user_id} variable name {name} not found.")
+                msg = f"user_id {user_id} variable name {name} not found."
+                raise ValueError(msg)
 
     def get_variable(
         self,
@@ -76,10 +78,11 @@ class KubernetesSecretService(VariableService, Service):
         secret_name = encode_user_id(user_id)
         key, value = self.resolve_variable(secret_name, user_id, name)
         if key.startswith(CREDENTIAL_TYPE + "_") and field == "session_id":  # type: ignore
-            raise TypeError(
+            msg = (
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
                 "because its purpose is to prevent the exposure of values."
             )
+            raise TypeError(msg)
         return value
 
     def list_variables(

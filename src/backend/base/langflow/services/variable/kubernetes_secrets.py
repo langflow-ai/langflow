@@ -185,7 +185,8 @@ def encode_user_id(user_id: UUID | str) -> str:
     id = id[:253]
 
     if not all(c.isalnum() or c in "-_" for c in id):
-        raise ValueError(f"Invalid user_id: {id}")
+        msg = f"Invalid user_id: {id}"
+        raise ValueError(msg)
 
     # Ensure the name ends with an alphanumeric character
     while not id[-1].isalnum():

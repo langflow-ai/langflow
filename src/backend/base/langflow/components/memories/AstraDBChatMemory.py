@@ -1,5 +1,7 @@
 import os
 
+from astrapy.admin import parse_api_endpoint
+
 from langflow.base.memory.model import LCChatMemoryComponent
 from langflow.field_typing import BaseChatMessageHistory
 from langflow.inputs import MessageTextInput, SecretStrInput, StrInput
@@ -51,10 +53,11 @@ class AstraDBChatMemory(LCChatMemoryComponent):
         try:
             from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
         except ImportError:
-            raise ImportError(
+            msg = (
                 "Could not import langchain Astra DB integration package. "
                 "Please install it with `pip install langchain-astradb`."
             )
+            raise ImportError(msg)
 
         memory = AstraDBChatMessageHistory(
             session_id=self.session_id,
@@ -62,5 +65,6 @@ class AstraDBChatMemory(LCChatMemoryComponent):
             token=self.token,
             api_endpoint=self.api_endpoint,
             namespace=self.namespace or None,
+            environment=parse_api_endpoint(self.api_endpoint).environment,
         )
         return memory

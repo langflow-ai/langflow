@@ -42,7 +42,7 @@ def extract_uniont_types_from_generic_alias(return_type: GenericAlias) -> list:
             _inner_arg
             for _type in return_type
             for _inner_arg in _type.__args__
-            if _inner_arg not in set((Any, type(None), type(Any)))
+            if _inner_arg not in {Any, type(None), type(Any)}
         ]
 
     return list(return_type.__args__)
@@ -81,7 +81,7 @@ def extract_union_types_from_generic_alias(return_type: GenericAlias) -> list:
             _inner_arg
             for _type in return_type
             for _inner_arg in _type.__args__
-            if _inner_arg not in set((Any, type(None), type(Any)))
+            if _inner_arg not in {Any, type(None), type(Any)}
         ]
 
     return list(return_type.__args__)

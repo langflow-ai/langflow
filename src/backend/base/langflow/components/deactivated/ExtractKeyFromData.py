@@ -40,7 +40,8 @@ class ExtractKeyFromDataComponent(CustomComponent):
                 extracted_keys[key] = getattr(data, key)
             except AttributeError:
                 if not silent_error:
-                    raise KeyError(f"The key '{key}' does not exist in the data.")
+                    msg = f"The key '{key}' does not exist in the data."
+                    raise KeyError(msg)
         return_data = Data(data=extracted_keys)
         self.status = return_data
         return return_data

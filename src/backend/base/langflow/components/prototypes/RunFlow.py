@@ -49,7 +49,8 @@ class RunFlowComponent(Component):
 
     async def generate_results(self) -> list[Data]:
         if "flow_name" not in self._attributes or not self._attributes["flow_name"]:
-            raise ValueError("Flow name is required")
+            msg = "Flow name is required"
+            raise ValueError(msg)
         flow_name = self._attributes["flow_name"]
 
         results: list[RunOutputs | None] = await self.run_flow(

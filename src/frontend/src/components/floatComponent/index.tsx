@@ -30,7 +30,7 @@ export default function FloatComponent({
   };
 
   const handleChange = (event) => {
-    onChange(event.target.value);
+    onChange(Number(event.target.value));
   };
 
   return (

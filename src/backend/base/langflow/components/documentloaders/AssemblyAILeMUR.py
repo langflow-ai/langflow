@@ -1,7 +1,7 @@
 import assemblyai as aai
 
 from langflow.custom import Component
-from langflow.io import DataInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, SecretStrInput
+from langflow.io import DataInput, DropdownInput, FloatInput, IntInput, MultilineInput, Output, SecretStrInput
 from langflow.schema import Data
 
 
@@ -23,7 +23,7 @@ class AssemblyAILeMUR(Component):
             display_name="Transcription Result",
             info="The transcription result from AssemblyAI",
         ),
-        MessageInput(
+        MultilineInput(
             name="prompt",
             display_name="Input Prompt",
             info="The text to prompt the model",
@@ -34,6 +34,7 @@ class AssemblyAILeMUR(Component):
             options=["claude3_5_sonnet", "claude3_opus", "claude3_haiku", "claude3_sonnet"],
             value="claude3_5_sonnet",
             info="The model that is used for the final prompt after compression is performed",
+            advanced=True,
         ),
         FloatInput(
             name="temperature",
@@ -49,6 +50,32 @@ class AssemblyAILeMUR(Component):
             value=2000,
             info="Max output size in tokens, up to 4000",
         ),
+        DropdownInput(
+            name="endpoint",
+            display_name="Endpoint",
+            options=["task", "summary", "question-answer"],
+            value="task",
+            info=(
+                "The LeMUR endpoint to use. For 'summary' and 'question-answer',"
+                " no prompt input is needed. See https://www.assemblyai.com/docs/api-reference/lemur/ for more info."
+            ),
+            advanced=True,
+        ),
+        MultilineInput(
+            name="questions",
+            display_name="Questions",
+            info="Comma-separated list of your questions. Only used if Endpoint is 'question-answer'",
+            advanced=True,
+        ),
+        MultilineInput(
+            name="transcript_ids",
+            display_name="Transcript IDs",
+            info=(
+                "Comma-separated list of transcript IDs. LeMUR can perform actions over multiple transcripts."
+                " If provided, the Transcription Result is ignored."
+            ),
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -59,41 +86,88 @@ class AssemblyAILeMUR(Component):
         """Use the LeMUR task endpoint to input the LLM prompt."""
         aai.settings.api_key = self.api_key
 
-        # check if it's an error message from the previous step
-        if self.transcription_result.data.get("error"):
+        if not self.transcription_result and not self.transcript_ids:
+            error = "Either a Transcription Result or Transcript IDs must be provided"
+            self.status = error
+            return Data(data={"error": error})
+        elif self.transcription_result and self.transcription_result.data.get("error"):
+            # error message from the previous step
             self.status = self.transcription_result.data["error"]
             return self.transcription_result
-
-        if not self.prompt or not self.prompt.text:
-            self.status = "No prompt specified"
+        elif self.endpoint == "task" and not self.prompt:
+            self.status = "No prompt specified for the task endpoint"
             return Data(data={"error": "No prompt specified"})
-
-        try:
-            transcript = aai.Transcript.get_by_id(self.transcription_result.data["id"])
-        except Exception as e:
-            error = f"Getting transcription failed: {str(e)}"
+        elif self.endpoint == "question-answer" and not self.questions:
+            error = "No Questions were provided for the question-answer endpoint"
             self.status = error
             return Data(data={"error": error})
 
-        if transcript.status == aai.TranscriptStatus.completed:
-            try:
-                result = transcript.lemur.task(
-                    prompt=self.prompt.text,
-                    final_model=self.get_final_model(self.final_model),
-                    temperature=self.temperature,
-                    max_output_size=self.max_output_size,
-                )
+        # Check for valid transcripts
+        transcript_ids = None
+        if self.transcription_result and "id" in self.transcription_result.data:
+            transcript_ids = [self.transcription_result.data["id"]]
+        elif self.transcript_ids:
+            transcript_ids = self.transcript_ids.split(",") or []
+            transcript_ids = [t.strip() for t in transcript_ids]
 
-                result = Data(data=result.dict())
-                self.status = result
-                return result
-            except Exception as e:
-                error = f"An Exception happened while calling LeMUR: {str(e)}"
-                self.status = error
-                return Data(data={"error": error})
+        if not transcript_ids:
+            error = "Either a valid Transcription Result or valid Transcript IDs must be provided"
+            self.status = error
+            return Data(data={"error": error})
+
+        # Get TranscriptGroup and check if there is any error
+        transcript_group = aai.TranscriptGroup(transcript_ids=transcript_ids)
+        transcript_group, failures = transcript_group.wait_for_completion(return_failures=True)
+        if failures:
+            error = f"Getting transcriptions failed: {failures[0]}"
+            self.status = error
+            return Data(data={"error": error})
+
+        for t in transcript_group.transcripts:
+            if t.status == aai.TranscriptStatus.error:
+                self.status = t.error
+                return Data(data={"error": t.error})
+
+        # Perform LeMUR action
+        try:
+            response = self.perform_lemur_action(transcript_group, self.endpoint)
+            result = Data(data=response)
+            self.status = result
+            return result
+        except Exception as e:
+            error = f"An Error happened: {str(e)}"
+            self.status = error
+            return Data(data={"error": error})
+
+    def perform_lemur_action(self, transcript_group: aai.TranscriptGroup, endpoint: str) -> dict:
+        print("Endpoint:", endpoint, type(endpoint))
+        if endpoint == "task":
+            result = transcript_group.lemur.task(
+                prompt=self.prompt,
+                final_model=self.get_final_model(self.final_model),
+                temperature=self.temperature,
+                max_output_size=self.max_output_size,
+            )
+        elif endpoint == "summary":
+            result = transcript_group.lemur.summarize(
+                final_model=self.get_final_model(self.final_model),
+                temperature=self.temperature,
+                max_output_size=self.max_output_size,
+            )
+        elif endpoint == "question-answer":
+            questions = self.questions.split(",")
+            questions = [aai.LemurQuestion(question=q) for q in questions]
+            result = transcript_group.lemur.question(
+                questions=questions,
+                final_model=self.get_final_model(self.final_model),
+                temperature=self.temperature,
+                max_output_size=self.max_output_size,
+            )
         else:
-            self.status = transcript.error
-            return Data(data={"error": transcript.error})
+            msg = f"Endpoint not supported: {endpoint}"
+            raise ValueError(msg)
+
+        return result.dict()
 
     def get_final_model(self, model_name: str) -> aai.LemurModel:
         if model_name == "claude3_5_sonnet":
@@ -105,4 +179,5 @@ class AssemblyAILeMUR(Component):
         elif model_name == "claude3_sonnet":
             return aai.LemurModel.claude3_sonnet
         else:
-            raise ValueError(f"Model name not supported: {model_name}")
+            msg = f"Model name not supported: {model_name}"
+            raise ValueError(msg)
