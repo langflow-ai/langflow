@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://www.googletagmanager.com">
 <script>window.dataLayer=window.dataLayer||[]</script>
 <script>!function(e,t,a,n,g){e[n]=e[n]||[],e[n].push({"gtm.start":(new Date).getTime(),event:"gtm.js"});var m=t.getElementsByTagName(a)[0],r=t.createElement(a);r.async=!0,r.src="https://www.googletagmanager.com/gtm.js?id=GTM-NK5M4ZT8",m.parentNode.insertBefore(r,m)}(window,document,"script","dataLayer")</script><link rel="stylesheet" href="/assets/css/styles.0752b4d1.css">
-<script src="/assets/js/runtime~main.5f537a01.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.f3be9898.js" defer="defer"></script>
 <script src="/assets/js/main.2ccefa45.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -35,7 +35,7 @@
 <p>Enter the key in the <em>AssemblyAI API Key</em> field in all components that require the key.</p>
 <p>(Optional): To use LeMUR, you need to upgrade your AssemblyAI account, since this is not included in the free account.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="components">Components<a class="hash-link" aria-label="Direct link to Components" title="Direct link to Components" href="/integrations-assemblyai#components">​</a></h2>
-<p><img decoding="async" loading="lazy" alt="AssemblyAI Components" src="/assets/images/assemblyai-components-ab9684425dba3168de28dc1a1f770d1c.png" width="2143" height="1532" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="AssemblyAI Components" src="/assets/images/assemblyai-components-b88c7c97e04114bf658898f7fc633e23.png" width="1494" height="1048" class="img_ev3q"></p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="assemblyai-start-transcript">AssemblyAI Start Transcript<a class="hash-link" aria-label="Direct link to AssemblyAI Start Transcript" title="Direct link to AssemblyAI Start Transcript" href="/integrations-assemblyai#assemblyai-start-transcript">​</a></h3>
 <p>This component allows you to submit an audio or video file for transcription.</p>
 <p><strong>Tip</strong>: You can freeze the path of this component to only submit the file once.</p>
@@ -70,29 +70,13 @@ See <a href="https://www.assemblyai.com/docs/getting-started/supported-languages
 <p><strong>Input</strong>:</p>
 <ul>
 <li>AssemblyAI API Key: Your API key.</li>
-<li>Polling Interval: The polling interval in seconds. Default is 3.</li>
+<li>Polling Interval (Optional): The polling interval in seconds. Default is 3.</li>
 </ul>
 </li>
 <li>
 <p><strong>Output</strong>:</p>
 <ul>
 <li>Transcription Result: The AssemblyAI JSON response of a completed transcript. Contains the text and other info.</li>
-</ul>
-</li>
-</ul>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="assebmlyai-parse-transcript">AssebmlyAI Parse Transcript<a class="hash-link" aria-label="Direct link to AssebmlyAI Parse Transcript" title="Direct link to AssebmlyAI Parse Transcript" href="/integrations-assemblyai#assebmlyai-parse-transcript">​</a></h3>
-<p>This component allows you to parse a <em>Transcription Result</em> and outputs the formatted text.</p>
-<ul>
-<li>
-<p><strong>Input</strong>:</p>
-<ul>
-<li>Transcription Result: The output of the <em>Poll Transcript</em> component.</li>
-</ul>
-</li>
-<li>
-<p><strong>Output</strong>:</p>
-<ul>
-<li>Parsed transcription: The parsed transcript. If Speaker Labels was enabled in the <em>Start Transcript</em> component, it formats utterances with speakers and timestamps.</li>
 </ul>
 </li>
 </ul>
@@ -111,7 +95,7 @@ See <a href="https://www.assemblyai.com/docs/getting-started/supported-languages
 <li>
 <p><strong>Output</strong>:</p>
 <ul>
-<li>Parsed transcription: The parsed transcript. If Speaker Labels was enabled in the <em>Start Transcript</em> component, it formats utterances with speakers and timestamps.</li>
+<li>Subtitles: A JSON response with the <code>subtitles</code> field containing the captions in SRT or VTT format.</li>
 </ul>
 </li>
 </ul>
@@ -128,6 +112,9 @@ See <a href="https://www.assemblyai.com/docs/getting-started/supported-languages
 <li>Final Model: The model that is used for the final prompt after compression is performed. Default is Claude 3.5 Sonnet.</li>
 <li>Temperature (Optional): The temperature to use for the model. Default is 0.0.</li>
 <li>Max Output Size (Optional): Max output size in tokens, up to 4000. Default is 2000.</li>
+<li>Endpoint (Optional): The LeMUR endpoint to use. Default is &quot;task&quot;. For &quot;summary&quot; and &quot;question-answer&quot;, no prompt input is needed. See <a href="https://www.assemblyai.com/docs/api-reference/lemur/" target="_blank" rel="noopener noreferrer">LeMUR API docs</a> for more info.</li>
+<li>Questions (Optional): Comma-separated list of your questions. Only used if <em>Endpoint</em> is &quot;question-answer&quot;.</li>
+<li>Transcript IDs (Optional): Comma-separated list of transcript IDs. LeMUR can perform actions over multiple transcripts. If provided, the <em>Transcription Result</em> is ignored.</li>
 </ul>
 </li>
 <li>
@@ -163,7 +150,7 @@ See <a href="https://www.assemblyai.com/docs/getting-started/supported-languages
 <li>The user can also input an LLM prompt. In this example, we want to generate a summary of the transcript.</li>
 <li>The flow submits the audio file for transcription.</li>
 <li>The flow checks the status of the transcript every few seconds until transcription is completed.</li>
-<li>The flow parses the transcript and outputs the formatted text.</li>
+<li>The flow parses the transcription result and outputs the transcribed text.</li>
 <li>The flow also generates subtitles.</li>
 <li>The flow applies the LLM prompt to generate a summary.</li>
 <li>As a standalone component, all transcripts can be listed.</li>
@@ -172,11 +159,11 @@ See <a href="https://www.assemblyai.com/docs/getting-started/supported-languages
 <p>To run the Transcription and Speech AI Flow:</p>
 <ol>
 <li>Open Langflow and create a new project.</li>
-<li>Add the components listed above to your flow canvas, or download the <a href="/assets/files/AssemblyAI_Flow-79fdd9e10f4e8e0f1c087fc6124d0eb5.json" target="_blank">AssemblyAI Transcription and Speech AI Flow</a>(Download link) and <strong>Import</strong> the JSON file into Langflow.</li>
+<li>Add the components listed above to your flow canvas, or download the <a href="/assets/files/AssemblyAI_Flow-22ac78676a24fcafe6cbef24c124b018.json" target="_blank">AssemblyAI Transcription and Speech AI Flow</a>(Download link) and <strong>Import</strong> the JSON file into Langflow.</li>
 <li>Connect the components as shown in the flow diagram. <strong>Tip</strong>: Freeze the path of the <em>Start Transcript</em> component to only submit the file once.</li>
 <li>Input the AssemblyAI API key in in all components that require the key (Start Transcript, Poll Transcript, Get Subtitles, LeMUR, List Transcripts).</li>
 <li>Select an audio or video file in the <em>Start Transcript</em> component.</li>
-<li>Run the flow by clicking <strong>Play</strong> on the <em>Parse Transcript</em> component.</li>
+<li>Run the flow by clicking <strong>Play</strong> on the <em>Parse Data</em> component. Make sure that the specified template is <code>{text}</code>.</li>
 <li>To generate subtitles, click <strong>Play</strong> on the <em>Get Subtitles</em> component.</li>
 <li>To apply an LLM to your audio file, click <strong>Play</strong> on the <em>LeMUR</em> component. Note that you need an upgraded AssemblyAI account to use LeMUR.</li>
 <li>To list all transcripts, click <strong>Play</strong> on the <em>List Transcript</em> component.</li>
@@ -197,6 +184,6 @@ See <a href="https://www.assemblyai.com/docs/getting-started/supported-languages
 <li>Verify that all components are properly connected in the flow.</li>
 <li>Review the Langflow logs for any error messages.</li>
 </ol>
-<p>For more advanced usage, refer to the <a href="https://www.assemblyai.com/docs/" target="_blank" rel="noopener noreferrer">AssemblyAI API documentation</a>. If you need more help, you can reach out to the <a href="https://www.assemblyai.com/contact/support" target="_blank" rel="noopener noreferrer">AssemblyAI support</a>.</p></div></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/integrations/notion/notion-agent-conversational"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Notion Conversational Agent</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/contributing-telemetry"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Telemetry</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#prerequisites">Prerequisites</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#components">Components</a><ul><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#assemblyai-start-transcript">AssemblyAI Start Transcript</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#assebmlyai-poll-transcript">AssebmlyAI Poll Transcript</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#assebmlyai-parse-transcript">AssebmlyAI Parse Transcript</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#assebmlyai-get-subtitles">AssebmlyAI Get Subtitles</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#assebmlyai-lemur">AssebmlyAI LeMUR</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#assemblyai-list-transcripts">AssemblyAI List Transcripts</a></li></ul></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#flow-process">Flow Process</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#run-the-transcription-and-speech-ai-flow">Run the Transcription and Speech AI Flow</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#customization">Customization</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#troubleshooting">Troubleshooting</a></li></ul></div></div></div></div></main></div></div></div><div id="ms-floating-button" class="ms-fixed ms-bottom-4 ms-right-8 ms-z-[100] ms-flex ms-flex-col ms-items-end hover:ms-cursor-pointer"><div class="ms-relative ms-mb-4"><div style="background-color:#f6f6f6" class="ms-absolute -ms-bottom-1 ms-right-6 -ms-z-10 ms-h-4 ms-w-4 ms-rotate-45"></div><div style="background-color:#f6f6f6" class="ms-z-10 ms-flex ms-items-center ms-justify-center ms-rounded-lg ms-px-3 ms-py-2"><p style="color:#000000;margin:0" class="ms-text-sm">Hi, how can I help you?</p></div></div><div style="background-color:#f6f6f6" class="ms-flex ms-h-16 ms-w-16 ms-flex-col ms-items-center ms-justify-center ms-self-end ms-rounded-full ms-p-2 ms-transition"><div class="ms-rotate-0 ms-flex ms-h-full ms-w-full ms-transform ms-cursor-pointer ms-items-center ms-justify-center ms-rounded-full ms-transition-all ms-delay-75 ms-duration-100 ms-ease-in-out"><div style="color:#000000;font-size:22px;width:48px;height:48px;margin:0px;padding:0px;display:flex;align-items:center;justify-content:center;text-align:center"><img src="/img/chain.png" style="width:40px"></div></div></div><div></div></div></div>
+<p>For more advanced usage, refer to the <a href="https://www.assemblyai.com/docs/" target="_blank" rel="noopener noreferrer">AssemblyAI API documentation</a>. If you need more help, you can reach out to the <a href="https://www.assemblyai.com/contact/support" target="_blank" rel="noopener noreferrer">AssemblyAI support</a>.</p></div></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/integrations/notion/notion-agent-conversational"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Notion Conversational Agent</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/contributing-telemetry"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Telemetry</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#prerequisites">Prerequisites</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#components">Components</a><ul><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#assemblyai-start-transcript">AssemblyAI Start Transcript</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#assebmlyai-poll-transcript">AssebmlyAI Poll Transcript</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#assebmlyai-get-subtitles">AssebmlyAI Get Subtitles</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#assebmlyai-lemur">AssebmlyAI LeMUR</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#assemblyai-list-transcripts">AssemblyAI List Transcripts</a></li></ul></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#flow-process">Flow Process</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#run-the-transcription-and-speech-ai-flow">Run the Transcription and Speech AI Flow</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#customization">Customization</a></li><li><a class="table-of-contents__link toc-highlight" href="/integrations-assemblyai#troubleshooting">Troubleshooting</a></li></ul></div></div></div></div></main></div></div></div><div id="ms-floating-button" class="ms-fixed ms-bottom-4 ms-right-8 ms-z-[100] ms-flex ms-flex-col ms-items-end hover:ms-cursor-pointer"><div class="ms-relative ms-mb-4"><div style="background-color:#f6f6f6" class="ms-absolute -ms-bottom-1 ms-right-6 -ms-z-10 ms-h-4 ms-w-4 ms-rotate-45"></div><div style="background-color:#f6f6f6" class="ms-z-10 ms-flex ms-items-center ms-justify-center ms-rounded-lg ms-px-3 ms-py-2"><p style="color:#000000;margin:0" class="ms-text-sm">Hi, how can I help you?</p></div></div><div style="background-color:#f6f6f6" class="ms-flex ms-h-16 ms-w-16 ms-flex-col ms-items-center ms-justify-center ms-self-end ms-rounded-full ms-p-2 ms-transition"><div class="ms-rotate-0 ms-flex ms-h-full ms-w-full ms-transform ms-cursor-pointer ms-items-center ms-justify-center ms-rounded-full ms-transition-all ms-delay-75 ms-duration-100 ms-ease-in-out"><div style="color:#000000;font-size:22px;width:48px;height:48px;margin:0px;padding:0px;display:flex;align-items:center;justify-content:center;text-align:center"><img src="/img/chain.png" style="width:40px"></div></div></div><div></div></div></div>
 </body>
 </html>
