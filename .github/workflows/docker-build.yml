@@ -65,11 +65,32 @@ jobs:
       - name: Resolve nightly tag
         id: resolve-nightly-tag
         run: |
-          if [[ "${{ inputs.nightly_tag_main }}" != '' ]]; then
-            echo "nightly_tag=${{ inputs.nightly_tag_main }}" >> $GITHUB_OUTPUT
-            echo "nightly_build=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.nightly_tag_base }}" != '' ]]; then
+          # Note - this is more complex than I'd like. For `main` builds, we just pass the `main` tag.
+          # For `base` builds, we pass both the `base` and `main` tags. This is because the `main` tag is the 
+          # version we need to check out for the build, but the `base` tag is the version we need to build.
+          #
+          # So, you need to check for `base` existence before `main`. 
+
+          if [[ "${{ inputs.nightly_tag_base }}" != '' ]]; then
+            if [[ "${{ inputs.release_type }}" != "base" ]]; then
+              echo "Release type is not 'base'. Exiting the workflow."
+              exit 1
+            fi
+
+            # Main tag must not be empty, otherwise we have no valid tag to check out.
+            if [[ "${{ inputs.nightly_tag_main }}" == '' ]]; then
+              echo "Nightly tag main is empty. Exiting the workflow."
+              exit 1
+            fi
+
             echo "nightly_tag=${{ inputs.nightly_tag_base }}" >> $GITHUB_OUTPUT
+            echo "nightly_build=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.nightly_tag_main }}" != '' ]]; then
+            if [[ "${{ inputs.release_type }}" != "main" ]]; then
+              echo "Release type is not 'main'. Exiting the workflow."
+              exit 1
+            fi
+            echo "nightly_tag=${{ inputs.nightly_tag_main }}" >> $GITHUB_OUTPUT
             echo "nightly_build=true" >> $GITHUB_OUTPUT
           else
             echo "nightly_tag=" >> $GITHUB_OUTPUT
@@ -128,8 +149,6 @@ jobs:
       docker_tags: ${{ steps.set-vars.outputs.docker_tags }}
       ghcr_tags: ${{ steps.set-vars.outputs.ghcr_tags }}
       file: ${{ steps.set-vars.outputs.file }}
-    env:
-      NIGHTLY_TAG: ${{ needs.get-version.outputs.nightly-tag }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
@@ -140,7 +159,7 @@ jobs:
         id: set-vars
         run: |
           nightly_suffix=''
-          if [[ "${{ env.NIGHTLY_TAG }}" != '' ]]; then
+          if [[ "${{ needs.get-version.outputs.nightly-build }}" == "true" ]]; then
             nightly_suffix="-nightly"
           fi
 
