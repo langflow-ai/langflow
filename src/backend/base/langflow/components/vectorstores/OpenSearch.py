@@ -49,7 +49,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             name="search_input",
             display_name="Search Input",
             info="Enter a search query. Leave empty to retrieve all documents. If you need a more advanced search consider using Hybrid Search Query instead.",
-            value=" ",
+            value="",
         ),
         DataInput(
             name="ingest_data",
