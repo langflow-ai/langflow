@@ -17,8 +17,7 @@ def get_starter_projects(
     from langflow.initial_setup.load import get_starter_projects_dump
 
     try:
-        flows = get_starter_projects_dump()
-        return flows
+        return get_starter_projects_dump()
     except Exception as exc:
         logger.error(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc

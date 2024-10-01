@@ -75,6 +75,5 @@ class AssemblyAIGetSubtitles(Component):
 
             self.status = result
             return result
-        else:
-            self.status = transcript.error
-            return Data(data={"error": transcript.error})
+        self.status = transcript.error
+        return Data(data={"error": transcript.error})

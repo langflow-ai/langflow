@@ -106,6 +106,5 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = f"Found {len(data)} results for the query: {self.search_query}"
             return data
-        else:
-            self.status = "No search query provided"
-            return []
+        self.status = "No search query provided"
+        return []

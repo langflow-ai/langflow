@@ -74,9 +74,8 @@ class KubernetesSecretManager:
             if e.status == 404:
                 # Secret doesn't exist, create a new one
                 return self.create_secret(secret_name, data)
-            else:
-                logger.error(f"Error upserting secret {secret_name}: {e}")
-                raise
+            logger.error(f"Error upserting secret {secret_name}: {e}")
+            raise
 
     def get_secret(self, name: str) -> dict | None:
         """

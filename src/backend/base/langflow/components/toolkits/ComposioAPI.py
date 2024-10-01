@@ -84,8 +84,7 @@ class ComposioAPIComponent(LCToolComponent):
             auth_schemes = toolset.client.apps.get(app).auth_schemes
             if auth_schemes[0].auth_mode == "API_KEY":
                 return self._process_api_key_auth(entity, app)
-            else:
-                return self._initiate_default_connection(entity, app)
+            return self._initiate_default_connection(entity, app)
         except Exception as exc:
             logger.error(f"Authorization error: {str(exc)}")
             return "Error"
@@ -108,18 +107,16 @@ class ComposioAPIComponent(LCToolComponent):
 
         if is_different_app or is_url or is_default_api_key_message:
             return "Enter API Key"
-        else:
-            if not is_default_api_key_message:
-                entity.initiate_connection(
-                    app_name=app,
-                    auth_mode="API_KEY",
-                    auth_config={"api_key": self.auth_status_config},
-                    use_composio_auth=False,
-                    force_new_integration=True,
-                )
-                return f"{app} CONNECTED"
-            else:
-                return "Enter API Key"
+        if not is_default_api_key_message:
+            entity.initiate_connection(
+                app_name=app,
+                auth_mode="API_KEY",
+                auth_config={"api_key": self.auth_status_config},
+                use_composio_auth=False,
+                force_new_integration=True,
+            )
+            return f"{app} CONNECTED"
+        return "Enter API Key"
 
     def _initiate_default_connection(self, entity: Any, app: str) -> str:
         connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)
@@ -169,8 +166,7 @@ class ComposioAPIComponent(LCToolComponent):
 
     def build_tool(self) -> Sequence[Tool]:
         composio_toolset = self._build_wrapper()
-        composio_tools = composio_toolset.get_tools(actions=self.action_names)
-        return composio_tools
+        return composio_toolset.get_tools(actions=self.action_names)
 
     def _build_wrapper(self) -> ComposioToolSet:
         return ComposioToolSet(api_key=self.api_key)

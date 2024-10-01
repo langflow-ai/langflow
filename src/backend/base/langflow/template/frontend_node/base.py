@@ -64,8 +64,7 @@ class FrontendNode(BaseModel):
     def process_base_classes(self, base_classes: list[str]) -> list[str]:
         """Removes unwanted base classes from the list of base classes."""
 
-        sorted_base_classes = sorted(set(base_classes), key=lambda x: x.lower())
-        return sorted_base_classes
+        return sorted(set(base_classes), key=lambda x: x.lower())
 
     @field_serializer("display_name")
     def process_display_name(self, display_name: str) -> str:
