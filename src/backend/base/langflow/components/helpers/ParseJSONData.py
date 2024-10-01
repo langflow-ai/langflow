@@ -71,5 +71,4 @@ class ParseJSONDataComponent(Component):
 
         results = jq.compile(self.query).input_text(full_filter_str).all()
         print("results: ", results)
-        docs = [Data(data=value) if isinstance(value, dict) else Data(text=str(value)) for value in results]
-        return docs
+        return [Data(data=value) if isinstance(value, dict) else Data(text=str(value)) for value in results]

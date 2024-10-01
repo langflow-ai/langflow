@@ -66,8 +66,7 @@ def load_flow_from_json(
     if tweaks is not None:
         graph_data = process_tweaks(graph_data, tweaks)
 
-    graph = Graph.from_payload(graph_data)
-    return graph
+    return Graph.from_payload(graph_data)
 
 
 def run_flow_from_json(
@@ -124,7 +123,7 @@ def run_flow_from_json(
         cache=cache,
         disable_logs=disable_logs,
     )
-    result = run_graph(
+    return run_graph(
         graph=graph,
         input_value=input_value,
         input_type=input_type,
@@ -132,4 +131,3 @@ def run_flow_from_json(
         output_component=output_component,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    return result

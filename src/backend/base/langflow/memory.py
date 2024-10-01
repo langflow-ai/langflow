@@ -35,7 +35,6 @@ def get_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
-    messages_read: list[Message] = []
     with session_scope() as session:
         stmt = select(MessageTable)
         if sender:
@@ -55,9 +54,7 @@ def get_messages(
         if limit:
             stmt = stmt.limit(limit)
         messages = session.exec(stmt)
-        messages_read = [Message(**d.model_dump()) for d in messages]
-
-    return messages_read
+        return [Message(**d.model_dump()) for d in messages]
 
 
 def add_messages(messages: Message | list[Message], flow_id: str | None = None):

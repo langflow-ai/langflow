@@ -32,6 +32,7 @@ class CustomComponentVertex(Vertex):
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
+        return None
 
 
 class ComponentVertex(Vertex):
@@ -52,6 +53,7 @@ class ComponentVertex(Vertex):
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
+        return None
 
     def _update_built_object_and_artifacts(self, result):
         """
@@ -136,12 +138,11 @@ class ComponentVertex(Vertex):
             if edge is None:
                 msg = f"Edge not found between {self.display_name} and {requester.display_name}"
                 raise ValueError(msg)
-            elif edge.source_handle.name not in self.results:
+            if edge.source_handle.name not in self.results:
                 msg = f"Result not found for {edge.source_handle.name}. Results: {self.results}"
                 raise ValueError(msg)
-            else:
-                msg = f"Result not found for {edge.source_handle.name} in {edge}"
-                raise ValueError(msg)
+            msg = f"Result not found for {edge.source_handle.name} in {edge}"
+            raise ValueError(msg)
         if flow_id:
             asyncio.create_task(log_transaction(source=self, target=requester, flow_id=str(flow_id), status="success"))
         return result
@@ -215,8 +216,7 @@ class InterfaceVertex(ComponentVertex):
         if self.task_id and self.is_task:
             if task := self.get_task():
                 return str(task.info)
-            else:
-                return f"Task {self.task_id} is not running"
+            return f"Task {self.task_id} is not running"
         if self.artifacts:
             # dump as a yaml string
             if isinstance(self.artifacts, dict):
@@ -230,8 +230,7 @@ class InterfaceVertex(ComponentVertex):
                 # artifacts = {k.title().replace("_", " "): v for k, v in self.artifacts.items() if v is not None}
                 artifact = {k.title().replace("_", " "): v for k, v in artifact.items() if v is not None}
                 artifacts.append(artifact)
-            yaml_str = yaml.dump(artifacts, default_flow_style=False, allow_unicode=True)
-            return yaml_str
+            return yaml.dump(artifacts, default_flow_style=False, allow_unicode=True)
         return super()._built_object_repr()
 
     def _process_chat_component(self):
@@ -481,6 +480,7 @@ class StateVertex(ComponentVertex):
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
+        return None
 
 
 def dict_to_codeblock(d: dict) -> str:

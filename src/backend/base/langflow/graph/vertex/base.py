@@ -741,7 +741,7 @@ class Vertex:
         if isinstance(self._built_object, UnbuiltObject):
             msg = f"{self.display_name}: {self._built_object_repr()}"
             raise ValueError(msg)
-        elif self._built_object is None:
+        if self._built_object is None:
             message = f"{self.display_name} returned None."
             if self.base_type == "custom_components":
                 message += " Make sure your build method returns a component."
@@ -782,11 +782,11 @@ class Vertex:
             if self.state == VertexStates.INACTIVE:
                 # If the vertex is inactive, return None
                 self.build_inactive()
-                return
+                return None
 
             if self.frozen and self._built:
                 return await self.get_requester_result(requester)
-            elif self._built and requester is not None:
+            if self._built and requester is not None:
                 # This means that the vertex has already been built
                 # and we are just getting the result for the requester
                 return await self.get_requester_result(requester)
@@ -812,8 +812,7 @@ class Vertex:
 
             self._finalize_build()
 
-        result = await self.get_requester_result(requester)
-        return result
+        return await self.get_requester_result(requester)
 
     async def get_requester_result(self, requester: Optional["Vertex"]):
         # If the requester is None, this means that

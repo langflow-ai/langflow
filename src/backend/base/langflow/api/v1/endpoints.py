@@ -71,11 +71,10 @@ async def get_all(
 
     try:
         async with Lock() as lock:
-            all_types_dict = await get_and_cache_all_types_dict(
+            return await get_and_cache_all_types_dict(
                 settings_service=settings_service, cache_service=cache_service, force_refresh=force_refresh, lock=lock
             )
 
-            return all_types_dict
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -163,13 +162,12 @@ async def simple_run_flow_task(
     Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
     """
     try:
-        result = await simple_run_flow(
+        return await simple_run_flow(
             flow=flow,
             input_request=input_request,
             stream=stream,
             api_key_user=api_key_user,
         )
-        return result
 
     except Exception as exc:
         logger.exception(f"Error running flow {flow.id} task: {exc}")
@@ -279,9 +277,8 @@ async def simplified_run_flow(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         if "not found" in str(exc):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        else:
-            logger.exception(exc)
-            raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+        logger.exception(exc)
+        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
     except InvalidChatInputException as exc:
         logger.error(exc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -486,12 +483,11 @@ async def experimental_run_flow(
         if f"Flow {flow_id_str} not found" in str(exc):
             logger.error(f"Flow {flow_id_str} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        elif f"Session {session_id} not found" in str(exc):
+        if f"Session {session_id} not found" in str(exc):
             logger.error(f"Session {session_id} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        else:
-            logger.exception(exc)
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        logger.exception(exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc

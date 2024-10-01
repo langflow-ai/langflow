@@ -98,16 +98,15 @@ class GoogleDriveSearchComponent(Component):
         """
         if mime_type == "application/vnd.google-apps.document":
             return f"https://docs.google.com/document/d/{file_id}/edit"
-        elif mime_type == "application/vnd.google-apps.spreadsheet":
+        if mime_type == "application/vnd.google-apps.spreadsheet":
             return f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
-        elif mime_type == "application/vnd.google-apps.presentation":
+        if mime_type == "application/vnd.google-apps.presentation":
             return f"https://docs.google.com/presentation/d/{file_id}/edit"
-        elif mime_type == "application/vnd.google-apps.drawing":
+        if mime_type == "application/vnd.google-apps.drawing":
             return f"https://docs.google.com/drawings/d/{file_id}/edit"
-        elif mime_type == "application/pdf":
+        if mime_type == "application/pdf":
             return f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
-        else:
-            return f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
+        return f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
 
     def search_files(self) -> dict:
         # Load the token information from the JSON string

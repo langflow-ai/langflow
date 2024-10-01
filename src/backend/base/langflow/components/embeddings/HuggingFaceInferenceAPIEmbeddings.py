@@ -71,8 +71,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
     def get_api_url(self) -> str:
         if "huggingface" in self.inference_endpoint.lower():
             return f"{self.inference_endpoint}{self.model_name}"
-        else:
-            return self.inference_endpoint
+        return self.inference_endpoint
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
     def create_huggingface_embeddings(

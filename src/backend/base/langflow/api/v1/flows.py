@@ -102,7 +102,7 @@ def create_flow(
         # If it is a validation error, return the error message
         if hasattr(e, "errors"):
             raise HTTPException(status_code=400, detail=str(e)) from e
-        elif "UNIQUE constraint failed" in str(e):
+        if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
             columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
             # UNIQUE constraint failed: flow.user_id, flow.name
@@ -113,10 +113,9 @@ def create_flow(
             raise HTTPException(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
-        elif isinstance(e, HTTPException):
+        if isinstance(e, HTTPException):
             raise e
-        else:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/", response_model=list[FlowRead], status_code=200)
@@ -198,8 +197,7 @@ def read_flow(
         )  # noqa
     if user_flow := session.exec(stmt).first():
         return user_flow
-    else:
-        raise HTTPException(status_code=404, detail="Flow not found")
+    raise HTTPException(status_code=404, detail="Flow not found")
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
@@ -242,7 +240,7 @@ def update_flow(
         # If it is a validation error, return the error message
         if hasattr(e, "errors"):
             raise HTTPException(status_code=400, detail=str(e)) from e
-        elif "UNIQUE constraint failed" in str(e):
+        if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
             columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
             # UNIQUE constraint failed: flow.user_id, flow.name
@@ -253,10 +251,9 @@ def update_flow(
             raise HTTPException(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
-        elif isinstance(e, HTTPException):
+        if isinstance(e, HTTPException):
             raise e
-        else:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/{flow_id}", status_code=200)
@@ -402,5 +399,4 @@ async def download_multiple_file(
             media_type="application/x-zip-compressed",
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
-    else:
-        return flows_without_api_keys[0]
+    return flows_without_api_keys[0]

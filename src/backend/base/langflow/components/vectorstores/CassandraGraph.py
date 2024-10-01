@@ -187,14 +187,13 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
     def _map_search_type(self):
         if self.search_type == "Similarity":
             return "similarity"
-        elif self.search_type == "Similarity with score threshold":
+        if self.search_type == "Similarity with score threshold":
             return "similarity_score_threshold"
-        elif self.search_type == "MMR (Max Marginal Relevance)":
+        if self.search_type == "MMR (Max Marginal Relevance)":
             return "mmr"
-        elif self.search_type == "MMR Traversal":
+        if self.search_type == "MMR Traversal":
             return "mmr_traversal"
-        else:
-            return "traversal"
+        return "traversal"
 
     def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
@@ -218,16 +217,14 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
                         "Your collection does not contain a field name 'content'."
                     )
                     raise ValueError(msg) from e
-                else:
-                    raise e
+                raise e
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []
 
     def _build_search_args(self):
         args = {

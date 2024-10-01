@@ -173,27 +173,26 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
                 unit=metric.unit,
                 description=metric.description,
             )
-        elif metric.type == MetricType.OBSERVABLE_GAUGE:
+        if metric.type == MetricType.OBSERVABLE_GAUGE:
             return ObservableGaugeWrapper(
                 name=metric.name,
                 description=metric.description,
                 unit=metric.unit,
             )
-        elif metric.type == MetricType.UP_DOWN_COUNTER:
+        if metric.type == MetricType.UP_DOWN_COUNTER:
             return self.meter.create_up_down_counter(
                 name=metric.name,
                 unit=metric.unit,
                 description=metric.description,
             )
-        elif metric.type == MetricType.HISTOGRAM:
+        if metric.type == MetricType.HISTOGRAM:
             return self.meter.create_histogram(
                 name=metric.name,
                 unit=metric.unit,
                 description=metric.description,
             )
-        else:
-            msg = f"Unknown metric type: {metric.type}"
-            raise ValueError(msg)
+        msg = f"Unknown metric type: {metric.type}"
+        raise ValueError(msg)
 
     def validate_labels(self, metric_name: str, labels: Mapping[str, str]):
         reg = self._metrics_registry.get(metric_name)

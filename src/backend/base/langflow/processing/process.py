@@ -100,7 +100,7 @@ def run_graph(
         components.append(input_value_request.components or [])
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
         types.append(input_value_request.type)
-    run_outputs = graph.run(
+    return graph.run(
         inputs_list,
         components,
         types,
@@ -109,7 +109,6 @@ def run_graph(
         session_id="",
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    return run_outputs
 
 
 def validate_input(

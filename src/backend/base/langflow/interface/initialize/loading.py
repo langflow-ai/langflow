@@ -63,11 +63,10 @@ async def get_instance_results(
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
         if base_type == "custom_components":
             return await build_custom_component(params=custom_params, custom_component=custom_component)
-        elif base_type == "component":
+        if base_type == "component":
             return await build_component(params=custom_params, custom_component=custom_component)
-        else:
-            msg = f"Base type {base_type} not found."
-            raise ValueError(msg)
+        msg = f"Base type {base_type} not found."
+        raise ValueError(msg)
 
 
 def get_params(vertex_params):
