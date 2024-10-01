@@ -33,5 +33,4 @@ class AssistantsGetAssistantName(Component):
         assistant = self.client.beta.assistants.retrieve(
             assistant_id=self.assistant_id,
         )
-        message = Message(text=assistant.name)
-        return message
+        return Message(text=assistant.name)

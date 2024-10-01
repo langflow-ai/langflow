@@ -64,10 +64,10 @@ class ChatOllamaComponent(LCModelComponent):
                 response.raise_for_status()
                 data = response.json()
 
-                model_names = [model["name"] for model in data.get("models", [])]
-                return model_names
+                return [model["name"] for model in data.get("models", [])]
         except Exception as e:
-            raise ValueError("Could not retrieve models. Please, make sure Ollama is running.") from e
+            msg = "Could not retrieve models. Please, make sure Ollama is running."
+            raise ValueError(msg) from e
 
     inputs = LCModelComponent._base_inputs + [
         StrInput(
@@ -261,6 +261,7 @@ class ChatOllamaComponent(LCModelComponent):
         try:
             output = ChatOllama(**llm_params)  # type: ignore
         except Exception as e:
-            raise ValueError("Could not initialize Ollama LLM.") from e
+            msg = "Could not initialize Ollama LLM."
+            raise ValueError(msg) from e
 
         return output  # type: ignore

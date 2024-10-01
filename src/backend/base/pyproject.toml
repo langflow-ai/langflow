@@ -123,6 +123,7 @@ pytest-split = "^0.9.0"
 devtools = "^0.12.2"
 pytest-flakefinder = "^1.1.0"
 types-markdown = "^3.7.0.20240822"
+assemblyai = "^0.33.0"
 
 
 [tool.pytest.ini_options]
@@ -156,6 +157,7 @@ select = [
     "COM",
     "DJ",
     "E",
+    "EM",
     "F",
     "FLY",
     "FURB",
@@ -167,6 +169,7 @@ select = [
     "PD",
     "PIE",
     "Q",
+    "RET",
     "RSE",
     "SLOT",
     "T10",
@@ -251,7 +254,8 @@ dependencies = [
     "crewai>=0.36.0",
     "spider-client>=0.0.27",
     "diskcache>=5.6.3",
-    "clickhouse-connect==0.7.19"
+    "clickhouse-connect==0.7.19",
+    "assemblyai>=0.33.0"
 ]
 
 # Optional dependencies for uv

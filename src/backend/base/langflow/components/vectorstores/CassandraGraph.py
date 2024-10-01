@@ -126,9 +126,8 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             import cassio
             from langchain_community.utilities.cassandra import SetupMode
         except ImportError:
-            raise ImportError(
-                "Could not import cassio integration package. " "Please install it with `pip install cassio`."
-            )
+            msg = "Could not import cassio integration package. " "Please install it with `pip install cassio`."
+            raise ImportError(msg)
 
         database_ref = self.database_ref
 
@@ -188,14 +187,13 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
     def _map_search_type(self):
         if self.search_type == "Similarity":
             return "similarity"
-        elif self.search_type == "Similarity with score threshold":
+        if self.search_type == "Similarity with score threshold":
             return "similarity_score_threshold"
-        elif self.search_type == "MMR (Max Marginal Relevance)":
+        if self.search_type == "MMR (Max Marginal Relevance)":
             return "mmr"
-        elif self.search_type == "MMR Traversal":
+        if self.search_type == "MMR Traversal":
             return "mmr_traversal"
-        else:
-            return "traversal"
+        return "traversal"
 
     def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
@@ -214,20 +212,19 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
                 docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
             except KeyError as e:
                 if "content" in str(e):
-                    raise ValueError(
+                    msg = (
                         "You should ingest data through Langflow (or LangChain) to query it in Langflow. "
                         "Your collection does not contain a field name 'content'."
-                    ) from e
-                else:
-                    raise e
+                    )
+                    raise ValueError(msg) from e
+                raise e
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []
 
     def _build_search_args(self):
         args = {

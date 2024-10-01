@@ -22,7 +22,7 @@ from langflow.schema import Data
 class AstraVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB"
     description: str = "Implementation of Vector Store using Astra DB with search capabilities"
-    documentation: str = "https://python.langchain.com/docs/integrations/vectorstores/astradb"
+    documentation: str = "https://docs.langflow.org/starter-projects-vector-store-rag"
     name = "AstraDB"
     icon: str = "AstraDB"
 
@@ -367,10 +367,11 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode
         except ImportError:
-            raise ImportError(
+            msg = (
                 "Could not import langchain Astra DB integration package. "
                 "Please install it with `pip install langchain-astradb`."
             )
+            raise ImportError(msg)
 
         try:
             if not self.setup_mode:
@@ -378,7 +379,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
             setup_mode_value = SetupMode[self.setup_mode.upper()]
         except KeyError:
-            raise ValueError(f"Invalid setup mode: {self.setup_mode}")
+            msg = f"Invalid setup mode: {self.setup_mode}"
+            raise ValueError(msg)
 
         if self.embedding:
             embedding_dict = {"embedding": self.embedding}
@@ -423,7 +425,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         try:
             vector_store = AstraDBVectorStore(**vector_store_kwargs)
         except Exception as e:
-            raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
+            msg = f"Error initializing AstraDBVectorStore: {str(e)}"
+            raise ValueError(msg) from e
 
         self._add_documents_to_vector_store(vector_store)
 
@@ -435,24 +438,25 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
-                raise ValueError("Vector Store Inputs must be Data objects.")
+                msg = "Vector Store Inputs must be Data objects."
+                raise ValueError(msg)
 
         if documents:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
             except Exception as e:
-                raise ValueError(f"Error adding documents to AstraDBVectorStore: {str(e)}") from e
+                msg = f"Error adding documents to AstraDBVectorStore: {str(e)}"
+                raise ValueError(msg) from e
         else:
             logger.debug("No documents to add to the Vector Store.")
 
     def _map_search_type(self):
         if self.search_type == "Similarity with score threshold":
             return "similarity_score_threshold"
-        elif self.search_type == "MMR (Max Marginal Relevance)":
+        if self.search_type == "MMR (Max Marginal Relevance)":
             return "mmr"
-        else:
-            return "similarity"
+        return "similarity"
 
     def _build_search_args(self):
         args = {
@@ -481,7 +485,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
                 docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
             except Exception as e:
-                raise ValueError(f"Error performing search in AstraDBVectorStore: {str(e)}") from e
+                msg = f"Error performing search in AstraDBVectorStore: {str(e)}"
+                raise ValueError(msg) from e
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 
@@ -489,9 +494,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             logger.debug(f"Converted documents to data: {len(data)}")
             self.status = data
             return data
-        else:
-            logger.debug("No search input provided. Skipping search.")
-            return []
+        logger.debug("No search input provided. Skipping search.")
+        return []
 
     def get_retriever_kwargs(self):
         search_args = self._build_search_args()

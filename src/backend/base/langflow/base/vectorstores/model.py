@@ -47,10 +47,11 @@ class LCVectorStoreComponent(Component):
         if hasattr(cls, "build_vector_store"):
             method = cls.build_vector_store
             if not hasattr(method, "_is_cached_vector_store_checked"):
-                raise TypeError(
+                msg = (
                     f"The method 'build_vector_store' in class {cls.__name__} "
                     "must be decorated with @check_cached_vector_store"
                 )
+                raise TypeError(msg)
 
     trace_type = "retriever"
     outputs = [
@@ -81,9 +82,11 @@ class LCVectorStoreComponent(Component):
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
-                raise ValueError(f"Output with name '{method_name}' must be defined.")
-            elif not hasattr(self, method_name):
-                raise ValueError(f"Method '{method_name}' must be defined.")
+                msg = f"Output with name '{method_name}' must be defined."
+                raise ValueError(msg)
+            if not hasattr(self, method_name):
+                msg = f"Method '{method_name}' must be defined."
+                raise ValueError(msg)
 
     def search_with_vector_store(
         self,
@@ -112,7 +115,8 @@ class LCVectorStoreComponent(Component):
         if input_value and isinstance(input_value, str) and hasattr(vector_store, "search"):
             docs = vector_store.search(query=input_value, search_type=search_type.lower(), k=k, **kwargs)
         else:
-            raise ValueError("Invalid inputs provided.")
+            msg = "Invalid inputs provided."
+            raise ValueError(msg)
         data = docs_to_data(docs)
         self.status = data
         return data
@@ -135,8 +139,8 @@ class LCVectorStoreComponent(Component):
             if self.status is None:
                 self.status = "Retriever built successfully."
             return retriever
-        else:
-            raise ValueError(f"Vector Store {vector_store.__class__.__name__} does not have an as_retriever method.")
+        msg = f"Vector Store {vector_store.__class__.__name__} does not have an as_retriever method."
+        raise ValueError(msg)
 
     def search_documents(self) -> list[Data]:
         """
@@ -175,4 +179,5 @@ class LCVectorStoreComponent(Component):
         """
         Builds the Vector Store object.
         """
-        raise NotImplementedError("build_vector_store method must be implemented.")
+        msg = "build_vector_store method must be implemented."
+        raise NotImplementedError(msg)
