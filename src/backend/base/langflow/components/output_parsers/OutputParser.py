@@ -35,10 +35,12 @@ class OutputParserComponent(Component):
         if self.parser_type == "CSV":
             return CommaSeparatedListOutputParser()
         else:
-            raise ValueError("Unsupported or missing parser")
+            msg = "Unsupported or missing parser"
+            raise ValueError(msg)
 
     def format_instructions(self) -> Message:
         if self.parser_type == "CSV":
             return Message(text=CommaSeparatedListOutputParser().get_format_instructions())
         else:
-            raise ValueError("Unsupported or missing parser")
+            msg = "Unsupported or missing parser"
+            raise ValueError(msg)
