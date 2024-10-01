@@ -45,7 +45,7 @@ This component allows you to submit an audio or video file for transcription.
     - Audio File: The audio or video file to transcribe.
     - Speech Model (Optional): Select the class of models. Default is *Best*. See [speech models](https://www.assemblyai.com/docs/speech-to-text/speech-recognition#select-the-speech-model-with-best-and-nano) for more info.
     - Automatic Language Detection (Optional): Enable automatic language detection.
-    - Language (Optional): The language of the audio file. Can be set manually if automatic language detection is disabled. 
+    - Language (Optional): The language of the audio file. Can be set manually if automatic language detection is disabled.
             See [supported languages](https://www.assemblyai.com/docs/getting-started/supported-languages) for a list of supported language codes.
     - Enable Speaker Labels (Optional): Detect speakers in an audio file and what each speaker said.
     - Expected Number of Speakers (Optional): Set the expected number of speakers, if Speaker Labels is enabled.
@@ -163,4 +163,3 @@ If you encounter issues:
 4. Review the Langflow logs for any error messages.
 
 For more advanced usage, refer to the [AssemblyAI API documentation](https://www.assemblyai.com/docs/). If you need more help, you can reach out to the [AssemblyAI support](https://www.assemblyai.com/contact/support).
-
