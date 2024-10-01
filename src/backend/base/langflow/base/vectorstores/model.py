@@ -48,7 +48,8 @@ class LCVectorStoreComponent(Component):
             method = cls.build_vector_store
             if not hasattr(method, "_is_cached_vector_store_checked"):
                 raise TypeError(
-                    f"The method 'build_vector_store' in class {cls.__name__} must be decorated with @check_cached_vector_store"
+                    f"The method 'build_vector_store' in class {cls.__name__} "
+                    "must be decorated with @check_cached_vector_store"
                 )
 
     trace_type = "retriever"

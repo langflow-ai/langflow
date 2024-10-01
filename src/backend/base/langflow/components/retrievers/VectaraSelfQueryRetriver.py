@@ -31,7 +31,11 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
         },
         "metadata_field_info": {
             "display_name": "Metadata Field Info",
-            "info": 'Each metadata field info is a string in the form of key value pair dictionary containing additional search metadata.\nExample input: {"name":"speech","description":"what name of the speech","type":"string or list[string]"}.\nThe keys should remain constant(name, description, type)',
+            "info": "Each metadata field info is a string in the form of key value pair dictionary containing "
+            "additional search metadata.\n"
+            'Example input: {"name":"speech","description":"what name of the speech","type":'
+            '"string or list[string]"}.\n'
+            "The keys should remain constant(name, description, type)",
         },
     }
 

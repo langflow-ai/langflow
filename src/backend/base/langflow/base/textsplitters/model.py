@@ -26,4 +26,3 @@ class LCTextSplitterComponent(LCDocumentTransformerComponent):
         """
         Build the text splitter.
         """
-        pass

@@ -71,7 +71,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         ),
         SecretStrInput(
             name="api_endpoint",
-            display_name="API Endpoint",
+            display_name="Database" if os.getenv("ASTRA_ENHANCED", "false").lower() == "true" else "API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
             required=True,
@@ -192,7 +192,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="search_score_threshold",
             display_name="Search Score Threshold",
-            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            info="Minimum similarity score threshold for search results. "
+            "(when using 'Similarity with score threshold')",
             value=0,
             advanced=True,
         ),
@@ -278,8 +279,10 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             new_parameter_0 = DropdownInput(
                 name="z_00_model_name",
                 display_name="Model Name",
-                info=f"The embedding model to use for the selected provider. Each provider has a different set of models "
-                f"available (full list at https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n{', '.join(model_options)}",
+                info="The embedding model to use for the selected provider. Each provider has a different set of "
+                "models available (full list at "
+                "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n"
+                f"{', '.join(model_options)}",
                 options=model_options,
                 required=True,
             ).to_dict()
@@ -293,13 +296,17 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             new_parameter_2 = MessageTextInput(
                 name="z_02_api_key_name",
                 display_name="API Key name",
-                info="The name of the embeddings provider API key stored on Astra. If set, it will override the 'ProviderKey' in the authentication parameters.",
+                info="The name of the embeddings provider API key stored on Astra. "
+                "If set, it will override the 'ProviderKey' in the authentication parameters.",
             ).to_dict()
 
             new_parameter_3 = SecretStrInput(
                 name="z_03_provider_api_key",
                 display_name="Provider API Key",
-                info="An alternative to the Astra Authentication that passes an API key for the provider with each request to Astra DB. This may be used when Vectorize is configured for the collection, but no corresponding provider secret is stored within Astra's key management system.",
+                info="An alternative to the Astra Authentication that passes an API key for the provider "
+                "with each request to Astra DB. "
+                "This may be used when Vectorize is configured for the collection, "
+                "but no corresponding provider secret is stored within Astra's key management system.",
             ).to_dict()
 
             new_parameter_4 = DictInput(
@@ -339,9 +346,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         authentication = {**(self.z_04_authentication or kwargs.get("z_04_authentication", {}))}
 
         api_key_name = self.z_02_api_key_name or kwargs.get("z_02_api_key_name")
-        provider_key_name = self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key")
-        if provider_key_name:
-            authentication["providerKey"] = provider_key_name
+        provider_key = self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key")
         if api_key_name:
             authentication["providerKey"] = api_key_name
 
@@ -353,7 +358,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 "authentication": authentication,
                 "parameters": self.z_01_model_parameters or kwargs.get("z_01_model_parameters", {}),
             },
-            "collection_embedding_api_key": self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key"),
+            "collection_embedding_api_key": provider_key,
         }
 
     @check_cached_vector_store

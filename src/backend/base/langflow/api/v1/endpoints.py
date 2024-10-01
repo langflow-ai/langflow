@@ -186,31 +186,44 @@ async def simplified_run_flow(
     telemetry_service: TelemetryService = Depends(get_telemetry_service),
 ):
     """
-    Executes a specified flow by ID with input customization, performance enhancements through caching, and optional data streaming.
+    Executes a specified flow by ID with input customization, performance enhancements through caching, and optional
+    data streaming.
 
     ### Parameters:
     - `db` (Session): Database session for executing queries.
     - `flow_id_or_name` (str): ID or endpoint name of the flow to run.
-    - `input_request` (SimplifiedAPIRequest): Request object containing input values, types, output selection, tweaks, and session ID.
+    - `input_request` (SimplifiedAPIRequest): Request object containing input values, types, output selection, tweaks,
+      and session ID.
     - `api_key_user` (User): User object derived from the provided API key, used for authentication.
     - `session_service` (SessionService): Service for managing flow sessions, essential for session reuse and caching.
 
     ### SimplifiedAPIRequest:
     - `input_value` (Optional[str], default=""): Input value to pass to the flow.
-    - `input_type` (Optional[Literal["chat", "text", "any"]], default="chat"): Type of the input value, determining how the input is interpreted.
-    - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output, affecting which components' outputs are included in the response. If set to "debug", all outputs are returned.
-    - `output_component` (Optional[str], default=None): Specific component output to retrieve. If provided, only the output of the specified component is returned. This overrides the `output_type` parameter.
-    - `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution parameters.
-    - `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for subsequent requests.
+    - `input_type` (Optional[Literal["chat", "text", "any"]], default="chat"): Type of the input value,
+      determining how the input is interpreted.
+    - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output,
+      affecting which components' outputs are included in the response. If set to "debug", all outputs are returned.
+    - `output_component` (Optional[str], default=None): Specific component output to retrieve. If provided,
+      only the output of the specified component is returned. This overrides the `output_type` parameter.
+    - `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution
+      parameters.
+    - `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for
+      subsequent requests.
 
 
     ### Tweaks
-    A dictionary of tweaks to customize the flow execution. The tweaks can be used to modify the flow's parameters and components. Tweaks can be overridden by the input values.
-    You can use Component's `id` or Display Name as key to tweak a specific component (e.g., `{"Component Name": {"parameter_name": "value"}}`).
-    You can also use the parameter name as key to tweak all components with that parameter (e.g., `{"parameter_name": "value"}`).
+    A dictionary of tweaks to customize the flow execution.
+    The tweaks can be used to modify the flow's parameters and components.
+    Tweaks can be overridden by the input values.
+    You can use Component's `id` or Display Name as key to tweak a specific component
+    (e.g., `{"Component Name": {"parameter_name": "value"}}`).
+    You can also use the parameter name as key to tweak all components with that parameter
+    (e.g., `{"parameter_name": "value"}`).
 
     ### Returns:
-    - A `RunResponse` object containing the execution results, including selected (or all, based on `output_type`) outputs of the flow and the session ID, facilitating result retrieval and further interactions in a session context.
+    - A `RunResponse` object containing the execution results, including selected (or all, based on `output_type`)
+      outputs of the flow and the session ID, facilitating result retrieval and further interactions in a session
+      context.
 
     ### Raises:
     - HTTPException: 404 if the specified flow ID curl -X 'POST' \
@@ -231,7 +244,9 @@ async def simplified_run_flow(
           }'
     ```
 
-    This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency, supporting a wide range of applications by allowing for dynamic input and output configuration along with performance optimizations through session management and caching.
+    This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency,
+    supporting a wide range of applications by allowing for dynamic input and output configuration along with
+    performance optimizations through session management and caching.
     """
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
@@ -382,19 +397,27 @@ async def experimental_run_flow(
 
     ### Parameters:
     - `flow_id` (str): The unique identifier of the flow to be executed.
-    - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components for the flow. Each input can target specific components and provide custom values.
-    - `outputs` (List[str], optional): A list of output names to retrieve from the executed flow. If not provided, all outputs are returned.
-    - `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution. The tweaks can be used to modify the flow's parameters and components. Tweaks can be overridden by the input values.
+    - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components
+      for the flow. Each input can target specific components and provide custom values.
+    - `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.
+      If not provided, all outputs are returned.
+    - `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution.
+      The tweaks can be used to modify the flow's parameters and components.
+      Tweaks can be overridden by the input values.
     - `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.
-    - `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow execution.
+    - `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow
+      execution.
     - `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.
     - `session_service` (SessionService): The session service object for managing flow sessions.
 
     ### Returns:
-    A `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow and the session ID. The structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.
+    A `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow
+    and the session ID.
+    The structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.
 
     ### Raises:
-    HTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during flow execution.
+    HTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during
+    flow execution.
 
     ### Example usage:
     ```json
@@ -412,8 +435,9 @@ async def experimental_run_flow(
     }
     ```
 
-    This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations, catering to diverse application requirements.
-    """
+    This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
+    catering to diverse application requirements.
+    """  # noqa: E501
     try:
         flow_id_str = str(flow_id)
         if outputs is None:
@@ -582,7 +606,8 @@ async def custom_component_update(
     Update a custom component with the provided code request.
 
     This endpoint generates the CustomComponentFrontendNode normally but then runs the `update_build_config` method
-    on the latest version of the template. This ensures that every time it runs, it has the latest version of the template.
+    on the latest version of the template.
+    This ensures that every time it runs, it has the latest version of the template.
 
     Args:
         code_request (CustomComponentRequest): The code request containing the updated code for the custom component.
