@@ -502,6 +502,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     [isAddingNote],
   );
 
+  const zoomLevel = reactFlowInstance?.getZoom();
+
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
       {showCanvas ? (
@@ -576,8 +578,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             id="shadow-box"
             style={{
               position: "absolute",
-              width: `${NOTE_NODE_MIN_WIDTH / 2}px`,
-              height: `${NOTE_NODE_MIN_HEIGHT / 2}px`,
+              width: `${NOTE_NODE_MIN_WIDTH * (zoomLevel || 1)}px`,
+              height: `${NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1)}px`,
               backgroundColor: `${SHADOW_COLOR_OPTIONS[Object.keys(SHADOW_COLOR_OPTIONS)[0]]}`,
             }}
           ></div>

@@ -65,7 +65,7 @@ function NoteNode({
         }}
         ref={nodeDiv}
         className={cn(
-          "flex h-full w-full flex-col gap-3 border border-b p-5 transition-all",
+          "flex h-full w-full flex-col gap-3 border border-b p-3 transition-all",
           selected ? "" : "-z-50 shadow-sm",
         )}
       >
