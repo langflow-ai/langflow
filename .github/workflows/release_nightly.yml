@@ -234,7 +234,7 @@ jobs:
     with:
       # Version should _not_ contain the leading `v`
       # version: ${{ needs.release-nightly-base.outputs.version }} 
-      version: "0.0.96.dev10"
+      version: "0.0.96.dev11"
       release_type: base
       nightly_tag_base: ${{ inputs.nightly_tag_base }}
       nightly_tag_main: ${{ inputs.nightly_tag_main }}
@@ -249,7 +249,7 @@ jobs:
     with:
       # Version should _not_ contain the leading `v`
       # version: ${{ needs.release-nightly-main.outputs.version }}
-      version: "1.0.18.dev9"
+      version: "1.0.18.dev10"
       release_type: main
       nightly_tag_main: ${{ inputs.nightly_tag_main }}
     secrets: inherit
