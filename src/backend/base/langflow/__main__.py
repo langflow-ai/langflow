@@ -403,7 +403,8 @@ def superuser(
             if result:
                 typer.echo("Default folder created successfully.")
             else:
-                raise RuntimeError("Could not create default folder.")
+                msg = "Could not create default folder."
+                raise RuntimeError(msg)
             typer.echo("Superuser created successfully.")
 
         else:

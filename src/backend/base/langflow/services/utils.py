@@ -41,9 +41,11 @@ def get_or_create_super_user(session: Session, username, password, is_default):
 
     if user:
         if verify_password(password, user.password):
-            raise ValueError("User with superuser credentials exists but is not a superuser.")
+            msg = "User with superuser credentials exists but is not a superuser."
+            raise ValueError(msg)
         else:
-            raise ValueError("Incorrect superuser credentials")
+            msg = "Incorrect superuser credentials"
+            raise ValueError(msg)
 
     if is_default:
         logger.debug("Creating default superuser.")
@@ -78,7 +80,8 @@ def setup_superuser(settings_service, session: Session):
             logger.debug("Superuser created successfully.")
     except Exception as exc:
         logger.exception(exc)
-        raise RuntimeError("Could not create superuser. Please create a superuser manually.") from exc
+        msg = "Could not create superuser. Please create a superuser manually."
+        raise RuntimeError(msg) from exc
     finally:
         settings_service.auth_settings.reset_credentials()
 
@@ -107,7 +110,8 @@ def teardown_superuser(settings_service, session):
         except Exception as exc:
             logger.exception(exc)
             session.rollback()
-            raise RuntimeError("Could not remove default superuser.") from exc
+            msg = "Could not remove default superuser."
+            raise RuntimeError(msg) from exc
 
 
 async def teardown_services():
@@ -171,4 +175,5 @@ def initialize_services(fix_migration: bool = False, socketio_server=None):
         get_db_service().migrate_flows_if_auto_login()
     except Exception as exc:
         logger.error(f"Error migrating flows: {exc}")
-        raise RuntimeError("Error migrating flows") from exc
+        msg = "Error migrating flows"
+        raise RuntimeError(msg) from exc

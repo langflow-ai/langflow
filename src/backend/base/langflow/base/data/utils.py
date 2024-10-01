@@ -53,7 +53,8 @@ def retrieve_file_paths(
 ) -> list[str]:
     path_obj = Path(path)
     if not path_obj.exists() or not path_obj.is_dir():
-        raise ValueError(f"Path {path} must exist and be a directory.")
+        msg = f"Path {path} must exist and be a directory."
+        raise ValueError(msg)
 
     def match_types(p: Path) -> bool:
         return any(p.suffix == f".{t}" for t in types) if types else True
@@ -83,7 +84,8 @@ def partition_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
         elements = partition(file_path)
     except Exception as e:
         if not silent_errors:
-            raise ValueError(f"Error loading file {file_path}: {e}") from e
+            msg = f"Error loading file {file_path}: {e}"
+            raise ValueError(msg) from e
         return None
 
     # Create a Data
@@ -147,7 +149,8 @@ def parse_text_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
             text = ET.tostring(xml_element, encoding="unicode")
     except Exception as e:
         if not silent_errors:
-            raise ValueError(f"Error loading file {file_path}: {e}") from e
+            msg = f"Error loading file {file_path}: {e}"
+            raise ValueError(msg) from e
         return None
 
     record = Data(data={"file_path": file_path, "text": text})

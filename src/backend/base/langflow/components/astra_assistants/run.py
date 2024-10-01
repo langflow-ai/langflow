@@ -92,4 +92,5 @@ class AssistantsRun(Component):
             return message
         except Exception as e:
             print(e)
-            raise Exception(f"Error running assistant: {e}")
+            msg = f"Error running assistant: {e}"
+            raise Exception(msg)

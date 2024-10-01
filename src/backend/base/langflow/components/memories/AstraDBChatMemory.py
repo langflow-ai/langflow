@@ -53,10 +53,11 @@ class AstraDBChatMemory(LCChatMemoryComponent):
         try:
             from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
         except ImportError:
-            raise ImportError(
+            msg = (
                 "Could not import langchain Astra DB integration package. "
                 "Please install it with `pip install langchain-astradb`."
             )
+            raise ImportError(msg)
 
         memory = AstraDBChatMessageHistory(
             session_id=self.session_id,

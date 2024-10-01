@@ -70,7 +70,8 @@ def add_messages(messages: Message | list[Message], flow_id: str | None = None):
 
         if not all(isinstance(message, Message) for message in messages):
             types = ", ".join([str(type(message)) for message in messages])
-            raise ValueError(f"The messages must be instances of Message. Found: {types}")
+            msg = f"The messages must be instances of Message. Found: {types}"
+            raise ValueError(msg)
 
         messages_models: list[MessageTable] = []
         for msg in messages:
@@ -133,7 +134,8 @@ def store_message(
         return []
 
     if not message.session_id or not message.sender or not message.sender_name:
-        raise ValueError("All of session_id, sender, and sender_name must be provided.")
+        msg = "All of session_id, sender, and sender_name must be provided."
+        raise ValueError(msg)
 
     return add_messages([message], flow_id=flow_id)
 

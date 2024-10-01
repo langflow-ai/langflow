@@ -57,7 +57,8 @@ class LocalStorageService(StorageService):
         file_path = self.data_dir / flow_id / file_name
         if not file_path.exists():
             logger.warning(f"File {file_name} not found in flow {flow_id}.")
-            raise FileNotFoundError(f"File {file_name} not found in flow {flow_id}")
+            msg = f"File {file_name} not found in flow {flow_id}"
+            raise FileNotFoundError(msg)
 
         def read_file(file_path: Path) -> bytes:
             with open(file_path, "rb") as f:
@@ -78,7 +79,8 @@ class LocalStorageService(StorageService):
         folder_path = self.data_dir / flow_id
         if not folder_path.exists() or not folder_path.is_dir():
             logger.warning(f"Flow {flow_id} directory does not exist.")
-            raise FileNotFoundError(f"Flow {flow_id} directory does not exist.")
+            msg = f"Flow {flow_id} directory does not exist."
+            raise FileNotFoundError(msg)
 
         files = [file.name for file in folder_path.iterdir() if file.is_file()]
         logger.info(f"Listed {len(files)} files in flow {flow_id}.")

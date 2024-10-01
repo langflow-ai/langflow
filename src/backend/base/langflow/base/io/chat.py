@@ -22,7 +22,8 @@ class ChatComponent(Component):
             flow_id=self.graph.flow_id,
         )
         if len(messages) > 1:
-            raise ValueError("Only one message can be stored at a time.")
+            msg = "Only one message can be stored at a time."
+            raise ValueError(msg)
         stored_message = messages[0]
         if hasattr(self, "_event_manager") and self._event_manager and stored_message.id:
             if not isinstance(message.text, str):
@@ -55,7 +56,8 @@ class ChatComponent(Component):
     def _stream_message(self, message: Message, message_id: str) -> str:
         iterator = message.text
         if not isinstance(iterator, AsyncIterator | Iterator):
-            raise ValueError("The message must be an iterator or an async iterator.")
+            msg = "The message must be an iterator or an async iterator."
+            raise ValueError(msg)
 
         if isinstance(iterator, AsyncIterator):
             return run_until_complete(self._handle_async_iterator(iterator, message, message_id))
