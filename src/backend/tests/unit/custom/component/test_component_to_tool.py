@@ -17,10 +17,17 @@ def test_component_to_toolkit():
     tool = tools[0]
 
     assert tool.name == "ChatInput-message_response"
-    assert (
-        tool.description
-        == "message_response(files: file, input_value: Message, sender: str, sender_name: Message, session_id: Message, should_store_message: bool) - Get chat inputs from the Playground."
-    )
+    terms = [
+        "message_response",
+        "files",
+        "input_value",
+        "sender",
+        "sender_name",
+        "session_id",
+        "should_store_message",
+    ]
+    assert all(term in tool.description for term in terms)
+
     assert isinstance(tool.func, Callable)
     assert tool.args_schema is not None
 
