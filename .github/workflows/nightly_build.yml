@@ -12,8 +12,7 @@ env:
 
 jobs:
   create-nightly-tag:
-    # if: github.repository == 'langflow-ai/langflow'
-    if: false
+    if: github.repository == 'langflow-ai/langflow'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -186,15 +185,15 @@ jobs:
     if: github.repository == 'langflow-ai/langflow'
     name: Run Nightly Langflow Build
     # needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
-    # needs: [create-nightly-tag]
+    needs: [create-nightly-tag]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
       build_docker_main: true
-      # nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
-      nightly_tag_main: "v1.0.18.dev9"
-      # nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
-      nightly_tag_base: "v0.0.96.dev10"
+      nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
+      # nightly_tag_main: "v1.0.18.dev9"
+      nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
+      # nightly_tag_base: "v0.0.96.dev10"
     secrets: inherit
 
   # slack-notification:
