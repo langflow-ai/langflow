@@ -6,7 +6,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-jbtaD",
+            "id": "ChatInput-AwB1F",
             "name": "message",
             "output_types": [
               "Message"
@@ -14,7 +14,7 @@
           },
           "targetHandle": {
             "fieldName": "user_input",
-            "id": "Prompt-0SBd6",
+            "id": "Prompt-bHLxK",
             "inputTypes": [
               "Message",
               "Text"
@@ -22,18 +22,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-jbtaD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-jbtaDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-0SBd6{œfieldNameœ:œuser_inputœ,œidœ:œPrompt-0SBd6œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-jbtaD",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-jbtaDœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-0SBd6",
-        "targetHandle": "{œfieldNameœ: œuser_inputœ, œidœ: œPrompt-0SBd6œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-AwB1F{œdataTypeœ:œChatInputœ,œidœ:œChatInput-AwB1Fœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-bHLxK{œfieldNameœ:œuser_inputœ,œidœ:œPrompt-bHLxKœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-AwB1F",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-AwB1Fœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-bHLxK",
+        "targetHandle": "{œfieldNameœ: œuser_inputœ, œidœ: œPrompt-bHLxKœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-0SBd6",
+            "id": "Prompt-bHLxK",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -41,25 +41,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-HBuxy",
+            "id": "OpenAIModel-tnzXU",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-0SBd6{œdataTypeœ:œPromptœ,œidœ:œPrompt-0SBd6œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-HBuxy{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-HBuxyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-0SBd6",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-0SBd6œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-HBuxy",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-HBuxyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-bHLxK{œdataTypeœ:œPromptœ,œidœ:œPrompt-bHLxKœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-tnzXU{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-tnzXUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-bHLxK",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-bHLxKœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-tnzXU",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-tnzXUœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-HBuxy",
+            "id": "OpenAIModel-tnzXU",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -67,18 +67,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-WG5tg",
+            "id": "ChatOutput-wbcyd",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-HBuxy{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-HBuxyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-WG5tg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-WG5tgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-HBuxy",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-HBuxyœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-WG5tg",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-WG5tgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-tnzXU{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-tnzXUœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-wbcyd{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-wbcydœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-tnzXU",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-tnzXUœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-wbcyd",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-wbcydœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -86,7 +86,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-jbtaD",
+          "id": "ChatInput-AwB1F",
           "node": {
             "base_classes": [
               "Message"
@@ -285,15 +285,15 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 309,
-        "id": "ChatInput-jbtaD",
+        "height": 297,
+        "id": "ChatInput-AwB1F",
         "position": {
-          "x": -493.6459512396177,
-          "y": 1083.200545525551
+          "x": 54.0197580905824,
+          "y": 777.1114693911709
         },
         "positionAbsolute": {
-          "x": -493.6459512396177,
-          "y": 1083.200545525551
+          "x": 54.0197580905824,
+          "y": 777.1114693911709
         },
         "selected": false,
         "type": "genericNode",
@@ -301,9 +301,9 @@
       },
       {
         "data": {
-          "description": "Create a prompt template with dynamic variables.",
+          "description": "Create a prompt template with dynamic variables. If using an OutputParser, you must include {format_instructions} as an additional variable.",
           "display_name": "Prompt",
-          "id": "Prompt-0SBd6",
+          "id": "Prompt-bHLxK",
           "node": {
             "base_classes": [
               "Message"
@@ -405,15 +405,15 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 423,
-        "id": "Prompt-0SBd6",
+        "height": 411,
+        "id": "Prompt-bHLxK",
         "position": {
-          "x": 56.354011530798516,
-          "y": 1157.2005405164796
+          "x": 577.3727711743836,
+          "y": 853.9773971889889
         },
         "positionAbsolute": {
-          "x": 56.354011530798516,
-          "y": 1157.2005405164796
+          "x": 577.3727711743836,
+          "y": 853.9773971889889
         },
         "selected": false,
         "type": "genericNode",
@@ -421,9 +421,9 @@
       },
       {
         "data": {
-          "description": "Display a chat message in the Playground.",
+          "description": "Display a chat message in the Playground.\n\n💡 Click the ▶️ to run the flow.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-WG5tg",
+          "id": "ChatOutput-wbcyd",
           "node": {
             "base_classes": [
               "Message"
@@ -431,7 +431,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Display a chat message in the Playground.",
+            "description": "Display a chat message in the Playground.\n\n💡 Click the ▶️ to run the flow.",
             "display_name": "Chat Output",
             "documentation": "",
             "edited": false,
@@ -600,15 +600,15 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 309,
-        "id": "ChatOutput-WG5tg",
+        "height": 297,
+        "id": "ChatOutput-wbcyd",
         "position": {
-          "x": 1219.477374823274,
-          "y": 1200.950216973985
+          "x": 1760.7152955011902,
+          "y": 903.6717604714486
         },
         "positionAbsolute": {
-          "x": 1219.477374823274,
-          "y": 1200.950216973985
+          "x": 1760.7152955011902,
+          "y": 903.6717604714486
         },
         "selected": false,
         "type": "genericNode",
@@ -616,9 +616,9 @@
       },
       {
         "data": {
-          "description": "Generates text using OpenAI LLMs.",
+          "description": "Generates text using OpenAI LLMs.\n\n💡 Be sure to add your **OpenAI API Key**",
           "display_name": "OpenAI",
-          "id": "OpenAIModel-HBuxy",
+          "id": "OpenAIModel-tnzXU",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -627,7 +627,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Generates text using OpenAI LLMs.",
+            "description": "Generates text using OpenAI LLMs.\n\n💡 Be sure to add your **OpenAI API Key**",
             "display_name": "OpenAI",
             "documentation": "",
             "edited": false,
@@ -917,31 +917,63 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "height": 623,
-        "id": "OpenAIModel-HBuxy",
+        "height": 595,
+        "id": "OpenAIModel-tnzXU",
         "position": {
-          "x": 664.0296638933031,
-          "y": 1026.5966174731725
+          "x": 1165.97061248482,
+          "y": 768.6307079517978
         },
         "positionAbsolute": {
-          "x": 664.0296638933031,
-          "y": 1026.5966174731725
+          "x": 1165.97061248482,
+          "y": 768.6307079517978
         },
         "selected": false,
         "type": "genericNode",
         "width": 384
+      },
+      {
+        "data": {
+          "id": "undefined-XuFCr",
+          "node": {
+            "description": "### ✅ Basic Prompting (Hello, World) README\n\nPerform basic prompting with an OpenAI model. *Psst: look out for the* '💡' *emoji for tips in components.*\n\n#### Extra notes on these Components\n- **Chat Input:** Sends natural language instructions to the OpenAI model.\n- **OpenAI Model:** Processes the prompt and generates a response.\n- **Chat Output:** Processes the prompt and generates a response.\n#### Get started\n- Input your **OpenAI API key** to the **OpenAI Model component**\n- Select the **Playground** to interact with the chatbot.\n\nFor more details, see the [flow overview doc](https://docs.langflow.org/starter-projects-basic-prompting).",
+            "display_name": "Read Me",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "indigo"
+            }
+          }
+        },
+        "dragging": false,
+        "height": 800,
+        "id": "undefined-XuFCr",
+        "position": {
+          "x": -580.3704460174015,
+          "y": 498.2202393425737
+        },
+        "positionAbsolute": {
+          "x": -580.3704460174015,
+          "y": 498.2202393425737
+        },
+        "resizing": false,
+        "selected": false,
+        "style": {
+          "height": 800,
+          "width": 532
+        },
+        "type": "noteNode",
+        "width": 532
       }
     ],
     "viewport": {
-      "x": 427.12410642709614,
-      "y": -361.39815091467085,
-      "zoom": 0.5562299357713679
+      "x": 208.20796881231723,
+      "y": -76.87392199339831,
+      "zoom": 0.4810857801741779
     }
   },
   "description": "This flow will get you experimenting with the basics of the UI, the Chat and the Prompt component. \n\nTry changing the Template in it to see how the model behaves. \nYou can change it to this and a Text Input into the `type_of_person` variable : \"Answer the user as if you were a pirate.\n\nUser: {user_input}\n\nAnswer: \" ",
   "endpoint_name": null,
-  "id": "b0e19aab-2095-41ee-b91c-1168790cc68b",
+  "id": "fd36e130-512d-48e6-96cc-f1e03c5d3a18",
   "is_component": false,
-  "last_tested_version": "1.0.9",
+  "last_tested_version": "1.0.18",
   "name": "Basic Prompting (Hello, World)"
 }

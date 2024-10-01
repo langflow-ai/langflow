@@ -78,7 +78,7 @@ test("Simple Agent", async ({ page }) => {
     timeout: 15000,
   });
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page.waitForSelector(
     "text=Use the Python REPL tool to create a python function that calculates 4 + 4 and stores it in a variable.",

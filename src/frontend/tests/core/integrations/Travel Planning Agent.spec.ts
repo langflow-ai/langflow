@@ -82,7 +82,7 @@ test("Travel Planning Agent", async ({ page }) => {
   await page.getByText("built successfully").last().click({
     timeout: 15000,
   });
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page.waitForSelector("text=default session", {
     timeout: 30000,
