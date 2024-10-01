@@ -44,18 +44,6 @@ def update_uv_dep(pyproject_path: str, new_project_name: str) -> None:
     with open(filepath, "w") as file:
         file.write(content)
 
-    # For the main project, update the langflow-base dependency in uv section
-    if new_project_name == "langflow-nightly":
-        # pattern = re.compile(r'langflow-base')
-        pattern = re.compile(r'(dependencies\s*=\s*\[\s*\n\s*)("langflow-base")')
-        replacement = r'\1"langflow-base-nightly"'
-
-        if not pattern.search(content):
-            raise Exception(f"{replacement} uv dependency not found in {filepath}")
-        content = pattern.sub(replacement, content)
-        with open(filepath, "w") as file:
-            file.write(content)
-
 
 def main() -> None:
     if len(sys.argv) != 3:

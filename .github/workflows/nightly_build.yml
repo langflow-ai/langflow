@@ -99,6 +99,7 @@ jobs:
           echo "Updating main project version to $MAIN_TAG"
           uv run ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
           uv run ./scripts/ci/update_pyproject_name.py langflow-nightly main
+          uv run ./scripts/ci/update_uv_dependency.py $BASE_TAG
           
 
           git add pyproject.toml src/backend/base/pyproject.toml
