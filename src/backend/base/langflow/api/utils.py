@@ -135,7 +135,8 @@ async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
     for vertex_id in graph._has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
-            raise ValueError(f"Vertex {vertex_id} not found")
+            msg = f"Vertex {vertex_id} not found"
+            raise ValueError(msg)
         if not vertex._raw_params.get("session_id"):
             vertex.update_raw_params({"session_id": flow_id}, overwrite=True)
 
@@ -150,7 +151,8 @@ async def build_graph_from_db_no_cache(flow_id: str, session: Session):
     """Build and cache the graph."""
     flow: Flow | None = session.get(Flow, flow_id)
     if not flow or not flow.data:
-        raise ValueError("Invalid flow ID")
+        msg = "Invalid flow ID"
+        raise ValueError(msg)
     return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
 
 
@@ -260,4 +262,5 @@ async def cascade_delete_flow(session: Session, flow: Flow):
         session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))  # type: ignore
         session.exec(delete(Flow).where(Flow.id == flow.id))  # type: ignore
     except Exception as e:
-        raise RuntimeError(f"Unable to cascade delete flow: ${flow.id}", e)
+        msg = f"Unable to cascade delete flow: ${flow.id}"
+        raise RuntimeError(msg, e)

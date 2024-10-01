@@ -46,7 +46,8 @@ class BaseCrewComponent(Component):
         return self.tasks, self.agents
 
     def build_crew(self) -> Crew:
-        raise NotImplementedError("build_crew must be implemented in subclasses")
+        msg = "build_crew must be implemented in subclasses"
+        raise NotImplementedError(msg)
 
     def get_task_callback(
         self,

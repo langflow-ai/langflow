@@ -215,7 +215,8 @@ class Settings(BaseSettings):
                 # so we need to migrate to the new format
                 # if there is a database in that location
                 if not info.data["config_dir"]:
-                    raise ValueError("config_dir not set, please set it or provide a database_url")
+                    msg = "config_dir not set, please set it or provide a database_url"
+                    raise ValueError(msg)
 
                 from langflow.utils.version import get_version_info
                 from langflow.utils.version import is_pre_release as langflow_is_pre_release
@@ -370,7 +371,8 @@ def load_settings_from_yaml(file_path: str) -> Settings:
 
         for key in settings_dict:
             if key not in Settings.model_fields.keys():
-                raise KeyError(f"Key {key} not found in settings")
+                msg = f"Key {key} not found in settings"
+                raise KeyError(msg)
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
     return Settings(**settings_dict)

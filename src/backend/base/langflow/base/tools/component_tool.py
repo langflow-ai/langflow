@@ -35,7 +35,8 @@ class ComponentTool(BaseTool):
             results, _ = self.component(**kwargs)
             return results
         except Exception as e:
-            raise ToolException(f"Error running {self.name}: {e}")
+            msg = f"Error running {self.name}: {e}"
+            raise ToolException(msg)
 
 
 ComponentTool.update_forward_refs()

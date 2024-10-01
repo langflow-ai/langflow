@@ -53,7 +53,8 @@ def create_state_model_from_graph(graph: BaseModel) -> type[BaseModel]:
     """
     for vertex in graph.vertices:
         if hasattr(vertex, "_custom_component") and vertex._custom_component is None:
-            raise ValueError(f"Vertex {vertex.id} does not have a component instance.")
+            msg = f"Vertex {vertex.id} does not have a component instance."
+            raise ValueError(msg)
 
     state_model_getters = [
         vertex._custom_component.get_state_model_instance_getter()

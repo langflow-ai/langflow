@@ -76,13 +76,15 @@ class DatabaseVariableService(VariableService, Service):
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
 
         if not variable or not variable.value:
-            raise ValueError(f"{name} variable not found.")
+            msg = f"{name} variable not found."
+            raise ValueError(msg)
 
         if variable.type == CREDENTIAL_TYPE and field == "session_id":  # type: ignore
-            raise TypeError(
+            msg = (
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
                 "because its purpose is to prevent the exposure of values."
             )
+            raise TypeError(msg)
 
         # we decrypt the value
         decrypted = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
@@ -104,7 +106,8 @@ class DatabaseVariableService(VariableService, Service):
     ):
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
         if not variable:
-            raise ValueError(f"{name} variable not found.")
+            msg = f"{name} variable not found."
+            raise ValueError(msg)
         encrypted = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
         variable.value = encrypted
         session.add(variable)
@@ -143,14 +146,16 @@ class DatabaseVariableService(VariableService, Service):
         stmt = select(Variable).where(Variable.user_id == user_id).where(Variable.name == name)
         variable = session.exec(stmt).first()
         if not variable:
-            raise ValueError(f"{name} variable not found.")
+            msg = f"{name} variable not found."
+            raise ValueError(msg)
         session.delete(variable)
         session.commit()
 
     def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: Session):
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.id == variable_id)).first()
         if not variable:
-            raise ValueError(f"{variable_id} variable not found.")
+            msg = f"{variable_id} variable not found."
+            raise ValueError(msg)
         session.delete(variable)
         session.commit()
 

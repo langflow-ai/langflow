@@ -25,9 +25,11 @@ def upload(file_path, host, flow_id):
             if response.status_code == 200 or response.status_code == 201:
                 return response.json()
             else:
-                raise Exception(f"Error uploading file: {response.status_code}")
+                msg = f"Error uploading file: {response.status_code}"
+                raise Exception(msg)
     except Exception as e:
-        raise Exception(f"Error uploading file: {e}")
+        msg = f"Error uploading file: {e}"
+        raise Exception(msg)
 
 
 def upload_file(file_path: str, host: str, flow_id: str, components: list[str], tweaks: dict | None = None):
@@ -57,12 +59,15 @@ def upload_file(file_path: str, host: str, flow_id: str, components: list[str], 
                 if isinstance(component, str):
                     tweaks[component] = {"path": response["file_path"]}
                 else:
-                    raise ValueError(f"Component ID or name must be a string. Got {type(component)}")
+                    msg = f"Component ID or name must be a string. Got {type(component)}"
+                    raise ValueError(msg)
             return tweaks
         else:
-            raise ValueError("Error uploading file")
+            msg = "Error uploading file"
+            raise ValueError(msg)
     except Exception as e:
-        raise ValueError(f"Error uploading file: {e}")
+        msg = f"Error uploading file: {e}"
+        raise ValueError(msg)
 
 
 def get_flow(url: str, flow_id: str):
@@ -87,6 +92,8 @@ def get_flow(url: str, flow_id: str):
             flow = FlowBase(**json_response).model_dump()
             return flow
         else:
-            raise Exception(f"Error retrieving flow: {response.status_code}")
+            msg = f"Error retrieving flow: {response.status_code}"
+            raise Exception(msg)
     except Exception as e:
-        raise Exception(f"Error retrieving flow: {e}")
+        msg = f"Error retrieving flow: {e}"
+        raise Exception(msg)

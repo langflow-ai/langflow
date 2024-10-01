@@ -78,6 +78,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
                 streaming=stream,
             )
         except Exception as e:
-            raise ValueError(f"Could not connect to AzureOpenAI API: {str(e)}") from e
+            msg = f"Could not connect to AzureOpenAI API: {str(e)}"
+            raise ValueError(msg) from e
 
         return output  # type: ignore

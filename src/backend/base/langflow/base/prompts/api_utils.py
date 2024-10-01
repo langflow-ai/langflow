@@ -127,14 +127,16 @@ def validate_prompt(prompt_template: str, silent_errors: bool = False) -> list[s
     # Check if there are invalid characters in the input_variables
     input_variables = _check_input_variables(input_variables)
     if any(var in _INVALID_NAMES for var in input_variables):
-        raise ValueError(f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. ")
+        msg = f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. "
+        raise ValueError(msg)
 
     try:
         PromptTemplate(template=prompt_template, input_variables=input_variables)
     except Exception as exc:
         logger.error(f"Invalid prompt: {exc}")
         if not silent_errors:
-            raise ValueError(f"Invalid prompt: {exc}") from exc
+            msg = f"Invalid prompt: {exc}"
+            raise ValueError(msg) from exc
 
     return input_variables
 

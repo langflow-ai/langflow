@@ -113,6 +113,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
                 repetition_penalty=repetition_penalty,
             )
         except Exception as e:
-            raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
+            msg = "Could not connect to HuggingFace Endpoints API."
+            raise ValueError(msg) from e
 
         return llm

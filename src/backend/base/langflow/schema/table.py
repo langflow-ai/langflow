@@ -23,7 +23,8 @@ class Column(BaseModel):
             return FormatterType(value)
         if isinstance(value, FormatterType):
             return value
-        raise ValueError("Invalid formatter type")
+        msg = "Invalid formatter type"
+        raise ValueError(msg)
 
 
 class TableSchema(BaseModel):

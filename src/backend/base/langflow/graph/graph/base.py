@@ -125,7 +125,8 @@ class Graph:
             self._set_start_and_end(start, end)
             self.prepare(start_component_id=start._id)
         if (start is not None and end is None) or (start is None and end is not None):
-            raise ValueError("You must provide both input and output components")
+            msg = "You must provide both input and output components"
+            raise ValueError(msg)
 
     @property
     def state_model(self):
@@ -135,7 +136,8 @@ class Graph:
 
     def __add__(self, other):
         if not isinstance(other, Graph):
-            raise TypeError("Can only add Graph objects")
+            msg = "Can only add Graph objects"
+            raise TypeError(msg)
         # Add the vertices and edges from the other graph to this graph
         new_instance = copy.deepcopy(self)
         for vertex in other.vertices:
@@ -147,7 +149,8 @@ class Graph:
 
     def __iadd__(self, other):
         if not isinstance(other, Graph):
-            raise TypeError("Can only add Graph objects")
+            msg = "Can only add Graph objects"
+            raise TypeError(msg)
         # Add the vertices and edges from the other graph to this graph
         for vertex in other.vertices:
             # This updates the edges as well
@@ -211,7 +214,8 @@ class Graph:
             return component_id
         component._id = component_id
         if component_id in self.vertex_map:
-            raise ValueError(f"Component ID {component_id} already exists")
+            msg = f"Component ID {component_id} already exists"
+            raise ValueError(msg)
         frontend_node = component.to_frontend_node()
         self._vertices.append(frontend_node)
         vertex = self._create_vertex(frontend_node)
@@ -229,24 +233,30 @@ class Graph:
 
     def _set_start_and_end(self, start: Component, end: Component):
         if not hasattr(start, "to_frontend_node"):
-            raise TypeError(f"start must be a Component. Got {type(start)}")
+            msg = f"start must be a Component. Got {type(start)}"
+            raise TypeError(msg)
         if not hasattr(end, "to_frontend_node"):
-            raise TypeError(f"end must be a Component. Got {type(end)}")
+            msg = f"end must be a Component. Got {type(end)}"
+            raise TypeError(msg)
         self.add_component(start, start._id)
         self.add_component(end, end._id)
 
     def add_component_edge(self, source_id: str, output_input_tuple: tuple[str, str], target_id: str):
         source_vertex = self.get_vertex(source_id)
         if not isinstance(source_vertex, ComponentVertex):
-            raise ValueError(f"Source vertex {source_id} is not a component vertex.")
+            msg = f"Source vertex {source_id} is not a component vertex."
+            raise ValueError(msg)
         target_vertex = self.get_vertex(target_id)
         if not isinstance(target_vertex, ComponentVertex):
-            raise ValueError(f"Target vertex {target_id} is not a component vertex.")
+            msg = f"Target vertex {target_id} is not a component vertex."
+            raise ValueError(msg)
         output_name, input_name = output_input_tuple
         if source_vertex._custom_component is None:
-            raise ValueError(f"Source vertex {source_id} does not have a custom component.")
+            msg = f"Source vertex {source_id} does not have a custom component."
+            raise ValueError(msg)
         if target_vertex._custom_component is None:
-            raise ValueError(f"Target vertex {target_id} does not have a custom component.")
+            msg = f"Target vertex {target_id} does not have a custom component."
+            raise ValueError(msg)
 
         try:
             input_field = target_vertex.get_input(input_name)
@@ -255,7 +265,8 @@ class Graph:
         except ValueError:
             input_field = target_vertex.data.get("node", {}).get("template", {}).get(input_name)
             if not input_field:
-                raise ValueError(f"Input field {input_name} not found in target vertex {target_id}")
+                msg = f"Input field {input_name} not found in target vertex {target_id}"
+                raise ValueError(msg)
             input_types = input_field.get("input_types", [])
             input_field_type = input_field.get("type", "")
 
@@ -287,7 +298,8 @@ class Graph:
         event_manager: EventManager | None = None,
     ):
         if not self._prepared:
-            raise ValueError("Graph not prepared. Call prepare() first.")
+            msg = "Graph not prepared. Call prepare() first."
+            raise ValueError(msg)
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
         for _input in inputs or []:
@@ -306,7 +318,8 @@ class Graph:
             if isinstance(result, Finish):
                 return
 
-        raise ValueError("Max iterations reached")
+        msg = "Max iterations reached"
+        raise ValueError(msg)
 
     def _snapshot(self):
         return {
@@ -488,15 +501,17 @@ class Graph:
                 successors = self.get_all_successors(vertex)
                 for successor in successors:
                     if successor.params.get("stream") or successor.params.get("streaming"):
-                        raise ValueError(
+                        msg = (
                             f"Components {vertex.display_name} and {successor.display_name} "
                             "are connected and both have stream or streaming set to True"
                         )
+                        raise ValueError(msg)
 
     @property
     def first_layer(self):
         if self._first_layer is None:
-            raise ValueError("Graph not prepared. Call prepare() first.")
+            msg = "Graph not prepared. Call prepare() first."
+            raise ValueError(msg)
         return self._first_layer
 
     @property
@@ -528,7 +543,8 @@ class Graph:
             ValueError: If the run ID is not set.
         """
         if not self._run_id:
-            raise ValueError("Run ID not set")
+            msg = "Run ID not set"
+            raise ValueError(msg)
         return self._run_id
 
     def set_run_id(self, run_id: uuid.UUID | None = None):
@@ -603,7 +619,8 @@ class Graph:
             elif input_type is not None and input_type != "any" and input_type not in vertex.id.lower():
                 continue
             if vertex is None:
-                raise ValueError(f"Vertex {vertex_id} not found")
+                msg = f"Vertex {vertex_id} not found"
+                raise ValueError(msg)
             vertex.update_raw_params(inputs, overwrite=True)
 
     async def _run(
@@ -631,19 +648,22 @@ class Graph:
         """
 
         if input_components and not isinstance(input_components, list):
-            raise ValueError(f"Invalid components value: {input_components}. Expected list")
+            msg = f"Invalid components value: {input_components}. Expected list"
+            raise ValueError(msg)
         elif input_components is None:
             input_components = []
 
         if not isinstance(inputs.get(INPUT_FIELD_NAME, ""), str):
-            raise ValueError(f"Invalid input value: {inputs.get(INPUT_FIELD_NAME)}. Expected string")
+            msg = f"Invalid input value: {inputs.get(INPUT_FIELD_NAME)}. Expected string"
+            raise ValueError(msg)
         if inputs:
             self._set_inputs(input_components, inputs, input_type)
         # Update all the vertices with the session_id
         for vertex_id in self._has_session_id_vertices:
             vertex = self.get_vertex(vertex_id)
             if vertex is None:
-                raise ValueError(f"Vertex {vertex_id} not found")
+                msg = f"Vertex {vertex_id} not found"
+                raise ValueError(msg)
             vertex.update_raw_params({"session_id": session_id})
         # Process the graph
         try:
@@ -660,7 +680,8 @@ class Graph:
             self.increment_run_count()
         except Exception as exc:
             asyncio.create_task(self.end_all_traces(error=exc))
-            raise ValueError(f"Error running graph: {exc}") from exc
+            msg = f"Error running graph: {exc}"
+            raise ValueError(msg) from exc
         finally:
             asyncio.create_task(self.end_all_traces())
         # Get the outputs
@@ -669,7 +690,8 @@ class Graph:
             if not vertex._built:
                 continue
             if vertex is None:
-                raise ValueError(f"Vertex {vertex_id} not found")
+                msg = f"Vertex {vertex_id} not found"
+                raise ValueError(msg)
 
             if not vertex.result and not stream and hasattr(vertex, "consume_async_generator"):
                 await vertex.consume_async_generator()
@@ -719,7 +741,8 @@ class Graph:
             # Attempt to get the running event loop; if none, an exception is raised
             loop = asyncio.get_running_loop()
             if loop.is_closed():
-                raise RuntimeError("The running event loop is closed.")
+                msg = "The running event loop is closed."
+                raise RuntimeError(msg)
         except RuntimeError:
             # If there's no running event loop or it's closed, use asyncio.run
             return asyncio.run(coro)
@@ -1001,11 +1024,11 @@ class Graph:
             logger.exception(exc)
             if "nodes" not in payload and "edges" not in payload:
                 logger.exception(exc)
-                raise ValueError(
-                    f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
-                ) from exc
+                msg = f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
+                raise ValueError(msg) from exc
 
-            raise ValueError(f"Error while creating graph from payload: {exc}") from exc
+            msg = f"Error while creating graph from payload: {exc}"
+            raise ValueError(msg) from exc
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Graph):
@@ -1181,7 +1204,8 @@ class Graph:
         try:
             return self.vertex_map[vertex_id]
         except KeyError:
-            raise ValueError(f"Vertex {vertex_id} not found")
+            msg = f"Vertex {vertex_id} not found"
+            raise ValueError(msg)
 
     def get_root_of_group_node(self, vertex_id: str) -> Vertex:
         """Returns the root of a group node."""
@@ -1195,7 +1219,8 @@ class Graph:
                 successors = self.get_all_successors(vertex, recursive=False)
                 if not any(successor in vertices for successor in successors):
                     return vertex
-        raise ValueError(f"Vertex {vertex_id} is not a top level vertex or no root vertex found")
+        msg = f"Vertex {vertex_id} is not a top level vertex or no root vertex found"
+        raise ValueError(msg)
 
     def get_next_in_queue(self):
         if not self._run_queue:
@@ -1213,7 +1238,8 @@ class Graph:
         event_manager: EventManager | None = None,
     ):
         if not self._prepared:
-            raise ValueError("Graph not prepared. Call prepare() first.")
+            msg = "Graph not prepared. Call prepare() first."
+            raise ValueError(msg)
         if not self._run_queue:
             asyncio.create_task(self.end_all_traces())
             return Finish()
@@ -1357,7 +1383,8 @@ class Graph:
                 result_dict = vertex.result
                 artifacts = vertex.artifacts
             else:
-                raise ValueError(f"No result found for vertex {vertex_id}")
+                msg = f"No result found for vertex {vertex_id}"
+                raise ValueError(msg)
 
             vertex_build_result = VertexBuildResult(
                 result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
@@ -1486,7 +1513,8 @@ class Graph:
             elif isinstance(result, tuple) and len(result) == 5:
                 vertices.append(result[4])
             else:
-                raise ValueError(f"Invalid result from task {task_name}: {result}")
+                msg = f"Invalid result from task {task_name}: {result}"
+                raise ValueError(msg)
 
         for v in vertices:
             # set all executed vertices as non-runnable to not run them again.
@@ -1519,7 +1547,8 @@ class Graph:
         def dfs(vertex):
             if state[vertex] == 1:
                 # We have a cycle
-                raise ValueError("Graph contains a cycle, cannot perform topological sort")
+                msg = "Graph contains a cycle, cannot perform topological sort"
+                raise ValueError(msg)
             if state[vertex] == 0:
                 state[vertex] = 1
                 for edge in vertex.edges:
@@ -1631,9 +1660,11 @@ class Graph:
         target = self.get_vertex(edge["target"])
 
         if source is None:
-            raise ValueError(f"Source vertex {edge['source']} not found")
+            msg = f"Source vertex {edge['source']} not found"
+            raise ValueError(msg)
         if target is None:
-            raise ValueError(f"Target vertex {edge['target']} not found")
+            msg = f"Target vertex {edge['target']} not found"
+            raise ValueError(msg)
         if (source.id, target.id) in self.cycles:
             new_edge: CycleEdge | Edge = CycleEdge(source, target, edge)
         else:
@@ -1676,7 +1707,8 @@ class Graph:
         vertex_type: str = vertex_data["type"]  # type: ignore
         vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
         if "id" not in vertex_data:
-            raise ValueError(f"Vertex data for {vertex_data['display_name']} does not contain an id")
+            msg = f"Vertex data for {vertex_data['display_name']} does not contain an id"
+            raise ValueError(msg)
 
         VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
 
@@ -1687,7 +1719,8 @@ class Graph:
     def prepare(self, stop_component_id: str | None = None, start_component_id: str | None = None):
         self.initialize()
         if stop_component_id and start_component_id:
-            raise ValueError("You can only provide one of stop_component_id or start_component_id")
+            msg = "You can only provide one of stop_component_id or start_component_id"
+            raise ValueError(msg)
         self.validate_stream()
 
         if stop_component_id or start_component_id:
@@ -1748,7 +1781,8 @@ class Graph:
                 # Find the chat input component
                 chat_input = find_start_component_id(vertices_ids)
                 if chat_input is None:
-                    raise ValueError("No input component found and no start component provided")
+                    msg = "No input component found and no start component provided"
+                    raise ValueError(msg)
                 queue = deque([chat_input])
         else:
             queue = deque(

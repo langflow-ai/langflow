@@ -34,4 +34,5 @@ def process_graph_cached_task(
     clear_cache=False,
     session_id=None,
 ) -> dict[str, Any]:
-    raise NotImplementedError("This task is not implemented yet")
+    msg = "This task is not implemented yet"
+    raise NotImplementedError(msg)

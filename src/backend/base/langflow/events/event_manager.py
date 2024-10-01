@@ -26,19 +26,24 @@ class EventManager:
     @staticmethod
     def _validate_callback(callback: EventCallback):
         if not callable(callback):
-            raise ValueError("Callback must be callable")
+            msg = "Callback must be callable"
+            raise ValueError(msg)
         # Check if it has `self, event_type and data`
         sig = inspect.signature(callback)
         if len(sig.parameters) != 3:
-            raise ValueError("Callback must have exactly 3 parameters")
+            msg = "Callback must have exactly 3 parameters"
+            raise ValueError(msg)
         if not all(param.name in ["manager", "event_type", "data"] for param in sig.parameters.values()):
-            raise ValueError("Callback must have exactly 3 parameters: manager, event_type, and data")
+            msg = "Callback must have exactly 3 parameters: manager, event_type, and data"
+            raise ValueError(msg)
 
     def register_event(self, name: str, event_type: str, callback: EventCallback | None = None):
         if not name:
-            raise ValueError("Event name cannot be empty")
+            msg = "Event name cannot be empty"
+            raise ValueError(msg)
         if not name.startswith("on_"):
-            raise ValueError("Event name must start with 'on_'")
+            msg = "Event name must start with 'on_'"
+            raise ValueError(msg)
         if callback is None:
             _callback = partial(self.send_event, event_type=event_type)
         else:

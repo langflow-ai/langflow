@@ -138,11 +138,13 @@ class Component(CustomComponent):
         try:
             module = inspect.getmodule(self.__class__)
             if module is None:
-                raise ValueError("Could not find module for class")
+                msg = "Could not find module for class"
+                raise ValueError(msg)
             class_code = inspect.getsource(module)
             self._code = class_code
         except OSError:
-            raise ValueError(f"Could not find source code for {self.__class__.__name__}")
+            msg = f"Could not find source code for {self.__class__.__name__}"
+            raise ValueError(msg)
 
     def set(self, **kwargs):
         """
@@ -209,7 +211,8 @@ class Component(CustomComponent):
         """
         if name in self._inputs:
             return self._inputs[name]
-        raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
+        msg = f"Input {name} not found in {self.__class__.__name__}"
+        raise ValueError(msg)
 
     def get_output(self, name: str) -> Any:
         """
@@ -226,20 +229,23 @@ class Component(CustomComponent):
         """
         if name in self._outputs_map:
             return self._outputs_map[name]
-        raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
+        msg = f"Output {name} not found in {self.__class__.__name__}"
+        raise ValueError(msg)
 
     def set_on_output(self, name: str, **kwargs):
         output = self.get_output(name)
         for key, value in kwargs.items():
             if not hasattr(output, key):
-                raise ValueError(f"Output {name} does not have a method {key}")
+                msg = f"Output {name} does not have a method {key}"
+                raise ValueError(msg)
             setattr(output, key, value)
 
     def set_output_value(self, name: str, value: Any):
         if name in self._outputs_map:
             self._outputs_map[name].value = value
         else:
-            raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
+            msg = f"Output {name} not found in {self.__class__.__name__}"
+            raise ValueError(msg)
 
     def map_outputs(self, outputs: list[Output]):
         """
@@ -256,7 +262,8 @@ class Component(CustomComponent):
         """
         for output in outputs:
             if output.name is None:
-                raise ValueError("Output name cannot be None.")
+                msg = "Output name cannot be None."
+                raise ValueError(msg)
             # Deepcopy is required to avoid modifying the original component;
             # allows each instance of each component to modify its own output
             self._outputs_map[output.name] = deepcopy(output)
@@ -274,7 +281,8 @@ class Component(CustomComponent):
         """
         for input_ in inputs:
             if input_.name is None:
-                raise ValueError("Input name cannot be None.")
+                msg = "Input name cannot be None."
+                raise ValueError(msg)
             self._inputs[input_.name] = deepcopy(input_)
 
     def validate(self, params: dict):
@@ -303,7 +311,8 @@ class Component(CustomComponent):
         output = next((output for output in self._outputs_map.values() if output.method == method.__name__), None)
         if output is None:
             method_name = method.__name__ if hasattr(method, "__name__") else str(method)
-            raise ValueError(f"Output with method {method_name} not found")
+            msg = f"Output with method {method_name} not found"
+            raise ValueError(msg)
         return output
 
     def _inherits_from_component(self, method: Callable):
@@ -340,13 +349,15 @@ class Component(CustomComponent):
                         matching_pairs.append((output, input_))
         if len(matching_pairs) > 1:
             matching_pairs_str = self._build_error_string_from_matching_pairs(matching_pairs)
-            raise ValueError(
+            msg = (
                 f"There are multiple outputs from {value.__class__.__name__} "
                 f"that can connect to inputs in {self.__class__.__name__}: {matching_pairs_str}"
             )
+            raise ValueError(msg)
         output, input_ = matching_pairs[0]
         if not isinstance(output.method, str):
-            raise ValueError(f"Method {output.method} is not a valid output of {value.__class__.__name__}")
+            msg = f"Method {output.method} is not a valid output of {value.__class__.__name__}"
+            raise ValueError(msg)
         return getattr(value, output.method)
 
     def _process_connection_or_parameter(self, key, value):
@@ -361,9 +372,8 @@ class Component(CustomComponent):
             try:
                 self._method_is_valid_output(value)
             except ValueError:
-                raise ValueError(
-                    f"Method {value.__name__} is not a valid output of {value.__self__.__class__.__name__}"
-                )
+                msg = f"Method {value.__name__} is not a valid output of {value.__self__.__class__.__name__}"
+                raise ValueError(msg)
             self._connect_to_component(key, value, _input)
         else:
             self._set_parameter_or_attribute(key, value)
@@ -416,10 +426,11 @@ class Component(CustomComponent):
     def _set_parameter_or_attribute(self, key, value):
         if isinstance(value, Component):
             methods = ", ".join([f"'{output.method}'" for output in value.outputs])
-            raise ValueError(
+            msg = (
                 f"You set {value.display_name} as value for `{key}`. "
                 f"You should pass one of the following: {methods}"
             )
+            raise ValueError(msg)
         self._set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
@@ -453,26 +464,28 @@ class Component(CustomComponent):
             return self.__dict__[f"_{name}"]
         if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[name]
-        raise AttributeError(f"{name} not found in {self.__class__.__name__}")
+        msg = f"{name} not found in {self.__class__.__name__}"
+        raise AttributeError(msg)
 
     def _set_input_value(self, name: str, value: Any):
         if name in self._inputs:
             input_value = self._inputs[name].value
             if isinstance(input_value, Component):
                 methods = ", ".join([f"'{output.method}'" for output in input_value.outputs])
-                raise ValueError(
+                msg = (
                     f"You set {input_value.display_name} as value for `{name}`. "
                     f"You should pass one of the following: {methods}"
                 )
+                raise ValueError(msg)
             if callable(input_value):
-                raise ValueError(
-                    f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
-                )
+                msg = f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
+                raise ValueError(msg)
             self._inputs[name].value = value
             if hasattr(self._inputs[name], "load_from_db"):
                 self._inputs[name].load_from_db = False
         else:
-            raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
+            msg = f"Input {name} not found in {self.__class__.__name__}"
+            raise ValueError(msg)
 
     def _validate_outputs(self):
         # Raise Error if some rule isn't met
@@ -489,10 +502,12 @@ class Component(CustomComponent):
             except KeyError:
                 close_match = find_closest_match(name, list(template.keys()))
                 if close_match:
-                    raise ValueError(
+                    msg = (
                         f"Parameter '{name}' not found in {self.__class__.__name__}. " f"Did you mean '{close_match}'?"
                     )
-                raise ValueError(f"Parameter {name} not found in {self.__class__.__name__}. ")
+                    raise ValueError(msg)
+                msg = f"Parameter {name} not found in {self.__class__.__name__}. "
+                raise ValueError(msg)
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
@@ -569,10 +584,11 @@ class Component(CustomComponent):
         _attributes = {}
         for key, value in params.items():
             if key in self.__dict__ and value != getattr(self, key):
-                raise ValueError(
+                msg = (
                     f"{self.__class__.__name__} defines an input parameter named '{key}' "
                     f"that is a reserved word and cannot be used."
                 )
+                raise ValueError(msg)
             _attributes[key] = value
         for key, input_obj in self._inputs.items():
             if key not in _attributes:
@@ -634,7 +650,8 @@ class Component(CustomComponent):
                     or output.name in self._vertex.edges_source_names
                 ):
                     if output.method is None:
-                        raise ValueError(f"Output {output.name} does not have a method defined.")
+                        msg = f"Output {output.name} does not have a method defined."
+                        raise ValueError(msg)
                     self._current_output = output.name
                     method: Callable = getattr(self, output.method)
                     if output.cache and output.value != UNDEFINED:

@@ -216,10 +216,11 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):  # type: ignore
         try:
             import redis
         except ImportError as exc:
-            raise ImportError(
+            msg = (
                 "RedisCache requires the redis-py package."
                 " Please install Langflow with the deploy extra: pip install langflow[deploy]"
-            ) from exc
+            )
+            raise ImportError(msg) from exc
         logger.warning(
             "RedisCache is an experimental feature and may not work as expected."
             " Please report any issues to our GitHub repository."
@@ -271,9 +272,11 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):  # type: ignore
             if pickled := pickle.dumps(value):
                 result = self._client.setex(str(key), self.expiration_time, pickled)
                 if not result:
-                    raise ValueError("RedisCache could not set the value.")
+                    msg = "RedisCache could not set the value."
+                    raise ValueError(msg)
         except TypeError as exc:
-            raise TypeError("RedisCache only accepts values that can be pickled. ") from exc
+            msg = "RedisCache only accepts values that can be pickled. "
+            raise TypeError(msg) from exc
 
     async def upsert(self, key, value, lock=None):
         """

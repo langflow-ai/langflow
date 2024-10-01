@@ -42,9 +42,8 @@ class ChatVertexAIComponent(LCModelComponent):
         try:
             from langchain_google_vertexai import ChatVertexAI
         except ImportError:
-            raise ImportError(
-                "Please install the langchain-google-vertexai package to use the VertexAIEmbeddings component."
-            )
+            msg = "Please install the langchain-google-vertexai package to use the VertexAIEmbeddings component."
+            raise ImportError(msg)
         location = self.location or None
         if self.credentials:
             from google.cloud import aiplatform

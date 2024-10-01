@@ -110,7 +110,8 @@ class LangChainHubPromptComponent(Component):
 
         # Check if the api key is provided
         if not self.langchain_api_key:
-            raise ValueError("Please provide a LangChain API Key")
+            msg = "Please provide a LangChain API Key"
+            raise ValueError(msg)
 
         # Pull the prompt from LangChain Hub
         prompt_data = langchain.hub.pull(self.langchain_hub_prompt, api_key=self.langchain_api_key)

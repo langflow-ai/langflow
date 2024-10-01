@@ -143,7 +143,8 @@ class Input(BaseModel):
     @field_validator("file_types")
     def validate_file_types(cls, value):
         if not isinstance(value, list):
-            raise ValueError("file_types must be a list")
+            msg = "file_types must be a list"
+            raise ValueError(msg)
         return [
             (f".{file_type}" if isinstance(file_type, str) and not file_type.startswith(".") else file_type)
             for file_type in value
@@ -159,7 +160,8 @@ class Input(BaseModel):
             v = post_process_type(v)[0]
             v = format_type(v)
         elif not isinstance(v, str):
-            raise ValueError(f"type must be a string or a type, not {type(v)}")
+            msg = f"type must be a string or a type, not {type(v)}"
+            raise ValueError(msg)
         return v
 
 
@@ -212,7 +214,8 @@ class Output(BaseModel):
         if self.value == UNDEFINED.value:
             self.value = UNDEFINED
         if self.name is None:
-            raise ValueError("name must be set")
+            msg = "name must be set"
+            raise ValueError(msg)
         if self.display_name is None:
             self.display_name = self.name
         return self

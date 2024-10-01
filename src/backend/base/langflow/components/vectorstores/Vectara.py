@@ -59,7 +59,8 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
         try:
             from langchain_community.vectorstores import Vectara
         except ImportError:
-            raise ImportError("Could not import Vectara. Please install it with `pip install langchain-community`.")
+            msg = "Could not import Vectara. Please install it with `pip install langchain-community`."
+            raise ImportError(msg)
 
         vectara = Vectara(
             vectara_customer_id=self.vectara_customer_id,

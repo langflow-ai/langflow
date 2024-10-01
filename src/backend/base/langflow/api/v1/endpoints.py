@@ -94,17 +94,15 @@ def validate_input_and_tweaks(input_request: SimplifiedAPIRequest):
                 has_input_value = value.get("input_value") is not None
                 input_value_is_chat = input_request.input_value is not None and input_request.input_type == "chat"
                 if has_input_value and input_value_is_chat:
-                    raise InvalidChatInputException(
-                        "If you pass an input_value to the chat input, you cannot pass a tweak with the same name."
-                    )
+                    msg = "If you pass an input_value to the chat input, you cannot pass a tweak with the same name."
+                    raise InvalidChatInputException(msg)
         elif "Text Input" in key or "TextInput" in key:
             if isinstance(value, dict):
                 has_input_value = value.get("input_value") is not None
                 input_value_is_text = input_request.input_value is not None and input_request.input_type == "text"
                 if has_input_value and input_value_is_text:
-                    raise InvalidChatInputException(
-                        "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
-                    )
+                    msg = "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
+                    raise InvalidChatInputException(msg)
 
 
 async def simple_run_flow(
@@ -120,7 +118,8 @@ async def simple_run_flow(
         user_id = api_key_user.id if api_key_user else None
         flow_id_str = str(flow.id)
         if flow.data is None:
-            raise ValueError(f"Flow {flow_id_str} has no data")
+            msg = f"Flow {flow_id_str} has no data"
+            raise ValueError(msg)
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
         graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
@@ -331,8 +330,9 @@ async def webhook_run_flow(
         data = await request.body()
         if not data:
             logger.error("Request body is empty")
+            msg = "Request body is empty. You should provide a JSON payload containing the flow ID."
             raise ValueError(
-                "Request body is empty. You should provide a JSON payload containing the flow ID.",
+                msg,
             )
 
         # get all webhook components in the flow
@@ -448,7 +448,8 @@ async def experimental_run_flow(
             session_data = await session_service.load_session(session_id, flow_id=flow_id_str)
             graph, artifacts = session_data if session_data else (None, None)
             if graph is None:
-                raise ValueError(f"Session {session_id} not found")
+                msg = f"Session {session_id} not found"
+                raise ValueError(msg)
         else:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
@@ -456,10 +457,12 @@ async def experimental_run_flow(
                 select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
             ).first()
             if flow is None:
-                raise ValueError(f"Flow {flow_id_str} not found")
+                msg = f"Flow {flow_id_str} not found"
+                raise ValueError(msg)
 
             if flow.data is None:
-                raise ValueError(f"Flow {flow_id_str} has no data")
+                msg = f"Flow {flow_id_str} has no data"
+                raise ValueError(msg)
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str)

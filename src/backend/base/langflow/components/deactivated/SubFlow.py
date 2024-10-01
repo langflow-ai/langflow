@@ -45,7 +45,8 @@ class SubFlowComponent(CustomComponent):
             try:
                 flow_data = self.get_flow(field_value)
                 if not flow_data:
-                    raise ValueError(f"Flow {field_value} not found.")
+                    msg = f"Flow {field_value} not found."
+                    raise ValueError(msg)
                 graph = Graph.from_payload(flow_data.data["data"])
                 # Get all inputs from the graph
                 inputs = get_flow_inputs(graph)

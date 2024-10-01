@@ -58,7 +58,8 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
 
         if not documents:
             if self.schema is None:
-                raise ValueError("If no documents are provided, a schema must be provided.")
+                msg = "If no documents are provided, a schema must be provided."
+                raise ValueError(msg)
             redis_vs = Redis.from_existing_index(
                 embedding=self.embedding,
                 index_name=self.redis_index_name,

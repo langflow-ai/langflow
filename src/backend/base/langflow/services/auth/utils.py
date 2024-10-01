@@ -67,7 +67,8 @@ async def api_key_security(
         return UserRead.model_validate(result.user, from_attributes=True)
     elif isinstance(result, User):
         return UserRead.model_validate(result, from_attributes=True)
-    raise ValueError("Invalid result type")
+    msg = "Invalid result type"
+    raise ValueError(msg)
 
 
 async def get_current_user(

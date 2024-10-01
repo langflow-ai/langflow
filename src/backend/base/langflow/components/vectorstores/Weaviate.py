@@ -50,7 +50,8 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
             client = weaviate.Client(url=self.url)
 
         if self.index_name != self.index_name.capitalize():
-            raise ValueError(f"Weaviate requires the index name to be capitalized. Use: {self.index_name.capitalize()}")
+            msg = f"Weaviate requires the index name to be capitalized. Use: {self.index_name.capitalize()}"
+            raise ValueError(msg)
 
         documents = []
         for _input in self.ingest_data or []:

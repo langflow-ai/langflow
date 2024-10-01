@@ -31,7 +31,8 @@ class CacheServiceFactory(ServiceFactory):
                 return redis_cache
             else:
                 # do not attempt to fallback to another cache type
-                raise ConnectionError("Failed to connect to Redis cache")
+                msg = "Failed to connect to Redis cache"
+                raise ConnectionError(msg)
 
         elif settings_service.settings.cache_type == "memory":
             return ThreadingInMemoryCache(expiration_time=settings_service.settings.cache_expire)

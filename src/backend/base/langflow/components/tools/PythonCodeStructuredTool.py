@@ -175,7 +175,8 @@ class PythonCodeStructuredTool(LCToolComponent):
             field_name = attr.split("|")[1]
             func_arg = self._find_arg(named_functions, func_name, field_name)
             if func_arg is None:
-                raise Exception(f"Failed to find arg: {field_name}")
+                msg = f"Failed to find arg: {field_name}"
+                raise Exception(msg)
 
             field_annotation = func_arg["annotation"]
             field_description = self._get_value(self._attributes[attr], str)
@@ -250,7 +251,8 @@ class PythonCodeStructuredTool(LCToolComponent):
             func = {"name": node.name, "args": []}
             for arg in node.args.args:
                 if arg.lineno != arg.end_lineno:
-                    raise Exception("Multiline arguments are not supported")
+                    msg = "Multiline arguments are not supported"
+                    raise Exception(msg)
 
                 func_arg = {
                     "name": arg.arg,

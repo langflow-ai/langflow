@@ -51,7 +51,8 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
         for meta in metadata_field_info:
             meta_obj = json.loads(meta)
             if "name" not in meta_obj or "description" not in meta_obj or "type" not in meta_obj:
-                raise Exception("Incorrect metadata field info format.")
+                msg = "Incorrect metadata field info format."
+                raise Exception(msg)
             attribute_info = AttributeInfo(
                 name=meta_obj["name"],
                 description=meta_obj["description"],

@@ -118,7 +118,8 @@ class RunnableExecComponent(Component):
     async def build_executor(self) -> Message:
         input_dict, status = self.get_input_dict(self.runnable, self.input_key, self.input_value)
         if not isinstance(self.runnable, AgentExecutor):
-            raise ValueError("The runnable must be an AgentExecutor")
+            msg = "The runnable must be an AgentExecutor"
+            raise ValueError(msg)
 
         if self.use_stream:
             return self.astream_events(input_dict)

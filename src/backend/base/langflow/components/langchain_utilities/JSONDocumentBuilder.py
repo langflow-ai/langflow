@@ -43,6 +43,7 @@ class JSONDocumentBuilder(CustomComponent):
         elif isinstance(document, Document):
             documents = Document(page_content=orjson_dumps({key: document.page_content}, indent_2=False))
         else:
-            raise TypeError(f"Expected Document or list of Documents, got {type(document)}")
+            msg = f"Expected Document or list of Documents, got {type(document)}"
+            raise TypeError(msg)
         self.repr_value = documents
         return documents

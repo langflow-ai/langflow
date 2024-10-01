@@ -10,7 +10,8 @@ def update_message(message_id: UUID, message: MessageUpdate | dict):
     with session_scope() as session:
         db_message = session.get(MessageTable, message_id)
         if not db_message:
-            raise ValueError("Message not found")
+            msg = "Message not found"
+            raise ValueError(msg)
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
         db_message.sqlmodel_update(message_dict)
         session.add(db_message)

@@ -56,7 +56,8 @@ class UpdateDataComponent(Component):
             existing_fields = {}
             if field_value_int > 15:
                 build_config["number_of_fields"]["value"] = 15
-                raise ValueError("Number of fields cannot exceed 15. Try using a Component to combine two Data.")
+                msg = "Number of fields cannot exceed 15. Try using a Component to combine two Data."
+                raise ValueError(msg)
             if len(build_config) > len(default_keys):
                 # back up the existing template fields
                 for key in build_config.copy():
@@ -105,4 +106,5 @@ class UpdateDataComponent(Component):
         """This function validates that the Text Key is one of the keys in the Data"""
         data_keys = data.data.keys()
         if self.text_key not in data_keys and self.text_key != "":
-            raise ValueError(f"Text Key: {self.text_key} not found in the Data keys: {','.join(data_keys)}")
+            msg = f"Text Key: {self.text_key} not found in the Data keys: {','.join(data_keys)}"
+            raise ValueError(msg)

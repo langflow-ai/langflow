@@ -38,7 +38,8 @@ class LangFuseTracer(BaseTracer):
 
             config = self._get_config()
             if not all(config.values()):
-                raise ValueError("Missing Langfuse configuration")
+                msg = "Missing Langfuse configuration"
+                raise ValueError(msg)
 
             self._client = Langfuse(**config)
             self.trace = self._client.trace(id=str(self.trace_id), name=self.flow_id)

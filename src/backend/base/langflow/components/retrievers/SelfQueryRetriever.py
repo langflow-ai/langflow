@@ -66,7 +66,8 @@ class SelfQueryRetrieverComponent(Component):
         elif isinstance(self.query, str):
             input_text = self.query
         else:
-            raise ValueError(f"Query type {type(self.query)} not supported.")
+            msg = f"Query type {type(self.query)} not supported."
+            raise ValueError(msg)
 
         documents = self_query_retriever.invoke(input=input_text, config={"callbacks": self.get_langchain_callbacks()})
         data = [Data.from_document(document) for document in documents]

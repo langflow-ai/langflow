@@ -32,7 +32,8 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
 
     def build_embeddings(self) -> Embeddings:
         if not self.api_key:
-            raise ValueError("API Key is required")
+            msg = "API Key is required"
+            raise ValueError(msg)
 
         class HotaGoogleGenerativeAIEmbeddings(GoogleGenerativeAIEmbeddings):
             def __init__(self, *args, **kwargs):
@@ -85,7 +86,8 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                             BatchEmbedContentsRequest(requests=requests, model=self.model)
                         )
                     except Exception as e:
-                        raise GoogleGenerativeAIError(f"Error embedding content: {e}") from e
+                        msg = f"Error embedding content: {e}"
+                        raise GoogleGenerativeAIError(msg) from e
                     embeddings.extend([list(np.pad(e.values, (0, 768), "constant")) for e in result.embeddings])
                 return embeddings
 

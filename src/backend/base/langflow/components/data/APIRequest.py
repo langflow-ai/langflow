@@ -93,7 +93,8 @@ class APIRequestComponent(Component):
                 build_config["body"]["value"] = {}
         except Exception as exc:
             logger.error(f"Error parsing curl: {exc}")
-            raise ValueError(f"Error parsing curl: {exc}")
+            msg = f"Error parsing curl: {exc}"
+            raise ValueError(msg)
         return build_config
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -112,7 +113,8 @@ class APIRequestComponent(Component):
     ) -> Data:
         method = method.upper()
         if method not in ["GET", "POST", "PATCH", "PUT", "DELETE"]:
-            raise ValueError(f"Unsupported method: {method}")
+            msg = f"Unsupported method: {method}"
+            raise ValueError(msg)
 
         if isinstance(body, str) and body:
             try:
@@ -120,7 +122,8 @@ class APIRequestComponent(Component):
             except Exception as e:
                 logger.error(f"Error decoding JSON data: {e}")
                 body = None
-                raise ValueError(f"Error decoding JSON data: {e}")
+                msg = f"Error decoding JSON data: {e}"
+                raise ValueError(msg)
 
         data = body if body else None
 

@@ -56,7 +56,8 @@ class KeyedWorkerLockManager:
     @contextmanager
     def lock(self, key: str):
         if not self._validate_key(key):
-            raise ValueError(f"Invalid key: {key}")
+            msg = f"Invalid key: {key}"
+            raise ValueError(msg)
 
         lock = FileLock(self.locks_dir / key)
         with lock:

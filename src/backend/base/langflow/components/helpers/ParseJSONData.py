@@ -62,7 +62,8 @@ class ParseJSONDataComponent(Component):
                 try:
                     to_filter_as_dict.append(json.loads(repair_json(f)))
                 except JSONDecodeError as e:
-                    raise ValueError(f"Invalid JSON: {e}")
+                    msg = f"Invalid JSON: {e}"
+                    raise ValueError(msg)
 
         full_filter_str = json.dumps(to_filter_as_dict)
 

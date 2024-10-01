@@ -33,7 +33,8 @@ class FlowTool(BaseTool):
         elif self.graph is not None:
             return build_schema_from_inputs(self.name, get_flow_inputs(self.graph))
         else:
-            raise ToolException("No input schema available.")
+            msg = "No input schema available."
+            raise ToolException(msg)
 
     def _run(
         self,
@@ -45,9 +46,8 @@ class FlowTool(BaseTool):
         if len(args_names) == len(args):
             kwargs = {arg["arg_name"]: arg_value for arg, arg_value in zip(args_names, args)}
         elif len(args_names) != len(args) and len(args) != 0:
-            raise ToolException(
-                "Number of arguments does not match the number of inputs. Pass keyword arguments instead."
-            )
+            msg = "Number of arguments does not match the number of inputs. Pass keyword arguments instead."
+            raise ToolException(msg)
         tweaks = {arg["component_name"]: kwargs[arg["arg_name"]] for arg in args_names}
 
         run_outputs = run_until_complete(
@@ -72,16 +72,16 @@ class FlowTool(BaseTool):
         """Validate the inputs."""
 
         if len(args) > 0 and len(args) != len(args_names):
-            raise ToolException(
-                "Number of positional arguments does not match the number of inputs. Pass keyword arguments instead."
-            )
+            msg = "Number of positional arguments does not match the number of inputs. Pass keyword arguments instead."
+            raise ToolException(msg)
 
         if len(args) == len(args_names):
             kwargs = {arg_name["arg_name"]: arg_value for arg_name, arg_value in zip(args_names, args)}
 
         missing_args = [arg["arg_name"] for arg in args_names if arg["arg_name"] not in kwargs]
         if missing_args:
-            raise ToolException(f"Missing required arguments: {', '.join(missing_args)}")
+            msg = f"Missing required arguments: {', '.join(missing_args)}"
+            raise ToolException(msg)
 
         return kwargs
 

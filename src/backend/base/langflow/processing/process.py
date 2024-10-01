@@ -116,12 +116,14 @@ def validate_input(
     graph_data: dict[str, Any], tweaks: Union["Tweaks", dict[str, str | dict[str, Any]]]
 ) -> list[dict[str, Any]]:
     if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
-        raise ValueError("graph_data and tweaks should be dictionaries")
+        msg = "graph_data and tweaks should be dictionaries"
+        raise ValueError(msg)
 
     nodes = graph_data.get("data", {}).get("nodes") or graph_data.get("nodes")
 
     if not isinstance(nodes, list):
-        raise ValueError("graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key")
+        msg = "graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key"
+        raise ValueError(msg)
 
     return nodes
 

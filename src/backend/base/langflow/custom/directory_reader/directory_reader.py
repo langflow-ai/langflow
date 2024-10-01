@@ -124,7 +124,8 @@ class DirectoryReader:
         Walk through the directory path and return a list of all .py files.
         """
         if not (safe_path := self.get_safe_path()):
-            raise CustomComponentPathValueError(f"The path needs to start with '{self.base_path}'.")
+            msg = f"The path needs to start with '{self.base_path}'."
+            raise CustomComponentPathValueError(msg)
 
         file_list = []
         safe_path_obj = Path(safe_path)
