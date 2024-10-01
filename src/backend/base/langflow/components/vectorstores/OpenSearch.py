@@ -1,5 +1,4 @@
-from typing import TYPE_CHECKING, List, Optional, Dict, Any, Tuple
-from langchain.schema import Document
+from typing import TYPE_CHECKING, List, Optional, Dict, Any
 from langchain_community.vectorstores import OpenSearchVectorSearch
 from loguru import logger
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -16,6 +15,7 @@ from langflow.io import (
 )
 from langflow.schema import Data
 import traceback
+import json
 
 if TYPE_CHECKING:
     from langchain_community.vectorstores import OpenSearchVectorSearch
@@ -36,7 +36,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         StrInput(
             name="opensearch_url",
             display_name="OpenSearch URL",
-            value="https://localhost:9200",
+            value="http://localhost:9200",
             info="URL for OpenSearch cluster (e.g. https://192.168.1.1:9200).",
         ),
         StrInput(
@@ -48,7 +48,8 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         MultilineInput(
             name="search_input",
             display_name="Search Input",
-            info="Enter a search query. Leave empty to retrieve all documents.",
+            info="Enter a search query. Leave empty to retrieve all documents. If you need a more advanced search consider using Hybrid Search Query instead.",
+            value=" ",
         ),
         DataInput(
             name="ingest_data",
@@ -59,8 +60,8 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         DropdownInput(
             name="search_type",
             display_name="Search Type",
-            options=["Similarity", "MMR"],
-            value="Similarity",
+            options=["similarity", "similarity_score_threshold", "mmr"],
+            value="similarity",
             advanced=True,
         ),
         IntInput(
@@ -101,6 +102,15 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             value=False,
             advanced=True,
         ),
+        MultilineInput(
+            name="hybrid_search_query",
+            display_name="Hybrid Search Query",
+            value="",
+            advanced=True,
+            info=(
+                "Provide a custom hybrid search query in JSON format. This allows you to combine vector similarity and keyword matching."
+            ),
+        ),
     ]
 
     @check_cached_vector_store
@@ -112,81 +122,40 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             from langchain_community.vectorstores import OpenSearchVectorSearch
         except ImportError as e:
             logger.error(f"Failed to import required modules: {str(e)}")
-            raise ImportError("Please ensure opensearchpy and langchain_community are installed.") from e
+            raise ImportError("Please ensure opensearch-py and langchain_community are installed.") from e
 
+        # Create OpenSearchVectorSearch instance without documents
         try:
-            if self.ingest_data:
-                # Convert Data objects to langchain Documents
-                documents = []
-                for data in self.ingest_data:
-                    if isinstance(data, Data):
-                        doc = data.to_lc_document()
-                        documents.append(doc)
-                    else:
-                        error_message = f"Expected Data object, got {type(data)}"
-                        logger.error(error_message)
-                        raise ValueError(error_message)
-
-                # Create OpenSearchVectorSearch instance using from_documents method
-                try:
-                    opensearch = OpenSearchVectorSearch.from_documents(
-                        documents,
-                        self.embedding,
-                        opensearch_url=self.opensearch_url,
-                        http_auth=(self.username, self.password),
-                        use_ssl=self.use_ssl,
-                        verify_certs=self.verify_certs,
-                        ssl_assert_hostname=False,
-                        ssl_show_warn=False,
-                        index_name=self.index_name,
-                    )
-                    return opensearch
-                except Exception as e:
-                    logger.error(f"Failed to create OpenSearchVectorSearch instance: {str(e)}")
-                    raise RuntimeError(
-                        "Error creating OpenSearchVectorSearch instance. Check your connection and credentials."
-                    ) from e
-            else:
-                # No ingest_data provided, connect to existing index
-                try:
-                    opensearch = OpenSearchVectorSearch(
-                        index_name=self.index_name,
-                        embedding_function=self.embedding,
-                        opensearch_url=self.opensearch_url,
-                        http_auth=(self.username, self.password),
-                        use_ssl=self.use_ssl,
-                        verify_certs=self.verify_certs,
-                        ssl_assert_hostname=False,
-                        ssl_show_warn=False,
-                    )
-                    return opensearch
-                except Exception as e:
-                    logger.error(f"Failed to connect to OpenSearchVectorSearch instance: {str(e)}")
-                    raise RuntimeError(
-                        "Error connecting to OpenSearchVectorSearch instance. Check your connection and credentials."
-                    ) from e
-        except Exception as e:
-            logger.error(
-                f"Unexpected error in build_vector_store, checkout if the username and the password were correctly set: {str(e)}"
+            opensearch = OpenSearchVectorSearch(
+                index_name=self.index_name,
+                embedding_function=self.embedding,
+                opensearch_url=self.opensearch_url,
+                http_auth=(self.username, self.password),
+                use_ssl=self.use_ssl,
+                verify_certs=self.verify_certs,
+                ssl_assert_hostname=False,
+                ssl_show_warn=False,
             )
-            raise RuntimeError(
-                "An unexpected error occurred while building the vector store, checkout if the username and the password were correctly set."
-            ) from e
+        except Exception as e:
+            logger.error(f"Failed to create OpenSearchVectorSearch instance: {str(e)}")
+            raise RuntimeError(f"Check your connection and credentials: {str(e)}") from e
+
+        # If there are documents to ingest, add them to the vector store
+        if self.ingest_data:
+            self._add_documents_to_vector_store(opensearch)
+
+        return opensearch
 
     def _add_documents_to_vector_store(self, vector_store: "OpenSearchVectorSearch") -> None:
         """
         Adds documents to the Vector Store.
         """
-        if not self.ingest_data:
-            self.status = ""
-            return
-
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
-                error_message = "Vector Store Inputs must be Data objects."
+                error_message = f"Expected Data object, got {type(_input)}"
                 logger.error(error_message)
                 raise ValueError(error_message)
 
@@ -198,7 +167,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 error_message = f"Error adding documents to Vector Store: {str(e)}"
                 logger.error(error_message)
                 logger.error(f"Traceback: {traceback.format_exc()}")
-                raise Exception(error_message)
+                raise RuntimeError(f"An error occurred while adding documents to the Vector Store: {str(e)}") from e
         else:
             logger.debug("No documents to add to the Vector Store.")
 
@@ -208,60 +177,65 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         """
         try:
             vector_store = self.build_vector_store()
-            search_kwargs = {"k": self.number_of_results, "score_threshold": self.search_score_threshold}
 
-            if query:
-                search_type = self.search_type.lower()
-                if search_type == "similarity":
-                    results = vector_store.similarity_search_with_score(query, **search_kwargs)
-                    # Handle results with scores
-                    return [
-                        {"page_content": doc.page_content, "metadata": doc.metadata, "score": score}
-                        for doc, score in results
-                    ]
-                elif search_type == "mmr":
-                    results = vector_store.max_marginal_relevance_search(query, **search_kwargs)
-                    # Handle results without scores
-                    return [{"page_content": doc.page_content, "metadata": doc.metadata} for doc in results]
-                else:
-                    raise ValueError(f"Invalid search type: {self.search_type}")
-            else:
-                # Retrieve all documents when no query is provided
-                results = self.get_all_documents(vector_store, **search_kwargs)
+            query = query or ""
+
+            if self.hybrid_search_query.strip():
+                # Use custom hybrid search query if provided
+                try:
+                    hybrid_query = json.loads(self.hybrid_search_query)
+
+                except json.JSONDecodeError as e:
+                    logger.error(f"Invalid hybrid search query JSON after replacement: {str(e)}")
+                    raise ValueError(f"Invalid hybrid search query JSON after replacement: {str(e)}") from e
+
+                results = vector_store.client.search(index=self.index_name, body=hybrid_query)
+
+                processed_results = []
+                for hit in results.get("hits", {}).get("hits", []):
+                    source = hit.get("_source", {})
+                    text = source.get("text", "")
+                    metadata = source.get("metadata", {})
+
+                    if isinstance(text, dict):
+                        text = text.get("text", "")
+
+                    processed_results.append(
+                        {
+                            "page_content": text,
+                            "metadata": metadata,
+                        }
+                    )
+                return processed_results
+
+            # If hybrid search query is not provided, continue with regular search
+            search_kwargs = {"k": self.number_of_results}
+            search_type = self.search_type.lower()
+
+            if search_type == "similarity":
+                results = vector_store.similarity_search(query, **search_kwargs)
+                return [{"page_content": doc.page_content, "metadata": doc.metadata} for doc in results]
+            elif search_type == "similarity_score_threshold":
+                search_kwargs["score_threshold"] = self.search_score_threshold
+                results = vector_store.similarity_search_with_relevance_scores(query, **search_kwargs)
                 return [
-                    {"page_content": doc.page_content, "metadata": doc.metadata, "score": score}
+                    {
+                        "page_content": doc.page_content,
+                        "metadata": doc.metadata,
+                        "score": score,
+                    }
                     for doc, score in results
                 ]
+            elif search_type == "mmr":
+                results = vector_store.max_marginal_relevance_search(query, **search_kwargs)
+                return [{"page_content": doc.page_content, "metadata": doc.metadata} for doc in results]
+            else:
+                raise ValueError(f"Invalid search type: {self.search_type}")
+
         except Exception as e:
-            error_message = f"Error during search: {str(e)}"
-            logger.error(error_message)
+            logger.error(f"Error during search: {str(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")
-            raise Exception(error_message)
-
-    def get_all_documents(self, vector_store: OpenSearchVectorSearch, **kwargs) -> List[Tuple[Document, float]]:
-        """
-        Retrieve all documents from the vector store.
-        """
-        try:
-            client = vector_store.client
-            index_name = vector_store.index_name
-
-            query = {"query": {"match_all": {}}, "size": kwargs.get("k", self.number_of_results)}
-
-            response = client.search(index=index_name, body=query)
-
-            results = []
-            for hit in response["hits"]["hits"]:
-                doc = Document(page_content=hit["_source"].get("text", ""), metadata=hit["_source"].get("metadata", {}))
-                score = hit["_score"]
-                results.append((doc, score))
-
-            return results
-        except Exception as e:
-            error_message = f"Error retrieving all documents: {str(e)}"
-            logger.error(error_message)
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            raise Exception(error_message)
+            raise RuntimeError(f"An error occurred during the search operation: {str(e)}") from e
 
     def search_documents(self) -> List[Data]:
         """
@@ -269,24 +243,18 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         If no search input is provided, retrieve all documents.
         """
         try:
-            results = self.search(self.search_input)
+            query = self.search_input.strip() if self.search_input else None
+            results = self.search(query)
             retrieved_data = [
-                Data(filename=result["metadata"].get("file_path", ""), text=result["page_content"])
+                Data(
+                    file_path=result["metadata"].get("file_path", ""),
+                    text=result["page_content"],
+                )
                 for result in results
             ]
             self.status = retrieved_data
             return retrieved_data
         except Exception as e:
-            error_message = f"Error during document search: {str(e)}"
-            logger.error(error_message)
+            logger.error(f"Error during document search: {str(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")
-            raise Exception(error_message)
-
-    def get_retriever_kwargs(self):
-        """
-        Get the keyword arguments for the retriever.
-        """
-        return {
-            "search_type": self.search_type.lower(),
-            "search_kwargs": {"k": self.number_of_results, "score_threshold": self.search_score_threshold},
-        }
+            raise RuntimeError(f"An error occurred during the document search operation: {str(e)}") from e
