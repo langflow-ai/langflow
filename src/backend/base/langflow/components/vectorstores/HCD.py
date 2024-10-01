@@ -128,7 +128,8 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             name="embedding",
             display_name="Embedding or Astra Vectorize",
             input_types=["Embeddings", "dict"],
-            info="Allows either an embedding model or an Astra Vectorize configuration.",  # TODO: This should be optional, but need to refactor langchain-astradb first.
+            # TODO: This should be optional, but need to refactor langchain-astradb first.
+            info="Allows either an embedding model or an Astra Vectorize configuration.",
         ),
         StrInput(
             name="metadata_indexing_exclude",
@@ -160,7 +161,8 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="search_score_threshold",
             display_name="Search Score Threshold",
-            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            info="Minimum similarity score threshold for search results. "
+            "(when using 'Similarity with score threshold')",
             value=0,
             advanced=True,
         ),

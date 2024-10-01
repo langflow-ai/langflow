@@ -129,8 +129,8 @@ class FrontendNode(BaseModel):
             )
 
     def validate_attributes(self) -> None:
-        # None of inputs, outputs, _artifacts, _results, logs, status, vertex, graph, display_name, description, documentation, icon
-        # should be present in outputs or input names
+        # None of inputs, outputs, _artifacts, _results, logs, status, vertex, graph, display_name, description,
+        # documentation, icon should be present in outputs or input names
         output_names = [output.name for output in self.outputs]
         input_names = [input_.name for input_ in self.template.fields]
         attributes = [

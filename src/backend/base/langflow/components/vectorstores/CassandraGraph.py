@@ -106,7 +106,8 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="search_score_threshold",
             display_name="Search Score Threshold",
-            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            info="Minimum similarity score threshold for search results. "
+            "(when using 'Similarity with score threshold')",
             value=0,
             advanced=True,
         ),
@@ -214,7 +215,8 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             except KeyError as e:
                 if "content" in str(e):
                     raise ValueError(
-                        "You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'."
+                        "You should ingest data through Langflow (or LangChain) to query it in Langflow. "
+                        "Your collection does not contain a field name 'content'."
                     ) from e
                 else:
                     raise e

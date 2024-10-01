@@ -26,7 +26,9 @@ class PythonREPLToolComponent(LCToolComponent):
             name="description",
             display_name="Tool Description",
             info="A description of the tool.",
-            value="A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.",
+            value="A Python shell. Use this to execute python commands. "
+            "Input should be a valid python command. "
+            "If you want to see the output of a value, you should print it out with `print(...)`.",
         ),
         StrInput(
             name="global_imports",
