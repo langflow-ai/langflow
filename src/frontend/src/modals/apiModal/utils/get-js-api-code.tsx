@@ -18,9 +18,7 @@ export default function getJsApiCode({
   if (tweaksBuildedObject)
     tweaksString = JSON.stringify(tweaksBuildedObject, null, 2);
 
-  return `const EventSource = require('eventsource');
-
-  class LangflowClient {
+  return `class LangflowClient {
     constructor(baseURL, apiKey) {
         this.baseURL = baseURL;
         this.apiKey = apiKey;
