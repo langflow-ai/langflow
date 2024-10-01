@@ -133,7 +133,7 @@ AI:
 
   await page.waitForTimeout(1000);
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page.waitForSelector('[data-testid="icon-LucideSend"]', {
     timeout: 100000,
