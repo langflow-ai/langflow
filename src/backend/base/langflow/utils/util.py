@@ -30,7 +30,8 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
 
     # Raise error if name is not in chains
     if name not in classes:
-        raise ValueError(f"{name} not found")
+        msg = f"{name} not found"
+        raise ValueError(msg)
 
     for _type, v in type_to_loader_dict.items():
         if v.__annotations__["return"].__name__ == name:
@@ -69,6 +70,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
                 "description": docs.short_description or "",
                 "base_classes": base_classes,
             }
+    return None
 
 
 def build_template_from_method(
@@ -81,7 +83,8 @@ def build_template_from_method(
 
     # Raise error if class_name is not in classes
     if class_name not in classes:
-        raise ValueError(f"{class_name} not found.")
+        msg = f"{class_name} not found."
+        raise ValueError(msg)
 
     for _type, v in type_to_cls_dict.items():
         if v.__name__ == class_name:
@@ -89,7 +92,8 @@ def build_template_from_method(
 
             # Check if the method exists in this class
             if not hasattr(_class, method_name):
-                raise ValueError(f"Method {method_name} not found in class {class_name}")
+                msg = f"Method {method_name} not found in class {class_name}"
+                raise ValueError(msg)
 
             # Get the method
             method = getattr(_class, method_name)
@@ -128,6 +132,7 @@ def build_template_from_method(
                 "description": docs.short_description or "",
                 "base_classes": base_classes,
             }
+    return None
 
 
 def get_base_classes(cls):
@@ -313,7 +318,7 @@ def get_formatted_type(key: str, _type: str) -> str:
     if key == "allowed_tools":
         return "Tool"
 
-    elif key == "max_value_length":
+    if key == "max_value_length":
         return "int"
 
     return _type

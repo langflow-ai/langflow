@@ -43,7 +43,7 @@ Begin!
 Question: {input}
 
 {agent_scratchpad}
-            """,
+            """,  # noqa: E501
         ),
         MultilineInput(
             name="user_prompt", display_name="Prompt", info="This prompt must contain 'input' key.", value="{input}"
@@ -55,7 +55,8 @@ Question: {input}
 
     def create_agent_runnable(self):
         if "input" not in self.user_prompt:
-            raise ValueError("Prompt must contain 'input' key.")
+            msg = "Prompt must contain 'input' key."
+            raise ValueError(msg)
         messages = [
             ("system", self.system_prompt),
             ("placeholder", "{chat_history}"),

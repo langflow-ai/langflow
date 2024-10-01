@@ -57,17 +57,25 @@ jobs:
       skipped: ${{ steps.check-version.outputs.skipped }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install poetry
-        run: pipx install poetry==${{ env.POETRY_VERSION }}
-      - name: Set up Python 3.12
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-          cache: "poetry"
-      - name: Set up Nodejs 20
-        uses: actions/setup-node@v4
+          python-version-file: "pyproject.toml"
+      - name: Restore uv cache
+        uses: actions/cache@v4
         with:
-          node-version: "20"
+          path: /tmp/.uv-cache
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+            uv-${{ runner.os }}
+      - name: Install the project
+        run: uv sync --dev
       - name: Check Version
         id: check-version
         run: |
@@ -103,10 +111,10 @@ jobs:
             echo "Server terminated successfully"
           fi
       - name: Publish to PyPI
-        if: steps.check-version.outputs.skipped == 'false'
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-        run: make publish base=true
+        run: |
+          make publish base=true
       - name: Upload Artifact
         if: steps.check-version.outputs.skipped == 'false'
         uses: actions/upload-artifact@v4
@@ -123,23 +131,31 @@ jobs:
       version: ${{ steps.check-version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install poetry
-        run: pipx install poetry==${{ env.POETRY_VERSION }}
-      - name: Set up Python 3.12
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-          cache: "poetry"
-      - name: Set up Nodejs 20
-        uses: actions/setup-node@v4
+          python-version-file: "pyproject.toml"
+      - name: Restore uv cache
+        uses: actions/cache@v4
         with:
-          node-version: "20"
+          path: /tmp/.uv-cache
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+            uv-${{ runner.os }}
+      - name: Install the project
+        run: uv sync --dev
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow
       - name: Check if pre-release
         if: inputs.pre_release == 'true'
         run: |
-          version=$(poetry version --short)
+          version=$(uv tree | grep 'langflow' | awk '{print $2}' | sed 's/^v//')
           if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post)([0-9]+))$ ]]; then
             echo "Pre-release version detected. Continuing with the release."
           else
@@ -149,7 +165,7 @@ jobs:
       - name: Check Version
         id: check-version
         run: |
-          version=$(poetry version --short)
+          version=$(uv tree | grep 'langflow' | awk '{print $2}' | sed 's/^v//')
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
@@ -182,8 +198,9 @@ jobs:
           fi
       - name: Publish to PyPI
         env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-        run: make publish main=true
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          make publish main=true
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:

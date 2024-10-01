@@ -32,6 +32,7 @@ class CustomComponentVertex(Vertex):
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
+        return None
 
 
 class ComponentVertex(Vertex):
@@ -40,7 +41,8 @@ class ComponentVertex(Vertex):
 
     def get_input(self, name: str) -> InputTypes:
         if self._custom_component is None:
-            raise ValueError(f"Vertex {self.id} does not have a component instance.")
+            msg = f"Vertex {self.id} does not have a component instance."
+            raise ValueError(msg)
         return self._custom_component.get_input(name)
 
     def get_output(self, name: str) -> Output:
@@ -51,6 +53,7 @@ class ComponentVertex(Vertex):
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
+        return None
 
     def _update_built_object_and_artifacts(self, result):
         """
@@ -105,10 +108,12 @@ class ComponentVertex(Vertex):
                 if edge.is_cycle and edge.target_param:
                     return requester.get_value_from_template_dict(edge.target_param)
 
-            raise ValueError(f"Component {self.display_name} has not been built yet")
+            msg = f"Component {self.display_name} has not been built yet"
+            raise ValueError(msg)
 
         if requester is None:
-            raise ValueError("Requester Vertex is None")
+            msg = "Requester Vertex is None"
+            raise ValueError(msg)
 
         edges = self.get_edge_with_target(requester.id)
         result = UNDEFINED
@@ -131,11 +136,13 @@ class ComponentVertex(Vertex):
                 break
         if result is UNDEFINED:
             if edge is None:
-                raise ValueError(f"Edge not found between {self.display_name} and {requester.display_name}")
-            elif edge.source_handle.name not in self.results:
-                raise ValueError(f"Result not found for {edge.source_handle.name}. Results: {self.results}")
-            else:
-                raise ValueError(f"Result not found for {edge.source_handle.name} in {edge}")
+                msg = f"Edge not found between {self.display_name} and {requester.display_name}"
+                raise ValueError(msg)
+            if edge.source_handle.name not in self.results:
+                msg = f"Result not found for {edge.source_handle.name}. Results: {self.results}"
+                raise ValueError(msg)
+            msg = f"Result not found for {edge.source_handle.name} in {edge}"
+            raise ValueError(msg)
         if flow_id:
             asyncio.create_task(log_transaction(source=self, target=requester, flow_id=str(flow_id), status="success"))
         return result
@@ -209,8 +216,7 @@ class InterfaceVertex(ComponentVertex):
         if self.task_id and self.is_task:
             if task := self.get_task():
                 return str(task.info)
-            else:
-                return f"Task {self.task_id} is not running"
+            return f"Task {self.task_id} is not running"
         if self.artifacts:
             # dump as a yaml string
             if isinstance(self.artifacts, dict):
@@ -224,8 +230,7 @@ class InterfaceVertex(ComponentVertex):
                 # artifacts = {k.title().replace("_", " "): v for k, v in self.artifacts.items() if v is not None}
                 artifact = {k.title().replace("_", " "): v for k, v in artifact.items() if v is not None}
                 artifacts.append(artifact)
-            yaml_str = yaml.dump(artifacts, default_flow_style=False, allow_unicode=True)
-            return yaml_str
+            return yaml.dump(artifacts, default_flow_style=False, allow_unicode=True)
         return super()._built_object_repr()
 
     def _process_chat_component(self):
@@ -347,7 +352,8 @@ class InterfaceVertex(ComponentVertex):
                 elif ignore_errors:
                     logger.error(f"Data expected, but got {value} of type {type(value)}")
                 else:
-                    raise ValueError(f"Data expected, but got {value} of type {type(value)}")
+                    msg = f"Data expected, but got {value} of type {type(value)}"
+                    raise ValueError(msg)
         self.artifacts = DataOutputResponse(data=artifacts)
         return self._built_object
 
@@ -370,7 +376,8 @@ class InterfaceVertex(ComponentVertex):
     async def stream(self):
         iterator = self.params.get(INPUT_FIELD_NAME, None)
         if not isinstance(iterator, AsyncIterator | Iterator):
-            raise ValueError("The message must be an iterator or an async iterator.")
+            msg = "The message must be an iterator or an async iterator."
+            raise ValueError(msg)
         is_async = isinstance(iterator, AsyncIterator)
         complete_message = ""
         if is_async:
@@ -473,6 +480,7 @@ class StateVertex(ComponentVertex):
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
+        return None
 
 
 def dict_to_codeblock(d: dict) -> str:

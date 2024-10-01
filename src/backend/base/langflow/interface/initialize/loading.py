@@ -32,7 +32,8 @@ async def instantiate_class(
     logger.debug(f"Instantiating {vertex_type} of type {base_type}")
 
     if not base_type:
-        raise ValueError("No base type provided for vertex")
+        msg = "No base type provided for vertex"
+        raise ValueError(msg)
 
     custom_params = get_params(vertex.params)
     code = custom_params.pop("code")
@@ -62,10 +63,10 @@ async def get_instance_results(
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
         if base_type == "custom_components":
             return await build_custom_component(params=custom_params, custom_component=custom_component)
-        elif base_type == "component":
+        if base_type == "component":
             return await build_component(params=custom_params, custom_component=custom_component)
-        else:
-            raise ValueError(f"Base type {base_type} not found.")
+        msg = f"Base type {base_type} not found."
+        raise ValueError(msg)
 
 
 def get_params(vertex_params):
@@ -125,7 +126,8 @@ def update_params_with_load_from_db_fields(
                 if fallback_to_env_vars and key is None:
                     var = os.getenv(params[field])
                     if var is None:
-                        raise ValueError(f"Environment variable {params[field]} is not set.")
+                        msg = f"Environment variable {params[field]} is not set."
+                        raise ValueError(msg)
                     key = var
                     logger.info(f"Using environment variable {params[field]} for {field}")
                 if key is None:
@@ -197,4 +199,5 @@ async def build_custom_component(params: dict, custom_component: CustomComponent
         custom_component._results = {custom_component._vertex.outputs[0].get("name"): build_result}
         return custom_component, build_result, artifact
 
-    raise ValueError("Custom component does not have a vertex")
+    msg = "Custom component does not have a vertex"
+    raise ValueError(msg)

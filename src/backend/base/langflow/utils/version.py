@@ -46,7 +46,9 @@ def _get_version_info():
             pass
 
     if __version__ is None:
-        raise ValueError(f"Package not found from options {package_options}")
+        msg = f"Package not found from options {package_options}"
+        raise ValueError(msg)
+    return None
 
 
 VERSION_INFO = _get_version_info()

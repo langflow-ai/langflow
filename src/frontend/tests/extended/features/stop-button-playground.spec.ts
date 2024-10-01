@@ -135,7 +135,7 @@ class CustomComponent(Component):
 
   await page.waitForTimeout(1000);
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page.waitForTimeout(1000);
 

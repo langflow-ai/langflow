@@ -54,14 +54,17 @@ class FlowBase(SQLModel):
     @field_validator("icon_bg_color")
     def validate_icon_bg_color(cls, v):
         if v is not None and not isinstance(v, str):
-            raise ValueError("Icon background color must be a string")
+            msg = "Icon background color must be a string"
+            raise ValueError(msg)
         # validate that is is a hex color
         if v and not v.startswith("#"):
-            raise ValueError("Icon background color must start with #")
+            msg = "Icon background color must start with #"
+            raise ValueError(msg)
 
         # validate that it is a valid hex color
         if v and len(v) != 7:
-            raise ValueError("Icon background color must be 7 characters long")
+            msg = "Icon background color must be 7 characters long"
+            raise ValueError(msg)
         return v
 
     @field_validator("icon")
@@ -76,10 +79,11 @@ class FlowBase(SQLModel):
 
         if not v.startswith(":") and not v.endswith(":"):
             return v
-        elif not v.startswith(":") or not v.endswith(":"):
+        if not v.startswith(":") or not v.endswith(":"):
             # emoji should have both starting and ending colons
             # so if one of them is missing, we will raise
-            raise ValueError(f"Invalid emoji. {v} is not a valid emoji.")
+            msg = f"Invalid emoji. {v} is not a valid emoji."
+            raise ValueError(msg)
 
         emoji_value = emoji.emojize(v, variant="emoji_type")
         if v == emoji_value:
@@ -92,12 +96,15 @@ class FlowBase(SQLModel):
             return icon
         # otherwise it should be a valid lucide icon
         if v is not None and not isinstance(v, str):
-            raise ValueError("Icon must be a string")
+            msg = "Icon must be a string"
+            raise ValueError(msg)
         # is should be lowercase and contain only letters and hyphens
         if v and not v.islower():
-            raise ValueError("Icon must be lowercase")
+            msg = "Icon must be lowercase"
+            raise ValueError(msg)
         if v and not v.replace("-", "").isalpha():
-            raise ValueError("Icon must contain only letters and hyphens")
+            msg = "Icon must contain only letters and hyphens"
+            raise ValueError(msg)
         return v
 
     @field_validator("data")
@@ -105,13 +112,16 @@ class FlowBase(SQLModel):
         if not v:
             return v
         if not isinstance(v, dict):
-            raise ValueError("Flow must be a valid JSON")
+            msg = "Flow must be a valid JSON"
+            raise ValueError(msg)
 
         # data must contain nodes and edges
         if "nodes" not in v.keys():
-            raise ValueError("Flow must have nodes")
+            msg = "Flow must have nodes"
+            raise ValueError(msg)
         if "edges" not in v.keys():
-            raise ValueError("Flow must have edges")
+            msg = "Flow must have edges"
+            raise ValueError(msg)
 
         return v
 
@@ -131,7 +141,7 @@ class FlowBase(SQLModel):
     def validate_dt(cls, v):
         if v is None:
             return v
-        elif isinstance(v, datetime):
+        if isinstance(v, datetime):
             return v
 
         return datetime.fromisoformat(v)
@@ -157,8 +167,7 @@ class Flow(FlowBase, table=True):  # type: ignore
             "description": serialized.pop("description"),
             "updated_at": serialized.pop("updated_at"),
         }
-        record = Data(data=data)
-        return record
+        return Data(data=data)
 
     __table_args__ = (
         UniqueConstraint("user_id", "name", name="unique_flow_name"),

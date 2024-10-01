@@ -352,7 +352,8 @@ def load_starter_projects(retries=3, delay=1) -> list[tuple[Path, dict]]:
                 except orjson.JSONDecodeError as e:
                     attempt += 1
                     if attempt >= retries:
-                        raise ValueError(f"Error loading starter project {file}: {e}")
+                        msg = f"Error loading starter project {file}: {e}"
+                        raise ValueError(msg)
                     time.sleep(delay)  # Wait before retrying
     return starter_projects
 
@@ -363,7 +364,8 @@ def copy_profile_pictures():
     target = Path(config_dir) / "profile_pictures"
 
     if not os.path.exists(origin):
-        raise ValueError(f"The source folder '{origin}' does not exist.")
+        msg = f"The source folder '{origin}' does not exist."
+        raise ValueError(msg)
 
     if not os.path.exists(target):
         os.makedirs(target)
@@ -458,8 +460,7 @@ def create_new_project(
 
 
 def get_all_flows_similar_to_project(session, folder_id):
-    flows = session.exec(select(Folder).where(Folder.id == folder_id)).first().flows
-    return flows
+    return session.exec(select(Folder).where(Folder.id == folder_id)).first().flows
 
 
 def delete_start_projects(session, folder_id):
@@ -482,8 +483,7 @@ def create_starter_folder(session):
         session.commit()
         session.refresh(db_folder)
         return db_folder
-    else:
-        return session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+    return session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
 
 
 def _is_valid_uuid(val):
@@ -605,7 +605,8 @@ def initialize_super_user_if_needed():
     username = settings_service.auth_settings.SUPERUSER
     password = settings_service.auth_settings.SUPERUSER_PASSWORD
     if not username or not password:
-        raise ValueError("SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true.")
+        msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
+        raise ValueError(msg)
 
     with session_scope() as session:
         super_user = create_super_user(db=session, username=username, password=password)
