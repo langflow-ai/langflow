@@ -192,9 +192,7 @@ jobs:
       build_docker_base: true
       build_docker_main: true
       nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
-      # nightly_tag_main: "v1.0.18.dev9"
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
-      # nightly_tag_base: "v0.0.96.dev10"
     secrets: inherit
 
   # slack-notification:
