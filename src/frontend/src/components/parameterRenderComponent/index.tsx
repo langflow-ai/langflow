@@ -15,6 +15,7 @@ import ToggleShadComponent from "../toggleShadComponent";
 import { RefreshParameterComponent } from "./component/refreshParameterComponent";
 import { StrRenderComponent } from "./component/strRenderComponent";
 import { EmptyParameterComponent } from "./component/emptyParameterComponent";
+import { InputProps } from "./types";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -48,6 +49,145 @@ export function ParameterRenderComponent({
     templateData.name
   ).toLowerCase();
 
+  const renderComponent = ():React.ReactElement<InputProps> => {
+    if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
+      return (
+        <StrRenderComponent
+          templateData={templateData}
+          value={templateValue}
+          name={name}
+          disabled={disabled}
+          handleOnNewValue={handleOnNewValue}
+          id={id}
+          editNode={editNode}
+        />
+      );
+    }
+    switch (templateData.type) {
+      case "NestedDict":
+        return (
+          <DictComponent
+            disabled={disabled}
+            editNode={editNode}
+            value={
+              (templateValue || "").toString() === "{}" ? {} : templateValue
+            }
+            onChange={onChange}
+            id={`dict_${id}`}
+          />
+        );
+      case "dict":
+        return (
+          <KeypairListComponent
+            disabled={disabled}
+            editNode={editNode}
+            value={templateValue}
+            onChange={onChange}
+            isList={templateData.list ?? false}
+            id={`keypair_${id}`}
+          />
+        );
+      case "bool":
+        return (
+          <ToggleShadComponent
+            id={`toggle_${id}`}
+            disabled={disabled}
+            enabled={templateValue}
+            setEnabled={onChange}
+            size={editNode ? "small" : "large"}
+          />
+        );
+      case "link":
+        return (
+          <LinkComponent
+            value={templateData}
+            onChange={onChange}
+            id={`link_${id}`}
+          />
+        );
+      case "float":
+        return (
+          <FloatComponent
+            disabled={disabled}
+            editNode={editNode}
+            rangeSpec={templateData.range_spec}
+            value={templateValue ?? ""}
+            onChange={onChange}
+            id={`float_${id}`}
+          />
+        );
+      case "int":
+        return (
+          <IntComponent
+            rangeSpec={templateData.range_spec}
+            id={`int_${id}`}
+            disabled={disabled}
+            editNode={editNode}
+            value={templateValue ?? 0}
+            onChange={onChange}
+          />
+        );
+      case "file":
+        return (
+          <InputFileComponent
+            editNode={editNode}
+            disabled={disabled}
+            value={templateValue ?? ""}
+            handleOnNewValue={handleOnNewValue}
+            fileTypes={templateData.fileTypes}
+            id={`inputfile_${id}`}
+          />
+        );
+      case "prompt":
+        return (
+          <PromptAreaComponent
+            readonly={!!nodeClass.flow}
+            field_name={name}
+            editNode={editNode}
+            disabled={disabled}
+            nodeClass={nodeClass}
+            setNodeClass={handleNodeClass}
+            value={templateValue ?? ""}
+            onChange={onChange}
+            id={`promptarea_${id}`}
+          />
+        );
+      case "code":
+        return (
+          <CodeAreaComponent
+            dynamic={false}
+            setNodeClass={handleNodeClass}
+            nodeClass={nodeClass}
+            disabled={disabled}
+            editNode={editNode}
+            value={templateValue ?? ""}
+            onChange={onChange}
+            id={`codearea_${id}`}
+          />
+        );
+      case "table":
+        return (
+          <TableNodeComponent
+            description={templateData.info || "Add or edit data"}
+            columns={templateData?.table_schema?.columns}
+            onChange={onChange}
+            tableTitle={templateData?.display_name ?? "Table"}
+            value={templateValue}
+          />
+        );
+      default:
+        return (
+          <EmptyParameterComponent
+            id={id}
+            value={templateValue}
+            editNode={editNode}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        );
+    }
+  };
+
   return useMemo(
     () => (
       <RefreshParameterComponent
@@ -59,117 +199,7 @@ export function ParameterRenderComponent({
         handleNodeClass={handleNodeClass}
         name={name}
       >
-        {TEXT_FIELD_TYPES.includes(templateData.type ?? "") ? (
-          <StrRenderComponent
-            templateData={templateData}
-            value={templateValue}
-            name={name}
-            disabled={disabled}
-            handleOnNewValue={handleOnNewValue}
-            id={id}
-            editNode={editNode}
-          />
-        ) : templateData.type === "NestedDict" ? (
-          <DictComponent
-            disabled={disabled}
-            editNode={editNode}
-            value={
-              (templateValue || "").toString() === "{}" ? {} : templateValue
-            }
-            onChange={onChange}
-            id={`dict_${id}`}
-          />
-        ) : templateData.type === "dict" ? (
-          <KeypairListComponent
-            disabled={disabled}
-            editNode={editNode}
-            value={templateValue}
-            onChange={onChange}
-            isList={templateData.list ?? false}
-            id={`keypair_${id}`}
-          />
-        ) : templateData.type === "bool" ? (
-          <ToggleShadComponent
-            id={`toggle_${id}`}
-            disabled={disabled}
-            enabled={templateValue}
-            setEnabled={onChange}
-            size={editNode ? "small" : "large"}
-          />
-        ) : templateData.type === "link" ? (
-          <LinkComponent
-            value={templateData}
-            onChange={onChange}
-            id={`link_${id}`}
-          />
-        ) : templateData.type === "float" ? (
-          <FloatComponent
-            disabled={disabled}
-            editNode={editNode}
-            rangeSpec={templateData.range_spec}
-            value={templateValue ?? ""}
-            onChange={onChange}
-            id={`float_${id}`}
-          />
-        ) : templateData.type === "int" ? (
-          <IntComponent
-            rangeSpec={templateData.range_spec}
-            id={`int_${id}`}
-            disabled={disabled}
-            editNode={editNode}
-            value={templateValue ?? 0}
-            onChange={onChange}
-          />
-        ) : templateData.type === "file" ? (
-          <InputFileComponent
-            editNode={editNode}
-            disabled={disabled}
-            value={templateValue ?? ""}
-            handleOnNewValue={handleOnNewValue}
-            fileTypes={templateData.fileTypes}
-            id={`inputfile_${id}`}
-          />
-        ) : templateData.type === "prompt" ? (
-          <PromptAreaComponent
-            readonly={nodeClass.flow ? true : false}
-            field_name={name}
-            editNode={editNode}
-            disabled={disabled}
-            nodeClass={nodeClass}
-            setNodeClass={handleNodeClass}
-            value={templateValue ?? ""}
-            onChange={onChange}
-            id={`promptarea_${id}`}
-          />
-        ) : templateData.type === "code" ? (
-          <CodeAreaComponent
-            readonly={nodeClass.flow && templateData.dynamic ? true : false}
-            dynamic={false}
-            setNodeClass={handleNodeClass}
-            nodeClass={nodeClass}
-            disabled={disabled}
-            editNode={editNode}
-            value={templateValue ?? ""}
-            onChange={onChange}
-            id={`codearea_${id}`}
-          />
-        ) : templateData.type === "table" ? (
-          <TableNodeComponent
-            description={templateData.info || "Add or edit data"}
-            columns={templateData?.table_schema?.columns}
-            onChange={onChange}
-            tableTitle={templateData?.display_name ?? "Table"}
-            value={templateValue}
-          />
-        ) : (
-          <EmptyParameterComponent
-          id={id}
-          value={templateValue}
-          editNode={editNode}
-          onChange={onChange}
-          disabled={disabled}
-        />
-        )}
+        {renderComponent()}
       </RefreshParameterComponent>
     ),
     [templateData, disabled, nodeId, editNode, nodeClass, name, templateValue],
