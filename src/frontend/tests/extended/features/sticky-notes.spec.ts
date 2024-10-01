@@ -30,7 +30,11 @@ test("user should be able to interact with sticky notes", async ({ page }) => {
     control = "Meta";
   }
 
-  const randomTitle = Math.random().toString(36).substring(7).padEnd(8, 'x').substring(0, 8);
+  const randomTitle = Math.random()
+    .toString(36)
+    .substring(7)
+    .padEnd(8, "x")
+    .substring(0, 8);
 
   const noteText = `# ${randomTitle}
 
@@ -85,7 +89,6 @@ The future of AI is both exciting and uncertain. As the technology continues to 
   await page.getByTitle("zoom out").click();
 
   await page.getByTestId("note_node").click();
-  
 
   await page.locator(".generic-node-desc").last().dblclick();
   await page.getByTestId("textarea").fill(noteText);
