@@ -7,7 +7,7 @@ import CodeAreaComponent from "./components/codeAreaComponent";
 import DictComponent from "../dictComponent";
 import FloatComponent from "./components/floatComponent";
 import InputFileComponent from "../inputFileComponent";
-import IntComponent from "../intComponent";
+import IntComponent from "./components/intComponent";
 import KeypairListComponent from "../keypairListComponent";
 import LinkComponent from "../linkComponent";
 import PromptAreaComponent from "../promptComponent";
@@ -126,12 +126,9 @@ export function ParameterRenderComponent({
       case "int":
         return (
           <IntComponent
-            rangeSpec={templateData.range_spec}
-            id={`int_${id}`}
-            disabled={disabled}
-            editNode={editNode}
-            value={templateValue ?? 0}
-            onChange={onChange}
+          {...baseInputProps}
+          rangeSpec={templateData.range_spec}
+          id={`int_${id}`}
           />
         );
       case "file":

@@ -26,5 +26,8 @@ export type TableComponentType = {
 
 export type FloatComponentType = {
   rangeSpec: RangeSpecType;
+};
 
+export type IntComponentType = {
+    rangeSpec: RangeSpecType;
 };
