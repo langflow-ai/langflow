@@ -131,10 +131,7 @@ export function ParameterRenderComponent({
       case "file":
         return (
           <InputFileComponent
-            editNode={editNode}
-            disabled={disabled}
-            value={templateValue ?? ""}
-            handleOnNewValue={handleOnNewValue}
+          {...baseInputProps}
             fileTypes={templateData.fileTypes}
             id={`inputfile_${id}`}
           />

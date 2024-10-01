@@ -9,9 +9,9 @@ import {
 } from "../../../../constants/alerts_constants";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { FileComponentType } from "../../../../types/components";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
+import { FileComponentType, InputProps } from "../../types";
 
 export default function InputFileComponent({
   value,
@@ -20,7 +20,7 @@ export default function InputFileComponent({
   fileTypes,
   editNode = false,
   id,
-}: FileComponentType): JSX.Element {
+}: InputProps<string, FileComponentType>): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
