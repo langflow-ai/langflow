@@ -63,21 +63,11 @@ This components allows you to poll the transcripts. It checks the status of the 
 
 - **Input**:
     - AssemblyAI API Key: Your API key.
-    - Polling Interval: The polling interval in seconds. Default is 3.
+    - Polling Interval (Optional): The polling interval in seconds. Default is 3.
 
 - **Output**:
     - Transcription Result: The AssemblyAI JSON response of a completed transcript. Contains the text and other info.
 
-
-### AssebmlyAI Parse Transcript
-
-This component allows you to parse a *Transcription Result* and outputs the formatted text.
-
-- **Input**:
-    - Transcription Result: The output of the *Poll Transcript* component.
-
-- **Output**:
-    - Parsed transcription: The parsed transcript. If Speaker Labels was enabled in the *Start Transcript* component, it formats utterances with speakers and timestamps.
 
 ### AssebmlyAI Get Subtitles
 
@@ -90,7 +80,7 @@ This component allows you to generate subtitles in SRT or VTT format.
     - Character per Caption (Optional): The maximum number of characters per caption (0 for no limit).
 
 - **Output**:
-    - Parsed transcription: The parsed transcript. If Speaker Labels was enabled in the *Start Transcript* component, it formats utterances with speakers and timestamps.
+    - Subtitles: A JSON response with the `subtitles` field containing the captions in SRT or VTT format.
 
 
 ### AssebmlyAI LeMUR
@@ -106,6 +96,9 @@ LeMUR automatically ingests the transcript as additional context, making it easy
     - Final Model: The model that is used for the final prompt after compression is performed. Default is Claude 3.5 Sonnet.
     - Temperature (Optional): The temperature to use for the model. Default is 0.0.
     - Max Output Size (Optional): Max output size in tokens, up to 4000. Default is 2000.
+    - Endpoint (Optional): The LeMUR endpoint to use. Default is "task". For "summary" and "question-answer", no prompt input is needed. See [LeMUR API docs](https://www.assemblyai.com/docs/api-reference/lemur/) for more info.
+    - Questions (Optional): Comma-separated list of your questions. Only used if *Endpoint* is "question-answer".
+    - Transcript IDs (Optional): Comma-separated list of transcript IDs. LeMUR can perform actions over multiple transcripts. If provided, the *Transcription Result* is ignored.
 
 - **Output**:
     - LeMUR Response: The generated LLM response.
@@ -131,7 +124,7 @@ This component can be used as a standalone component to list all previously gene
 2. The user can also input an LLM prompt. In this example, we want to generate a summary of the transcript.
 3. The flow submits the audio file for transcription.
 4. The flow checks the status of the transcript every few seconds until transcription is completed.
-5. The flow parses the transcript and outputs the formatted text.
+5. The flow parses the transcription result and outputs the transcribed text.
 6. The flow also generates subtitles.
 7. The flow applies the LLM prompt to generate a summary.
 8. As a standalone component, all transcripts can be listed.
@@ -145,7 +138,7 @@ To run the Transcription and Speech AI Flow:
 3. Connect the components as shown in the flow diagram. **Tip**: Freeze the path of the *Start Transcript* component to only submit the file once.
 4. Input the AssemblyAI API key in in all components that require the key (Start Transcript, Poll Transcript, Get Subtitles, LeMUR, List Transcripts).
 5. Select an audio or video file in the *Start Transcript* component.
-6. Run the flow by clicking **Play** on the *Parse Transcript* component.
+6. Run the flow by clicking **Play** on the *Parse Data* component. Make sure that the specified template is `{text}`.
 7. To generate subtitles, click **Play** on the *Get Subtitles* component.
 8. To apply an LLM to your audio file, click **Play** on the *LeMUR* component. Note that you need an upgraded AssemblyAI account to use LeMUR.
 9. To list all transcripts, click **Play** on the *List Transcript* component.
