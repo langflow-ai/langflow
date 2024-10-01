@@ -69,7 +69,8 @@ class AmazonBedrockComponent(LCModelComponent):
         try:
             from langchain_aws import ChatBedrock
         except ImportError:
-            raise ImportError("langchain_aws is not installed. Please install it with `pip install langchain_aws`.")
+            msg = "langchain_aws is not installed. Please install it with `pip install langchain_aws`."
+            raise ImportError(msg)
         if self.aws_access_key:
             import boto3  # type: ignore
 
@@ -103,5 +104,6 @@ class AmazonBedrockComponent(LCModelComponent):
                 streaming=self.stream,
             )
         except Exception as e:
-            raise ValueError("Could not connect to AmazonBedrock API.") from e
+            msg = "Could not connect to AmazonBedrock API."
+            raise ValueError(msg) from e
         return output  # type: ignore

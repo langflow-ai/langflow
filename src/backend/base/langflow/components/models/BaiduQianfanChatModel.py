@@ -97,6 +97,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
                 endpoint=endpoint,
             )
         except Exception as e:
-            raise ValueError("Could not connect to Baidu Qianfan API.") from e
+            msg = "Could not connect to Baidu Qianfan API."
+            raise ValueError(msg) from e
 
         return output  # type: ignore
