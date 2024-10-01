@@ -51,7 +51,6 @@ jobs:
   release-nightly-base:
     name: Release Langflow Nightly Base
     runs-on: ubuntu-latest
-    if: false
     defaults:
       run:
         shell: bash
@@ -142,7 +141,6 @@ jobs:
   release-nightly-main:
     name: Release Langflow Nightly Main
     needs: [release-nightly-base]
-    if: false
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.verify.outputs.version }}
@@ -227,14 +225,12 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    # if: always() && ${{ inputs.build_docker_base == 'true' }}
-    if: always()
-    # needs: [release-nightly-base, release-nightly-main]
+    if: always() && ${{ inputs.build_docker_base == 'true' }}
+    needs: [release-nightly-base, release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     with:
       # Version should _not_ contain the leading `v`
-      # version: ${{ needs.release-nightly-base.outputs.version }} 
-      version: "0.0.96.dev11"
+      version: ${{ needs.release-nightly-base.outputs.version }} 
       release_type: base
       nightly_tag_base: ${{ inputs.nightly_tag_base }}
       nightly_tag_main: ${{ inputs.nightly_tag_main }}
@@ -242,14 +238,12 @@ jobs:
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    # if: always() && ${{ inputs.build_docker_main == 'true' }}
-    if: always()
-    # needs: [release-nightly-main]
+    if: always() && ${{ inputs.build_docker_main == 'true' }}
+    needs: [release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     with:
       # Version should _not_ contain the leading `v`
-      # version: ${{ needs.release-nightly-main.outputs.version }}
-      version: "1.0.18.dev10"
+      version: ${{ needs.release-nightly-main.outputs.version }}
       release_type: main
       nightly_tag_main: ${{ inputs.nightly_tag_main }}
     secrets: inherit
