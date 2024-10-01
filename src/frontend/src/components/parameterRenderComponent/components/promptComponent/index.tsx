@@ -1,24 +1,24 @@
 import PromptModal from "@/modals/promptModal";
 import { useEffect } from "react";
-import { PromptAreaComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
+import { InputProps, PromptAreaComponentType } from "../../types";
 
 export default function PromptAreaComponent({
   field_name,
-  setNodeClass,
   nodeClass,
+  handleOnNewValue,
+  handleNodeClass,
   value,
-  onChange,
   disabled,
   editNode = false,
   id = "",
   readonly = false,
-}: PromptAreaComponentType): JSX.Element {
+}: InputProps<string, PromptAreaComponentType>): JSX.Element {
   useEffect(() => {
     if (disabled && value !== "") {
-      onChange("", undefined, true);
+      handleOnNewValue({ value: "" }, { skipSnapshot: true });
     }
   }, [disabled]);
 
@@ -59,9 +59,9 @@ export default function PromptAreaComponent({
         field_name={field_name}
         readonly={readonly}
         value={value}
-        setValue={onChange}
+        setValue={()=>handleOnNewValue({value: ""})}
         nodeClass={nodeClass}
-        setNodeClass={setNodeClass}
+        setNodeClass={handleNodeClass}
       >
         <Button unstyled className="w-full">
           <div className="flex w-full items-center gap-3">

@@ -139,15 +139,10 @@ export function ParameterRenderComponent({
       case "prompt":
         return (
           <PromptAreaComponent
-            readonly={!!nodeClass.flow}
-            field_name={name}
-            editNode={editNode}
-            disabled={disabled}
-            nodeClass={nodeClass}
-            setNodeClass={handleNodeClass}
-            value={templateValue ?? ""}
-            onChange={onChange}
-            id={`promptarea_${id}`}
+          {...baseInputProps}
+          readonly={!!nodeClass.flow}
+          field_name={name}
+          id={`promptarea_${id}`}
           />
         );
       case "code":
