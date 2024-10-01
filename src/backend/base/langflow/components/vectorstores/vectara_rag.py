@@ -65,7 +65,8 @@ class VectaraRagComponent(Component):
             range_spec=RangeSpec(min=0.005, max=0.1, step=0.005),
             value=0.005,
             advanced=True,
-            info="How much to weigh lexical scores compared to the embedding score. 0 means lexical search is not used at all, and 1 means only lexical search is used.",
+            info="How much to weigh lexical scores compared to the embedding score. "
+            "0 means lexical search is not used at all, and 1 means only lexical search is used.",
         ),
         MessageTextInput(
             name="filter",
@@ -118,7 +119,8 @@ class VectaraRagComponent(Component):
             options=SUMMARIZER_PROMPTS,
             value=SUMMARIZER_PROMPTS[0],
             advanced=True,
-            info="Only vectara-summary-ext-24-05-sml is for Growth customers; all other prompts are for Scale customers only.",
+            info="Only vectara-summary-ext-24-05-sml is for Growth customers; "
+            "all other prompts are for Scale customers only.",
         ),
     ]
 

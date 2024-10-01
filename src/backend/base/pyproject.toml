@@ -148,7 +148,34 @@ exclude = ["langflow/alembic"]
 line-length = 120
 
 [tool.ruff.lint]
-select = ["C4", "E4", "E7", "E9", "F", "I", "UP"]
+select = [
+    "ASYNC",
+    "C4",
+    "COM",
+    "DJ",
+    "E",
+    "F",
+    "FLY",
+    "FURB",
+    "I",
+    "ICN",
+    "INT",
+    "LOG",
+    "NPY",
+    "PD",
+    "PIE",
+    "Q",
+    "RSE",
+    "SLOT",
+    "T10",
+    "TID",
+    "UP",
+    "W",
+    "YTT"
+]
+ignore = [
+    "COM812", # Messes with the formatter
+]
 
 [build-system]
 requires = ["hatchling"]

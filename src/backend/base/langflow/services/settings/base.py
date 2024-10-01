@@ -63,7 +63,8 @@ class Settings(BaseSettings):
     # Define if langflow db should be saved in config dir or
     # in the langflow directory
     save_db_in_config_dir: bool = False
-    """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory (i.e. in the package directory)."""
+    """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory
+    (i.e. in the package directory)."""
 
     dev: bool = False
     """If True, Langflow will run in development mode."""
@@ -75,7 +76,8 @@ class Settings(BaseSettings):
     """The number of connections to allow that can be opened beyond the pool size.
     If not provided, the default is 20."""
     db_connect_timeout: int = 20
-    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the database."""
+    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
+    database."""
 
     # sqlite configuration
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}

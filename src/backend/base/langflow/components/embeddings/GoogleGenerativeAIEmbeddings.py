@@ -13,7 +13,10 @@ from langflow.io import MessageTextInput, Output, SecretStrInput
 
 class GoogleGenerativeAIEmbeddingsComponent(Component):
     display_name = "Google Generative AI Embeddings"
-    description = "Connect to Google's generative AI embeddings service using the GoogleGenerativeAIEmbeddings class, found in the langchain-google-genai package."
+    description = (
+        "Connect to Google's generative AI embeddings service using the GoogleGenerativeAIEmbeddings class, "
+        "found in the langchain-google-genai package."
+    )
     documentation: str = "https://python.langchain.com/v0.2/docs/integrations/text_embedding/google_generative_ai/"
     icon = "Google"
     name = "Google Generative AI Embeddings"

@@ -411,7 +411,9 @@ async def build_flow(
             get_time_yield = time.time()
             client_consumed_queue.put_nowait(event_id)
             logger.debug(
-                f"consumed event {str(event_id)} (time in queue, {get_time - put_time:.4f}, client {get_time_yield - get_time:.4f})"
+                f"consumed event {str(event_id)} "
+                f"(time in queue, {get_time - put_time:.4f}, "
+                f"client {get_time_yield - get_time:.4f})"
             )
 
     asyncio_queue: asyncio.Queue = asyncio.Queue()

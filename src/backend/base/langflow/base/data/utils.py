@@ -140,7 +140,7 @@ def parse_text_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
                 text = [normalize_text(item) if isinstance(item, str) else item for item in text]
             text = orjson.dumps(text).decode("utf-8")
 
-        elif file_path.endswith(".yaml") or file_path.endswith(".yml"):
+        elif file_path.endswith((".yaml", ".yml")):
             text = yaml.safe_load(text)
         elif file_path.endswith(".xml"):
             xml_element = ET.fromstring(text)

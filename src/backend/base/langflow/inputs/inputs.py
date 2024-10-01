@@ -40,7 +40,8 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
         for item in v:
             if not isinstance(item, dict | Data):
                 raise ValueError(
-                    f"TableInput value must be a list of dictionaries or Data. Item '{item}' is not a dictionary or Data."
+                    "TableInput value must be a list of dictionaries or Data. "
+                    f"Item '{item}' is not a dictionary or Data."
                 )
         return v
 
@@ -104,7 +105,8 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
             # Keep the warning for now, but we should change it to an error
             if _info.data.get("input_types") and v.__class__.__name__ not in _info.data.get("input_types"):
                 warnings.warn(
-                    f"Invalid value type {type(v)} for input {_info.data.get('name')}. Expected types: {_info.data.get('input_types')}"
+                    f"Invalid value type {type(v)} for input {_info.data.get('name')}. "
+                    f"Expected types: {_info.data.get('input_types')}"
                 )
             else:
                 warnings.warn(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
@@ -154,10 +156,12 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
     """
     Represents a text input component for the Langflow system.
 
-    This component is used to handle text inputs in the Langflow system. It provides methods for validating and processing text values.
+    This component is used to handle text inputs in the Langflow system.
+    It provides methods for validating and processing text values.
 
     Attributes:
-        input_types (list[str]): A list of input types that this component supports. In this case, it supports the "Message" input type.
+        input_types (list[str]): A list of input types that this component supports.
+            In this case, it supports the "Message" input type.
     """
 
     input_types: list[str] = ["Message"]
@@ -192,7 +196,8 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
                 input_name = _info.data["name"]
                 raise ValueError(
                     f"The input to '{input_name}' must contain the key '{v.text_key}'."
-                    f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
+                    f"You can set `text_key` to one of the following keys: {keys} "
+                    "or set the value using another Component."
                 )
         elif isinstance(v, AsyncIterator | Iterator):
             value = v
@@ -274,7 +279,8 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
                 input_name = _info.data["name"]
                 raise ValueError(
                     f"The input to '{input_name}' must contain the key '{v.text_key}'."
-                    f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
+                    f"You can set `text_key` to one of the following keys: {keys} "
+                    "or set the value using another Component."
                 )
         elif isinstance(v, AsyncIterator | Iterator):
             value = v

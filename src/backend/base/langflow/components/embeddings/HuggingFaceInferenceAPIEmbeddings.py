@@ -47,14 +47,17 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
         parsed_url = urlparse(inference_endpoint)
         if not all([parsed_url.scheme, parsed_url.netloc]):
             raise ValueError(
-                f"Invalid inference endpoint format: '{self.inference_endpoint}'. Please ensure the URL includes both a scheme (e.g., 'http://' or 'https://') and a domain name. Example: 'http://localhost:8080' or 'https://api.example.com'"
+                f"Invalid inference endpoint format: '{self.inference_endpoint}'. "
+                "Please ensure the URL includes both a scheme (e.g., 'http://' or 'https://') and a domain name. "
+                "Example: 'http://localhost:8080' or 'https://api.example.com'"
             )
 
         try:
             response = requests.get(f"{inference_endpoint}/health", timeout=5)
         except requests.RequestException:
             raise ValueError(
-                f"Inference endpoint '{inference_endpoint}' is not responding. Please ensure the URL is correct and the service is running."
+                f"Inference endpoint '{inference_endpoint}' is not responding. "
+                "Please ensure the URL is correct and the service is running."
             )
 
         if response.status_code != 200:
