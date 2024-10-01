@@ -66,10 +66,14 @@ class AstraAssistantManager(Component):
         print(self.tools)
         tool_cls = tools_and_names[self.tools]
         tool_obj = tool_cls()
-        #TODO: make tools dynamic
-        #TODO: maybe pass thread_id and assistant_id
         client = get_patched_openai_client()
-        assistant_manager = AssistantManager(instructions=self.instructions, model=self.model_name, name="managed_assistant", tools=[tool_obj], client=client)
+        assistant_id = None
+        thread_id = None
+        if self.assistant_id:
+            assistant_id = self.assistant_id
+        if self.thread_id:
+            thread_id = self.thread_id
+        assistant_manager = AssistantManager(instructions=self.instructions, model=self.model_name, name="managed_assistant", tools=[tool_obj], client=client, thread_id=thread_id, assistant_id=assistant_id)
 
         content=self.user_message
         result: ToolOutput = await assistant_manager.run_thread(
