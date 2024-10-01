@@ -4,7 +4,7 @@ export function EmptyParameterComponent({
   id,
   value,
   editNode,
-  onChange,
+  handleOnNewValue,
   disabled
 }:InputProps) {
     return <div id={id}>{

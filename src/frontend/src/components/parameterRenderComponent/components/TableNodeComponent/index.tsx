@@ -4,19 +4,20 @@ import { DataTypeDefinition, SelectionChangedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useMemo, useRef, useState } from "react";
-import { ForwardedIconComponent } from "../../components/genericIconComponent";
-import { TableComponentType } from "../../types/components";
-import { Button } from "../ui/button";
+import { ForwardedIconComponent } from "../../../genericIconComponent";
+import { Button } from "../../../ui/button";
+import { InputProps, TableComponentType } from "../../types";
 
 export default function TableNodeComponent({
   tableTitle,
   description,
   value,
-  onChange,
   editNode = false,
   id = "",
   columns,
-}: TableComponentType): JSX.Element {
+  handleOnNewValue,
+  disabled = false,
+}: InputProps<any[],TableComponentType>): JSX.Element {
   const dataTypeDefinitions: {
     [cellDataType: string]: DataTypeDefinition<any>;
   } = useMemo(() => {
@@ -68,7 +69,7 @@ export default function TableNodeComponent({
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
       const rows: any = [];
       agGrid.current.api.forEachNode((node) => rows.push(node.data));
-      onChange(rows);
+      handleOnNewValue({value: rows});
     }
   }
   function deleteRow() {
@@ -85,7 +86,7 @@ export default function TableNodeComponent({
       const toDuplicate = selectedNodes.map((node) => cloneDeep(node.data));
       setSelectedNodes([]);
       const rows: any = [];
-      onChange([...value, ...toDuplicate]);
+      handleOnNewValue({value: [...value, ...toDuplicate]});
     }
   }
   function addRow() {
@@ -93,7 +94,7 @@ export default function TableNodeComponent({
     componentColumns.forEach((column) => {
       newRow[column.name] = null;
     });
-    onChange([...value, newRow]);
+    handleOnNewValue({value: [...value, newRow]});
   }
 
   function updateComponent() {
@@ -135,9 +136,10 @@ export default function TableNodeComponent({
           rowData={value}
         >
           <Button
+            disabled={disabled}
             variant="primary"
             size={editNode ? "xs" : "default"}
-            className="w-full"
+            className={`w-full ${disabled ? "opacity-50" : ""}`}
           >
             <ForwardedIconComponent name="Table" className="mt-px h-4 w-4" />
             <span className="font-normal">Open Table</span>
