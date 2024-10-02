@@ -88,7 +88,6 @@ jobs:
 
       - name: Verify Nightly Name and Version
         id: verify
-        working-directory: src/backend/base
         run: |
           name=$(uv tree | grep 'langflow-base' | awk '{print $2}')
           version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
@@ -109,8 +108,11 @@ jobs:
 
       - name: Test CLI
         run: |
-          # uv pip install src/backend/base/dist/*.whl
-          uv pip install $(ls src/backend/base/dist/*.whl)
+          echo $(ls src/backend/base/)
+          echo $(ls src/backend/base/dist || echo "not found") 
+          echo $(ls dist)
+
+          uv pip install src/backend/base/dist/*.whl
           uv run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
