@@ -117,7 +117,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
-          persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
         with:
