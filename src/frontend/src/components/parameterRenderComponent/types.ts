@@ -58,3 +58,8 @@ export type StrRenderComponentType = {
     templateData: Partial<InputFieldType>;
     name: string;
   }
+
+  export type InputListComponentType = {
+    componentName?: string;
+    id?: string;
+  };

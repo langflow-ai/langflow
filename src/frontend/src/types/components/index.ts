@@ -116,16 +116,6 @@ export type NodeInputFieldComponentType = {
   showNode: boolean;
 };
 
-export type InputListComponentType = {
-  value: string[];
-  onChange: (value: string[], dbValue?: boolean, snapshot?: boolean) => void;
-  disabled: boolean;
-  editNode?: boolean;
-  componentName?: string;
-  playgroundDisabled?: boolean;
-  id?: string;
-};
-
 export type InputGlobalComponentType = {
   disabled: boolean;
   onChange: (value: string, dbValue: boolean, snapshot?: boolean) => void;
