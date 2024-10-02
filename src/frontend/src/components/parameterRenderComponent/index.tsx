@@ -88,11 +88,7 @@ export function ParameterRenderComponent({
         <StrRenderComponent
           {...baseInputProps}
           templateData={templateData}
-          value={templateValue}
           name={name}
-          disabled={disabled}
-          handleOnNewValue={handleOnNewValue}
-          id={id}
           editNode={editNode}
         />
       );
