@@ -97,27 +97,11 @@ jobs:
             echo "nightly_build=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
         with:
           ref: ${{ inputs.nightly_tag_main || github.ref }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-      - name: "Set up Python"
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: "pyproject.toml"
-      - name: Restore uv cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.uv-cache
-          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-            uv-${{ runner.os }}
+      
       - name: Install the project
         run: uv sync --dev
 
@@ -181,27 +165,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [get-version, setup]
     steps:
-      - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+      - name: Setup Environment
+        uses: ./.github/actions/setup-uv
         with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }} 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-      - name: "Set up Python"
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: "pyproject.toml"
-      - name: Restore uv cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.uv-cache
-          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-            uv-${{ runner.os }}
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
+
       - name: Install the project
         run: |
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
