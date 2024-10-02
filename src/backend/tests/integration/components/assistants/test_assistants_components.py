@@ -9,7 +9,7 @@ from tests.integration.utils import run_single_component
 @pytest.mark.api_key_required
 @pytest.mark.asyncio
 async def test_manager():
-    system_prompt = "you're a very detailed ascii artist, take a few iterations to make the art perfect"
+    system_prompt = "you're a very detailed ascii artist"
     user_message = "draw a cat eating ice cream"
     results = await iterate(system_prompt, user_message)
     is_complete = results['assistant_response'].data['tool_output']['decision'].is_complete
@@ -33,15 +33,15 @@ async def iterate(system_prompt, user_message):
     )
     assert results['assistant_response'].text is not None
     print(results['assistant_response'].text)
-    thread_id = results['assistant_response'].data['thread_id']
+    thread_id = results['output_thread_id'].text
     results = await run_single_component(
         AstraAssistantManager,
         inputs={
             "instructions": system_prompt,
             "model_name": "gpt-4o-mini",
-            "user_message": "check to see if you are finished",
+            "user_message": "check to see if you are finished, do at least a few iterations",
             "tool": "ReActDeciderTool",
-            "thread_id": thread_id,
+            "input_thread_id": thread_id,
         },
     )
     assert results['assistant_response'].text is not None

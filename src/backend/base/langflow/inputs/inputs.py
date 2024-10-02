@@ -1,8 +1,9 @@
+import traceback
 import warnings
 from collections.abc import AsyncIterator, Iterator
 from typing import Any, get_args
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, ValidationError
 
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
@@ -212,6 +213,15 @@ class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     multiline: CoalesceBool = True
+
+    def __init__(self, **data):
+        try:
+            super().__init__(**data)
+        except ValidationError as e:
+            print(e)
+            trace = traceback.format_exc()
+            print(trace)
+            raise
 
 
 class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):

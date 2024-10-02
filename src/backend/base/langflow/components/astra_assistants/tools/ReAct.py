@@ -114,7 +114,6 @@ class ReActThoughtTool(ToolInterface):
         """Executes the chain of thought process until it's complete."""
         instructions = (
             f"## Context:\n"
-            f"So far, we have thought about the problem a bunch and here's what we came up with:\n"
             f"{cot.to_string()}\n"
         )
 

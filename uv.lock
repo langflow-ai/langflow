@@ -254,7 +254,7 @@ wheels = [
 
 [[package]]
 name = "astra-assistants"
-version = "2.1.3"
+version = "2.1.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -269,9 +269,9 @@ dependencies = [
     { name = "tree-sitter" },
     { name = "tree-sitter-python" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/84/d9/e0324f155fafe0534c65f8a191b4808594112f59f552dd9106363c7a6463/astra_assistants-2.1.3.tar.gz", hash = "sha256:39f23a7d94aa2e4afad567777aa48afd9b6d8afcb5fff3241cabd79ff07df29c", size = 67583 }
+sdist = { url = "https://files.pythonhosted.org/packages/1f/fe/e747dbe5b4adcd6f02cece3a1a113865267257113d6f5ba7118097245d33/astra_assistants-2.1.4.tar.gz", hash = "sha256:cfd9c2914baa0f03a6b69b417e402a478127fb1f0f539226dabe5bd4578f387f", size = 67581 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/1a/bfe4d2612b299e3810b73662869dac2ae14e525878c749694b7fadbb3b86/astra_assistants-2.1.3-py3-none-any.whl", hash = "sha256:13b2f75c8ec41a21ec8eaaf3b2278298a737bd1180620b7243846b324f87236c", size = 78366 },
+    { url = "https://files.pythonhosted.org/packages/1b/cc/d05434d4b8e4c31cd58f8c4479503138b93c410c3b5d30e8764f39faa663/astra_assistants-2.1.4-py3-none-any.whl", hash = "sha256:c2dbb32bacb82a674be2b5f1a28918adc4fddec2655934c66c47dbb5c8bc1e6e", size = 78310 },
 ]
 
 [[package]]
@@ -3534,7 +3534,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "assemblyai", specifier = ">=0.26.0" },
-    { name = "astra-assistants", specifier = ">=2.1.3" },
+    { name = "astra-assistants", specifier = ">=2.1.4" },
     { name = "beautifulsoup4", specifier = ">=4.12.2" },
     { name = "boto3", specifier = "~=1.34.162" },
     { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
