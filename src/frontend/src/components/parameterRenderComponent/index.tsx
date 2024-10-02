@@ -17,6 +17,7 @@ import { StrRenderComponent } from "./components/strRenderComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import { InputProps } from "./types";
 import InputListComponent from "./components/inputListComponent";
+import MultiselectComponent from "./components/multiselectComponent";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -39,10 +40,6 @@ export function ParameterRenderComponent({
   nodeClass: APIClassType;
   disabled: boolean;
 }) {
-  const onChange = (value: any) => {
-    handleOnNewValue({ value });
-  };
-
   const id = (
     templateData.type +
     "_" +
@@ -50,26 +47,42 @@ export function ParameterRenderComponent({
     templateData.name
   ).toLowerCase();
 
-  const renderComponent = ():React.ReactElement<InputProps> => {
+  const renderComponent = (): React.ReactElement<InputProps> => {
     const baseInputProps: InputProps = {
-    id,
-    value: templateValue,
-    editNode,
-    handleOnNewValue,
-    disabled,
-    nodeClass,
-    handleNodeClass,
-    readonly: templateData.readonly,
+      id,
+      value: templateValue,
+      editNode,
+      handleOnNewValue,
+      disabled,
+      nodeClass,
+      handleNodeClass,
+      readonly: templateData.readonly,
     };
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
-      if(templateData.listist) {
-        return (
-          <InputListComponent
-            {...baseInputProps}
-            componentName={name}
-            id={`inputlist_${id}`}
-          />
-        );
+      if (templateData.list) {
+        if (!templateData.options) {
+          return (
+            <InputListComponent
+              {...baseInputProps}
+              componentName={name}
+              id={`inputlist_${id}`}
+            />
+          );
+        }
+        if (!!templateData.options) {
+          return (
+            <MultiselectComponent
+              {...baseInputProps}
+              combobox={templateData.combobox}
+              options={
+                (Array.isArray(templateData.options)
+                  ? templateData.options
+                  : [templateData.options]) || []
+              }
+              id={`multiselect_${id}`}
+            />
+          );
+        }
       }
       return (
         <StrRenderComponent
@@ -103,8 +116,8 @@ export function ParameterRenderComponent({
       case "bool":
         return (
           <ToggleShadComponent
-          {...baseInputProps}
-          id={`toggle_${id}`}
+            {...baseInputProps}
+            id={`toggle_${id}`}
           />
         );
       case "link":
@@ -127,9 +140,9 @@ export function ParameterRenderComponent({
       case "int":
         return (
           <IntComponent
-          {...baseInputProps}
-          rangeSpec={templateData.range_spec}
-          id={`int_${id}`}
+            {...baseInputProps}
+            rangeSpec={templateData.range_spec}
+            id={`int_${id}`}
           />
         );
       case "file":
@@ -143,10 +156,10 @@ export function ParameterRenderComponent({
       case "prompt":
         return (
           <PromptAreaComponent
-          {...baseInputProps}
-          readonly={!!nodeClass.flow}
-          field_name={name}
-          id={`promptarea_${id}`}
+            {...baseInputProps}
+            readonly={!!nodeClass.flow}
+            field_name={name}
+            id={`promptarea_${id}`}
           />
         );
       case "code":
