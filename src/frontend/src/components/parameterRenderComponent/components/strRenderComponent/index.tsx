@@ -6,6 +6,7 @@ import InputListComponent from "../inputListComponent";
 import MultiselectComponent from "../../../multiselectComponent";
 import TextAreaComponent from "../../../textAreaComponent";
 import { InputProps, StrRenderComponentType } from "../../types";
+import DropdownComponent from "../dropdownComponent";
 
 export function StrRenderComponent({
   templateData,
@@ -19,6 +20,14 @@ export function StrRenderComponent({
   const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
     handleOnNewValue({ value, load_from_db: dbValue }, { skipSnapshot });
   };
+  const baseInputProps: InputProps = {
+    id,
+    value,
+    editNode,
+    handleOnNewValue,
+    disabled,
+    readonly: templateData.readonly,
+    };
 
   if (!templateData.options) {
     return templateData.multiline ? (
@@ -73,13 +82,10 @@ export function StrRenderComponent({
 
   if (!!templateData.options) {
     return (
-      <Dropdown
-        editNode={editNode}
+      <DropdownComponent
+        {...baseInputProps}
         options={templateData.options}
-        onSelect={onChange}
         combobox={templateData.combobox}
-        value={value || ""}
-        id={`dropdown_${id}`}
       />
     );
   }
