@@ -9,10 +9,6 @@ export function StrRenderComponent({
   name,
   ...baseInputProps
 }: InputProps<string, StrRenderComponentType>) {
-  const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
-    handleOnNewValue({ value, load_from_db: dbValue }, { skipSnapshot });
-  };
-
   const { handleOnNewValue, id, disabled, editNode, value } = baseInputProps;
 
   if (!templateData.options) {
@@ -36,28 +32,6 @@ export function StrRenderComponent({
         password={templateData.password}
         load_from_db={templateData.load_from_db}
         id={"input-" + name}
-      />
-    );
-  }
-
-  if (!!templateData.options && !!templateData?.list) {
-    return (
-      <MultiselectComponent
-        editNode={editNode}
-        disabled={disabled}
-        options={
-          (Array.isArray(templateData.options)
-            ? templateData.options
-            : [templateData.options]) || []
-        }
-        combobox={templateData.combobox}
-        value={
-          (Array.isArray(templateData.value)
-            ? templateData.value
-            : [templateData.value]) || []
-        }
-        id={`multiselect_${id}`}
-        onSelect={onChange}
       />
     );
   }
