@@ -174,10 +174,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             else:
                 documents.append(_input)
 
-        if self.enable_body_search:
-            body_index_options = [("index_analyzer", "STANDARD")]
-        else:
-            body_index_options = None
+        body_index_options = [("index_analyzer", "STANDARD")] if self.enable_body_search else None
 
         if self.setup_mode == "Off":
             setup_mode = SetupMode.OFF

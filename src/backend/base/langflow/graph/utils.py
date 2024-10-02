@@ -103,11 +103,10 @@ def get_artifact_type(value, build_result) -> str:
         case Message():
             result = ArtifactType.MESSAGE
 
-    if result == ArtifactType.UNKNOWN:
-        if isinstance(build_result, Generator):
-            result = ArtifactType.STREAM
-        elif isinstance(value, Message) and isinstance(value.text, Generator):
-            result = ArtifactType.STREAM
+    if result == ArtifactType.UNKNOWN and (
+        isinstance(build_result, Generator) or isinstance(value, Message) and isinstance(value.text, Generator)
+    ):
+        result = ArtifactType.STREAM
 
     return result.value
 

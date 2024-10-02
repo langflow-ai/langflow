@@ -103,10 +103,7 @@ class Message(Data):
         # they are: "text", "sender"
         if self.text is None or not self.sender:
             logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
-        if not isinstance(self.text, str):
-            text = ""
-        else:
-            text = self.text
+        text = "" if not isinstance(self.text, str) else self.text
 
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
@@ -160,9 +157,7 @@ class Message(Data):
 
     @field_serializer("text", mode="plain")
     def serialize_text(self, value):
-        if isinstance(value, AsyncIterator):
-            return ""
-        if isinstance(value, Iterator):
+        if isinstance(value, AsyncIterator | Iterator):
             return ""
         return value
 

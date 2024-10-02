@@ -55,9 +55,7 @@ class RunnableVerticesManager:
             return False
         if vertex_id not in self.vertices_to_run:
             return False
-        if not self.are_all_predecessors_fulfilled(vertex_id):
-            return False
-        return True
+        return self.are_all_predecessors_fulfilled(vertex_id)
 
     def are_all_predecessors_fulfilled(self, vertex_id: str) -> bool:
         return not any(self.run_predecessors.get(vertex_id, []))

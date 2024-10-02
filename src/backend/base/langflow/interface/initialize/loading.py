@@ -89,12 +89,11 @@ def convert_kwargs(params):
     # Loop through items to avoid repeated lookups
     items_to_remove = []
     for key, value in params.items():
-        if "kwargs" in key or "config" in key:
-            if isinstance(value, str):
-                try:
-                    params[key] = orjson.loads(value)
-                except orjson.JSONDecodeError:
-                    items_to_remove.append(key)
+        if ("kwargs" in key or "config" in key) and isinstance(value, str):
+            try:
+                params[key] = orjson.loads(value)
+            except orjson.JSONDecodeError:
+                items_to_remove.append(key)
 
     # Remove invalid keys outside the loop to avoid modifying dict during iteration
     for key in items_to_remove:

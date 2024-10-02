@@ -43,10 +43,7 @@ class CharacterTextSplitterComponent(LCTextSplitterComponent):
         return self.data_input
 
     def build_text_splitter(self) -> TextSplitter:
-        if self.separator:
-            separator = unescape_string(self.separator)
-        else:
-            separator = "\n\n"
+        separator = unescape_string(self.separator) if self.separator else "\n\n"
         return CharacterTextSplitter(
             chunk_overlap=self.chunk_overlap,
             chunk_size=self.chunk_size,

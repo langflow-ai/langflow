@@ -28,10 +28,7 @@ class SQLGeneratorComponent(LCChainComponent):
     outputs = [Output(display_name="Text", name="text", method="invoke_chain")]
 
     def invoke_chain(self) -> Message:
-        if self.prompt:
-            prompt_template = PromptTemplate.from_template(template=self.prompt)
-        else:
-            prompt_template = None
+        prompt_template = PromptTemplate.from_template(template=self.prompt) if self.prompt else None
 
         if self.top_k < 1:
             msg = "Top K must be greater than 0."

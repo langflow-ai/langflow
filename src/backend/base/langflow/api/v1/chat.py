@@ -344,20 +344,17 @@ async def build_flow(
             raise ValueError(msg) from exc
         event_manager.on_end_vertex(data={"build_data": build_data})
         await client_consumed_queue.get()
-        if vertex_build_response.valid:
-            if vertex_build_response.next_vertices_ids:
-                tasks = []
-                for next_vertex_id in vertex_build_response.next_vertices_ids:
-                    task = asyncio.create_task(
-                        build_vertices(next_vertex_id, graph, client_consumed_queue, event_manager)
-                    )
-                    tasks.append(task)
-                try:
-                    await asyncio.gather(*tasks)
-                except asyncio.CancelledError:
-                    for task in tasks:
-                        task.cancel()
-                    return
+        if vertex_build_response.valid and vertex_build_response.next_vertices_ids:
+            tasks = []
+            for next_vertex_id in vertex_build_response.next_vertices_ids:
+                task = asyncio.create_task(build_vertices(next_vertex_id, graph, client_consumed_queue, event_manager))
+                tasks.append(task)
+            try:
+                await asyncio.gather(*tasks)
+            except asyncio.CancelledError:
+                for task in tasks:
+                    task.cancel()
+                return
 
     async def event_generator(event_manager: EventManager, client_consumed_queue: asyncio.Queue) -> None:
         if not data:

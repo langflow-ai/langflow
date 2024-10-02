@@ -126,10 +126,7 @@ class StoreService(Service):
         self, url: str, api_key: str | None = None, params: dict[str, Any] | None = None
     ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         """Utility method to perform GET requests."""
-        if api_key:
-            headers = {"Authorization": f"Bearer {api_key}"}
-        else:
-            headers = {}
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(url, headers=headers, params=params, timeout=self.timeout)

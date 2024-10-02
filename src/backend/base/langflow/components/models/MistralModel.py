@@ -78,10 +78,7 @@ class MistralAIModelComponent(LCModelComponent):
         random_seed = self.random_seed
         safe_mode = self.safe_mode
 
-        if mistral_api_key:
-            api_key = SecretStr(mistral_api_key)
-        else:
-            api_key = None
+        api_key = SecretStr(mistral_api_key) if mistral_api_key else None
 
         return ChatMistralAI(
             max_tokens=max_tokens or None,

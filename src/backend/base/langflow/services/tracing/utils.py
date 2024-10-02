@@ -20,10 +20,7 @@ def convert_to_langchain_type(value):
         else:
             value = value.to_lc_document()
     elif isinstance(value, Data):
-        if "text" in value.data:
-            value = value.to_lc_document()
-        else:
-            value = value.data
+        value = value.to_lc_document() if "text" in value.data else value.data
     return value
 
 

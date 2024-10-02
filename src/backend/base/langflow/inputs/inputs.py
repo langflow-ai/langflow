@@ -131,12 +131,7 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
         is_list = _info.data["is_list"]
-        value = None
-        if is_list:
-            value = [cls._validate_value(vv, _info) for vv in v]
-        else:
-            value = cls._validate_value(v, _info)
-        return value
+        return [cls._validate_value(vv, _info) for vv in v] if is_list else cls._validate_value(v, _info)
 
 
 class MessageInput(StrInput, InputTraceMixin):

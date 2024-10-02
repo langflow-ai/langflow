@@ -95,13 +95,12 @@ def validate_input_and_tweaks(input_request: SimplifiedAPIRequest):
                 if has_input_value and input_value_is_chat:
                     msg = "If you pass an input_value to the chat input, you cannot pass a tweak with the same name."
                     raise InvalidChatInputException(msg)
-        elif "Text Input" in key or "TextInput" in key:
-            if isinstance(value, dict):
-                has_input_value = value.get("input_value") is not None
-                input_value_is_text = input_request.input_value is not None and input_request.input_type == "text"
-                if has_input_value and input_value_is_text:
-                    msg = "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
-                    raise InvalidChatInputException(msg)
+        elif ("Text Input" in key or "TextInput" in key) and isinstance(value, dict):
+            has_input_value = value.get("input_value") is not None
+            input_value_is_text = input_request.input_value is not None and input_request.input_type == "text"
+            if has_input_value and input_value_is_text:
+                msg = "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
+                raise InvalidChatInputException(msg)
 
 
 async def simple_run_flow(

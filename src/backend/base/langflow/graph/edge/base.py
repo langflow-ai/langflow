@@ -244,10 +244,10 @@ class CycleEdge(Edge):
             await self.honor(source, target)
 
         # If the target vertex is a power component we log messages
-        if target.vertex_type == "ChatOutput" and (
-            isinstance(target.params.get(INPUT_FIELD_NAME), str)
-            or isinstance(target.params.get(INPUT_FIELD_NAME), dict)
+        if (
+            target.vertex_type == "ChatOutput"
+            and isinstance(target.params.get(INPUT_FIELD_NAME), str | dict)
+            and target.params.get("message") == ""
         ):
-            if target.params.get("message") == "":
-                return self.result
+            return self.result
         return self.result

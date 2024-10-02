@@ -93,10 +93,7 @@ class CacheService(Subject, Service):
             "image": "png",
             "pandas": "csv",
         }
-        if obj_type in object_extensions:
-            _extension = object_extensions[obj_type]
-        else:
-            _extension = type(obj).__name__.lower()
+        _extension = object_extensions[obj_type] if obj_type in object_extensions else type(obj).__name__.lower()
         self.current_cache[name] = {
             "obj": obj,
             "type": obj_type,

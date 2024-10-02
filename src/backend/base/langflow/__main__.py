@@ -457,11 +457,10 @@ def migration(
     """
     Run or test migrations.
     """
-    if fix:
-        if not typer.confirm(
-            "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
-        ):
-            raise typer.Abort
+    if fix and not typer.confirm(
+        "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
+    ):
+        raise typer.Abort
 
     initialize_services(fix_migration=fix)
     db_service = get_db_service()

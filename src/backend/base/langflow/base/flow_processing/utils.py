@@ -67,10 +67,7 @@ def build_data_from_result_data(result_data: ResultData, get_final_results_only:
     if isinstance(result_data.results, dict):
         for name, result in result_data.results.items():
             dataobj: Data | Message | None = None
-            if isinstance(result, Message):
-                dataobj = result
-            else:
-                dataobj = Data(data=result, text_key=name)
+            dataobj = result if isinstance(result, Message) else Data(data=result, text_key=name)
 
             data.append(dataobj)
     else:

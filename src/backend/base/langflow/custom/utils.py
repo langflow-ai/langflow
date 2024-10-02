@@ -226,7 +226,7 @@ def add_extra_fields(frontend_node, field_config, function_args):
             field_required,
             config,
         )
-    if "kwargs" in function_args_names and not all(key in function_args_names for key in field_config.keys()):
+    if "kwargs" in function_args_names and not all(key in function_args_names for key in field_config):
         for field_name, field_config in _field_config.copy().items():
             if "name" not in field_config or field_name == "code":
                 continue
@@ -503,35 +503,35 @@ def update_field_dict(
     call: bool = False,
 ):
     """Update the field dictionary by calling options() or value() if they are callable"""
-    if ("real_time_refresh" in field_dict or "refresh_button" in field_dict) and any(
-        (
-            field_dict.get("real_time_refresh", False),
-            field_dict.get("refresh_button", False),
+    if (
+        ("real_time_refresh" in field_dict or "refresh_button" in field_dict)
+        and any(
+            (
+                field_dict.get("real_time_refresh", False),
+                field_dict.get("refresh_button", False),
+            )
         )
+        and call
     ):
-        if call:
-            try:
-                dd_build_config = dotdict(build_config)
-                custom_component_instance.update_build_config(
-                    build_config=dd_build_config,
-                    field_value=update_field,
-                    field_name=update_field_value,
-                )
-                build_config = dd_build_config
-            except Exception as exc:
-                logger.error(f"Error while running update_build_config: {str(exc)}")
-                msg = f"Error while running update_build_config: {str(exc)}"
-                raise UpdateBuildConfigError(msg) from exc
+        try:
+            dd_build_config = dotdict(build_config)
+            custom_component_instance.update_build_config(
+                build_config=dd_build_config,
+                field_value=update_field,
+                field_name=update_field_value,
+            )
+            build_config = dd_build_config
+        except Exception as exc:
+            logger.error(f"Error while running update_build_config: {str(exc)}")
+            msg = f"Error while running update_build_config: {str(exc)}"
+            raise UpdateBuildConfigError(msg) from exc
 
     return build_config
 
 
 def sanitize_field_config(field_config: dict | Input):
     # If any of the already existing keys are in field_config, remove them
-    if isinstance(field_config, Input):
-        field_dict = field_config.to_dict()
-    else:
-        field_dict = field_config
+    field_dict = field_config.to_dict() if isinstance(field_config, Input) else field_config
     for key in [
         "name",
         "field_type",

@@ -161,10 +161,7 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             else:
                 documents.append(_input)
 
-        if self.setup_mode == "Off":
-            setup_mode = SetupMode.OFF
-        else:
-            setup_mode = SetupMode.SYNC
+        setup_mode = SetupMode.OFF if self.setup_mode == "Off" else SetupMode.SYNC
 
         if documents:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")

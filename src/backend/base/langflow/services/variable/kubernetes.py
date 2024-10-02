@@ -93,7 +93,7 @@ class KubernetesSecretService(VariableService, Service):
             return []
 
         names = []
-        for key in variables.keys():
+        for key in variables:
             if key.startswith(CREDENTIAL_TYPE + "_"):
                 names.append(key[len(CREDENTIAL_TYPE) + 1 :])
             else:
