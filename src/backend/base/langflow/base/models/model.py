@@ -166,7 +166,7 @@ class LCModelComponent(Component):
                 messages.append(HumanMessage(content=input_value))
 
         if system_message and not system_message_added:
-            messages.append(SystemMessage(content=system_message))
+            messages.insert(0, SystemMessage(content=system_message))
         inputs: list | dict = messages or {}
         try:
             if self.output_parser is not None:
