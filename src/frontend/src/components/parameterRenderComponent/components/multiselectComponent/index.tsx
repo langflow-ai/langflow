@@ -1,24 +1,24 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { useEffect, useRef, useState } from "react";
-import { MultiselectComponentType } from "../../types/components";
-import { cn } from "../../utils/utils";
-import { default as ForwardedIconComponent } from "../genericIconComponent";
-import ShadTooltip from "../shadTooltipComponent";
-import { Button } from "../ui/button";
+import { MultiselectComponentType } from "../../../../types/components";
+import { cn } from "../../../../utils/utils";
+import { default as ForwardedIconComponent } from "../../../genericIconComponent";
+import ShadTooltip from "../../../shadTooltipComponent";
+import { Button } from "../../../ui/button";
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandItem,
   CommandList,
-} from "../ui/command";
+} from "../../../ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverContentWithoutPortal,
   PopoverTrigger,
-} from "../ui/popover";
+} from "../../../ui/popover";
 
 export default function MultiselectComponent({
   disabled,
