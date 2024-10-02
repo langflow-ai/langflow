@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from uuid import UUID
 
@@ -14,7 +16,7 @@ from langflow.services.variable.kubernetes_secrets import KubernetesSecretManage
 
 
 class KubernetesSecretService(VariableService, Service):
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         # TODO: settings_service to set kubernetes namespace
         self.kubernetes_secrets = KubernetesSecretManager()
@@ -93,7 +95,7 @@ class KubernetesSecretService(VariableService, Service):
             return []
 
         names = []
-        for key in variables.keys():
+        for key in variables:
             if key.startswith(CREDENTIAL_TYPE + "_"):
                 names.append(key[len(CREDENTIAL_TYPE) + 1 :])
             else:

@@ -81,7 +81,7 @@ class BaseComponent:
                     template_config[attribute] = func(value=value)
 
         for key in template_config.copy():
-            if key not in ATTR_FUNC_MAPPING.keys():
+            if key not in ATTR_FUNC_MAPPING:
                 template_config.pop(key, None)
 
         return template_config

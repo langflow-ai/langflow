@@ -71,18 +71,32 @@
     --status-blue: #2563eb;
     --status-gray: #6b7280;
     --connection: #555;
+    --note-default: #f1f5f9;
     --note-indigo: #e0e7ff;
     --note-emerald: #d1fae5;
     --note-amber: #fef3c7;
     --note-red: #fee2e2;
+
+    --note-default-opacity: #f1f5f980;
+    --note-indigo-opacity: #312e8180;
+    --note-emerald-opacity: #064e3b80;
+    --note-amber-opacity: #78350f80;
+    --note-red-opacity: #7f1d1d80;
   }
 
   .dark {
+    --note-default: #0f172a;
     --note-indigo: #312e81;
     --note-emerald: #064e3b;
     --note-amber: #78350f;
     --note-red: #7f1d1d;
     --note-placeholder: 216 12% 84%; /* hsl(216 12% 84%) */
+
+    --note-default-opacity: #0f172a80;
+    --note-indigo-opacity: #312e8180;
+    --note-emerald-opacity: #064e3b80;
+    --note-amber-opacity: #78350f80;
+    --note-red-opacity: #7f1d1d80;
 
     --node-selected: 234 89% 74%;
     --background: 224 28% 7.5%; /* hsl(224 10% 7.5%) */

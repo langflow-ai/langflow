@@ -214,6 +214,7 @@ import { NotionIcon } from "../icons/Notion";
 import { NvidiaIcon } from "../icons/Nvidia";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
+import { OpenSearch } from "../icons/OpenSearch";
 import { PineconeIcon } from "../icons/Pinecone";
 import { PostgresIcon } from "../icons/Postgres";
 import { PythonIcon } from "../icons/Python";
@@ -631,4 +632,5 @@ export const nodeIconsLucide: iconsType = {
   Option: OptionIcon,
   Perplexity,
   DuckDuckGo: DuckDuckGoIcon,
+  OpenSearch,
 };

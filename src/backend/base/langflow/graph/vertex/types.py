@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import asyncio
+import contextlib
 import json
 from collections.abc import AsyncIterator, Generator, Iterator
 from typing import TYPE_CHECKING, Any, cast
@@ -74,7 +77,7 @@ class ComponentVertex(Vertex):
         for key, value in self._built_object.items():
             self.add_result(key, value)
 
-    def get_edge_with_target(self, target_id: str) -> Generator["CycleEdge", None, None]:
+    def get_edge_with_target(self, target_id: str) -> Generator[CycleEdge, None, None]:
         """
         Get the edge with the target id.
 
@@ -88,7 +91,7 @@ class ComponentVertex(Vertex):
             if edge.target_id == target_id:
                 yield edge
 
-    async def _get_result(self, requester: "Vertex", target_handle_name: str | None = None) -> Any:
+    async def _get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
         """
         Retrieves the result of the built component.
 
@@ -167,7 +170,7 @@ class ComponentVertex(Vertex):
             message_dict = artifact if isinstance(artifact, dict) else artifact.model_dump()
             if not message_dict.get("text"):
                 continue
-            try:
+            with contextlib.suppress(KeyError):
                 messages.append(
                     ChatOutputResponse(
                         message=message_dict["text"],
@@ -182,8 +185,6 @@ class ComponentVertex(Vertex):
                         type=self.artifacts_type[key],
                     ).model_dump(exclude_none=True)
                 )
-            except KeyError:
-                pass
         return messages
 
     def _finalize_build(self):
@@ -208,6 +209,7 @@ class InterfaceVertex(ComponentVertex):
         super().__init__(data, graph=graph)
         self._added_message = None
         self.steps = [self._build, self._run]
+        self.is_interface_component = True
 
     def build_stream_url(self):
         return f"/api/v1/build/{self.graph.flow_id}/{self.id}/stream"
@@ -439,11 +441,12 @@ class InterfaceVertex(ComponentVertex):
             for key, value in origin_vertex.results.items():
                 if isinstance(value, AsyncIterator | Iterator):
                     origin_vertex.results[key] = complete_message
-        if self._custom_component:
-            if hasattr(self._custom_component, "should_store_message") and hasattr(
-                self._custom_component, "store_message"
-            ):
-                self._custom_component.store_message(message)
+        if (
+            self._custom_component
+            and hasattr(self._custom_component, "should_store_message")
+            and hasattr(self._custom_component, "store_message")
+        ):
+            self._custom_component.store_message(message)
         log_vertex_build(
             flow_id=self.graph.flow_id,
             vertex_id=self.id,

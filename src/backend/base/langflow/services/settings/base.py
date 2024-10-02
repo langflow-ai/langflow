@@ -31,10 +31,7 @@ def is_list_of_any(field: FieldInfo) -> bool:
     if field.annotation is None:
         return False
     try:
-        if hasattr(field.annotation, "__args__"):
-            union_args = field.annotation.__args__
-        else:
-            union_args = []
+        union_args = field.annotation.__args__ if hasattr(field.annotation, "__args__") else []
 
         return field.annotation.__origin__ is list or any(
             arg.__origin__ is list for arg in union_args if hasattr(arg, "__origin__")
@@ -267,10 +264,7 @@ class Settings(BaseSettings):
                         final_path = new_path
 
                 if final_path is None:
-                    if is_pre_release:
-                        final_path = new_pre_path
-                    else:
-                        final_path = new_path
+                    final_path = new_pre_path if is_pre_release else new_path
 
                 value = f"sqlite:///{final_path}"
 
@@ -370,7 +364,7 @@ def load_settings_from_yaml(file_path: str) -> Settings:
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 
         for key in settings_dict:
-            if key not in Settings.model_fields.keys():
+            if key not in Settings.model_fields:
                 msg = f"Key {key} not found in settings"
                 raise KeyError(msg)
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
