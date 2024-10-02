@@ -1,13 +1,12 @@
-from datetime import datetime
 import hashlib
+from datetime import datetime
 from http import HTTPStatus
 from io import BytesIO
-from uuid import UUID
 from pathlib import Path
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-
 
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.auth.utils import get_current_active_user
@@ -44,6 +43,12 @@ async def upload_file(
     storage_service: StorageService = Depends(get_storage_service),
 ):
     try:
+        max_file_size_upload = get_storage_service().settings_service.settings.max_file_size_upload
+        if file.size > max_file_size_upload * 1024 * 1024:
+            raise HTTPException(
+                status_code=413, detail=f"File size is larger than the maximum file size {max_file_size_upload}MB."
+            )
+
         flow_id_str = str(flow_id)
         file_content = await file.read()
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

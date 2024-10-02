@@ -1,5 +1,7 @@
 from typing import Any
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter, TextSplitter
+
 from langflow.base.textsplitters.model import LCTextSplitterComponent
 from langflow.inputs.inputs import DataInput, IntInput, MessageTextInput
 from langflow.utils.util import unescape_string

@@ -53,6 +53,8 @@ class FrontendNode(BaseModel):
     """Error message for the frontend node."""
     edited: bool = False
     """Whether the frontend node has been edited."""
+    metadata: dict = {}
+    """Metadata for the component node."""
 
     def set_documentation(self, documentation: str) -> None:
         """Sets the documentation of the frontend node."""
