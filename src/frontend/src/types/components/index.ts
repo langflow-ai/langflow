@@ -811,11 +811,3 @@ export type handleSelectPropsType = {
   setLockChat: (lock: boolean) => void;
   setChatHistory: (chatHistory: ChatMessageType) => void;
 };
-
-export type LinkComponentType = {
-  value: Partial<InputFieldType>;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  editNode?: boolean;
-  id?: string;
-};

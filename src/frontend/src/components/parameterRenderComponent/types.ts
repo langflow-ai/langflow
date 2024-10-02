@@ -43,3 +43,8 @@ export type FileComponentType = {
  export type PromptAreaComponentType = {
     field_name?: string;
   };
+
+  export type LinkComponentType = {
+  icon?: string;
+  text?: string;
+};
