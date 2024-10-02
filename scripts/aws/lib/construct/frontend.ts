@@ -5,11 +5,9 @@ import {
   aws_ecs as ecs,
   aws_s3 as s3,
   aws_iam as iam,
-  aws_logs as logs,
   aws_elasticloadbalancingv2 as elb,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
-  aws_s3_deployment as s3_deployment
 } from 'aws-cdk-lib';
 import { NodejsBuild } from 'deploy-time-build';
 
@@ -90,7 +88,8 @@ export class Web extends Construct {
     defaultBehavior: { origin:  s3SpaOrigin },
     additionalBehaviors: {
       '/api/v1/*': albBehaviorOptions,
-      '/health' : albBehaviorOptions,
+      '/health_check' : albBehaviorOptions,
+
     },
     enableLogging: true, // ログ出力設定
     logBucket: new s3.Bucket(this, 'LogBucket',commonBucketProps),

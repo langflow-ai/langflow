@@ -1,7 +1,6 @@
 import { Construct } from "constructs";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from "aws-cdk-lib/aws-rds";
-import * as cdk from "aws-cdk-lib";
 
 interface RdsProps {
   vpc: ec2.Vpc;
@@ -25,44 +24,9 @@ export class Rds extends Construct {
       secretName: "langflow-DbSecret",
     });
 
-    // DB クラスターのパラメータグループ作成
-    const clusterParameterGroup = new rds.ParameterGroup(
-      scope,
-      "ClusterParameterGroup",
-      {
-        engine: rds.DatabaseClusterEngine.auroraMysql({
-          version: rds.AuroraMysqlEngineVersion.of(
-            "8.0.mysql_aurora.3.05.2",
-            "8.0",
-          ),
-        }),
-        description: "for-langflow",
-      },
-    );
-    clusterParameterGroup.bindToCluster({});
-
-    // DB インスタンスのパラメタグループ作成
-    const instanceParameterGroup = new rds.ParameterGroup(
-      scope,
-      "InstanceParameterGroup",
-      {
-        engine: rds.DatabaseClusterEngine.auroraMysql({
-          version: rds.AuroraMysqlEngineVersion.of(
-            "8.0.mysql_aurora.3.05.2",
-            "8.0",
-          ),
-        }),
-        description: "for-langflow",
-      },
-    );
-    instanceParameterGroup.bindToInstance({});
-
     this.rdsCluster = new rds.DatabaseCluster(scope, "LangflowDbCluster", {
       engine: rds.DatabaseClusterEngine.auroraMysql({
-        version: rds.AuroraMysqlEngineVersion.of(
-          "8.0.mysql_aurora.3.05.2",
-          "8.0",
-        ),
+        version: rds.AuroraMysqlEngineVersion.VER_3_06_0,
       }),
       storageEncrypted: true,
       credentials: rdsCredentials,
@@ -75,10 +39,8 @@ export class Rds extends Construct {
       writer: rds.ClusterInstance.provisioned("WriterInstance", {
         instanceType: instanceType,
         enablePerformanceInsights: true,
-        parameterGroup: instanceParameterGroup,
       }),
       // 2台目以降はreaders:で設定
-      parameterGroup: clusterParameterGroup,
       defaultDatabaseName: "langflow",
     });
   }

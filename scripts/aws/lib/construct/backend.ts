@@ -1,17 +1,15 @@
-import { Duration } from 'aws-cdk-lib'
 import { Construct } from 'constructs';
 import {
     aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_ecr as ecr,
     aws_rds as rds,
-    aws_servicediscovery as servicediscovery,
     aws_iam as iam,
     aws_logs as logs,
     aws_elasticloadbalancingv2 as elb,
 } from 'aws-cdk-lib';
 import * as dotenv from 'dotenv';
-const path = require('path');
+import path from 'path';
 dotenv.config({path: path.join(__dirname, "../../.env")});
 
 interface BackEndProps {
