@@ -1,5 +1,5 @@
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { APIClassType } from "@/types/api";
+import { APIClassType, InputFieldType } from "@/types/api";
 import { RangeSpecType } from "@/types/components";
 import { ColumnField } from "@/types/utils/functions";
 
@@ -53,3 +53,8 @@ export type KeyPairListComponentType = {
     value: any;
     isList?: boolean;
 };
+
+export type StrRenderComponentType = {
+    templateData: Partial<InputFieldType>;
+    name: string;
+  }
