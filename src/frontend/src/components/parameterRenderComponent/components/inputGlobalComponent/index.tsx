@@ -3,14 +3,14 @@ import {
   useGetGlobalVariables,
 } from "@/controllers/API/queries/variables";
 import { useEffect } from "react";
-import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
-import useAlertStore from "../../stores/alertStore";
-import { InputGlobalComponentType } from "../../types/components";
-import { cn } from "../../utils/utils";
-import GlobalVariableModal from "../GlobalVariableModal/GlobalVariableModal";
-import ForwardedIconComponent from "../genericIconComponent";
-import InputComponent from "../inputComponent";
-import { CommandItem } from "../ui/command";
+import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
+import useAlertStore from "../../../../stores/alertStore";
+import { InputGlobalComponentType } from "../../../../types/components";
+import { cn } from "../../../../utils/utils";
+import GlobalVariableModal from "../../../GlobalVariableModal/GlobalVariableModal";
+import ForwardedIconComponent from "../../../genericIconComponent";
+import InputComponent from "../../../inputComponent";
+import { CommandItem } from "../../../ui/command";
 
 export default function InputGlobalComponent({
   disabled,
