@@ -63,3 +63,8 @@ export type StrRenderComponentType = {
     componentName?: string;
     id?: string;
   };
+
+  export type DropDownComponentType = {
+    combobox?: boolean;
+    options: string[];
+  };
