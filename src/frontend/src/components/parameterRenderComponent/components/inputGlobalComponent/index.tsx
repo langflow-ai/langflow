@@ -5,32 +5,34 @@ import {
 import { useEffect } from "react";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
-import { InputGlobalComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
 import GlobalVariableModal from "../../../GlobalVariableModal/GlobalVariableModal";
 import ForwardedIconComponent from "../../../genericIconComponent";
 import InputComponent from "../../../inputComponent";
 import { CommandItem } from "../../../ui/command";
+import { InputGlobalComponentType, InputProps } from "../../types";
 
 export default function InputGlobalComponent({
   disabled,
-  onChange,
-  name,
-  data,
+  handleOnNewValue,
+  value,
+  id,
+  load_from_db,
+  password,
   editNode = false,
-}: InputGlobalComponentType): JSX.Element {
+}: InputProps<string, InputGlobalComponentType>): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const { data: globalVariables } = useGetGlobalVariables();
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
 
   useEffect(() => {
-    if (data && globalVariables)
+    if (globalVariables)
       if (
-        data.load_from_db &&
-        !globalVariables.find((variable) => variable.name === data.value)
+        load_from_db &&
+        !globalVariables.find((variable) => variable.name === value)
       ) {
-        onChange("", false, true);
+        handleOnNewValue({value: "", load_from_db: false}, {skipSnapshot: true});
       }
   }, [globalVariables]);
 
@@ -42,8 +44,8 @@ export default function InputGlobalComponent({
         { id },
         {
           onSuccess: () => {
-            if (data?.value === key && data?.load_from_db) {
-              onChange("", false);
+            if (value === key && load_from_db) {
+              handleOnNewValue({value: "", load_from_db: false})
             }
           },
           onError: () => {
@@ -63,11 +65,11 @@ export default function InputGlobalComponent({
   }
   return (
     <InputComponent
-      id={"input-" + name}
+      id={id}
       editNode={editNode}
       disabled={disabled}
-      password={data.password ?? false}
-      value={data.value ?? ""}
+      password={password ?? false}
+      value={value ?? ""}
       options={globalVariables?.map((variable) => variable.name) ?? []}
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
@@ -110,19 +112,19 @@ export default function InputGlobalComponent({
         </DeleteConfirmationModal>
       )}
       selectedOption={
-        data?.load_from_db &&
+        load_from_db &&
         globalVariables &&
         globalVariables
           ?.map((variable) => variable.name)
-          .includes(data?.value ?? "")
-          ? data?.value
+          .includes(value ?? "")
+          ? value
           : ""
       }
       setSelectedOption={(value) => {
-        onChange(value, value !== "" ? true : false);
+        handleOnNewValue({value: value, load_from_db: value !== "" ? true : false});
       }}
       onChange={(value, skipSnapshot) => {
-        onChange(value, false, skipSnapshot);
+        handleOnNewValue({value: value, load_from_db:false}, {skipSnapshot});
       }}
     />
   );
