@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 import emoji
 from emoji import purely_emoji  # type: ignore
 from fastapi import HTTPException, status
-from pydantic import field_serializer, field_validator
+from pydantic import BaseModel, field_serializer, field_validator
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -184,6 +184,13 @@ class FlowRead(FlowBase):
     id: UUID
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()
+
+
+class PaginatedFlowResponse(BaseModel):
+    flows: list[FlowRead]
+    total: int
+    page_size: int
+    page_index: int
 
 
 class FlowUpdate(SQLModel):
