@@ -12,13 +12,12 @@ from typing import TYPE_CHECKING
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
-from loguru import logger
-from pytest import LogCaptureFixture
-
 from base.langflow.components.inputs.ChatInput import ChatInput
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
+from loguru import logger
+from pytest import LogCaptureFixture
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 from tests.api_keys import get_openai_api_key
@@ -377,8 +376,8 @@ def json_two_outputs():
 
 
 @pytest.fixture
-async def added_flow_with_prompt_and_history(client, json_flow_with_prompt_and_history, logged_in_headers):
-    flow = orjson.loads(json_flow_with_prompt_and_history)
+async def added_flow_webhook_test(client, json_webhook_test, logged_in_headers):
+    flow = orjson.loads(json_webhook_test)
     data = flow["data"]
     flow = FlowCreate(name="Basic Chat", description="description", data=data)
     response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)

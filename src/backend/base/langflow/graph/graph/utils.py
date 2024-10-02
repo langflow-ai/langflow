@@ -1,6 +1,8 @@
 import copy
 from collections import defaultdict, deque
 
+import networkx as nx
+
 PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
 
 
@@ -437,3 +439,16 @@ def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) 
     if max_iterations is None:
         return True
     return max(yielded_counts.values(), default=0) <= max_iterations
+
+
+def find_cycle_vertices(edges):
+    # Create a directed graph from the edges
+    graph = nx.DiGraph(edges)
+
+    # Find all simple cycles in the graph
+    cycles = list(nx.simple_cycles(graph))
+
+    # Flatten the list of cycles and remove duplicates
+    cycle_vertices = {vertex for cycle in cycles for vertex in cycle}
+
+    return sorted(cycle_vertices)
