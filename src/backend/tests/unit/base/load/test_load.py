@@ -16,7 +16,7 @@ def test_run_flow_from_json_params():
         "env_file",
         "cache",
         "disable_logs",
-        "fallback_to_env_vars"
+        "fallback_to_env_vars",
     }
 
     # Check if the function accepts all expected parameters
