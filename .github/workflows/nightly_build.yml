@@ -86,8 +86,9 @@ jobs:
           uv run ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
           uv run ./scripts/ci/update_pyproject_name.py langflow-nightly main
           uv run ./scripts/ci/update_uv_dependency.py $BASE_TAG
+
           uv lock
-          cd src/backend/base && uv lock
+          cd src/backend/base && uv lock && cd ../../..
 
           git add pyproject.toml src/backend/base/pyproject.toml uv.lock src/backend/base/uv.lock
           git commit -m "Update version and project name"
