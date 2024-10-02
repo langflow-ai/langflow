@@ -78,3 +78,7 @@ export type InputGlobalComponentType = {
   load_from_db: boolean | undefined;
   password: boolean | undefined;
 };
+export type MultiselectComponentType = {
+    options: string[];
+    combobox?: boolean;
+  };

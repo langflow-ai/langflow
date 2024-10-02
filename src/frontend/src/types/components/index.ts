@@ -53,17 +53,6 @@ export type DropDownComponent = {
   id?: string;
   children?: ReactNode;
 };
-export type MultiselectComponentType = {
-  disabled?: boolean;
-  isLoading?: boolean;
-  value: string[];
-  combobox?: boolean;
-  options: string[];
-  onSelect: (value: string[], dbValue?: boolean, snapshot?: boolean) => void;
-  editNode?: boolean;
-  id?: string;
-  children?: ReactNode;
-};
 export type ParameterComponentType = {
   selected?: boolean;
   data: NodeDataType;
