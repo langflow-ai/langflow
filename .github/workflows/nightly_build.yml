@@ -24,11 +24,14 @@ jobs:
       main_tag: ${{ steps.generate_main_tag.outputs.main_tag }}
       base_tag: ${{ steps.set_base_tag.outputs.base_tag }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
         with:
           ref: ${{ github.ref }}
-
       - name: Install the project
         run: uv sync --dev
 
