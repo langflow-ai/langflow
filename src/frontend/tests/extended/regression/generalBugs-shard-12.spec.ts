@@ -57,7 +57,7 @@ test("user should be able to connect RetrieverTool to another components", async
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-500, 500);
+      await page.mouse.move(-300, 300);
     });
 
   await page.mouse.up();
@@ -86,7 +86,7 @@ test("user should be able to connect RetrieverTool to another components", async
   await chromaDbOutput.hover();
   await page.mouse.down();
   const retrieverToolInput = await page
-    .getByTestId("handle-retrievertool-shownode-retriever-left")
+    .getByTestId("handle-nvidiarerankcomponent-shownode-retriever-left")
     .nth(0);
   await retrieverToolInput.hover();
   await page.mouse.up();
