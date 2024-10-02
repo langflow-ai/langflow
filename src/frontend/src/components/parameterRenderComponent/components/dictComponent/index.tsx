@@ -1,30 +1,27 @@
 import { useEffect } from "react";
-import { DictComponentType } from "../../types/components";
 
-import DictAreaModal from "../../modals/dictAreaModal";
-import { classNames, cn } from "../../utils/utils";
-import ForwardedIconComponent from "../genericIconComponent";
-import { Button } from "../ui/button";
+import DictAreaModal from "../../../../modals/dictAreaModal";
+import { classNames, cn } from "../../../../utils/utils";
+import ForwardedIconComponent from "../../../genericIconComponent";
+import { Button } from "../../../ui/button";
+import { InputProps } from "../../types";
 
 export default function DictComponent({
   value = [],
-  onChange,
+  handleOnNewValue,
   disabled,
   editNode = false,
   id = "",
-}: DictComponentType): JSX.Element {
-  // Create a reference to the value
-
+}: InputProps<object|object[]|string>): JSX.Element {
   useEffect(() => {
     if (disabled) {
-      onChange({});
+      handleOnNewValue({value:{}});
     }
   }, [disabled]);
 
   return (
     <div
       className={classNames(
-        value.length > 1 && editNode ? "my-1" : "",
         "flex w-full flex-col gap-3",
         disabled ? "pointer-events-none" : "",
       )}
@@ -32,9 +29,9 @@ export default function DictComponent({
       {
         <div className="flex w-full gap-3" data-testid={id}>
           <DictAreaModal
-            value={value}
+            value={(value || "").toString() === "{}" ? {} : value}
             onChange={(obj) => {
-              onChange(obj);
+              handleOnNewValue({value:obj});
             }}
             disabled={disabled}
           >
