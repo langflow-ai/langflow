@@ -14,7 +14,7 @@ def complex_agent_graph():
     llm = OpenAIModelComponent(model_name="gpt-4o-mini")
     manager_llm = OpenAIModelComponent(model_name="gpt-4o")
     search_api_tool = SearchAPIComponent()
-    yahoo_search_tool = YfinanceToolComponent
+    yahoo_search_tool = YfinanceToolComponent()
     dynamic_agent = CrewAIAgentComponent()
     chat_input = ChatInput()
     role_prompt = PromptComponent(_display_name="Role Prompt")
