@@ -1,24 +1,24 @@
 import ComponentTextModal from "@/modals/textAreaModal";
 import { classNames } from "@/utils/utils";
 import { useEffect } from "react";
-import { TextAreaComponentType } from "../../../../types/components";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 import { Textarea } from "../../../ui/textarea";
+import { InputProps, TextAreaComponentType } from "../../types";
 
 export default function TextAreaComponent({
   value,
-  onChange,
   disabled,
+  handleOnNewValue,
   editNode = false,
   id = "",
   password,
   updateVisibility,
-}: TextAreaComponentType): JSX.Element {
+}: InputProps<string, TextAreaComponentType>): JSX.Element {
   // Clear text area
   useEffect(() => {
     if (disabled && value !== "") {
-      onChange("", undefined, true);
+      handleOnNewValue({value: ""}, {skipSnapshot: true});
     }
   }, [disabled]);
 
@@ -38,7 +38,7 @@ export default function TextAreaComponent({
       )}
       rows={1}
       placeholder="Type something..."
-      onChange={(event) => onChange(event.target.value)}
+      onChange={(event) => handleOnNewValue({value: event.target.value})}
     />
   );
 
@@ -46,7 +46,7 @@ export default function TextAreaComponent({
     <ComponentTextModal
       changeVisibility={updateVisibility}
       value={value}
-      setValue={(value) => onChange(value)}
+      setValue={(value) => handleOnNewValue({value: value})}
       disabled={disabled}
       password={password}
     >
