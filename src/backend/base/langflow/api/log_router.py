@@ -90,10 +90,7 @@ async def logs(
                 status_code=HTTPStatus.BAD_REQUEST,
                 detail="Timestamp is required when requesting logs after the timestamp",
             )
-        if lines_before <= 0:
-            content = log_buffer.get_last_n(10)
-        else:
-            content = log_buffer.get_last_n(lines_before)
+        content = log_buffer.get_last_n(10) if lines_before <= 0 else log_buffer.get_last_n(lines_before)
     else:
         if lines_before > 0:
             content = log_buffer.get_before_timestamp(timestamp=timestamp, lines=lines_before)

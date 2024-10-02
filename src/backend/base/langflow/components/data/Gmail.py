@@ -96,10 +96,7 @@ class GmailLoaderComponent(Component):
                     msg = "From email not found."
                     raise ValueError(msg)
 
-                if "parts" in msg["payload"]:
-                    parts = msg["payload"]["parts"]
-                else:
-                    parts = [msg["payload"]]
+                parts = msg["payload"]["parts"] if "parts" in msg["payload"] else [msg["payload"]]
 
                 for part in parts:
                     if part["mimeType"] == "text/plain":

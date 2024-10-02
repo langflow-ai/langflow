@@ -243,7 +243,7 @@ class TracingService(Service):
 
     def _cleanup_inputs(self, inputs: dict[str, Any]):
         inputs = inputs.copy()
-        for key in inputs.keys():
+        for key in inputs:
             if "api_key" in key:
                 inputs[key] = "*****"  # avoid logging api_keys for security reasons
         return inputs

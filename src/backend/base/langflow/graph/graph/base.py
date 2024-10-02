@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import copy
 import json
 import uuid
@@ -1061,10 +1062,7 @@ class Graph:
         same_length = len(vertex.edges) == len(other_vertex.edges)
         if not same_length:
             return False
-        for edge in vertex.edges:
-            if edge not in other_vertex.edges:
-                return False
-        return True
+        return all(edge in other_vertex.edges for edge in vertex.edges)
 
     def update(self, other: Graph) -> Graph:
         # Existing vertices in self graph
@@ -1080,10 +1078,8 @@ class Graph:
 
         # Remove vertices that are not in the other graph
         for vertex_id in removed_vertex_ids:
-            try:
+            with contextlib.suppress(ValueError):
                 self.remove_vertex(vertex_id)
-            except ValueError:
-                pass
 
         # The order here matters because adding the vertex is required
         # if any of them have edges that point to any of the new vertices
