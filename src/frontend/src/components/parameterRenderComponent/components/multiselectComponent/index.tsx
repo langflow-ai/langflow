@@ -1,7 +1,6 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { useEffect, useRef, useState } from "react";
-import { MultiselectComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
@@ -19,24 +18,22 @@ import {
   PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "../../../ui/popover";
+import { InputProps, MultiselectComponentType } from "../../types";
 
 export default function MultiselectComponent({
   disabled,
-  isLoading,
   value,
   options: defaultOptions,
+  handleOnNewValue,
   combobox,
-  onSelect,
   editNode = false,
   id = "",
-  children,
-}: MultiselectComponentType): JSX.Element {
-  const [open, setOpen] = useState(children ? true : false);
+}: InputProps<string[],MultiselectComponentType>): JSX.Element {
+  const [open, setOpen] = useState(false);
 
   const refButton = useRef<HTMLButtonElement>(null);
 
-  const PopoverContentDropdown =
-    children || editNode ? PopoverContent : PopoverContentWithoutPortal;
+  const PopoverContentDropdown = editNode ? PopoverContent : PopoverContentWithoutPortal;
 
   const [customValues, setCustomValues] = useState<string[]>([]);
   const [searchValue, setSearchValue] = useState("");
@@ -64,7 +61,7 @@ export default function MultiselectComponent({
 
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
-      onSelect([], undefined, true);
+      handleOnNewValue({value: []}, { skipSnapshot: true });
     }
   }, [disabled]);
 
@@ -94,9 +91,9 @@ export default function MultiselectComponent({
 
   const handleOptionSelect = (currentValue) => {
     if (value.includes(currentValue)) {
-      onSelect(value.filter((v) => v !== currentValue));
+      handleOnNewValue({value: value.filter((v) => v !== currentValue)})
     } else {
-      onSelect([...value, currentValue]);
+      handleOnNewValue({value: [...value, currentValue]})
     }
   };
 
@@ -189,11 +186,7 @@ export default function MultiselectComponent({
   );
 
   if (Object.keys(options).length === 0 && !combobox) {
-    return isLoading ? (
-      <div>
-        <span className="text-sm italic">Loading...</span>
-      </div>
-    ) : (
+    return (
       <div>
         <span className="text-sm italic">
           No parameters are available for display.
@@ -203,22 +196,16 @@ export default function MultiselectComponent({
   }
 
   return (
-    <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
-      {children ? (
-        <PopoverAnchor>{children}</PopoverAnchor>
-      ) : (
+    <Popover open={open} onOpenChange={setOpen}>
+      {(
         renderDropdownTrigger()
       )}
       <PopoverContentDropdown
         onOpenAutoFocus={(event) => event.preventDefault()}
         side="bottom"
-        avoidCollisions={!!children}
+        avoidCollisions={false}
         className="noflow nowheel nopan nodelete nodrag p-0"
-        style={
-          children
-            ? {}
-            : { minWidth: refButton?.current?.clientWidth ?? "200px" }
-        }
+        style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
         <Command>
           {renderSearchInput()}
