@@ -13,7 +13,7 @@ export function StrRenderComponent({
     handleOnNewValue({ value, load_from_db: dbValue }, { skipSnapshot });
   };
 
-  const { handleOnNewValue, id, disabled, editNode,value } = baseInputProps;
+  const { handleOnNewValue, id, disabled, editNode, value } = baseInputProps;
 
   if (!templateData.options) {
     return templateData.multiline ? (
@@ -32,11 +32,10 @@ export function StrRenderComponent({
       />
     ) : (
       <InputGlobalComponent
-        disabled={disabled}
-        editNode={editNode}
-        onChange={onChange}
-        name={name}
-        data={templateData}
+        {...baseInputProps}
+        password={templateData.password}
+        load_from_db={templateData.load_from_db}
+        id={"input-" + name}
       />
     );
   }
