@@ -1,8 +1,4 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { InputFieldType } from "@/types/api";
-import Dropdown from "../../../dropdownComponent";
 import InputGlobalComponent from "../../../inputGlobalComponent";
-import InputListComponent from "../inputListComponent";
 import MultiselectComponent from "../../../multiselectComponent";
 import TextAreaComponent from "../textAreaComponent";
 import { InputProps, StrRenderComponentType } from "../../types";
