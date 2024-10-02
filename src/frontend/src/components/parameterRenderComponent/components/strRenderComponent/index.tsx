@@ -2,9 +2,10 @@ import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { InputFieldType } from "@/types/api";
 import Dropdown from "../../../dropdownComponent";
 import InputGlobalComponent from "../../../inputGlobalComponent";
-import InputListComponent from "../../../inputListComponent";
+import InputListComponent from "../inputListComponent";
 import MultiselectComponent from "../../../multiselectComponent";
 import TextAreaComponent from "../../../textAreaComponent";
+import { InputProps, StrRenderComponentType } from "../../types";
 
 export function StrRenderComponent({
   templateData,
@@ -14,30 +15,13 @@ export function StrRenderComponent({
   handleOnNewValue,
   editNode,
   id,
-}: {
-  templateData: Partial<InputFieldType>;
-  value: any;
-  name: string;
-  disabled: boolean;
-  handleOnNewValue: handleOnNewValueType;
-  editNode: boolean;
-  id: string;
-}) {
+}: InputProps<string, StrRenderComponentType>) {
   const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
     handleOnNewValue({ value, load_from_db: dbValue }, { skipSnapshot });
   };
 
   if (!templateData.options) {
-    return templateData?.list ? (
-      <InputListComponent
-        componentName={name ?? undefined}
-        editNode={editNode}
-        disabled={disabled}
-        value={value || [""]}
-        onChange={onChange}
-        id={`inputlist_${id}`}
-      />
-    ) : templateData.multiline ? (
+    return templateData.multiline ? (
       <TextAreaComponent
         password={templateData.password}
         updateVisibility={() => {

@@ -3,7 +3,7 @@ import { useState } from "react";
 import ImageViewer from "../../../../components/ImageViewer";
 import CsvOutputComponent from "../../../../components/csvOutputComponent";
 import DataOutputComponent from "../../../../components/dataOutputComponent";
-import InputListComponent from "../../../../components/inputListComponent";
+import InputListComponent from "../../../../components/parameterRenderComponent/components/inputListComponent";
 import PdfViewer from "../../../../components/pdfViewer";
 import { Textarea } from "../../../../components/ui/textarea";
 import { PDFViewConstant } from "../../../../constants/constants";

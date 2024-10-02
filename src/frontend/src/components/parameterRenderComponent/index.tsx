@@ -16,6 +16,7 @@ import { RefreshParameterComponent } from "./components/refreshParameterComponen
 import { StrRenderComponent } from "./components/strRenderComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import { InputProps } from "./types";
+import InputListComponent from "./components/inputListComponent";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -61,8 +62,21 @@ export function ParameterRenderComponent({
     readonly: templateData.readonly,
     };
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
+      if(templateData.listist) {
+        return (
+          <InputListComponent
+            componentName={name ?? undefined}
+            editNode={editNode}
+            disabled={disabled}
+            value={templateValue || [""]}
+            onChange={onChange}
+            id={`inputlist_${id}`}
+          />
+        );
+      }
       return (
         <StrRenderComponent
+          {...baseInputProps}
           templateData={templateData}
           value={templateValue}
           name={name}
