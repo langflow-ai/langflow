@@ -1,4 +1,3 @@
-import traceback
 import warnings
 from collections.abc import AsyncIterator, Iterator
 from typing import Any, get_args
