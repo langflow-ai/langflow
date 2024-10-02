@@ -1,7 +1,10 @@
-from typing import TYPE_CHECKING, List, Optional, Dict, Any, Tuple
+import traceback  # noqa: F401
+from typing import TYPE_CHECKING, Any
+
 from langchain.schema import Document
 from langchain_elasticsearch import ElasticsearchStore
 from loguru import logger
+
 from langflow.base.vectorstores.model import (
     LCVectorStoreComponent,
     check_cached_vector_store,
@@ -9,16 +12,15 @@ from langflow.base.vectorstores.model import (
 from langflow.io import (
     BoolInput,  # noqa: F401
     DataInput,
-    HandleInput,
-    IntInput,
-    StrInput,
-    MultilineInput,
     DropdownInput,
     FloatInput,
+    HandleInput,
+    IntInput,
+    MultilineInput,
     SecretStrInput,
+    StrInput,
 )
 from langflow.schema import Data
-import traceback  # noqa: F401
 
 if TYPE_CHECKING:
     from langchain_elasticsearch import ElasticsearchStore
@@ -150,7 +152,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
         return elasticsearch
 
-    def _prepare_documents(self) -> List[Document]:
+    def _prepare_documents(self) -> list[Document]:
         """
         Prepares documents from the input data to add to the vector store.
         """
@@ -175,7 +177,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         else:
             logger.debug("No documents to add to the Vector Store.")
 
-    def search(self, query: Optional[str] = None) -> List[Dict[str, Any]]:
+    def search(self, query: str | None = None) -> list[dict[str, Any]]:
         """
         Search for similar documents in the vector store or retrieve all documents
         if no query is provided.
@@ -209,7 +211,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
                 {"page_content": doc.page_content, "metadata": doc.metadata, "score": score} for doc, score in results
             ]
 
-    def get_all_documents(self, vector_store: ElasticsearchStore, **kwargs) -> List[Tuple[Document, float]]:
+    def get_all_documents(self, vector_store: ElasticsearchStore, **kwargs) -> list[tuple[Document, float]]:
         """
         Retrieve all documents from the vector store.
         """
@@ -234,7 +236,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
         return results
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         """
         Search for documents in the vector store based on the search input.
         If no search input is provided, retrieve all documents.
