@@ -5,7 +5,10 @@ from langflow.schema import Data
 
 class ExtractDataKeyComponent(Component):
     display_name = "Extract Key"
-    description = "Extract a specific key from a Data object or a list of Data objects and return the extracted value(s) as Data object(s)."
+    description = (
+        "Extract a specific key from a Data object or a list of "
+        "Data objects and return the extracted value(s) as Data object(s)."
+    )
     icon = "key"
     beta = True
     name = "ExtractaKey"

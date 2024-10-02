@@ -43,7 +43,8 @@ class JSONToDataComponent(Component):
     def convert_json_to_data(self) -> Data | list[Data]:
         try:
             if sum(bool(field) for field in [self.json_file, self.json_path, self.json_string]) != 1:
-                raise ValueError("Please provide exactly one of: JSON file, file path, or JSON string.")
+                msg = "Please provide exactly one of: JSON file, file path, or JSON string."
+                raise ValueError(msg)
 
             json_data = None
 
@@ -51,14 +52,16 @@ class JSONToDataComponent(Component):
                 resolved_path = self.resolve_path(self.json_file)
                 file_path = Path(resolved_path)
                 if file_path.suffix.lower() != ".json":
-                    raise ValueError("The provided file must be a JSON file.")
+                    msg = "The provided file must be a JSON file."
+                    raise ValueError(msg)
                 with open(file_path, encoding="utf-8") as jsonfile:
                     json_data = jsonfile.read()
 
             elif self.json_path:
                 file_path = Path(self.json_path)
                 if file_path.suffix.lower() != ".json":
-                    raise ValueError("The provided file must be a JSON file.")
+                    msg = "The provided file must be a JSON file."
+                    raise ValueError(msg)
                 with open(file_path, encoding="utf-8") as jsonfile:
                     json_data = jsonfile.read()
 
@@ -66,7 +69,8 @@ class JSONToDataComponent(Component):
                 json_data = self.json_string
 
             if not json_data:
-                raise ValueError("No JSON data provided.")
+                msg = "No JSON data provided."
+                raise ValueError(msg)
 
             # Try to parse the JSON string
             try:

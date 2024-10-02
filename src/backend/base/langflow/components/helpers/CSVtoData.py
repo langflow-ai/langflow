@@ -40,7 +40,8 @@ class CSVToDataComponent(Component):
     def load_csv_to_data(self) -> list[Data]:
         try:
             if sum(bool(field) for field in [self.csv_file, self.csv_path, self.csv_string]) != 1:
-                raise ValueError("Please provide exactly one of: CSV file, file path, or CSV string.")
+                msg = "Please provide exactly one of: CSV file, file path, or CSV string."
+                raise ValueError(msg)
 
             csv_data = None
 
@@ -48,14 +49,16 @@ class CSVToDataComponent(Component):
                 resolved_path = self.resolve_path(self.csv_file)
                 file_path = Path(resolved_path)
                 if file_path.suffix.lower() != ".csv":
-                    raise ValueError("The provided file must be a CSV file.")
+                    msg = "The provided file must be a CSV file."
+                    raise ValueError(msg)
                 with open(file_path, newline="", encoding="utf-8") as csvfile:
                     csv_data = csvfile.read()
 
             elif self.csv_path:
                 file_path = Path(self.csv_path)
                 if file_path.suffix.lower() != ".csv":
-                    raise ValueError("The provided file must be a CSV file.")
+                    msg = "The provided file must be a CSV file."
+                    raise ValueError(msg)
                 with open(file_path, newline="", encoding="utf-8") as csvfile:
                     csv_data = csvfile.read()
 
@@ -63,7 +66,8 @@ class CSVToDataComponent(Component):
                 csv_data = self.csv_string
 
             if not csv_data:
-                raise ValueError("No CSV data provided.")
+                msg = "No CSV data provided."
+                raise ValueError(msg)
 
             result = []
             csv_reader = csv.DictReader(io.StringIO(csv_data))
