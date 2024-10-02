@@ -1,10 +1,10 @@
 import ComponentTextModal from "@/modals/textAreaModal";
 import { classNames } from "@/utils/utils";
 import { useEffect } from "react";
-import { TextAreaComponentType } from "../../types/components";
-import IconComponent from "../genericIconComponent";
-import { Button } from "../ui/button";
-import { Textarea } from "../ui/textarea";
+import { TextAreaComponentType } from "../../../../types/components";
+import IconComponent from "../../../genericIconComponent";
+import { Button } from "../../../ui/button";
+import { Textarea } from "../../../ui/textarea";
 
 export default function TextAreaComponent({
   value,
