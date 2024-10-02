@@ -24,7 +24,7 @@ jobs:
           - "3.10"
     steps:
       - name: Setup Environment
-        uses: "./.github/actions/setup-uv@${{ github.ref }}"
+        uses: ./.github/actions/setup-uv
         with:
           ref: ${{ inputs.branch || github.ref }}
       - name: Install the project
