@@ -74,19 +74,17 @@ def fetch_latest_version(package_name: str, include_prerelease: bool) -> str | N
     from packaging import version as pkg_version
 
     package_name = package_name.replace(" ", "-").lower()
-    valid_versions = []
     try:
         response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
         versions = response.json()["releases"].keys()
         valid_versions = [v for v in versions if include_prerelease or not is_pre_release(v)]
-
-    except Exception as e:
-        logger.exception(e)
-
-    finally:
         if not valid_versions:
             return None  # Handle case where no valid versions are found
         return max(valid_versions, key=lambda v: pkg_version.parse(v))
+
+    except Exception as e:
+        logger.exception(e)
+        return None
 
 
 def get_version_info():

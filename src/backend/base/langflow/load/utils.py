@@ -28,7 +28,7 @@ def upload(file_path, host, flow_id):
             raise Exception(msg)
     except Exception as e:
         msg = f"Error uploading file: {e}"
-        raise Exception(msg)
+        raise Exception(msg) from e
 
 
 def upload_file(file_path: str, host: str, flow_id: str, components: list[str], tweaks: dict | None = None):
@@ -65,7 +65,7 @@ def upload_file(file_path: str, host: str, flow_id: str, components: list[str], 
         raise ValueError(msg)
     except Exception as e:
         msg = f"Error uploading file: {e}"
-        raise ValueError(msg)
+        raise ValueError(msg) from e
 
 
 def get_flow(url: str, flow_id: str):
@@ -92,4 +92,4 @@ def get_flow(url: str, flow_id: str):
         raise Exception(msg)
     except Exception as e:
         msg = f"Error retrieving flow: {e}"
-        raise Exception(msg)
+        raise Exception(msg) from e

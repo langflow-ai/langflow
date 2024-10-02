@@ -36,9 +36,7 @@ def update_memory_keys(langchain_object, possible_new_mem_key):
         if key not in [langchain_object.memory.memory_key, possible_new_mem_key]
     ][0]
 
-    keys = [input_key, output_key, possible_new_mem_key]
-    attrs = ["input_key", "output_key", "memory_key"]
-    for key, attr in zip(keys, attrs):
+    for key, attr in [(input_key, "input_key"), (output_key, "output_key"), (possible_new_mem_key, "memory_key")]:
         try:
             setattr(langchain_object.memory, attr, key)
         except ValueError as exc:

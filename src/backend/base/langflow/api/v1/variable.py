@@ -83,8 +83,8 @@ def update_variable(
             variable=variable,
             session=session,
         )
-    except NoResultFound:
-        raise HTTPException(status_code=404, detail="Variable not found")
+    except NoResultFound as e:
+        raise HTTPException(status_code=404, detail="Variable not found") from e
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

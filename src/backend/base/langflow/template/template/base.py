@@ -53,7 +53,7 @@ class Template(BaseModel):
                         _input = instantiate_input(input_type, value)
                     except Exception as e:
                         msg = f"Error instantiating input {input_type}: {e}"
-                        raise ValueError(msg)
+                        raise ValueError(msg) from e
                 else:
                     _input = Input(**value)
 

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import re
-import warnings
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from langchain_core.tools import BaseTool
 from langchain_core.tools.structured import StructuredTool
+from loguru import logger
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.io.schema import create_input_schema
@@ -27,7 +27,7 @@ def _get_input_type(input: InputTypes):
 
 def build_description(component: Component, output: Output):
     if not output.required_inputs:
-        warnings.warn(f"Output {output.name} does not have required inputs defined")
+        logger.warning(f"Output {output.name} does not have required inputs defined")
 
     if output.required_inputs:
         args = ", ".join(

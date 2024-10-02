@@ -22,7 +22,7 @@ class ShouldRunNextComponent(CustomComponent):
         prompt = PromptTemplate.from_template(template)
         chain = prompt | llm
         error_message = ""
-        for i in range(retries):
+        for _i in range(retries):
             result = chain.invoke(
                 {"question": question, "context": context, "error_message": error_message},
                 config={"callbacks": self.get_langchain_callbacks()},

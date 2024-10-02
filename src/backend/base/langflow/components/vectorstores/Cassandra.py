@@ -136,9 +136,9 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
         try:
             import cassio
             from langchain_community.utilities.cassandra import SetupMode
-        except ImportError:
+        except ImportError as e:
             msg = "Could not import cassio integration package. " "Please install it with `pip install cassio`."
-            raise ImportError(msg)
+            raise ImportError(msg) from e
 
         from uuid import UUID
 
@@ -234,7 +234,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                         "You should ingest data through Langflow (or LangChain) to query it in Langflow. "
                         "Your collection does not contain a field name 'content'."
                     )
-                    raise ValueError(msg)
+                    raise ValueError(msg) from e
                 raise e
 
             logger.debug(f"Retrieved documents: {len(docs)}")

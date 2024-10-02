@@ -1,6 +1,8 @@
+import logging
 from collections import deque
 
 import pytest
+from pytest import LogCaptureFixture
 
 from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
 from langflow.components.inputs.ChatInput import ChatInput
@@ -28,14 +30,16 @@ async def test_graph_not_prepared():
 
 
 @pytest.mark.asyncio
-async def test_graph():
+async def test_graph(caplog: LogCaptureFixture):
     chat_input = ChatInput()
     chat_output = ChatOutput()
     graph = Graph()
     graph.add_component(chat_input)
     graph.add_component(chat_output)
-    with pytest.warns(UserWarning, match="Graph has vertices but no edges"):
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
         graph.prepare()
+        assert "Graph has vertices but no edges" in caplog.text
 
 
 @pytest.mark.asyncio

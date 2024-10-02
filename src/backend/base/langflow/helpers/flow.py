@@ -39,7 +39,7 @@ def list_flows(*, user_id: str | None = None) -> list[Data]:
             return [flow.to_data() for flow in flows]
     except Exception as e:
         msg = f"Error listing flows: {e}"
-        raise ValueError(msg)
+        raise ValueError(msg) from e
 
 
 async def load_flow(
@@ -161,7 +161,7 @@ def generate_function_for_flow(
     # Map original argument names to their corresponding Pythonic variable names in the function
     arg_mappings = ", ".join(
         f'"{original_name}": {name}'
-        for original_name, name in zip(original_arg_names, [arg.split(":")[0] for arg in args])
+        for original_name, name in zip(original_arg_names, [arg.split(":")[0] for arg in args], strict=True)
     )
 
     func_body = f"""

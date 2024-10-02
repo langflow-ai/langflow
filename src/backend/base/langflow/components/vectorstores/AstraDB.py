@@ -213,11 +213,13 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             items = list(build_config.items())
 
             # Find the index of the key to insert after
-            for i, (key, value) in enumerate(items):
+            idx = len(items)
+            for i, (key, _value) in enumerate(items):
                 if key == field_name:
+                    idx = i + 1
                     break
 
-            items.insert(i + 1, (new_field_name, new_parameter))
+            items.insert(idx, (new_field_name, new_parameter))
 
             # Clear the original dictionary and update with the modified items
             build_config.clear()
@@ -366,21 +368,21 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         try:
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode
-        except ImportError:
+        except ImportError as e:
             msg = (
                 "Could not import langchain Astra DB integration package. "
                 "Please install it with `pip install langchain-astradb`."
             )
-            raise ImportError(msg)
+            raise ImportError(msg) from e
 
         try:
             if not self.setup_mode:
                 self.setup_mode = self._inputs["setup_mode"].options[0]
 
             setup_mode_value = SetupMode[self.setup_mode.upper()]
-        except KeyError:
+        except KeyError as e:
             msg = f"Invalid setup mode: {self.setup_mode}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
         if self.embedding:
             embedding_dict = {"embedding": self.embedding}

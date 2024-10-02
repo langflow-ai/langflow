@@ -134,7 +134,7 @@ async def retrieve_vertices_order(
             ),
         )
         if "stream or streaming set to True" in str(exc):
-            raise HTTPException(status_code=400, detail=str(exc))
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         logger.error(f"Error checking build status: {exc}")
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -202,7 +202,7 @@ async def build_flow(
                 ),
             )
             if "stream or streaming set to True" in str(exc):
-                raise HTTPException(status_code=400, detail=str(exc))
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
             logger.error(f"Error checking build status: {exc}")
             logger.exception(exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc

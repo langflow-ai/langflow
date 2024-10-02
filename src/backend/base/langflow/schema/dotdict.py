@@ -29,9 +29,9 @@ class dotdict(dict):
                 value = dotdict(value)
                 self[attr] = value  # Update self to nest dotdict for future accesses
             return value
-        except KeyError:
+        except KeyError as e:
             msg = f"'dotdict' object has no attribute '{attr}'"
-            raise AttributeError(msg)
+            raise AttributeError(msg) from e
 
     def __setattr__(self, key, value):
         """
@@ -57,9 +57,9 @@ class dotdict(dict):
         """
         try:
             del self[key]
-        except KeyError:
+        except KeyError as e:
             msg = f"'dotdict' object has no attribute '{key}'"
-            raise AttributeError(msg)
+            raise AttributeError(msg) from e
 
     def __missing__(self, key):
         """

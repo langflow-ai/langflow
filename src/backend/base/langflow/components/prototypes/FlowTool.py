@@ -1,5 +1,6 @@
-import warnings
 from typing import Any
+
+from loguru import logger
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.base.tools.flow_tool import FlowTool
@@ -85,7 +86,7 @@ class FlowToolComponent(LCToolComponent):
         try:
             graph.set_run_id(self.graph.run_id)
         except Exception as e:
-            warnings.warn(f"Failed to set run_id: {e}")
+            logger.warning(f"Failed to set run_id: {e}")
         inputs = get_flow_inputs(graph)
         tool = FlowTool(
             name=self.name,

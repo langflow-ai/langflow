@@ -68,9 +68,9 @@ class AmazonBedrockComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
             from langchain_aws import ChatBedrock
-        except ImportError:
+        except ImportError as e:
             msg = "langchain_aws is not installed. Please install it with `pip install langchain_aws`."
-            raise ImportError(msg)
+            raise ImportError(msg) from e
         if self.aws_access_key:
             import boto3  # type: ignore
 

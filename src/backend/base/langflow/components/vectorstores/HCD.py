@@ -180,28 +180,28 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
         try:
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode
-        except ImportError:
+        except ImportError as e:
             msg = (
                 "Could not import langchain Astra DB integration package. "
                 "Please install it with `pip install langchain-astradb`."
             )
-            raise ImportError(msg)
+            raise ImportError(msg) from e
 
         try:
             from astrapy.authentication import UsernamePasswordTokenProvider
             from astrapy.constants import Environment
-        except ImportError:
+        except ImportError as e:
             msg = "Could not import astrapy integration package. " "Please install it with `pip install astrapy`."
-            raise ImportError(msg)
+            raise ImportError(msg) from e
 
         try:
             if not self.setup_mode:
                 self.setup_mode = self._inputs["setup_mode"].options[0]
 
             setup_mode_value = SetupMode[self.setup_mode.upper()]
-        except KeyError:
+        except KeyError as e:
             msg = f"Invalid setup mode: {self.setup_mode}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
         if not isinstance(self.embedding, dict):
             embedding_dict = {"embedding": self.embedding}

@@ -83,7 +83,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             client.command("SELECT 1")
         except Exception as e:
             msg = f"Failed to connect to Clickhouse: {e}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
         documents = []
         for _input in self.ingest_data or []:

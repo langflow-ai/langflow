@@ -62,9 +62,9 @@ class GoogleGenerativeAIComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
-        except ImportError:
+        except ImportError as e:
             msg = "The 'langchain_google_genai' package is required to use the Google Generative AI model."
-            raise ImportError(msg)
+            raise ImportError(msg) from e
 
         google_api_key = self.google_api_key
         model = self.model

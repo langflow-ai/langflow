@@ -59,7 +59,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
             cluster.wait_until_ready(timedelta(seconds=5))
         except Exception as e:
             msg = f"Failed to connect to Couchbase: {e}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
         documents = []
         for _input in self.ingest_data or []:

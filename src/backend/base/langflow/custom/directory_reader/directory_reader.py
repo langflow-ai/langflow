@@ -324,7 +324,7 @@ class DirectoryReader:
         tasks = [self.process_file_async(file_path) for file_path in file_paths]
         results = await asyncio.gather(*tasks)
 
-        for file_path, (validation_result, result_content) in zip(file_paths, results):
+        for file_path, (validation_result, result_content) in zip(file_paths, results, strict=True):
             menu_name = os.path.basename(os.path.dirname(file_path))
             filename = os.path.basename(file_path)
 

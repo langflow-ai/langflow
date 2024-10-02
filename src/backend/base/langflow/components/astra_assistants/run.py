@@ -26,7 +26,6 @@ class AssistantsRun(Component):
             if field_value is None:
                 thread = self.client.beta.threads.create()
                 self.thread_id = thread.id
-                field_value
             build_config["thread_id"] = field_value
 
     inputs = [
@@ -92,4 +91,4 @@ class AssistantsRun(Component):
         except Exception as e:
             print(e)
             msg = f"Error running assistant: {e}"
-            raise Exception(msg)
+            raise Exception(msg) from e

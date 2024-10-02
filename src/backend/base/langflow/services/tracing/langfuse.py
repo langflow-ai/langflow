@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -100,7 +101,7 @@ class LangFuseTracer(BaseTracer):
         trace_name: str,
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
-        logs: list[Log | dict] = [],
+        logs: Sequence[Log | dict] = (),
     ):
         end_time = datetime.utcnow()
         if not self._ready:
@@ -111,7 +112,7 @@ class LangFuseTracer(BaseTracer):
             _output: dict = {}
             _output |= outputs if outputs else {}
             _output |= {"error": str(error)} if error else {}
-            _output |= {"logs": logs} if logs else {}
+            _output |= {"logs": list(logs)} if logs else {}
             content = {"output": _output, "end_time": end_time}
             span.update(**content)
 
