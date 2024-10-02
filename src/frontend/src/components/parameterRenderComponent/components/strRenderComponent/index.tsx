@@ -18,6 +18,7 @@ export function StrRenderComponent({
   if (!templateData.options) {
     return templateData.multiline ? (
       <TextAreaComponent
+        {...baseInputProps}
         password={templateData.password}
         updateVisibility={() => {
           if (templateData.password !== undefined) {
@@ -28,10 +29,6 @@ export function StrRenderComponent({
           }
         }}
         id={`textarea_${id}`}
-        disabled={disabled}
-        editNode={editNode}
-        value={value ?? ""}
-        onChange={onChange}
       />
     ) : (
       <InputGlobalComponent
