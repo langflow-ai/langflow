@@ -135,15 +135,6 @@ export type InputGlobalComponentType = {
   playgroundDisabled?: boolean;
 };
 
-export type KeyPairListComponentType = {
-  value: any;
-  onChange: (value: Object[]) => void;
-  disabled: boolean;
-  editNode?: boolean;
-  editNodeModal?: boolean;
-  isList?: boolean;
-  id?: string;
-};
 
 export type DictComponentType = {
   value: any;

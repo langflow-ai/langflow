@@ -48,3 +48,8 @@ export type FileComponentType = {
   icon?: string;
   text?: string;
 };
+
+export type KeyPairListComponentType = {
+    value: any;
+    isList?: boolean;
+  };
