@@ -1,5 +1,4 @@
 import InputGlobalComponent from "../inputGlobalComponent";
-import MultiselectComponent from "../multiselectComponent";
 import TextAreaComponent from "../textAreaComponent";
 import { InputProps, StrRenderComponentType } from "../../types";
 import DropdownComponent from "../dropdownComponent";
