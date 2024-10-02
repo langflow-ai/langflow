@@ -23,6 +23,8 @@ import IOFileInput from "./components/FileInput";
 import IoJsonInput from "./components/JSONInput";
 import CsvSelect from "./components/csvSelect";
 import IOKeyPairInput from "./components/keyPairInput";
+import useHandleNewValue from "@/CustomNodes/hooks/use-handle-new-value";
+import { NodeType } from "@/types/flow";
 
 export default function IOFieldView({
   type,
@@ -33,14 +35,14 @@ export default function IOFieldView({
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const flowPool = useFlowStore((state) => state.flowPool);
-  const node = nodes.find((node) => node.id === fieldId);
+  const node:NodeType | undefined = nodes.find((node) => node.id === fieldId);
   const flowPoolNode = (flowPool[node!.id] ?? [])[
     (flowPool[node!.id]?.length ?? 1) - 1
   ];
   const handleChangeSelect = (e) => {
     if (node) {
       let newNode = cloneDeep(node);
-      if (newNode.data.node.template.separator) {
+      if (newNode.data.node?.template.separator) {
         newNode.data.node.template.separator.value = e;
         setNode(newNode.id, newNode);
       }
@@ -52,6 +54,8 @@ export default function IOFieldView({
   const textOutputValue =
     (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data
       .results.text ?? "";
+
+  const {handleOnNewValue} = node?.data.node ? useHandleNewValue({node: node.data.node, nodeId: node.id, name: "input_value"}) : {handleOnNewValue: (value:any,options?:any) => {}  };
 
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
@@ -129,15 +133,12 @@ export default function IOFieldView({
             return (
               <>
                 <InputListComponent
+                  id={`playground_${node.id}_input_list`}
+                  editNode={false}
                   value={node.data.node!.template["input_value"]?.value}
-                  onChange={(e) => {
-                    if (node) {
-                      let newNode = cloneDeep(node);
-                      newNode.data.node!.template["input_value"].value = e;
-                      setNode(node.id, newNode);
-                    }
-                  }}
+                  handleOnNewValue={handleOnNewValue}
                   disabled={false}
+
                 />
               </>
             );
@@ -236,16 +237,11 @@ export default function IOFieldView({
             return (
               <>
                 <InputListComponent
+                  id={`playground_${node.id}_output_list`}
+                  editNode={false}
                   value={node.data.node!.template["input_value"]?.value}
-                  onChange={(e) => {
-                    if (node) {
-                      let newNode = cloneDeep(node);
-                      newNode.data.node!.template["input_value"].value = e;
-                      setNode(node.id, newNode);
-                    }
-                  }}
-                  playgroundDisabled
-                  disabled={false}
+                  handleOnNewValue={handleOnNewValue}
+                  disabled={true}
                 />
               </>
             );
