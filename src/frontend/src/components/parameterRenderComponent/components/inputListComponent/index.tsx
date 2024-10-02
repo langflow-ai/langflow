@@ -1,11 +1,11 @@
 import { useEffect } from "react";
-import { InputListComponentType } from "../../types/components";
+import { InputListComponentType } from "../../../../types/components";
 
 import _ from "lodash";
-import { classNames, cn } from "../../utils/utils";
-import IconComponent from "../genericIconComponent";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+import { classNames, cn } from "../../../../utils/utils";
+import IconComponent from "../../../genericIconComponent";
+import { Button } from "../../../ui/button";
+import { Input } from "../../../ui/input";
 
 export default function InputListComponent({
   value,
