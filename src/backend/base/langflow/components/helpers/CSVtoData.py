@@ -1,9 +1,10 @@
-from langflow.custom import Component
-from langflow.io import FileInput, Output, MessageTextInput, MultilineInput
-from langflow.schema import Data
-from pathlib import Path
 import csv
 import io
+from pathlib import Path
+
+from langflow.custom import Component
+from langflow.io import FileInput, MessageTextInput, MultilineInput, Output
+from langflow.schema import Data
 
 
 class CSVToDataComponent(Component):
@@ -48,14 +49,14 @@ class CSVToDataComponent(Component):
                 file_path = Path(resolved_path)
                 if file_path.suffix.lower() != ".csv":
                     raise ValueError("The provided file must be a CSV file.")
-                with open(file_path, "r", newline="", encoding="utf-8") as csvfile:
+                with open(file_path, newline="", encoding="utf-8") as csvfile:
                     csv_data = csvfile.read()
 
             elif self.csv_path:
                 file_path = Path(self.csv_path)
                 if file_path.suffix.lower() != ".csv":
                     raise ValueError("The provided file must be a CSV file.")
-                with open(file_path, "r", newline="", encoding="utf-8") as csvfile:
+                with open(file_path, newline="", encoding="utf-8") as csvfile:
                     csv_data = csvfile.read()
 
             elif self.csv_string:

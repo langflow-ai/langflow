@@ -1,7 +1,8 @@
+from typing import Any
+
 from langflow.custom import Component
-from langflow.io import DataInput, MessageInput, DropdownInput, Output
+from langflow.io import DataInput, DropdownInput, MessageInput, Output
 from langflow.schema import Data
-from typing import List, Any
 
 
 class DataFilterComponent(Component):
@@ -39,19 +40,19 @@ class DataFilterComponent(Component):
     def compare_values(self, item_value: Any, filter_value: str, operator: str) -> bool:
         if operator == "equals":
             return str(item_value) == filter_value
-        elif operator == "not equals":
+        if operator == "not equals":
             return str(item_value) != filter_value
-        elif operator == "contains":
+        if operator == "contains":
             return filter_value in str(item_value)
-        elif operator == "starts with":
+        if operator == "starts with":
             return str(item_value).startswith(filter_value)
-        elif operator == "ends with":
+        if operator == "ends with":
             return str(item_value).endswith(filter_value)
         return False
 
-    def filter_data(self) -> List[Data]:
+    def filter_data(self) -> list[Data]:
         # Extract inputs
-        input_data: List[Data] = self.input_data
+        input_data: list[Data] = self.input_data
         filter_key: str = self.filter_key.text
         filter_value: str = self.filter_value.text
         operator: str = self.operator

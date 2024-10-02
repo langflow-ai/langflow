@@ -1,6 +1,5 @@
-from typing import List, Union
 from langflow.custom import Component
-from langflow.io import DataInput, StrInput, Output
+from langflow.io import DataInput, Output, StrInput
 from langflow.schema import Data
 
 
@@ -28,7 +27,7 @@ class ExtractDataKeyComponent(Component):
         Output(display_name="Extracted Data", name="extracted_data", method="extract_key"),
     ]
 
-    def extract_key(self) -> Union[Data, List[Data]]:
+    def extract_key(self) -> Data | list[Data]:
         key = self.key
 
         if isinstance(self.data_input, list):
@@ -39,15 +38,13 @@ class ExtractDataKeyComponent(Component):
                     result.append(Data(data={key: extracted_value}))
             self.status = result
             return result
-        elif isinstance(self.data_input, Data):
+        if isinstance(self.data_input, Data):
             if key in self.data_input.data:
                 extracted_value = self.data_input.data[key]
                 result = Data(data={key: extracted_value})
                 self.status = result
                 return result
-            else:
-                self.status = f"Key '{key}' not found in Data object."
-                return Data(data={"error": f"Key '{key}' not found in Data object."})
-        else:
-            self.status = "Invalid input. Expected Data object or list of Data objects."
-            return Data(data={"error": "Invalid input. Expected Data object or list of Data objects."})
+            self.status = f"Key '{key}' not found in Data object."
+            return Data(data={"error": f"Key '{key}' not found in Data object."})
+        self.status = "Invalid input. Expected Data object or list of Data objects."
+        return Data(data={"error": "Invalid input. Expected Data object or list of Data objects."})

@@ -1,6 +1,5 @@
-from typing import Union, List
 from langflow.custom import Component
-from langflow.io import DataInput, MessageTextInput, DropdownInput, Output
+from langflow.io import DataInput, DropdownInput, MessageTextInput, Output
 from langflow.schema import Data, dotdict
 
 
@@ -45,15 +44,15 @@ class DataConditionalRouterComponent(Component):
     def compare_values(self, item_value: str, compare_value: str, operator: str) -> bool:
         if operator == "equals":
             return item_value == compare_value
-        elif operator == "not equals":
+        if operator == "not equals":
             return item_value != compare_value
-        elif operator == "contains":
+        if operator == "contains":
             return compare_value in item_value
-        elif operator == "starts with":
+        if operator == "starts with":
             return item_value.startswith(compare_value)
-        elif operator == "ends with":
+        if operator == "ends with":
             return item_value.endswith(compare_value)
-        elif operator == "boolean validator":
+        if operator == "boolean validator":
             return self.parse_boolean(item_value)
         return False
 
@@ -73,7 +72,7 @@ class DataConditionalRouterComponent(Component):
             return False
         return True
 
-    def process_data(self) -> Union[Data, List[Data]]:
+    def process_data(self) -> Data | list[Data]:
         if isinstance(self.data_input, list):
             true_output = []
             false_output = []
@@ -86,12 +85,11 @@ class DataConditionalRouterComponent(Component):
                         false_output.append(item)
             self.stop("false_output" if true_output else "true_output")
             return true_output if true_output else false_output
-        else:
-            if not self.validate_input(self.data_input):
-                return Data(data={"error": self.status})
-            result = self.process_single_data(self.data_input)
-            self.stop("false_output" if result else "true_output")
-            return self.data_input
+        if not self.validate_input(self.data_input):
+            return Data(data={"error": self.status})
+        result = self.process_single_data(self.data_input)
+        self.stop("false_output" if result else "true_output")
+        return self.data_input
 
     def process_single_data(self, data_item: Data) -> bool:
         item_value = data_item.data[self.key_name]
@@ -108,9 +106,8 @@ class DataConditionalRouterComponent(Component):
         if condition_met:
             self.status = f"Condition met: {condition_description}"
             return True
-        else:
-            self.status = f"Condition not met: {condition_description}"
-            return False
+        self.status = f"Condition not met: {condition_description}"
+        return False
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "operator":

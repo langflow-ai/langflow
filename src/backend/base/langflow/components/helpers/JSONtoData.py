@@ -1,7 +1,7 @@
 import json
-from typing import Union, List
-from json_repair import repair_json
 from pathlib import Path
+
+from json_repair import repair_json
 
 from langflow.custom import Component
 from langflow.io import FileInput, MessageTextInput, MultilineInput, Output
@@ -40,7 +40,7 @@ class JSONToDataComponent(Component):
         Output(name="data", display_name="Data", method="convert_json_to_data"),
     ]
 
-    def convert_json_to_data(self) -> Union[Data, List[Data]]:
+    def convert_json_to_data(self) -> Data | list[Data]:
         try:
             if sum(bool(field) for field in [self.json_file, self.json_path, self.json_string]) != 1:
                 raise ValueError("Please provide exactly one of: JSON file, file path, or JSON string.")
@@ -52,14 +52,14 @@ class JSONToDataComponent(Component):
                 file_path = Path(resolved_path)
                 if file_path.suffix.lower() != ".json":
                     raise ValueError("The provided file must be a JSON file.")
-                with open(file_path, "r", encoding="utf-8") as jsonfile:
+                with open(file_path, encoding="utf-8") as jsonfile:
                     json_data = jsonfile.read()
 
             elif self.json_path:
                 file_path = Path(self.json_path)
                 if file_path.suffix.lower() != ".json":
                     raise ValueError("The provided file must be a JSON file.")
-                with open(file_path, "r", encoding="utf-8") as jsonfile:
+                with open(file_path, encoding="utf-8") as jsonfile:
                     json_data = jsonfile.read()
 
             elif self.json_string:
