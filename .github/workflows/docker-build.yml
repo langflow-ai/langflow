@@ -205,9 +205,9 @@ jobs:
       - name: Install the project
         run: |
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
-            cd src/backend/base && uv sync --no-dev
+            cd src/backend/base && uv sync --no-dev --no-sources
           else
-            uv sync --no-dev
+            uv sync --no-dev --no-sources
           fi
 
       - name: Set up Docker Buildx
