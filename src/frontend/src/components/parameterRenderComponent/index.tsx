@@ -4,7 +4,7 @@ import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
 import TableNodeComponent from "./components/TableNodeComponent";
 import CodeAreaComponent from "./components/codeAreaComponent";
-import DictComponent from "../dictComponent";
+import DictComponent from "./components/dictComponent";
 import FloatComponent from "./components/floatComponent";
 import InputFileComponent from "./components/inputFileComponent";
 import IntComponent from "./components/intComponent";
@@ -77,12 +77,7 @@ export function ParameterRenderComponent({
       case "NestedDict":
         return (
           <DictComponent
-            disabled={disabled}
-            editNode={editNode}
-            value={
-              (templateValue || "").toString() === "{}" ? {} : templateValue
-            }
-            onChange={onChange}
+            {...baseInputProps}
             id={`dict_${id}`}
           />
         );

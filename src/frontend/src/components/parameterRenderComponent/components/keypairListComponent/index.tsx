@@ -18,7 +18,6 @@ export default function KeypairListComponent({
   isList = true,
   id,
 }: InputProps<object[]|object|string,KeyPairListComponentType>): JSX.Element {
-  console.log(typeof value,JSON.stringify(value))
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
       handleOnNewValue({value: [{ "": "" }]});
