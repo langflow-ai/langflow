@@ -47,7 +47,7 @@ def test_get_successors_a(graph):
 
     result = utils.get_successors(graph, vertex_id)
 
-    assert set(result) == {"A", "B", "D", "E", "F", "H", "G"}
+    assert set(result) == {"B", "D", "E", "F", "H", "G"}
 
 
 def test_get_successors_z(graph):
@@ -55,7 +55,7 @@ def test_get_successors_z(graph):
 
     result = utils.get_successors(graph, vertex_id)
 
-    assert set(result) == {"Z"}
+    assert len(result) == 0
 
 
 def test_sort_up_to_vertex_n_is_start(graph):

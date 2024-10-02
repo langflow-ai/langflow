@@ -1,13 +1,17 @@
 import asyncio
 
-from openai.types.beta.threads.run_submit_tool_outputs_params import ToolOutput
-from langflow.components.astra_assistants.util import get_patched_openai_client, litellm_model_names, tool_names, \
-    tools_and_names
+from astra_assistants.astra_assistants_manager import AssistantManager
+
+from langflow.components.astra_assistants.util import (
+    get_patched_openai_client,
+    litellm_model_names,
+    tool_names,
+    tools_and_names,
+)
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, StrInput, MultilineInput
+from langflow.inputs import DropdownInput, MultilineInput, StrInput
 from langflow.schema.message import Message
 from langflow.template import Output
-from astra_assistants.astra_assistants_manager import AssistantManager
 
 
 class AstraAssistantManager(Component):
@@ -116,15 +120,12 @@ class AstraAssistantManager(Component):
             tools=tools,
             client=client,
             thread_id=thread_id,
-            assistant_id=assistant_id
+            assistant_id=assistant_id,
         )
 
         content = self.user_message
-        result = await assistant_manager.run_thread(
-            content=content,
-            tool=tool_obj
-        )
-        self.assistant_response = Message(text=result['text'])
+        result = await assistant_manager.run_thread(content=content, tool=tool_obj)
+        self.assistant_response = Message(text=result["text"])
         if "decision" in result:
             self.tool_output = Message(text=str(result["decision"].is_complete))
         else:

@@ -63,7 +63,8 @@ class Settings(BaseSettings):
     # Define if langflow db should be saved in config dir or
     # in the langflow directory
     save_db_in_config_dir: bool = False
-    """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory (i.e. in the package directory)."""
+    """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory
+    (i.e. in the package directory)."""
 
     dev: bool = False
     """If True, Langflow will run in development mode."""
@@ -75,7 +76,8 @@ class Settings(BaseSettings):
     """The number of connections to allow that can be opened beyond the pool size.
     If not provided, the default is 20."""
     db_connect_timeout: int = 20
-    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the database."""
+    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
+    database."""
 
     # sqlite configuration
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
@@ -153,6 +155,8 @@ class Settings(BaseSettings):
     """The interval in ms at which Langflow will auto save flows."""
     health_check_max_retries: int = 5
     """The maximum number of retries for the health check."""
+    max_file_size_upload: int = 100
+    """The maximum file size for the upload in MB."""
 
     @field_validator("dev")
     @classmethod
@@ -211,7 +215,8 @@ class Settings(BaseSettings):
                 # so we need to migrate to the new format
                 # if there is a database in that location
                 if not info.data["config_dir"]:
-                    raise ValueError("config_dir not set, please set it or provide a database_url")
+                    msg = "config_dir not set, please set it or provide a database_url"
+                    raise ValueError(msg)
 
                 from langflow.utils.version import get_version_info
                 from langflow.utils.version import is_pre_release as langflow_is_pre_release
@@ -366,7 +371,8 @@ def load_settings_from_yaml(file_path: str) -> Settings:
 
         for key in settings_dict:
             if key not in Settings.model_fields.keys():
-                raise KeyError(f"Key {key} not found in settings")
+                msg = f"Key {key} not found in settings"
+                raise KeyError(msg)
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
     return Settings(**settings_dict)

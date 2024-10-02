@@ -1,6 +1,3 @@
-from astra_assistants import patch  # type: ignore
-from openai import OpenAI
-
 from langflow.components.astra_assistants.util import get_patched_openai_client
 from langflow.custom import Component
 from langflow.inputs import MultilineInput
@@ -29,5 +26,4 @@ class AssistantsCreateThread(Component):
         thread = self.client.beta.threads.create()
         thread_id = thread.id
 
-        message = Message(text=thread_id)
-        return message
+        return Message(text=thread_id)

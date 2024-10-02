@@ -212,17 +212,17 @@ def test_updated_graph_with_prompts():
 
     print(f"Execution completed with results: {results_ids}")
 
+
 @pytest.mark.api_key_required
 def test_react():
-    #system_prompt = "you're a very detailed ascii artist"
-    #user_message = "draw a cat eating ice cream"
+    # system_prompt = "you're a very detailed ascii artist"
+    # user_message = "draw a cat eating ice cream"
 
     system_prompt = "you're a helpful spelling assistant that always breaks down words into letters to avoid tokenization issues, i.e. puppies --> p | u | p | p | i | e | s"
     user_message = "how many r's are in the word strawberry"
 
     # Chat input initialization
     chat_input = ChatInput(_id="chat_input").set(input_value=user_message)
-
 
     router = ConditionalRouterComponent(_id="router")
 
@@ -233,21 +233,17 @@ def test_react():
         new_prompt=router.false_response,
     )
 
-
     # First Assistant Manager component (ThoughtGenerator)
-    assistant_component_1 = AstraAssistantManager(
-        _id="assistant_component_1")
+    assistant_component_1 = AstraAssistantManager(_id="assistant_component_1")
     assistant_component_1.set(
         instructions=system_prompt,
         model_name="gpt-4o-mini",
         tool="ReActThoughtTool",
-        user_message=prompt_component_1.build_prompt
+        user_message=prompt_component_1.build_prompt,
     )
 
     # Second Assistant Manager component (DeciderTool)
-    assistant_component_2 = AstraAssistantManager(
-        _id="assistant_component_2"
-    )
+    assistant_component_2 = AstraAssistantManager(_id="assistant_component_2")
     assistant_component_2.set(
         instructions="determine if you are done, do more iterations if at all unsure",
         model_name="gpt-4o-mini",
@@ -263,7 +259,6 @@ def test_react():
         operator="equals",
         message=assistant_component_1.get_assistant_response,
     )
-
 
     # chat output for the final OpenAI response
     chat_output_1 = ChatOutput(_id="chat_output_1")

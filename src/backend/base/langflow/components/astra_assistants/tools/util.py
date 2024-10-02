@@ -1,23 +1,18 @@
-from typing import (
-    TypedDict,
-    List,
-    get_type_hints,
-    Optional,
-    Union,
-    get_origin,
-    get_args,
-    Type,
-    Any,
-)
-from pydantic import BaseModel, create_model
 from enum import Enum
+from typing import (
+    Optional,
+    TypedDict,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
+
+from pydantic import BaseModel, create_model
 from typing_extensions import NotRequired
 
-def typed_dict_to_basemodel(
-        name: str,
-        typed_dict: Type[TypedDict],
-        created_models: dict = None
-) -> Type[BaseModel]:
+
+def typed_dict_to_basemodel(name: str, typed_dict: type[TypedDict], created_models: dict = None) -> type[BaseModel]:
     if created_models is None:
         created_models = {}
 
@@ -30,8 +25,8 @@ def typed_dict_to_basemodel(
     model_fields = {}
 
     # Determine required and optional fields
-    required_keys = getattr(typed_dict, '__required_keys__', set())
-    optional_keys = getattr(typed_dict, '__optional_keys__', set())
+    required_keys = getattr(typed_dict, "__required_keys__", set())
+    # optional_keys = getattr(typed_dict, "__optional_keys__", set())
 
     # Helper function to safely check subclass
     def issubclass_safe(cls, classinfo):
@@ -49,32 +44,27 @@ def typed_dict_to_basemodel(
             if issubclass_safe(hint_type, TypedDict):
                 nested_model_name = f"{hint_type.__name__}Model"
                 return typed_dict_to_basemodel(nested_model_name, hint_type, created_models)
-            elif issubclass_safe(hint_type, BaseModel):
+            if issubclass_safe(hint_type, BaseModel):
                 return hint_type  # Already a Pydantic model
-            elif issubclass_safe(hint_type, Enum):
+            if issubclass_safe(hint_type, Enum):
                 return hint_type  # Enums can be used directly
 
-        if origin_inner in {List, list} and len(args_inner) == 1:
+        if origin_inner in {list, list} and len(args_inner) == 1:
             elem_type = args_inner[0]
             if isinstance(elem_type, type) and issubclass_safe(elem_type, TypedDict):
-                nested_model = typed_dict_to_basemodel(
-                    f"{elem_type.__name__}Model", elem_type, created_models
-                )
-                return List[nested_model]
-            else:
-                return List[elem_type]
-        elif origin_inner is Union:
+                nested_model = typed_dict_to_basemodel(f"{elem_type.__name__}Model", elem_type, created_models)
+                return list[nested_model]
+            return list[elem_type]
+        if origin_inner is Union:
             # Handle Optional (Union[..., NoneType])
             non_none_args = [arg for arg in args_inner if arg is not type(None)]
             if len(non_none_args) == 1:
                 return Optional[process_hint(non_none_args[0])]
-            else:
-                return hint_type
-        elif origin_inner is NotRequired:
+            return hint_type
+        if origin_inner is NotRequired:
             # Handle NotRequired explicitly, treat as Optional
             return Optional[args_inner[0]]
-        else:
-            return hint_type
+        return hint_type
 
     for field, hint in hints.items():
         processed_hint = process_hint(hint)

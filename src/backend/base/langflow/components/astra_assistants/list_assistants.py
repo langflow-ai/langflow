@@ -1,6 +1,3 @@
-from astra_assistants import patch  # type: ignore
-from openai import OpenAI
-
 from langflow.components.astra_assistants.util import get_patched_openai_client
 from langflow.custom import Component
 from langflow.schema.message import Message
@@ -19,8 +16,7 @@ class AssistantsListAssistants(Component):
     def process_inputs(self) -> Message:
         assistants = self.client.beta.assistants.list().data
         id_list = [assistant.id for assistant in assistants]
-        message = Message(
+        return Message(
             # get text from list
             text="\n".join(id_list)
         )
-        return message

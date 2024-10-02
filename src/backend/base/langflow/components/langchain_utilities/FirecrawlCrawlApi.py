@@ -57,9 +57,10 @@ class FirecrawlCrawlApi(CustomComponent):
         try:
             from firecrawl.firecrawl import FirecrawlApp  # type: ignore
         except ImportError:
-            raise ImportError(
+            msg = (
                 "Could not import firecrawl integration package. " "Please install it with `pip install firecrawl-py`."
             )
+            raise ImportError(msg)
         if crawlerOptions:
             crawler_options_dict = crawlerOptions.__dict__["data"]["text"]
         else:
@@ -85,5 +86,4 @@ class FirecrawlCrawlApi(CustomComponent):
             idempotency_key,
         )
 
-        records = Data(data={"results": crawl_result})
-        return records
+        return Data(data={"results": crawl_result})

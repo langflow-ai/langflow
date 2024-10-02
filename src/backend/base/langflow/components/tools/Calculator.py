@@ -52,12 +52,11 @@ class CalculatorToolComponent(LCToolComponent):
             def eval_expr(node):
                 if isinstance(node, ast.Num):
                     return node.n
-                elif isinstance(node, ast.BinOp):
+                if isinstance(node, ast.BinOp):
                     return operators[type(node.op)](eval_expr(node.left), eval_expr(node.right))
-                elif isinstance(node, ast.UnaryOp):
+                if isinstance(node, ast.UnaryOp):
                     return operators[type(node.op)](eval_expr(node.operand))
-                else:
-                    raise TypeError(node)
+                raise TypeError(node)
 
             # Parse the expression and evaluate it
             tree = ast.parse(expression, mode="eval")

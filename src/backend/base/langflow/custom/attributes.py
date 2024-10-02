@@ -10,10 +10,11 @@ def validate_icon(value: str, *args, **kwargs):
 
     if not value.startswith(":") and not value.endswith(":"):
         return value
-    elif not value.startswith(":") or not value.endswith(":"):
+    if not value.startswith(":") or not value.endswith(":"):
         # emoji should have both starting and ending colons
         # so if one of them is missing, we will raise
-        raise ValueError(f"Invalid emoji. {value} is not a valid emoji.")
+        msg = f"Invalid emoji. {value} is not a valid emoji."
+        raise ValueError(msg)
 
     emoji_value = emoji.emojize(value, variant="emoji_type")
     if value == emoji_value:
@@ -29,6 +30,7 @@ def getattr_return_str(value):
 def getattr_return_bool(value):
     if isinstance(value, bool):
         return value
+    return None
 
 
 def getattr_return_list_of_str(value):
@@ -49,6 +51,12 @@ def getattr_return_list_of_values_from_dict(value):
     return []
 
 
+def getattr_return_dict(value):
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
 ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "display_name": getattr_return_str,
     "description": getattr_return_str,
@@ -63,4 +71,5 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "_inputs": getattr_return_list_of_values_from_dict,
     "outputs": getattr_return_list_of_object,
     "inputs": getattr_return_list_of_object,
+    "metadata": getattr_return_dict,
 }

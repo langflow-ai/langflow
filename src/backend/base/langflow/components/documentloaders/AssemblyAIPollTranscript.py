@@ -27,6 +27,7 @@ class AssemblyAITranscriptionJobPoller(Component):
             display_name="Polling Interval",
             value=3.0,
             info="The polling interval in seconds",
+            advanced=True,
         ),
     ]
 
@@ -52,9 +53,14 @@ class AssemblyAITranscriptionJobPoller(Component):
             return Data(data={"error": error})
 
         if transcript.status == aai.TranscriptStatus.completed:
-            data = Data(data=transcript.json_response)
+            json_response = transcript.json_response
+            text = json_response.pop("text", None)
+            utterances = json_response.pop("utterances", None)
+            transcript_id = json_response.pop("id", None)
+            sorted_data = {"text": text, "utterances": utterances, "id": transcript_id}
+            sorted_data.update(json_response)
+            data = Data(data=sorted_data)
             self.status = data
             return data
-        else:
-            self.status = transcript.error
-            return Data(data={"error": transcript.error})
+        self.status = transcript.error
+        return Data(data={"error": transcript.error})
