@@ -78,7 +78,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                             title=title,
                             output_dimensionality=1536,
                         )
-                        for text, title in zip(batch, titles_batch)
+                        for text, title in zip(batch, titles_batch, strict=True)
                     ]
 
                     try:

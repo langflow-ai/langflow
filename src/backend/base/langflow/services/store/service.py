@@ -44,7 +44,7 @@ async def user_data_context(store_service: StoreService, api_key: str | None = N
         except HTTPStatusError as exc:
             if exc.response.status_code == 403:
                 msg = "Invalid API key"
-                raise ValueError(msg)
+                raise ValueError(msg) from exc
     try:
         yield
     finally:
@@ -119,10 +119,10 @@ class StoreService(Service):
             if exc.response.status_code in [403, 401]:
                 return False
             msg = f"Unexpected status code: {exc.response.status_code}"
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
         except Exception as exc:
             msg = f"Unexpected error: {exc}"
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
 
     async def _get(
         self, url: str, api_key: str | None = None, params: dict[str, Any] | None = None
@@ -137,7 +137,7 @@ class StoreService(Service):
                 raise exc
             except Exception as exc:
                 msg = f"GET failed: {exc}"
-                raise ValueError(msg)
+                raise ValueError(msg) from exc
         json_response = response.json()
         result = json_response["data"]
         metadata = {}
@@ -355,9 +355,9 @@ class StoreService(Service):
             # If it is, we need to build the metadata
             try:
                 download_component.metadata = process_component_data(download_component.data.get("nodes", []))
-            except KeyError:
+            except KeyError as e:
                 msg = "Invalid component data. No nodes found"
-                raise ValueError(msg)
+                raise ValueError(msg) from e
         return download_component
 
     async def upload(self, api_key: str, component_data: StoreComponentCreate) -> CreateComponentResponse:
@@ -392,7 +392,7 @@ class StoreService(Service):
                 except UnboundLocalError:
                     pass
             msg = f"Upload failed: {exc}"
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
 
     async def update(
         self, api_key: str, component_id: UUID, component_data: StoreComponentCreate
@@ -429,7 +429,7 @@ class StoreService(Service):
                 except UnboundLocalError:
                     pass
             msg = f"Upload failed: {exc}"
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
 
     async def get_tags(self) -> list[dict[str, Any]]:
         url = f"{self.base_url}/items/tags"
@@ -460,9 +460,9 @@ class StoreService(Service):
         # try to convert it to int
         try:
             likes = int(likes)
-        except ValueError:
+        except ValueError as e:
             msg = f"Unexpected value for likes count: {likes}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
         return likes
 
     async def like_component(self, api_key: str, component_id: str) -> bool:
@@ -567,10 +567,10 @@ class StoreService(Service):
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
                     msg = "You are not authorized to access this public resource"
-                    raise ForbiddenError(msg)
+                    raise ForbiddenError(msg) from exc
                 if exc.response.status_code == 401:
                     msg = "You are not authorized to access this resource. Please check your API key."
-                    raise APIKeyError(msg)
+                    raise APIKeyError(msg) from exc
 
             if store_api_key:
                 # Now, from the result, we need to get the components

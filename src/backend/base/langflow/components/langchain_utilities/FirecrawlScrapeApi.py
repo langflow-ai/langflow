@@ -49,11 +49,11 @@ class FirecrawlScrapeApi(CustomComponent):
     ) -> Data:
         try:
             from firecrawl.firecrawl import FirecrawlApp  # type: ignore
-        except ImportError:
+        except ImportError as e:
             msg = (
                 "Could not import firecrawl integration package. " "Please install it with `pip install firecrawl-py`."
             )
-            raise ImportError(msg)
+            raise ImportError(msg) from e
         extractor_options_dict = extractorOptions.__dict__["data"]["text"] if extractorOptions else {}
 
         page_options_dict = pageOptions.__dict__["data"]["text"] if pageOptions else {}

@@ -78,7 +78,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                 }
                             )
                             node_data["template"][key]["value"] = value["value"]
-                    for key, value in node_data["template"].items():
+                    for key in node_data["template"]:
                         if key not in latest_template:
                             node_data["template"][key]["input_types"] = DEFAULT_PROMPT_INTUT_TYPES
                 node_changes_log[node_data["display_name"]].append(
@@ -359,7 +359,7 @@ def load_starter_projects(retries=3, delay=1) -> list[tuple[Path, dict]]:
                     attempt += 1
                     if attempt >= retries:
                         msg = f"Error loading starter project {file}: {e}"
-                        raise ValueError(msg)
+                        raise ValueError(msg) from e
                     time.sleep(delay)  # Wait before retrying
     return starter_projects
 

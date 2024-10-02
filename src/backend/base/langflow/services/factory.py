@@ -54,9 +54,9 @@ def infer_service_types(factory_class: type[ServiceFactory], available_services=
             # Attempt to find a matching enum value
             service_type = ServiceType[type_name]
             service_types.append(service_type)
-        except KeyError:
+        except KeyError as e:
             msg = f"No matching ServiceType for parameter type: {param_type.__name__}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
     return service_types
 
 

@@ -106,11 +106,11 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         try:
             from chromadb import Client
             from langchain_chroma import Chroma
-        except ImportError:
+        except ImportError as e:
             msg = (
                 "Could not import Chroma integration package. " "Please install it with `pip install langchain-chroma`."
             )
-            raise ImportError(msg)
+            raise ImportError(msg) from e
         # Chroma settings
         chroma_settings = None
         client = None
