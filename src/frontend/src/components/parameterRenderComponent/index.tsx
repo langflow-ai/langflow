@@ -89,10 +89,7 @@ export function ParameterRenderComponent({
       case "dict":
         return (
           <KeypairListComponent
-            disabled={disabled}
-            editNode={editNode}
-            value={templateValue}
-            onChange={onChange}
+            {...baseInputProps}
             isList={templateData.list ?? false}
             id={`keypair_${id}`}
           />

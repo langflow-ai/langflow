@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { KeyPairListComponentType } from "../../../../types/components";
 
 import {
   convertObjToArray,
@@ -9,18 +8,20 @@ import {
 import { cloneDeep } from "lodash";
 import IconComponent from "../../../genericIconComponent";
 import { Input } from "../../../ui/input";
+import { InputProps, KeyPairListComponentType } from "../../types";
 
 export default function KeypairListComponent({
   value,
-  onChange,
+  handleOnNewValue,
   disabled,
   editNode = false,
   isList = true,
   id,
-}: KeyPairListComponentType): JSX.Element {
+}: InputProps<object[]|object|string,KeyPairListComponentType>): JSX.Element {
+  console.log(typeof value,JSON.stringify(value))
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
-      onChange([{ "": "" }]);
+      handleOnNewValue({value: [{ "": "" }]});
     }
   }, [disabled]);
 
@@ -37,8 +38,8 @@ export default function KeypairListComponent({
     const valueToNumbers = convertValuesToNumbers(newValue);
     setDuplicateKey(hasDuplicateKeys(valueToNumbers));
     if (isList) {
-      onChange(valueToNumbers);
-    } else onChange(valueToNumbers[0]);
+      handleOnNewValue({value: valueToNumbers});
+    } else handleOnNewValue({value: valueToNumbers[0]});
   };
 
   const handleChangeKey = (event, idx) => {
@@ -64,13 +65,13 @@ export default function KeypairListComponent({
   const addNewKeyValuePair = () => {
     const newValues = cloneDeep(values);
     newValues.push({ "": "" });
-    onChange(newValues);
+    handleOnNewValue({value: newValues});
   };
 
   const removeKeyValuePair = (index) => {
     const newValues = cloneDeep(values);
     newValues.splice(index, 1);
-    onChange(newValues);
+    handleOnNewValue({value: newValues});
   };
 
   const getInputClassName = (isEditNode, isDuplicateKey) => {
