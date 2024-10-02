@@ -68,7 +68,7 @@ def test_read_flows(client: TestClient, json_flow: str, active_user, logged_in_h
 
 
 def test_read_flows_components_only(client: TestClient, flow_component: dict, logged_in_headers):
-    response = client.get("api/v1/flows/", headers=logged_in_headers, params={"components_only": True})
+    response = client.get("api/v1/flows/", headers=logged_in_headers, params={"components_only": True, "get_all": True})
     assert response.status_code == 200
     names = [flow["name"] for flow in response.json()]
     assert any("Chat Input Component" in name for name in names)
@@ -412,7 +412,7 @@ def test_delete_nonexistent_flow(client: TestClient, active_user, logged_in_head
 
 
 def test_read_only_starter_projects(client: TestClient, active_user, logged_in_headers):
-    response = client.get("api/v1/flows/", headers=logged_in_headers)
+    response = client.get("api/v1/flows/basic_examples/", headers=logged_in_headers)
     starter_projects = load_starter_projects()
     assert response.status_code == 200
     assert len(response.json()) == len(starter_projects)
