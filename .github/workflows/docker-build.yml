@@ -203,7 +203,12 @@ jobs:
             uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
             uv-${{ runner.os }}
       - name: Install the project
-        run: uv sync --dev   
+        run: |
+          if [[ "${{ inputs.release_type }}" == "base" ]]; then
+            cd src/backend/base && uv sync --no-dev
+          else
+            uv sync --no-dev
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
