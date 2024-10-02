@@ -1,7 +1,7 @@
 const AssemblyAISVG = (props) => (
   <svg
-    width="501"
-    height="434"
+    width="1.1em"
+    height="1.1em"
     viewBox="0 0 501 434"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"

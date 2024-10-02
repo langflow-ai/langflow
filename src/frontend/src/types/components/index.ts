@@ -369,6 +369,7 @@ export type IconComponentProps = {
   stroke?: string;
   strokeWidth?: number;
   id?: string;
+  skipFallback?: boolean;
 };
 
 export type InputProps = {

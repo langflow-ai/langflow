@@ -33,7 +33,8 @@ export default function ParentDisclosureComponent({
                 ))}
                 <div>
                   <IconComponent
-                    name="ChevronsUpDownIcon"
+                    skipFallback
+                    name={open ? "chevron-down" : "chevron-right"}
                     className={`${
                       open || defaultOpen ? "" : ""
                     } h-4 w-4 text-foreground`}
