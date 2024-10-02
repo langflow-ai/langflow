@@ -118,7 +118,7 @@ class CustomComponent(BaseComponent):
             self._vertex.graph.update_state(name=name, record=value, caller=self._vertex.id)
         except Exception as e:
             msg = f"Error updating state: {e}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
     def stop(self, output_name: str | None = None):
         if not output_name and self._vertex and len(self._vertex.outputs) == 1:
@@ -133,7 +133,7 @@ class CustomComponent(BaseComponent):
             self.graph.mark_branch(vertex_id=self._vertex.id, output_name=output_name, state="INACTIVE")
         except Exception as e:
             msg = f"Error stopping {self.display_name}: {e}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
     def append_state(self, name: str, value: Any):
         if not self._vertex:
@@ -143,7 +143,7 @@ class CustomComponent(BaseComponent):
             self._vertex.graph.append_state(name=name, record=value, caller=self._vertex.id)
         except Exception as e:
             msg = f"Error appending state: {e}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
     def get_state(self, name: str):
         if not self._vertex:
@@ -153,7 +153,7 @@ class CustomComponent(BaseComponent):
             return self._vertex.graph.get_state(name=name)
         except Exception as e:
             msg = f"Error getting state: {e}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
     @staticmethod
     def resolve_path(path: str) -> str:
@@ -278,9 +278,9 @@ class CustomComponent(BaseComponent):
                     else:
                         try:
                             data_dict[key] = model_dump[key]
-                        except KeyError:
+                        except KeyError as e:
                             msg = f"Key {key} not found in {item}"
-                            raise ValueError(msg)
+                            raise ValueError(msg) from e
 
             elif isinstance(item, str):
                 data_dict = {"text": item}
@@ -512,7 +512,7 @@ class CustomComponent(BaseComponent):
             return list_flows(user_id=str(self._user_id))
         except Exception as e:
             msg = f"Error listing flows: {e}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         """

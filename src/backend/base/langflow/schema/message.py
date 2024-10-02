@@ -31,9 +31,9 @@ def _timestamp_to_str(timestamp: datetime | str) -> str:
         try:
             datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
             return timestamp
-        except ValueError:
+        except ValueError as e:
             msg = f"Invalid timestamp: {timestamp}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 

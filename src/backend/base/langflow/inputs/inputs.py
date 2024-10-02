@@ -108,10 +108,14 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
             if _info.data.get("input_types") and v.__class__.__name__ not in _info.data.get("input_types"):
                 warnings.warn(
                     f"Invalid value type {type(v)} for input {_info.data.get('name')}. "
-                    f"Expected types: {_info.data.get('input_types')}"
+                    f"Expected types: {_info.data.get('input_types')}",
+                    stacklevel=4,
                 )
             else:
-                warnings.warn(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
+                warnings.warn(
+                    f"Invalid value type {type(v)} for input {_info.data.get('name')}.",
+                    stacklevel=4,
+                )
         return v
 
     @field_validator("value")

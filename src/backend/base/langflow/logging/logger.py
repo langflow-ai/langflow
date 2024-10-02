@@ -78,7 +78,7 @@ class SizedLogBuffer:
             with self._wlock:
                 as_list = list(self.buffer)
             max_index = -1
-            for i, (ts, msg) in enumerate(as_list):
+            for i, (ts, _) in enumerate(as_list):
                 if ts >= timestamp:
                     max_index = i
                     break
