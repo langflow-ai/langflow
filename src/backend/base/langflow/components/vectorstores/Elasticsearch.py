@@ -1,16 +1,11 @@
-import traceback  # noqa: F401
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from langchain.schema import Document
 from langchain_elasticsearch import ElasticsearchStore
 from loguru import logger
 
-from langflow.base.vectorstores.model import (
-    LCVectorStoreComponent,
-    check_cached_vector_store,
-)
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.io import (
-    BoolInput,  # noqa: F401
     DataInput,
     DropdownInput,
     FloatInput,
@@ -21,9 +16,6 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import Data
-
-if TYPE_CHECKING:
-    from langchain_elasticsearch import ElasticsearchStore
 
 
 class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
@@ -67,14 +59,20 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             display_name="Username",
             value="",
             advanced=False,
-            info="Elasticsearch username (e.g., 'elastic'). Required for both local and Elastic Cloud setups unless API keys are used.",
+            info=(
+                "Elasticsearch username (e.g., 'elastic'). "
+                "Required for both local and Elastic Cloud setups unless API keys are used."
+            ),
         ),
         SecretStrInput(
             name="password",
             display_name="Password",
             value="",
             advanced=False,
-            info="Elasticsearch password for the specified user. Required for both local and Elastic Cloud setups unless API keys are used.",
+            info=(
+                "Elasticsearch password for the specified user. "
+                "Required for both local and Elastic Cloud setups unless API keys are used."
+            ),
         ),
         DataInput(
             name="ingest_data",
@@ -122,10 +120,11 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         Builds the Elasticsearch Vector Store object.
         """
         if self.cloud_id and self.elasticsearch_url:
-            raise ValueError(
+            msg = (
                 "Both 'cloud_id' and 'elasticsearch_url' provided. "
                 "Please use only one based on your deployment (Cloud or Local)."
             )
+            raise ValueError(msg)
 
         es_params = {
             "index_name": self.index_name,
@@ -196,20 +195,20 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
                 elif search_type == "mmr":
                     results = vector_store.max_marginal_relevance_search(query, **search_kwargs)
                 else:
-                    raise ValueError(f"Invalid search type: {self.search_type}")
+                    msg = f"Invalid search type: {self.search_type}"
+                    raise ValueError(msg)
             except Exception as e:
                 logger.error(f"Search query failed: {str(e)}")
-                raise Exception(
-                    "Error occurred while querying the Elasticsearch VectorStore, there is no Data into the VectorStore."
+                msg = (
+                    "Error occurred while querying the Elasticsearch VectorStore,"
+                    " there is no Data into the VectorStore."
                 )
+                raise ValueError(msg) from e
             return [
                 {"page_content": doc.page_content, "metadata": doc.metadata, "score": score} for doc, score in results
             ]
-        else:
-            results = self.get_all_documents(vector_store, **search_kwargs)
-            return [
-                {"page_content": doc.page_content, "metadata": doc.metadata, "score": score} for doc, score in results
-            ]
+        results = self.get_all_documents(vector_store, **search_kwargs)
+        return [{"page_content": doc.page_content, "metadata": doc.metadata, "score": score} for doc, score in results]
 
     def get_all_documents(self, vector_store: ElasticsearchStore, **kwargs) -> list[tuple[Document, float]]:
         """
