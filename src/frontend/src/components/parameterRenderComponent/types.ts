@@ -52,4 +52,4 @@ export type FileComponentType = {
 export type KeyPairListComponentType = {
     value: any;
     isList?: boolean;
-  };
+};

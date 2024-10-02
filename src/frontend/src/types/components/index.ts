@@ -135,17 +135,12 @@ export type InputGlobalComponentType = {
   playgroundDisabled?: boolean;
 };
 
-
-export type DictComponentType = {
+export type IOJSONInputComponentType = {
   value: any;
   onChange: (value) => void;
-  disabled?: boolean;
-  editNode?: boolean;
-  id?: string;
   left?: boolean;
   output?: boolean;
 };
-
 export type TextAreaComponentType = {
   field_name?: string;
   nodeClass?: APIClassType;
