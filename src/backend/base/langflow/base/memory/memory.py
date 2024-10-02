@@ -34,7 +34,8 @@ class BaseMemoryComponent(CustomComponent):
             "data_template": {
                 "display_name": "Data Template",
                 "multiline": True,
-                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "info": "Template to convert Data to Text. "
+                "If left empty, it will be dynamically set to the Data's text key.",
                 "advanced": True,
             },
         }

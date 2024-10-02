@@ -29,14 +29,17 @@ class MessageBase(SQLModel):
     def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
         # first check if the record has all the required fields
         if message.text is None or not message.sender or not message.sender_name:
-            raise ValueError("The message does not have the required fields (text, sender, sender_name).")
+            msg = "The message does not have the required fields (text, sender, sender_name)."
+            raise ValueError(msg)
         if message.files:
             image_paths = []
             for file in message.files:
                 if hasattr(file, "path") and hasattr(file, "url") and file.path:
                     session_id = message.session_id
                     image_paths.append(f"{session_id}{file.path.split(session_id)[1]}")
-            message.files = image_paths
+            if image_paths:
+                message.files = image_paths
+
         if isinstance(message.timestamp, str):
             timestamp = datetime.fromisoformat(message.timestamp)
         else:

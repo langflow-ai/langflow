@@ -1,5 +1,6 @@
 import os
 
+from astrapy.admin import parse_api_endpoint
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -21,7 +22,7 @@ from langflow.schema import Data
 class AstraVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB"
     description: str = "Implementation of Vector Store using Astra DB with search capabilities"
-    documentation: str = "https://python.langchain.com/docs/integrations/vectorstores/astradb"
+    documentation: str = "https://docs.langflow.org/starter-projects-vector-store-rag"
     name = "AstraDB"
     icon: str = "AstraDB"
 
@@ -70,7 +71,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         ),
         SecretStrInput(
             name="api_endpoint",
-            display_name="API Endpoint",
+            display_name="Database" if os.getenv("ASTRA_ENHANCED", "false").lower() == "true" else "API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
             required=True,
@@ -191,7 +192,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="search_score_threshold",
             display_name="Search Score Threshold",
-            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            info="Minimum similarity score threshold for search results. "
+            "(when using 'Similarity with score threshold')",
             value=0,
             advanced=True,
         ),
@@ -277,8 +279,10 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             new_parameter_0 = DropdownInput(
                 name="z_00_model_name",
                 display_name="Model Name",
-                info=f"The embedding model to use for the selected provider. Each provider has a different set of models "
-                f"available (full list at https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n{', '.join(model_options)}",
+                info="The embedding model to use for the selected provider. Each provider has a different set of "
+                "models available (full list at "
+                "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n"
+                f"{', '.join(model_options)}",
                 options=model_options,
                 required=True,
             ).to_dict()
@@ -292,13 +296,17 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             new_parameter_2 = MessageTextInput(
                 name="z_02_api_key_name",
                 display_name="API Key name",
-                info="The name of the embeddings provider API key stored on Astra. If set, it will override the 'ProviderKey' in the authentication parameters.",
+                info="The name of the embeddings provider API key stored on Astra. "
+                "If set, it will override the 'ProviderKey' in the authentication parameters.",
             ).to_dict()
 
             new_parameter_3 = SecretStrInput(
                 name="z_03_provider_api_key",
                 display_name="Provider API Key",
-                info="An alternative to the Astra Authentication that passes an API key for the provider with each request to Astra DB. This may be used when Vectorize is configured for the collection, but no corresponding provider secret is stored within Astra's key management system.",
+                info="An alternative to the Astra Authentication that passes an API key for the provider "
+                "with each request to Astra DB. "
+                "This may be used when Vectorize is configured for the collection, "
+                "but no corresponding provider secret is stored within Astra's key management system.",
             ).to_dict()
 
             new_parameter_4 = DictInput(
@@ -338,9 +346,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         authentication = {**(self.z_04_authentication or kwargs.get("z_04_authentication", {}))}
 
         api_key_name = self.z_02_api_key_name or kwargs.get("z_02_api_key_name")
-        provider_key_name = self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key")
-        if provider_key_name:
-            authentication["providerKey"] = provider_key_name
+        provider_key = self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key")
         if api_key_name:
             authentication["providerKey"] = api_key_name
 
@@ -352,7 +358,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 "authentication": authentication,
                 "parameters": self.z_01_model_parameters or kwargs.get("z_01_model_parameters", {}),
             },
-            "collection_embedding_api_key": self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key"),
+            "collection_embedding_api_key": provider_key,
         }
 
     @check_cached_vector_store
@@ -361,10 +367,11 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode
         except ImportError:
-            raise ImportError(
+            msg = (
                 "Could not import langchain Astra DB integration package. "
                 "Please install it with `pip install langchain-astradb`."
             )
+            raise ImportError(msg)
 
         try:
             if not self.setup_mode:
@@ -372,7 +379,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
             setup_mode_value = SetupMode[self.setup_mode.upper()]
         except KeyError:
-            raise ValueError(f"Invalid setup mode: {self.setup_mode}")
+            msg = f"Invalid setup mode: {self.setup_mode}"
+            raise ValueError(msg)
 
         if self.embedding:
             embedding_dict = {"embedding": self.embedding}
@@ -397,6 +405,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             "token": self.token,
             "api_endpoint": self.api_endpoint,
             "namespace": self.namespace or None,
+            "environment": parse_api_endpoint(self.api_endpoint).environment,
             "metric": self.metric or None,
             "batch_size": self.batch_size or None,
             "bulk_insert_batch_concurrency": self.bulk_insert_batch_concurrency or None,
@@ -416,7 +425,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         try:
             vector_store = AstraDBVectorStore(**vector_store_kwargs)
         except Exception as e:
-            raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
+            msg = f"Error initializing AstraDBVectorStore: {str(e)}"
+            raise ValueError(msg) from e
 
         self._add_documents_to_vector_store(vector_store)
 
@@ -428,24 +438,25 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
-                raise ValueError("Vector Store Inputs must be Data objects.")
+                msg = "Vector Store Inputs must be Data objects."
+                raise ValueError(msg)
 
         if documents:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
             except Exception as e:
-                raise ValueError(f"Error adding documents to AstraDBVectorStore: {str(e)}") from e
+                msg = f"Error adding documents to AstraDBVectorStore: {str(e)}"
+                raise ValueError(msg) from e
         else:
             logger.debug("No documents to add to the Vector Store.")
 
     def _map_search_type(self):
         if self.search_type == "Similarity with score threshold":
             return "similarity_score_threshold"
-        elif self.search_type == "MMR (Max Marginal Relevance)":
+        if self.search_type == "MMR (Max Marginal Relevance)":
             return "mmr"
-        else:
-            return "similarity"
+        return "similarity"
 
     def _build_search_args(self):
         args = {
@@ -474,7 +485,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
                 docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
             except Exception as e:
-                raise ValueError(f"Error performing search in AstraDBVectorStore: {str(e)}") from e
+                msg = f"Error performing search in AstraDBVectorStore: {str(e)}"
+                raise ValueError(msg) from e
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 
@@ -482,9 +494,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             logger.debug(f"Converted documents to data: {len(data)}")
             self.status = data
             return data
-        else:
-            logger.debug("No search input provided. Skipping search.")
-            return []
+        logger.debug("No search input provided. Skipping search.")
+        return []
 
     def get_retriever_kwargs(self):
         search_args = self._build_search_args()

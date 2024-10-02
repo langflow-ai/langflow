@@ -154,7 +154,7 @@ test("should be able to upload a file", async ({ page }) => {
   // Release the mouse
   await page.mouse.up();
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page.waitForSelector("text=Run Flow", {
     timeout: 30000,

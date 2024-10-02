@@ -102,7 +102,7 @@ def create_flow(
         # If it is a validation error, return the error message
         if hasattr(e, "errors"):
             raise HTTPException(status_code=400, detail=str(e)) from e
-        elif "UNIQUE constraint failed" in str(e):
+        if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
             columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
             # UNIQUE constraint failed: flow.user_id, flow.name
@@ -113,10 +113,9 @@ def create_flow(
             raise HTTPException(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
-        elif isinstance(e, HTTPException):
+        if isinstance(e, HTTPException):
             raise e
-        else:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/", response_model=list[FlowRead], status_code=200)
@@ -126,6 +125,7 @@ def read_flows(
     session: Session = Depends(get_session),
     settings_service: "SettingsService" = Depends(get_settings_service),
     remove_example_flows: bool = False,
+    components_only: bool = False,
 ):
     """
     Retrieve a list of flows.
@@ -135,7 +135,7 @@ def read_flows(
         session (Session): The database session.
         settings_service (SettingsService): The settings service.
         remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
-
+        components_only (bool, optional): Whether to return only components. Defaults to False.
 
     Returns:
         List[Dict]: A list of flows in JSON format.
@@ -144,27 +144,35 @@ def read_flows(
     try:
         auth_settings = settings_service.auth_settings
         if auth_settings.AUTO_LOGIN:
-            flows = session.exec(
-                select(Flow).where(
-                    (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa
-                )
-            ).all()
+            stmt = select(Flow).where(
+                (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa
+            )
+            if components_only:
+                stmt = stmt.where(Flow.is_component == True)  # noqa
+            flows = session.exec(stmt).all()
+
         else:
             flows = current_user.flows
 
         flows = validate_is_component(flows)  # type: ignore
+        if components_only:
+            flows = [flow for flow in flows if flow.is_component]
         flow_ids = [flow.id for flow in flows]
         # with the session get the flows that DO NOT have a user_id
-        if not remove_example_flows:
-            try:
-                folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+        folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
 
+        if not remove_example_flows and not components_only:
+            try:
                 example_flows = folder.flows if folder else []
                 for example_flow in example_flows:
                     if example_flow.id not in flow_ids:
                         flows.append(example_flow)  # type: ignore
             except Exception as e:
                 logger.error(e)
+
+        if remove_example_flows:
+            flows = [flow for flow in flows if flow.folder_id != folder.id]
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return [jsonable_encoder(flow) for flow in flows]
@@ -189,8 +197,7 @@ def read_flow(
         )  # noqa
     if user_flow := session.exec(stmt).first():
         return user_flow
-    else:
-        raise HTTPException(status_code=404, detail="Flow not found")
+    raise HTTPException(status_code=404, detail="Flow not found")
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
@@ -233,7 +240,7 @@ def update_flow(
         # If it is a validation error, return the error message
         if hasattr(e, "errors"):
             raise HTTPException(status_code=400, detail=str(e)) from e
-        elif "UNIQUE constraint failed" in str(e):
+        if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
             columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
             # UNIQUE constraint failed: flow.user_id, flow.name
@@ -244,10 +251,9 @@ def update_flow(
             raise HTTPException(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
-        elif isinstance(e, HTTPException):
+        if isinstance(e, HTTPException):
             raise e
-        else:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/{flow_id}", status_code=200)
@@ -393,5 +399,4 @@ async def download_multiple_file(
             media_type="application/x-zip-compressed",
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
-    else:
-        return flows_without_api_keys[0]
+    return flows_without_api_keys[0]

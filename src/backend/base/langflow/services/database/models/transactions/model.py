@@ -36,8 +36,7 @@ class TransactionBase(SQLModel):
 
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict:
-        truncated_data = truncate_long_strings(data)
-        return truncated_data
+        return truncate_long_strings(data)
 
 
 class TransactionTable(TransactionBase, table=True):  # type: ignore

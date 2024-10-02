@@ -340,7 +340,8 @@ async def build_flow(
             vertex_build_response_json = vertex_build_response.model_dump_json()
             build_data = json.loads(vertex_build_response_json)
         except Exception as exc:
-            raise ValueError(f"Error serializing vertex build response: {exc}") from exc
+            msg = f"Error serializing vertex build response: {exc}"
+            raise ValueError(msg) from exc
         event_manager.on_end_vertex(data={"build_data": build_data})
         await client_consumed_queue.get()
         if vertex_build_response.valid:
@@ -411,7 +412,9 @@ async def build_flow(
             get_time_yield = time.time()
             client_consumed_queue.put_nowait(event_id)
             logger.debug(
-                f"consumed event {str(event_id)} (time in queue, {get_time - put_time:.4f}, client {get_time_yield - get_time:.4f})"
+                f"consumed event {str(event_id)} "
+                f"(time in queue, {get_time - put_time:.4f}, "
+                f"client {get_time_yield - get_time:.4f})"
             )
 
     asyncio_queue: asyncio.Queue = asyncio.Queue()
@@ -650,13 +653,15 @@ async def build_vertex_stream(
                 cache = await chat_service.get_cache(flow_id_str)
                 if not cache:
                     # If there's no cache
-                    raise ValueError(f"No cache found for {flow_id_str}.")
+                    msg = f"No cache found for {flow_id_str}."
+                    raise ValueError(msg)
                 else:
                     graph = cache.get("result")
 
                 vertex: InterfaceVertex = graph.get_vertex(vertex_id)
                 if not hasattr(vertex, "stream"):
-                    raise ValueError(f"Vertex {vertex_id} does not support streaming")
+                    msg = f"Vertex {vertex_id} does not support streaming"
+                    raise ValueError(msg)
                 if isinstance(vertex._built_result, str) and vertex._built_result:
                     stream_data = StreamData(
                         event="message",
@@ -689,7 +694,8 @@ async def build_vertex_stream(
                     )
                     yield str(stream_data)
                 else:
-                    raise ValueError(f"No result found for vertex {vertex_id}")
+                    msg = f"No result found for vertex {vertex_id}"
+                    raise ValueError(msg)
 
             except Exception as exc:
                 logger.exception(f"Error building Component: {exc}")

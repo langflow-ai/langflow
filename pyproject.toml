@@ -74,7 +74,7 @@ dependencies = [
     "elasticsearch>=8.12.0",
     "pytube>=15.0.0",
     "dspy-ai>=2.4.0",
-    "assemblyai>=0.26.0",
+    "assemblyai>=0.33.0",
     "litellm>=1.44.0",
     "chromadb>=0.4",
     "langchain-anthropic>=0.1.23",
@@ -229,6 +229,7 @@ langchain-unstructured = "^0.1.2"
 pydantic-settings = "2.4.0"
 ragstack-ai-knowledge-store = "^0.2.1"
 duckduckgo-search = "^6.2.12"
+opensearch-py = "^2.7.1"
 
 
 [tool.poetry.group.dev.dependencies]
