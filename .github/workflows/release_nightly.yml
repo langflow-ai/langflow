@@ -137,7 +137,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.nightly_tag_main}}
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv

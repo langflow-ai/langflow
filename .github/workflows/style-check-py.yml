@@ -19,9 +19,6 @@ jobs:
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }}
-          persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
         with:
