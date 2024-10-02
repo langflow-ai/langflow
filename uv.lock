@@ -1654,6 +1654,19 @@ wheels = [
 ]
 
 [[package]]
+name = "fastapi-pagination"
+version = "0.12.29"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/18/4f/758832457733a75522fe6693b543a1404009bfa19fd5198e80cf6f77f232/fastapi_pagination-0.12.29.tar.gz", hash = "sha256:bbfa8af44636f9cda3ec10f59fe370a89a8f10cfa4035a6dc4da86b9f8d06649", size = 26279 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/16/8f/3a0ab35dcb73c8e93a7dc66ff0641bcc4af2a6b919ba21f3c1873c642f96/fastapi_pagination-0.12.29-py3-none-any.whl", hash = "sha256:c18e58c91cf7909490236ded4dae1326c68e286a0831de41ba1be170fb24f182", size = 42525 },
+]
+
+[[package]]
 name = "fastavro"
 version = "1.9.7"
 source = { registry = "https://pypi.org/simple" }
@@ -3672,6 +3685,7 @@ dependencies = [
     { name = "duckdb" },
     { name = "emoji" },
     { name = "fastapi" },
+    { name = "fastapi-pagination" },
     { name = "filelock" },
     { name = "firecrawl-py" },
     { name = "grandalf" },
@@ -3788,6 +3802,7 @@ requires-dist = [
     { name = "duckdb", specifier = ">=1.0.0" },
     { name = "emoji", specifier = ">=2.12.0" },
     { name = "fastapi", specifier = ">=0.111.0" },
+    { name = "fastapi-pagination", specifier = ">=0.12.29" },
     { name = "filelock", specifier = ">=3.15.4" },
     { name = "firecrawl-py", specifier = ">=0.0.16" },
     { name = "flower", marker = "extra == 'all'", specifier = ">=1.0.0" },
