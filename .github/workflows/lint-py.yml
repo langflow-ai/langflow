@@ -23,8 +23,13 @@ jobs:
           - "3.11"
           - "3.10"
     steps:
-      - name: Setup Environment
-        uses: "langflow-ai/langflow/.github/actions/setup-uv@${{ github.ref }}"
+      - name: Check out the code at a specific ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+          persist-credentials: true
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
         with:
           ref: ${{ inputs.branch || github.ref }}
       - name: Install the project

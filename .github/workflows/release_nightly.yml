@@ -57,7 +57,12 @@ jobs:
     outputs:
       version: ${{ steps.verify.outputs.version }}
     steps:
-      - name: Setup Environment
+      - name: Check out the code at a specific ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.nightly_tag_main }}
+          persist-credentials: true
+      - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
         with:
           ref: ${{ inputs.nightly_tag_main }}
@@ -129,7 +134,12 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Setup Environment
+      - name: Check out the code at a specific ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: true
+      - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
         with:
           ref: ${{ inputs.nightly_tag_main }}
@@ -193,7 +203,7 @@ jobs:
     uses: ./.github/workflows/docker-build.yml
     with:
       # Version should _not_ contain the leading `v`
-      version: ${{ needs.release-nightly-base.outputs.version }} 
+      version: ${{ needs.release-nightly-base.outputs.version }}
       release_type: base
       nightly_tag_base: ${{ inputs.nightly_tag_base }}
       nightly_tag_main: ${{ inputs.nightly_tag_main }}
