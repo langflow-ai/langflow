@@ -54,15 +54,9 @@ class FirecrawlScrapeApi(CustomComponent):
                 "Could not import firecrawl integration package. " "Please install it with `pip install firecrawl-py`."
             )
             raise ImportError(msg)
-        if extractorOptions:
-            extractor_options_dict = extractorOptions.__dict__["data"]["text"]
-        else:
-            extractor_options_dict = {}
+        extractor_options_dict = extractorOptions.__dict__["data"]["text"] if extractorOptions else {}
 
-        if pageOptions:
-            page_options_dict = pageOptions.__dict__["data"]["text"]
-        else:
-            page_options_dict = {}
+        page_options_dict = pageOptions.__dict__["data"]["text"] if pageOptions else {}
 
         app = FirecrawlApp(api_key=api_key)
         results = app.scrape_url(

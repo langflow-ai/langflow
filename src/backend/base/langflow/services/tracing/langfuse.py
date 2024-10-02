@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
@@ -10,6 +12,7 @@ from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
     from langchain.callbacks.base import BaseCallbackHandler
+    from langfuse.client import StatefulSpanClient
 
     from langflow.graph.vertex.base import Vertex
 
@@ -23,7 +26,7 @@ class LangFuseTracer(BaseTracer):
         self.trace_type = trace_type
         self.trace_id = trace_id
         self.flow_id = trace_name.split(" - ")[-1]
-        self.last_span = None
+        self.last_span: StatefulSpanClient | None = None
         self.spans: dict = {}
         self._ready: bool = self.setup_langfuse()
 
@@ -68,7 +71,7 @@ class LangFuseTracer(BaseTracer):
         trace_type: str,
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
-        vertex: Optional["Vertex"] = None,
+        vertex: Vertex | None = None,
     ):
         start_time = datetime.utcnow()
         if not self._ready:
@@ -86,10 +89,7 @@ class LangFuseTracer(BaseTracer):
             "start_time": start_time,
         }
 
-        if self.last_span:
-            span = self.last_span.span(**content_span)
-        else:
-            span = self.trace.span(**content_span)
+        span = self.last_span.span(**content_span) if self.last_span else self.trace.span(**content_span)
 
         self.last_span = span
         self.spans[trace_id] = span
@@ -127,7 +127,7 @@ class LangFuseTracer(BaseTracer):
 
         self._client.flush()
 
-    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
+    def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:
             return None
         return None  # self._callback

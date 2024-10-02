@@ -29,10 +29,7 @@ async def run_graph_internal(
 ) -> tuple[list[RunOutputs], str]:
     """Run the graph and generate the result"""
     inputs = inputs or []
-    if session_id is None:
-        session_id_str = flow_id
-    else:
-        session_id_str = session_id
+    session_id_str = flow_id if session_id is None else session_id
     components = []
     inputs_list = []
     types = []
@@ -168,11 +165,7 @@ def process_tweaks(
     :return: The modified graph_data dictionary.
     :raises ValueError: If the input is not in the expected format.
     """
-    tweaks_dict = {}
-    if not isinstance(tweaks, dict):
-        tweaks_dict = cast(dict[str, Any], tweaks.model_dump())
-    else:
-        tweaks_dict = tweaks
+    tweaks_dict = cast(dict[str, Any], tweaks.model_dump()) if not isinstance(tweaks, dict) else tweaks
     if "stream" not in tweaks_dict:
         tweaks_dict |= {"stream": stream}
     nodes = validate_input(graph_data, cast(dict[str, str | dict[str, Any]], tweaks_dict))
@@ -182,9 +175,7 @@ def process_tweaks(
     all_nodes_tweaks = {}
     for key, value in tweaks_dict.items():
         if isinstance(value, dict):
-            if node := nodes_map.get(key):
-                apply_tweaks(node, value)
-            elif node := nodes_display_name_map.get(key):
+            if (node := nodes_map.get(key)) or (node := nodes_display_name_map.get(key)):
                 apply_tweaks(node, value)
         else:
             all_nodes_tweaks[key] = value

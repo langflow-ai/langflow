@@ -287,7 +287,7 @@ class Vertex:
                     if not param_dict or len(param_dict) != 1:
                         params[param_key] = self.graph.get_vertex(edge.source_id)
                     else:
-                        params[param_key] = {key: self.graph.get_vertex(edge.source_id) for key in param_dict.keys()}
+                        params[param_key] = {key: self.graph.get_vertex(edge.source_id) for key in param_dict}
 
                 else:
                     params[param_key] = self.graph.get_vertex(edge.source_id)
@@ -415,8 +415,6 @@ class Vertex:
                 elif val is not None and val != "":
                     params[field_name] = val
 
-                elif val is not None and val != "":
-                    params[field_name] = val
                 if field.get("load_from_db"):
                     load_from_db_fields.append(field_name)
 
@@ -534,10 +532,7 @@ class Vertex:
         # to the frontend
         self.set_artifacts()
         artifacts = self.artifacts_raw
-        if isinstance(artifacts, dict):
-            messages = self.extract_messages_from_artifacts(artifacts)
-        else:
-            messages = []
+        messages = self.extract_messages_from_artifacts(artifacts) if isinstance(artifacts, dict) else []
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
