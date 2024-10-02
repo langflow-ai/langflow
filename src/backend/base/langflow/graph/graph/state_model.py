@@ -62,6 +62,6 @@ def create_state_model_from_graph(graph: BaseModel) -> type[BaseModel]:
     ]
     fields = {
         camel_to_snake(vertex.id): state_model_getter
-        for vertex, state_model_getter in zip(graph.vertices, state_model_getters)
+        for vertex, state_model_getter in zip(graph.vertices, state_model_getters, strict=False)
     }
     return create_state_model(model_name="GraphStateModel", validate=False, **fields)

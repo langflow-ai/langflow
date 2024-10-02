@@ -52,15 +52,15 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
                 build_config["model"]["value"] = ids[0]
             except Exception as e:
                 msg = f"Error getting model names: {e}"
-                raise ValueError(msg)
+                raise ValueError(msg) from e
         return build_config
 
     def build_embeddings(self) -> Embeddings:
         try:
             from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
-        except ImportError:
+        except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the Nvidia model."
-            raise ImportError(msg)
+            raise ImportError(msg) from e
         try:
             output = NVIDIAEmbeddings(
                 model=self.model,

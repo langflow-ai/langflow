@@ -113,7 +113,7 @@ class Component(CustomComponent):
     def _reset_all_output_values(self):
         if isinstance(self._outputs_map, dict):
             for output in self._outputs_map.values():
-                setattr(output, "value", UNDEFINED)
+                output.value = UNDEFINED
 
     def _build_state_model(self):
         if self._state_model:
@@ -164,9 +164,9 @@ class Component(CustomComponent):
                 raise ValueError(msg)
             class_code = inspect.getsource(module)
             self._code = class_code
-        except OSError:
+        except OSError as e:
             msg = f"Could not find source code for {self.__class__.__name__}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
     def set(self, **kwargs):
         """
@@ -441,9 +441,9 @@ class Component(CustomComponent):
         if callable(value) and self._inherits_from_component(value):
             try:
                 self._method_is_valid_output(value)
-            except ValueError:
+            except ValueError as e:
                 msg = f"Method {value.__name__} is not a valid output of {value.__self__.__class__.__name__}"
-                raise ValueError(msg)
+                raise ValueError(msg) from e
             self._connect_to_component(key, value, _input)
         else:
             self._set_parameter_or_attribute(key, value)
@@ -569,15 +569,15 @@ class Component(CustomComponent):
         for name, value in self._parameters.items():
             try:
                 template[name]["value"] = value
-            except KeyError:
+            except KeyError as e:
                 close_match = find_closest_match(name, list(template.keys()))
                 if close_match:
                     msg = (
                         f"Parameter '{name}' not found in {self.__class__.__name__}. " f"Did you mean '{close_match}'?"
                     )
-                    raise ValueError(msg)
+                    raise ValueError(msg) from e
                 msg = f"Parameter {name} not found in {self.__class__.__name__}. "
-                raise ValueError(msg)
+                raise ValueError(msg) from e
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
@@ -594,7 +594,7 @@ class Component(CustomComponent):
         #! works and then update this later
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
-        for key, value in self._inputs.items():
+        for key, _value in self._inputs.items():
             frontend_node.set_field_load_from_db_in_template(key, False)
         self._map_parameters_on_frontend_node(frontend_node)
 

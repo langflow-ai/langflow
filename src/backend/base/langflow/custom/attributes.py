@@ -1,7 +1,7 @@
-import warnings
 from collections.abc import Callable
 
 import emoji
+from loguru import logger
 
 
 def validate_icon(value: str, *args, **kwargs):
@@ -18,7 +18,7 @@ def validate_icon(value: str, *args, **kwargs):
 
     emoji_value = emoji.emojize(value, variant="emoji_type")
     if value == emoji_value:
-        warnings.warn(f"Invalid emoji. {value} is not a valid emoji.")
+        logger.warning(f"Invalid emoji. {value} is not a valid emoji.")
         return value
     return emoji_value
 

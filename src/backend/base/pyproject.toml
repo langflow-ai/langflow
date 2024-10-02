@@ -149,8 +149,15 @@ exclude = ["langflow/alembic"]
 line-length = 120
 
 [tool.ruff.lint]
+flake8-bugbear.extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Query",
+    "typer.Option",
+]
 select = [
     "ASYNC",
+    "B",
     "C4",
     "COM",
     "DJ",
