@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "langflow-base"
-version = "0.0.96"
+name = "langflow-base-nightly"
+version = "0.0.96.dev13"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -156,8 +156,8 @@ build-backend = "hatchling.build"
 
 
 [project]
-name = "langflow-base"
-version = "0.0.96"
+name = "langflow-base-nightly"
+version = "0.0.96.dev13"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 license = "MIT"
