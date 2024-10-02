@@ -10,24 +10,14 @@ import DropdownComponent from "../dropdownComponent";
 
 export function StrRenderComponent({
   templateData,
-  value,
   name,
-  disabled,
-  handleOnNewValue,
-  editNode,
-  id,
+  ...baseInputProps
 }: InputProps<string, StrRenderComponentType>) {
   const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
     handleOnNewValue({ value, load_from_db: dbValue }, { skipSnapshot });
   };
-  const baseInputProps: InputProps = {
-    id,
-    value,
-    editNode,
-    handleOnNewValue,
-    disabled,
-    readonly: templateData.readonly,
-    };
+
+  const { handleOnNewValue, id, disabled, editNode,value } = baseInputProps;
 
   if (!templateData.options) {
     return templateData.multiline ? (
