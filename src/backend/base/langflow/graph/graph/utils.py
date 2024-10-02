@@ -449,6 +449,6 @@ def find_cycle_vertices(edges):
     cycles = list(nx.simple_cycles(graph))
 
     # Flatten the list of cycles and remove duplicates
-    cycle_vertices = set(vertex for cycle in cycles for vertex in cycle)
+    cycle_vertices = {vertex for cycle in cycles for vertex in cycle}
 
-    return sorted(list(cycle_vertices))
+    return sorted(cycle_vertices)
