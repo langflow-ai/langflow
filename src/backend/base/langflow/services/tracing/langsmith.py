@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import os
 import traceback
 import types
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
@@ -65,7 +67,7 @@ class LangSmithTracer(BaseTracer):
         trace_type: str,
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
-        vertex: Optional["Vertex"] = None,
+        vertex: Vertex | None = None,
     ):
         if not self._ready:
             return
@@ -161,5 +163,5 @@ class LangSmithTracer(BaseTracer):
         self._run_tree.post()
         self._run_link = self._run_tree.get_url()
 
-    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
+    def get_langchain_callback(self) -> BaseCallbackHandler | None:
         return None

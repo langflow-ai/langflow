@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib
 import inspect
 import os
@@ -15,7 +17,7 @@ if TYPE_CHECKING:
 class PluginService(Service):
     name = "plugin_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.plugins: dict[str, BasePlugin] = {}
         # plugin_dir = settings_service.settings.PLUGIN_DIR
         self.plugin_dir = os.path.dirname(__file__)

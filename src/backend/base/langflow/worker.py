@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 
 from asgiref.sync import async_to_sync
@@ -15,7 +17,7 @@ def test_celery(word: str) -> str:
 
 
 @celery_app.task(bind=True, soft_time_limit=30, max_retries=3)
-def build_vertex(self, vertex: "Vertex") -> "Vertex":
+def build_vertex(self, vertex: Vertex) -> Vertex:
     """
     Build a vertex
     """

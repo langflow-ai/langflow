@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from langflow.services.factory import ServiceFactory
@@ -11,5 +13,5 @@ class TracingServiceFactory(ServiceFactory):
     def __init__(self):
         super().__init__(TracingService)
 
-    def create(self, settings_service: "SettingsService"):
+    def create(self, settings_service: SettingsService):
         return TracingService(settings_service)

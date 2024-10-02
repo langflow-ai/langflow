@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import os
@@ -27,7 +29,7 @@ if TYPE_CHECKING:
 class TelemetryService(Service):
     name = "telemetry_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         super().__init__()
         self.settings_service = settings_service
         self.base_url = settings_service.settings.telemetry_base_url

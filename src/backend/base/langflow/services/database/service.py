@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from contextlib import contextmanager
 from datetime import datetime
@@ -32,7 +34,7 @@ if TYPE_CHECKING:
 class DatabaseService(Service):
     name = "database_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         if settings_service.settings.database_url is None:
             msg = "No database URL provided"
@@ -45,7 +47,7 @@ class DatabaseService(Service):
         self.alembic_cfg_path = langflow_dir / "alembic.ini"
         self.engine = self._create_engine()
 
-    def _create_engine(self) -> "Engine":
+    def _create_engine(self) -> Engine:
         """Create the engine for the database."""
         if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
             "sqlite"

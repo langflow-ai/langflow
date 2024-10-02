@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from typing import Any
 
@@ -18,7 +20,7 @@ class FlowTool(BaseTool):
     graph: Graph | None = None
     flow_id: str | None = None
     user_id: str | None = None
-    inputs: list["Vertex"] = []
+    inputs: list[Vertex] = []
     get_final_results_only: bool = True
 
     @property
