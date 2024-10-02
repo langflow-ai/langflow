@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union
+from typing import Optional
 
 from astrapy import Collection, DataAPIClient, Database
 from langchain.pydantic_v1 import BaseModel, Field, create_model
@@ -91,7 +91,7 @@ class AstraToolComponent(LCToolComponent):
         self._cached_collection = _cached_db.get_collection(self.collection_name)
         return self._cached_collection
 
-    def create_args_schema(self) -> Dict[str, BaseModel]:
+    def create_args_schema(self) -> dict[str, BaseModel]:
         args = {}
 
         for key in self.tool_params.keys():
@@ -137,7 +137,7 @@ class AstraToolComponent(LCToolComponent):
 
         return result
 
-    def run_model(self, **args) -> Union[Data, list[Data]]:
+    def run_model(self, **args) -> Data | list[Data]:
         collection = self._build_collection()
         results = collection.find(
             ({**args, **self.static_filters} or {}), projection=self.projection_args(self.projection), limit=self.limit

@@ -1,5 +1,5 @@
 import urllib
-from typing import Dict, Optional, Union
+from typing import Optional
 
 import requests
 from langchain.pydantic_v1 import BaseModel, Field, create_model
@@ -121,7 +121,7 @@ class AstraCQLToolComponent(LCToolComponent):
             res_data = res.status_code
             return res_data
 
-    def create_args_schema(self) -> Dict[str, BaseModel]:
+    def create_args_schema(self) -> dict[str, BaseModel]:
         args = {}
 
         for key in self.partition_keys.keys():
@@ -171,7 +171,7 @@ class AstraCQLToolComponent(LCToolComponent):
 
         return result
 
-    def run_model(self, **args) -> Union[Data, list[Data]]:
+    def run_model(self, **args) -> Data | list[Data]:
         results = self.astra_rest(args)
         self.status = results
         return results
