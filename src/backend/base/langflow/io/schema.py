@@ -14,6 +14,7 @@ _convert_field_type_to_type: dict[FieldTypes, type] = {
     FieldTypes.TABLE: dict,
     FieldTypes.FILE: str,
     FieldTypes.PROMPT: str,
+    FieldTypes.OTHER: str,
 }
 
 if TYPE_CHECKING:
@@ -22,13 +23,17 @@ if TYPE_CHECKING:
 
 def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
     if not isinstance(inputs, list):
-        raise TypeError("inputs must be a list of Inputs")
+        msg = "inputs must be a list of Inputs"
+        raise TypeError(msg)
     fields = {}
     for input_model in inputs:
         # Create a Pydantic Field for each input field
         field_type = input_model.field_type
         if isinstance(field_type, FieldTypes):
             field_type = _convert_field_type_to_type[field_type]
+        else:
+            msg = f"Invalid field type: {field_type}"
+            raise ValueError(msg)
         if hasattr(input_model, "options") and isinstance(input_model.options, list) and input_model.options:
             literal_string = f"Literal{input_model.options}"
             # validate that the literal_string is a valid literal
@@ -41,7 +46,8 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
         elif input_model.display_name:
             name = input_model.display_name
         else:
-            raise ValueError("Input name or display_name is required")
+            msg = "Input name or display_name is required"
+            raise ValueError(msg)
         field_dict = {
             "title": name,
             "description": input_model.info or "",

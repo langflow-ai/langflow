@@ -1,8 +1,9 @@
 import base64
 import json
 import re
+from collections.abc import Iterator
 from json.decoder import JSONDecodeError
-from typing import Any, Iterator, List, Optional
+from typing import Any
 
 from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
@@ -29,7 +30,7 @@ class GmailLoaderComponent(Component):
             display_name="JSON String of the Service Account Token",
             info="JSON string containing OAuth 2.0 access token information for service account access",
             required=True,
-            value=str("""{
+            value="""{
                 "account": "",
                 "client_id": "",
                 "client_secret": "",
@@ -41,7 +42,7 @@ class GmailLoaderComponent(Component):
                 "token": "",
                 "token_uri": "https://oauth2.googleapis.com/token",
                 "universe_domain": "googleapis.com"
-            }"""),
+            }""",
         ),
         MessageTextInput(
             name="label_ids",
@@ -66,7 +67,7 @@ class GmailLoaderComponent(Component):
     def load_emails(self) -> Data:
         class CustomGMailLoader(GMailLoader):
             def __init__(
-                self, creds: Any, n: int = 100, label_ids: Optional[List[str]] = None, raise_error: bool = False
+                self, creds: Any, n: int = 100, label_ids: list[str] | None = None, raise_error: bool = False
             ) -> None:
                 super().__init__(creds, n, raise_error)
                 self.label_ids = label_ids if label_ids is not None else ["SENT"]
@@ -83,9 +84,7 @@ class GmailLoaderComponent(Component):
                 message = re.sub(r"\s{2,}", " ", message)
 
                 # Trim leading and trailing whitespace
-                message = message.strip()
-
-                return message
+                return message.strip()
 
             def _extract_email_content(self, msg: Any) -> HumanMessage:
                 from_email = None
@@ -94,12 +93,10 @@ class GmailLoaderComponent(Component):
                     if name == "From":
                         from_email = values["value"]
                 if from_email is None:
-                    raise ValueError("From email not found.")
+                    msg = "From email not found."
+                    raise ValueError(msg)
 
-                if "parts" in msg["payload"]:
-                    parts = msg["payload"]["parts"]
-                else:
-                    parts = [msg["payload"]]
+                parts = msg["payload"]["parts"] if "parts" in msg["payload"] else [msg["payload"]]
 
                 for part in parts:
                     if part["mimeType"] == "text/plain":
@@ -107,12 +104,12 @@ class GmailLoaderComponent(Component):
                         data = base64.urlsafe_b64decode(data).decode("utf-8")
                         pattern = re.compile(r"\r\nOn .+(\r\n)*wrote:\r\n")
                         newest_response = re.split(pattern, data)[0]
-                        message = HumanMessage(
+                        return HumanMessage(
                             content=self.clean_message_content(newest_response),
                             additional_kwargs={"sender": from_email},
                         )
-                        return message
-                raise ValueError("No plain text part found in the email.")
+                msg = "No plain text part found in the email."
+                raise ValueError(msg)
 
             def _get_message_data(self, service: Any, message: Any) -> ChatSession:
                 msg = service.users().messages().get(userId="me", id=message["id"]).execute()
@@ -140,11 +137,11 @@ class GmailLoaderComponent(Component):
                                 if message_id == in_reply_to:
                                     response_email = message
                     if response_email is None:
-                        raise ValueError("Response email not found in the thread.")
+                        msg = "Response email not found in the thread."
+                        raise ValueError(msg)
                     starter_content = self._extract_email_content(response_email)
                     return ChatSession(messages=[starter_content, message_content])
-                else:
-                    return ChatSession(messages=[message_content])
+                return ChatSession(messages=[message_content])
 
             def lazy_load(self) -> Iterator[ChatSession]:
                 service = build("gmail", "v1", credentials=self.creds)
@@ -171,7 +168,8 @@ class GmailLoaderComponent(Component):
         try:
             token_info = json.loads(json_string)
         except JSONDecodeError as e:
-            raise ValueError("Invalid JSON string") from e
+            msg = "Invalid JSON string"
+            raise ValueError(msg) from e
 
         creds = Credentials.from_authorized_user_info(token_info)
 
@@ -181,11 +179,11 @@ class GmailLoaderComponent(Component):
         try:
             docs = loader.load()
         except RefreshError as e:
-            raise ValueError(
-                "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."
-            ) from e
+            msg = "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."
+            raise ValueError(msg) from e
         except Exception as e:
-            raise ValueError(f"Error loading documents: {e}") from e
+            msg = f"Error loading documents: {e}"
+            raise ValueError(msg) from e
 
         # Return the loaded documents
         self.status = docs

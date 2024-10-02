@@ -62,7 +62,8 @@ class ParseJSONDataComponent(Component):
                 try:
                     to_filter_as_dict.append(json.loads(repair_json(f)))
                 except JSONDecodeError as e:
-                    raise ValueError(f"Invalid JSON: {e}")
+                    msg = f"Invalid JSON: {e}"
+                    raise ValueError(msg) from e
 
         full_filter_str = json.dumps(to_filter_as_dict)
 
@@ -70,5 +71,4 @@ class ParseJSONDataComponent(Component):
 
         results = jq.compile(self.query).input_text(full_filter_str).all()
         print("results: ", results)
-        docs = [Data(data=value) if isinstance(value, dict) else Data(text=str(value)) for value in results]
-        return docs
+        return [Data(data=value) if isinstance(value, dict) else Data(text=str(value)) for value in results]

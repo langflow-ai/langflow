@@ -1,4 +1,5 @@
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from celery.result import AsyncResult  # type: ignore
 
@@ -17,7 +18,8 @@ class CeleryBackend(TaskBackend):
         from celery import Task  # type: ignore
 
         if not hasattr(task_func, "delay"):
-            raise ValueError(f"Task function {task_func} does not have a delay method")
+            msg = f"Task function {task_func} does not have a delay method"
+            raise ValueError(msg)
         task: Task = task_func.delay(*args, **kwargs)
         return task.id, AsyncResult(task.id, app=self.celery_app)
 

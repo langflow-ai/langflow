@@ -1,5 +1,5 @@
+from collections.abc import Generator
 from enum import Enum
-from typing import Generator
 
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
@@ -41,11 +41,13 @@ def get_artifact_type(value, build_result=None) -> str:
         case list():
             result = ArtifactType.ARRAY
 
-    if result == ArtifactType.UNKNOWN:
-        if build_result and isinstance(build_result, Generator):
-            result = ArtifactType.STREAM
-        elif isinstance(value, Message) and isinstance(value.text, Generator):
-            result = ArtifactType.STREAM
+    if result == ArtifactType.UNKNOWN and (
+        build_result
+        and isinstance(build_result, Generator)
+        or isinstance(value, Message)
+        and isinstance(value.text, Generator)
+    ):
+        result = ArtifactType.STREAM
 
     return result.value
 
@@ -56,15 +58,13 @@ def post_process_raw(raw, artifact_type: str):
     elif artifact_type == ArtifactType.ARRAY.value:
         _raw = []
         for item in raw:
-            if hasattr(item, "dict"):
-                _raw.append(recursive_serialize_or_str(item))
-            elif hasattr(item, "model_dump"):
+            if hasattr(item, "dict") or hasattr(item, "model_dump"):
                 _raw.append(recursive_serialize_or_str(item))
             else:
                 _raw.append(str(item))
         raw = _raw
     elif artifact_type == ArtifactType.UNKNOWN.value and raw is not None:
-        if isinstance(raw, (BaseModel, dict)):
+        if isinstance(raw, BaseModel | dict):
             try:
                 raw = jsonable_encoder(raw)
                 artifact_type = ArtifactType.OBJECT.value

@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain.embeddings.base import Embeddings
 from langchain_community.vectorstores import Qdrant
 
@@ -87,7 +85,8 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         if not isinstance(self.embedding, Embeddings):
-            raise ValueError("Invalid embedding object")
+            msg = "Invalid embedding object"
+            raise ValueError(msg)
 
         if documents:
             qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs)
@@ -99,7 +98,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         return qdrant
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
@@ -111,5 +110,4 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

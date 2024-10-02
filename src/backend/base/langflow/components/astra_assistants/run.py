@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 from astra_assistants import patch  # type: ignore
 from openai import OpenAI
@@ -20,13 +20,12 @@ class AssistantsRun(Component):
         self,
         build_config: dotdict,
         field_value: Any,
-        field_name: Optional[str] = None,
+        field_name: str | None = None,
     ):
         if field_name == "thread_id":
             if field_value is None:
                 thread = self.client.beta.threads.create()
                 self.thread_id = thread.id
-                field_value
             build_config["thread_id"] = field_value
 
     inputs = [
@@ -88,8 +87,8 @@ class AssistantsRun(Component):
                 for part in stream.text_deltas:
                     text += part
                     print(part)
-            message = Message(text=text)
-            return message
+            return Message(text=text)
         except Exception as e:
             print(e)
-            raise Exception(f"Error running assistant: {e}")
+            msg = f"Error running assistant: {e}"
+            raise Exception(msg) from e

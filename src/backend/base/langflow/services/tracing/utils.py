@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from langflow.schema.data import Data
 
@@ -20,14 +20,11 @@ def convert_to_langchain_type(value):
         else:
             value = value.to_lc_document()
     elif isinstance(value, Data):
-        if "text" in value.data:
-            value = value.to_lc_document()
-        else:
-            value = value.data
+        value = value.to_lc_document() if "text" in value.data else value.data
     return value
 
 
-def convert_to_langchain_types(io_dict: Dict[str, Any]):
+def convert_to_langchain_types(io_dict: dict[str, Any]):
     converted = {}
     for key, value in io_dict.items():
         converted[key] = convert_to_langchain_type(value)

@@ -2,6 +2,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
+from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 
 
@@ -49,15 +50,21 @@ class AnthropicModelComponent(LCModelComponent):
             info="Prefill text to guide the model's response.",
             advanced=True,
         ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
             from langchain_anthropic.chat_models import ChatAnthropic
-        except ImportError:
-            raise ImportError(
-                "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
-            )
+        except ImportError as e:
+            msg = "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
+            raise ImportError(msg) from e
         model = self.model
         anthropic_api_key = self.anthropic_api_key
         max_tokens = self.max_tokens
@@ -74,7 +81,8 @@ class AnthropicModelComponent(LCModelComponent):
                 streaming=self.stream,
             )
         except Exception as e:
-            raise ValueError("Could not connect to Anthropic API.") from e
+            msg = "Could not connect to Anthropic API."
+            raise ValueError(msg) from e
 
         return output  # type: ignore
 

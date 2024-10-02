@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Union
+from typing import Any
 
 import requests
 from langchain.tools import StructuredTool
@@ -45,22 +45,22 @@ class NotionPageCreator(LCToolComponent):
         if isinstance(result, str):
             # An error occurred, return it as text
             return Data(text=result)
-        else:
-            # Success, return the created page data
-            output = "Created page properties:\n"
-            for prop_name, prop_value in result.get("properties", {}).items():
-                output += f"{prop_name}: {prop_value}\n"
-            return Data(text=output, data=result)
+        # Success, return the created page data
+        output = "Created page properties:\n"
+        for prop_name, prop_value in result.get("properties", {}).items():
+            output += f"{prop_name}: {prop_value}\n"
+        return Data(text=output, data=result)
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
             name="create_notion_page",
-            description="Create a new page in a Notion database. IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
+            description="Create a new page in a Notion database. "
+            "IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
             func=self._create_notion_page,
             args_schema=self.NotionPageCreatorSchema,
         )
 
-    def _create_notion_page(self, database_id: str, properties_json: str) -> Union[Dict[str, Any], str]:
+    def _create_notion_page(self, database_id: str, properties_json: str) -> dict[str, Any] | str:
         if not database_id or not properties_json:
             return "Invalid input. Please provide 'database_id' and 'properties_json'."
 
@@ -83,8 +83,7 @@ class NotionPageCreator(LCToolComponent):
         try:
             response = requests.post("https://api.notion.com/v1/pages", headers=headers, json=data)
             response.raise_for_status()
-            result = response.json()
-            return result
+            return response.json()
         except requests.exceptions.RequestException as e:
             error_message = f"Failed to create Notion page. Error: {str(e)}"
             if hasattr(e, "response") and e.response is not None:

@@ -3,6 +3,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
+from langflow.inputs.inputs import HandleInput
 from langflow.io import FloatInput, SecretStrInput
 
 
@@ -22,20 +23,22 @@ class CohereComponent(LCModelComponent):
             value="COHERE_API_KEY",
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.75),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         cohere_api_key = self.cohere_api_key
         temperature = self.temperature
 
-        if cohere_api_key:
-            api_key = SecretStr(cohere_api_key)
-        else:
-            api_key = None
+        api_key = SecretStr(cohere_api_key) if cohere_api_key else None
 
-        output = ChatCohere(
+        return ChatCohere(
             temperature=temperature or 0.75,
             cohere_api_key=api_key,
         )
-
-        return output  # type: ignore

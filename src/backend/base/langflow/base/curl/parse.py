@@ -1,11 +1,14 @@
 """
 This file contains a fix for the implementation of the `uncurl` library, which is available at https://github.com/spulec/uncurl.git.
 
-The `uncurl` library provides a way to parse and convert cURL commands into Python requests. However, there are some issues with the original implementation that this file aims to fix.
+The `uncurl` library provides a way to parse and convert cURL commands into Python requests.
+However, there are some issues with the original implementation that this file aims to fix.
 
-The `parse_context` function in this file takes a cURL command as input and returns a `ParsedContext` object, which contains the parsed information from the cURL command, such as the HTTP method, URL, headers, cookies, etc.
+The `parse_context` function in this file takes a cURL command as input and returns a `ParsedContext` object,
+which contains the parsed information from the cURL command, such as the HTTP method, URL, headers, cookies, etc.
 
-The `normalize_newlines` function is a helper function that replaces the line continuation character ("\") followed by a newline with a space.
+The `normalize_newlines` function is a helper function that replaces the line continuation character ("\")
+followed by a newline with a space.
 
 
 """
@@ -46,7 +49,8 @@ def parse_curl_command(curl_command):
     tokens = shlex.split(normalize_newlines(curl_command))
     tokens = [token for token in tokens if token and token != " "]
     if tokens and "curl" not in tokens[0]:
-        raise ValueError("Invalid curl command")
+        msg = "Invalid curl command"
+        raise ValueError(msg)
     args_template = {
         "command": None,
         "url": None,
@@ -153,13 +157,13 @@ def parse_context(curl_command):
     # proxy_auth = parsed_args.proxy_user
     if parsed_args.proxy and parsed_args.proxy_user:
         proxies = {
-            "http": "http://{}@{}/".format(parsed_args.proxy_user, parsed_args.proxy),
-            "https": "http://{}@{}/".format(parsed_args.proxy_user, parsed_args.proxy),
+            "http": f"http://{parsed_args.proxy_user}@{parsed_args.proxy}/",
+            "https": f"http://{parsed_args.proxy_user}@{parsed_args.proxy}/",
         }
     elif parsed_args.proxy:
         proxies = {
-            "http": "http://{}/".format(parsed_args.proxy),
-            "https": "http://{}/".format(parsed_args.proxy),
+            "http": f"http://{parsed_args.proxy}/",
+            "https": f"http://{parsed_args.proxy}/",
         }
 
     return ParsedContext(

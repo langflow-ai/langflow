@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any
 
 from loguru import logger
 
@@ -17,11 +17,11 @@ class SubFlowComponent(Component):
     name = "SubFlow"
     beta: bool = True
 
-    def get_flow_names(self) -> List[str]:
+    def get_flow_names(self) -> list[str]:
         flow_data = self.list_flows()
         return [flow_data.data["name"] for flow_data in flow_data]
 
-    def get_flow(self, flow_name: str) -> Optional[Data]:
+    def get_flow(self, flow_name: str) -> Data | None:
         flow_datas = self.list_flows()
         for flow_data in flow_datas:
             if flow_data.data["name"] == flow_name:
@@ -39,7 +39,8 @@ class SubFlowComponent(Component):
             try:
                 flow_data = self.get_flow(field_value)
                 if not flow_data:
-                    raise ValueError(f"Flow {field_value} not found.")
+                    msg = f"Flow {field_value} not found."
+                    raise ValueError(msg)
                 graph = Graph.from_payload(flow_data.data["data"])
                 # Get all inputs from the graph
                 inputs = get_flow_inputs(graph)
@@ -50,13 +51,13 @@ class SubFlowComponent(Component):
 
         return build_config
 
-    def add_inputs_to_build_config(self, inputs_vertex: List[Vertex], build_config: dotdict):
+    def add_inputs_to_build_config(self, inputs_vertex: list[Vertex], build_config: dotdict):
         new_fields: list[dotdict] = []
 
         for vertex in inputs_vertex:
             new_vertex_inputs = []
             field_template = vertex.data["node"]["template"]
-            for inp in field_template.keys():
+            for inp in field_template:
                 if inp not in ["code", "_type"]:
                     field_template[inp]["display_name"] = (
                         vertex.display_name + " - " + field_template[inp]["display_name"]
@@ -81,12 +82,12 @@ class SubFlowComponent(Component):
 
     outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="generate_results")]
 
-    async def generate_results(self) -> List[Data]:
+    async def generate_results(self) -> list[Data]:
         tweaks: dict = {}
-        for field in self._attributes.keys():
+        for field in self._attributes:
             if field != "flow_name":
                 [node, name] = field.split("|")
-                if node not in tweaks.keys():
+                if node not in tweaks:
                     tweaks[node] = {}
                 tweaks[node][name] = self._attributes[field]
         flow_name = self._attributes.get("flow_name")

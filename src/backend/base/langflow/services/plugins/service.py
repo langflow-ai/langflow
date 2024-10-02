@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import importlib
 import inspect
 import os
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
@@ -15,7 +17,7 @@ if TYPE_CHECKING:
 class PluginService(Service):
     name = "plugin_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.plugins: dict[str, BasePlugin] = {}
         # plugin_dir = settings_service.settings.PLUGIN_DIR
         self.plugin_dir = os.path.dirname(__file__)
@@ -45,7 +47,7 @@ class PluginService(Service):
         self.plugins[plugin_name] = plugin_instance
         plugin_instance.initialize()
 
-    def get_plugin(self, plugin_name) -> Union[BasePlugin, None]:
+    def get_plugin(self, plugin_name) -> BasePlugin | None:
         return self.plugins.get(plugin_name)
 
     def get(self, plugin_name):

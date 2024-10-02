@@ -1,5 +1,3 @@
-from typing import Dict, Union
-
 import requests
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
@@ -38,9 +36,8 @@ class NotionDatabaseProperties(LCToolComponent):
         if isinstance(result, str):
             # An error occurred, return it as text
             return Data(text=result)
-        else:
-            # Success, return the properties
-            return Data(text=str(result), data=result)
+        # Success, return the properties
+        return Data(text=str(result), data=result)
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
@@ -50,7 +47,7 @@ class NotionDatabaseProperties(LCToolComponent):
             args_schema=self.NotionDatabasePropertiesSchema,
         )
 
-    def _fetch_database_properties(self, database_id: str) -> Union[Dict, str]:
+    def _fetch_database_properties(self, database_id: str) -> dict | str:
         url = f"https://api.notion.com/v1/databases/{database_id}"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
@@ -60,8 +57,7 @@ class NotionDatabaseProperties(LCToolComponent):
             response = requests.get(url, headers=headers)
             response.raise_for_status()
             data = response.json()
-            properties = data.get("properties", {})
-            return properties
+            return data.get("properties", {})
         except requests.exceptions.RequestException as e:
             return f"Error fetching Notion database properties: {str(e)}"
         except ValueError as e:

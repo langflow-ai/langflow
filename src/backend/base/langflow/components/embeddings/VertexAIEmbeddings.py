@@ -38,10 +38,9 @@ class VertexAIEmbeddingsComponent(LCModelComponent):
     def build_embeddings(self) -> Embeddings:
         try:
             from langchain_google_vertexai import VertexAIEmbeddings
-        except ImportError:
-            raise ImportError(
-                "Please install the langchain-google-vertexai package to use the VertexAIEmbeddings component."
-            )
+        except ImportError as e:
+            msg = "Please install the langchain-google-vertexai package to use the VertexAIEmbeddings component."
+            raise ImportError(msg) from e
 
         from google.oauth2 import service_account
 
