@@ -131,24 +131,6 @@ export type IOJSONInputComponentType = {
   left?: boolean;
   output?: boolean;
 };
-export type TextAreaComponentType = {
-  field_name?: string;
-  nodeClass?: APIClassType;
-  setNodeClass?: (value: APIClassType) => void;
-  disabled: boolean;
-  onChange: (
-    value: string[] | string,
-    dbValue?: boolean,
-    skipSnapshot?: boolean,
-  ) => void;
-  value: string;
-  editNode?: boolean;
-  id?: string;
-  readonly?: boolean;
-  password?: boolean;
-  updateVisibility?: () => void;
-};
-
 export type outputComponentType = {
   types: string[];
   selected: string;

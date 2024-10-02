@@ -68,3 +68,8 @@ export type StrRenderComponentType = {
     combobox?: boolean;
     options: string[];
   };
+
+  export type TextAreaComponentType = {
+    password?: boolean;
+    updateVisibility?: () => void;
+  };
