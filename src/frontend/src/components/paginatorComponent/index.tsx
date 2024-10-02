@@ -1,3 +1,8 @@
+import {
+  PAGINATION_PAGE,
+  PAGINATION_ROWS_COUNT,
+  PAGINATION_SIZE,
+} from "@/constants/constants";
 import { useEffect, useState } from "react";
 import {
   Select,
@@ -11,12 +16,13 @@ import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 
 export default function PaginatorComponent({
-  pageSize = 12,
-  pageIndex = 1,
-  rowsCount = [12, 24, 48, 96],
+  pageSize = PAGINATION_SIZE,
+  pageIndex = PAGINATION_PAGE,
+  rowsCount = PAGINATION_ROWS_COUNT,
   totalRowsCount = 0,
   paginate,
   storeComponent = false,
+  pages,
 }: PaginatorComponentType) {
   const [size, setPageSize] = useState(pageSize);
   const [maxIndex, setMaxPageIndex] = useState(
@@ -24,7 +30,7 @@ export default function PaginatorComponent({
   );
 
   useEffect(() => {
-    setMaxPageIndex(Math.ceil(totalRowsCount / size));
+    setMaxPageIndex(pages ?? Math.ceil(totalRowsCount / size));
   }, [totalRowsCount]);
 
   return (
@@ -43,8 +49,10 @@ export default function PaginatorComponent({
             <Select
               onValueChange={(pageSize: string) => {
                 setPageSize(Number(pageSize));
-                setMaxPageIndex(Math.ceil(totalRowsCount / Number(pageSize)));
-                paginate(Number(pageSize), 1);
+                setMaxPageIndex(
+                  pages ?? Math.ceil(totalRowsCount / Number(pageSize)),
+                );
+                paginate(1, Number(pageSize));
               }}
               value={pageSize.toString()}
             >
@@ -70,7 +78,7 @@ export default function PaginatorComponent({
               variant="outline"
               className="hidden h-8 w-8 p-0 lg:flex"
               onClick={() => {
-                paginate(size, 1);
+                paginate(1, size);
               }}
               size={"icon"}
             >
@@ -81,7 +89,7 @@ export default function PaginatorComponent({
               disabled={pageIndex <= 1}
               onClick={() => {
                 if (pageIndex > 0) {
-                  paginate(size, pageIndex - 1);
+                  paginate(pageIndex - 1, size);
                 }
               }}
               variant="outline"
@@ -94,7 +102,7 @@ export default function PaginatorComponent({
             <Button
               disabled={pageIndex === maxIndex}
               onClick={() => {
-                paginate(size, pageIndex + 1);
+                paginate(pageIndex + 1, size);
               }}
               variant="outline"
               className="h-8 w-8 p-0"
@@ -109,7 +117,7 @@ export default function PaginatorComponent({
               className="hidden h-8 w-8 p-0 lg:flex"
               size={"icon"}
               onClick={() => {
-                paginate(size, maxIndex);
+                paginate(maxIndex, size);
               }}
             >
               <span className="sr-only">Go to last page</span>
