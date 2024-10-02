@@ -1,5 +1,8 @@
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi_pagination import Page, Params
+from fastapi_pagination.ext.sqlmodel import paginate
+from pydantic import BaseModel
 from sqlalchemy import or_, update
 from sqlmodel import Session, select
 
@@ -8,6 +11,7 @@ from langflow.api.v1.flows import create_flows
 from langflow.api.v1.schemas import FlowListCreate, FlowListReadWithFolderName
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
+from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
@@ -15,13 +19,17 @@ from langflow.services.database.models.folder.model import (
     Folder,
     FolderCreate,
     FolderRead,
-    FolderReadWithFlows,
     FolderUpdate,
 )
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session
 
 router = APIRouter(prefix="/folders", tags=["Folders"])
+
+
+class FolderWithPaginatedFlows(BaseModel):
+    folder: FolderRead
+    flows: Page[FlowRead]
 
 
 @router.post("/", response_model=FolderRead, status_code=201)
@@ -89,25 +97,38 @@ def read_folders(
                 or_(Folder.user_id == current_user.id, Folder.user_id == None)  # type: ignore # noqa: E711
             )
         ).all()
+        folders = [folder for folder in folders if folder.name != STARTER_FOLDER_NAME]
         return sorted(folders, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{folder_id}", response_model=FolderReadWithFlows, status_code=200)
+@router.get("/{folder_id}", response_model=FolderWithPaginatedFlows, status_code=200)
 def read_folder(
     *,
     session: Session = Depends(get_session),
     folder_id: str,
     current_user: User = Depends(get_current_active_user),
+    params: Params = Depends(),
+    is_component: bool = False,
+    is_flow: bool = False,
+    search: str = "",
 ):
     try:
         folder = session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
-        flows_from_current_user_in_folder = [flow for flow in folder.flows if flow.user_id == current_user.id]
-        folder.flows = flows_from_current_user_in_folder
-        return folder
+
+        stmt = select(Flow).where(Flow.folder_id == folder_id, Flow.user_id == current_user.id)
+        if is_component:
+            stmt = stmt.where(Flow.is_component)
+        if is_flow:
+            stmt = stmt.where(not Flow.is_component)
+        if search:
+            stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore
+        paginated_flows = paginate(session, stmt, params=params)
+
+        return FolderWithPaginatedFlows(folder=FolderRead.model_validate(folder), flows=paginated_flows)
     except Exception as e:
         if "No result found" in str(e):
             raise HTTPException(status_code=404, detail="Folder not found")

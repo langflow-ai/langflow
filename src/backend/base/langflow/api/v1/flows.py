@@ -9,6 +9,8 @@ import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
+from fastapi_pagination import Page, Params, add_pagination
+from fastapi_pagination.ext.sqlalchemy import paginate
 from loguru import logger
 from sqlmodel import Session, and_, col, select
 
@@ -118,64 +120,75 @@ def create_flow(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/", response_model=list[FlowRead], status_code=200)
+@router.get("/", response_model=list[FlowRead] | Page[FlowRead], status_code=200)
 def read_flows(
     *,
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session),
     settings_service: "SettingsService" = Depends(get_settings_service),
-    remove_example_flows: bool = False,
     components_only: bool = False,
+    get_all: bool = False,
+    folder_id: UUID | None = None,
+    params: Params = Depends(),
+    remove_example_flows: bool = False,
 ):
     """
-    Retrieve a list of flows.
+    Retrieve a list of flows with pagination support.
 
     Args:
         current_user (User): The current authenticated user.
         session (Session): The database session.
         settings_service (SettingsService): The settings service.
-        remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
         components_only (bool, optional): Whether to return only components. Defaults to False.
-
+        get_all (bool, optional): Whether to return all flows without pagination. Defaults to False.
+        folder_id (UUID, optional): The folder ID. Defaults to None.
+        params (Params): Pagination parameters.
+        remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
     Returns:
-        List[Dict]: A list of flows in JSON format.
+        Union[list[FlowRead], Page[FlowRead]]: A list of flows or a paginated response containing the list of flows.
     """
 
     try:
         auth_settings = settings_service.auth_settings
+
+        default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
+        default_folder_id = default_folder.id if default_folder else None
+
+        starter_folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+        starter_folder_id = starter_folder.id if starter_folder else None
+
+        if not folder_id:
+            folder_id = default_folder_id
+
         if auth_settings.AUTO_LOGIN:
             stmt = select(Flow).where(
                 (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa
             )
-            if components_only:
-                stmt = stmt.where(Flow.is_component == True)  # noqa
-            flows = session.exec(stmt).all()
-
         else:
-            flows = current_user.flows
-
-        flows = validate_is_component(flows)  # type: ignore
-        if components_only:
-            flows = [flow for flow in flows if flow.is_component]
-        flow_ids = [flow.id for flow in flows]
-        # with the session get the flows that DO NOT have a user_id
-        folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
-
-        if not remove_example_flows and not components_only:
-            try:
-                example_flows = folder.flows if folder else []
-                for example_flow in example_flows:
-                    if example_flow.id not in flow_ids:
-                        flows.append(example_flow)  # type: ignore
-            except Exception as e:
-                logger.error(e)
+            stmt = select(Flow).where(Flow.user_id == current_user.id)
 
         if remove_example_flows:
-            flows = [flow for flow in flows if flow.folder_id != folder.id]
+            stmt = stmt.where(Flow.folder_id != starter_folder_id)
+
+        if components_only:
+            stmt = stmt.where(Flow.is_component == True)  # noqa
+
+        if not get_all:
+            stmt = stmt.where(Flow.folder_id == folder_id)
+
+        if get_all:
+            flows = session.exec(stmt).all()
+            flows = validate_is_component(flows)  # type: ignore
+            if components_only:
+                flows = [flow for flow in flows if flow.is_component]
+            if remove_example_flows and starter_folder_id:
+                flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
+
+            return flows
+        return paginate(session, stmt, params=params)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return [jsonable_encoder(flow) for flow in flows]
 
 
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
@@ -400,3 +413,36 @@ async def download_multiple_file(
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     return flows_without_api_keys[0]
+
+
+@router.get("/basic_examples/", response_model=list[FlowRead], status_code=200)
+def read_basic_examples(
+    *,
+    session: Session = Depends(get_session),
+):
+    """
+    Retrieve a list of basic example flows.
+
+    Args:
+        session (Session): The database session.
+
+    Returns:
+        list[FlowRead]: A list of basic example flows.
+    """
+
+    try:
+        # Get the starter folder
+        starter_folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+
+        if not starter_folder:
+            return []
+
+        # Get all flows in the starter folder
+        return session.exec(select(Flow).where(Flow.folder_id == starter_folder.id)).all()
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# At the end of the file, add:
+add_pagination(router)
