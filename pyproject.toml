@@ -22,8 +22,8 @@ include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
 documentation = "https://docs.langflow.org"
 
 [tool.uv.sources]
-langflow-base = {workspace = true}
-langflow = {workspace = true}
+langflow-base = { workspace = true }
+langflow = { workspace = true }
 
 [tool.uv.workspace]
 members = ["src/backend/base", "."]
@@ -38,7 +38,7 @@ description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 # Define your main dependencies here
 dependencies = [
-    "langflow-base==0.0.96",  # Local editable package
+    "langflow-base==0.0.96",
     "beautifulsoup4>=4.12.2",
     "google-search-results>=2.4.1",
     "google-api-python-client>=2.130.0",
@@ -74,7 +74,7 @@ dependencies = [
     "elasticsearch>=8.12.0",
     "pytube>=15.0.0",
     "dspy-ai>=2.4.0",
-    "assemblyai>=0.26.0",
+    "assemblyai>=0.33.0",
     "litellm>=1.44.0",
     "chromadb>=0.4",
     "langchain-anthropic>=0.1.23",
@@ -230,6 +230,8 @@ pydantic-settings = "2.4.0"
 ragstack-ai-knowledge-store = "^0.2.1"
 duckduckgo-search = "^6.2.12"
 langchain-elasticsearch = "^0.2.0"
+opensearch-py = "^2.7.1"
+
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
@@ -300,8 +302,8 @@ dev-dependencies = [
     "pytest-split>=0.9.0",
     "pytest-flakefinder>=1.1.0",
     "types-markdown>=3.7.0.20240822",
-    "packaging>=23.2,<24.0"
-
+    "packaging>=23.2,<24.0",
+    "asgi-lifespan>=2.1.0",
 ]
 
 
@@ -327,7 +329,8 @@ log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 markers = ["async_test", "api_key_required"]
-
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
 command_line = """

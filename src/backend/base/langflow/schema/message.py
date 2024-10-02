@@ -31,8 +31,9 @@ def _timestamp_to_str(timestamp: datetime | str) -> str:
         try:
             datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
             return timestamp
-        except ValueError:
-            raise ValueError(f"Invalid timestamp: {timestamp}")
+        except ValueError as e:
+            msg = f"Invalid timestamp: {timestamp}"
+            raise ValueError(msg) from e
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -102,10 +103,7 @@ class Message(Data):
         # they are: "text", "sender"
         if self.text is None or not self.sender:
             logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
-        if not isinstance(self.text, str):
-            text = ""
-        else:
-            text = self.text
+        text = "" if not isinstance(self.text, str) else self.text
 
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
@@ -159,9 +157,7 @@ class Message(Data):
 
     @field_serializer("text", mode="plain")
     def serialize_text(self, value):
-        if isinstance(value, AsyncIterator):
-            return ""
-        elif isinstance(value, Iterator):
+        if isinstance(value, AsyncIterator | Iterator):
             return ""
         return value
 
@@ -186,7 +182,8 @@ class Message(Data):
 
     def load_lc_prompt(self):
         if "prompt" not in self:
-            raise ValueError("Prompt is required.")
+            msg = "Prompt is required."
+            raise ValueError(msg)
         # self.prompt was passed through jsonable_encoder
         # so inner messages are not BaseMessage
         # we need to convert them to BaseMessage
@@ -203,8 +200,7 @@ class Message(Data):
                     messages.append(AIMessage(content=message.get("content")))
 
         self.prompt["kwargs"]["messages"] = messages
-        loaded_prompt = load(self.prompt)
-        return loaded_prompt
+        return load(self.prompt)
 
     @classmethod
     def from_lc_prompt(
@@ -268,7 +264,8 @@ class DefaultModel(BaseModel):
     def custom_encoder(obj):
         if isinstance(obj, datetime):
             return obj.isoformat()
-        raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+        msg = f"Object of type {obj.__class__.__name__} is not JSON serializable"
+        raise TypeError(msg)
 
 
 class MessageResponse(DefaultModel):
@@ -305,7 +302,8 @@ class MessageResponse(DefaultModel):
     def from_message(cls, message: Message, flow_id: str | None = None):
         # first check if the record has all the required fields
         if message.text is None or not message.sender or not message.sender_name:
-            raise ValueError("The message does not have the required fields (text, sender, sender_name).")
+            msg = "The message does not have the required fields (text, sender, sender_name)."
+            raise ValueError(msg)
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,

@@ -65,9 +65,10 @@ async def api_key_security(
         )
     if isinstance(result, ApiKey):
         return UserRead.model_validate(result.user, from_attributes=True)
-    elif isinstance(result, User):
+    if isinstance(result, User):
         return UserRead.model_validate(result, from_attributes=True)
-    raise ValueError("Invalid result type")
+    msg = "Invalid result type"
+    raise ValueError(msg)
 
 
 async def get_current_user(
@@ -78,15 +79,14 @@ async def get_current_user(
 ) -> User:
     if token:
         return await get_current_user_by_jwt(token, db)
-    else:
-        user = await api_key_security(query_param, header_param, db)
-        if user:
-            return user
+    user = await api_key_security(query_param, header_param, db)
+    if user:
+        return user
 
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or missing API key",
-        )
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Invalid or missing API key",
+    )
 
 
 async def get_current_user_by_jwt(
@@ -160,10 +160,9 @@ async def get_current_user_for_websocket(
     api_key = websocket.query_params.get("x-api-key")
     if token:
         return await get_current_user_by_jwt(token, db)
-    elif api_key:
+    if api_key:
         return await api_key_security(api_key, query_param, db)
-    else:
-        return None
+    return None
 
 
 def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
@@ -362,8 +361,7 @@ def ensure_valid_key(s: str) -> bytes:
 def get_fernet(settings_service=Depends(get_settings_service)):
     SECRET_KEY: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
     valid_key = ensure_valid_key(SECRET_KEY)
-    fernet = Fernet(valid_key)
-    return fernet
+    return Fernet(valid_key)
 
 
 def encrypt_api_key(api_key: str, settings_service=Depends(get_settings_service)):

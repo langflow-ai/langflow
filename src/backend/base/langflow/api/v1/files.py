@@ -64,7 +64,7 @@ async def upload_file(
         await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)
         return UploadFileResponse(flowId=flow_id_str, file_path=f"{folder}/{full_file_name}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/download/{flow_id}/{file_name}")
@@ -89,7 +89,7 @@ async def download_file(file_name: str, flow_id: UUID, storage_service: StorageS
         }
         return StreamingResponse(BytesIO(file_content), media_type=content_type, headers=headers)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/images/{flow_id}/{file_name}")
@@ -105,13 +105,13 @@ async def download_image(file_name: str, flow_id: UUID, storage_service: Storage
 
         if not content_type:
             raise HTTPException(status_code=500, detail=f"Content type not found for extension {extension}")
-        elif not content_type.startswith("image"):
+        if not content_type.startswith("image"):
             raise HTTPException(status_code=500, detail=f"Content type {content_type} is not an image")
 
         file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/profile_pictures/{folder_name}/{file_name}")
@@ -130,7 +130,7 @@ async def download_profile_picture(
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/profile_pictures/list")
@@ -151,7 +151,7 @@ async def list_profile_pictures(storage_service: StorageService = Depends(get_st
         return {"files": files}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/list/{flow_id}")
@@ -163,7 +163,7 @@ async def list_files(
         files = await storage_service.list_files(flow_id=flow_id_str)
         return {"files": files}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/delete/{flow_id}/{file_name}")
@@ -175,4 +175,4 @@ async def delete_file(
         await storage_service.delete_file(flow_id=flow_id_str, file_name=file_name)
         return {"message": f"File {file_name} deleted successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

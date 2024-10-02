@@ -20,4 +20,4 @@ XML_AGENT_PROMPT = """You are a helpful assistant. Help the user answer any ques
             {chat_history}
 
             Question: {input}
-            {agent_scratchpad}"""
+            {agent_scratchpad}"""  # noqa: E501

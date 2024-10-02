@@ -226,6 +226,18 @@ wheels = [
 ]
 
 [[package]]
+name = "asgi-lifespan"
+version = "2.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sniffio" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6a/da/e7908b54e0f8043725a990bf625f2041ecf6bfe8eb7b19407f1c00b630f7/asgi-lifespan-2.1.0.tar.gz", hash = "sha256:5e2effaf0bfe39829cf2d64e7ecc47c7d86d676a6599f7afba378c31f5e3a308", size = 15627 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2f/f5/c36551e93acba41a59939ae6a0fb77ddb3f2e8e8caa716410c65f7341f72/asgi_lifespan-2.1.0-py3-none-any.whl", hash = "sha256:ed840706680e28428c01e14afb3875d7d76d3206f3d5b2f2294e059b5c23804f", size = 10895 },
+]
+
+[[package]]
 name = "asgiref"
 version = "3.8.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3499,6 +3511,7 @@ local = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "asgi-lifespan" },
     { name = "dictdiffer" },
     { name = "httpx" },
     { name = "ipykernel" },
@@ -3533,7 +3546,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "assemblyai", specifier = ">=0.26.0" },
+    { name = "assemblyai", specifier = ">=0.33.0" },
     { name = "astra-assistants", specifier = ">=2.1.2" },
     { name = "beautifulsoup4", specifier = ">=4.12.2" },
     { name = "boto3", specifier = "~=1.34.162" },
@@ -3620,6 +3633,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "ipykernel", specifier = ">=6.29.0" },
@@ -3659,6 +3673,7 @@ source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofiles" },
     { name = "alembic" },
+    { name = "assemblyai" },
     { name = "asyncer" },
     { name = "bcrypt" },
     { name = "cachetools" },
@@ -3764,10 +3779,16 @@ local = [
     { name = "sentence-transformers" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "asgi-lifespan" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "aiofiles", specifier = ">=24.1.0" },
     { name = "alembic", specifier = ">=1.13.0" },
+    { name = "assemblyai", specifier = ">=0.33.0" },
     { name = "asyncer", specifier = ">=0.0.5" },
     { name = "bcrypt", specifier = "==4.0.1" },
     { name = "cachetools", specifier = ">=5.3.1" },
@@ -3862,6 +3883,9 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.30.0" },
     { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.11" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "asgi-lifespan", specifier = ">=2.1.0" }]
 
 [[package]]
 name = "langfuse"

@@ -42,7 +42,8 @@ class GroqModel(LCModelComponent):
         IntInput(
             name="n",
             display_name="N",
-            info="Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.",
+            info="Number of chat completions to generate for each prompt. "
+            "Note that the API may not return the full n completions if duplicates are generated.",
             advanced=True,
         ),
         DropdownInput(
@@ -92,7 +93,7 @@ class GroqModel(LCModelComponent):
         n = self.n
         stream = self.stream
 
-        output = ChatGroq(  # type: ignore
+        return ChatGroq(  # type: ignore
             model=model_name,
             max_tokens=max_tokens or None,
             temperature=temperature,
@@ -101,5 +102,3 @@ class GroqModel(LCModelComponent):
             api_key=SecretStr(groq_api_key),
             streaming=stream,
         )
-
-        return output  # type: ignore

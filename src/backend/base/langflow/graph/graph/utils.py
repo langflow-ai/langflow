@@ -1,6 +1,8 @@
 import copy
 from collections import defaultdict, deque
 
+import networkx as nx
+
 PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
 
 
@@ -173,7 +175,8 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node):
     new_edge["target"] = proxy_id
     _type = target_handle.get("type")
     if _type is None:
-        raise KeyError("The 'type' key must be present in target_handle.")
+        msg = "The 'type' key must be present in target_handle."
+        raise KeyError(msg)
 
     field = target_handle["proxy"]["field"]
     new_target_handle = {
@@ -267,7 +270,8 @@ def get_root_of_group_node(
             if not any(successor in child_vertices for successor in successors):
                 return child_id
 
-    raise ValueError(f"Vertex {vertex_id} is not a top level vertex or no root vertex found")
+    msg = f"Vertex {vertex_id} is not a top level vertex or no root vertex found"
+    raise ValueError(msg)
 
 
 def sort_up_to_vertex(
@@ -279,12 +283,14 @@ def sort_up_to_vertex(
     """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
     try:
         stop_or_start_vertex = graph[vertex_id]
-    except KeyError:
+    except KeyError as e:
         if parent_node_map is None:
-            raise ValueError("Parent node map is required to find the root of a group node")
+            msg = "Parent node map is required to find the root of a group node"
+            raise ValueError(msg) from e
         vertex_id = get_root_of_group_node(graph=graph, vertex_id=vertex_id, parent_node_map=parent_node_map)
         if vertex_id not in graph:
-            raise ValueError(f"Vertex {vertex_id} not found into graph")
+            msg = f"Vertex {vertex_id} not found into graph"
+            raise ValueError(msg) from e
         stop_or_start_vertex = graph[vertex_id]
 
     visited, excluded = set(), set()
@@ -350,12 +356,7 @@ def has_cycle(vertex_ids: list[str], edges: list[tuple[str, str]]) -> bool:
     visited: set[str] = set()
     rec_stack: set[str] = set()
 
-    for vertex in vertex_ids:
-        if vertex not in visited:
-            if dfs(vertex, visited, rec_stack):
-                return True
-
-    return False
+    return any(vertex not in visited and dfs(vertex, visited, rec_stack) for vertex in vertex_ids)
 
 
 def find_cycle_edge(entry_point: str, edges: list[tuple[str, str]]) -> tuple[str, str]:
@@ -438,3 +439,16 @@ def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) 
     if max_iterations is None:
         return True
     return max(yielded_counts.values(), default=0) <= max_iterations
+
+
+def find_cycle_vertices(edges):
+    # Create a directed graph from the edges
+    graph = nx.DiGraph(edges)
+
+    # Find all simple cycles in the graph
+    cycles = list(nx.simple_cycles(graph))
+
+    # Flatten the list of cycles and remove duplicates
+    cycle_vertices = {vertex for cycle in cycles for vertex in cycle}
+
+    return sorted(cycle_vertices)

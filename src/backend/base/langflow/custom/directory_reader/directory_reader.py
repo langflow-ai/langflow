@@ -124,7 +124,8 @@ class DirectoryReader:
         Walk through the directory path and return a list of all .py files.
         """
         if not (safe_path := self.get_safe_path()):
-            raise CustomComponentPathValueError(f"The path needs to start with '{self.base_path}'.")
+            msg = f"The path needs to start with '{self.base_path}'."
+            raise CustomComponentPathValueError(msg)
 
         file_list = []
         safe_path_obj = Path(safe_path)
@@ -221,21 +222,20 @@ class DirectoryReader:
 
         if file_content is None:
             return False, f"Could not read {file_path}"
-        elif self.is_empty_file(file_content):
+        if self.is_empty_file(file_content):
             return False, "Empty file"
-        elif not self.validate_code(file_content):
+        if not self.validate_code(file_content):
             return False, "Syntax error"
-        elif self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
+        if self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
             "Optional", file_content
         ):
             return (
                 False,
                 "Type hint 'Optional' is used but not imported in the code.",
             )
-        else:
-            if self.compress_code_field:
-                file_content = str(StringCompressor(file_content).compress_string())
-            return True, file_content
+        if self.compress_code_field:
+            file_content = str(StringCompressor(file_content).compress_string())
+        return True, file_content
 
     def build_component_menu_list(self, file_paths):
         """
@@ -299,21 +299,20 @@ class DirectoryReader:
 
         if file_content is None:
             return False, f"Could not read {file_path}"
-        elif self.is_empty_file(file_content):
+        if self.is_empty_file(file_content):
             return False, "Empty file"
-        elif not self.validate_code(file_content):
+        if not self.validate_code(file_content):
             return False, "Syntax error"
-        elif self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
+        if self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
             "Optional", file_content
         ):
             return (
                 False,
                 "Type hint 'Optional' is used but not imported in the code.",
             )
-        else:
-            if self.compress_code_field:
-                file_content = str(StringCompressor(file_content).compress_string())
-            return True, file_content
+        if self.compress_code_field:
+            file_content = str(StringCompressor(file_content).compress_string())
+        return True, file_content
 
     async def get_output_types_from_code_async(self, code: str):
         return await asyncio.to_thread(self.get_output_types_from_code, code)
@@ -325,7 +324,7 @@ class DirectoryReader:
         tasks = [self.process_file_async(file_path) for file_path in file_paths]
         results = await asyncio.gather(*tasks)
 
-        for file_path, (validation_result, result_content) in zip(file_paths, results):
+        for file_path, (validation_result, result_content) in zip(file_paths, results, strict=True):
             menu_name = os.path.basename(os.path.dirname(file_path))
             filename = os.path.basename(file_path)
 

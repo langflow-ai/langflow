@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from typing import TYPE_CHECKING
@@ -13,14 +15,12 @@ if TYPE_CHECKING:
 
 async def aget_all_types_dict(components_paths):
     """Get all types dictionary combining native and custom components."""
-    custom_components_from_file = await abuild_custom_components(components_paths=components_paths)
-    return custom_components_from_file
+    return await abuild_custom_components(components_paths=components_paths)
 
 
 def get_all_types_dict(components_paths):
     """Get all types dictionary combining native and custom components."""
-    custom_components_from_file = build_custom_components(components_paths=components_paths)
-    return custom_components_from_file
+    return build_custom_components(components_paths=components_paths)
 
 
 # TypeError: unhashable type: 'list'
@@ -61,8 +61,8 @@ all_types_dict_cache = None
 
 
 async def get_and_cache_all_types_dict(
-    settings_service: "SettingsService",
-    cache_service: "CacheService",
+    settings_service: SettingsService,
+    cache_service: CacheService,
     force_refresh: bool = False,
     lock: asyncio.Lock | None = None,
 ):

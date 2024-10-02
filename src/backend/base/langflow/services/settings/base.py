@@ -31,10 +31,7 @@ def is_list_of_any(field: FieldInfo) -> bool:
     if field.annotation is None:
         return False
     try:
-        if hasattr(field.annotation, "__args__"):
-            union_args = field.annotation.__args__
-        else:
-            union_args = []
+        union_args = field.annotation.__args__ if hasattr(field.annotation, "__args__") else []
 
         return field.annotation.__origin__ is list or any(
             arg.__origin__ is list for arg in union_args if hasattr(arg, "__origin__")
@@ -63,7 +60,8 @@ class Settings(BaseSettings):
     # Define if langflow db should be saved in config dir or
     # in the langflow directory
     save_db_in_config_dir: bool = False
-    """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory (i.e. in the package directory)."""
+    """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory
+    (i.e. in the package directory)."""
 
     dev: bool = False
     """If True, Langflow will run in development mode."""
@@ -75,7 +73,8 @@ class Settings(BaseSettings):
     """The number of connections to allow that can be opened beyond the pool size.
     If not provided, the default is 20."""
     db_connect_timeout: int = 20
-    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the database."""
+    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
+    database."""
 
     # sqlite configuration
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
@@ -213,7 +212,8 @@ class Settings(BaseSettings):
                 # so we need to migrate to the new format
                 # if there is a database in that location
                 if not info.data["config_dir"]:
-                    raise ValueError("config_dir not set, please set it or provide a database_url")
+                    msg = "config_dir not set, please set it or provide a database_url"
+                    raise ValueError(msg)
 
                 from langflow.utils.version import get_version_info
                 from langflow.utils.version import is_pre_release as langflow_is_pre_release
@@ -264,10 +264,7 @@ class Settings(BaseSettings):
                         final_path = new_path
 
                 if final_path is None:
-                    if is_pre_release:
-                        final_path = new_pre_path
-                    else:
-                        final_path = new_path
+                    final_path = new_pre_path if is_pre_release else new_path
 
                 value = f"sqlite:///{final_path}"
 
@@ -367,8 +364,9 @@ def load_settings_from_yaml(file_path: str) -> Settings:
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 
         for key in settings_dict:
-            if key not in Settings.model_fields.keys():
-                raise KeyError(f"Key {key} not found in settings")
+            if key not in Settings.model_fields:
+                msg = f"Key {key} not found in settings"
+                raise KeyError(msg)
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
     return Settings(**settings_dict)

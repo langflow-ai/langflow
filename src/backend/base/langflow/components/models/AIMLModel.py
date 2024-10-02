@@ -43,7 +43,8 @@ class AIMLModelComponent(LCModelComponent):
             name="aiml_api_base",
             display_name="AIML API Base",
             advanced=True,
-            info="The base URL of the OpenAI API. Defaults to https://api.aimlapi.com . You can change this to use other APIs like JinaChat, LocalAI e Prem.",
+            info="The base URL of the OpenAI API. Defaults to https://api.aimlapi.com . "
+            "You can change this to use other APIs like JinaChat, LocalAI and Prem.",
         ),
         SecretStrInput(
             name="api_key",
@@ -78,12 +79,9 @@ class AIMLModelComponent(LCModelComponent):
         aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com"
         seed = self.seed
 
-        if isinstance(aiml_api_key, SecretStr):
-            openai_api_key = aiml_api_key.get_secret_value()
-        else:
-            openai_api_key = aiml_api_key
+        openai_api_key = aiml_api_key.get_secret_value() if isinstance(aiml_api_key, SecretStr) else aiml_api_key
 
-        model = ChatOpenAI(
+        return ChatOpenAI(
             model=model_name,
             temperature=temperature,
             api_key=openai_api_key,
@@ -92,8 +90,6 @@ class AIMLModelComponent(LCModelComponent):
             seed=seed,
             **model_kwargs,
         )
-
-        return model  # type: ignore
 
     def _get_exception_message(self, e: Exception):
         """

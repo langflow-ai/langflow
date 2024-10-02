@@ -96,18 +96,13 @@ class GoogleDriveSearchComponent(Component):
         """
         Generates the appropriate Google Drive URL for a file based on its MIME type.
         """
-        if mime_type == "application/vnd.google-apps.document":
-            return f"https://docs.google.com/document/d/{file_id}/edit"
-        elif mime_type == "application/vnd.google-apps.spreadsheet":
-            return f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
-        elif mime_type == "application/vnd.google-apps.presentation":
-            return f"https://docs.google.com/presentation/d/{file_id}/edit"
-        elif mime_type == "application/vnd.google-apps.drawing":
-            return f"https://docs.google.com/drawings/d/{file_id}/edit"
-        elif mime_type == "application/pdf":
-            return f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
-        else:
-            return f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
+        return {
+            "application/vnd.google-apps.document": f"https://docs.google.com/document/d/{file_id}/edit",
+            "application/vnd.google-apps.spreadsheet": f"https://docs.google.com/spreadsheets/d/{file_id}/edit",
+            "application/vnd.google-apps.presentation": f"https://docs.google.com/presentation/d/{file_id}/edit",
+            "application/vnd.google-apps.drawing": f"https://docs.google.com/drawings/d/{file_id}/edit",
+            "application/pdf": f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk",
+        }.get(mime_type, f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk")
 
     def search_files(self) -> dict:
         # Load the token information from the JSON string
