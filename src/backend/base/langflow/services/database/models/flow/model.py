@@ -117,10 +117,10 @@ class FlowBase(SQLModel):
             raise ValueError(msg)
 
         # data must contain nodes and edges
-        if "nodes" not in v.keys():
+        if "nodes" not in v:
             msg = "Flow must have nodes"
             raise ValueError(msg)
-        if "edges" not in v.keys():
+        if "edges" not in v:
             msg = "Flow must have edges"
             raise ValueError(msg)
 

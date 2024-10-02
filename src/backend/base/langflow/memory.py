@@ -46,10 +46,7 @@ def get_messages(
         if flow_id:
             stmt = stmt.where(MessageTable.flow_id == flow_id)
         if order_by:
-            if order == "DESC":
-                col = getattr(MessageTable, order_by).desc()
-            else:
-                col = getattr(MessageTable, order_by).asc()
+            col = getattr(MessageTable, order_by).desc() if order == "DESC" else getattr(MessageTable, order_by).asc()
             stmt = stmt.order_by(col)
         if limit:
             stmt = stmt.limit(limit)
