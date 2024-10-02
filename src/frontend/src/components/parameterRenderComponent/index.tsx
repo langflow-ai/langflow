@@ -8,7 +8,7 @@ import DictComponent from "../dictComponent";
 import FloatComponent from "./components/floatComponent";
 import InputFileComponent from "./components/inputFileComponent";
 import IntComponent from "./components/intComponent";
-import KeypairListComponent from "../keypairListComponent";
+import KeypairListComponent from "./components/keypairListComponent";
 import LinkComponent from "./components/linkComponent";
 import PromptAreaComponent from "./components/promptComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";

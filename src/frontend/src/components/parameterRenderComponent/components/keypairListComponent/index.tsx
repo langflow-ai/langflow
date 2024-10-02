@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { KeyPairListComponentType } from "../../types/components";
+import { KeyPairListComponentType } from "../../../../types/components";
 
 import {
   convertObjToArray,
@@ -7,8 +7,8 @@ import {
   hasDuplicateKeys,
 } from "@/utils/reactflowUtils";
 import { cloneDeep } from "lodash";
-import IconComponent from "../genericIconComponent";
-import { Input } from "../ui/input";
+import IconComponent from "../../../genericIconComponent";
+import { Input } from "../../../ui/input";
 
 export default function KeypairListComponent({
   value,
