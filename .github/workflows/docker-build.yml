@@ -22,7 +22,7 @@ on:
         required: false
         type: string
         default: ''
- 
+
   workflow_dispatch:
     inputs:
       version:
@@ -48,7 +48,7 @@ on:
         required: false
         type: string
         default: ''
- 
+
 env:
   POETRY_VERSION: "1.8.2"
   TEST_TAG: "langflowai/langflow:test"
@@ -65,44 +65,70 @@ jobs:
       - name: Resolve nightly tag
         id: resolve-nightly-tag
         run: |
-          if [[ "${{ inputs.nightly_tag_main }}" != '' ]]; then
-            echo "nightly_tag=${{ inputs.nightly_tag_main }}" >> $GITHUB_OUTPUT
-            echo "nightly_build=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.nightly_tag_base }}" != '' ]]; then
+          # Note - this is more complex than I'd like. For `main` builds, we just pass the `main` tag.
+          # For `base` builds, we pass both the `base` and `main` tags. This is because the `main` tag is the
+          # version we need to check out for the build, but the `base` tag is the version we need to build.
+          #
+          # So, you need to check for `base` existence before `main`.
+
+          if [[ "${{ inputs.nightly_tag_base }}" != '' ]]; then
+            if [[ "${{ inputs.release_type }}" != "base" ]]; then
+              echo "Release type is not 'base'. Exiting the workflow."
+              exit 1
+            fi
+
+            # Main tag must not be empty, otherwise we have no valid tag to check out.
+            if [[ "${{ inputs.nightly_tag_main }}" == '' ]]; then
+              echo "Nightly tag main is empty. Exiting the workflow."
+              exit 1
+            fi
+
             echo "nightly_tag=${{ inputs.nightly_tag_base }}" >> $GITHUB_OUTPUT
+            echo "nightly_build=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.nightly_tag_main }}" != '' ]]; then
+            if [[ "${{ inputs.release_type }}" != "main" ]]; then
+              echo "Release type is not 'main'. Exiting the workflow."
+              exit 1
+            fi
+            echo "nightly_tag=${{ inputs.nightly_tag_main }}" >> $GITHUB_OUTPUT
             echo "nightly_build=true" >> $GITHUB_OUTPUT
           else
             echo "nightly_tag=" >> $GITHUB_OUTPUT
             echo "nightly_build=false" >> $GITHUB_OUTPUT
           fi
-
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.nightly_tag_main || github.ref }}
-      - name: Set up Python 3.12 + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_caching"
+          persist-credentials: true
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
         with:
-          python-version: "3.12"
-          poetry-version: ${{ env.POETRY_VERSION }}
-          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
+
+      - name: Install the project
+        run: uv sync --dev
+
       - name: Get Version from Input
         if: ${{ inputs.version != '' }}
         id: get-version-input
         run: |
           version=${{ inputs.version }}
+          echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Base
         if: ${{ inputs.version == '' && inputs.release_type == 'base' }}
         id: get-version-base
         run: |
-          version=$(cd src/backend/base && poetry version --short)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
+          echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Main
         if: ${{ inputs.version == '' && inputs.release_type == 'main' }}
         id: get-version-main
         run: |
-          version=$(poetry version --short)
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
   setup:
     runs-on: ubuntu-latest
@@ -111,8 +137,6 @@ jobs:
       docker_tags: ${{ steps.set-vars.outputs.docker_tags }}
       ghcr_tags: ${{ steps.set-vars.outputs.ghcr_tags }}
       file: ${{ steps.set-vars.outputs.file }}
-    env:
-      NIGHTLY_TAG: ${{ needs.get-version.outputs.nightly-tag }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
@@ -123,7 +147,7 @@ jobs:
         id: set-vars
         run: |
           nightly_suffix=''
-          if [[ "${{ env.NIGHTLY_TAG }}" != '' ]]; then
+          if [[ "${{ needs.get-version.outputs.nightly-build }}" == "true" ]]; then
             nightly_suffix="-nightly"
           fi
 
@@ -148,7 +172,21 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }} 
+          ref: ${{ inputs.ref }}
+          persist-credentials: true
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
+        with:
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
+
+      - name: Install the project
+        run: |
+          if [[ "${{ inputs.release_type }}" == "base" ]]; then
+            cd src/backend/base && uv sync --no-dev --no-sources
+          else
+            uv sync --no-dev --no-sources
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -213,8 +251,8 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }} 
- 
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -224,7 +262,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-       
+
       - name: Login to Github Container Registry
         if: ${{ matrix.component == 'ghcr-backend' }} || ${{ matrix.component == 'ghcr-frontend' }}
         uses: docker/login-action@v3
@@ -232,7 +270,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
- 
+
       - name: Wait for propagation (for backend)
         run: sleep 120
 

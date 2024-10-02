@@ -1,4 +1,5 @@
 import ast
+import contextlib
 import inspect
 import traceback
 from typing import Any
@@ -171,11 +172,9 @@ class CodeParser:
             return_type_str = ast.unparse(node.returns)
             eval_env = self.construct_eval_env(return_type_str, tuple(self.data["imports"]))
 
-            try:
+            # Handle cases where the type is not found in the constructed environment
+            with contextlib.suppress(NameError):
                 return_type = eval(return_type_str, eval_env)
-            except NameError:
-                # Handle cases where the type is not found in the constructed environment
-                pass
 
         func = CallableCodeDetails(
             name=node.name,

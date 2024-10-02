@@ -107,6 +107,39 @@ async def update_message(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.patch("/messages/session/{old_session_id}", response_model=list[MessageResponse])
+async def update_session_id(
+    old_session_id: str,
+    new_session_id: str = Query(..., description="The new session ID to update to"),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    try:
+        # Get all messages with the old session ID
+        stmt = select(MessageTable).where(MessageTable.session_id == old_session_id)
+        messages = session.exec(stmt).all()
+
+        if not messages:
+            raise HTTPException(status_code=404, detail="No messages found with the given session ID")
+
+        # Update all messages with the new session ID
+        for message in messages:
+            message.session_id = new_session_id
+
+        session.add_all(messages)
+
+        session.commit()
+        message_responses = []
+        for message in messages:
+            session.refresh(message)
+            message_responses.append(MessageResponse.model_validate(message, from_attributes=True))
+        return message_responses
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/messages/session/{session_id}", status_code=204)
 async def delete_messages_session(
     session_id: str,

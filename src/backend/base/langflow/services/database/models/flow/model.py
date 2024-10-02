@@ -28,6 +28,7 @@ class FlowBase(SQLModel):
     description: str | None = Field(default=None, sa_column=Column(Text, index=True, nullable=True))
     icon: str | None = Field(default=None, nullable=True)
     icon_bg_color: str | None = Field(default=None, nullable=True)
+    gradient: str | None = Field(default=None, nullable=True)
     data: dict | None = Field(default=None, nullable=True)
     is_component: bool | None = Field(default=False, nullable=True)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
@@ -116,10 +117,10 @@ class FlowBase(SQLModel):
             raise ValueError(msg)
 
         # data must contain nodes and edges
-        if "nodes" not in v.keys():
+        if "nodes" not in v:
             msg = "Flow must have nodes"
             raise ValueError(msg)
-        if "edges" not in v.keys():
+        if "edges" not in v:
             msg = "Flow must have edges"
             raise ValueError(msg)
 

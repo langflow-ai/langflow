@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import uaParser from "ua-parser-js";
 
 test("Simple Agent", async ({ page }) => {
   test.skip(
@@ -35,6 +36,14 @@ test("Simple Agent", async ({ page }) => {
     await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
+  }
+
+  const getUA = await page.evaluate(() => navigator.userAgent);
+  const userAgentInfo = uaParser(getUA);
+  let control = "Control";
+
+  if (userAgentInfo.os.name.includes("Mac")) {
+    control = "Meta";
   }
 
   await page.getByRole("heading", { name: "Simple Agent" }).click();
@@ -124,7 +133,7 @@ test("Simple Agent", async ({ page }) => {
 
   await page.waitForTimeout(500);
 
-  await page.keyboard.press("Control+V");
+  await page.keyboard.press(`${control}+V`);
 
   await page.waitForTimeout(500);
 

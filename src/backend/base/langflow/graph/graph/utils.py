@@ -354,12 +354,7 @@ def has_cycle(vertex_ids: list[str], edges: list[tuple[str, str]]) -> bool:
     visited: set[str] = set()
     rec_stack: set[str] = set()
 
-    for vertex in vertex_ids:
-        if vertex not in visited:
-            if dfs(vertex, visited, rec_stack):
-                return True
-
-    return False
+    return any(vertex not in visited and dfs(vertex, visited, rec_stack) for vertex in vertex_ids)
 
 
 def find_cycle_edge(entry_point: str, edges: list[tuple[str, str]]) -> tuple[str, str]:
