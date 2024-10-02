@@ -65,11 +65,8 @@ export function ParameterRenderComponent({
       if(templateData.listist) {
         return (
           <InputListComponent
-            componentName={name ?? undefined}
-            editNode={editNode}
-            disabled={disabled}
-            value={templateValue || [""]}
-            onChange={onChange}
+            {...baseInputProps}
+            componentName={name}
             id={`inputlist_${id}`}
           />
         );
