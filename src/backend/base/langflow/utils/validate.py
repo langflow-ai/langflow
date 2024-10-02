@@ -124,7 +124,7 @@ def create_function(code, function_name):
     exec_globals = globals().copy()
 
     for node in module.body:
-        if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
+        if isinstance(node, ast.Import | ast.ImportFrom):
             for alias in node.names:
                 try:
                     if isinstance(node, ast.ImportFrom):
