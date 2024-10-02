@@ -1,20 +1,14 @@
-name: 'Setup uv'
-description: 'Checks out code, installs uv, and sets up Python environment'
+name: "Setup uv"
+description: "Checks out code, installs uv, and sets up Python environment"
 inputs:
   ref:
-    description: 'Reference to check out'
+    description: "Reference to check out"
     required: false
-    default: 'github.ref'
+    default: "github.ref"
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
-    - name: Check out the code at a specific ref
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.ref }}
-        persist-credentials: true
-
     - name: Install uv
       uses: astral-sh/setup-uv@v3
       with:
