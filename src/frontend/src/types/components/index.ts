@@ -116,15 +116,6 @@ export type NodeInputFieldComponentType = {
   showNode: boolean;
 };
 
-export type InputGlobalComponentType = {
-  disabled: boolean;
-  onChange: (value: string, dbValue: boolean, snapshot?: boolean) => void;
-  name: string;
-  data: Partial<InputFieldType>;
-  editNode?: boolean;
-  playgroundDisabled?: boolean;
-};
-
 export type IOJSONInputComponentType = {
   value: any;
   onChange: (value) => void;

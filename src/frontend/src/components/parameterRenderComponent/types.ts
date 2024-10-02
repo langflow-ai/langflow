@@ -29,7 +29,7 @@ export type FloatComponentType = {
 };
 
 export type IntComponentType = {
-    rangeSpec: RangeSpecType;
+  rangeSpec: RangeSpecType;
 };
 export type ToggleComponentType = {
   size?: "small" | "medium" | "large";
@@ -37,39 +37,44 @@ export type ToggleComponentType = {
 };
 
 export type FileComponentType = {
-    fileTypes: Array<string>;
- };
+  fileTypes: Array<string>;
+};
 
- export type PromptAreaComponentType = {
-    field_name?: string;
-  };
+export type PromptAreaComponentType = {
+  field_name?: string;
+};
 
-  export type LinkComponentType = {
+export type LinkComponentType = {
   icon?: string;
   text?: string;
 };
 
 export type KeyPairListComponentType = {
-    value: any;
-    isList?: boolean;
+  value: any;
+  isList?: boolean;
 };
 
 export type StrRenderComponentType = {
-    templateData: Partial<InputFieldType>;
-    name: string;
-  }
+  templateData: Partial<InputFieldType>;
+  name: string;
+};
 
-  export type InputListComponentType = {
-    componentName?: string;
-    id?: string;
-  };
+export type InputListComponentType = {
+  componentName?: string;
+  id?: string;
+};
 
-  export type DropDownComponentType = {
-    combobox?: boolean;
-    options: string[];
-  };
+export type DropDownComponentType = {
+  combobox?: boolean;
+  options: string[];
+};
 
-  export type TextAreaComponentType = {
-    password?: boolean;
-    updateVisibility?: () => void;
-  };
+export type TextAreaComponentType = {
+  password?: boolean;
+  updateVisibility?: () => void;
+};
+
+export type InputGlobalComponentType = {
+  load_from_db: boolean | undefined;
+  password: boolean | undefined;
+};
