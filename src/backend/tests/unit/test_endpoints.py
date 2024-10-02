@@ -398,8 +398,8 @@ async def test_get_vertices_flow_not_found(client, logged_in_headers):
     assert response.status_code == 500
 
 
-async def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_headers):
-    flow_id = added_flow_with_prompt_and_history["id"]
+async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
+    flow_id = added_flow_webhook_test["id"]
     response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
     assert response.status_code == 200
     assert "ids" in response.json()
@@ -408,11 +408,7 @@ async def test_get_vertices(client, added_flow_with_prompt_and_history, logged_i
     # The important part is before the - (ConversationBufferMemory, PromptTemplate, ChatOpenAI, LLMChain)
     ids = [_id.split("-")[0] for _id in response.json()["ids"]]
 
-    assert set(ids) == {
-        "ChatOpenAI",
-        "PromptTemplate",
-        "ConversationBufferMemory",
-    }
+    assert set(ids) == {"Webhook", "ChatInput"}
 
 
 async def test_build_vertex_invalid_flow_id(client, logged_in_headers):
@@ -421,8 +417,8 @@ async def test_build_vertex_invalid_flow_id(client, logged_in_headers):
     assert response.status_code == 500
 
 
-async def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_history, logged_in_headers):
-    flow_id = added_flow_with_prompt_and_history["id"]
+async def test_build_vertex_invalid_vertex_id(client, added_flow_webhook_test, logged_in_headers):
+    flow_id = added_flow_webhook_test["id"]
     response = await client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
 
