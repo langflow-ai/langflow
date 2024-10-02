@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import io
 import json
 import re
@@ -123,7 +125,7 @@ def read_flows(
     *,
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session),
-    settings_service: "SettingsService" = Depends(get_settings_service),
+    settings_service: SettingsService = Depends(get_settings_service),
     remove_example_flows: bool = False,
     components_only: bool = False,
 ):
@@ -184,7 +186,7 @@ def read_flow(
     session: Session = Depends(get_session),
     flow_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    settings_service: "SettingsService" = Depends(get_settings_service),
+    settings_service: SettingsService = Depends(get_settings_service),
 ):
     """Read a flow."""
     auth_settings = settings_service.auth_settings

@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Any, Union, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 from pydantic import BaseModel
@@ -20,11 +22,11 @@ class Result(BaseModel):
 
 
 async def run_graph_internal(
-    graph: "Graph",
+    graph: Graph,
     flow_id: str,
     stream: bool = False,
     session_id: str | None = None,
-    inputs: list["InputValueRequest"] | None = None,
+    inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
 ) -> tuple[list[RunOutputs], str]:
     """Run the graph and generate the result"""
@@ -59,7 +61,7 @@ async def run_graph_internal(
 
 
 def run_graph(
-    graph: "Graph",
+    graph: Graph,
     input_value: str,
     input_type: str,
     output_type: str,
@@ -112,7 +114,7 @@ def run_graph(
 
 
 def validate_input(
-    graph_data: dict[str, Any], tweaks: Union["Tweaks", dict[str, str | dict[str, Any]]]
+    graph_data: dict[str, Any], tweaks: Tweaks | dict[str, str | dict[str, Any]]
 ) -> list[dict[str, Any]]:
     if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
         msg = "graph_data and tweaks should be dictionaries"
@@ -154,7 +156,7 @@ def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: dict[str, Any]) -> None:
 
 
 def process_tweaks(
-    graph_data: dict[str, Any], tweaks: Union["Tweaks", dict[str, dict[str, Any]]], stream: bool = False
+    graph_data: dict[str, Any], tweaks: Tweaks | dict[str, dict[str, Any]], stream: bool = False
 ) -> dict[str, Any]:
     """
     This function is used to tweak the graph data using the node id and the tweaks dict.

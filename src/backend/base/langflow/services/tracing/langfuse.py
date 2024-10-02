@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
@@ -68,7 +70,7 @@ class LangFuseTracer(BaseTracer):
         trace_type: str,
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
-        vertex: Optional["Vertex"] = None,
+        vertex: Vertex | None = None,
     ):
         start_time = datetime.utcnow()
         if not self._ready:
@@ -127,7 +129,7 @@ class LangFuseTracer(BaseTracer):
 
         self._client.flush()
 
-    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
+    def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:
             return None
         return None  # self._callback

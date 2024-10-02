@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from collections.abc import AsyncIterator, Generator, Iterator
@@ -74,7 +76,7 @@ class ComponentVertex(Vertex):
         for key, value in self._built_object.items():
             self.add_result(key, value)
 
-    def get_edge_with_target(self, target_id: str) -> Generator["CycleEdge", None, None]:
+    def get_edge_with_target(self, target_id: str) -> Generator[CycleEdge, None, None]:
         """
         Get the edge with the target id.
 
@@ -88,7 +90,7 @@ class ComponentVertex(Vertex):
             if edge.target_id == target_id:
                 yield edge
 
-    async def _get_result(self, requester: "Vertex", target_handle_name: str | None = None) -> Any:
+    async def _get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
         """
         Retrieves the result of the built component.
 

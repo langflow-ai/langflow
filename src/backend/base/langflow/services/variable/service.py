@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -19,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class DatabaseVariableService(VariableService, Service):
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
 
     def initialize_user_variables(self, user_id: UUID | str, session: Session = Depends(get_session)):

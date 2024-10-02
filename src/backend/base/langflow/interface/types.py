@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from typing import TYPE_CHECKING
@@ -59,8 +61,8 @@ all_types_dict_cache = None
 
 
 async def get_and_cache_all_types_dict(
-    settings_service: "SettingsService",
-    cache_service: "CacheService",
+    settings_service: SettingsService,
+    cache_service: CacheService,
     force_refresh: bool = False,
     lock: asyncio.Lock | None = None,
 ):

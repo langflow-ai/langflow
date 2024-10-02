@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -31,7 +33,7 @@ user_data_var: ContextVar[dict[str, Any] | None] = ContextVar("user_data", defau
 
 
 @asynccontextmanager
-async def user_data_context(store_service: "StoreService", api_key: str | None = None):
+async def user_data_context(store_service: StoreService, api_key: str | None = None):
     # Fetch and set user data to the context variable
     if api_key:
         try:
@@ -78,7 +80,7 @@ class StoreService(Service):
 
     name = "store_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         self.base_url = self.settings_service.settings.store_url
         self.download_webhook_url = self.settings_service.settings.download_webhook_url

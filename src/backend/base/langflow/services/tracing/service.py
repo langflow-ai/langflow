@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 import os
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
@@ -40,7 +42,7 @@ def _get_langfuse_tracer():
 class TracingService(Service):
     name = "tracing_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         self.inputs: dict[str, dict] = defaultdict(dict)
         self.inputs_metadata: dict[str, dict] = defaultdict(dict)
@@ -155,7 +157,7 @@ class TracingService(Service):
         trace_type: str,
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
-        vertex: Optional["Vertex"] = None,
+        vertex: Vertex | None = None,
     ):
         inputs = self._cleanup_inputs(inputs)
         self.inputs[trace_name] = inputs
@@ -203,7 +205,7 @@ class TracingService(Service):
     @asynccontextmanager
     async def trace_context(
         self,
-        component: "Component",
+        component: Component,
         trace_name: str,
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
@@ -248,7 +250,7 @@ class TracingService(Service):
                 inputs[key] = "*****"  # avoid logging api_keys for security reasons
         return inputs
 
-    def get_langchain_callbacks(self) -> list["BaseCallbackHandler"]:
+    def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
         callbacks = []
         for tracer in self._tracers.values():
             if not tracer.ready:  # type: ignore
