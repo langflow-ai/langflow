@@ -164,10 +164,10 @@ class Data(BaseModel):
             if key in {"data", "text_key"} or key.startswith("_"):
                 return super().__getattr__(key)
             return self.data[key]
-        except KeyError:
+        except KeyError as e:
             # Fallback to default behavior to raise AttributeError for undefined attributes
             msg = f"'{type(self).__name__}' object has no attribute '{key}'"
-            raise AttributeError(msg)
+            raise AttributeError(msg) from e
 
     def __setattr__(self, key, value):
         """

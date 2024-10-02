@@ -24,11 +24,14 @@ jobs:
       main_tag: ${{ steps.generate_main_tag.outputs.main_tag }}
       base_tag: ${{ steps.set_base_tag.outputs.base_tag }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
         with:
           ref: ${{ github.ref }}
-
       - name: Install the project
         run: uv sync --dev
 
@@ -83,8 +86,9 @@ jobs:
           uv run ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
           uv run ./scripts/ci/update_pyproject_name.py langflow-nightly main
           uv run ./scripts/ci/update_uv_dependency.py $BASE_TAG
+
           uv lock
-          cd src/backend/base && uv lock
+          cd src/backend/base && uv lock && cd ../../..
 
           git add pyproject.toml src/backend/base/pyproject.toml uv.lock src/backend/base/uv.lock
           git commit -m "Update version and project name"

@@ -55,12 +55,12 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
 
         try:
             response = requests.get(f"{inference_endpoint}/health", timeout=5)
-        except requests.RequestException:
+        except requests.RequestException as e:
             msg = (
                 f"Inference endpoint '{inference_endpoint}' is not responding. "
                 "Please ensure the URL is correct and the service is running."
             )
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
         if response.status_code != 200:
             msg = f"HuggingFace health check failed: {response.status_code}"

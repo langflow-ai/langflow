@@ -12,6 +12,9 @@ from typing import TYPE_CHECKING
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
+from loguru import logger
+from pytest import LogCaptureFixture
+
 from base.langflow.components.inputs.ChatInput import ChatInput
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
@@ -78,6 +81,19 @@ def get_text():
         pytest.MEMORY_CHATBOT_NO_LLM,
     ]:
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
+
+
+@pytest.fixture
+def caplog(caplog: LogCaptureFixture):
+    handler_id = logger.add(
+        caplog.handler,
+        format="{message}",
+        level=0,
+        filter=lambda record: record["level"].no >= caplog.handler.level,
+        enqueue=False,  # Set to 'True' if your test is spawning child processes.
+    )
+    yield caplog
+    logger.remove(handler_id)
 
 
 @pytest.fixture()

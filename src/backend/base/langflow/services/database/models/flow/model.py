@@ -1,7 +1,6 @@
 # Path: src/backend/langflow/services/database/models/flow/model.py
 
 import re
-import warnings
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
@@ -9,6 +8,7 @@ from uuid import UUID, uuid4
 import emoji
 from emoji import purely_emoji  # type: ignore
 from fastapi import HTTPException, status
+from loguru import logger
 from pydantic import field_serializer, field_validator
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
@@ -88,8 +88,7 @@ class FlowBase(SQLModel):
 
         emoji_value = emoji.emojize(v, variant="emoji_type")
         if v == emoji_value:
-            warnings.warn(f"Invalid emoji. {v} is not a valid emoji.")
-            icon = v
+            logger.warning(f"Invalid emoji. {v} is not a valid emoji.")
         icon = emoji_value
 
         if purely_emoji(icon):
