@@ -1,8 +1,7 @@
-import { LinkComponentType } from "@/types/components";
-import { useCallback, useEffect, useState } from "react";
 import { classNames } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
+import { InputProps, LinkComponentType } from "../../types";
 
 const DEFAULT_ICON = "ExternalLink";
 
@@ -10,21 +9,20 @@ export default function LinkComponent({
   value,
   disabled = false,
   id = "",
-}: LinkComponentType): JSX.Element {
-  const [componentValue, setComponentValue] = useState(value);
+  text,
+  icon,
+  editNode = false,
+  handleOnNewValue
+}: InputProps<string,LinkComponentType>): JSX.Element {
 
-  useEffect(() => {
-    setComponentValue(value);
-  }, [value]);
-
-  const handleOpenLink = useCallback(() => {
-    if (componentValue?.value) {
-      const url = !/^https?:\/\//i.test(componentValue.value)
-        ? `https://${componentValue.value}`
-        : componentValue.value;
+  function handleOpenLink(){
+    if (value) {
+      const url = !/^https?:\/\//i.test(value)
+        ? `https://${value}`
+        : value;
       window.open(url, "_blank", "noopener,noreferrer");
     }
-  }, [componentValue]);
+  }
 
   const buttonClassName = classNames(
     "nopan w-full shrink-0",
@@ -49,15 +47,15 @@ export default function LinkComponent({
       <Button
         data-testid={id}
         onClick={handleOpenLink}
-        disabled={disabled || !componentValue}
+        disabled={disabled || !value}
         type="button"
         variant="primary"
         size="sm"
         className={buttonClassName}
       >
         <ButtonContent
-          icon={componentValue?.icon ?? DEFAULT_ICON}
-          text={componentValue?.text ?? ""}
+          icon={icon ?? DEFAULT_ICON}
+          text={text ?? ""}
         />
       </Button>
     </div>

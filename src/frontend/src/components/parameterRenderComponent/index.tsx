@@ -107,8 +107,9 @@ export function ParameterRenderComponent({
       case "link":
         return (
           <LinkComponent
-            value={templateData}
-            onChange={onChange}
+            {...baseInputProps}
+            icon={templateData.icon}
+            text={templateData.text}
             id={`link_${id}`}
           />
         );
