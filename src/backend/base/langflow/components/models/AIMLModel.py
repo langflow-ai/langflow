@@ -79,10 +79,7 @@ class AIMLModelComponent(LCModelComponent):
         aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com"
         seed = self.seed
 
-        if isinstance(aiml_api_key, SecretStr):
-            openai_api_key = aiml_api_key.get_secret_value()
-        else:
-            openai_api_key = aiml_api_key
+        openai_api_key = aiml_api_key.get_secret_value() if isinstance(aiml_api_key, SecretStr) else aiml_api_key
 
         return ChatOpenAI(
             model=model_name,

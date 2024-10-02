@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
@@ -10,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class Edge:
-    def __init__(self, source: "Vertex", target: "Vertex", edge: EdgeData):
+    def __init__(self, source: Vertex, target: Vertex, edge: EdgeData):
         self.source_id: str = source.id if source else ""
         self.target_id: str = target.id if target else ""
         self.valid_handles: bool = False
@@ -207,13 +209,13 @@ class Edge:
 
 
 class CycleEdge(Edge):
-    def __init__(self, source: "Vertex", target: "Vertex", raw_edge: EdgeData):
+    def __init__(self, source: Vertex, target: Vertex, raw_edge: EdgeData):
         super().__init__(source, target, raw_edge)
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
         self.result: Any = None
         self.is_cycle = True
 
-    async def honor(self, source: "Vertex", target: "Vertex") -> None:
+    async def honor(self, source: Vertex, target: Vertex) -> None:
         """
         Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
         If the edge is runnable, the source vertex is run with the message text and the target vertex's
@@ -238,16 +240,16 @@ class CycleEdge(Edge):
         target.params[self.target_param] = self.result
         self.is_fulfilled = True
 
-    async def get_result_from_source(self, source: "Vertex", target: "Vertex"):
+    async def get_result_from_source(self, source: Vertex, target: Vertex):
         # Fulfill the contract if it has not been fulfilled.
         if not self.is_fulfilled:
             await self.honor(source, target)
 
         # If the target vertex is a power component we log messages
-        if target.vertex_type == "ChatOutput" and (
-            isinstance(target.params.get(INPUT_FIELD_NAME), str)
-            or isinstance(target.params.get(INPUT_FIELD_NAME), dict)
+        if (
+            target.vertex_type == "ChatOutput"
+            and isinstance(target.params.get(INPUT_FIELD_NAME), str | dict)
+            and target.params.get("message") == ""
         ):
-            if target.params.get("message") == "":
-                return self.result
+            return self.result
         return self.result

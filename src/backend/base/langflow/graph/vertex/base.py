@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import asyncio
 import inspect
@@ -6,7 +8,7 @@ import traceback
 import types
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 from loguru import logger
@@ -46,7 +48,7 @@ class Vertex:
     def __init__(
         self,
         data: NodeData,
-        graph: "Graph",
+        graph: Graph,
         base_type: str | None = None,
         is_task: bool = False,
         params: dict | None = None,
@@ -108,7 +110,7 @@ class Vertex:
     def to_data(self):
         return self._data
 
-    def add_component_instance(self, component_instance: "Component"):
+    def add_component_instance(self, component_instance: Component):
         component_instance.set_vertex(self)
         self._custom_component = component_instance
 
@@ -165,15 +167,15 @@ class Vertex:
         pass
 
     @property
-    def edges(self) -> list["CycleEdge"]:
+    def edges(self) -> list[CycleEdge]:
         return self.graph.get_vertex_edges(self.id)
 
     @property
-    def outgoing_edges(self) -> list["CycleEdge"]:
+    def outgoing_edges(self) -> list[CycleEdge]:
         return [edge for edge in self.edges if edge.source_id == self.id]
 
     @property
-    def incoming_edges(self) -> list["CycleEdge"]:
+    def incoming_edges(self) -> list[CycleEdge]:
         return [edge for edge in self.edges if edge.target_id == self.id]
 
     @property
@@ -181,11 +183,11 @@ class Vertex:
         return {edge.source_handle.name for edge in self.edges}
 
     @property
-    def predecessors(self) -> list["Vertex"]:
+    def predecessors(self) -> list[Vertex]:
         return self.graph.get_predecessors(self)
 
     @property
-    def successors(self) -> list["Vertex"]:
+    def successors(self) -> list[Vertex]:
         return self.graph.get_successors(self)
 
     @property
@@ -268,7 +270,7 @@ class Vertex:
 
         return AsyncResult(self.task_id)
 
-    def _set_params_from_normal_edge(self, params: dict, edge: "Edge", template_dict: dict):
+    def _set_params_from_normal_edge(self, params: dict, edge: Edge, template_dict: dict):
         param_key = edge.target_param
 
         # If the param_key is in the template_dict and the edge.target_id is the current node
@@ -287,7 +289,7 @@ class Vertex:
                     if not param_dict or len(param_dict) != 1:
                         params[param_key] = self.graph.get_vertex(edge.source_id)
                     else:
-                        params[param_key] = {key: self.graph.get_vertex(edge.source_id) for key in param_dict.keys()}
+                        params[param_key] = {key: self.graph.get_vertex(edge.source_id) for key in param_dict}
 
                 else:
                     params[param_key] = self.graph.get_vertex(edge.source_id)
@@ -415,8 +417,6 @@ class Vertex:
                 elif val is not None and val != "":
                     params[field_name] = val
 
-                elif val is not None and val != "":
-                    params[field_name] = val
                 if field.get("load_from_db"):
                     load_from_db_fields.append(field_name)
 
@@ -534,10 +534,7 @@ class Vertex:
         # to the frontend
         self.set_artifacts()
         artifacts = self.artifacts_raw
-        if isinstance(artifacts, dict):
-            messages = self.extract_messages_from_artifacts(artifacts)
-        else:
-            messages = []
+        messages = self.extract_messages_from_artifacts(artifacts) if isinstance(artifacts, dict) else []
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
@@ -575,7 +572,7 @@ class Vertex:
     async def _build_dict_and_update_params(
         self,
         key,
-        vertices_dict: dict[str, "Vertex"],
+        vertices_dict: dict[str, Vertex],
     ):
         """
         Iterates over a dictionary of vertices, builds each and updates the params dictionary.
@@ -599,7 +596,7 @@ class Vertex:
         """
         return all(self._is_vertex(vertex) for vertex in value)
 
-    async def get_result(self, requester: "Vertex", target_handle_name: str | None = None) -> Any:
+    async def get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
         """
         Retrieves the result of the vertex.
 
@@ -611,7 +608,7 @@ class Vertex:
         async with self._lock:
             return await self._get_result(requester, target_handle_name)
 
-    async def _get_result(self, requester: "Vertex", target_handle_name: str | None = None) -> Any:
+    async def _get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
         """
         Retrieves the result of the built component.
 
@@ -632,7 +629,7 @@ class Vertex:
             asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="success"))
         return result
 
-    async def _build_vertex_and_update_params(self, key, vertex: "Vertex"):
+    async def _build_vertex_and_update_params(self, key, vertex: Vertex):
         """
         Builds a given vertex and updates the params dictionary accordingly.
         """
@@ -646,7 +643,7 @@ class Vertex:
     async def _build_list_of_vertices_and_update_params(
         self,
         key,
-        vertices: list["Vertex"],
+        vertices: list[Vertex],
     ):
         """
         Iterates over a list of vertices, builds each and updates the params dictionary.
@@ -716,7 +713,7 @@ class Vertex:
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
             raise ComponentBuildException(msg, tb) from exc
 
-    def _update_built_object_and_artifacts(self, result: Any | tuple[Any, dict] | tuple["Component", Any, dict]):
+    def _update_built_object_and_artifacts(self, result: Any | tuple[Any, dict] | tuple[Component, Any, dict]):
         """
         Updates the built object and its artifacts.
         """
@@ -774,7 +771,7 @@ class Vertex:
         user_id=None,
         inputs: dict[str, Any] | None = None,
         files: list[str] | None = None,
-        requester: Optional["Vertex"] = None,
+        requester: Vertex | None = None,
         event_manager: EventManager | None = None,
         **kwargs,
     ) -> Any:
@@ -814,7 +811,7 @@ class Vertex:
 
         return await self.get_requester_result(requester)
 
-    async def get_requester_result(self, requester: Optional["Vertex"]):
+    async def get_requester_result(self, requester: Vertex | None):
         # If the requester is None, this means that
         # the Vertex is the root of the graph
         if requester is None:
@@ -829,7 +826,7 @@ class Vertex:
             else await requester_edge.get_result_from_source(source=self, target=requester)
         )
 
-    def add_edge(self, edge: "CycleEdge") -> None:
+    def add_edge(self, edge: CycleEdge) -> None:
         if edge not in self.edges:
             self.edges.append(edge)
 

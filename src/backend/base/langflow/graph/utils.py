@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import json
 from collections.abc import Generator
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from langchain_core.documents import Document
@@ -103,11 +105,10 @@ def get_artifact_type(value, build_result) -> str:
         case Message():
             result = ArtifactType.MESSAGE
 
-    if result == ArtifactType.UNKNOWN:
-        if isinstance(build_result, Generator):
-            result = ArtifactType.STREAM
-        elif isinstance(value, Message) and isinstance(value.text, Generator):
-            result = ArtifactType.STREAM
+    if result == ArtifactType.UNKNOWN and (
+        isinstance(build_result, Generator) or isinstance(value, Message) and isinstance(value.text, Generator)
+    ):
+        result = ArtifactType.STREAM
 
     return result.value
 
@@ -119,7 +120,7 @@ def post_process_raw(raw, artifact_type: str):
     return raw
 
 
-def _vertex_to_primitive_dict(target: "Vertex") -> dict:
+def _vertex_to_primitive_dict(target: Vertex) -> dict:
     """
     Cleans the parameters of the target vertex.
     """
@@ -135,7 +136,7 @@ def _vertex_to_primitive_dict(target: "Vertex") -> dict:
 
 
 async def log_transaction(
-    flow_id: str | UUID, source: "Vertex", status, target: Optional["Vertex"] = None, error=None
+    flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
 ) -> None:
     try:
         if not get_settings_service().settings.transactions_storage_enabled:
@@ -163,7 +164,7 @@ def log_vertex_build(
     vertex_id: str,
     valid: bool,
     params: Any,
-    data: "ResultDataResponse",
+    data: ResultDataResponse,
     artifacts: dict | None = None,
 ):
     try:

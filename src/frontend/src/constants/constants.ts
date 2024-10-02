@@ -910,10 +910,20 @@ export const NOTE_NODE_MAX_HEIGHT = 800;
 export const NOTE_NODE_MAX_WIDTH = 600;
 
 export const COLOR_OPTIONS = {
+  default: "var(--note-default)",
   indigo: "var(--note-indigo)",
   emerald: "var(--note-emerald)",
   amber: "var(--note-amber)",
   red: "var(--note-red)",
 };
 
+export const SHADOW_COLOR_OPTIONS = {
+  default: "var(--note-default-opacity)",
+  indigo: "var(--note-indigo-opacity)",
+  emerald: "var(--note-emerald-opacity)",
+  amber: "var(--note-amber-opacity)",
+  red: "var(--note-red-opacity)",
+};
+
+export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes
 export const MAX_TEXT_LENGTH = 99999;

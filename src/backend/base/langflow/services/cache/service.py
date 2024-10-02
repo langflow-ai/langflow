@@ -72,11 +72,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
                 # Move the key to the end to make it recently used
                 self._cache.move_to_end(key)
                 # Check if the value is pickled
-                if isinstance(item["value"], bytes):
-                    value = pickle.loads(item["value"])
-                else:
-                    value = item["value"]
-                return value
+                return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
             self.delete(key)
         return None
 
