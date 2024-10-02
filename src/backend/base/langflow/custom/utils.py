@@ -2,7 +2,6 @@ import ast
 import contextlib
 import re
 import traceback
-import warnings
 from typing import Any
 from uuid import UUID
 
@@ -177,7 +176,7 @@ def add_new_custom_field(
     field_config["is_list"] = is_list or field_config.get("list", False) or field_contains_list
 
     if "name" in field_config:
-        warnings.warn("The 'name' key in field_config is used to build the object and can't be changed.")
+        logger.warning("The 'name' key in field_config is used to build the object and can't be changed.")
     required = field_config.pop("required", field_required)
     placeholder = field_config.pop("placeholder", "")
 

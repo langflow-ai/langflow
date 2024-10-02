@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -40,7 +41,7 @@ class BaseTracer(ABC):
         trace_name: str,
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
-        logs: list[Log | dict] = [],
+        logs: Sequence[Log | dict] = (),
     ):
         raise NotImplementedError
 

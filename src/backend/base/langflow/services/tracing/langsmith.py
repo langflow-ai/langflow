@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import traceback
 import types
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -119,7 +120,7 @@ class LangSmithTracer(BaseTracer):
         trace_name: str,
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
-        logs: list[Log | dict] = [],
+        logs: Sequence[Log | dict] = (),
     ):
         if not self._ready:
             return

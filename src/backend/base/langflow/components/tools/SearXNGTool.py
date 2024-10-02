@@ -1,4 +1,5 @@
 import json
+from collections.abc import Sequence
 from typing import Any
 
 import requests
@@ -87,7 +88,7 @@ class SearXNGToolComponent(LCToolComponent):
             _max_results: int = 10
 
             @staticmethod
-            def search(query: str, categories: list[str] = []) -> list:
+            def search(query: str, categories: Sequence[str] = ()) -> list:
                 if not SearxSearch._categories and not categories:
                     msg = "No categories provided."
                     raise ValueError(msg)

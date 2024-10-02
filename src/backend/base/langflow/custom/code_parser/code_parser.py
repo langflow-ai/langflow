@@ -217,7 +217,7 @@ class CodeParser:
 
         defaults = missing_defaults + default_values
 
-        return [self.parse_arg(arg, default) for arg, default in zip(node.args.args, defaults)]
+        return [self.parse_arg(arg, default) for arg, default in zip(node.args.args, defaults, strict=True)]
 
     def parse_varargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
@@ -238,7 +238,7 @@ class CodeParser:
             ast.unparse(default) if default else None for default in node.args.kw_defaults
         ]
 
-        return [self.parse_arg(arg, default) for arg, default in zip(node.args.kwonlyargs, kw_defaults)]
+        return [self.parse_arg(arg, default) for arg, default in zip(node.args.kwonlyargs, kw_defaults, strict=True)]
 
     def parse_kwargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
