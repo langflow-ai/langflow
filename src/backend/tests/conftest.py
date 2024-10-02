@@ -266,7 +266,7 @@ async def client_fixture(session: Session, monkeypatch, request, load_flows_dir)
         app = create_app()
 
         # app.dependency_overrides[get_session] = get_session_override
-        async with LifespanManager(app) as manager:
+        async with LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager:
             async with AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client:
                 yield client
         # app.dependency_overrides.clear()

@@ -49,7 +49,7 @@ async def files_client_fixture(session: Session, monkeypatch, request, load_flow
         app = create_app()
 
         app.dependency_overrides[get_storage_service] = lambda: mock_storage_service
-        async with LifespanManager(app) as manager:
+        async with LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager:
             async with AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client:
                 yield client
         # app.dependency_overrides.clear()
