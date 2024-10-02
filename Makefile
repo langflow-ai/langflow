@@ -315,18 +315,18 @@ build: setup_env ## build the frontend static files and package the project
 ifdef base
 	make install_frontendci
 	make build_frontend
-	make build_langflow_base
+	make build_langflow_base args="$(args)"
 endif
 
 ifdef main
 	make install_frontendci
 	make build_frontend
-	make build_langflow_base
+	make build_langflow_base args="$(args)"
 	make build_langflow args="$(args)"
 endif
 
 build_langflow_base:
-	cd src/backend/base && uv build
+	cd src/backend/base && uv build $(args)
 	rm -rf src/backend/base/langflow/frontend
 
 build_langflow_backup:

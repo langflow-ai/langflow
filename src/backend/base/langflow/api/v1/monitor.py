@@ -29,7 +29,7 @@ async def get_vertex_builds(
         vertex_builds = get_vertex_builds_by_flow_id(session, flow_id)
         return VertexBuildMapModel.from_list_of_dicts(vertex_builds)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/builds", status_code=204)
@@ -40,7 +40,7 @@ async def delete_vertex_builds(
     try:
         delete_vertex_builds_by_flow_id(session, flow_id)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/messages", response_model=list[MessageResponse])
@@ -68,7 +68,7 @@ async def get_messages(
         messages = session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/messages", status_code=204)
@@ -81,7 +81,7 @@ async def delete_messages(
         session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore
         session.commit()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.put("/messages/{message_id}", response_model=MessageRead)
@@ -104,7 +104,7 @@ async def update_message(
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.patch("/messages/session/{old_session_id}", response_model=list[MessageResponse])
@@ -137,7 +137,7 @@ async def update_session_id(
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/messages/session/{session_id}", status_code=204)
@@ -154,7 +154,7 @@ async def delete_messages_session(
         session.commit()
         return {"message": "Messages deleted successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/transactions", response_model=list[TransactionReadResponse])
@@ -179,4 +179,4 @@ async def get_transactions(
             for t in transactions
         ]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

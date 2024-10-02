@@ -134,6 +134,8 @@ console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]
 log_cli = true
 markers = ["async_test"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
@@ -149,14 +151,22 @@ exclude = ["langflow/alembic"]
 line-length = 120
 
 [tool.ruff.lint]
+flake8-bugbear.extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Query",
+    "typer.Option",
+]
 select = [
     "ASYNC",
+    "B",
     "C4",
     "COM",
     "DJ",
     "E",
     "EM",
     "F",
+    "FA",
     "FLY",
     "FURB",
     "I",
@@ -169,6 +179,7 @@ select = [
     "Q",
     "RET",
     "RSE",
+    "SIM",
     "SLOT",
     "T10",
     "TID",
@@ -178,6 +189,11 @@ select = [
 ]
 ignore = [
     "COM812", # Messes with the formatter
+]
+
+[tool.uv]
+dev-dependencies = [
+    "asgi-lifespan>=2.1.0",
 ]
 
 [build-system]

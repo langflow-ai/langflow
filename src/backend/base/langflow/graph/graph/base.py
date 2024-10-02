@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import copy
 import json
 import uuid
-import warnings
 from collections import defaultdict, deque
 from collections.abc import Generator, Iterable
 from datetime import datetime, timezone
@@ -265,11 +265,11 @@ class Graph:
             input_field = target_vertex.get_input(input_name)
             input_types = input_field.input_types
             input_field_type = str(input_field.field_type)
-        except ValueError:
+        except ValueError as e:
             input_field = target_vertex.data.get("node", {}).get("template", {}).get(input_name)
             if not input_field:
                 msg = f"Input field {input_name} not found in target vertex {target_id}"
-                raise ValueError(msg)
+                raise ValueError(msg) from e
             input_types = input_field.get("input_types", [])
             input_field_type = input_field.get("type", "")
 
@@ -797,7 +797,7 @@ class Graph:
             types = []
         for _ in range(len(inputs) - len(types)):
             types.append("chat")  # default to chat
-        for run_inputs, components, input_type in zip(inputs, inputs_components, types):
+        for run_inputs, components, input_type in zip(inputs, inputs_components, types, strict=True):
             run_outputs = await self._run(
                 inputs=run_inputs,
                 input_components=components,
@@ -1066,10 +1066,7 @@ class Graph:
         same_length = len(vertex.edges) == len(other_vertex.edges)
         if not same_length:
             return False
-        for edge in vertex.edges:
-            if edge not in other_vertex.edges:
-                return False
-        return True
+        return all(edge in other_vertex.edges for edge in vertex.edges)
 
     def update(self, other: Graph) -> Graph:
         # Existing vertices in self graph
@@ -1085,10 +1082,8 @@ class Graph:
 
         # Remove vertices that are not in the other graph
         for vertex_id in removed_vertex_ids:
-            try:
+            with contextlib.suppress(ValueError):
                 self.remove_vertex(vertex_id)
-            except ValueError:
-                pass
 
         # The order here matters because adding the vertex is required
         # if any of them have edges that point to any of the new vertices
@@ -1223,9 +1218,9 @@ class Graph:
         """Returns a vertex by id."""
         try:
             return self.vertex_map[vertex_id]
-        except KeyError:
+        except KeyError as e:
             msg = f"Vertex {vertex_id} not found"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
     def get_root_of_group_node(self, vertex_id: str) -> Vertex:
         """Returns the root of a group node."""
@@ -1677,7 +1672,7 @@ class Graph:
             new_edge = self.build_edge(edge)
             edges.add(new_edge)
         if self.vertices and not edges:
-            warnings.warn("Graph has vertices but no edges")
+            logger.warning("Graph has vertices but no edges")
         return list(cast(Iterable[CycleEdge], edges))
 
     def build_edge(self, edge: EdgeData) -> CycleEdge | Edge:

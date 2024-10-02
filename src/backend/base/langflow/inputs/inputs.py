@@ -108,10 +108,14 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
             if _info.data.get("input_types") and v.__class__.__name__ not in _info.data.get("input_types"):
                 warnings.warn(
                     f"Invalid value type {type(v)} for input {_info.data.get('name')}. "
-                    f"Expected types: {_info.data.get('input_types')}"
+                    f"Expected types: {_info.data.get('input_types')}",
+                    stacklevel=4,
                 )
             else:
-                warnings.warn(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
+                warnings.warn(
+                    f"Invalid value type {type(v)} for input {_info.data.get('name')}.",
+                    stacklevel=4,
+                )
         return v
 
     @field_validator("value")
@@ -131,12 +135,7 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
         is_list = _info.data["is_list"]
-        value = None
-        if is_list:
-            value = [cls._validate_value(vv, _info) for vv in v]
-        else:
-            value = cls._validate_value(v, _info)
-        return value
+        return [cls._validate_value(vv, _info) for vv in v] if is_list else cls._validate_value(v, _info)
 
 
 class MessageInput(StrInput, InputTraceMixin):

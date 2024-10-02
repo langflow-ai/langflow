@@ -31,6 +31,7 @@ RUN apt-get update \
     gcc \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
 # Install the project's dependencies using the lockfile and settings
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \

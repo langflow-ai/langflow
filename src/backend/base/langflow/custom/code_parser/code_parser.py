@@ -1,4 +1,5 @@
 import ast
+import contextlib
 import inspect
 import traceback
 from typing import Any
@@ -171,11 +172,9 @@ class CodeParser:
             return_type_str = ast.unparse(node.returns)
             eval_env = self.construct_eval_env(return_type_str, tuple(self.data["imports"]))
 
-            try:
+            # Handle cases where the type is not found in the constructed environment
+            with contextlib.suppress(NameError):
                 return_type = eval(return_type_str, eval_env)
-            except NameError:
-                # Handle cases where the type is not found in the constructed environment
-                pass
 
         func = CallableCodeDetails(
             name=node.name,
@@ -218,7 +217,7 @@ class CodeParser:
 
         defaults = missing_defaults + default_values
 
-        return [self.parse_arg(arg, default) for arg, default in zip(node.args.args, defaults)]
+        return [self.parse_arg(arg, default) for arg, default in zip(node.args.args, defaults, strict=True)]
 
     def parse_varargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
@@ -239,7 +238,7 @@ class CodeParser:
             ast.unparse(default) if default else None for default in node.args.kw_defaults
         ]
 
-        return [self.parse_arg(arg, default) for arg, default in zip(node.args.kwonlyargs, kw_defaults)]
+        return [self.parse_arg(arg, default) for arg, default in zip(node.args.kwonlyargs, kw_defaults, strict=True)]
 
     def parse_kwargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
