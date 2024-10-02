@@ -150,8 +150,7 @@ jobs:
           fi
 
   frontend-tests:
-    # if: github.repository == 'langflow-ai/langflow'
-    if: false
+    if: github.repository == 'langflow-ai/langflow'
     name: Run Frontend Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
@@ -162,8 +161,7 @@ jobs:
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
 
   backend-unit-tests:
-    # if: github.repository == 'langflow-ai/langflow'
-    if: false
+    if: github.repository == 'langflow-ai/langflow'
     name: Run Backend Unit Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
@@ -184,8 +182,7 @@ jobs:
   release-nightly-build:
     if: github.repository == 'langflow-ai/langflow'
     name: Run Nightly Langflow Build
-    # needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
-    needs: [create-nightly-tag]
+    needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
