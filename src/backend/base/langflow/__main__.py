@@ -84,7 +84,7 @@ def run(
     worker_timeout: int | None = typer.Option(None, help="Worker timeout in seconds.", show_default=False),
     port: int | None = typer.Option(None, help="Port to listen on.", show_default=False),
     components_path: Path | None = typer.Option(
-        str(Path(__file__).parent / "components"),
+        Path(__file__).parent / "components",
         help="Path to the directory containing custom components.",
         show_default=False,
     ),
@@ -162,7 +162,8 @@ def run(
     settings_service = get_settings_service()
 
     frame = inspect.currentframe()
-    valid_args = []
+    valid_args: list = []
+    values: dict = {}
     if frame is not None:
         arguments, _, _, values = inspect.getargvalues(frame)
         valid_args = [arg for arg in arguments if values[arg] is not None]
@@ -177,6 +178,7 @@ def run(
     host = settings_service.settings.host
     port = settings_service.settings.port
     workers = settings_service.settings.workers
+    worker_timeout = settings_service.settings.worker_timeout
     log_level = settings_service.settings.log_level
     frontend_path = settings_service.settings.frontend_path
     backend_only = settings_service.settings.backend_only
