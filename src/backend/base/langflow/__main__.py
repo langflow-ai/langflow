@@ -79,21 +79,19 @@ def set_var_for_macos_issue():
 
 @app.command()
 def run(
-    host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"),
-    workers: int = typer.Option(1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"),
-    timeout: int = typer.Option(300, help="Worker timeout in seconds.", envvar="LANGFLOW_WORKER_TIMEOUT"),
-    port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
+    host: str = typer.Option("127.0.0.1", help="Host to bind the server to."),
+    workers: int = typer.Option(1, help="Number of worker processes."),
+    timeout: int = typer.Option(300, help="Worker timeout in seconds."),
+    port: int = typer.Option(7860, help="Port to listen on."),
     components_path: Path | None = typer.Option(
         Path(__file__).parent / "components",
         help="Path to the directory containing custom components.",
-        envvar="LANGFLOW_COMPONENTS_PATH",
     ),
     # .env file param
     env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
-    log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
-    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"),
+    log_level: str = typer.Option("critical", help="Logging level."),
+    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
     cache: str | None = typer.Option(
-        envvar="LANGFLOW_LANGCHAIN_CACHE",
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
         default=None,
     ),
@@ -101,47 +99,38 @@ def run(
     path: str = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
-        envvar="LANGFLOW_FRONTEND_PATH",
     ),
     open_browser: bool = typer.Option(
         True,
         help="Open the browser after starting the server.",
-        envvar="LANGFLOW_OPEN_BROWSER",
     ),
     remove_api_keys: bool = typer.Option(
         False,
         help="Remove API keys from the projects saved in the database.",
-        envvar="LANGFLOW_REMOVE_API_KEYS",
     ),
     backend_only: bool = typer.Option(
         False,
         help="Run only the backend server without the frontend.",
-        envvar="LANGFLOW_BACKEND_ONLY",
     ),
     store: bool = typer.Option(
         True,
         help="Enables the store features.",
-        envvar="LANGFLOW_STORE",
     ),
     auto_saving: bool = typer.Option(
         True,
         help="Defines if the auto save is enabled.",
-        envvar="LANGFLOW_AUTO_SAVING",
     ),
     auto_saving_interval: int = typer.Option(
         1000,
         help="Defines the debounce time for the auto save.",
-        envvar="LANGFLOW_AUTO_SAVING_INTERVAL",
     ),
     health_check_max_retries: bool = typer.Option(
         True,
         help="Defines the number of retries for the health check.",
-        envvar="LANGFLOW_HEALTH_CHECK_MAX_RETRIES",
     ),
     max_file_size_upload: int = typer.Option(
         100,
         help="Defines the maximum file size for the upload in MB.",
-        envvar="LANGFLOW_MAX_FILE_SIZE_UPLOAD",
     ),
 ):
     """
@@ -472,7 +461,7 @@ def migration(
 
 @app.command()
 def api_key(
-    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    log_level: str = typer.Option("error", help="Logging level."),
 ):
     """
     Creates an API key for the default superuser if AUTO_LOGIN is enabled.
