@@ -16,12 +16,12 @@ client_lock = threading.Lock()
 client = None
 
 
-def get_patched_openai_client():
+def get_patched_openai_client(shared_component_cache):
     os.environ["ASTRA_ASSISTANTS_QUIET"] = "true"
-    global client
-    with client_lock:
-        if client is None:
-            client = patch(OpenAI())
+    client = shared_component_cache.get("client")
+    if client is None:
+        client = patch(OpenAI())
+        shared_component_cache.set("client", client)
     return client
 
 

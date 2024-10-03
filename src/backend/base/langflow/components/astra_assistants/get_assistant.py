@@ -1,14 +1,13 @@
 from langflow.components.astra_assistants.util import get_patched_openai_client
-from langflow.custom import Component
+from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs import MultilineInput, StrInput
 from langflow.schema.message import Message
 from langflow.template import Output
 
 
-class AssistantsGetAssistantName(Component):
+class AssistantsGetAssistantName(ComponentWithCache):
     display_name = "Get Assistant name"
     description = "Assistant by id"
-    client = get_patched_openai_client()
 
     inputs = [
         StrInput(
@@ -26,6 +25,10 @@ class AssistantsGetAssistantName(Component):
     outputs = [
         Output(display_name="Assistant Name", name="assistant_name", method="process_inputs"),
     ]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.client = get_patched_openai_client(self.shared_component_cache)
 
     def process_inputs(self) -> Message:
         assistant = self.client.beta.assistants.retrieve(

@@ -10,12 +10,12 @@ async def test_manager():
     system_prompt = "you're a very detailed ascii artist"
     user_message = "draw a cat eating ice cream"
     results = await iterate(system_prompt, user_message)
-    is_complete = results["assistant_response"].data["tool_output"]["decision"].is_complete
+    is_complete = bool(results["tool_output"].data["text"])
     i = 0
-    while is_complete and i < 10:
+    while not is_complete and i < 10:
         user_message = "continue"
         results = await iterate(system_prompt, user_message)
-        is_complete = results["assistant_response"].data["tool_output"]["decision"].is_complete
+        is_complete = bool(results["tool_output"].data["text"])
         i += 1
 
 
@@ -78,6 +78,8 @@ async def test_create_assistants():
     await run_assistant(assistant_id, thread_id)
 
 
+@pytest.mark.api_key_required
+@pytest.mark.asyncio
 async def test_create_thread():
     from langflow.components.astra_assistants import AssistantsCreateThread
 

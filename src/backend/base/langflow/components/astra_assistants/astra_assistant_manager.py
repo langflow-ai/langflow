@@ -8,13 +8,13 @@ from langflow.components.astra_assistants.util import (
     tool_names,
     tools_and_names,
 )
-from langflow.custom import Component
+from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs import DropdownInput, MultilineInput, StrInput
 from langflow.schema.message import Message
 from langflow.template import Output
 
 
-class AstraAssistantManager(Component):
+class AstraAssistantManager(ComponentWithCache):
     display_name = "Astra Assistant Manager"
     description = "Manages Assistant Interactions"
     icon = "bot"
@@ -74,6 +74,7 @@ class AstraAssistantManager(Component):
         self.tool_output = None
         self.thread_id = None
         self.assistant_id = None
+        self.client = get_patched_openai_client(self.shared_component_cache)
 
     async def get_assistant_response(self) -> Message:
         await self.initialize()
@@ -106,7 +107,6 @@ class AstraAssistantManager(Component):
             tool_cls = tools_and_names[self.tool]
             tool_obj = tool_cls()
             tools.append(tool_obj)
-        client = get_patched_openai_client()
         assistant_id = None
         thread_id = None
         if self.input_assistant_id:
@@ -118,7 +118,7 @@ class AstraAssistantManager(Component):
             model=self.model_name,
             name="managed_assistant",
             tools=tools,
-            client=client,
+            client=self.client,
             thread_id=thread_id,
             assistant_id=assistant_id,
         )
