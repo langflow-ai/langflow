@@ -191,7 +191,7 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             from astrapy.authentication import UsernamePasswordTokenProvider
             from astrapy.constants import Environment
         except ImportError as e:
-            msg = "Could not import astrapy integration package. " "Please install it with `pip install astrapy`."
+            msg = "Could not import astrapy integration package. Please install it with `pip install astrapy`."
             raise ImportError(msg) from e
 
         try:
