@@ -130,8 +130,8 @@ class RunnableExecComponent(Component):
         self.status = status
         return result_value
 
-    async def astream_events(self, input):
-        async for event in self.runnable.astream_events(input, version="v1"):
+    async def astream_events(self, runnable_input):
+        async for event in self.runnable.astream_events(runnable_input, version="v1"):
             if event.get("event") != "on_chat_model_stream":
                 continue
 

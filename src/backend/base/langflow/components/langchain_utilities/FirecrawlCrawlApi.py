@@ -57,9 +57,7 @@ class FirecrawlCrawlApi(CustomComponent):
         try:
             from firecrawl.firecrawl import FirecrawlApp  # type: ignore
         except ImportError as e:
-            msg = (
-                "Could not import firecrawl integration package. " "Please install it with `pip install firecrawl-py`."
-            )
+            msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
         crawler_options_dict = crawlerOptions.__dict__["data"]["text"] if crawlerOptions else {}
 

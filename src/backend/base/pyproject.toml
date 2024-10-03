@@ -157,24 +157,31 @@ flake8-bugbear.extend-immutable-calls = [
     "typer.Option",
 ]
 select = [
+    "A",
     "ASYNC",
     "B",
     "C4",
     "COM",
     "DJ",
+    "DTZ",
     "E",
     "EM",
     "F",
     "FA",
     "FLY",
     "FURB",
+    "G",
     "I",
     "ICN",
     "INT",
+    "INP",
+    "ISC",
     "LOG",
     "NPY",
     "PD",
     "PIE",
+    "PT",
+    "PYI",
     "Q",
     "RET",
     "RSE",
@@ -188,6 +195,7 @@ select = [
 ]
 ignore = [
     "COM812", # Messes with the formatter
+    "ISC001", # Messes with the formatter
 ]
 
 [tool.uv]
