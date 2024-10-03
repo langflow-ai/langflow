@@ -1,8 +1,8 @@
+from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
-from fastapi_pagination import Page, Params
+from fastapi_pagination import  Params
 from fastapi_pagination.ext.sqlmodel import paginate
-from pydantic import BaseModel
 from sqlalchemy import or_, update
 from sqlmodel import Session, select
 
@@ -25,11 +25,6 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session
 
 router = APIRouter(prefix="/folders", tags=["Folders"])
-
-
-class FolderWithPaginatedFlows(BaseModel):
-    folder: FolderRead
-    flows: Page[FlowRead]
 
 
 @router.post("/", response_model=FolderRead, status_code=201)
@@ -119,13 +114,17 @@ def read_folder(
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
 
-        stmt = select(Flow).where(Flow.folder_id == folder_id, Flow.user_id == current_user.id)
+        stmt = (
+            select(Flow)
+            .where(Flow.folder_id == folder_id, Flow.user_id == current_user.id)
+            .order_by(Flow.updated_at.desc())
+        )  # type: ignore # noqa: E501
         if is_component:
-            stmt = stmt.where(Flow.is_component)
+            stmt = stmt.where(Flow.is_component == True)  # type: ignore # noqa: E712
         if is_flow:
-            stmt = stmt.where(not Flow.is_component)
+            stmt = stmt.where(Flow.is_component == False)  # type: ignore # noqa: E712
         if search:
-            stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore
+            stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore # noqa: E712
         paginated_flows = paginate(session, stmt, params=params)
 
         return FolderWithPaginatedFlows(folder=FolderRead.model_validate(folder), flows=paginated_flows)
