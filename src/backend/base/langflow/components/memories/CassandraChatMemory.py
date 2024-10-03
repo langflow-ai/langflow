@@ -55,7 +55,7 @@ class CassandraChatMemory(LCChatMemoryComponent):
         try:
             import cassio
         except ImportError as e:
-            msg = "Could not import cassio integration package. " "Please install it with `pip install cassio`."
+            msg = "Could not import cassio integration package. Please install it with `pip install cassio`."
             raise ImportError(msg) from e
 
         from uuid import UUID

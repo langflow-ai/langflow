@@ -521,7 +521,7 @@ async def process(
     """
     # Raise a depreciation warning
     logger.warning(
-        "The /process endpoint is deprecated and will be removed in a future version. " "Please use /run instead."
+        "The /process endpoint is deprecated and will be removed in a future version. Please use /run instead."
     )
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
