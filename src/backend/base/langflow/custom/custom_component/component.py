@@ -572,9 +572,7 @@ class Component(CustomComponent):
             except KeyError as e:
                 close_match = find_closest_match(name, list(template.keys()))
                 if close_match:
-                    msg = (
-                        f"Parameter '{name}' not found in {self.__class__.__name__}. " f"Did you mean '{close_match}'?"
-                    )
+                    msg = f"Parameter '{name}' not found in {self.__class__.__name__}. Did you mean '{close_match}'?"
                     raise ValueError(msg) from e
                 msg = f"Parameter {name} not found in {self.__class__.__name__}. "
                 raise ValueError(msg) from e
