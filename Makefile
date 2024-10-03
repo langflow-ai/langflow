@@ -243,7 +243,7 @@ start:
 
 ifeq ($(open_browser),false)
 	@make install_backend && uv run langflow run \
-		--path $(path) \
+		--frontend-path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
 		--port $(port) \
@@ -251,7 +251,7 @@ ifeq ($(open_browser),false)
 		--no-open-browser
 else
 	@make install_backend && uv run langflow run \
-		--path $(path) \
+		--frontend-path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
 		--port $(port) \
@@ -262,7 +262,7 @@ setup_devcontainer: ## set up the development container
 	make install_backend
 	make install_frontend
 	make build_frontend
-	uv run langflow --path src/frontend/build
+	uv run langflow --frontend-path src/frontend/build
 
 setup_env: ## set up the environment
 	@sh ./scripts/setup/setup_env.sh
