@@ -161,8 +161,12 @@ def run(
 
     settings_service = get_settings_service()
 
-    arguments, _, _, values = inspect.getargvalues(inspect.currentframe())
-    valid_args = [arg for arg in arguments if values[arg] is not None]
+    frame = inspect.currentframe()
+    valid_args = []
+    if frame is not None:
+        arguments, _, _, values = inspect.getargvalues(frame)
+        valid_args = [arg for arg in arguments if values[arg] is not None]
+
     for arg in valid_args:
         if arg == "components_path":
             settings_service.settings.update_settings(components_path=components_path)
