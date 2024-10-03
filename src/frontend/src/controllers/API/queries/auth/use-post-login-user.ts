@@ -32,6 +32,7 @@ export const useLoginUser: useMutationFunctionType<undefined, LoginType> = (
       ...options,
       onSettled: () => {
         queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+        queryClient.refetchQueries({ queryKey: ["useGetTags"] });
       },
     },
   );
