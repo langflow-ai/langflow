@@ -1,17 +1,7 @@
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
-
-interface NavProps {
-  links: {
-    id: string;
-    title: string;
-    label?: string;
-    icon: string;
-  }[];
-  currentTab: string;
-  onClick?: (id: string) => void;
-}
+import { NavProps } from "../../../../types/templates/types";
 
 export function Nav({ links, currentTab, onClick }: NavProps) {
   return (

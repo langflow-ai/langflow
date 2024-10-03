@@ -3,20 +3,24 @@ import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import Fuse from "fuse.js";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ForwardedIconComponent } from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { useFolderStore } from "../../../../stores/foldersStore";
+import { TemplateContentProps } from "../../../../types/templates/types";
 import { updateIds } from "../../../../utils/reactflowUtils";
-import TemplateExampleCard from "../TemplateExampleCard";
+import { TemplateCategoryComponent } from "../TemplateCategoryComponent";
 
-interface TemplateContentProps {
-  currentTab: string;
-}
-
-export default function TemplateContent({ currentTab }: TemplateContentProps) {
-  const examples = useFlowsManagerStore((state) => state.examples);
+export default function TemplateContentComponent({
+  currentTab,
+  categories,
+}: TemplateContentProps) {
+  const examples = useFlowsManagerStore((state) => state.examples).filter(
+    (example) =>
+      example.tags?.includes(currentTab ?? "") ||
+      currentTab === "all-templates",
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredExamples, setFilteredExamples] = useState(examples);
   const addFlow = useAddFlow();
@@ -26,7 +30,10 @@ export default function TemplateContent({ currentTab }: TemplateContentProps) {
 
   const folderIdUrl = folderId ?? myCollectionId;
 
-  const fuse = new Fuse(examples, { keys: ["name", "description"] });
+  const fuse = useMemo(
+    () => new Fuse(examples, { keys: ["name", "description"] }),
+    [examples],
+  );
 
   useEffect(() => {
     if (searchQuery === "") {
@@ -35,7 +42,7 @@ export default function TemplateContent({ currentTab }: TemplateContentProps) {
       const searchResults = fuse.search(searchQuery);
       setFilteredExamples(searchResults.map((result) => result.item));
     }
-  }, [searchQuery, examples]);
+  }, [searchQuery, examples, fuse]);
 
   const handleCardClick = (example) => {
     updateIds(example.data);
@@ -44,6 +51,8 @@ export default function TemplateContent({ currentTab }: TemplateContentProps) {
     });
     track("New Flow Created", { template: `${example.name} Template` });
   };
+
+  const currentTabItem = categories.find((item) => item.id === currentTab);
 
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-hidden">
@@ -61,22 +70,31 @@ export default function TemplateContent({ currentTab }: TemplateContentProps) {
         />
       </div>
       <div className="flex flex-1 flex-col gap-6 overflow-auto">
-        <div className="flex items-center gap-3 font-medium">
-          <ForwardedIconComponent
-            name="MessagesSquare"
-            className="h-4 w-4 text-muted-foreground"
+        {currentTab === "all-templates" ? (
+          categories.map(
+            (value) =>
+              filteredExamples.filter((example) =>
+                example.tags?.includes(value.id),
+              ).length > 0 && (
+                <TemplateCategoryComponent
+                  key={value.id}
+                  currentTab={value}
+                  examples={filteredExamples.filter((example) =>
+                    example.tags?.includes(value.id),
+                  )}
+                  onCardClick={handleCardClick}
+                />
+              ),
+          )
+        ) : currentTabItem ? (
+          <TemplateCategoryComponent
+            currentTab={currentTabItem}
+            examples={filteredExamples}
+            onCardClick={handleCardClick}
           />
-          Chatbots
-        </div>
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredExamples.map((example, index) => (
-            <TemplateExampleCard
-              key={index}
-              example={example}
-              onClick={() => handleCardClick(example)}
-            />
-          ))}
-        </div>
+        ) : (
+          <></>
+        )}
       </div>
     </div>
   );

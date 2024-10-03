@@ -1,24 +1,13 @@
 import BaseModal from "@/modals/baseModal";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { FlowType } from "@/types/flow";
+import { CardData } from "@/types/templates/types";
 import memoryChatbotSpiral from "../../../../assets/artwork-spiral-1-def.svg";
 import vectorRagSpiral from "../../../../assets/artwork-spiral-2-def.svg";
 import multiAgentSpiral from "../../../../assets/artwork-spiral-3-def.svg";
 import memoryChatbotBg from "../../../../assets/memory-chatbot-bg.png";
 import multiAgentBg from "../../../../assets/multi-agent-bg.png";
 import vectorRagBg from "../../../../assets/vector-rag-bg.png";
-import TemplateCard from "../TemplateCardComponent";
-
-// New interface for the card data
-interface CardData {
-  bgImage: string;
-  spiralImage: string;
-  icon: string;
-  category: string;
-  title: string;
-  description: string;
-  flow: FlowType | undefined;
-}
+import TemplateGetStartedCardComponent from "../TemplateGetStartedCardComponent";
 
 export default function GetStartedComponent() {
   const examples = useFlowsManagerStore((state) => state.examples);
@@ -64,7 +53,7 @@ export default function GetStartedComponent() {
       </BaseModal.Header>
       <div className="grid flex-1 grid-cols-3 gap-4">
         {cardData.map((card, index) => (
-          <TemplateCard key={index} {...card} />
+          <TemplateGetStartedCardComponent key={index} {...card} />
         ))}
       </div>
     </div>
