@@ -1,11 +1,11 @@
 import httpx
-from typing import List
-from pydantic import BaseModel, Field
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, MessageTextInput, DropdownInput, IntInput, BoolInput
-from langflow.schema import Data
-from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
+from pydantic import BaseModel, Field
+
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
+from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.schema import Data
 
 
 class TavilySearchToolComponent(LCToolComponent):
@@ -77,7 +77,7 @@ Note: Check 'Advanced' for all options.
         include_images: bool = Field(False, description="Include a list of query-related images in the response.")
         include_answer: bool = Field(False, description="Include a short answer to original query.")
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         return self._tavily_search(
             self.query,
             self.search_depth,
@@ -103,7 +103,7 @@ Note: Check 'Advanced' for all options.
         max_results: int = 5,
         include_images: bool = False,
         include_answer: bool = False,
-    ) -> List[Data]:
+    ) -> list[Data]:
         try:
             url = "https://api.tavily.com/search"
             headers = {
