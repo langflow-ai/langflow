@@ -42,6 +42,7 @@ export default function CollectionCardComponent({
   const selectedFlowsComponentsCards = useFlowsManagerStore(
     (state) => state.selectedFlowsComponentsCards,
   );
+
   function hasPlayground(flow?: FlowType) {
     if (!flow) {
       return false;
@@ -60,9 +61,9 @@ export default function CollectionCardComponent({
     e.stopPropagation();
     track("Playground Button Clicked", { flowId: data.id });
     setLoadingPlayground(true);
-    const flow = getFlowById(data.id);
-    if (flow) {
-      if (!hasPlayground(flow)) {
+
+    if (data) {
+      if (!hasPlayground(data)) {
         setErrorData({
           title: "Error",
           list: ["This flow doesn't have a playground."],
@@ -70,7 +71,7 @@ export default function CollectionCardComponent({
         setLoadingPlayground(false);
         return;
       }
-      setCurrentFlow(flow);
+      setCurrentFlow(data);
       setOpenPlayground(true);
       setLoadingPlayground(false);
     } else {
