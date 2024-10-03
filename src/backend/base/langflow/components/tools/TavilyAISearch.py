@@ -10,7 +10,8 @@ from langflow.schema import Data
 
 class TavilySearchToolComponent(LCToolComponent):
     display_name = "Tavily AI Search"
-    description = """**Tavily AI** is a search engine optimized for LLMs and RAG, aimed at efficient, quick, and persistent search results. It can be used independently or as an agent tool.
+    description = """**Tavily AI** is a search engine optimized for LLMs and RAG, \
+        aimed at efficient, quick, and persistent search results. It can be used independently or as an agent tool.
 
 Note: Check 'Advanced' for all options.
 """
