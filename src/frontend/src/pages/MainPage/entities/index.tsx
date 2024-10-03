@@ -9,6 +9,23 @@ export type FolderType = {
   components: string[];
 };
 
+export type PaginatedFolderType = {
+  folder: {
+    name: string;
+    description: string;
+    id?: string | null;
+    parent_id: string;
+    components: string[];
+  };
+  flows: {
+    items: FlowType[];
+    total: number;
+    page: number;
+    size: number;
+    pages: number;
+  };
+};
+
 export type AddFolderType = {
   name: string;
   description: string;
