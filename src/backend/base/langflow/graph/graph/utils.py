@@ -283,14 +283,14 @@ def sort_up_to_vertex(
     """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
     try:
         stop_or_start_vertex = graph[vertex_id]
-    except KeyError:
+    except KeyError as e:
         if parent_node_map is None:
             msg = "Parent node map is required to find the root of a group node"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
         vertex_id = get_root_of_group_node(graph=graph, vertex_id=vertex_id, parent_node_map=parent_node_map)
         if vertex_id not in graph:
             msg = f"Vertex {vertex_id} not found into graph"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
         stop_or_start_vertex = graph[vertex_id]
 
     visited, excluded = set(), set()
@@ -356,12 +356,7 @@ def has_cycle(vertex_ids: list[str], edges: list[tuple[str, str]]) -> bool:
     visited: set[str] = set()
     rec_stack: set[str] = set()
 
-    for vertex in vertex_ids:
-        if vertex not in visited:
-            if dfs(vertex, visited, rec_stack):
-                return True
-
-    return False
+    return any(vertex not in visited and dfs(vertex, visited, rec_stack) for vertex in vertex_ids)
 
 
 def find_cycle_edge(entry_point: str, edges: list[tuple[str, str]]) -> tuple[str, str]:
@@ -454,6 +449,6 @@ def find_cycle_vertices(edges):
     cycles = list(nx.simple_cycles(graph))
 
     # Flatten the list of cycles and remove duplicates
-    cycle_vertices = set(vertex for cycle in cycles for vertex in cycle)
+    cycle_vertices = {vertex for cycle in cycles for vertex in cycle}
 
-    return sorted(list(cycle_vertices))
+    return sorted(cycle_vertices)

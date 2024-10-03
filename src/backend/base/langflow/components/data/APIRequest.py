@@ -94,7 +94,7 @@ class APIRequestComponent(Component):
         except Exception as exc:
             logger.error(f"Error parsing curl: {exc}")
             msg = f"Error parsing curl: {exc}"
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
         return build_config
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -123,7 +123,7 @@ class APIRequestComponent(Component):
                 logger.error(f"Error decoding JSON data: {e}")
                 body = None
                 msg = f"Error decoding JSON data: {e}"
-                raise ValueError(msg)
+                raise ValueError(msg) from e
 
         data = body if body else None
 
@@ -191,7 +191,10 @@ class APIRequestComponent(Component):
 
         async with httpx.AsyncClient() as client:
             results = await asyncio.gather(
-                *[self.make_request(client, method, u, headers, rec, timeout) for u, rec in zip(urls, bodies)]
+                *[
+                    self.make_request(client, method, u, headers, rec, timeout)
+                    for u, rec in zip(urls, bodies, strict=True)
+                ]
             )
         self.status = results
         return results

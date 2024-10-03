@@ -114,7 +114,7 @@ class SpiderTool(Component):
                 raise ValueError(msg)
         except Exception as e:
             msg = f"Error: {str(e)}"
-            raise Exception(msg)
+            raise Exception(msg) from e
 
         records = []
 

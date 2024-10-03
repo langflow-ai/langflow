@@ -125,9 +125,9 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
         try:
             import cassio
             from langchain_community.utilities.cassandra import SetupMode
-        except ImportError:
+        except ImportError as e:
             msg = "Could not import cassio integration package. " "Please install it with `pip install cassio`."
-            raise ImportError(msg)
+            raise ImportError(msg) from e
 
         database_ref = self.database_ref
 
@@ -161,10 +161,7 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             else:
                 documents.append(_input)
 
-        if self.setup_mode == "Off":
-            setup_mode = SetupMode.OFF
-        else:
-            setup_mode = SetupMode.SYNC
+        setup_mode = SetupMode.OFF if self.setup_mode == "Off" else SetupMode.SYNC
 
         if documents:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")

@@ -95,13 +95,12 @@ def validate_input_and_tweaks(input_request: SimplifiedAPIRequest):
                 if has_input_value and input_value_is_chat:
                     msg = "If you pass an input_value to the chat input, you cannot pass a tweak with the same name."
                     raise InvalidChatInputException(msg)
-        elif "Text Input" in key or "TextInput" in key:
-            if isinstance(value, dict):
-                has_input_value = value.get("input_value") is not None
-                input_value_is_text = input_request.input_value is not None and input_request.input_type == "text"
-                if has_input_value and input_value_is_text:
-                    msg = "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
-                    raise InvalidChatInputException(msg)
+        elif ("Text Input" in key or "TextInput" in key) and isinstance(value, dict):
+            has_input_value = value.get("input_value") is not None
+            input_value_is_text = input_request.input_value is not None and input_request.input_type == "text"
+            if has_input_value and input_value_is_text:
+                msg = "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
+                raise InvalidChatInputException(msg)
 
 
 async def simple_run_flow(
@@ -177,7 +176,7 @@ async def simple_run_flow_task(
 async def simplified_run_flow(
     background_tasks: BackgroundTasks,
     flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
-    input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
+    input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: UserRead = Depends(api_key_security),
     telemetry_service: TelemetryService = Depends(get_telemetry_service),
@@ -245,6 +244,7 @@ async def simplified_run_flow(
     supporting a wide range of applications by allowing for dynamic input and output configuration along with
     performance optimizations through session management and caching.
     """
+    input_request = input_request if input_request is not None else SimplifiedAPIRequest()
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
     start_time = time.perf_counter()
@@ -380,8 +380,8 @@ async def webhook_run_flow(
 async def experimental_run_flow(
     session: Annotated[Session, Depends(get_session)],
     flow_id: UUID,
-    inputs: list[InputValueRequest] | None = [InputValueRequest(components=[], input_value="")],
-    outputs: list[str] | None = [],
+    inputs: list[InputValueRequest] | None = None,
+    outputs: list[str] | None = None,
     tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,  # noqa: F821
     stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[None | str, Body(embed=True)] = None,  # noqa: F821
@@ -439,6 +439,8 @@ async def experimental_run_flow(
         flow_id_str = str(flow_id)
         if outputs is None:
             outputs = []
+        if inputs is None:
+            inputs = [InputValueRequest(components=[], input_value="")]
 
         artifacts = {}
         if session_id:

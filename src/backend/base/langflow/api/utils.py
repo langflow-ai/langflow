@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import uuid
-import warnings
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
+from loguru import logger
 from sqlalchemy import delete
 from sqlmodel import Session
 
@@ -101,7 +101,7 @@ async def check_langflow_version(component: StoreComponentCreate):
     if langflow_version is None:
         raise HTTPException(status_code=500, detail="Unable to verify the latest version of Langflow")
     if langflow_version != component.last_tested_version:
-        warnings.warn(
+        logger.warning(
             f"Your version of Langflow ({component.last_tested_version}) is outdated. "
             f"Please update to the latest version ({langflow_version}) and try again."
         )
@@ -260,4 +260,4 @@ async def cascade_delete_flow(session: Session, flow: Flow):
         session.exec(delete(Flow).where(Flow.id == flow.id))  # type: ignore
     except Exception as e:
         msg = f"Unable to cascade delete flow: ${flow.id}"
-        raise RuntimeError(msg, e)
+        raise RuntimeError(msg, e) from e

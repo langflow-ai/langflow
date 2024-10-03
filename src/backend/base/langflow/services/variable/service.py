@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import os
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -19,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class DatabaseVariableService(VariableService, Service):
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
 
     def initialize_user_variables(self, user_id: UUID | str, session: Session = Depends(get_session)):
@@ -163,7 +166,7 @@ class DatabaseVariableService(VariableService, Service):
         user_id: UUID | str,
         name: str,
         value: str,
-        default_fields: list[str] = [],
+        default_fields: Sequence[str] = (),
         _type: str = GENERIC_TYPE,
         session: Session = Depends(get_session),
     ):
@@ -171,7 +174,7 @@ class DatabaseVariableService(VariableService, Service):
             name=name,
             type=_type,
             value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
-            default_fields=default_fields,
+            default_fields=list(default_fields),
         )
         variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
         session.add(variable)

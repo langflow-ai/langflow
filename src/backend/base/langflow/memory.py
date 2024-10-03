@@ -1,4 +1,3 @@
-import warnings
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -46,10 +45,7 @@ def get_messages(
         if flow_id:
             stmt = stmt.where(MessageTable.flow_id == flow_id)
         if order_by:
-            if order == "DESC":
-                col = getattr(MessageTable, order_by).desc()
-            else:
-                col = getattr(MessageTable, order_by).asc()
+            col = getattr(MessageTable, order_by).desc() if order == "DESC" else getattr(MessageTable, order_by).asc()
             stmt = stmt.order_by(col)
         if limit:
             stmt = stmt.limit(limit)
@@ -127,7 +123,7 @@ def store_message(
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
     """
     if not message:
-        warnings.warn("No message provided.")
+        logger.warning("No message provided.")
         return []
 
     if not message.session_id or not message.sender or not message.sender_name:
