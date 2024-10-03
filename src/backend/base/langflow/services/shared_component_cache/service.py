@@ -5,5 +5,5 @@ class SharedComponentCacheService(CacheService):
     """
     A caching service shared across components.
     """
-    name = "shared_component_cache_service"
 
+    name = "shared_component_cache_service"
