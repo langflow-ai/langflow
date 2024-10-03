@@ -4,3 +4,8 @@ export type Pagination = {
   page: number;
   pages?: number;
 };
+
+export type Tag = {
+  id: string;
+  name: string;
+};
