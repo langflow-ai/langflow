@@ -1,3 +1,5 @@
+from typing import Any
+
 import httpx
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
@@ -10,7 +12,8 @@ from langflow.schema import Data
 
 class TavilySearchToolComponent(LCToolComponent):
     display_name = "Tavily AI Search"
-    description = """**Tavily AI** is a search engine optimized for LLMs and RAG, aimed at efficient, quick, and persistent search results. It can be used independently or as an agent tool.
+    description = """**Tavily AI** is a search engine optimized for LLMs and RAG, \
+        aimed at efficient, quick, and persistent search results. It can be used independently or as an agent tool.
 
 Note: Check 'Advanced' for all options.
 """
@@ -144,7 +147,7 @@ Note: Check 'Advanced' for all options.
             if include_images and search_results.get("images"):
                 data_results.append(Data(data={"images": search_results["images"]}))
 
-            self.status = data_results
+            self.status: Any = data_results
             return data_results
 
         except httpx.HTTPStatusError as e:
