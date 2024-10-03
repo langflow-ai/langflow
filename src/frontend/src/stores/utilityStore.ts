@@ -1,4 +1,4 @@
-import { Pagination } from "@/types/utils/types";
+import { Pagination, Tag } from "@/types/utils/types";
 import { UtilityStoreType } from "@/types/zustand/utility";
 import { create } from "zustand";
 
@@ -27,4 +27,6 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
     size: 10,
   },
   setFlowsPagination: (flowsPagination: Pagination) => set({ flowsPagination }),
+  tags: [],
+  setTags: (tags: Tag[]) => set({ tags }),
 }));
