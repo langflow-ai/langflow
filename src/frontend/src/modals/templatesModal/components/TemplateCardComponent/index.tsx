@@ -69,7 +69,14 @@ export default function TemplateCard({
             {category}
           </span>
         </div>
-        <h3 className="text-xl font-bold">{title}</h3>
+        <div className="flex w-full items-center justify-between">
+          <h3 className="line-clamp-3 text-xl font-bold">{title}</h3>
+          <ForwardedIconComponent
+            name="ArrowRight"
+            className="mr-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100"
+          />
+        </div>
+
         <p className="text-xs font-medium opacity-90">{description}</p>
       </div>
     </div>

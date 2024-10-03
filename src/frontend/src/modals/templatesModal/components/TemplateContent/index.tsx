@@ -4,12 +4,11 @@ import useAddFlow from "@/hooks/flows/use-add-flow";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../../components/genericIconComponent";
+import { ForwardedIconComponent } from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { updateIds } from "../../../../utils/reactflowUtils";
+import TemplateExampleCard from "../TemplateExampleCard";
 
 interface TemplateContentProps {
   currentTab: string;
@@ -62,26 +61,11 @@ export default function TemplateContent({ currentTab }: TemplateContentProps) {
         </div>
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {filteredExamples.map((example, index) => (
-            <div
+            <TemplateExampleCard
               key={index}
-              className="group flex cursor-pointer flex-col gap-4 overflow-hidden"
+              example={example}
               onClick={() => handleCardClick(example)}
-            >
-              <div className="relative h-40 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 p-4">
-                <IconComponent
-                  name={example.icon || "FileText"}
-                  className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 stroke-1 text-primary opacity-50 duration-300 group-hover:scale-105 group-hover:opacity-100"
-                />
-              </div>
-              <div className="flex flex-1 flex-col justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">{example.name}</h3>
-                  <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                    {example.description}
-                  </p>
-                </div>
-              </div>
-            </div>
+            />
           ))}
         </div>
       </div>
