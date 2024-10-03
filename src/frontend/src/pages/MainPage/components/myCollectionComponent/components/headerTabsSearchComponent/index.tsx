@@ -1,3 +1,4 @@
+import { SEARCH_TABS } from "@/constants/constants";
 import { useState } from "react";
 import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
 import InputSearchComponent from "../inputSearchComponent";
@@ -5,17 +6,22 @@ import TabsSearchComponent from "../tabsComponent";
 
 type HeaderTabsSearchComponentProps = {
   loading: boolean;
+  onChangeTab: (tab: string) => void;
+  onSearch: (search: string) => void;
 };
 
 const HeaderTabsSearchComponent = ({
   loading,
+  onChangeTab,
+  onSearch,
 }: HeaderTabsSearchComponentProps) => {
-  const [tabActive, setTabActive] = useState("Flows");
+  const [tabActive, setTabActive] = useState("All");
   const [inputValue, setInputValue] = useState("");
 
-  const setSearchFlowsComponents = useFlowsManagerStore(
-    (state) => state.setSearchFlowsComponents,
-  );
+  const handleChangeTab = (tab: string) => {
+    setTabActive(tab);
+    onChangeTab(tab);
+  };
 
   return (
     <>
@@ -24,18 +30,17 @@ const HeaderTabsSearchComponent = ({
           loading={loading}
           value={inputValue}
           onChange={(e) => {
-            setSearchFlowsComponents(e.target.value);
             setInputValue(e.target.value);
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              setSearchFlowsComponents(inputValue);
+              onSearch(inputValue);
             }
           }}
         />
         <TabsSearchComponent
-          tabsOptions={["All", "Flows", "Components"]}
-          setActiveTab={setTabActive}
+          tabsOptions={SEARCH_TABS}
+          setActiveTab={handleChangeTab}
           loading={loading}
           tabActive={tabActive}
         />
