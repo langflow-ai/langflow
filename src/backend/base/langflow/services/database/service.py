@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import time
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from alembic import command, util
@@ -19,8 +21,6 @@ from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import (
     Result,
     TableResults,
-    migrate_messages_from_monitor_service_to_database,
-    migrate_transactions_from_monitor_service_to_database,
 )
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
@@ -34,10 +34,11 @@ if TYPE_CHECKING:
 class DatabaseService(Service):
     name = "database_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         if settings_service.settings.database_url is None:
-            raise ValueError("No database URL provided")
+            msg = "No database URL provided"
+            raise ValueError(msg)
         self.database_url: str = settings_service.settings.database_url
         # This file is in langflow.services.database.manager.py
         # the ini is in langflow
@@ -46,7 +47,7 @@ class DatabaseService(Service):
         self.alembic_cfg_path = langflow_dir / "alembic.ini"
         self.engine = self._create_engine()
 
-    def _create_engine(self) -> "Engine":
+    def _create_engine(self) -> Engine:
         """Create the engine for the database."""
         if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
             "sqlite"
@@ -73,16 +74,18 @@ class DatabaseService(Service):
                 # https://stackoverflow.com/questions/62688256/sqlalchemy-exc-nosuchmoduleerror-cant-load-plugin-sqlalchemy-dialectspostgre
                 self.database_url = self.database_url.replace("postgres://", "postgresql://")
                 logger.warning(
-                    "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. To avoid this warning, update the database URL."
+                    "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. "
+                    "To avoid this warning, update the database URL."
                 )
                 return self._create_engine()
-            raise RuntimeError("Error creating database engine") from exc
+            msg = "Error creating database engine"
+            raise RuntimeError(msg) from exc
 
     def on_connection(self, dbapi_connection, connection_record):
         from sqlite3 import Connection as sqliteConnection
 
         if isinstance(dbapi_connection, sqliteConnection):
-            pragmas: Optional[dict] = self.settings_service.settings.sqlite_pragmas
+            pragmas: dict | None = self.settings_service.settings.sqlite_pragmas
             pragmas_list = []
             for key, val in pragmas.items() or {}:
                 pragmas_list.append(f"PRAGMA {key} = {val}")
@@ -117,7 +120,8 @@ class DatabaseService(Service):
                     user = get_user_by_username(session, username)
                     if not user:
                         logger.error("Default superuser not found")
-                        raise RuntimeError("Default superuser not found")
+                        msg = "Default superuser not found"
+                        raise RuntimeError(msg)
                     for flow in flows:
                         flow.user_id = user.id
                     session.commit()
@@ -126,7 +130,7 @@ class DatabaseService(Service):
     def check_schema_health(self) -> bool:
         inspector = inspect(self.engine)
 
-        model_mapping: dict[str, Type[SQLModel]] = {
+        model_mapping: dict[str, type[SQLModel]] = {
             "flow": models.Flow,
             "user": models.User,
             "apikey": models.ApiKey,
@@ -194,35 +198,29 @@ class DatabaseService(Service):
                     self.init_alembic(alembic_cfg)
                 except Exception as exc:
                     logger.error(f"Error initializing alembic: {exc}")
-                    raise RuntimeError("Error initializing alembic") from exc
+                    msg = "Error initializing alembic"
+                    raise RuntimeError(msg) from exc
             else:
                 logger.info("Alembic already initialized")
 
             logger.info(f"Running DB migrations in {self.script_location}")
 
             try:
-                buffer.write(f"{datetime.now().isoformat()}: Checking migrations\n")
+                buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")
                 command.check(alembic_cfg)
             except Exception as exc:
-                if isinstance(exc, (util.exc.CommandError, util.exc.AutogenerateDiffsDetected)):
+                if isinstance(exc, util.exc.CommandError | util.exc.AutogenerateDiffsDetected):
                     command.upgrade(alembic_cfg, "head")
                     time.sleep(3)
 
             try:
-                buffer.write(f"{datetime.now().isoformat()}: Checking migrations\n")
+                buffer.write(f"{datetime.now(tz=timezone.utc).astimezone()}: Checking migrations\n")
                 command.check(alembic_cfg)
             except util.exc.AutogenerateDiffsDetected as exc:
                 logger.error(f"AutogenerateDiffsDetected: {exc}")
                 if not fix:
-                    raise RuntimeError(f"There's a mismatch between the models and the database.\n{exc}")
-            try:
-                migrate_messages_from_monitor_service_to_database(session)
-            except Exception as exc:
-                logger.error(f"Error migrating messages from monitor service to database: {exc}")
-            try:
-                migrate_transactions_from_monitor_service_to_database(session)
-            except Exception as exc:
-                logger.error(f"Error migrating transactions from monitor service to database: {exc}")
+                    msg = f"There's a mismatch between the models and the database.\n{exc}"
+                    raise RuntimeError(msg) from exc
 
             if fix:
                 self.try_downgrade_upgrade_until_success(alembic_cfg)
@@ -293,7 +291,8 @@ class DatabaseService(Service):
                 logger.warning(f"Table {table} already exists, skipping. Exception: {oe}")
             except Exception as exc:
                 logger.error(f"Error creating table {table}: {exc}")
-                raise RuntimeError(f"Error creating table {table}") from exc
+                msg = f"Error creating table {table}"
+                raise RuntimeError(msg) from exc
 
         # Now check if the required tables exist, if not, something went wrong.
         inspector = inspect(self.engine)
@@ -302,7 +301,8 @@ class DatabaseService(Service):
             if table not in table_names:
                 logger.error("Something went wrong creating the database and tables.")
                 logger.error("Please check your database settings.")
-                raise RuntimeError("Something went wrong creating the database and tables.")
+                msg = "Something went wrong creating the database and tables."
+                raise RuntimeError(msg)
 
         logger.debug("Database and tables created successfully")
 

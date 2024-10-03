@@ -16,6 +16,7 @@ from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
 from langflow.services.tracing.schema import Log
+from langflow.utils.util_strings import truncate_long_strings
 
 
 class BuildStatus(Enum):
@@ -109,7 +110,8 @@ class ChatResponse(ChatMessage):
     @classmethod
     def validate_message_type(cls, v):
         if v not in ["start", "stream", "end", "error", "info", "file"]:
-            raise ValueError("type must be start, stream, end, error, info, or file")
+            msg = "type must be start, stream, end, error, info, or file"
+            raise ValueError(msg)
         return v
 
 
@@ -133,7 +135,8 @@ class FileResponse(ChatMessage):
     @classmethod
     def validate_data_type(cls, v):
         if v not in ["image", "csv"]:
-            raise ValueError("data_type must be image or csv")
+            msg = "data_type must be image or csv"
+            raise ValueError(msg)
         return v
 
 
@@ -281,6 +284,11 @@ class VertexBuildResponse(BaseModel):
     timestamp: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
     """Timestamp of the build."""
 
+    @field_serializer("data")
+    def serialize_data(self, data: ResultDataResponse) -> dict:
+        data_dict = data.model_dump() if isinstance(data, BaseModel) else data
+        return truncate_long_strings(data_dict)
+
 
 class VerticesBuiltResponse(BaseModel):
     vertices: list[VertexBuildResponse]
@@ -291,7 +299,8 @@ class InputValueRequest(BaseModel):
     input_value: str | None = None
     type: InputType | None = Field(
         "any",
-        description="Defines on which components the input value should be applied. 'any' applies to all input components.",
+        description="Defines on which components the input value should be applied. "
+        "'any' applies to all input components.",
     )
 
     # add an example
@@ -341,3 +350,4 @@ class ConfigResponse(BaseModel):
     auto_saving: bool
     auto_saving_interval: int
     health_check_max_retries: int
+    max_file_size_upload: int

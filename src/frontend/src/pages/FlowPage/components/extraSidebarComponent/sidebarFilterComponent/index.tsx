@@ -18,8 +18,11 @@ export function SidebarFilterComponent({
           name="ListFilter"
           className="h-4 w-4 shrink-0 stroke-2"
         />
-        <div className="flex-1 overflow-hidden truncate">
-          {isInput ? "Input" : "Output"}: {type}
+        <div className="flex flex-1">
+          {isInput ? "Input" : "Output"}:{" "}
+          <div className="w-[5.7rem] flex-1 overflow-hidden truncate pl-1">
+            {type}
+          </div>
         </div>
       </div>
       <ShadTooltip

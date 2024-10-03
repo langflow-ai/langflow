@@ -1,19 +1,18 @@
-from typing import List
-
+from langchain.embeddings.base import Embeddings
 from langchain_community.vectorstores import Qdrant
+
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
+    DataInput,
     DropdownInput,
     HandleInput,
     IntInput,
-    StrInput,
-    SecretStrInput,
-    DataInput,
     MultilineInput,
+    SecretStrInput,
+    StrInput,
 )
 from langflow.schema import Data
-from langchain.embeddings.base import Embeddings
 
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
@@ -67,11 +66,12 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         server_kwargs = {
             "host": self.host if self.host else None,
-            "port": int(self.port),  # Garantir que port seja um inteiro
-            "grpc_port": int(self.grpc_port),  # Garantir que grpc_port seja um inteiro
+            "port": int(self.port),  # Ensure port is an integer
+            "grpc_port": int(self.grpc_port),  # Ensure grpc_port is an integer
             "api_key": self.api_key,
             "prefix": self.prefix,
-            "timeout": int(self.timeout) if self.timeout else None,  # Garantir que timeout seja um inteiro
+            # Ensure timeout is an integer
+            "timeout": int(self.timeout) if self.timeout else None,
             "path": self.path if self.path else None,
             "url": self.url if self.url else None,
         }
@@ -86,10 +86,11 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         if not isinstance(self.embedding, Embeddings):
-            raise ValueError("Invalid embedding object")
+            msg = "Invalid embedding object"
+            raise ValueError(msg)
 
         if documents:
-            qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs)
+            qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs, **server_kwargs)
         else:
             from qdrant_client import QdrantClient
 
@@ -98,7 +99,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         return qdrant
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
@@ -110,5 +111,4 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

@@ -1,25 +1,24 @@
 import json
 from pathlib import Path
-from typing import List, Optional, Union
 
 from dotenv import load_dotenv
 from loguru import logger
 
 from langflow.graph import Graph
 from langflow.graph.schema import RunOutputs
-from langflow.processing.process import process_tweaks, run_graph
 from langflow.logging.logger import configure
+from langflow.processing.process import process_tweaks, run_graph
 from langflow.utils.util import update_settings
 
 
 def load_flow_from_json(
-    flow: Union[Path, str, dict],
-    tweaks: Optional[dict] = None,
-    log_level: Optional[str] = None,
-    log_file: Optional[str] = None,
-    env_file: Optional[str] = None,
-    cache: Optional[str] = None,
-    disable_logs: Optional[bool] = True,
+    flow: Path | str | dict,
+    tweaks: dict | None = None,
+    log_level: str | None = None,
+    log_file: str | None = None,
+    env_file: str | None = None,
+    cache: str | None = None,
+    disable_logs: bool | None = True,
 ) -> Graph:
     """
     Load a flow graph from a JSON file or a JSON object.
@@ -53,43 +52,45 @@ def load_flow_from_json(
     # Update settings with cache and components path
     update_settings(cache=cache)
 
-    if isinstance(flow, (str, Path)):
-        with open(flow, "r", encoding="utf-8") as f:
+    if isinstance(flow, str | Path):
+        with open(flow, encoding="utf-8") as f:
             flow_graph = json.load(f)
     # If input is a dictionary, assume it's a JSON object
     elif isinstance(flow, dict):
         flow_graph = flow
     else:
-        raise TypeError("Input must be either a file path (str) or a JSON object (dict)")
+        msg = "Input must be either a file path (str) or a JSON object (dict)"
+        raise TypeError(msg)
 
     graph_data = flow_graph["data"]
     if tweaks is not None:
         graph_data = process_tweaks(graph_data, tweaks)
 
-    graph = Graph.from_payload(graph_data)
-    return graph
+    return Graph.from_payload(graph_data)
 
 
 def run_flow_from_json(
-    flow: Union[Path, str, dict],
+    flow: Path | str | dict,
     input_value: str,
-    tweaks: Optional[dict] = None,
+    session_id: str | None = None,
+    tweaks: dict | None = None,
     input_type: str = "chat",
     output_type: str = "chat",
-    output_component: Optional[str] = None,
-    log_level: Optional[str] = None,
-    log_file: Optional[str] = None,
-    env_file: Optional[str] = None,
-    cache: Optional[str] = None,
-    disable_logs: Optional[bool] = True,
+    output_component: str | None = None,
+    log_level: str | None = None,
+    log_file: str | None = None,
+    env_file: str | None = None,
+    cache: str | None = None,
+    disable_logs: bool | None = True,
     fallback_to_env_vars: bool = False,
-) -> List[RunOutputs]:
+) -> list[RunOutputs]:
     """
     Run a flow from a JSON file or dictionary.
 
     Args:
         flow (Union[Path, str, dict]): The path to the JSON file or the JSON dictionary representing the flow.
         input_value (str): The input value to be processed by the flow.
+        session_id (str | None, optional): The session ID to be used for the flow. Defaults to None.
         tweaks (Optional[dict], optional): Optional tweaks to be applied to the flow. Defaults to None.
         input_type (str, optional): The type of the input value. Defaults to "chat".
         output_type (str, optional): The type of the output value. Defaults to "chat".
@@ -99,7 +100,8 @@ def run_flow_from_json(
         env_file (Optional[str], optional): The environment file to load. Defaults to None.
         cache (Optional[str], optional): The cache directory to use. Defaults to None.
         disable_logs (Optional[bool], optional): Whether to disable logs. Defaults to True.
-        fallback_to_env_vars (bool, optional): Whether Global Variables should fallback to environment variables if not found. Defaults to False.
+        fallback_to_env_vars (bool, optional): Whether Global Variables should fallback to environment variables if
+            not found. Defaults to False.
 
     Returns:
         List[RunOutputs]: A list of RunOutputs objects representing the results of running the flow.
@@ -123,12 +125,12 @@ def run_flow_from_json(
         cache=cache,
         disable_logs=disable_logs,
     )
-    result = run_graph(
+    return run_graph(
         graph=graph,
+        session_id=session_id,
         input_value=input_value,
         input_type=input_type,
         output_type=output_type,
         output_component=output_component,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    return result

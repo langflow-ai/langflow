@@ -1,6 +1,7 @@
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput, SecretStrInput
+from langflow.inputs.inputs import HandleInput
 from langflow.io import DictInput, DropdownInput
 
 
@@ -55,13 +56,21 @@ class AmazonBedrockComponent(LCModelComponent):
         MessageTextInput(name="region_name", display_name="Region Name", value="us-east-1"),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True, is_list=True),
         MessageTextInput(name="endpoint_url", display_name="Endpoint URL", advanced=True),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
             from langchain_aws import ChatBedrock
-        except ImportError:
-            raise ImportError("langchain_aws is not installed. Please install it with `pip install langchain_aws`.")
+        except ImportError as e:
+            msg = "langchain_aws is not installed. Please install it with `pip install langchain_aws`."
+            raise ImportError(msg) from e
         if self.aws_access_key:
             import boto3  # type: ignore
 
@@ -95,5 +104,6 @@ class AmazonBedrockComponent(LCModelComponent):
                 streaming=self.stream,
             )
         except Exception as e:
-            raise ValueError("Could not connect to AmazonBedrock API.") from e
+            msg = "Could not connect to AmazonBedrock API."
+            raise ValueError(msg) from e
         return output  # type: ignore

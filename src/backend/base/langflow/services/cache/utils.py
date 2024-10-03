@@ -4,7 +4,7 @@ import hashlib
 import os
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
 
 from fastapi import UploadFile
 from platformdirs import user_cache_dir
@@ -12,7 +12,7 @@ from platformdirs import user_cache_dir
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import BuildStatus
 
-CACHE: Dict[str, Any] = {}
+CACHE: dict[str, Any] = {}
 
 CACHE_DIR = user_cache_dir("langflow", "langflow")
 
@@ -90,12 +90,14 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
         The path to the saved file.
     """
     if not any(file_name.endswith(suffix) for suffix in accepted_types):
-        raise ValueError(f"File {file_name} is not accepted")
+        msg = f"File {file_name} is not accepted"
+        raise ValueError(msg)
 
     # Get the destination folder
     cache_path = Path(CACHE_DIR) / PREFIX
     if not content:
-        raise ValueError("Please, reload the file in the loader.")
+        msg = "Please, reload the file in the loader."
+        raise ValueError(msg)
     data = content.split(",")[1]
     decoded_bytes = base64.b64decode(data)
 
@@ -124,10 +126,7 @@ def save_uploaded_file(file: UploadFile, folder_name):
     cache_path = Path(CACHE_DIR)
     folder_path = cache_path / folder_name
     filename = file.filename
-    if isinstance(filename, str) or isinstance(filename, Path):
-        file_extension = Path(filename).suffix
-    else:
-        file_extension = ""
+    file_extension = Path(filename).suffix if isinstance(filename, str | Path) else ""
     file_object = file.file
 
     # Create the folder if it doesn't exist
@@ -161,7 +160,8 @@ def save_uploaded_file(file: UploadFile, folder_name):
 def update_build_status(cache_service, flow_id: str, status: "BuildStatus"):
     cached_flow = cache_service[flow_id]
     if cached_flow is None:
-        raise ValueError(f"Flow {flow_id} not found in cache")
+        msg = f"Flow {flow_id} not found in cache"
+        raise ValueError(msg)
     cached_flow["status"] = status
     cache_service[flow_id] = cached_flow
     cached_flow["status"] = status

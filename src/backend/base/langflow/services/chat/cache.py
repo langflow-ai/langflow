@@ -1,5 +1,6 @@
+from collections.abc import Awaitable, Callable
 from contextlib import contextmanager
-from typing import Any, Awaitable, Callable, List, Optional
+from typing import Any
 
 import pandas as pd
 from PIL import Image
@@ -11,7 +12,7 @@ class Subject:
     """Base class for implementing the observer pattern."""
 
     def __init__(self):
-        self.observers: List[Callable[[], None]] = []
+        self.observers: list[Callable[[], None]] = []
 
     def attach(self, observer: Callable[[], None]):
         """Attach an observer to the subject."""
@@ -33,7 +34,7 @@ class AsyncSubject:
     """Base class for implementing the async observer pattern."""
 
     def __init__(self):
-        self.observers: List[Callable[[], Awaitable]] = []
+        self.observers: list[Callable[[], Awaitable]] = []
 
     def attach(self, observer: Callable[[], Awaitable]):
         """Attach an observer to the subject."""
@@ -79,7 +80,7 @@ class CacheService(Subject, Service):
             self.current_client_id = previous_client_id
             self.current_cache = self._cache.get(self.current_client_id, {})
 
-    def add(self, name: str, obj: Any, obj_type: str, extension: Optional[str] = None):
+    def add(self, name: str, obj: Any, obj_type: str, extension: str | None = None):
         """
         Add an object to the current client's cache.
 
@@ -92,10 +93,7 @@ class CacheService(Subject, Service):
             "image": "png",
             "pandas": "csv",
         }
-        if obj_type in object_extensions:
-            _extension = object_extensions[obj_type]
-        else:
-            _extension = type(obj).__name__.lower()
+        _extension = object_extensions[obj_type] if obj_type in object_extensions else type(obj).__name__.lower()
         self.current_cache[name] = {
             "obj": obj,
             "type": obj_type,
@@ -111,10 +109,11 @@ class CacheService(Subject, Service):
             name (str): The cache key.
             obj (Any): The pandas DataFrame or Series object.
         """
-        if isinstance(obj, (pd.DataFrame, pd.Series)):
+        if isinstance(obj, pd.DataFrame | pd.Series):
             self.add(name, obj.to_csv(), "pandas", extension="csv")
         else:
-            raise ValueError("Object is not a pandas DataFrame or Series")
+            msg = "Object is not a pandas DataFrame or Series"
+            raise ValueError(msg)
 
     def add_image(self, name: str, obj: Any, extension: str = "png"):
         """
@@ -127,7 +126,8 @@ class CacheService(Subject, Service):
         if isinstance(obj, Image.Image):
             self.add(name, obj, "image", extension=extension)
         else:
-            raise ValueError("Object is not a PIL Image")
+            msg = "Object is not a PIL Image"
+            raise ValueError(msg)
 
     def get(self, name: str):
         """

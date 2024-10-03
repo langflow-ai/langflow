@@ -1,9 +1,7 @@
-from typing import Union
-
 from langchain_core.tools import Tool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, MultilineInput, IntInput
+from langflow.inputs import IntInput, MultilineInput, SecretStrInput
 from langflow.schema import Data
 
 
@@ -22,7 +20,7 @@ class GoogleSearchAPIComponent(LCToolComponent):
         IntInput(name="k", display_name="Number of results", value=4, required=True),
     ]
 
-    def run_model(self) -> Union[Data, list[Data]]:
+    def run_model(self) -> Data | list[Data]:
         wrapper = self._build_wrapper()
         results = wrapper.results(query=self.input_value, num_results=self.k)
         data = [Data(data=result, text=result["snippet"]) for result in results]
@@ -40,6 +38,7 @@ class GoogleSearchAPIComponent(LCToolComponent):
     def _build_wrapper(self):
         try:
             from langchain_google_community import GoogleSearchAPIWrapper  # type: ignore
-        except ImportError:
-            raise ImportError("Please install langchain-google-community to use GoogleSearchAPIWrapper.")
+        except ImportError as e:
+            msg = "Please install langchain-google-community to use GoogleSearchAPIWrapper."
+            raise ImportError(msg) from e
         return GoogleSearchAPIWrapper(google_api_key=self.google_api_key, google_cse_id=self.google_cse_id, k=self.k)

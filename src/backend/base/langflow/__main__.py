@@ -1,15 +1,13 @@
+import inspect
 import platform
 import socket
 import sys
 import time
 import warnings
 from pathlib import Path
-from typing import Optional
 
 import click
 import httpx
-from langflow.utils.version import get_version_info, fetch_latest_version
-from langflow.utils.version import is_pre_release as langflow_is_pre_release
 import typer
 from dotenv import load_dotenv
 from multiprocess import cpu_count  # type: ignore
@@ -31,7 +29,8 @@ from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
-from langflow.utils.util import update_settings
+from langflow.utils.version import fetch_latest_version, get_version_info
+from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
 console = Console()
 
@@ -73,71 +72,80 @@ def set_var_for_macos_issue():
         import os
 
         os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
-        # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa
+        # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa: E501
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
 @app.command()
 def run(
-    host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"),
-    workers: int = typer.Option(1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"),
-    timeout: int = typer.Option(300, help="Worker timeout in seconds.", envvar="LANGFLOW_WORKER_TIMEOUT"),
-    port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
-    components_path: Optional[Path] = typer.Option(
+    host: str | None = typer.Option(None, help="Host to bind the server to.", show_default=False),
+    workers: int | None = typer.Option(None, help="Number of worker processes.", show_default=False),
+    worker_timeout: int | None = typer.Option(None, help="Worker timeout in seconds.", show_default=False),
+    port: int | None = typer.Option(None, help="Port to listen on.", show_default=False),
+    components_path: Path | None = typer.Option(
         Path(__file__).parent / "components",
         help="Path to the directory containing custom components.",
-        envvar="LANGFLOW_COMPONENTS_PATH",
+        show_default=False,
     ),
     # .env file param
-    env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
-    log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
-    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"),
-    cache: Optional[str] = typer.Option(
-        envvar="LANGFLOW_LANGCHAIN_CACHE",
-        help="Type of cache to use. (InMemoryCache, SQLiteCache)",
-        default=None,
+    env_file: Path | None = typer.Option(
+        None,
+        help="Path to the .env file containing environment variables.",
+        show_default=False,
     ),
-    dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
-    path: str = typer.Option(
+    log_level: str | None = typer.Option(None, help="Logging level.", show_default=False),
+    log_file: Path | None = typer.Option(None, help="Path to the log file.", show_default=False),
+    cache: str | None = typer.Option(
+        None,
+        help="Type of cache to use. (InMemoryCache, SQLiteCache)",
+        show_default=False,
+    ),
+    dev: bool | None = typer.Option(None, help="Run in development mode (may contain bugs)", show_default=False),
+    frontend_path: str | None = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
-        envvar="LANGFLOW_FRONTEND_PATH",
+        show_default=False,
     ),
-    open_browser: bool = typer.Option(
-        True,
+    open_browser: bool | None = typer.Option(
+        None,
         help="Open the browser after starting the server.",
-        envvar="LANGFLOW_OPEN_BROWSER",
+        show_default=False,
     ),
-    remove_api_keys: bool = typer.Option(
-        False,
+    remove_api_keys: bool | None = typer.Option(
+        None,
         help="Remove API keys from the projects saved in the database.",
-        envvar="LANGFLOW_REMOVE_API_KEYS",
+        show_default=False,
     ),
-    backend_only: bool = typer.Option(
-        False,
+    backend_only: bool | None = typer.Option(
+        None,
         help="Run only the backend server without the frontend.",
-        envvar="LANGFLOW_BACKEND_ONLY",
+        show_default=False,
     ),
-    store: bool = typer.Option(
-        True,
+    store: bool | None = typer.Option(
+        None,
         help="Enables the store features.",
-        envvar="LANGFLOW_STORE",
+        show_default=False,
     ),
-    auto_saving: bool = typer.Option(
-        True,
+    auto_saving: bool | None = typer.Option(
+        None,
         help="Defines if the auto save is enabled.",
-        envvar="LANGFLOW_AUTO_SAVING",
+        show_default=False,
     ),
-    auto_saving_interval: int = typer.Option(
-        1000,
+    auto_saving_interval: int | None = typer.Option(
+        None,
         help="Defines the debounce time for the auto save.",
-        envvar="LANGFLOW_AUTO_SAVING_INTERVAL",
+        show_default=False,
     ),
-    health_check_max_retries: bool = typer.Option(
-        True,
+    health_check_max_retries: bool | None = typer.Option(
+        None,
         help="Defines the number of retries for the health check.",
-        envvar="LANGFLOW_HEALTH_CHECK_MAX_RETRIES",
+        show_default=False,
+    ),
+    max_file_size_upload: int | None = typer.Option(
+        None,
+        help="Defines the maximum file size for the upload in MB.",
+        show_default=False,
     ),
 ):
     """
@@ -149,32 +157,44 @@ def run(
 
     if env_file:
         load_dotenv(env_file, override=True)
+        logger.debug(f"Loading config from file: '{env_file}'")
 
-    update_settings(
-        dev=dev,
-        remove_api_keys=remove_api_keys,
-        cache=cache,
-        components_path=components_path,
-        store=store,
-        auto_saving=auto_saving,
-        auto_saving_interval=auto_saving_interval,
-        health_check_max_retries=health_check_max_retries,
-    )
-    # create path object if path is provided
-    static_files_dir: Optional[Path] = Path(path) if path else None
     settings_service = get_settings_service()
-    settings_service.set("backend_only", backend_only)
+
+    frame = inspect.currentframe()
+    valid_args: list = []
+    values: dict = {}
+    if frame is not None:
+        arguments, _, _, values = inspect.getargvalues(frame)
+        valid_args = [arg for arg in arguments if values[arg] is not None]
+
+    for arg in valid_args:
+        if arg == "components_path":
+            settings_service.settings.update_settings(components_path=components_path)
+        elif hasattr(settings_service.settings, arg):
+            settings_service.set(arg, values[arg])
+        logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
+
+    host = settings_service.settings.host
+    port = settings_service.settings.port
+    workers = settings_service.settings.workers
+    worker_timeout = settings_service.settings.worker_timeout
+    log_level = settings_service.settings.log_level
+    frontend_path = settings_service.settings.frontend_path
+    backend_only = settings_service.settings.backend_only
+
+    # create path object if frontend_path is provided
+    static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
+
     app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
 
-    settings_service.set("worker_timeout", timeout)
-
     options = {
         "bind": f"{host}:{port}",
         "workers": get_number_of_workers(workers),
-        "timeout": timeout,
+        "timeout": worker_timeout,
     }
 
     # Define an env variable to know if we are just testing the server
@@ -230,7 +250,7 @@ def run_on_windows(host, port, log_level, options, app):
     """
     print_banner(host, port)
     run_langflow(host, port, log_level, options, app)
-    return None
+    return
 
 
 def is_port_in_use(port, host="localhost"):
@@ -291,8 +311,7 @@ def generate_pip_command(package_names, is_pre_release):
     base_command = "pip install"
     if is_pre_release:
         return f"{base_command} {' '.join(package_names)} -U --pre"
-    else:
-        return f"{base_command} {' '.join(package_names)} -U"
+    return f"{base_command} {' '.join(package_names)} -U"
 
 
 def stylize_text(text: str, to_style: str, is_prerelease: bool) -> str:
@@ -331,8 +350,14 @@ def print_banner(host: str, port: int):
     styled_package_name = stylize_text(package_name, package_name, any("pre-release" in notice for notice in notices))
 
     title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
-    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
-    telemetry_text = "We collect anonymous usage data to improve Langflow.\nYou can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
+    info_text = (
+        "Collaborate, and contribute at our "
+        "[bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
+    )
+    telemetry_text = (
+        "We collect anonymous usage data to improve Langflow.\n"
+        "You can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
+    )
     access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
 
     panel_content = "\n\n".join([title, *styled_notices, info_text, telemetry_text, access_link])
@@ -392,7 +417,8 @@ def superuser(
             if result:
                 typer.echo("Default folder created successfully.")
             else:
-                raise RuntimeError("Could not create default folder.")
+                msg = "Could not create default folder."
+                raise RuntimeError(msg)
             typer.echo("Superuser created successfully.")
 
         else:
@@ -406,7 +432,8 @@ def copy_db():
     """
     Copy the database files to the current directory.
 
-    This function copies the 'langflow.db' and 'langflow-pre.db' files from the cache directory to the current directory.
+    This function copies the 'langflow.db' and 'langflow-pre.db' files from the cache directory to the current
+    directory.
     If the files exist in the cache directory, they will be copied to the same directory as this script (__main__.py).
 
     Returns:
@@ -445,11 +472,10 @@ def migration(
     """
     Run or test migrations.
     """
-    if fix:
-        if not typer.confirm(
-            "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
-        ):
-            raise typer.Abort()
+    if fix and not typer.confirm(
+        "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
+    ):
+        raise typer.Abort
 
     initialize_services(fix_migration=fix)
     db_service = get_db_service()
@@ -461,7 +487,7 @@ def migration(
 
 @app.command()
 def api_key(
-    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    log_level: str = typer.Option("error", help="Logging level."),
 ):
     """
     Creates an API key for the default superuser if AUTO_LOGIN is enabled.

@@ -1,13 +1,12 @@
 from collections import defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import HTTPException
 from langchain_core.prompts import PromptTemplate
 from loguru import logger
 
-from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.inputs.inputs import DefaultPromptField
-
+from langflow.interface.utils import extract_input_variables_from_prompt
 
 _INVALID_CHARACTERS = {
     " ",
@@ -128,14 +127,16 @@ def validate_prompt(prompt_template: str, silent_errors: bool = False) -> list[s
     # Check if there are invalid characters in the input_variables
     input_variables = _check_input_variables(input_variables)
     if any(var in _INVALID_NAMES for var in input_variables):
-        raise ValueError(f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. ")
+        msg = f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. "
+        raise ValueError(msg)
 
     try:
         PromptTemplate(template=prompt_template, input_variables=input_variables)
     except Exception as exc:
         logger.error(f"Invalid prompt: {exc}")
         if not silent_errors:
-            raise ValueError(f"Invalid prompt: {exc}") from exc
+            msg = f"Invalid prompt: {exc}"
+            raise ValueError(msg) from exc
 
     return input_variables
 
@@ -199,7 +200,7 @@ def update_input_variables_field(input_variables, template):
 
 
 def process_prompt_template(
-    template: str, name: str, custom_fields: Optional[Dict[str, List[str]]], frontend_node_template: Dict[str, Any]
+    template: str, name: str, custom_fields: dict[str, list[str]] | None, frontend_node_template: dict[str, Any]
 ):
     """Process and validate prompt template, update template and custom fields."""
     # Validate the prompt template and extract input variables
@@ -221,20 +222,4 @@ def process_prompt_template(
     # Update the input variables field in the template
     update_input_variables_field(input_variables, frontend_node_template)
 
-    # Optional: cleanup fields based on specific conditions
-    cleanup_prompt_template_fields(input_variables, frontend_node_template)
-
     return input_variables
-
-
-def cleanup_prompt_template_fields(input_variables, template):
-    """Removes unused fields if the conditions are met in the template."""
-    prompt_fields = [
-        key for key, field in template.items() if isinstance(field, dict) and field.get("type") == "prompt"
-    ]
-
-    if len(prompt_fields) == 1:
-        for key in list(template.keys()):  # Use list to copy keys
-            field = template.get(key, {})
-            if isinstance(field, dict) and field.get("type") != "code" and key not in input_variables + prompt_fields:
-                del template[key]

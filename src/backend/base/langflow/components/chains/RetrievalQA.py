@@ -2,7 +2,7 @@ from langchain.chains import RetrievalQA
 
 from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
-from langflow.inputs import HandleInput, MultilineInput, BoolInput, DropdownInput
+from langflow.inputs import BoolInput, DropdownInput, HandleInput, MultilineInput
 
 
 class RetrievalQAComponent(LCChainComponent):
@@ -58,7 +58,7 @@ class RetrievalQAComponent(LCChainComponent):
         result_str = str(result.get("result", ""))
         if self.return_source_documents and len(source_docs):
             references_str = self.create_references_from_data(source_docs)
-            result_str = "\n".join([result_str, references_str])
+            result_str = f"{result_str}\n{references_str}"
         # put the entire result to debug history, query and content
         self.status = {**result, "source_documents": source_docs, "output": result_str}
         return result_str

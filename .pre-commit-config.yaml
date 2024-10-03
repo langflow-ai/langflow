@@ -1,4 +1,3 @@
-fail_fast: true
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.1.0
@@ -12,3 +11,15 @@ repos:
         args:
           - --fix=lf
       - id: trailing-whitespace
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        language: system
+        entry: bash -c "uv run ruff check"
+        types: [file, python]
+      - id: ruff-format
+        name: ruff format
+        language: system
+        entry: bash -c "uv run ruff format"
+        types: [file, python]

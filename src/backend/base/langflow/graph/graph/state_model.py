@@ -5,8 +5,7 @@ from langflow.helpers.base_model import BaseModel
 
 
 def camel_to_snake(camel_str: str) -> str:
-    snake_str = re.sub(r"(?<!^)(?=[A-Z])", "_", camel_str).lower()
-    return snake_str
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", camel_str).lower()
 
 
 def create_state_model_from_graph(graph: BaseModel) -> type[BaseModel]:
@@ -53,7 +52,8 @@ def create_state_model_from_graph(graph: BaseModel) -> type[BaseModel]:
     """
     for vertex in graph.vertices:
         if hasattr(vertex, "_custom_component") and vertex._custom_component is None:
-            raise ValueError(f"Vertex {vertex.id} does not have a component instance.")
+            msg = f"Vertex {vertex.id} does not have a component instance."
+            raise ValueError(msg)
 
     state_model_getters = [
         vertex._custom_component.get_state_model_instance_getter()
@@ -62,6 +62,6 @@ def create_state_model_from_graph(graph: BaseModel) -> type[BaseModel]:
     ]
     fields = {
         camel_to_snake(vertex.id): state_model_getter
-        for vertex, state_model_getter in zip(graph.vertices, state_model_getters)
+        for vertex, state_model_getter in zip(graph.vertices, state_model_getters, strict=False)
     }
     return create_state_model(model_name="GraphStateModel", validate=False, **fields)

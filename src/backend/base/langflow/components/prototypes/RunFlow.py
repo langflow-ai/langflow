@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any
 
 from langflow.base.flow_processing.utils import build_data_from_run_outputs
 from langflow.custom import Component
@@ -13,7 +13,7 @@ class RunFlowComponent(Component):
     name = "RunFlow"
     beta: bool = True
 
-    def get_flow_names(self) -> List[str]:
+    def get_flow_names(self) -> list[str]:
         flow_data = self.list_flows()
         return [flow_data.data["name"] for flow_data in flow_data]
 
@@ -47,12 +47,13 @@ class RunFlowComponent(Component):
         Output(display_name="Run Outputs", name="run_outputs", method="generate_results"),
     ]
 
-    async def generate_results(self) -> List[Data]:
+    async def generate_results(self) -> list[Data]:
         if "flow_name" not in self._attributes or not self._attributes["flow_name"]:
-            raise ValueError("Flow name is required")
+            msg = "Flow name is required"
+            raise ValueError(msg)
         flow_name = self._attributes["flow_name"]
 
-        results: List[Optional[RunOutputs]] = await self.run_flow(
+        results: list[RunOutputs | None] = await self.run_flow(
             inputs={"input_value": self.input_value}, flow_name=flow_name, tweaks=self.tweaks
         )
         if isinstance(results, list):

@@ -51,13 +51,13 @@ class SelectivePassThroughComponent(Component):
 
         if operator == "equals":
             return input_value == comparison_value
-        elif operator == "not equals":
+        if operator == "not equals":
             return input_value != comparison_value
-        elif operator == "contains":
+        if operator == "contains":
             return comparison_value in input_value
-        elif operator == "starts with":
+        if operator == "starts with":
             return input_value.startswith(comparison_value)
-        elif operator == "ends with":
+        if operator == "ends with":
             return input_value.endswith(comparison_value)
         return False
 
@@ -71,6 +71,5 @@ class SelectivePassThroughComponent(Component):
         if self.evaluate_condition(input_value, comparison_value, operator, case_sensitive):
             self.status = value_to_pass
             return value_to_pass
-        else:
-            self.status = ""
-            return ""
+        self.status = ""
+        return ""

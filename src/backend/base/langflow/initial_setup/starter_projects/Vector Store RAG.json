@@ -6,7 +6,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-DFgo2",
+            "id": "ChatInput-jvvNM",
             "name": "message",
             "output_types": [
               "Message"
@@ -14,25 +14,25 @@
           },
           "targetHandle": {
             "fieldName": "search_input",
-            "id": "AstraVectorStoreComponent-XE3MH",
+            "id": "AstraVectorStoreComponent-0WT85",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-DFgo2{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DFgo2œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraVectorStoreComponent-XE3MH{œfieldNameœ:œsearch_inputœ,œidœ:œAstraVectorStoreComponent-XE3MHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-DFgo2",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DFgo2œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraVectorStoreComponent-XE3MH",
-        "targetHandle": "{œfieldNameœ: œsearch_inputœ, œidœ: œAstraVectorStoreComponent-XE3MHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-jvvNM{œdataTypeœ:œChatInputœ,œidœ:œChatInput-jvvNMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraVectorStoreComponent-0WT85{œfieldNameœ:œsearch_inputœ,œidœ:œAstraVectorStoreComponent-0WT85œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-jvvNM",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-jvvNMœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraVectorStoreComponent-0WT85",
+        "targetHandle": "{œfieldNameœ: œsearch_inputœ, œidœ: œAstraVectorStoreComponent-0WT85œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-ILuxa",
+            "id": "ParseData-f6Jhl",
             "name": "text",
             "output_types": [
               "Message"
@@ -40,7 +40,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-Tfriy",
+            "id": "Prompt-oJ8Eh",
             "inputTypes": [
               "Message",
               "Text"
@@ -48,18 +48,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-ILuxa{œdataTypeœ:œParseDataœ,œidœ:œParseData-ILuxaœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Tfriy{œfieldNameœ:œcontextœ,œidœ:œPrompt-Tfriyœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-ILuxa",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-ILuxaœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Tfriy",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-Tfriyœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-f6Jhl{œdataTypeœ:œParseDataœ,œidœ:œParseData-f6Jhlœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-oJ8Eh{œfieldNameœ:œcontextœ,œidœ:œPrompt-oJ8Ehœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-f6Jhl",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-f6Jhlœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-oJ8Eh",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-oJ8Ehœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-DFgo2",
+            "id": "ChatInput-jvvNM",
             "name": "message",
             "output_types": [
               "Message"
@@ -67,7 +67,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-Tfriy",
+            "id": "Prompt-oJ8Eh",
             "inputTypes": [
               "Message",
               "Text"
@@ -75,18 +75,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-DFgo2{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DFgo2œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-Tfriy{œfieldNameœ:œquestionœ,œidœ:œPrompt-Tfriyœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-DFgo2",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DFgo2œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Tfriy",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-Tfriyœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-jvvNM{œdataTypeœ:œChatInputœ,œidœ:œChatInput-jvvNMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-oJ8Eh{œfieldNameœ:œquestionœ,œidœ:œPrompt-oJ8Ehœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-jvvNM",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-jvvNMœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-oJ8Eh",
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-oJ8Ehœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-TBV93",
+            "id": "File-JZzdd",
             "name": "data",
             "output_types": [
               "Data"
@@ -94,25 +94,25 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-rAbUh",
+            "id": "SplitText-Kl7VQ",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-TBV93{œdataTypeœ:œFileœ,œidœ:œFile-TBV93œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-rAbUh{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-rAbUhœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "File-TBV93",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-TBV93œ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "SplitText-rAbUh",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-rAbUhœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-File-JZzdd{œdataTypeœ:œFileœ,œidœ:œFile-JZzddœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-Kl7VQ{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-Kl7VQœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "File-JZzdd",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-JZzddœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "SplitText-Kl7VQ",
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-Kl7VQœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-rAbUh",
+            "id": "SplitText-Kl7VQ",
             "name": "chunks",
             "output_types": [
               "Data"
@@ -120,25 +120,25 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "AstraVectorStoreComponent-6hNSy",
+            "id": "AstraVectorStoreComponent-EUhWZ",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-SplitText-rAbUh{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-rAbUhœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraVectorStoreComponent-6hNSy{œfieldNameœ:œingest_dataœ,œidœ:œAstraVectorStoreComponent-6hNSyœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "SplitText-rAbUh",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-rAbUhœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
-        "target": "AstraVectorStoreComponent-6hNSy",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraVectorStoreComponent-6hNSyœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-SplitText-Kl7VQ{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-Kl7VQœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraVectorStoreComponent-EUhWZ{œfieldNameœ:œingest_dataœ,œidœ:œAstraVectorStoreComponent-EUhWZœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "SplitText-Kl7VQ",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-Kl7VQœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
+        "target": "AstraVectorStoreComponent-EUhWZ",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraVectorStoreComponent-EUhWZœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-hLfqb",
+            "id": "OpenAIEmbeddings-Mf9md",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -146,26 +146,25 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "AstraVectorStoreComponent-6hNSy",
+            "id": "AstraVectorStoreComponent-EUhWZ",
             "inputTypes": [
-              "Embeddings",
-              "dict"
+              "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-hLfqb{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-hLfqbœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraVectorStoreComponent-6hNSy{œfieldNameœ:œembeddingœ,œidœ:œAstraVectorStoreComponent-6hNSyœ,œinputTypesœ:[œEmbeddingsœ,œdictœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-hLfqb",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-hLfqbœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraVectorStoreComponent-6hNSy",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraVectorStoreComponent-6hNSyœ, œinputTypesœ: [œEmbeddingsœ, œdictœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-OpenAIEmbeddings-Mf9md{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-Mf9mdœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraVectorStoreComponent-EUhWZ{œfieldNameœ:œembeddingœ,œidœ:œAstraVectorStoreComponent-EUhWZœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-Mf9md",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-Mf9mdœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraVectorStoreComponent-EUhWZ",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraVectorStoreComponent-EUhWZœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-OhWJM",
+            "id": "OpenAIEmbeddings-q2lBh",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -173,26 +172,25 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "AstraVectorStoreComponent-XE3MH",
+            "id": "AstraVectorStoreComponent-0WT85",
             "inputTypes": [
-              "Embeddings",
-              "dict"
+              "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-OhWJM{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-OhWJMœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraVectorStoreComponent-XE3MH{œfieldNameœ:œembeddingœ,œidœ:œAstraVectorStoreComponent-XE3MHœ,œinputTypesœ:[œEmbeddingsœ,œdictœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-OhWJM",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-OhWJMœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraVectorStoreComponent-XE3MH",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraVectorStoreComponent-XE3MHœ, œinputTypesœ: [œEmbeddingsœ, œdictœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-OpenAIEmbeddings-q2lBh{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-q2lBhœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraVectorStoreComponent-0WT85{œfieldNameœ:œembeddingœ,œidœ:œAstraVectorStoreComponent-0WT85œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-q2lBh",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-q2lBhœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraVectorStoreComponent-0WT85",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraVectorStoreComponent-0WT85œ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-Tfriy",
+            "id": "Prompt-oJ8Eh",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -200,25 +198,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-ExXPZ",
+            "id": "OpenAIModel-3v8LQ",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-Tfriy{œdataTypeœ:œPromptœ,œidœ:œPrompt-Tfriyœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-ExXPZ{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ExXPZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-Tfriy",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Tfriyœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-ExXPZ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-ExXPZœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-oJ8Eh{œdataTypeœ:œPromptœ,œidœ:œPrompt-oJ8Ehœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-3v8LQ{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-3v8LQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-oJ8Eh",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-oJ8Ehœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-3v8LQ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-3v8LQœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-ExXPZ",
+            "id": "OpenAIModel-3v8LQ",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -226,25 +224,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-Mh7FA",
+            "id": "ChatOutput-oPZbw",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-ExXPZ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ExXPZœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Mh7FA{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Mh7FAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-ExXPZ",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-ExXPZœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-Mh7FA",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Mh7FAœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-3v8LQ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-3v8LQœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-oPZbw{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-oPZbwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-3v8LQ",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-3v8LQœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-oPZbw",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-oPZbwœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "AstraVectorStoreComponent",
-            "id": "AstraVectorStoreComponent-XE3MH",
+            "id": "AstraVectorStoreComponent-0WT85",
             "name": "search_results",
             "output_types": [
               "Data"
@@ -252,18 +250,18 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-ILuxa",
+            "id": "ParseData-f6Jhl",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AstraVectorStoreComponent-XE3MH{œdataTypeœ:œAstraVectorStoreComponentœ,œidœ:œAstraVectorStoreComponent-XE3MHœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-ILuxa{œfieldNameœ:œdataœ,œidœ:œParseData-ILuxaœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "AstraVectorStoreComponent-XE3MH",
-        "sourceHandle": "{œdataTypeœ: œAstraVectorStoreComponentœ, œidœ: œAstraVectorStoreComponent-XE3MHœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-ILuxa",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-ILuxaœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-AstraVectorStoreComponent-0WT85{œdataTypeœ:œAstraVectorStoreComponentœ,œidœ:œAstraVectorStoreComponent-0WT85œ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-f6Jhl{œfieldNameœ:œdataœ,œidœ:œParseData-f6Jhlœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "AstraVectorStoreComponent-0WT85",
+        "sourceHandle": "{œdataTypeœ: œAstraVectorStoreComponentœ, œidœ: œAstraVectorStoreComponent-0WT85œ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-f6Jhl",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-f6Jhlœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -271,7 +269,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-DFgo2",
+          "id": "ChatInput-jvvNM",
           "node": {
             "base_classes": [
               "Message"
@@ -293,6 +291,7 @@
             ],
             "frozen": false,
             "icon": "ChatInput",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -326,7 +325,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output\nfrom langflow.memory import store_message\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, MESSAGE_SENDER_NAME_USER\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n    name = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n        )\n\n        if (\n            self.session_id\n            and isinstance(message, Message)\n            and isinstance(message.text, str)\n            and self.should_store_message\n        ):\n            store_message(\n                message,\n                flow_id=self.graph.flow_id,\n            )\n            self.message.value = message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output\nfrom langflow.memory import store_message\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n    name = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n        )\n\n        if (\n            self.session_id\n            and isinstance(message, Message)\n            and isinstance(message.text, str)\n            and self.should_store_message\n        ):\n            store_message(\n                message,\n                flow_id=self.graph.flow_id,\n            )\n            self.message.value = message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "advanced": true,
@@ -468,8 +467,8 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 302,
-        "id": "ChatInput-DFgo2",
+        "height": 297,
+        "id": "ChatInput-jvvNM",
         "position": {
           "x": 642.3545710150049,
           "y": 220.22556606238678
@@ -484,10 +483,10 @@
       },
       {
         "data": {
-          "description": "Implementation of Vector Store using Astra DB with search capabilities",
+          "description": "💡 Select a Database and a Collection, or create new ones. \n\n*If you're using OS Langflow, Paste your Astra DB Application Token here.*",
           "display_name": "Astra DB",
           "edited": false,
-          "id": "AstraVectorStoreComponent-XE3MH",
+          "id": "AstraVectorStoreComponent-0WT85",
           "node": {
             "base_classes": [
               "Data",
@@ -496,9 +495,9 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Implementation of Vector Store using Astra DB with search capabilities",
+            "description": "💡 Select a Database and a Collection, or create new ones. \n\n*If you're using OS Langflow, Paste your Astra DB Application Token here.*",
             "display_name": "Astra DB",
-            "documentation": "https://python.langchain.com/docs/integrations/vectorstores/astradb",
+            "documentation": "https://docs.langflow.org/starter-projects-vector-store-rag",
             "edited": false,
             "field_order": [
               "collection_name",
@@ -525,6 +524,7 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -532,6 +532,7 @@
                 "display_name": "Retriever",
                 "method": "build_base_retriever",
                 "name": "base_retriever",
+                "required_inputs": [],
                 "selected": "Retriever",
                 "types": [
                   "Retriever"
@@ -543,6 +544,29 @@
                 "display_name": "Search Results",
                 "method": "search_documents",
                 "name": "search_results",
+                "required_inputs": [
+                  "api_endpoint",
+                  "batch_size",
+                  "bulk_delete_concurrency",
+                  "bulk_insert_batch_concurrency",
+                  "bulk_insert_overwrite_concurrency",
+                  "collection_indexing_policy",
+                  "collection_name",
+                  "embedding",
+                  "ingest_data",
+                  "metadata_indexing_exclude",
+                  "metadata_indexing_include",
+                  "metric",
+                  "namespace",
+                  "number_of_results",
+                  "pre_delete_collection",
+                  "search_filter",
+                  "search_input",
+                  "search_score_threshold",
+                  "search_type",
+                  "setup_mode",
+                  "token"
+                ],
                 "selected": "Data",
                 "types": [
                   "Data"
@@ -554,6 +578,7 @@
                 "display_name": "Vector Store",
                 "method": "cast_vector_store",
                 "name": "vector_store",
+                "required_inputs": [],
                 "selected": "VectorStore",
                 "types": [
                   "VectorStore"
@@ -658,7 +683,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from loguru import logger\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers import docs_to_data\nfrom langflow.inputs import DictInput, FloatInput\nfrom langflow.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    HandleInput,\n    IntInput,\n    MultilineInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AstraVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Implementation of Vector Store using Astra DB with search capabilities\"\n    documentation: str = \"https://python.langchain.com/docs/integrations/vectorstores/astradb\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"API Endpoint\",\n            info=\"API endpoint URL for the Astra DB service.\",\n            value=\"ASTRA_DB_API_ENDPOINT\",\n            required=True,\n        ),\n        MultilineInput(\n            name=\"search_input\",\n            display_name=\"Search Input\",\n        ),\n        DataInput(\n            name=\"ingest_data\",\n            display_name=\"Ingest Data\",\n            is_list=True,\n        ),\n        StrInput(\n            name=\"namespace\",\n            display_name=\"Namespace\",\n            info=\"Optional namespace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"metric\",\n            display_name=\"Metric\",\n            info=\"Optional distance metric for vector comparisons in the vector store.\",\n            options=[\"cosine\", \"dot_product\", \"euclidean\"],\n            advanced=True,\n        ),\n        IntInput(\n            name=\"batch_size\",\n            display_name=\"Batch Size\",\n            info=\"Optional number of data to process in a single batch.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_batch_concurrency\",\n            display_name=\"Bulk Insert Batch Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_overwrite_concurrency\",\n            display_name=\"Bulk Insert Overwrite Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_delete_concurrency\",\n            display_name=\"Bulk Delete Concurrency\",\n            info=\"Optional concurrency level for bulk delete operations.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"setup_mode\",\n            display_name=\"Setup Mode\",\n            info=\"Configuration mode for setting up the vector store, with options like 'Sync', 'Async', or 'Off'.\",\n            options=[\"Sync\", \"Async\", \"Off\"],\n            advanced=True,\n            value=\"Sync\",\n        ),\n        BoolInput(\n            name=\"pre_delete_collection\",\n            display_name=\"Pre Delete Collection\",\n            info=\"Boolean flag to determine whether to delete the collection before creating a new one.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"metadata_indexing_include\",\n            display_name=\"Metadata Indexing Include\",\n            info=\"Optional list of metadata fields to include in the indexing.\",\n            advanced=True,\n        ),\n        HandleInput(\n            name=\"embedding\",\n            display_name=\"Embedding or Astra Vectorize\",\n            input_types=[\"Embeddings\", \"dict\"],\n            info=\"Allows either an embedding model or an Astra Vectorize configuration.\",  # TODO: This should be optional, but need to refactor langchain-astradb first.\n        ),\n        StrInput(\n            name=\"metadata_indexing_exclude\",\n            display_name=\"Metadata Indexing Exclude\",\n            info=\"Optional list of metadata fields to exclude from the indexing.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"collection_indexing_policy\",\n            display_name=\"Collection Indexing Policy\",\n            info=\"Optional dictionary defining the indexing policy for the collection.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n\n    @check_cached_vector_store\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import SetupMode\n        except ImportError:\n            raise ImportError(\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n\n        try:\n            if not self.setup_mode:\n                self.setup_mode = self._inputs[\"setup_mode\"].options[0]\n\n            setup_mode_value = SetupMode[self.setup_mode.upper()]\n        except KeyError:\n            raise ValueError(f\"Invalid setup mode: {self.setup_mode}\")\n\n        if not isinstance(self.embedding, dict):\n            embedding_dict = {\"embedding\": self.embedding}\n        else:\n            from astrapy.info import CollectionVectorServiceOptions\n\n            dict_options = self.embedding.get(\"collection_vector_service_options\", {})\n            dict_options[\"authentication\"] = {\n                k: v for k, v in dict_options.get(\"authentication\", {}).items() if k and v\n            }\n            dict_options[\"parameters\"] = {k: v for k, v in dict_options.get(\"parameters\", {}).items() if k and v}\n            embedding_dict = {\n                \"collection_vector_service_options\": CollectionVectorServiceOptions.from_dict(dict_options)\n            }\n            collection_embedding_api_key = self.embedding.get(\"collection_embedding_api_key\")\n            if collection_embedding_api_key:\n                embedding_dict[\"collection_embedding_api_key\"] = collection_embedding_api_key\n\n        vector_store_kwargs = {\n            **embedding_dict,\n            \"collection_name\": self.collection_name,\n            \"token\": self.token,\n            \"api_endpoint\": self.api_endpoint,\n            \"namespace\": self.namespace or None,\n            \"metric\": self.metric or None,\n            \"batch_size\": self.batch_size or None,\n            \"bulk_insert_batch_concurrency\": self.bulk_insert_batch_concurrency or None,\n            \"bulk_insert_overwrite_concurrency\": self.bulk_insert_overwrite_concurrency or None,\n            \"bulk_delete_concurrency\": self.bulk_delete_concurrency or None,\n            \"setup_mode\": setup_mode_value,\n            \"pre_delete_collection\": self.pre_delete_collection or False,\n        }\n\n        if self.metadata_indexing_include:\n            vector_store_kwargs[\"metadata_indexing_include\"] = self.metadata_indexing_include\n        elif self.metadata_indexing_exclude:\n            vector_store_kwargs[\"metadata_indexing_exclude\"] = self.metadata_indexing_exclude\n        elif self.collection_indexing_policy:\n            vector_store_kwargs[\"collection_indexing_policy\"] = self.collection_indexing_policy\n\n        try:\n            vector_store = AstraDBVectorStore(**vector_store_kwargs)\n        except Exception as e:\n            raise ValueError(f\"Error initializing AstraDBVectorStore: {str(e)}\") from e\n\n        self._add_documents_to_vector_store(vector_store)\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store):\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                raise ValueError(\"Vector Store Inputs must be Data objects.\")\n\n        if documents:\n            logger.debug(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                raise ValueError(f\"Error adding documents to AstraDBVectorStore: {str(e)}\") from e\n        else:\n            logger.debug(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self):\n        if self.search_type == \"Similarity with score threshold\":\n            return \"similarity_score_threshold\"\n        elif self.search_type == \"MMR (Max Marginal Relevance)\":\n            return \"mmr\"\n        else:\n            return \"similarity\"\n\n    def _build_search_args(self):\n        args = {\n            \"k\": self.number_of_results,\n            \"score_threshold\": self.search_score_threshold,\n        }\n\n        if self.search_filter:\n            clean_filter = {k: v for k, v in self.search_filter.items() if k and v}\n            if len(clean_filter) > 0:\n                args[\"filter\"] = clean_filter\n        return args\n\n    def search_documents(self) -> list[Data]:\n        vector_store = self.build_vector_store()\n\n        logger.debug(f\"Search input: {self.search_input}\")\n        logger.debug(f\"Search type: {self.search_type}\")\n        logger.debug(f\"Number of results: {self.number_of_results}\")\n\n        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():\n            try:\n                search_type = self._map_search_type()\n                search_args = self._build_search_args()\n\n                docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)\n            except Exception as e:\n                raise ValueError(f\"Error performing search in AstraDBVectorStore: {str(e)}\") from e\n\n            logger.debug(f\"Retrieved documents: {len(docs)}\")\n\n            data = docs_to_data(docs)\n            logger.debug(f\"Converted documents to data: {len(data)}\")\n            self.status = data\n            return data\n        else:\n            logger.debug(\"No search input provided. Skipping search.\")\n            return []\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
+                "value": "import os\n\nfrom astrapy.admin import parse_api_endpoint\nfrom loguru import logger\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers import docs_to_data\nfrom langflow.inputs import DictInput, FloatInput, MessageTextInput\nfrom langflow.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    HandleInput,\n    IntInput,\n    MultilineInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AstraVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Implementation of Vector Store using Astra DB with search capabilities\"\n    documentation: str = \"https://docs.langflow.org/starter-projects-vector-store-rag\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    VECTORIZE_PROVIDERS_MAPPING = {\n        \"Azure OpenAI\": [\"azureOpenAI\", [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"]],\n        \"Hugging Face - Dedicated\": [\"huggingfaceDedicated\", [\"endpoint-defined-model\"]],\n        \"Hugging Face - Serverless\": [\n            \"huggingface\",\n            [\n                \"sentence-transformers/all-MiniLM-L6-v2\",\n                \"intfloat/multilingual-e5-large\",\n                \"intfloat/multilingual-e5-large-instruct\",\n                \"BAAI/bge-small-en-v1.5\",\n                \"BAAI/bge-base-en-v1.5\",\n                \"BAAI/bge-large-en-v1.5\",\n            ],\n        ],\n        \"Jina AI\": [\n            \"jinaAI\",\n            [\n                \"jina-embeddings-v2-base-en\",\n                \"jina-embeddings-v2-base-de\",\n                \"jina-embeddings-v2-base-es\",\n                \"jina-embeddings-v2-base-code\",\n                \"jina-embeddings-v2-base-zh\",\n            ],\n        ],\n        \"Mistral AI\": [\"mistral\", [\"mistral-embed\"]],\n        \"NVIDIA\": [\"nvidia\", [\"NV-Embed-QA\"]],\n        \"OpenAI\": [\"openai\", [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"]],\n        \"Upstage\": [\"upstageAI\", [\"solar-embedding-1-large\"]],\n        \"Voyage AI\": [\n            \"voyageAI\",\n            [\"voyage-large-2-instruct\", \"voyage-law-2\", \"voyage-code-2\", \"voyage-large-2\", \"voyage-2\"],\n        ],\n    }\n\n    inputs = [\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n            required=True,\n            advanced=os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\",\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"Database\" if os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\" else \"API Endpoint\",\n            info=\"API endpoint URL for the Astra DB service.\",\n            value=\"ASTRA_DB_API_ENDPOINT\",\n            required=True,\n        ),\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n            required=True,\n        ),\n        MultilineInput(\n            name=\"search_input\",\n            display_name=\"Search Input\",\n        ),\n        DataInput(\n            name=\"ingest_data\",\n            display_name=\"Ingest Data\",\n            is_list=True,\n        ),\n        StrInput(\n            name=\"namespace\",\n            display_name=\"Namespace\",\n            info=\"Optional namespace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"embedding_service\",\n            display_name=\"Embedding Model or Astra Vectorize\",\n            info=\"Determines whether to use Astra Vectorize for the collection.\",\n            options=[\"Embedding Model\", \"Astra Vectorize\"],\n            real_time_refresh=True,\n            value=\"Embedding Model\",\n        ),\n        HandleInput(\n            name=\"embedding\",\n            display_name=\"Embedding Model\",\n            input_types=[\"Embeddings\"],\n            info=\"Allows an embedding model configuration.\",\n        ),\n        DropdownInput(\n            name=\"metric\",\n            display_name=\"Metric\",\n            info=\"Optional distance metric for vector comparisons in the vector store.\",\n            options=[\"cosine\", \"dot_product\", \"euclidean\"],\n            advanced=True,\n        ),\n        IntInput(\n            name=\"batch_size\",\n            display_name=\"Batch Size\",\n            info=\"Optional number of data to process in a single batch.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_batch_concurrency\",\n            display_name=\"Bulk Insert Batch Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_overwrite_concurrency\",\n            display_name=\"Bulk Insert Overwrite Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_delete_concurrency\",\n            display_name=\"Bulk Delete Concurrency\",\n            info=\"Optional concurrency level for bulk delete operations.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"setup_mode\",\n            display_name=\"Setup Mode\",\n            info=\"Configuration mode for setting up the vector store, with options like 'Sync', 'Async', or 'Off'.\",\n            options=[\"Sync\", \"Async\", \"Off\"],\n            advanced=True,\n            value=\"Sync\",\n        ),\n        BoolInput(\n            name=\"pre_delete_collection\",\n            display_name=\"Pre Delete Collection\",\n            info=\"Boolean flag to determine whether to delete the collection before creating a new one.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"metadata_indexing_include\",\n            display_name=\"Metadata Indexing Include\",\n            info=\"Optional list of metadata fields to include in the indexing.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"metadata_indexing_exclude\",\n            display_name=\"Metadata Indexing Exclude\",\n            info=\"Optional list of metadata fields to exclude from the indexing.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"collection_indexing_policy\",\n            display_name=\"Collection Indexing Policy\",\n            info=\"Optional dictionary defining the indexing policy for the collection.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n\n    def insert_in_dict(self, build_config, field_name, new_parameters):\n        # Insert the new key-value pair after the found key\n        for new_field_name, new_parameter in new_parameters.items():\n            # Get all the items as a list of tuples (key, value)\n            items = list(build_config.items())\n\n            # Find the index of the key to insert after\n            idx = len(items)\n            for i, (key, _value) in enumerate(items):\n                if key == field_name:\n                    idx = i + 1\n                    break\n\n            items.insert(idx, (new_field_name, new_parameter))\n\n            # Clear the original dictionary and update with the modified items\n            build_config.clear()\n            build_config.update(items)\n\n        return build_config\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        if field_name == \"embedding_service\":\n            if field_value == \"Astra Vectorize\":\n                for field in [\"embedding\"]:\n                    if field in build_config:\n                        del build_config[field]\n\n                new_parameter = DropdownInput(\n                    name=\"provider\",\n                    display_name=\"Vectorize Provider\",\n                    options=self.VECTORIZE_PROVIDERS_MAPPING.keys(),\n                    value=\"\",\n                    required=True,\n                    real_time_refresh=True,\n                ).to_dict()\n\n                self.insert_in_dict(build_config, \"embedding_service\", {\"provider\": new_parameter})\n            else:\n                for field in [\n                    \"provider\",\n                    \"z_00_model_name\",\n                    \"z_01_model_parameters\",\n                    \"z_02_api_key_name\",\n                    \"z_03_provider_api_key\",\n                    \"z_04_authentication\",\n                ]:\n                    if field in build_config:\n                        del build_config[field]\n\n                new_parameter = HandleInput(\n                    name=\"embedding\",\n                    display_name=\"Embedding Model\",\n                    input_types=[\"Embeddings\"],\n                    info=\"Allows an embedding model configuration.\",\n                ).to_dict()\n\n                self.insert_in_dict(build_config, \"embedding_service\", {\"embedding\": new_parameter})\n\n        elif field_name == \"provider\":\n            for field in [\n                \"z_00_model_name\",\n                \"z_01_model_parameters\",\n                \"z_02_api_key_name\",\n                \"z_03_provider_api_key\",\n                \"z_04_authentication\",\n            ]:\n                if field in build_config:\n                    del build_config[field]\n\n            model_options = self.VECTORIZE_PROVIDERS_MAPPING[field_value][1]\n\n            new_parameter_0 = DropdownInput(\n                name=\"z_00_model_name\",\n                display_name=\"Model Name\",\n                info=\"The embedding model to use for the selected provider. Each provider has a different set of \"\n                \"models available (full list at \"\n                \"https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\\n\\n\"\n                f\"{', '.join(model_options)}\",\n                options=model_options,\n                required=True,\n            ).to_dict()\n\n            new_parameter_1 = DictInput(\n                name=\"z_01_model_parameters\",\n                display_name=\"Model Parameters\",\n                is_list=True,\n            ).to_dict()\n\n            new_parameter_2 = MessageTextInput(\n                name=\"z_02_api_key_name\",\n                display_name=\"API Key name\",\n                info=\"The name of the embeddings provider API key stored on Astra. \"\n                \"If set, it will override the 'ProviderKey' in the authentication parameters.\",\n            ).to_dict()\n\n            new_parameter_3 = SecretStrInput(\n                name=\"z_03_provider_api_key\",\n                display_name=\"Provider API Key\",\n                info=\"An alternative to the Astra Authentication that passes an API key for the provider \"\n                \"with each request to Astra DB. \"\n                \"This may be used when Vectorize is configured for the collection, \"\n                \"but no corresponding provider secret is stored within Astra's key management system.\",\n            ).to_dict()\n\n            new_parameter_4 = DictInput(\n                name=\"z_04_authentication\",\n                display_name=\"Authentication parameters\",\n                is_list=True,\n            ).to_dict()\n\n            self.insert_in_dict(\n                build_config,\n                \"provider\",\n                {\n                    \"z_00_model_name\": new_parameter_0,\n                    \"z_01_model_parameters\": new_parameter_1,\n                    \"z_02_api_key_name\": new_parameter_2,\n                    \"z_03_provider_api_key\": new_parameter_3,\n                    \"z_04_authentication\": new_parameter_4,\n                },\n            )\n\n        return build_config\n\n    def build_vectorize_options(self, **kwargs):\n        for attribute in [\n            \"provider\",\n            \"z_00_model_name\",\n            \"z_01_model_parameters\",\n            \"z_02_api_key_name\",\n            \"z_03_provider_api_key\",\n            \"z_04_authentication\",\n        ]:\n            if not hasattr(self, attribute):\n                setattr(self, attribute, None)\n\n        # Fetch values from kwargs if any self.* attributes are None\n        provider_value = self.VECTORIZE_PROVIDERS_MAPPING.get(self.provider, [None])[0] or kwargs.get(\"provider\")\n        authentication = {**(self.z_04_authentication or kwargs.get(\"z_04_authentication\", {}))}\n\n        api_key_name = self.z_02_api_key_name or kwargs.get(\"z_02_api_key_name\")\n        provider_key = self.z_03_provider_api_key or kwargs.get(\"z_03_provider_api_key\")\n        if api_key_name:\n            authentication[\"providerKey\"] = api_key_name\n\n        return {\n            # must match astrapy.info.CollectionVectorServiceOptions\n            \"collection_vector_service_options\": {\n                \"provider\": provider_value,\n                \"modelName\": self.z_00_model_name or kwargs.get(\"z_00_model_name\"),\n                \"authentication\": authentication,\n                \"parameters\": self.z_01_model_parameters or kwargs.get(\"z_01_model_parameters\", {}),\n            },\n            \"collection_embedding_api_key\": provider_key,\n        }\n\n    @check_cached_vector_store\n    def build_vector_store(self, vectorize_options=None):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import SetupMode\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        try:\n            if not self.setup_mode:\n                self.setup_mode = self._inputs[\"setup_mode\"].options[0]\n\n            setup_mode_value = SetupMode[self.setup_mode.upper()]\n        except KeyError as e:\n            msg = f\"Invalid setup mode: {self.setup_mode}\"\n            raise ValueError(msg) from e\n\n        if self.embedding:\n            embedding_dict = {\"embedding\": self.embedding}\n        else:\n            from astrapy.info import CollectionVectorServiceOptions\n\n            dict_options = vectorize_options or self.build_vectorize_options()\n            dict_options[\"authentication\"] = {\n                k: v for k, v in dict_options.get(\"authentication\", {}).items() if k and v\n            }\n            dict_options[\"parameters\"] = {k: v for k, v in dict_options.get(\"parameters\", {}).items() if k and v}\n\n            embedding_dict = {\n                \"collection_vector_service_options\": CollectionVectorServiceOptions.from_dict(\n                    dict_options.get(\"collection_vector_service_options\", {})\n                ),\n            }\n\n        vector_store_kwargs = {\n            **embedding_dict,\n            \"collection_name\": self.collection_name,\n            \"token\": self.token,\n            \"api_endpoint\": self.api_endpoint,\n            \"namespace\": self.namespace or None,\n            \"environment\": parse_api_endpoint(self.api_endpoint).environment,\n            \"metric\": self.metric or None,\n            \"batch_size\": self.batch_size or None,\n            \"bulk_insert_batch_concurrency\": self.bulk_insert_batch_concurrency or None,\n            \"bulk_insert_overwrite_concurrency\": self.bulk_insert_overwrite_concurrency or None,\n            \"bulk_delete_concurrency\": self.bulk_delete_concurrency or None,\n            \"setup_mode\": setup_mode_value,\n            \"pre_delete_collection\": self.pre_delete_collection or False,\n        }\n\n        if self.metadata_indexing_include:\n            vector_store_kwargs[\"metadata_indexing_include\"] = self.metadata_indexing_include\n        elif self.metadata_indexing_exclude:\n            vector_store_kwargs[\"metadata_indexing_exclude\"] = self.metadata_indexing_exclude\n        elif self.collection_indexing_policy:\n            vector_store_kwargs[\"collection_indexing_policy\"] = self.collection_indexing_policy\n\n        try:\n            vector_store = AstraDBVectorStore(**vector_store_kwargs)\n        except Exception as e:\n            msg = f\"Error initializing AstraDBVectorStore: {str(e)}\"\n            raise ValueError(msg) from e\n\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store):\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise ValueError(msg)\n\n        if documents:\n            logger.debug(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {str(e)}\"\n                raise ValueError(msg) from e\n        else:\n            logger.debug(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self):\n        if self.search_type == \"Similarity with score threshold\":\n            return \"similarity_score_threshold\"\n        if self.search_type == \"MMR (Max Marginal Relevance)\":\n            return \"mmr\"\n        return \"similarity\"\n\n    def _build_search_args(self):\n        args = {\n            \"k\": self.number_of_results,\n            \"score_threshold\": self.search_score_threshold,\n        }\n\n        if self.search_filter:\n            clean_filter = {k: v for k, v in self.search_filter.items() if k and v}\n            if len(clean_filter) > 0:\n                args[\"filter\"] = clean_filter\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        if not vector_store:\n            vector_store = self.build_vector_store()\n\n        logger.debug(f\"Search input: {self.search_input}\")\n        logger.debug(f\"Search type: {self.search_type}\")\n        logger.debug(f\"Number of results: {self.number_of_results}\")\n\n        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():\n            try:\n                search_type = self._map_search_type()\n                search_args = self._build_search_args()\n\n                docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)\n            except Exception as e:\n                msg = f\"Error performing search in AstraDBVectorStore: {str(e)}\"\n                raise ValueError(msg) from e\n\n            logger.debug(f\"Retrieved documents: {len(docs)}\")\n\n            data = docs_to_data(docs)\n            logger.debug(f\"Converted documents to data: {len(data)}\")\n            self.status = data\n            return data\n        logger.debug(\"No search input provided. Skipping search.\")\n        return []\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
               },
               "collection_indexing_policy": {
                 "advanced": true,
@@ -694,12 +719,11 @@
               },
               "embedding": {
                 "advanced": false,
-                "display_name": "Embedding or Astra Vectorize",
+                "display_name": "Embedding Model",
                 "dynamic": false,
-                "info": "Allows either an embedding model or an Astra Vectorize configuration.",
+                "info": "Allows an embedding model configuration.",
                 "input_types": [
-                  "Embeddings",
-                  "dict"
+                  "Embeddings"
                 ],
                 "list": false,
                 "name": "embedding",
@@ -710,6 +734,27 @@
                 "trace_as_metadata": true,
                 "type": "other",
                 "value": ""
+              },
+              "embedding_service": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "Embedding Model or Astra Vectorize",
+                "dynamic": false,
+                "info": "Determines whether to use Astra Vectorize for the collection.",
+                "name": "embedding_service",
+                "options": [
+                  "Embedding Model",
+                  "Astra Vectorize"
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Embedding Model"
               },
               "ingest_data": {
                 "advanced": false,
@@ -939,8 +984,8 @@
           "type": "AstraVectorStoreComponent"
         },
         "dragging": false,
-        "height": 774,
-        "id": "AstraVectorStoreComponent-XE3MH",
+        "height": 837,
+        "id": "AstraVectorStoreComponent-0WT85",
         "position": {
           "x": 1246.0381406498648,
           "y": 333.25157075413966
@@ -949,7 +994,7 @@
           "x": 1246.0381406498648,
           "y": 333.25157075413966
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 384
       },
@@ -957,7 +1002,7 @@
         "data": {
           "description": "Convert Data into plain text following a specified template.",
           "display_name": "Parse Data",
-          "id": "ParseData-ILuxa",
+          "id": "ParseData-f6Jhl",
           "node": {
             "base_classes": [
               "Message"
@@ -976,6 +1021,7 @@
             ],
             "frozen": false,
             "icon": "braces",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1009,7 +1055,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Parse Data\"\n    description = \"Convert Data into plain text following a specified template.\"\n    icon = \"braces\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\"),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"parse_data\"),\n    ]\n\n    def parse_data(self) -> Message:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n\n        result_string = data_to_text(template, data, sep=self.sep)\n        self.status = result_string\n        return Message(text=result_string)\n"
+                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Parse Data\"\n    description = \"Convert Data into plain text following a specified template.\"\n    icon = \"braces\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\"),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"parse_data\"),\n    ]\n\n    def parse_data(self) -> Message:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n\n        result_string = data_to_text(template, data, sep=self.sep)\n        self.status = result_string\n        return Message(text=result_string)\n"
               },
               "data": {
                 "advanced": false,
@@ -1072,8 +1118,8 @@
           "type": "ParseData"
         },
         "dragging": false,
-        "height": 378,
-        "id": "ParseData-ILuxa",
+        "height": 369,
+        "id": "ParseData-f6Jhl",
         "position": {
           "x": 1854.1518317915907,
           "y": 459.3386924128532
@@ -1090,7 +1136,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-Tfriy",
+          "id": "Prompt-oJ8Eh",
           "node": {
             "base_classes": [
               "Message"
@@ -1112,6 +1158,7 @@
             ],
             "frozen": false,
             "icon": "prompts",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1216,8 +1263,8 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 502,
-        "id": "Prompt-Tfriy",
+        "height": 497,
+        "id": "Prompt-oJ8Eh",
         "position": {
           "x": 2486.0988668404975,
           "y": 496.5120474157301
@@ -1232,9 +1279,9 @@
       },
       {
         "data": {
-          "description": "Display a chat message in the Playground.",
+          "description": "Display a chat message in the Playground. \n💡 Click the ▶️ to run the flow",
           "display_name": "Chat Output",
-          "id": "ChatOutput-Mh7FA",
+          "id": "ChatOutput-oPZbw",
           "node": {
             "base_classes": [
               "Message"
@@ -1242,7 +1289,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Display a chat message in the Playground.",
+            "description": "Display a chat message in the Playground. \n💡 Click the ▶️ to run the flow",
             "display_name": "Chat Output",
             "documentation": "",
             "edited": false,
@@ -1256,6 +1303,7 @@
             ],
             "frozen": false,
             "icon": "ChatOutput",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1409,8 +1457,8 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 302,
-        "id": "ChatOutput-Mh7FA",
+        "height": 297,
+        "id": "ChatOutput-oPZbw",
         "position": {
           "x": 3769.242086248817,
           "y": 585.3403837062634
@@ -1427,7 +1475,7 @@
         "data": {
           "description": "Split text into chunks based on specified criteria.",
           "display_name": "Split Text",
-          "id": "SplitText-rAbUh",
+          "id": "SplitText-Kl7VQ",
           "node": {
             "base_classes": [
               "Data"
@@ -1447,6 +1495,7 @@
             ],
             "frozen": false,
             "icon": "scissors-line-dashed",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1510,7 +1559,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import List\n\nfrom langchain_text_splitters import CharacterTextSplitter\n\nfrom langflow.custom import Component\nfrom langflow.io import HandleInput, IntInput, MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.utils.util import unescape_string\n\n\nclass SplitTextComponent(Component):\n    display_name: str = \"Split Text\"\n    description: str = \"Split text into chunks based on specified criteria.\"\n    icon = \"scissors-line-dashed\"\n    name = \"SplitText\"\n\n    inputs = [\n        HandleInput(\n            name=\"data_inputs\",\n            display_name=\"Data Inputs\",\n            info=\"The data to split.\",\n            input_types=[\"Data\"],\n            is_list=True,\n        ),\n        IntInput(\n            name=\"chunk_overlap\",\n            display_name=\"Chunk Overlap\",\n            info=\"Number of characters to overlap between chunks.\",\n            value=200,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            info=\"The maximum number of characters in each chunk.\",\n            value=1000,\n        ),\n        MessageTextInput(\n            name=\"separator\",\n            display_name=\"Separator\",\n            info=\"The character to split on. Defaults to newline.\",\n            value=\"\\n\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Chunks\", name=\"chunks\", method=\"split_text\"),\n    ]\n\n    def _docs_to_data(self, docs):\n        data = []\n        for doc in docs:\n            data.append(Data(text=doc.page_content, data=doc.metadata))\n        return data\n\n    def split_text(self) -> List[Data]:\n        separator = unescape_string(self.separator)\n\n        documents = []\n        for _input in self.data_inputs:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n\n        splitter = CharacterTextSplitter(\n            chunk_overlap=self.chunk_overlap,\n            chunk_size=self.chunk_size,\n            separator=separator,\n        )\n        docs = splitter.split_documents(documents)\n        data = self._docs_to_data(docs)\n        self.status = data\n        return data\n"
+                "value": "from langchain_text_splitters import CharacterTextSplitter\n\nfrom langflow.custom import Component\nfrom langflow.io import HandleInput, IntInput, MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.utils.util import unescape_string\n\n\nclass SplitTextComponent(Component):\n    display_name: str = \"Split Text\"\n    description: str = \"Split text into chunks based on specified criteria.\"\n    icon = \"scissors-line-dashed\"\n    name = \"SplitText\"\n\n    inputs = [\n        HandleInput(\n            name=\"data_inputs\",\n            display_name=\"Data Inputs\",\n            info=\"The data to split.\",\n            input_types=[\"Data\"],\n            is_list=True,\n        ),\n        IntInput(\n            name=\"chunk_overlap\",\n            display_name=\"Chunk Overlap\",\n            info=\"Number of characters to overlap between chunks.\",\n            value=200,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            info=\"The maximum number of characters in each chunk.\",\n            value=1000,\n        ),\n        MessageTextInput(\n            name=\"separator\",\n            display_name=\"Separator\",\n            info=\"The character to split on. Defaults to newline.\",\n            value=\"\\n\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Chunks\", name=\"chunks\", method=\"split_text\"),\n    ]\n\n    def _docs_to_data(self, docs):\n        data = []\n        for doc in docs:\n            data.append(Data(text=doc.page_content, data=doc.metadata))\n        return data\n\n    def split_text(self) -> list[Data]:\n        separator = unescape_string(self.separator)\n\n        documents = []\n        for _input in self.data_inputs:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n\n        splitter = CharacterTextSplitter(\n            chunk_overlap=self.chunk_overlap,\n            chunk_size=self.chunk_size,\n            separator=separator,\n        )\n        docs = splitter.split_documents(documents)\n        data = self._docs_to_data(docs)\n        self.status = data\n        return data\n"
               },
               "data_inputs": {
                 "advanced": false,
@@ -1555,8 +1604,8 @@
           "type": "SplitText"
         },
         "dragging": false,
-        "height": 550,
-        "id": "SplitText-rAbUh",
+        "height": 541,
+        "id": "SplitText-Kl7VQ",
         "position": {
           "x": 2044.2799160989089,
           "y": 1185.3130355818519
@@ -1571,9 +1620,9 @@
       },
       {
         "data": {
-          "description": "A generic file loader.",
+          "description": "💡 Load a PDF file from your local machine.",
           "display_name": "File",
-          "id": "File-TBV93",
+          "id": "File-JZzdd",
           "node": {
             "base_classes": [
               "Data"
@@ -1581,7 +1630,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "A generic file loader.",
+            "description": "💡 Load a PDF file from your local machine.",
             "display_name": "File",
             "documentation": "",
             "edited": false,
@@ -1591,6 +1640,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1624,7 +1674,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from pathlib import Path\n\nfrom langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_data\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, FileInput, Output\nfrom langflow.schema import Data\n\n\nclass FileComponent(Component):\n    display_name = \"File\"\n    description = \"A generic file loader.\"\n    icon = \"file-text\"\n    name = \"File\"\n\n    inputs = [\n        FileInput(\n            name=\"path\",\n            display_name=\"Path\",\n            file_types=TEXT_FILE_TYPES,\n            info=f\"Supported file types: {', '.join(TEXT_FILE_TYPES)}\",\n        ),\n        BoolInput(\n            name=\"silent_errors\",\n            display_name=\"Silent Errors\",\n            advanced=True,\n            info=\"If true, errors will not raise an exception.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"load_file\"),\n    ]\n\n    def load_file(self) -> Data:\n        if not self.path:\n            raise ValueError(\"Please, upload a file to use this component.\")\n        resolved_path = self.resolve_path(self.path)\n        silent_errors = self.silent_errors\n\n        extension = Path(resolved_path).suffix[1:].lower()\n\n        if extension == \"doc\":\n            raise ValueError(\"doc files are not supported. Please save as .docx\")\n        if extension not in TEXT_FILE_TYPES:\n            raise ValueError(f\"Unsupported file type: {extension}\")\n\n        data = parse_text_file_to_data(resolved_path, silent_errors)\n        self.status = data if data else \"No data\"\n        return data or Data()\n"
+                "value": "from pathlib import Path\n\nfrom langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_data\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, FileInput, Output\nfrom langflow.schema import Data\n\n\nclass FileComponent(Component):\n    display_name = \"File\"\n    description = \"A generic file loader.\"\n    icon = \"file-text\"\n    name = \"File\"\n\n    inputs = [\n        FileInput(\n            name=\"path\",\n            display_name=\"Path\",\n            file_types=TEXT_FILE_TYPES,\n            info=f\"Supported file types: {', '.join(TEXT_FILE_TYPES)}\",\n        ),\n        BoolInput(\n            name=\"silent_errors\",\n            display_name=\"Silent Errors\",\n            advanced=True,\n            info=\"If true, errors will not raise an exception.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"load_file\"),\n    ]\n\n    def load_file(self) -> Data:\n        if not self.path:\n            msg = \"Please, upload a file to use this component.\"\n            raise ValueError(msg)\n        resolved_path = self.resolve_path(self.path)\n        silent_errors = self.silent_errors\n\n        extension = Path(resolved_path).suffix[1:].lower()\n\n        if extension == \"doc\":\n            msg = \"doc files are not supported. Please save as .docx\"\n            raise ValueError(msg)\n        if extension not in TEXT_FILE_TYPES:\n            msg = f\"Unsupported file type: {extension}\"\n            raise ValueError(msg)\n\n        data = parse_text_file_to_data(resolved_path, silent_errors)\n        self.status = data if data else \"No data\"\n        return data or Data()\n"
               },
               "path": {
                 "advanced": false,
@@ -1682,8 +1732,8 @@
           "type": "File"
         },
         "dragging": false,
-        "height": 302,
-        "id": "File-TBV93",
+        "height": 297,
+        "id": "File-JZzdd",
         "position": {
           "x": 1418.981990122179,
           "y": 1539.3825691184466
@@ -1698,10 +1748,10 @@
       },
       {
         "data": {
-          "description": "Implementation of Vector Store using Astra DB with search capabilities",
+          "description": "💡 Select a Database and a Collection, or create new ones. Click  ▶️ **Play** to load your data.*If you're using OS Langflow, Paste your Astra DB Application Token here.*",
           "display_name": "Astra DB",
           "edited": false,
-          "id": "AstraVectorStoreComponent-6hNSy",
+          "id": "AstraVectorStoreComponent-EUhWZ",
           "node": {
             "base_classes": [
               "Data",
@@ -1710,9 +1760,9 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Implementation of Vector Store using Astra DB with search capabilities",
+            "description": "💡 Select a Database and a Collection, or create new ones. Click ▶️ **Play** to load your data.*If you're using OS Langflow, Paste your Astra DB Application Token here.*",
             "display_name": "Astra DB",
-            "documentation": "https://python.langchain.com/docs/integrations/vectorstores/astradb",
+            "documentation": "https://docs.langflow.org/starter-projects-vector-store-rag",
             "edited": false,
             "field_order": [
               "collection_name",
@@ -1739,6 +1789,7 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1746,6 +1797,7 @@
                 "display_name": "Retriever",
                 "method": "build_base_retriever",
                 "name": "base_retriever",
+                "required_inputs": [],
                 "selected": "Retriever",
                 "types": [
                   "Retriever"
@@ -1757,6 +1809,29 @@
                 "display_name": "Search Results",
                 "method": "search_documents",
                 "name": "search_results",
+                "required_inputs": [
+                  "api_endpoint",
+                  "batch_size",
+                  "bulk_delete_concurrency",
+                  "bulk_insert_batch_concurrency",
+                  "bulk_insert_overwrite_concurrency",
+                  "collection_indexing_policy",
+                  "collection_name",
+                  "embedding",
+                  "ingest_data",
+                  "metadata_indexing_exclude",
+                  "metadata_indexing_include",
+                  "metric",
+                  "namespace",
+                  "number_of_results",
+                  "pre_delete_collection",
+                  "search_filter",
+                  "search_input",
+                  "search_score_threshold",
+                  "search_type",
+                  "setup_mode",
+                  "token"
+                ],
                 "selected": "Data",
                 "types": [
                   "Data"
@@ -1768,6 +1843,7 @@
                 "display_name": "Vector Store",
                 "method": "cast_vector_store",
                 "name": "vector_store",
+                "required_inputs": [],
                 "selected": "VectorStore",
                 "types": [
                   "VectorStore"
@@ -1872,7 +1948,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from loguru import logger\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers import docs_to_data\nfrom langflow.inputs import DictInput, FloatInput\nfrom langflow.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    HandleInput,\n    IntInput,\n    MultilineInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AstraVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Implementation of Vector Store using Astra DB with search capabilities\"\n    documentation: str = \"https://python.langchain.com/docs/integrations/vectorstores/astradb\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"API Endpoint\",\n            info=\"API endpoint URL for the Astra DB service.\",\n            value=\"ASTRA_DB_API_ENDPOINT\",\n            required=True,\n        ),\n        MultilineInput(\n            name=\"search_input\",\n            display_name=\"Search Input\",\n        ),\n        DataInput(\n            name=\"ingest_data\",\n            display_name=\"Ingest Data\",\n            is_list=True,\n        ),\n        StrInput(\n            name=\"namespace\",\n            display_name=\"Namespace\",\n            info=\"Optional namespace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"metric\",\n            display_name=\"Metric\",\n            info=\"Optional distance metric for vector comparisons in the vector store.\",\n            options=[\"cosine\", \"dot_product\", \"euclidean\"],\n            advanced=True,\n        ),\n        IntInput(\n            name=\"batch_size\",\n            display_name=\"Batch Size\",\n            info=\"Optional number of data to process in a single batch.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_batch_concurrency\",\n            display_name=\"Bulk Insert Batch Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_overwrite_concurrency\",\n            display_name=\"Bulk Insert Overwrite Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_delete_concurrency\",\n            display_name=\"Bulk Delete Concurrency\",\n            info=\"Optional concurrency level for bulk delete operations.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"setup_mode\",\n            display_name=\"Setup Mode\",\n            info=\"Configuration mode for setting up the vector store, with options like 'Sync', 'Async', or 'Off'.\",\n            options=[\"Sync\", \"Async\", \"Off\"],\n            advanced=True,\n            value=\"Sync\",\n        ),\n        BoolInput(\n            name=\"pre_delete_collection\",\n            display_name=\"Pre Delete Collection\",\n            info=\"Boolean flag to determine whether to delete the collection before creating a new one.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"metadata_indexing_include\",\n            display_name=\"Metadata Indexing Include\",\n            info=\"Optional list of metadata fields to include in the indexing.\",\n            advanced=True,\n        ),\n        HandleInput(\n            name=\"embedding\",\n            display_name=\"Embedding or Astra Vectorize\",\n            input_types=[\"Embeddings\", \"dict\"],\n            info=\"Allows either an embedding model or an Astra Vectorize configuration.\",  # TODO: This should be optional, but need to refactor langchain-astradb first.\n        ),\n        StrInput(\n            name=\"metadata_indexing_exclude\",\n            display_name=\"Metadata Indexing Exclude\",\n            info=\"Optional list of metadata fields to exclude from the indexing.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"collection_indexing_policy\",\n            display_name=\"Collection Indexing Policy\",\n            info=\"Optional dictionary defining the indexing policy for the collection.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n\n    @check_cached_vector_store\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import SetupMode\n        except ImportError:\n            raise ImportError(\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n\n        try:\n            if not self.setup_mode:\n                self.setup_mode = self._inputs[\"setup_mode\"].options[0]\n\n            setup_mode_value = SetupMode[self.setup_mode.upper()]\n        except KeyError:\n            raise ValueError(f\"Invalid setup mode: {self.setup_mode}\")\n\n        if not isinstance(self.embedding, dict):\n            embedding_dict = {\"embedding\": self.embedding}\n        else:\n            from astrapy.info import CollectionVectorServiceOptions\n\n            dict_options = self.embedding.get(\"collection_vector_service_options\", {})\n            dict_options[\"authentication\"] = {\n                k: v for k, v in dict_options.get(\"authentication\", {}).items() if k and v\n            }\n            dict_options[\"parameters\"] = {k: v for k, v in dict_options.get(\"parameters\", {}).items() if k and v}\n            embedding_dict = {\n                \"collection_vector_service_options\": CollectionVectorServiceOptions.from_dict(dict_options)\n            }\n            collection_embedding_api_key = self.embedding.get(\"collection_embedding_api_key\")\n            if collection_embedding_api_key:\n                embedding_dict[\"collection_embedding_api_key\"] = collection_embedding_api_key\n\n        vector_store_kwargs = {\n            **embedding_dict,\n            \"collection_name\": self.collection_name,\n            \"token\": self.token,\n            \"api_endpoint\": self.api_endpoint,\n            \"namespace\": self.namespace or None,\n            \"metric\": self.metric or None,\n            \"batch_size\": self.batch_size or None,\n            \"bulk_insert_batch_concurrency\": self.bulk_insert_batch_concurrency or None,\n            \"bulk_insert_overwrite_concurrency\": self.bulk_insert_overwrite_concurrency or None,\n            \"bulk_delete_concurrency\": self.bulk_delete_concurrency or None,\n            \"setup_mode\": setup_mode_value,\n            \"pre_delete_collection\": self.pre_delete_collection or False,\n        }\n\n        if self.metadata_indexing_include:\n            vector_store_kwargs[\"metadata_indexing_include\"] = self.metadata_indexing_include\n        elif self.metadata_indexing_exclude:\n            vector_store_kwargs[\"metadata_indexing_exclude\"] = self.metadata_indexing_exclude\n        elif self.collection_indexing_policy:\n            vector_store_kwargs[\"collection_indexing_policy\"] = self.collection_indexing_policy\n\n        try:\n            vector_store = AstraDBVectorStore(**vector_store_kwargs)\n        except Exception as e:\n            raise ValueError(f\"Error initializing AstraDBVectorStore: {str(e)}\") from e\n\n        self._add_documents_to_vector_store(vector_store)\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store):\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                raise ValueError(\"Vector Store Inputs must be Data objects.\")\n\n        if documents:\n            logger.debug(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                raise ValueError(f\"Error adding documents to AstraDBVectorStore: {str(e)}\") from e\n        else:\n            logger.debug(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self):\n        if self.search_type == \"Similarity with score threshold\":\n            return \"similarity_score_threshold\"\n        elif self.search_type == \"MMR (Max Marginal Relevance)\":\n            return \"mmr\"\n        else:\n            return \"similarity\"\n\n    def _build_search_args(self):\n        args = {\n            \"k\": self.number_of_results,\n            \"score_threshold\": self.search_score_threshold,\n        }\n\n        if self.search_filter:\n            clean_filter = {k: v for k, v in self.search_filter.items() if k and v}\n            if len(clean_filter) > 0:\n                args[\"filter\"] = clean_filter\n        return args\n\n    def search_documents(self) -> list[Data]:\n        vector_store = self.build_vector_store()\n\n        logger.debug(f\"Search input: {self.search_input}\")\n        logger.debug(f\"Search type: {self.search_type}\")\n        logger.debug(f\"Number of results: {self.number_of_results}\")\n\n        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():\n            try:\n                search_type = self._map_search_type()\n                search_args = self._build_search_args()\n\n                docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)\n            except Exception as e:\n                raise ValueError(f\"Error performing search in AstraDBVectorStore: {str(e)}\") from e\n\n            logger.debug(f\"Retrieved documents: {len(docs)}\")\n\n            data = docs_to_data(docs)\n            logger.debug(f\"Converted documents to data: {len(data)}\")\n            self.status = data\n            return data\n        else:\n            logger.debug(\"No search input provided. Skipping search.\")\n            return []\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
+                "value": "import os\n\nfrom astrapy.admin import parse_api_endpoint\nfrom loguru import logger\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers import docs_to_data\nfrom langflow.inputs import DictInput, FloatInput, MessageTextInput\nfrom langflow.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    HandleInput,\n    IntInput,\n    MultilineInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AstraVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Implementation of Vector Store using Astra DB with search capabilities\"\n    documentation: str = \"https://docs.langflow.org/starter-projects-vector-store-rag\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    VECTORIZE_PROVIDERS_MAPPING = {\n        \"Azure OpenAI\": [\"azureOpenAI\", [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"]],\n        \"Hugging Face - Dedicated\": [\"huggingfaceDedicated\", [\"endpoint-defined-model\"]],\n        \"Hugging Face - Serverless\": [\n            \"huggingface\",\n            [\n                \"sentence-transformers/all-MiniLM-L6-v2\",\n                \"intfloat/multilingual-e5-large\",\n                \"intfloat/multilingual-e5-large-instruct\",\n                \"BAAI/bge-small-en-v1.5\",\n                \"BAAI/bge-base-en-v1.5\",\n                \"BAAI/bge-large-en-v1.5\",\n            ],\n        ],\n        \"Jina AI\": [\n            \"jinaAI\",\n            [\n                \"jina-embeddings-v2-base-en\",\n                \"jina-embeddings-v2-base-de\",\n                \"jina-embeddings-v2-base-es\",\n                \"jina-embeddings-v2-base-code\",\n                \"jina-embeddings-v2-base-zh\",\n            ],\n        ],\n        \"Mistral AI\": [\"mistral\", [\"mistral-embed\"]],\n        \"NVIDIA\": [\"nvidia\", [\"NV-Embed-QA\"]],\n        \"OpenAI\": [\"openai\", [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"]],\n        \"Upstage\": [\"upstageAI\", [\"solar-embedding-1-large\"]],\n        \"Voyage AI\": [\n            \"voyageAI\",\n            [\"voyage-large-2-instruct\", \"voyage-law-2\", \"voyage-code-2\", \"voyage-large-2\", \"voyage-2\"],\n        ],\n    }\n\n    inputs = [\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n            required=True,\n            advanced=os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\",\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"Database\" if os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\" else \"API Endpoint\",\n            info=\"API endpoint URL for the Astra DB service.\",\n            value=\"ASTRA_DB_API_ENDPOINT\",\n            required=True,\n        ),\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n            required=True,\n        ),\n        MultilineInput(\n            name=\"search_input\",\n            display_name=\"Search Input\",\n        ),\n        DataInput(\n            name=\"ingest_data\",\n            display_name=\"Ingest Data\",\n            is_list=True,\n        ),\n        StrInput(\n            name=\"namespace\",\n            display_name=\"Namespace\",\n            info=\"Optional namespace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"embedding_service\",\n            display_name=\"Embedding Model or Astra Vectorize\",\n            info=\"Determines whether to use Astra Vectorize for the collection.\",\n            options=[\"Embedding Model\", \"Astra Vectorize\"],\n            real_time_refresh=True,\n            value=\"Embedding Model\",\n        ),\n        HandleInput(\n            name=\"embedding\",\n            display_name=\"Embedding Model\",\n            input_types=[\"Embeddings\"],\n            info=\"Allows an embedding model configuration.\",\n        ),\n        DropdownInput(\n            name=\"metric\",\n            display_name=\"Metric\",\n            info=\"Optional distance metric for vector comparisons in the vector store.\",\n            options=[\"cosine\", \"dot_product\", \"euclidean\"],\n            advanced=True,\n        ),\n        IntInput(\n            name=\"batch_size\",\n            display_name=\"Batch Size\",\n            info=\"Optional number of data to process in a single batch.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_batch_concurrency\",\n            display_name=\"Bulk Insert Batch Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_overwrite_concurrency\",\n            display_name=\"Bulk Insert Overwrite Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_delete_concurrency\",\n            display_name=\"Bulk Delete Concurrency\",\n            info=\"Optional concurrency level for bulk delete operations.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"setup_mode\",\n            display_name=\"Setup Mode\",\n            info=\"Configuration mode for setting up the vector store, with options like 'Sync', 'Async', or 'Off'.\",\n            options=[\"Sync\", \"Async\", \"Off\"],\n            advanced=True,\n            value=\"Sync\",\n        ),\n        BoolInput(\n            name=\"pre_delete_collection\",\n            display_name=\"Pre Delete Collection\",\n            info=\"Boolean flag to determine whether to delete the collection before creating a new one.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"metadata_indexing_include\",\n            display_name=\"Metadata Indexing Include\",\n            info=\"Optional list of metadata fields to include in the indexing.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"metadata_indexing_exclude\",\n            display_name=\"Metadata Indexing Exclude\",\n            info=\"Optional list of metadata fields to exclude from the indexing.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"collection_indexing_policy\",\n            display_name=\"Collection Indexing Policy\",\n            info=\"Optional dictionary defining the indexing policy for the collection.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n\n    def insert_in_dict(self, build_config, field_name, new_parameters):\n        # Insert the new key-value pair after the found key\n        for new_field_name, new_parameter in new_parameters.items():\n            # Get all the items as a list of tuples (key, value)\n            items = list(build_config.items())\n\n            # Find the index of the key to insert after\n            idx = len(items)\n            for i, (key, _value) in enumerate(items):\n                if key == field_name:\n                    idx = i + 1\n                    break\n\n            items.insert(idx, (new_field_name, new_parameter))\n\n            # Clear the original dictionary and update with the modified items\n            build_config.clear()\n            build_config.update(items)\n\n        return build_config\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        if field_name == \"embedding_service\":\n            if field_value == \"Astra Vectorize\":\n                for field in [\"embedding\"]:\n                    if field in build_config:\n                        del build_config[field]\n\n                new_parameter = DropdownInput(\n                    name=\"provider\",\n                    display_name=\"Vectorize Provider\",\n                    options=self.VECTORIZE_PROVIDERS_MAPPING.keys(),\n                    value=\"\",\n                    required=True,\n                    real_time_refresh=True,\n                ).to_dict()\n\n                self.insert_in_dict(build_config, \"embedding_service\", {\"provider\": new_parameter})\n            else:\n                for field in [\n                    \"provider\",\n                    \"z_00_model_name\",\n                    \"z_01_model_parameters\",\n                    \"z_02_api_key_name\",\n                    \"z_03_provider_api_key\",\n                    \"z_04_authentication\",\n                ]:\n                    if field in build_config:\n                        del build_config[field]\n\n                new_parameter = HandleInput(\n                    name=\"embedding\",\n                    display_name=\"Embedding Model\",\n                    input_types=[\"Embeddings\"],\n                    info=\"Allows an embedding model configuration.\",\n                ).to_dict()\n\n                self.insert_in_dict(build_config, \"embedding_service\", {\"embedding\": new_parameter})\n\n        elif field_name == \"provider\":\n            for field in [\n                \"z_00_model_name\",\n                \"z_01_model_parameters\",\n                \"z_02_api_key_name\",\n                \"z_03_provider_api_key\",\n                \"z_04_authentication\",\n            ]:\n                if field in build_config:\n                    del build_config[field]\n\n            model_options = self.VECTORIZE_PROVIDERS_MAPPING[field_value][1]\n\n            new_parameter_0 = DropdownInput(\n                name=\"z_00_model_name\",\n                display_name=\"Model Name\",\n                info=\"The embedding model to use for the selected provider. Each provider has a different set of \"\n                \"models available (full list at \"\n                \"https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\\n\\n\"\n                f\"{', '.join(model_options)}\",\n                options=model_options,\n                required=True,\n            ).to_dict()\n\n            new_parameter_1 = DictInput(\n                name=\"z_01_model_parameters\",\n                display_name=\"Model Parameters\",\n                is_list=True,\n            ).to_dict()\n\n            new_parameter_2 = MessageTextInput(\n                name=\"z_02_api_key_name\",\n                display_name=\"API Key name\",\n                info=\"The name of the embeddings provider API key stored on Astra. \"\n                \"If set, it will override the 'ProviderKey' in the authentication parameters.\",\n            ).to_dict()\n\n            new_parameter_3 = SecretStrInput(\n                name=\"z_03_provider_api_key\",\n                display_name=\"Provider API Key\",\n                info=\"An alternative to the Astra Authentication that passes an API key for the provider \"\n                \"with each request to Astra DB. \"\n                \"This may be used when Vectorize is configured for the collection, \"\n                \"but no corresponding provider secret is stored within Astra's key management system.\",\n            ).to_dict()\n\n            new_parameter_4 = DictInput(\n                name=\"z_04_authentication\",\n                display_name=\"Authentication parameters\",\n                is_list=True,\n            ).to_dict()\n\n            self.insert_in_dict(\n                build_config,\n                \"provider\",\n                {\n                    \"z_00_model_name\": new_parameter_0,\n                    \"z_01_model_parameters\": new_parameter_1,\n                    \"z_02_api_key_name\": new_parameter_2,\n                    \"z_03_provider_api_key\": new_parameter_3,\n                    \"z_04_authentication\": new_parameter_4,\n                },\n            )\n\n        return build_config\n\n    def build_vectorize_options(self, **kwargs):\n        for attribute in [\n            \"provider\",\n            \"z_00_model_name\",\n            \"z_01_model_parameters\",\n            \"z_02_api_key_name\",\n            \"z_03_provider_api_key\",\n            \"z_04_authentication\",\n        ]:\n            if not hasattr(self, attribute):\n                setattr(self, attribute, None)\n\n        # Fetch values from kwargs if any self.* attributes are None\n        provider_value = self.VECTORIZE_PROVIDERS_MAPPING.get(self.provider, [None])[0] or kwargs.get(\"provider\")\n        authentication = {**(self.z_04_authentication or kwargs.get(\"z_04_authentication\", {}))}\n\n        api_key_name = self.z_02_api_key_name or kwargs.get(\"z_02_api_key_name\")\n        provider_key = self.z_03_provider_api_key or kwargs.get(\"z_03_provider_api_key\")\n        if api_key_name:\n            authentication[\"providerKey\"] = api_key_name\n\n        return {\n            # must match astrapy.info.CollectionVectorServiceOptions\n            \"collection_vector_service_options\": {\n                \"provider\": provider_value,\n                \"modelName\": self.z_00_model_name or kwargs.get(\"z_00_model_name\"),\n                \"authentication\": authentication,\n                \"parameters\": self.z_01_model_parameters or kwargs.get(\"z_01_model_parameters\", {}),\n            },\n            \"collection_embedding_api_key\": provider_key,\n        }\n\n    @check_cached_vector_store\n    def build_vector_store(self, vectorize_options=None):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import SetupMode\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        try:\n            if not self.setup_mode:\n                self.setup_mode = self._inputs[\"setup_mode\"].options[0]\n\n            setup_mode_value = SetupMode[self.setup_mode.upper()]\n        except KeyError as e:\n            msg = f\"Invalid setup mode: {self.setup_mode}\"\n            raise ValueError(msg) from e\n\n        if self.embedding:\n            embedding_dict = {\"embedding\": self.embedding}\n        else:\n            from astrapy.info import CollectionVectorServiceOptions\n\n            dict_options = vectorize_options or self.build_vectorize_options()\n            dict_options[\"authentication\"] = {\n                k: v for k, v in dict_options.get(\"authentication\", {}).items() if k and v\n            }\n            dict_options[\"parameters\"] = {k: v for k, v in dict_options.get(\"parameters\", {}).items() if k and v}\n\n            embedding_dict = {\n                \"collection_vector_service_options\": CollectionVectorServiceOptions.from_dict(\n                    dict_options.get(\"collection_vector_service_options\", {})\n                ),\n            }\n\n        vector_store_kwargs = {\n            **embedding_dict,\n            \"collection_name\": self.collection_name,\n            \"token\": self.token,\n            \"api_endpoint\": self.api_endpoint,\n            \"namespace\": self.namespace or None,\n            \"environment\": parse_api_endpoint(self.api_endpoint).environment,\n            \"metric\": self.metric or None,\n            \"batch_size\": self.batch_size or None,\n            \"bulk_insert_batch_concurrency\": self.bulk_insert_batch_concurrency or None,\n            \"bulk_insert_overwrite_concurrency\": self.bulk_insert_overwrite_concurrency or None,\n            \"bulk_delete_concurrency\": self.bulk_delete_concurrency or None,\n            \"setup_mode\": setup_mode_value,\n            \"pre_delete_collection\": self.pre_delete_collection or False,\n        }\n\n        if self.metadata_indexing_include:\n            vector_store_kwargs[\"metadata_indexing_include\"] = self.metadata_indexing_include\n        elif self.metadata_indexing_exclude:\n            vector_store_kwargs[\"metadata_indexing_exclude\"] = self.metadata_indexing_exclude\n        elif self.collection_indexing_policy:\n            vector_store_kwargs[\"collection_indexing_policy\"] = self.collection_indexing_policy\n\n        try:\n            vector_store = AstraDBVectorStore(**vector_store_kwargs)\n        except Exception as e:\n            msg = f\"Error initializing AstraDBVectorStore: {str(e)}\"\n            raise ValueError(msg) from e\n\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store):\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise ValueError(msg)\n\n        if documents:\n            logger.debug(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {str(e)}\"\n                raise ValueError(msg) from e\n        else:\n            logger.debug(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self):\n        if self.search_type == \"Similarity with score threshold\":\n            return \"similarity_score_threshold\"\n        if self.search_type == \"MMR (Max Marginal Relevance)\":\n            return \"mmr\"\n        return \"similarity\"\n\n    def _build_search_args(self):\n        args = {\n            \"k\": self.number_of_results,\n            \"score_threshold\": self.search_score_threshold,\n        }\n\n        if self.search_filter:\n            clean_filter = {k: v for k, v in self.search_filter.items() if k and v}\n            if len(clean_filter) > 0:\n                args[\"filter\"] = clean_filter\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        if not vector_store:\n            vector_store = self.build_vector_store()\n\n        logger.debug(f\"Search input: {self.search_input}\")\n        logger.debug(f\"Search type: {self.search_type}\")\n        logger.debug(f\"Number of results: {self.number_of_results}\")\n\n        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():\n            try:\n                search_type = self._map_search_type()\n                search_args = self._build_search_args()\n\n                docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)\n            except Exception as e:\n                msg = f\"Error performing search in AstraDBVectorStore: {str(e)}\"\n                raise ValueError(msg) from e\n\n            logger.debug(f\"Retrieved documents: {len(docs)}\")\n\n            data = docs_to_data(docs)\n            logger.debug(f\"Converted documents to data: {len(data)}\")\n            self.status = data\n            return data\n        logger.debug(\"No search input provided. Skipping search.\")\n        return []\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
               },
               "collection_indexing_policy": {
                 "advanced": true,
@@ -1908,12 +1984,11 @@
               },
               "embedding": {
                 "advanced": false,
-                "display_name": "Embedding or Astra Vectorize",
+                "display_name": "Embedding Model",
                 "dynamic": false,
-                "info": "Allows either an embedding model or an Astra Vectorize configuration.",
+                "info": "Allows an embedding model configuration.",
                 "input_types": [
-                  "Embeddings",
-                  "dict"
+                  "Embeddings"
                 ],
                 "list": false,
                 "name": "embedding",
@@ -1924,6 +1999,27 @@
                 "trace_as_metadata": true,
                 "type": "other",
                 "value": ""
+              },
+              "embedding_service": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "Embedding Model or Astra Vectorize",
+                "dynamic": false,
+                "info": "Determines whether to use Astra Vectorize for the collection.",
+                "name": "embedding_service",
+                "options": [
+                  "Embedding Model",
+                  "Astra Vectorize"
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Embedding Model"
               },
               "ingest_data": {
                 "advanced": false,
@@ -2153,8 +2249,8 @@
           "type": "AstraVectorStoreComponent"
         },
         "dragging": false,
-        "height": 774,
-        "id": "AstraVectorStoreComponent-6hNSy",
+        "height": 837,
+        "id": "AstraVectorStoreComponent-EUhWZ",
         "position": {
           "x": 2678.506138892635,
           "y": 1267.3353646037478
@@ -2169,9 +2265,9 @@
       },
       {
         "data": {
-          "description": "Generate embeddings using OpenAI models.",
+          "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
           "display_name": "OpenAI Embeddings",
-          "id": "OpenAIEmbeddings-hLfqb",
+          "id": "OpenAIEmbeddings-Mf9md",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -2179,7 +2275,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Generate embeddings using OpenAI models.",
+            "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
             "display_name": "OpenAI Embeddings",
             "documentation": "",
             "edited": false,
@@ -2208,6 +2304,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -2215,6 +2312,28 @@
                 "display_name": "Embeddings",
                 "method": "build_embeddings",
                 "name": "embeddings",
+                "required_inputs": [
+                  "chunk_size",
+                  "default_headers",
+                  "default_query",
+                  "deployment",
+                  "dimensions",
+                  "embedding_ctx_length",
+                  "max_retries",
+                  "model",
+                  "model_kwargs",
+                  "openai_api_base",
+                  "openai_api_key",
+                  "openai_api_type",
+                  "openai_api_version",
+                  "openai_organization",
+                  "openai_proxy",
+                  "request_timeout",
+                  "show_progress_bar",
+                  "skip_empty",
+                  "tiktoken_enable",
+                  "tiktoken_model_name"
+                ],
                 "selected": "Embeddings",
                 "types": [
                   "Embeddings"
@@ -2276,7 +2395,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.embeddings.model import LCEmbeddingsModel\nfrom langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES\nfrom langflow.field_typing import Embeddings\nfrom langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput\n\n\nclass OpenAIEmbeddingsComponent(LCEmbeddingsModel):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIEmbeddings\"\n\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        MessageTextInput(name=\"client\", display_name=\"Client\", advanced=True),\n        MessageTextInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=OPENAI_EMBEDDING_MODEL_NAMES,\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\", value=\"OPENAI_API_KEY\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        MessageTextInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        MessageTextInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        MessageTextInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        MessageTextInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tiktoken_enable\",\n            display_name=\"TikToken Enable\",\n            advanced=True,\n            value=True,\n            info=\"If False, you must have transformers installed.\",\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. Only supported by certain models.\",\n            advanced=True,\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout or None,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n            dimensions=self.dimensions or None,\n        )\n"
+                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.embeddings.model import LCEmbeddingsModel\nfrom langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES\nfrom langflow.field_typing import Embeddings\nfrom langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput\n\n\nclass OpenAIEmbeddingsComponent(LCEmbeddingsModel):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIEmbeddings\"\n\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        MessageTextInput(name=\"client\", display_name=\"Client\", advanced=True),\n        MessageTextInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=OPENAI_EMBEDDING_MODEL_NAMES,\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\", value=\"OPENAI_API_KEY\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        MessageTextInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        MessageTextInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        MessageTextInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        MessageTextInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tiktoken_enable\",\n            display_name=\"TikToken Enable\",\n            advanced=True,\n            value=True,\n            info=\"If False, you must have transformers installed.\",\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. \"\n            \"Only supported by certain models.\",\n            advanced=True,\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout or None,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n            dimensions=self.dimensions or None,\n        )\n"
               },
               "default_headers": {
                 "advanced": true,
@@ -2606,8 +2725,8 @@
           "type": "OpenAIEmbeddings"
         },
         "dragging": false,
-        "height": 388,
-        "id": "OpenAIEmbeddings-hLfqb",
+        "height": 383,
+        "id": "OpenAIEmbeddings-Mf9md",
         "position": {
           "x": 2044.683126356786,
           "y": 1785.2283494456522
@@ -2622,9 +2741,9 @@
       },
       {
         "data": {
-          "description": "Generate embeddings using OpenAI models.",
+          "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
           "display_name": "OpenAI Embeddings",
-          "id": "OpenAIEmbeddings-OhWJM",
+          "id": "OpenAIEmbeddings-q2lBh",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -2632,7 +2751,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Generate embeddings using OpenAI models.",
+            "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
             "display_name": "OpenAI Embeddings",
             "documentation": "",
             "edited": false,
@@ -2661,6 +2780,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -2668,6 +2788,28 @@
                 "display_name": "Embeddings",
                 "method": "build_embeddings",
                 "name": "embeddings",
+                "required_inputs": [
+                  "chunk_size",
+                  "default_headers",
+                  "default_query",
+                  "deployment",
+                  "dimensions",
+                  "embedding_ctx_length",
+                  "max_retries",
+                  "model",
+                  "model_kwargs",
+                  "openai_api_base",
+                  "openai_api_key",
+                  "openai_api_type",
+                  "openai_api_version",
+                  "openai_organization",
+                  "openai_proxy",
+                  "request_timeout",
+                  "show_progress_bar",
+                  "skip_empty",
+                  "tiktoken_enable",
+                  "tiktoken_model_name"
+                ],
                 "selected": "Embeddings",
                 "types": [
                   "Embeddings"
@@ -2729,7 +2871,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.embeddings.model import LCEmbeddingsModel\nfrom langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES\nfrom langflow.field_typing import Embeddings\nfrom langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput\n\n\nclass OpenAIEmbeddingsComponent(LCEmbeddingsModel):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIEmbeddings\"\n\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        MessageTextInput(name=\"client\", display_name=\"Client\", advanced=True),\n        MessageTextInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=OPENAI_EMBEDDING_MODEL_NAMES,\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\", value=\"OPENAI_API_KEY\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        MessageTextInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        MessageTextInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        MessageTextInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        MessageTextInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tiktoken_enable\",\n            display_name=\"TikToken Enable\",\n            advanced=True,\n            value=True,\n            info=\"If False, you must have transformers installed.\",\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. Only supported by certain models.\",\n            advanced=True,\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout or None,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n            dimensions=self.dimensions or None,\n        )\n"
+                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.embeddings.model import LCEmbeddingsModel\nfrom langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES\nfrom langflow.field_typing import Embeddings\nfrom langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput\n\n\nclass OpenAIEmbeddingsComponent(LCEmbeddingsModel):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIEmbeddings\"\n\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        MessageTextInput(name=\"client\", display_name=\"Client\", advanced=True),\n        MessageTextInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=OPENAI_EMBEDDING_MODEL_NAMES,\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\", value=\"OPENAI_API_KEY\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        MessageTextInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        MessageTextInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        MessageTextInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        MessageTextInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tiktoken_enable\",\n            display_name=\"TikToken Enable\",\n            advanced=True,\n            value=True,\n            info=\"If False, you must have transformers installed.\",\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. \"\n            \"Only supported by certain models.\",\n            advanced=True,\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout or None,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n            dimensions=self.dimensions or None,\n        )\n"
               },
               "default_headers": {
                 "advanced": true,
@@ -3059,8 +3201,8 @@
           "type": "OpenAIEmbeddings"
         },
         "dragging": false,
-        "height": 388,
-        "id": "OpenAIEmbeddings-OhWJM",
+        "height": 383,
+        "id": "OpenAIEmbeddings-q2lBh",
         "position": {
           "x": 628.9252513328779,
           "y": 648.6750537749285
@@ -3075,9 +3217,9 @@
       },
       {
         "data": {
-          "description": "Generates text using OpenAI LLMs.",
+          "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
           "display_name": "OpenAI",
-          "id": "OpenAIModel-ExXPZ",
+          "id": "OpenAIModel-3v8LQ",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -3086,7 +3228,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Generates text using OpenAI LLMs.",
+            "description": "💡 Paste your [OpenAI API key](https://platform.openai.com/) key here.",
             "display_name": "OpenAI",
             "documentation": "",
             "edited": false,
@@ -3106,6 +3248,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -3113,6 +3256,11 @@
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
+                "required_inputs": [
+                  "input_value",
+                  "stream",
+                  "system_message"
+                ],
                 "selected": "Message",
                 "types": [
                   "Message"
@@ -3124,6 +3272,17 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
+                "required_inputs": [
+                  "api_key",
+                  "json_mode",
+                  "max_tokens",
+                  "model_kwargs",
+                  "model_name",
+                  "openai_api_base",
+                  "output_schema",
+                  "seed",
+                  "temperature"
+                ],
                 "selected": "LanguageModel",
                 "types": [
                   "LanguageModel"
@@ -3168,7 +3327,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import operator\nfrom functools import reduce\n\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = LCModelComponent._base_inputs + [\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        # self.output_schema is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")  # type: ignore\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})  # type: ignore\n\n        return output  # type: ignore\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")  # type: ignore\n            if message:\n                return message\n        return\n"
+                "value": "import operator\nfrom functools import reduce\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.inputs.inputs import HandleInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = LCModelComponent._base_inputs + [\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. \"\n            \"You must pass the word JSON in the prompt. \"\n            \"If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n        HandleInput(\n            name=\"output_parser\",\n            display_name=\"Output Parser\",\n            info=\"The parser to use to parse the output of the model\",\n            advanced=True,\n            input_types=[\"OutputParser\"],\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        # self.output_schema is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n\n        api_key = SecretStr(openai_api_key) if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")  # type: ignore\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})  # type: ignore\n\n        return output  # type: ignore\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")  # type: ignore\n            if message:\n                return message\n        return None\n"
               },
               "input_value": {
                 "advanced": false,
@@ -3275,6 +3434,25 @@
                 "type": "str",
                 "value": ""
               },
+              "output_parser": {
+                "_input_type": "HandleInput",
+                "advanced": true,
+                "display_name": "Output Parser",
+                "dynamic": false,
+                "info": "The parser to use to parse the output of the model",
+                "input_types": [
+                  "OutputParser"
+                ],
+                "list": false,
+                "name": "output_parser",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
               "output_schema": {
                 "advanced": true,
                 "display_name": "Schema",
@@ -3360,8 +3538,8 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "height": 605,
-        "id": "OpenAIModel-ExXPZ",
+        "height": 595,
+        "id": "OpenAIModel-3v8LQ",
         "position": {
           "x": 3138.7638747868177,
           "y": 413.0859233500825
@@ -3373,18 +3551,117 @@
         "selected": false,
         "type": "genericNode",
         "width": 384
+      },
+      {
+        "data": {
+          "id": "note-LkhtD",
+          "node": {
+            "description": "### 📄 Load Data\n\nRun this first! Loads data from a local file and embeds it into the vector database.",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "indigo"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 356,
+        "id": "note-LkhtD",
+        "position": {
+          "x": 877.5400894704665,
+          "y": 1501.740726540235
+        },
+        "positionAbsolute": {
+          "x": 877.5400894704665,
+          "y": 1501.740726540235
+        },
+        "resizing": false,
+        "selected": false,
+        "style": {
+          "height": 356,
+          "width": 422
+        },
+        "type": "noteNode",
+        "width": 422
+      },
+      {
+        "data": {
+          "id": "note-SqVp4",
+          "node": {
+            "description": "## Vector Store RAG README\n\nLoad your data into a vector database with one flow, and use your data as chat context in another flow. \n\n**Look out for the** '💡' **emoji for tips in components.**\n\n#### 2 distinct flows:\n- **📄Load Data:** Run this first! Loads data from a local file and embeds it into the vector database.\n- **✨Retriever:** Retrieves data from the vector database based on your query.",
+            "display_name": "Read Me",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "indigo"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 535,
+        "id": "note-SqVp4",
+        "position": {
+          "x": -210.5780262142282,
+          "y": 338.8484570142142
+        },
+        "positionAbsolute": {
+          "x": -210.5780262142282,
+          "y": 338.8484570142142
+        },
+        "resizing": false,
+        "selected": false,
+        "style": {
+          "height": 535,
+          "width": 600
+        },
+        "type": "noteNode",
+        "width": 600
+      },
+      {
+        "data": {
+          "id": "note-Rywlz",
+          "node": {
+            "description": "### ✨ Retriever \n\n Retrieves data from the vector database based on your query.",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "indigo"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 358,
+        "id": "note-Rywlz",
+        "position": {
+          "x": 1246.270583789109,
+          "y": -99.85991506747081
+        },
+        "positionAbsolute": {
+          "x": 1246.270583789109,
+          "y": -99.85991506747081
+        },
+        "resizing": false,
+        "selected": false,
+        "style": {
+          "height": 358,
+          "width": 412
+        },
+        "type": "noteNode",
+        "width": 412
       }
     ],
     "viewport": {
-      "x": -439.4891000981311,
-      "y": -36.825136403696206,
-      "zoom": 0.7131428627969274
+      "x": 342.7396252506155,
+      "y": 81.92958175685953,
+      "zoom": 0.28537669697335505
     }
   },
-  "description": "Visit https://docs.langflow.org/tutorials/rag-with-astradb for a detailed guide of this project.\nThis project give you both Ingestion and RAG in a single file. You'll need to visit https://astra.datastax.com/ to create an Astra DB instance, your Token and grab an API Endpoint.\nRunning this project requires you to add a file in the Files component, then define a Collection Name and click on the Play icon on the Astra DB component. \n\nAfter the ingestion ends you are ready to click on the Run button at the lower left corner and start asking questions about your data.",
+  "description": "Visit https://docs.langflow.org/starter-projects-vector-store-rag for a detailed guide of this project.\nThis project give you both Ingestion and RAG in a single file. You'll need to visit https://astra.datastax.com/ to create an Astra DB instance, your Token and grab an API Endpoint.\nRunning this project requires you to add a file in the Files component, then define a Collection Name and click on the Play icon on the Astra DB component. \n\nAfter the ingestion ends you are ready to click on the Run button at the lower left corner and start asking questions about your data.",
   "endpoint_name": null,
-  "id": "11244a74-eba2-4b1f-b34a-2ce3ba421e2a",
+  "id": "87aff7ff-7c7f-4965-a5b1-155b18ae43de",
   "is_component": false,
-  "last_tested_version": "1.0.17",
+  "last_tested_version": "1.0.18",
   "name": "Vector Store RAG"
 }

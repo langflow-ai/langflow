@@ -1,4 +1,5 @@
 import ast
+import contextlib
 import inspect
 import traceback
 from typing import Any
@@ -41,7 +42,7 @@ def find_class_ast_node(class_obj):
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef) and node.name == class_obj.__name__:
             class_node = node
-        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+        elif isinstance(node, ast.Import | ast.ImportFrom):
             import_nodes.append(node)
 
     return class_node, import_nodes
@@ -66,7 +67,8 @@ class CodeParser:
         self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
         if isinstance(code, type):
             if not inspect.isclass(code):
-                raise ValueError("The provided code must be a class.")
+                msg = "The provided code must be a class."
+                raise ValueError(msg)
             # If the code is a class, get its source code
             code = inspect.getsource(code)
         self.code = code
@@ -170,11 +172,9 @@ class CodeParser:
             return_type_str = ast.unparse(node.returns)
             eval_env = self.construct_eval_env(return_type_str, tuple(self.data["imports"]))
 
-            try:
+            # Handle cases where the type is not found in the constructed environment
+            with contextlib.suppress(NameError):
                 return_type = eval(return_type_str, eval_env)
-            except NameError:
-                # Handle cases where the type is not found in the constructed environment
-                pass
 
         func = CallableCodeDetails(
             name=node.name,
@@ -217,8 +217,7 @@ class CodeParser:
 
         defaults = missing_defaults + default_values
 
-        args = [self.parse_arg(arg, default) for arg, default in zip(node.args.args, defaults)]
-        return args
+        return [self.parse_arg(arg, default) for arg, default in zip(node.args.args, defaults, strict=True)]
 
     def parse_varargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
@@ -239,8 +238,7 @@ class CodeParser:
             ast.unparse(default) if default else None for default in node.args.kw_defaults
         ]
 
-        args = [self.parse_arg(arg, default) for arg, default in zip(node.args.kwonlyargs, kw_defaults)]
-        return args
+        return [self.parse_arg(arg, default) for arg, default in zip(node.args.kwonlyargs, kw_defaults, strict=True)]
 
     def parse_kwargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
@@ -267,20 +265,19 @@ class CodeParser:
         def has_return(node):
             if isinstance(node, ast.Return):
                 return True
-            elif isinstance(node, ast.If):
+            if isinstance(node, ast.If):
                 return any(has_return(child) for child in node.body) or any(has_return(child) for child in node.orelse)
-            elif isinstance(node, ast.Try):
+            if isinstance(node, ast.Try):
                 return (
                     any(has_return(child) for child in node.body)
                     or any(has_return(child) for child in node.handlers)
                     or any(has_return(child) for child in node.finalbody)
                 )
-            elif isinstance(node, (ast.For, ast.While)):
+            if isinstance(node, ast.For | ast.While):
                 return any(has_return(child) for child in node.body) or any(has_return(child) for child in node.orelse)
-            elif isinstance(node, ast.With):
+            if isinstance(node, ast.With):
                 return any(has_return(child) for child in node.body)
-            else:
-                return False
+            return False
 
         return any(has_return(child) for child in node.body)
 
@@ -292,6 +289,7 @@ class CodeParser:
         for target in stmt.targets:
             if isinstance(target, ast.Name):
                 return {"name": target.id, "value": ast.unparse(stmt.value)}
+        return None
 
     def parse_ann_assign(self, stmt):
         """
@@ -304,6 +302,7 @@ class CodeParser:
                 "value": ast.unparse(stmt.value) if stmt.value else None,
                 "annotation": ast.unparse(stmt.annotation),
             }
+        return None
 
     def parse_function_def(self, stmt):
         """
@@ -343,7 +342,6 @@ class CodeParser:
                 nodes.append(class_node)
             except Exception as exc:
                 logger.error(f"Error finding base class node: {exc}")
-                pass
         nodes.insert(0, node)
         class_details = ClassCodeDetails(
             name=node.name,
@@ -365,7 +363,7 @@ class CodeParser:
             elif isinstance(stmt, ast.AnnAssign):
                 if attr := self.parse_ann_assign(stmt):
                     class_details.attributes.append(attr)
-            elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            elif isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef):
                 method, is_init = self.parse_function_def(stmt)
                 if is_init:
                     class_details.init = method

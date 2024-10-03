@@ -1,10 +1,11 @@
 import requests
+from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
+
 from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
 from langflow.inputs import SecretStrInput, StrInput
 from langflow.schema import Data
-from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
 
 
 class NotionPageContent(LCToolComponent):
@@ -35,9 +36,8 @@ class NotionPageContent(LCToolComponent):
         if isinstance(result, str) and result.startswith("Error:"):
             # An error occurred, return it as text
             return Data(text=result)
-        else:
-            # Success, return the content
-            return Data(text=result, data={"content": result})
+        # Success, return the content
+        return Data(text=result, data={"content": result})
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(

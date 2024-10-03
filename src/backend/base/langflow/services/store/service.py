@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import json
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import httpx
@@ -27,11 +29,11 @@ if TYPE_CHECKING:
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 
-user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar("user_data", default=None)
+user_data_var: ContextVar[dict[str, Any] | None] = ContextVar("user_data", default=None)
 
 
 @asynccontextmanager
-async def user_data_context(store_service: "StoreService", api_key: Optional[str] = None):
+async def user_data_context(store_service: StoreService, api_key: str | None = None):
     # Fetch and set user data to the context variable
     if api_key:
         try:
@@ -41,7 +43,8 @@ async def user_data_context(store_service: "StoreService", api_key: Optional[str
             user_data_var.set(user_data[0])
         except HTTPStatusError as exc:
             if exc.response.status_code == 403:
-                raise ValueError("Invalid API key")
+                msg = "Invalid API key"
+                raise ValueError(msg) from exc
     try:
         yield
     finally:
@@ -49,7 +52,7 @@ async def user_data_context(store_service: "StoreService", api_key: Optional[str
         user_data_var.set(None)
 
 
-def get_id_from_search_string(search_string: str) -> Optional[str]:
+def get_id_from_search_string(search_string: str) -> str | None:
     """
     Extracts the ID from a search string.
 
@@ -59,7 +62,7 @@ def get_id_from_search_string(search_string: str) -> Optional[str]:
     Returns:
         Optional[str]: The extracted ID, or None if no ID is found.
     """
-    possible_id: Optional[str] = search_string
+    possible_id: str | None = search_string
     if "www.langflow.store/store/" in search_string:
         possible_id = search_string.split("/")[-1]
 
@@ -77,7 +80,7 @@ class StoreService(Service):
 
     name = "store_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         self.base_url = self.settings_service.settings.store_url
         self.download_webhook_url = self.settings_service.settings.download_webhook_url
@@ -115,19 +118,17 @@ class StoreService(Service):
         except HTTPStatusError as exc:
             if exc.response.status_code in [403, 401]:
                 return False
-            else:
-                raise ValueError(f"Unexpected status code: {exc.response.status_code}")
+            msg = f"Unexpected status code: {exc.response.status_code}"
+            raise ValueError(msg) from exc
         except Exception as exc:
-            raise ValueError(f"Unexpected error: {exc}")
+            msg = f"Unexpected error: {exc}"
+            raise ValueError(msg) from exc
 
     async def _get(
-        self, url: str, api_key: Optional[str] = None, params: Optional[Dict[str, Any]] = None
-    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        self, url: str, api_key: str | None = None, params: dict[str, Any] | None = None
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         """Utility method to perform GET requests."""
-        if api_key:
-            headers = {"Authorization": f"Bearer {api_key}"}
-        else:
-            headers = {}
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(url, headers=headers, params=params, timeout=self.timeout)
@@ -135,7 +136,8 @@ class StoreService(Service):
             except HTTPError as exc:
                 raise exc
             except Exception as exc:
-                raise ValueError(f"GET failed: {exc}")
+                msg = f"GET failed: {exc}"
+                raise ValueError(msg) from exc
         json_response = response.json()
         result = json_response["data"]
         metadata = {}
@@ -162,17 +164,17 @@ class StoreService(Service):
         except Exception as exc:
             logger.debug(f"Webhook failed: {exc}")
 
-    def build_tags_filter(self, tags: List[str]):
-        tags_filter: Dict[str, Any] = {"tags": {"_and": []}}
+    def build_tags_filter(self, tags: list[str]):
+        tags_filter: dict[str, Any] = {"tags": {"_and": []}}
         for tag in tags:
             tags_filter["tags"]["_and"].append({"_some": {"tags_id": {"name": {"_eq": tag}}}})
         return tags_filter
 
     async def count_components(
         self,
-        filter_conditions: List[Dict[str, Any]],
-        api_key: Optional[str] = None,
-        use_api_key: Optional[bool] = False,
+        filter_conditions: list[dict[str, Any]],
+        api_key: str | None = None,
+        use_api_key: bool | None = False,
     ) -> int:
         params = {"aggregate": json.dumps({"count": "*"})}
         if filter_conditions:
@@ -187,7 +189,7 @@ class StoreService(Service):
     def build_search_filter_conditions(query: str):
         # instead of build the param ?search=query, we will build the filter
         # that will use _icontains (case insensitive)
-        conditions: Dict[str, Any] = {"_or": []}
+        conditions: dict[str, Any] = {"_or": []}
         conditions["_or"].append({"name": {"_icontains": query}})
         conditions["_or"].append({"description": {"_icontains": query}})
         conditions["_or"].append({"tags": {"tags_id": {"name": {"_icontains": query}}}})
@@ -196,14 +198,14 @@ class StoreService(Service):
 
     def build_filter_conditions(
         self,
-        component_id: Optional[str] = None,
-        search: Optional[str] = None,
-        private: Optional[bool] = None,
-        tags: Optional[List[str]] = None,
-        is_component: Optional[bool] = None,
-        filter_by_user: Optional[bool] = False,
-        liked: Optional[bool] = False,
-        store_api_key: Optional[str] = None,
+        component_id: str | None = None,
+        search: str | None = None,
+        private: bool | None = None,
+        tags: list[str] | None = None,
+        is_component: bool | None = None,
+        filter_by_user: bool | None = False,
+        liked: bool | None = False,
+        store_api_key: str | None = None,
     ):
         filter_conditions = []
 
@@ -228,15 +230,18 @@ class StoreService(Service):
             liked_filter = self.build_liked_filter()
             filter_conditions.append(liked_filter)
         elif liked and not store_api_key:
-            raise APIKeyError("You must provide an API key to filter by likes")
+            msg = "You must provide an API key to filter by likes"
+            raise APIKeyError(msg)
 
         if filter_by_user and store_api_key:
             user_data = user_data_var.get()
             if not user_data:
-                raise ValueError("No user data")
+                msg = "No user data"
+                raise ValueError(msg)
             filter_conditions.append({"user_created": {"_eq": user_data["id"]}})
         elif filter_by_user and not store_api_key:
-            raise APIKeyError("You must provide an API key to filter your components")
+            msg = "You must provide an API key to filter your components"
+            raise APIKeyError(msg)
         else:
             filter_conditions.append({"private": {"_eq": False}})
 
@@ -246,20 +251,21 @@ class StoreService(Service):
         user_data = user_data_var.get()
         # params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
         if not user_data:
-            raise ValueError("No user data")
+            msg = "No user data"
+            raise ValueError(msg)
         return {"liked_by": {"directus_users_id": {"_eq": user_data["id"]}}}
 
     async def query_components(
         self,
-        api_key: Optional[str] = None,
-        sort: Optional[List[str]] = None,
+        api_key: str | None = None,
+        sort: list[str] | None = None,
         page: int = 1,
         limit: int = 15,
-        fields: Optional[List[str]] = None,
-        filter_conditions: Optional[List[Dict[str, Any]]] = None,
-        use_api_key: Optional[bool] = False,
-    ) -> Tuple[List[ListComponentResponse], Dict[str, Any]]:
-        params: Dict[str, Any] = {
+        fields: list[str] | None = None,
+        filter_conditions: list[dict[str, Any]] | None = None,
+        use_api_key: bool | None = False,
+    ) -> tuple[list[ListComponentResponse], dict[str, Any]]:
+        params: dict[str, Any] = {
             "page": page,
             "limit": limit,
             "fields": ",".join(fields) if fields is not None else ",".join(self.default_fields),
@@ -288,13 +294,14 @@ class StoreService(Service):
 
         return results_objects, metadata
 
-    async def get_liked_by_user_components(self, component_ids: List[str], api_key: str) -> List[str]:
+    async def get_liked_by_user_components(self, component_ids: list[str], api_key: str) -> list[str]:
         # Get fields id
         # filter should be "id is in component_ids AND liked_by directus_users_id token is api_key"
         # return the ids
         user_data = user_data_var.get()
         if not user_data:
-            raise ValueError("No user data")
+            msg = "No user data"
+            raise ValueError(msg)
         params = {
             "fields": "id",
             "filter": json.dumps(
@@ -310,10 +317,11 @@ class StoreService(Service):
         return [result["id"] for result in results]
 
     # Which of the components is parent of the user's components
-    async def get_components_in_users_collection(self, component_ids: List[str], api_key: str):
+    async def get_components_in_users_collection(self, component_ids: list[str], api_key: str):
         user_data = user_data_var.get()
         if not user_data:
-            raise ValueError("No user data")
+            msg = "No user data"
+            raise ValueError(msg)
         params = {
             "fields": "id",
             "filter": json.dumps(
@@ -330,13 +338,15 @@ class StoreService(Service):
 
     async def download(self, api_key: str, component_id: UUID) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"
-        params = {"fields": ",".join(["id", "name", "description", "data", "is_component", "metadata"])}
+        params = {"fields": "id,name,description,data,is_component,metadata"}
         if not self.download_webhook_url:
-            raise ValueError("DOWNLOAD_WEBHOOK_URL is not set")
+            msg = "DOWNLOAD_WEBHOOK_URL is not set"
+            raise ValueError(msg)
         component, _ = await self._get(url, api_key, params)
         await self.call_webhook(api_key, self.download_webhook_url, component_id)
         if len(component) > 1:
-            raise ValueError("Something went wrong while downloading the component")
+            msg = "Something went wrong while downloading the component"
+            raise ValueError(msg)
         component_dict = component[0]
 
         download_component = DownloadComponentResponse(**component_dict)
@@ -345,8 +355,9 @@ class StoreService(Service):
             # If it is, we need to build the metadata
             try:
                 download_component.metadata = process_component_data(download_component.data.get("nodes", []))
-            except KeyError:
-                raise ValueError("Invalid component data. No nodes found")
+            except KeyError as e:
+                msg = "Invalid component data. No nodes found"
+                raise ValueError(msg) from e
         return download_component
 
     async def upload(self, api_key: str, component_data: StoreComponentCreate) -> CreateComponentResponse:
@@ -380,7 +391,8 @@ class StoreService(Service):
                     raise FilterError(message)
                 except UnboundLocalError:
                     pass
-            raise ValueError(f"Upload failed: {exc}")
+            msg = f"Upload failed: {exc}"
+            raise ValueError(msg) from exc
 
     async def update(
         self, api_key: str, component_id: UUID, component_data: StoreComponentCreate
@@ -416,45 +428,49 @@ class StoreService(Service):
                     raise FilterError(message)
                 except UnboundLocalError:
                     pass
-            raise ValueError(f"Upload failed: {exc}")
+            msg = f"Upload failed: {exc}"
+            raise ValueError(msg) from exc
 
-    async def get_tags(self) -> List[Dict[str, Any]]:
+    async def get_tags(self) -> list[dict[str, Any]]:
         url = f"{self.base_url}/items/tags"
-        params = {"fields": ",".join(["id", "name"])}
+        params = {"fields": "id,name"}
         tags, _ = await self._get(url, api_key=None, params=params)
         return tags
 
-    async def get_user_likes(self, api_key: str) -> List[Dict[str, Any]]:
+    async def get_user_likes(self, api_key: str) -> list[dict[str, Any]]:
         url = f"{self.base_url}/users/me"
         params = {
-            "fields": ",".join(["id", "likes"]),
+            "fields": "id,likes",
         }
         likes, _ = await self._get(url, api_key, params)
         return likes
 
-    async def get_component_likes_count(self, component_id: str, api_key: Optional[str] = None) -> int:
+    async def get_component_likes_count(self, component_id: str, api_key: str | None = None) -> int:
         url = f"{self.components_url}/{component_id}"
 
         params = {
-            "fields": ",".join(["id", "count(liked_by)"]),
+            "fields": "id,count(liked_by)",
         }
         result, _ = await self._get(url, api_key=api_key, params=params)
         if len(result) == 0:
-            raise ValueError("Component not found")
+            msg = "Component not found"
+            raise ValueError(msg)
         likes = result[0]["liked_by_count"]
         # likes_by_count is a string
         # try to convert it to int
         try:
             likes = int(likes)
-        except ValueError:
-            raise ValueError(f"Unexpected value for likes count: {likes}")
+        except ValueError as e:
+            msg = f"Unexpected value for likes count: {likes}"
+            raise ValueError(msg) from e
         return likes
 
     async def like_component(self, api_key: str, component_id: str) -> bool:
         # if it returns a list with one id, it means the like was successful
         # if it returns an int, it means the like was removed
         if not self.like_webhook_url:
-            raise ValueError("LIKE_WEBHOOK_URL is not set")
+            msg = "LIKE_WEBHOOK_URL is not set"
+            raise ValueError(msg)
         headers = {"Authorization": f"Bearer {api_key}"}
         # response = httpx.post(
         #     self.like_webhook_url,
@@ -476,30 +492,30 @@ class StoreService(Service):
 
             if isinstance(result, list):
                 return True
-            elif isinstance(result, int):
+            if isinstance(result, int):
                 return False
-            else:
-                raise ValueError(f"Unexpected result: {result}")
-        else:
-            raise ValueError(f"Unexpected status code: {response.status_code}")
+            msg = f"Unexpected result: {result}"
+            raise ValueError(msg)
+        msg = f"Unexpected status code: {response.status_code}"
+        raise ValueError(msg)
 
     async def get_list_component_response_model(
         self,
-        component_id: Optional[str] = None,
-        search: Optional[str] = None,
-        private: Optional[bool] = None,
-        tags: Optional[List[str]] = None,
-        is_component: Optional[bool] = None,
-        fields: Optional[List[str]] = None,
+        component_id: str | None = None,
+        search: str | None = None,
+        private: bool | None = None,
+        tags: list[str] | None = None,
+        is_component: bool | None = None,
+        fields: list[str] | None = None,
         filter_by_user: bool = False,
         liked: bool = False,
-        store_api_key: Optional[str] = None,
-        sort: Optional[List[str]] = None,
+        store_api_key: str | None = None,
+        sort: list[str] | None = None,
         page: int = 1,
         limit: int = 15,
     ):
         async with user_data_context(api_key=store_api_key, store_service=self):
-            filter_conditions: List[Dict[str, Any]] = self.build_filter_conditions(
+            filter_conditions: list[dict[str, Any]] = self.build_filter_conditions(
                 component_id=component_id,
                 search=search,
                 private=private,
@@ -510,9 +526,9 @@ class StoreService(Service):
                 store_api_key=store_api_key,
             )
 
-            result: List[ListComponentResponse] = []
+            result: list[ListComponentResponse] = []
             authorized = False
-            metadata: Dict = {}
+            metadata: dict = {}
             comp_count = 0
             try:
                 result, metadata = await self.query_components(
@@ -528,13 +544,14 @@ class StoreService(Service):
                     comp_count = metadata.get("filter_count", 0)
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
-                    raise ForbiddenError("You are not authorized to access this public resource") from exc
-                elif exc.response.status_code == 401:
-                    raise APIKeyError(
-                        "You are not authorized to access this resource. Please check your API key."
-                    ) from exc
+                    msg = "You are not authorized to access this public resource"
+                    raise ForbiddenError(msg) from exc
+                if exc.response.status_code == 401:
+                    msg = "You are not authorized to access this resource. Please check your API key."
+                    raise APIKeyError(msg) from exc
             except Exception as exc:
-                raise ValueError(f"Unexpected error: {exc}") from exc
+                msg = f"Unexpected error: {exc}"
+                raise ValueError(msg) from exc
             try:
                 if result and not metadata:
                     if len(result) >= limit:
@@ -549,9 +566,11 @@ class StoreService(Service):
                     comp_count = 0
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
-                    raise ForbiddenError("You are not authorized to access this public resource")
-                elif exc.response.status_code == 401:
-                    raise APIKeyError("You are not authorized to access this resource. Please check your API key.")
+                    msg = "You are not authorized to access this public resource"
+                    raise ForbiddenError(msg) from exc
+                if exc.response.status_code == 401:
+                    msg = "You are not authorized to access this resource. Please check your API key."
+                    raise APIKeyError(msg) from exc
 
             if store_api_key:
                 # Now, from the result, we need to get the components

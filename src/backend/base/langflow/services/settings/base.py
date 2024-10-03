@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 from shutil import copy2
-from typing import Any, List, Literal, Optional, Tuple, Type
+from typing import Any, Literal
 
 import orjson
 import yaml
@@ -31,10 +31,7 @@ def is_list_of_any(field: FieldInfo) -> bool:
     if field.annotation is None:
         return False
     try:
-        if hasattr(field.annotation, "__args__"):
-            union_args = field.annotation.__args__
-        else:
-            union_args = []
+        union_args = field.annotation.__args__ if hasattr(field.annotation, "__args__") else []
 
         return field.annotation.__origin__ is list or any(
             arg.__origin__ is list for arg in union_args if hasattr(arg, "__origin__")
@@ -59,15 +56,16 @@ class MyCustomSource(EnvSettingsSource):
 
 class Settings(BaseSettings):
     # Define the default LANGFLOW_DIR
-    config_dir: Optional[str] = None
+    config_dir: str | None = None
     # Define if langflow db should be saved in config dir or
     # in the langflow directory
     save_db_in_config_dir: bool = False
-    """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory (i.e. in the package directory)."""
+    """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory
+    (i.e. in the package directory)."""
 
     dev: bool = False
     """If True, Langflow will run in development mode."""
-    database_url: Optional[str] = None
+    database_url: str | None = None
     """Database URL for Langflow. If not provided, Langflow will use a SQLite database."""
     pool_size: int = 10
     """The number of connections to keep open in the connection pool. If not provided, the default is 10."""
@@ -75,10 +73,11 @@ class Settings(BaseSettings):
     """The number of connections to allow that can be opened beyond the pool size.
     If not provided, the default is 20."""
     db_connect_timeout: int = 20
-    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the database."""
+    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
+    database."""
 
     # sqlite configuration
-    sqlite_pragmas: Optional[dict] = {"synchronous": "NORMAL", "journal_mode": "WAL"}
+    sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
     """SQLite pragmas to use when connecting to the database."""
 
     # cache configuration
@@ -95,28 +94,26 @@ class Settings(BaseSettings):
     """The port on which Langflow will expose Prometheus metrics. 9090 is the default port."""
 
     remove_api_keys: bool = False
-    components_path: List[str] = []
+    components_path: list[str] = []
     langchain_cache: str = "InMemoryCache"
-    load_flows_path: Optional[str] = None
+    load_flows_path: str | None = None
 
     # Redis
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_db: int = 0
-    redis_url: Optional[str] = None
+    redis_url: str | None = None
     redis_cache_expire: int = 3600
 
     # Sentry
-    sentry_dsn: Optional[str] = None
-    sentry_traces_sample_rate: Optional[float] = 1.0
-    sentry_profiles_sample_rate: Optional[float] = 1.0
+    sentry_dsn: str | None = None
+    sentry_traces_sample_rate: float | None = 1.0
+    sentry_profiles_sample_rate: float | None = 1.0
 
-    store: Optional[bool] = True
-    store_url: Optional[str] = "https://api.langflow.store"
-    download_webhook_url: Optional[str] = (
-        "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
-    )
-    like_webhook_url: Optional[str] = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
+    store: bool | None = True
+    store_url: str | None = "https://api.langflow.store"
+    download_webhook_url: str | None = "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
+    like_webhook_url: str | None = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     storage_type: str = "local"
 
@@ -149,12 +146,28 @@ class Settings(BaseSettings):
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
     # Config
+    host: str = "127.0.0.1"
+    """The host on which Langflow will run."""
+    port: int = 7860
+    """The port on which Langflow will run."""
+    workers: int = 1
+    """The number of workers to run."""
+    log_level: str = "critical"
+    """The log level for Langflow."""
+    log_file: str | None = "logs/langflow.log"
+    """The path to log file for Langflow."""
+    frontend_path: str | None = None
+    """The path to the frontend directory containing build files. This is for development purposes only.."""
+    open_browser: bool = False
+    """If set to True, Langflow will open the browser on startup."""
     auto_saving: bool = True
     """If set to True, Langflow will auto save flows."""
     auto_saving_interval: int = 1000
     """The interval in ms at which Langflow will auto save flows."""
     health_check_max_retries: int = 5
     """The maximum number of retries for the health check."""
+    max_file_size_upload: int = 100
+    """The maximum file size for the upload in MB."""
 
     @field_validator("dev")
     @classmethod
@@ -213,7 +226,8 @@ class Settings(BaseSettings):
                 # so we need to migrate to the new format
                 # if there is a database in that location
                 if not info.data["config_dir"]:
-                    raise ValueError("config_dir not set, please set it or provide a database_url")
+                    msg = "config_dir not set, please set it or provide a database_url"
+                    raise ValueError(msg)
 
                 from langflow.utils.version import get_version_info
                 from langflow.utils.version import is_pre_release as langflow_is_pre_release
@@ -264,10 +278,7 @@ class Settings(BaseSettings):
                         final_path = new_path
 
                 if final_path is None:
-                    if is_pre_release:
-                        final_path = new_pre_path
-                    else:
-                        final_path = new_path
+                    final_path = new_pre_path if is_pre_release else new_path
 
                 value = f"sqlite:///{final_path}"
 
@@ -339,12 +350,12 @@ class Settings(BaseSettings):
     @classmethod
     def settings_customise_sources(
         cls,
-        settings_cls: Type[BaseSettings],
+        settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
-    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
         return (MyCustomSource(settings_cls),)
 
 
@@ -362,13 +373,14 @@ def load_settings_from_yaml(file_path: str) -> Settings:
 
         file_path = os.path.join(current_path, file_path)
 
-    with open(file_path, "r") as f:
+    with open(file_path) as f:
         settings_dict = yaml.safe_load(f)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 
         for key in settings_dict:
-            if key not in Settings.model_fields.keys():
-                raise KeyError(f"Key {key} not found in settings")
+            if key not in Settings.model_fields:
+                msg = f"Key {key} not found in settings"
+                raise KeyError(msg)
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
     return Settings(**settings_dict)

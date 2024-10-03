@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from typing import Optional, Union
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -11,15 +10,15 @@ from langflow.services.database.models.user.model import User, UserUpdate
 from langflow.services.deps import get_session
 
 
-def get_user_by_username(db: Session, username: str) -> Union[User, None]:
+def get_user_by_username(db: Session, username: str) -> User | None:
     return db.exec(select(User).where(User.username == username)).first()
 
 
-def get_user_by_id(db: Session, id: UUID) -> Union[User, None]:
-    return db.exec(select(User).where(User.id == id)).first()
+def get_user_by_id(db: Session, user_id: UUID) -> User | None:
+    return db.exec(select(User).where(User.id == user_id)).first()
 
 
-def update_user(user_db: Optional[User], user: UserUpdate, db: Session = Depends(get_session)) -> User:
+def update_user(user_db: User | None, user: UserUpdate, db: Session = Depends(get_session)) -> User:
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 

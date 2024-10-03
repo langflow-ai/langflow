@@ -1,9 +1,9 @@
-from typing import List
-from langflow.custom import Component
-from langflow.io import StrInput, SecretStrInput, BoolInput, DropdownInput, Output, IntInput
-from langflow.schema import Data
 from langchain_community.document_loaders import ConfluenceLoader
 from langchain_community.document_loaders.confluence import ContentFormat
+
+from langflow.custom import Component
+from langflow.io import BoolInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
 class ConfluenceComponent(Component):
@@ -66,7 +66,7 @@ class ConfluenceComponent(Component):
 
     def build_confluence(self) -> ConfluenceLoader:
         content_format = ContentFormat(self.content_format)
-        loader = ConfluenceLoader(
+        return ConfluenceLoader(
             url=self.url,
             username=self.username,
             api_key=self.api_key,
@@ -75,9 +75,8 @@ class ConfluenceComponent(Component):
             content_format=content_format,
             max_pages=self.max_pages,
         )
-        return loader
 
-    def load_documents(self) -> List[Data]:
+    def load_documents(self) -> list[Data]:
         confluence = self.build_confluence()
         documents = confluence.load()
         data = [Data.from_document(doc) for doc in documents]  # Using the from_document method of Data

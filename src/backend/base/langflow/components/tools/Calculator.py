@@ -1,12 +1,13 @@
 import ast
 import operator
-from typing import List
+
+from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
+
 from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
 from langflow.inputs import MessageTextInput
 from langflow.schema import Data
-from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
 
 
 class CalculatorToolComponent(LCToolComponent):
@@ -26,7 +27,7 @@ class CalculatorToolComponent(LCToolComponent):
     class CalculatorToolSchema(BaseModel):
         expression: str = Field(..., description="The arithmetic expression to evaluate.")
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         return self._evaluate_expression(self.expression)
 
     def build_tool(self) -> Tool:
@@ -37,7 +38,7 @@ class CalculatorToolComponent(LCToolComponent):
             args_schema=self.CalculatorToolSchema,
         )
 
-    def _evaluate_expression(self, expression: str) -> List[Data]:
+    def _evaluate_expression(self, expression: str) -> list[Data]:
         try:
             # Define the allowed operators
             operators = {
@@ -51,12 +52,11 @@ class CalculatorToolComponent(LCToolComponent):
             def eval_expr(node):
                 if isinstance(node, ast.Num):
                     return node.n
-                elif isinstance(node, ast.BinOp):
+                if isinstance(node, ast.BinOp):
                     return operators[type(node.op)](eval_expr(node.left), eval_expr(node.right))
-                elif isinstance(node, ast.UnaryOp):
+                if isinstance(node, ast.UnaryOp):
                     return operators[type(node.op)](eval_expr(node.operand))
-                else:
-                    raise TypeError(node)
+                raise TypeError(node)
 
             # Parse the expression and evaluate it
             tree = ast.parse(expression, mode="eval")

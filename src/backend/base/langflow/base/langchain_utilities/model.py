@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from langflow.custom import Component
 from langflow.field_typing import Tool
@@ -19,20 +19,20 @@ class LCToolComponent(Component):
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
-                raise ValueError(f"Output with name '{method_name}' must be defined.")
-            elif not hasattr(self, method_name):
-                raise ValueError(f"Method '{method_name}' must be defined.")
+                msg = f"Output with name '{method_name}' must be defined."
+                raise ValueError(msg)
+            if not hasattr(self, method_name):
+                msg = f"Method '{method_name}' must be defined."
+                raise ValueError(msg)
 
     @abstractmethod
-    def run_model(self) -> Union[Data, list[Data]]:
+    def run_model(self) -> Data | list[Data]:
         """
         Run model and return the output.
         """
-        pass
 
     @abstractmethod
     def build_tool(self) -> Tool | Sequence[Tool]:
         """
         Build the tool.
         """
-        pass

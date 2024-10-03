@@ -3,6 +3,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing.constants import LanguageModel
+from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, FloatInput, MessageTextInput, SecretStrInput
 
 
@@ -67,6 +68,13 @@ class QianfanChatEndpointComponent(LCModelComponent):
             display_name="Endpoint",
             info="Endpoint of the Qianfan LLM, required if custom model used.",
         ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -89,6 +97,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
                 endpoint=endpoint,
             )
         except Exception as e:
-            raise ValueError("Could not connect to Baidu Qianfan API.") from e
+            msg = "Could not connect to Baidu Qianfan API."
+            raise ValueError(msg) from e
 
         return output  # type: ignore

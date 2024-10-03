@@ -3,12 +3,12 @@ import json
 from typing import Any
 
 from langchain.agents import Tool
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs.inputs import MultilineInput, MessageTextInput, BoolInput, DropdownInput, HandleInput, FieldTypes
 from langchain_core.tools import StructuredTool
 from pydantic.v1 import Field, create_model
 from pydantic.v1.fields import Undefined
 
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.inputs.inputs import BoolInput, DropdownInput, FieldTypes, HandleInput, MessageTextInput, MultilineInput
 from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
@@ -175,7 +175,8 @@ class PythonCodeStructuredTool(LCToolComponent):
             field_name = attr.split("|")[1]
             func_arg = self._find_arg(named_functions, func_name, field_name)
             if func_arg is None:
-                raise Exception(f"Failed to find arg: {field_name}")
+                msg = f"Failed to find arg: {field_name}"
+                raise Exception(msg)
 
             field_annotation = func_arg["annotation"]
             field_description = self._get_value(self._attributes[attr], str)
@@ -187,9 +188,7 @@ class PythonCodeStructuredTool(LCToolComponent):
                 schema_annotation = Any
             schema_fields[field_name] = (
                 schema_annotation,
-                Field(
-                    default=func_arg["default"] if "default" in func_arg else Undefined, description=field_description
-                ),
+                Field(default=func_arg.get("default", Undefined), description=field_description),
             )
 
         if "temp_annotation_type" in _globals:
@@ -199,14 +198,13 @@ class PythonCodeStructuredTool(LCToolComponent):
         if schema_fields:
             PythonCodeToolSchema = create_model("PythonCodeToolSchema", **schema_fields)  # type: ignore
 
-        tool = StructuredTool.from_function(
+        return StructuredTool.from_function(
             func=_local[self.tool_function].run,
             args_schema=PythonCodeToolSchema,
             name=self.tool_name,
             description=self.tool_description,
             return_direct=self.return_direct,
         )
-        return tool  # type: ignore
 
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """
@@ -250,7 +248,8 @@ class PythonCodeStructuredTool(LCToolComponent):
             func = {"name": node.name, "args": []}
             for arg in node.args.args:
                 if arg.lineno != arg.end_lineno:
-                    raise Exception("Multiline arguments are not supported")
+                    msg = "Multiline arguments are not supported"
+                    raise Exception(msg)
 
                 func_arg = {
                     "name": arg.arg,

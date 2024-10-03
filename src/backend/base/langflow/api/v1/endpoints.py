@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from asyncio import Lock
 from http import HTTPStatus
@@ -62,18 +64,17 @@ router = APIRouter(tags=["Base"])
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all(
     settings_service=Depends(get_settings_service),
-    cache_service: "CacheService" = Depends(dependency=get_cache_service),
+    cache_service: CacheService = Depends(dependency=get_cache_service),
     force_refresh: bool = False,
 ):
     from langflow.interface.types import get_and_cache_all_types_dict
 
     try:
         async with Lock() as lock:
-            all_types_dict = await get_and_cache_all_types_dict(
+            return await get_and_cache_all_types_dict(
                 settings_service=settings_service, cache_service=cache_service, force_refresh=force_refresh, lock=lock
             )
 
-            return all_types_dict
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -92,17 +93,14 @@ def validate_input_and_tweaks(input_request: SimplifiedAPIRequest):
                 has_input_value = value.get("input_value") is not None
                 input_value_is_chat = input_request.input_value is not None and input_request.input_type == "chat"
                 if has_input_value and input_value_is_chat:
-                    raise InvalidChatInputException(
-                        "If you pass an input_value to the chat input, you cannot pass a tweak with the same name."
-                    )
-        elif "Text Input" in key or "TextInput" in key:
-            if isinstance(value, dict):
-                has_input_value = value.get("input_value") is not None
-                input_value_is_text = input_request.input_value is not None and input_request.input_type == "text"
-                if has_input_value and input_value_is_text:
-                    raise InvalidChatInputException(
-                        "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
-                    )
+                    msg = "If you pass an input_value to the chat input, you cannot pass a tweak with the same name."
+                    raise InvalidChatInputException(msg)
+        elif ("Text Input" in key or "TextInput" in key) and isinstance(value, dict):
+            has_input_value = value.get("input_value") is not None
+            input_value_is_text = input_request.input_value is not None and input_request.input_type == "text"
+            if has_input_value and input_value_is_text:
+                msg = "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
+                raise InvalidChatInputException(msg)
 
 
 async def simple_run_flow(
@@ -118,7 +116,8 @@ async def simple_run_flow(
         user_id = api_key_user.id if api_key_user else None
         flow_id_str = str(flow.id)
         if flow.data is None:
-            raise ValueError(f"Flow {flow_id_str} has no data")
+            msg = f"Flow {flow_id_str} has no data"
+            raise ValueError(msg)
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
         graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
@@ -162,13 +161,12 @@ async def simple_run_flow_task(
     Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
     """
     try:
-        result = await simple_run_flow(
+        return await simple_run_flow(
             flow=flow,
             input_request=input_request,
             stream=stream,
             api_key_user=api_key_user,
         )
-        return result
 
     except Exception as exc:
         logger.exception(f"Error running flow {flow.id} task: {exc}")
@@ -178,37 +176,50 @@ async def simple_run_flow_task(
 async def simplified_run_flow(
     background_tasks: BackgroundTasks,
     flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
-    input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
+    input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: UserRead = Depends(api_key_security),
-    telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
+    telemetry_service: TelemetryService = Depends(get_telemetry_service),
 ):
     """
-    Executes a specified flow by ID with input customization, performance enhancements through caching, and optional data streaming.
+    Executes a specified flow by ID with input customization, performance enhancements through caching, and optional
+    data streaming.
 
     ### Parameters:
     - `db` (Session): Database session for executing queries.
     - `flow_id_or_name` (str): ID or endpoint name of the flow to run.
-    - `input_request` (SimplifiedAPIRequest): Request object containing input values, types, output selection, tweaks, and session ID.
+    - `input_request` (SimplifiedAPIRequest): Request object containing input values, types, output selection, tweaks,
+      and session ID.
     - `api_key_user` (User): User object derived from the provided API key, used for authentication.
     - `session_service` (SessionService): Service for managing flow sessions, essential for session reuse and caching.
 
     ### SimplifiedAPIRequest:
     - `input_value` (Optional[str], default=""): Input value to pass to the flow.
-    - `input_type` (Optional[Literal["chat", "text", "any"]], default="chat"): Type of the input value, determining how the input is interpreted.
-    - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output, affecting which components' outputs are included in the response. If set to "debug", all outputs are returned.
-    - `output_component` (Optional[str], default=None): Specific component output to retrieve. If provided, only the output of the specified component is returned. This overrides the `output_type` parameter.
-    - `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution parameters.
-    - `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for subsequent requests.
+    - `input_type` (Optional[Literal["chat", "text", "any"]], default="chat"): Type of the input value,
+      determining how the input is interpreted.
+    - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output,
+      affecting which components' outputs are included in the response. If set to "debug", all outputs are returned.
+    - `output_component` (Optional[str], default=None): Specific component output to retrieve. If provided,
+      only the output of the specified component is returned. This overrides the `output_type` parameter.
+    - `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution
+      parameters.
+    - `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for
+      subsequent requests.
 
 
     ### Tweaks
-    A dictionary of tweaks to customize the flow execution. The tweaks can be used to modify the flow's parameters and components. Tweaks can be overridden by the input values.
-    You can use Component's `id` or Display Name as key to tweak a specific component (e.g., `{"Component Name": {"parameter_name": "value"}}`).
-    You can also use the parameter name as key to tweak all components with that parameter (e.g., `{"parameter_name": "value"}`).
+    A dictionary of tweaks to customize the flow execution.
+    The tweaks can be used to modify the flow's parameters and components.
+    Tweaks can be overridden by the input values.
+    You can use Component's `id` or Display Name as key to tweak a specific component
+    (e.g., `{"Component Name": {"parameter_name": "value"}}`).
+    You can also use the parameter name as key to tweak all components with that parameter
+    (e.g., `{"parameter_name": "value"}`).
 
     ### Returns:
-    - A `RunResponse` object containing the execution results, including selected (or all, based on `output_type`) outputs of the flow and the session ID, facilitating result retrieval and further interactions in a session context.
+    - A `RunResponse` object containing the execution results, including selected (or all, based on `output_type`)
+      outputs of the flow and the session ID, facilitating result retrieval and further interactions in a session
+      context.
 
     ### Raises:
     - HTTPException: 404 if the specified flow ID curl -X 'POST' \
@@ -229,8 +240,11 @@ async def simplified_run_flow(
           }'
     ```
 
-    This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency, supporting a wide range of applications by allowing for dynamic input and output configuration along with performance optimizations through session management and caching.
+    This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency,
+    supporting a wide range of applications by allowing for dynamic input and output configuration along with
+    performance optimizations through session management and caching.
     """
+    input_request = input_request if input_request is not None else SimplifiedAPIRequest()
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
     start_time = time.perf_counter()
@@ -263,9 +277,8 @@ async def simplified_run_flow(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         if "not found" in str(exc):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        else:
-            logger.exception(exc)
-            raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+        logger.exception(exc)
+        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
     except InvalidChatInputException as exc:
         logger.error(exc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -290,7 +303,7 @@ async def webhook_run_flow(
     user: Annotated[User, Depends(get_user_by_flow_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
-    telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
+    telemetry_service: TelemetryService = Depends(get_telemetry_service),
 ):
     """
     Run a flow using a webhook request.
@@ -314,8 +327,9 @@ async def webhook_run_flow(
         data = await request.body()
         if not data:
             logger.error("Request body is empty")
+            msg = "Request body is empty. You should provide a JSON payload containing the flow ID."
             raise ValueError(
-                "Request body is empty. You should provide a JSON payload containing the flow ID.",
+                msg,
             )
 
         # get all webhook components in the flow
@@ -366,8 +380,8 @@ async def webhook_run_flow(
 async def experimental_run_flow(
     session: Annotated[Session, Depends(get_session)],
     flow_id: UUID,
-    inputs: list[InputValueRequest] | None = [InputValueRequest(components=[], input_value="")],
-    outputs: list[str] | None = [],
+    inputs: list[InputValueRequest] | None = None,
+    outputs: list[str] | None = None,
     tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,  # noqa: F821
     stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[None | str, Body(embed=True)] = None,  # noqa: F821
@@ -380,19 +394,27 @@ async def experimental_run_flow(
 
     ### Parameters:
     - `flow_id` (str): The unique identifier of the flow to be executed.
-    - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components for the flow. Each input can target specific components and provide custom values.
-    - `outputs` (List[str], optional): A list of output names to retrieve from the executed flow. If not provided, all outputs are returned.
-    - `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution. The tweaks can be used to modify the flow's parameters and components. Tweaks can be overridden by the input values.
+    - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components
+      for the flow. Each input can target specific components and provide custom values.
+    - `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.
+      If not provided, all outputs are returned.
+    - `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution.
+      The tweaks can be used to modify the flow's parameters and components.
+      Tweaks can be overridden by the input values.
     - `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.
-    - `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow execution.
+    - `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow
+      execution.
     - `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.
     - `session_service` (SessionService): The session service object for managing flow sessions.
 
     ### Returns:
-    A `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow and the session ID. The structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.
+    A `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow
+    and the session ID.
+    The structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.
 
     ### Raises:
-    HTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during flow execution.
+    HTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during
+    flow execution.
 
     ### Example usage:
     ```json
@@ -410,19 +432,23 @@ async def experimental_run_flow(
     }
     ```
 
-    This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations, catering to diverse application requirements.
-    """
+    This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
+    catering to diverse application requirements.
+    """  # noqa: E501
     try:
         flow_id_str = str(flow_id)
         if outputs is None:
             outputs = []
+        if inputs is None:
+            inputs = [InputValueRequest(components=[], input_value="")]
 
         artifacts = {}
         if session_id:
             session_data = await session_service.load_session(session_id, flow_id=flow_id_str)
             graph, artifacts = session_data if session_data else (None, None)
             if graph is None:
-                raise ValueError(f"Session {session_id} not found")
+                msg = f"Session {session_id} not found"
+                raise ValueError(msg)
         else:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
@@ -430,10 +456,12 @@ async def experimental_run_flow(
                 select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
             ).first()
             if flow is None:
-                raise ValueError(f"Flow {flow_id_str} not found")
+                msg = f"Flow {flow_id_str} not found"
+                raise ValueError(msg)
 
             if flow.data is None:
-                raise ValueError(f"Flow {flow_id_str} has no data")
+                msg = f"Flow {flow_id_str} has no data"
+                raise ValueError(msg)
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
@@ -457,12 +485,11 @@ async def experimental_run_flow(
         if f"Flow {flow_id_str} not found" in str(exc):
             logger.error(f"Flow {flow_id_str} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        elif f"Session {session_id} not found" in str(exc):
+        if f"Session {session_id} not found" in str(exc):
             logger.error(f"Session {session_id} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        else:
-            logger.exception(exc)
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        logger.exception(exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
@@ -484,7 +511,7 @@ async def process(
     tweaks: dict | None = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[None | str, Body(embed=True)] = None,  # noqa: F821
-    task_service: "TaskService" = Depends(get_task_service),
+    task_service: TaskService = Depends(get_task_service),
     api_key_user: UserRead = Depends(api_key_security),
     sync: Annotated[bool, Body(embed=True)] = True,  # noqa: F821
     session_service: SessionService = Depends(get_session_service),
@@ -494,7 +521,7 @@ async def process(
     """
     # Raise a depreciation warning
     logger.warning(
-        "The /process endpoint is deprecated and will be removed in a future version. " "Please use /run instead."
+        "The /process endpoint is deprecated and will be removed in a future version. Please use /run instead."
     )
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -580,7 +607,8 @@ async def custom_component_update(
     Update a custom component with the provided code request.
 
     This endpoint generates the CustomComponentFrontendNode normally but then runs the `update_build_config` method
-    on the latest version of the template. This ensures that every time it runs, it has the latest version of the template.
+    on the latest version of the template.
+    This ensures that every time it runs, it has the latest version of the template.
 
     Args:
         code_request (CustomComponentRequest): The code request containing the updated code for the custom component.
@@ -633,7 +661,7 @@ def get_config():
     try:
         from langflow.services.deps import get_settings_service
 
-        settings_service: "SettingsService" = get_settings_service()  # type: ignore
+        settings_service: SettingsService = get_settings_service()  # type: ignore
         return settings_service.settings.model_dump()
     except Exception as exc:
         logger.exception(exc)

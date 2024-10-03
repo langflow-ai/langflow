@@ -1,9 +1,9 @@
-from typing import List, cast
+from typing import cast
 
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain_cohere import CohereRerank
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.field_typing import Retriever, VectorStore
 from langflow.io import (
     DropdownInput,
@@ -73,12 +73,14 @@ class CohereRerankComponent(LCVectorStoreComponent):
         retriever = ContextualCompressionRetriever(base_compressor=cohere_reranker, base_retriever=self.retriever)
         return cast(Retriever, retriever)
 
-    async def search_documents(self) -> List[Data]:  # type: ignore
+    async def search_documents(self) -> list[Data]:  # type: ignore
         retriever = self.build_base_retriever()
         documents = await retriever.ainvoke(self.search_query, config={"callbacks": self.get_langchain_callbacks()})
         data = self.to_data(documents)
         self.status = data
         return data
 
+    @check_cached_vector_store
     def build_vector_store(self) -> VectorStore:
-        raise NotImplementedError("Cohere Rerank does not support vector stores.")
+        msg = "Cohere Rerank does not support vector stores."
+        raise NotImplementedError(msg)

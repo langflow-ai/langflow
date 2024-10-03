@@ -1,13 +1,12 @@
-from datetime import datetime
 import hashlib
+from datetime import datetime, timezone
 from http import HTTPStatus
 from io import BytesIO
-from uuid import UUID
 from pathlib import Path
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-
 
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.auth.utils import get_current_active_user
@@ -41,19 +40,31 @@ def get_flow_id(
 async def upload_file(
     file: UploadFile,
     flow_id: UUID = Depends(get_flow_id),
+    current_user=Depends(get_current_active_user),
+    session=Depends(get_session),
     storage_service: StorageService = Depends(get_storage_service),
 ):
     try:
+        max_file_size_upload = get_storage_service().settings_service.settings.max_file_size_upload
+        if file.size > max_file_size_upload * 1024 * 1024:
+            raise HTTPException(
+                status_code=413, detail=f"File size is larger than the maximum file size {max_file_size_upload}MB."
+            )
+
         flow_id_str = str(flow_id)
+        flow = session.get(Flow, flow_id_str)
+        if flow.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="You don't have access to this flow")
+
         file_content = await file.read()
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        timestamp = datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d_%H-%M-%S")
         file_name = file.filename or hashlib.sha256(file_content).hexdigest()
         full_file_name = f"{timestamp}_{file_name}"
         folder = flow_id_str
         await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)
         return UploadFileResponse(flowId=flow_id_str, file_path=f"{folder}/{full_file_name}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/download/{flow_id}/{file_name}")
@@ -78,7 +89,7 @@ async def download_file(file_name: str, flow_id: UUID, storage_service: StorageS
         }
         return StreamingResponse(BytesIO(file_content), media_type=content_type, headers=headers)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/images/{flow_id}/{file_name}")
@@ -94,13 +105,13 @@ async def download_image(file_name: str, flow_id: UUID, storage_service: Storage
 
         if not content_type:
             raise HTTPException(status_code=500, detail=f"Content type not found for extension {extension}")
-        elif not content_type.startswith("image"):
+        if not content_type.startswith("image"):
             raise HTTPException(status_code=500, detail=f"Content type {content_type} is not an image")
 
         file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/profile_pictures/{folder_name}/{file_name}")
@@ -119,7 +130,7 @@ async def download_profile_picture(
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/profile_pictures/list")
@@ -140,7 +151,7 @@ async def list_profile_pictures(storage_service: StorageService = Depends(get_st
         return {"files": files}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/list/{flow_id}")
@@ -152,7 +163,7 @@ async def list_files(
         files = await storage_service.list_files(flow_id=flow_id_str)
         return {"files": files}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/delete/{flow_id}/{file_name}")
@@ -164,4 +175,4 @@ async def delete_file(
         await storage_service.delete_file(flow_id=flow_id_str, file_name=file_name)
         return {"message": f"File {file_name} deleted successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

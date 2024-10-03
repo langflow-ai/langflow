@@ -2,7 +2,7 @@ import re
 from collections.abc import Sequence as SequenceABC
 from itertools import chain
 from types import GenericAlias
-from typing import Any, List, Union
+from typing import Any, Union
 
 
 def extract_inner_type_from_generic_alias(return_type: GenericAlias) -> Any:
@@ -42,7 +42,7 @@ def extract_uniont_types_from_generic_alias(return_type: GenericAlias) -> list:
             _inner_arg
             for _type in return_type
             for _inner_arg in _type.__args__
-            if _inner_arg not in set((Any, type(None), type(Any)))
+            if _inner_arg not in {Any, type(None), type(Any)}
         ]
 
     return list(return_type.__args__)
@@ -59,7 +59,7 @@ def post_process_type(_type):
         Union[List[Any], Any]: The processed return type.
 
     """
-    if hasattr(_type, "__origin__") and _type.__origin__ in [list, List, SequenceABC]:
+    if hasattr(_type, "__origin__") and _type.__origin__ in [list, list, SequenceABC]:
         _type = extract_inner_type_from_generic_alias(_type)
 
     # If the return type is not a Union, then we just return it as a list
@@ -81,7 +81,7 @@ def extract_union_types_from_generic_alias(return_type: GenericAlias) -> list:
             _inner_arg
             for _type in return_type
             for _inner_arg in _type.__args__
-            if _inner_arg not in set((Any, type(None), type(Any)))
+            if _inner_arg not in {Any, type(None), type(Any)}
         ]
 
     return list(return_type.__args__)

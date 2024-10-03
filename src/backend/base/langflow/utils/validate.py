@@ -2,7 +2,7 @@ import ast
 import contextlib
 import importlib
 from types import FunctionType
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import ValidationError
 
@@ -57,7 +57,7 @@ def validate_code(code):
 
 def eval_function(function_string: str):
     # Create an empty dictionary to serve as a separate namespace
-    namespace: Dict = {}
+    namespace: dict = {}
 
     # Execute the code string in the new namespace
     exec(function_string, namespace)
@@ -70,7 +70,8 @@ def eval_function(function_string: str):
         None,
     )
     if function_object is None:
-        raise ValueError("Function string does not contain a function")
+        msg = "Function string does not contain a function"
+        raise ValueError(msg)
     return function_object
 
 
@@ -91,7 +92,8 @@ def execute_function(code, function_name, *args, **kwargs):
                     )
                     exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
                 except ModuleNotFoundError as e:
-                    raise ModuleNotFoundError(f"Module {alias.name} not found. Please install it and try again.") from e
+                    msg = f"Module {alias.name} not found. Please install it and try again."
+                    raise ModuleNotFoundError(msg) from e
 
     function_code = next(
         node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
@@ -101,7 +103,8 @@ def execute_function(code, function_name, *args, **kwargs):
     try:
         exec(code_obj, exec_globals, locals())
     except Exception as exc:
-        raise ValueError("Function string does not contain a function") from exc
+        msg = "Function string does not contain a function"
+        raise ValueError(msg) from exc
 
     # Add the function to the exec_globals dictionary
     exec_globals[function_name] = locals()[function_name]
@@ -121,12 +124,20 @@ def create_function(code, function_name):
     exec_globals = globals().copy()
 
     for node in module.body:
-        if isinstance(node, ast.Import):
+        if isinstance(node, ast.Import | ast.ImportFrom):
             for alias in node.names:
                 try:
-                    exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
+                    if isinstance(node, ast.ImportFrom):
+                        module_name = node.module
+                        exec_globals[alias.asname or alias.name] = getattr(
+                            importlib.import_module(module_name), alias.name
+                        )
+                    else:
+                        module_name = alias.name
+                        exec_globals[alias.asname or alias.name] = importlib.import_module(module_name)
                 except ModuleNotFoundError as e:
-                    raise ModuleNotFoundError(f"Module {alias.name} not found. Please install it and try again.") from e
+                    msg = f"Module {alias.name} not found. Please install it and try again."
+                    raise ModuleNotFoundError(msg) from e
 
     function_code = next(
         node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
@@ -206,14 +217,16 @@ def prepare_global_scope(code, module):
                 try:
                     exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
                 except ModuleNotFoundError as e:
-                    raise ModuleNotFoundError(f"Module {alias.name} not found. Please install it and try again.") from e
+                    msg = f"Module {alias.name} not found. Please install it and try again."
+                    raise ModuleNotFoundError(msg) from e
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             try:
                 imported_module = importlib.import_module(node.module)
                 for alias in node.names:
                     exec_globals[alias.name] = getattr(imported_module, alias.name)
-            except ModuleNotFoundError:
-                raise ModuleNotFoundError(f"Module {node.module} not found. Please install it and try again")
+            except ModuleNotFoundError as e:
+                msg = f"Module {node.module} not found. Please install it and try again"
+                raise ModuleNotFoundError(msg) from e
     return exec_globals
 
 
@@ -238,8 +251,7 @@ def compile_class_code(class_code):
     :param class_code: AST node of the class
     :return: Compiled code object of the class
     """
-    code_obj = compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
-    return code_obj
+    return compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
 
 
 def build_class_constructor(compiled_class, exec_globals, class_name):
@@ -276,8 +288,8 @@ def get_default_imports(code_string):
 
     default_imports = {
         "Optional": Optional,
-        "List": List,
-        "Dict": Dict,
+        "List": list,
+        "Dict": dict,
         "Union": Union,
     }
     langflow_imports = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
@@ -296,8 +308,7 @@ def find_names_in_code(code, names):
     :param names: A list of names to check for in the code.
     :return: A set of names that are found in the code.
     """
-    found_names = {name for name in names if name in code}
-    return found_names
+    return {name for name in names if name in code}
 
 
 def extract_function_name(code):
@@ -305,7 +316,8 @@ def extract_function_name(code):
     for node in module.body:
         if isinstance(node, ast.FunctionDef):
             return node.name
-    raise ValueError("No function definition found in the code string")
+    msg = "No function definition found in the code string"
+    raise ValueError(msg)
 
 
 def extract_class_name(code):
@@ -313,4 +325,5 @@ def extract_class_name(code):
     for node in module.body:
         if isinstance(node, ast.ClassDef):
             return node.name
-    raise ValueError("No class definition found in the code string")
+    msg = "No class definition found in the code string"
+    raise ValueError(msg)

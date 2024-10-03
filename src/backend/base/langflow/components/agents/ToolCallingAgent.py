@@ -1,10 +1,9 @@
-from typing import Optional, List
-
 from langchain.agents import create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate
+
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MultilineInput
-from langflow.inputs.inputs import HandleInput, DataInput
+from langflow.inputs.inputs import DataInput, HandleInput
 from langflow.schema import Data
 
 
@@ -29,12 +28,13 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         DataInput(name="chat_history", display_name="Chat History", is_list=True, advanced=True),
     ]
 
-    def get_chat_history_data(self) -> Optional[List[Data]]:
+    def get_chat_history_data(self) -> list[Data] | None:
         return self.chat_history
 
     def create_agent_runnable(self):
         if "input" not in self.user_prompt:
-            raise ValueError("Prompt must contain 'input' key.")
+            msg = "Prompt must contain 'input' key."
+            raise ValueError(msg)
         messages = [
             ("system", self.system_prompt),
             ("placeholder", "{chat_history}"),

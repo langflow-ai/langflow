@@ -1,26 +1,22 @@
 # from langflow.field_typing import Data
-from langflow.custom import Component
-from langflow.io import MessageTextInput, Output, SecretStrInput
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-
-from typing import List, Optional
+import numpy as np
 
 # TODO: remove ignore once the google package is published with types
-from google.ai.generativelanguage_v1beta.types import (
-    BatchEmbedContentsRequest,
-)
+from google.ai.generativelanguage_v1beta.types import BatchEmbedContentsRequest
 from langchain_core.embeddings import Embeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_google_genai._common import GoogleGenerativeAIError
 
-from langchain_google_genai._common import (
-    GoogleGenerativeAIError,
-)
-
-import numpy as np
+from langflow.custom import Component
+from langflow.io import MessageTextInput, Output, SecretStrInput
 
 
 class GoogleGenerativeAIEmbeddingsComponent(Component):
     display_name = "Google Generative AI Embeddings"
-    description = "Connect to Google's generative AI embeddings service using the GoogleGenerativeAIEmbeddings class, found in the langchain-google-genai package."
+    description = (
+        "Connect to Google's generative AI embeddings service using the GoogleGenerativeAIEmbeddings class, "
+        "found in the langchain-google-genai package."
+    )
     documentation: str = "https://python.langchain.com/v0.2/docs/integrations/text_embedding/google_generative_ai/"
     icon = "Google"
     name = "Google Generative AI Embeddings"
@@ -36,7 +32,8 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
 
     def build_embeddings(self) -> Embeddings:
         if not self.api_key:
-            raise ValueError("API Key is required")
+            msg = "API Key is required"
+            raise ValueError(msg)
 
         class HotaGoogleGenerativeAIEmbeddings(GoogleGenerativeAIEmbeddings):
             def __init__(self, *args, **kwargs):
@@ -44,13 +41,13 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
 
             def embed_documents(
                 self,
-                texts: List[str],
+                texts: list[str],
                 *,
                 batch_size: int = 100,
-                task_type: Optional[str] = None,
-                titles: Optional[List[str]] = None,
-                output_dimensionality: Optional[int] = 1536,
-            ) -> List[List[float]]:
+                task_type: str | None = None,
+                titles: list[str] | None = None,
+                output_dimensionality: int | None = 1536,
+            ) -> list[list[float]]:
                 """Embed a list of strings. Google Generative AI currently
                 sets a max batch size of 100 strings.
 
@@ -65,7 +62,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 Returns:
                     List of embeddings, one for each text.
                 """
-                embeddings: List[List[float]] = []
+                embeddings: list[list[float]] = []
                 batch_start_index = 0
                 for batch in GoogleGenerativeAIEmbeddings._prepare_batches(texts, batch_size):
                     if titles:
@@ -81,7 +78,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                             title=title,
                             output_dimensionality=1536,
                         )
-                        for text, title in zip(batch, titles_batch)
+                        for text, title in zip(batch, titles_batch, strict=True)
                     ]
 
                     try:
@@ -89,17 +86,18 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                             BatchEmbedContentsRequest(requests=requests, model=self.model)
                         )
                     except Exception as e:
-                        raise GoogleGenerativeAIError(f"Error embedding content: {e}") from e
+                        msg = f"Error embedding content: {e}"
+                        raise GoogleGenerativeAIError(msg) from e
                     embeddings.extend([list(np.pad(e.values, (0, 768), "constant")) for e in result.embeddings])
                 return embeddings
 
             def embed_query(
                 self,
                 text: str,
-                task_type: Optional[str] = None,
-                title: Optional[str] = None,
-                output_dimensionality: Optional[int] = 1536,
-            ) -> List[float]:
+                task_type: str | None = None,
+                title: str | None = None,
+                output_dimensionality: int | None = 1536,
+            ) -> list[float]:
                 """Embed a text.
 
                 Args:

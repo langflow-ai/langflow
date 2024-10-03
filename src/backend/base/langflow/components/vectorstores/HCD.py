@@ -128,7 +128,8 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             name="embedding",
             display_name="Embedding or Astra Vectorize",
             input_types=["Embeddings", "dict"],
-            info="Allows either an embedding model or an Astra Vectorize configuration.",  # TODO: This should be optional, but need to refactor langchain-astradb first.
+            # TODO: This should be optional, but need to refactor langchain-astradb first.
+            info="Allows either an embedding model or an Astra Vectorize configuration.",
         ),
         StrInput(
             name="metadata_indexing_exclude",
@@ -160,7 +161,8 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="search_score_threshold",
             display_name="Search Score Threshold",
-            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            info="Minimum similarity score threshold for search results. "
+            "(when using 'Similarity with score threshold')",
             value=0,
             advanced=True,
         ),
@@ -178,27 +180,28 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
         try:
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode
-        except ImportError:
-            raise ImportError(
+        except ImportError as e:
+            msg = (
                 "Could not import langchain Astra DB integration package. "
                 "Please install it with `pip install langchain-astradb`."
             )
+            raise ImportError(msg) from e
 
         try:
-            from astrapy.constants import Environment
             from astrapy.authentication import UsernamePasswordTokenProvider
-        except ImportError:
-            raise ImportError(
-                "Could not import astrapy integration package. " "Please install it with `pip install astrapy`."
-            )
+            from astrapy.constants import Environment
+        except ImportError as e:
+            msg = "Could not import astrapy integration package. Please install it with `pip install astrapy`."
+            raise ImportError(msg) from e
 
         try:
             if not self.setup_mode:
                 self.setup_mode = self._inputs["setup_mode"].options[0]
 
             setup_mode_value = SetupMode[self.setup_mode.upper()]
-        except KeyError:
-            raise ValueError(f"Invalid setup mode: {self.setup_mode}")
+        except KeyError as e:
+            msg = f"Invalid setup mode: {self.setup_mode}"
+            raise ValueError(msg) from e
 
         if not isinstance(self.embedding, dict):
             embedding_dict = {"embedding": self.embedding}
@@ -244,7 +247,8 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
         try:
             vector_store = AstraDBVectorStore(**vector_store_kwargs)
         except Exception as e:
-            raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
+            msg = f"Error initializing AstraDBVectorStore: {str(e)}"
+            raise ValueError(msg) from e
 
         self._add_documents_to_vector_store(vector_store)
         return vector_store
@@ -255,24 +259,25 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
-                raise ValueError("Vector Store Inputs must be Data objects.")
+                msg = "Vector Store Inputs must be Data objects."
+                raise ValueError(msg)
 
         if documents:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
             except Exception as e:
-                raise ValueError(f"Error adding documents to AstraDBVectorStore: {str(e)}") from e
+                msg = f"Error adding documents to AstraDBVectorStore: {str(e)}"
+                raise ValueError(msg) from e
         else:
             logger.debug("No documents to add to the Vector Store.")
 
     def _map_search_type(self):
         if self.search_type == "Similarity with score threshold":
             return "similarity_score_threshold"
-        elif self.search_type == "MMR (Max Marginal Relevance)":
+        if self.search_type == "MMR (Max Marginal Relevance)":
             return "mmr"
-        else:
-            return "similarity"
+        return "similarity"
 
     def _build_search_args(self):
         args = {
@@ -300,7 +305,8 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
 
                 docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
             except Exception as e:
-                raise ValueError(f"Error performing search in AstraDBVectorStore: {str(e)}") from e
+                msg = f"Error performing search in AstraDBVectorStore: {str(e)}"
+                raise ValueError(msg) from e
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 
@@ -308,9 +314,8 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             logger.debug(f"Converted documents to data: {len(data)}")
             self.status = data
             return data
-        else:
-            logger.debug("No search input provided. Skipping search.")
-            return []
+        logger.debug("No search input provided. Skipping search.")
+        return []
 
     def get_retriever_kwargs(self):
         search_args = self._build_search_args()

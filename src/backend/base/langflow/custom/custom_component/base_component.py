@@ -1,10 +1,10 @@
 import operator
 from typing import Any, ClassVar
 from uuid import UUID
-import warnings
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
+from loguru import logger
 
 from langflow.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.custom.code_parser import CodeParser
@@ -35,13 +35,13 @@ class BaseComponent:
         self.cache = TTLCache(maxsize=1024, ttl=60)
         for key, value in data.items():
             if key == "user_id":
-                setattr(self, "_user_id", value)
+                self._user_id = value
             else:
                 setattr(self, key, value)
 
     def __setattr__(self, key, value):
-        if key == "_user_id" and hasattr(self, "_user_id") and getattr(self, "_user_id") is not None:
-            warnings.warn("user_id is immutable and cannot be changed.")
+        if key == "_user_id" and self._user_id is not None:
+            logger.warning("user_id is immutable and cannot be changed.")
         super().__setattr__(key, value)
 
     @cachedmethod(cache=operator.attrgetter("cache"))
@@ -81,7 +81,7 @@ class BaseComponent:
                     template_config[attribute] = func(value=value)
 
         for key in template_config.copy():
-            if key not in ATTR_FUNC_MAPPING.keys():
+            if key not in ATTR_FUNC_MAPPING:
                 template_config.pop(key, None)
 
         return template_config
@@ -98,8 +98,7 @@ class BaseComponent:
 
         cc_class = eval_custom_component_code(self._code)
         component_instance = cc_class(_code=self._code)
-        template_config = self.get_template_config(component_instance)
-        return template_config
+        return self.get_template_config(component_instance)
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError

@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_community.vectorstores import Cassandra
 from loguru import logger
 
@@ -106,7 +104,8 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="search_score_threshold",
             display_name="Search Score Threshold",
-            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            info="Minimum similarity score threshold for search results. "
+            "(when using 'Similarity with score threshold')",
             value=0,
             advanced=True,
         ),
@@ -137,10 +136,9 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
         try:
             import cassio
             from langchain_community.utilities.cassandra import SetupMode
-        except ImportError:
-            raise ImportError(
-                "Could not import cassio integration package. " "Please install it with `pip install cassio`."
-            )
+        except ImportError as e:
+            msg = "Could not import cassio integration package. Please install it with `pip install cassio`."
+            raise ImportError(msg) from e
 
         from uuid import UUID
 
@@ -176,10 +174,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             else:
                 documents.append(_input)
 
-        if self.enable_body_search:
-            body_index_options = [("index_analyzer", "STANDARD")]
-        else:
-            body_index_options = None
+        body_index_options = [("index_analyzer", "STANDARD")] if self.enable_body_search else None
 
         if self.setup_mode == "Off":
             setup_mode = SetupMode.OFF
@@ -214,12 +209,11 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     def _map_search_type(self):
         if self.search_type == "Similarity with score threshold":
             return "similarity_score_threshold"
-        elif self.search_type == "MMR (Max Marginal Relevance)":
+        if self.search_type == "MMR (Max Marginal Relevance)":
             return "mmr"
-        else:
-            return "similarity"
+        return "similarity"
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         logger.debug(f"Search input: {self.search_query}")
@@ -236,19 +230,19 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
             except KeyError as e:
                 if "content" in str(e):
-                    raise ValueError(
-                        "You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'."
+                    msg = (
+                        "You should ingest data through Langflow (or LangChain) to query it in Langflow. "
+                        "Your collection does not contain a field name 'content'."
                     )
-                else:
-                    raise e
+                    raise ValueError(msg) from e
+                raise e
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []
 
     def _build_search_args(self):
         args = {
@@ -262,7 +256,8 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 args["filter"] = clean_filter
         if self.body_search:
             if not self.enable_body_search:
-                raise ValueError("You should enable body search when creating the table to search the body field.")
+                msg = "You should enable body search when creating the table to search the body field."
+                raise ValueError(msg)
             args["body_search"] = self.body_search
         return args
 

@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import os
 import traceback
 import types
+from collections.abc import Sequence
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
@@ -12,8 +15,9 @@ from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
     from langchain.callbacks.base import BaseCallbackHandler
+
+    from langflow.graph.vertex.base import Vertex
 
 
 class LangSmithTracer(BaseTracer):
@@ -62,9 +66,9 @@ class LangSmithTracer(BaseTracer):
         trace_id: str,
         trace_name: str,
         trace_type: str,
-        inputs: Dict[str, Any],
-        metadata: Dict[str, Any] | None = None,
-        vertex: Optional["Vertex"] = None,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+        vertex: Vertex | None = None,
     ):
         if not self._ready:
             return
@@ -81,7 +85,7 @@ class LangSmithTracer(BaseTracer):
         self._children[trace_name] = child
         self._child_link: dict[str, str] = {}
 
-    def _convert_to_langchain_types(self, io_dict: Dict[str, Any]):
+    def _convert_to_langchain_types(self, io_dict: dict[str, Any]):
         converted = {}
         for key, value in io_dict.items():
             converted[key] = self._convert_to_langchain_type(value)
@@ -114,9 +118,9 @@ class LangSmithTracer(BaseTracer):
         self,
         trace_id: str,
         trace_name: str,
-        outputs: Dict[str, Any] | None = None,
+        outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
-        logs: list[Log | dict] = [],
+        logs: Sequence[Log | dict] = (),
     ):
         if not self._ready:
             return
@@ -137,7 +141,7 @@ class LangSmithTracer(BaseTracer):
             child.post()
         self._child_link[trace_name] = child.get_url()
 
-    def _error_to_string(self, error: Optional[Exception]):
+    def _error_to_string(self, error: Exception | None):
         error_message = None
         if error:
             string_stacktrace = traceback.format_exception(error)
@@ -147,7 +151,7 @@ class LangSmithTracer(BaseTracer):
     def end(
         self,
         inputs: dict[str, Any],
-        outputs: Dict[str, Any],
+        outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -160,5 +164,5 @@ class LangSmithTracer(BaseTracer):
         self._run_tree.post()
         self._run_link = self._run_tree.get_url()
 
-    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
+    def get_langchain_callback(self) -> BaseCallbackHandler | None:
         return None

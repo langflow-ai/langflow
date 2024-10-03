@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import yaml
 from cachetools import TTLCache
@@ -69,7 +71,7 @@ class CustomComponent(BaseComponent):
     """The default frozen state of the component. Defaults to False."""
     build_parameters: dict | None = None
     """The build parameters of the component. Defaults to None."""
-    _vertex: Optional["Vertex"] = None
+    _vertex: Vertex | None = None
     """The edge target parameter of the component. Defaults to None."""
     _code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
@@ -81,7 +83,7 @@ class CustomComponent(BaseComponent):
     _outputs: list[OutputValue] = []
     _logs: list[Log] = []
     _output_logs: dict[str, Log] = {}
-    _tracing_service: Optional["TracingService"] = None
+    _tracing_service: TracingService | None = None
     _tree: dict | None = None
 
     def __init__(self, **data):
@@ -110,39 +112,48 @@ class CustomComponent(BaseComponent):
 
     def update_state(self, name: str, value: Any):
         if not self._vertex:
-            raise ValueError("Vertex is not set")
+            msg = "Vertex is not set"
+            raise ValueError(msg)
         try:
             self._vertex.graph.update_state(name=name, record=value, caller=self._vertex.id)
         except Exception as e:
-            raise ValueError(f"Error updating state: {e}")
+            msg = f"Error updating state: {e}"
+            raise ValueError(msg) from e
 
     def stop(self, output_name: str | None = None):
         if not output_name and self._vertex and len(self._vertex.outputs) == 1:
             output_name = self._vertex.outputs[0]["name"]
         elif not output_name:
-            raise ValueError("You must specify an output name to call stop")
+            msg = "You must specify an output name to call stop"
+            raise ValueError(msg)
         if not self._vertex:
-            raise ValueError("Vertex is not set")
+            msg = "Vertex is not set"
+            raise ValueError(msg)
         try:
             self.graph.mark_branch(vertex_id=self._vertex.id, output_name=output_name, state="INACTIVE")
         except Exception as e:
-            raise ValueError(f"Error stopping {self.display_name}: {e}")
+            msg = f"Error stopping {self.display_name}: {e}"
+            raise ValueError(msg) from e
 
     def append_state(self, name: str, value: Any):
         if not self._vertex:
-            raise ValueError("Vertex is not set")
+            msg = "Vertex is not set"
+            raise ValueError(msg)
         try:
             self._vertex.graph.append_state(name=name, record=value, caller=self._vertex.id)
         except Exception as e:
-            raise ValueError(f"Error appending state: {e}")
+            msg = f"Error appending state: {e}"
+            raise ValueError(msg) from e
 
     def get_state(self, name: str):
         if not self._vertex:
-            raise ValueError("Vertex is not set")
+            msg = "Vertex is not set"
+            raise ValueError(msg)
         try:
             return self._vertex.graph.get_state(name=name)
         except Exception as e:
-            raise ValueError(f"Error getting state: {e}")
+            msg = f"Error getting state: {e}"
+            raise ValueError(msg) from e
 
     @staticmethod
     def resolve_path(path: str) -> str:
@@ -158,7 +169,7 @@ class CustomComponent(BaseComponent):
         return str(path_object)
 
     def get_full_path(self, path: str) -> str:
-        storage_svc: "StorageService" = get_storage_service()
+        storage_svc: StorageService = get_storage_service()
 
         flow_id, file_name = path.split("/", 1)
         return storage_svc.build_full_path(flow_id, file_name)
@@ -238,7 +249,8 @@ class CustomComponent(BaseComponent):
             If the input data is a Langchain Document, text_key and data_key are ignored.
 
             keys (List[str], optional): The keys to access the text and data values in each item.
-                It should be a list of strings where the first element is the text key and the second element is the data key.
+                It should be a list of strings where the first element is the text key and the second element
+                is the data key.
                 Defaults to None, in which case the default keys "text" and "data" are used.
 
         Returns:
@@ -266,15 +278,17 @@ class CustomComponent(BaseComponent):
                     else:
                         try:
                             data_dict[key] = model_dump[key]
-                        except KeyError:
-                            raise ValueError(f"Key {key} not found in {item}")
+                        except KeyError as e:
+                            msg = f"Key {key} not found in {item}"
+                            raise ValueError(msg) from e
 
             elif isinstance(item, str):
                 data_dict = {"text": item}
             elif isinstance(item, dict):
                 data_dict = item.copy()
             else:
-                raise ValueError(f"Invalid data type: {type(item)}")
+                msg = f"Invalid data type: {type(item)}"
+                raise ValueError(msg)
 
             data_objects.append(Data(data=data_dict))
 
@@ -413,7 +427,8 @@ class CustomComponent(BaseComponent):
 
         def get_variable(name: str, field: str):
             if hasattr(self, "_user_id") and not self.user_id:
-                raise ValueError(f"User id is not set for {self.__class__.__name__}")
+                msg = f"User id is not set for {self.__class__.__name__}"
+                raise ValueError(msg)
             variable_service = get_variable_service()  # Get service instance
             # Retrieve and decrypt the variable by name for the current user
             with session_scope() as session:
@@ -433,7 +448,8 @@ class CustomComponent(BaseComponent):
             List[str]: The names of the variables for the current user.
         """
         if hasattr(self, "_user_id") and not self.user_id:
-            raise ValueError(f"User id is not set for {self.__class__.__name__}")
+            msg = f"User id is not set for {self.__class__.__name__}"
+            raise ValueError(msg)
         variable_service = get_variable_service()
 
         with session_scope() as session:
@@ -464,9 +480,10 @@ class CustomComponent(BaseComponent):
         """
         return validate.create_function(self._code, self._function_entrypoint_name)
 
-    async def load_flow(self, flow_id: str, tweaks: dict | None = None) -> "Graph":
+    async def load_flow(self, flow_id: str, tweaks: dict | None = None) -> Graph:
         if not self.user_id:
-            raise ValueError("Session is invalid")
+            msg = "Session is invalid"
+            raise ValueError(msg)
         return await load_flow(user_id=str(self._user_id), flow_id=flow_id, tweaks=tweaks)
 
     async def run_flow(
@@ -489,11 +506,13 @@ class CustomComponent(BaseComponent):
 
     def list_flows(self) -> list[Data]:
         if not self.user_id:
-            raise ValueError("Session is invalid")
+            msg = "Session is invalid"
+            raise ValueError(msg)
         try:
             return list_flows(user_id=str(self._user_id))
         except Exception as e:
-            raise ValueError(f"Error listing flows: {e}")
+            msg = f"Error listing flows: {e}"
+            raise ValueError(msg) from e
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         """
@@ -512,12 +531,11 @@ class CustomComponent(BaseComponent):
         """
         This function is called after the code validation is done.
         """
-        frontend_node = update_frontend_node_with_template_values(
+        return update_frontend_node_with_template_values(
             frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node
         )
-        return frontend_node
 
-    def get_langchain_callbacks(self) -> list["BaseCallbackHandler"]:
+    def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
         if self._tracing_service:
             return self._tracing_service.get_langchain_callbacks()
         return []

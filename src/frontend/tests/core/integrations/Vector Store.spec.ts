@@ -166,7 +166,7 @@ test("Vector Store RAG", async ({ page }) => {
     timeout: 30000,
   });
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,

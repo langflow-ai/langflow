@@ -5,7 +5,7 @@ import json
 import re
 from functools import wraps
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from docstring_parser import parse
 
@@ -25,12 +25,13 @@ def remove_ansi_escape_codes(text):
     return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
 
 
-def build_template_from_function(name: str, type_to_loader_dict: Dict, add_function: bool = False):
+def build_template_from_function(name: str, type_to_loader_dict: dict, add_function: bool = False):
     classes = [item.__annotations__["return"].__name__ for item in type_to_loader_dict.values()]
 
     # Raise error if name is not in chains
     if name not in classes:
-        raise ValueError(f"{name} not found")
+        msg = f"{name} not found"
+        raise ValueError(msg)
 
     for _type, v in type_to_loader_dict.items():
         if v.__annotations__["return"].__name__ == name:
@@ -55,9 +56,7 @@ def build_template_from_function(name: str, type_to_loader_dict: Dict, add_funct
                     elif name_ not in ["name"]:
                         variables[class_field_items][name_] = value_
 
-                variables[class_field_items]["placeholder"] = (
-                    docs.params[class_field_items] if class_field_items in docs.params else ""
-                )
+                variables[class_field_items]["placeholder"] = docs.params.get(class_field_items, "")
             # Adding function to base classes to allow
             # the output to be a function
             base_classes = get_base_classes(_class)
@@ -69,19 +68,21 @@ def build_template_from_function(name: str, type_to_loader_dict: Dict, add_funct
                 "description": docs.short_description or "",
                 "base_classes": base_classes,
             }
+    return None
 
 
 def build_template_from_method(
     class_name: str,
     method_name: str,
-    type_to_cls_dict: Dict,
+    type_to_cls_dict: dict,
     add_function: bool = False,
 ):
     classes = [item.__name__ for item in type_to_cls_dict.values()]
 
     # Raise error if class_name is not in classes
     if class_name not in classes:
-        raise ValueError(f"{class_name} not found.")
+        msg = f"{class_name} not found."
+        raise ValueError(msg)
 
     for _type, v in type_to_cls_dict.items():
         if v.__name__ == class_name:
@@ -89,7 +90,8 @@ def build_template_from_method(
 
             # Check if the method exists in this class
             if not hasattr(_class, method_name):
-                raise ValueError(f"Method {method_name} not found in class {class_name}")
+                msg = f"Method {method_name} not found in class {class_name}"
+                raise ValueError(msg)
 
             # Get the method
             method = getattr(_class, method_name)
@@ -128,6 +130,7 @@ def build_template_from_method(
                 "description": docs.short_description or "",
                 "base_classes": base_classes,
             }
+    return None
 
 
 def get_base_classes(cls):
@@ -139,7 +142,7 @@ def get_base_classes(cls):
         bases = cls.__bases__
         result = []
         for base in bases:
-            if any(type in base.__module__ for type in ["pydantic", "abc"]):
+            if any(_type in base.__module__ for _type in ["pydantic", "abc"]):
                 continue
             result.append(base.__name__)
             base_classes = get_base_classes(base)
@@ -196,7 +199,7 @@ def sync_to_async(func):
     return async_wrapper
 
 
-def format_dict(dictionary: Dict[str, Any], class_name: Optional[str] = None) -> Dict[str, Any]:
+def format_dict(dictionary: dict[str, Any], class_name: str | None = None) -> dict[str, Any]:
     """
     Formats a dictionary by removing certain keys and modifying the
     values of other keys.
@@ -209,7 +212,7 @@ def format_dict(dictionary: Dict[str, Any], class_name: Optional[str] = None) ->
         if key in ["_type"]:
             continue
 
-        _type: Union[str, type] = get_type(value)
+        _type: str | type = get_type(value)
 
         if "BaseModel" in str(_type):
             continue
@@ -246,7 +249,7 @@ def get_type_from_union_literal(union_literal: str) -> str:
     return union_literal
 
 
-def get_type(value: Any) -> Union[str, type]:
+def get_type(value: Any) -> str | type:
     """
     Retrieves the type value from the dictionary.
 
@@ -259,7 +262,7 @@ def get_type(value: Any) -> Union[str, type]:
     return _type if isinstance(_type, str) else _type.__name__
 
 
-def remove_optional_wrapper(_type: Union[str, type]) -> str:
+def remove_optional_wrapper(_type: str | type) -> str:
     """
     Removes the 'Optional' wrapper from the type string.
 
@@ -274,7 +277,7 @@ def remove_optional_wrapper(_type: Union[str, type]) -> str:
     return _type
 
 
-def check_list_type(_type: str, value: Dict[str, Any]) -> str:
+def check_list_type(_type: str, value: dict[str, Any]) -> str:
     """
     Checks if the type is a list type and modifies the value accordingly.
 
@@ -313,13 +316,13 @@ def get_formatted_type(key: str, _type: str) -> str:
     if key == "allowed_tools":
         return "Tool"
 
-    elif key == "max_value_length":
+    if key == "max_value_length":
         return "int"
 
     return _type
 
 
-def should_show_field(value: Dict[str, Any], key: str) -> bool:
+def should_show_field(value: dict[str, Any], key: str) -> bool:
     """
     Determines if the field should be shown or not.
 
@@ -361,7 +364,7 @@ def is_multiline_field(key: str) -> bool:
     }
 
 
-def set_dict_file_attributes(value: Dict[str, Any]) -> None:
+def set_dict_file_attributes(value: dict[str, Any]) -> None:
     """
     Sets the file attributes for the 'dict_' key.
     """
@@ -369,7 +372,7 @@ def set_dict_file_attributes(value: Dict[str, Any]) -> None:
     value["fileTypes"] = [".json", ".yaml", ".yml"]
 
 
-def replace_default_value_with_actual(value: Dict[str, Any]) -> None:
+def replace_default_value_with_actual(value: dict[str, Any]) -> None:
     """
     Replaces the default value with the actual value.
     """
@@ -378,14 +381,14 @@ def replace_default_value_with_actual(value: Dict[str, Any]) -> None:
         value.pop("default")
 
 
-def set_headers_value(value: Dict[str, Any]) -> None:
+def set_headers_value(value: dict[str, Any]) -> None:
     """
     Sets the value for the 'headers' key.
     """
     value["value"] = """{"Authorization": "Bearer <token>"}"""
 
 
-def add_options_to_field(value: Dict[str, Any], class_name: Optional[str], key: str) -> None:
+def add_options_to_field(value: dict[str, Any], class_name: str | None, key: str) -> None:
     """
     Adds options to the field based on the class name and key.
     """
@@ -402,7 +405,7 @@ def add_options_to_field(value: Dict[str, Any], class_name: Optional[str], key: 
         value["value"] = options_map[class_name][0]
 
 
-def build_loader_repr_from_data(data: List[Data]) -> str:
+def build_loader_repr_from_data(data: list[Data]) -> str:
     """
     Builds a string representation of the loader based on the given data.
 
@@ -422,15 +425,16 @@ def build_loader_repr_from_data(data: List[Data]) -> str:
 
 
 def update_settings(
-    config: Optional[str] = None,
-    cache: Optional[str] = None,
+    config: str | None = None,
+    cache: str | None = None,
     dev: bool = False,
     remove_api_keys: bool = False,
-    components_path: Optional[Path] = None,
+    components_path: Path | None = None,
     store: bool = True,
     auto_saving: bool = True,
     auto_saving_interval: int = 1000,
     health_check_max_retries: int = 5,
+    max_file_size_upload: int = 100,
 ):
     """Update the settings from a config file."""
     from langflow.services.utils import initialize_settings_service
@@ -463,6 +467,9 @@ def update_settings(
     if health_check_max_retries is not None:
         logger.debug(f"Setting health_check_max_retries to {health_check_max_retries}")
         settings_service.settings.update_settings(health_check_max_retries=health_check_max_retries)
+    if max_file_size_upload is not None:
+        logger.debug(f"Setting max_file_size_upload to {max_file_size_upload}")
+        settings_service.settings.update_settings(max_file_size_upload=max_file_size_upload)
 
 
 def is_class_method(func, cls):

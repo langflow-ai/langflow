@@ -1,4 +1,7 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, cast
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 import nanoid  # type: ignore
@@ -9,10 +12,10 @@ from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
+    from langchain.callbacks.base import BaseCallbackHandler
     from langwatch.tracer import ContextSpan
 
     from langflow.graph.vertex.base import Vertex
-    from langchain.callbacks.base import BaseCallbackHandler
 
 
 class LangWatchTracer(BaseTracer):
@@ -33,11 +36,12 @@ class LangWatchTracer(BaseTracer):
             self.trace = self._client.trace(
                 trace_id=str(self.trace_id),
             )
-            self.spans: dict[str, "ContextSpan"] = {}
+            self.spans: dict[str, ContextSpan] = {}
 
             name_without_id = " - ".join(trace_name.split(" - ")[0:-1])
             self.trace.root_span.update(
-                span_id=f"{self.flow_id}-{nanoid.generate(size=6)}",  # nanoid to make the span_id globally unique, which is required for LangWatch for now
+                # nanoid to make the span_id globally unique, which is required for LangWatch for now
+                span_id=f"{self.flow_id}-{nanoid.generate(size=6)}",
                 name=name_without_id,
                 type="workflow",
             )
@@ -64,9 +68,9 @@ class LangWatchTracer(BaseTracer):
         trace_id: str,
         trace_name: str,
         trace_type: str,
-        inputs: Dict[str, Any],
-        metadata: Dict[str, Any] | None = None,
-        vertex: Optional["Vertex"] = None,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+        vertex: Vertex | None = None,
     ):
         if not self._ready:
             return
@@ -84,7 +88,8 @@ class LangWatchTracer(BaseTracer):
         )
 
         span = self.trace.span(
-            span_id=f"{trace_id}-{nanoid.generate(size=6)}",  # Add a nanoid to make the span_id globally unique, which is required for LangWatch for now
+            # Add a nanoid to make the span_id globally unique, which is required for LangWatch for now
+            span_id=f"{trace_id}-{nanoid.generate(size=6)}",
             name=name_without_id,
             type="component",
             parent=(previous_nodes[-1] if len(previous_nodes) > 0 else self.trace.root_span),
@@ -97,9 +102,9 @@ class LangWatchTracer(BaseTracer):
         self,
         trace_id: str,
         trace_name: str,
-        outputs: Dict[str, Any] | None = None,
+        outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
-        logs: list[Log | dict] = [],
+        logs: Sequence[Log | dict] = (),
     ):
         if not self._ready:
             return
@@ -109,7 +114,7 @@ class LangWatchTracer(BaseTracer):
     def end(
         self,
         inputs: dict[str, Any],
-        outputs: Dict[str, Any],
+        outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):
@@ -127,7 +132,7 @@ class LangWatchTracer(BaseTracer):
         if self.trace.api_key or self._client.api_key:
             self.trace.deferred_send_spans()
 
-    def _convert_to_langwatch_types(self, io_dict: Optional[Dict[str, Any]]):
+    def _convert_to_langwatch_types(self, io_dict: dict[str, Any] | None):
         from langwatch.utils import autoconvert_typed_values
 
         if io_dict is None:
@@ -163,7 +168,7 @@ class LangWatchTracer(BaseTracer):
             value = cast(dict, value.to_lc_document())
         return value
 
-    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
+    def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if self.trace is None:
             return None
 

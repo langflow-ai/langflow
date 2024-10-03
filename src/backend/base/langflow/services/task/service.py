@@ -1,4 +1,7 @@
-from typing import TYPE_CHECKING, Any, Callable, Coroutine
+from __future__ import annotations
+
+from collections.abc import Callable, Coroutine
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -26,7 +29,7 @@ def check_celery_availability():
 class TaskService(Service):
     name = "task_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         try:
             if self.settings_service.settings.celery_enabled:
@@ -65,7 +68,8 @@ class TaskService(Service):
         if not self.use_celery:
             return None, await task_func(*args, **kwargs)
         if not hasattr(task_func, "apply"):
-            raise ValueError(f"Task function {task_func} does not have an apply method")
+            msg = f"Task function {task_func} does not have an apply method"
+            raise ValueError(msg)
         task = task_func.apply(args=args, kwargs=kwargs)
 
         result = task.get()

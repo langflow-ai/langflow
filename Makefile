@@ -35,9 +35,8 @@ patch: ## bump the version in langflow and langflow-base
 
 # check for required tools
 check_tools:
-	@command -v poetry >/dev/null 2>&1 || { echo >&2 "$(RED)Poetry is not installed. Aborting.$(NC)"; exit 1; }
+	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
-	@command -v docker >/dev/null 2>&1 || { echo >&2 "$(RED)Docker is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v pipx >/dev/null 2>&1 || { echo >&2 "$(RED)pipx is not installed. Aborting.$(NC)"; exit 1; }
 	@$(MAKE) check_env
 	@echo "$(GREEN)All required tools are installed.$(NC)"
@@ -61,9 +60,13 @@ help: ## show this help message
 # INSTALL PROJECT
 ######################
 
+reinstall_backend: ## forces reinstall all dependencies (no caching)
+	@echo 'Installing backend dependencies'
+	@uv sync -n --reinstall --frozen
+
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@poetry install > /dev/null 2>&1
+	@uv sync --frozen
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
@@ -80,7 +83,7 @@ init: check_tools clean_python_cache clean_npm_cache ## initialize the project
 	@make install_frontend
 	@make build_frontend
 	@echo "$(GREEN)All requirements are installed.$(NC)"
-	@python -m langflow run
+	@uv run langflow run
 
 ######################
 # CLEAN PROJECT
@@ -104,21 +107,21 @@ clean_npm_cache:
 clean_all: clean_python_cache clean_npm_cache # clean all caches and temporary directories
 	@echo "$(GREEN)All caches and temporary directories cleaned.$(NC)"
 
-setup_poetry: ## install poetry using pipx
-	pipx install poetry
+setup_uv: ## install poetry using pipx
+	pipx install uv
 
 add:
 	@echo 'Adding dependencies'
 ifdef devel
-	@cd src/backend/base && poetry add --group dev $(devel)
+	@cd src/backend/base && uv add --group dev $(devel)
 endif
 
 ifdef main
-	@poetry add $(main)
+	@uv add $(main)
 endif
 
 ifdef base
-	@cd src/backend/base && poetry add $(base)
+	@cd src/backend/base && uv add $(base)
 endif
 
 
@@ -128,19 +131,22 @@ endif
 ######################
 
 coverage: ## run the tests and generate a coverage report
-	@poetry run coverage run
-	@poetry run coverage erase
+	@uv run coverage run
+	@uv run coverage erase
+	#@poetry run coverage run
+	#@poetry run coverage erase
 
 unit_tests: ## run unit tests
+	@uv sync --extra dev --frozen
 ifeq ($(async), true)
-	poetry run pytest src/backend/tests \
+	uv run pytest src/backend/tests \
 		--ignore=src/backend/tests/integration \
 		--instafail -n auto -ra -m "not api_key_required" \
 		--durations-path src/backend/tests/.test_durations \
 		--splitting-algorithm least_duration \
 		$(args)
 else
-	poetry run pytest src/backend/tests \
+	uv run pytest src/backend/tests \
 		--ignore=src/backend/tests/integration \
 		--instafail -ra -m "not api_key_required" \
 		--durations-path src/backend/tests/.test_durations \
@@ -152,17 +158,17 @@ unit_tests_looponfail:
 	@make unit_tests args="-f"
 
 integration_tests:
-	poetry run pytest src/backend/tests/integration \
+	uv run pytest src/backend/tests/integration \
 		--instafail -ra \
 		$(args)
 
 integration_tests_no_api_keys:
-	poetry run pytest src/backend/tests/integration \
+	uv run pytest src/backend/tests/integration \
 		--instafail -ra -m "not api_key_required" \
 		$(args)
 
 integration_tests_api_keys:
-	poetry run pytest src/backend/tests/integration \
+	uv run pytest src/backend/tests/integration \
 		--instafail -ra -m "api_key_required" \
 		$(args)
 
@@ -187,12 +193,12 @@ fix_codespell: ## run codespell to fix spelling errors
 	poetry run codespell --toml pyproject.toml --write
 
 format: ## run code formatters
-	@poetry run ruff check . --fix
-	@poetry run ruff format .
+	@uv run ruff check . --fix
+	@uv run ruff format .
 	@cd src/frontend && npm run format
 
 lint: install_backend ## run linters
-	@poetry run mypy --namespace-packages -p "langflow"
+	@uv run mypy --namespace-packages -p "langflow"
 
 install_frontendci:
 	@cd src/frontend && npm ci > /dev/null 2>&1
@@ -236,16 +242,16 @@ start:
 	@echo 'Running the CLI'
 
 ifeq ($(open_browser),false)
-	@make install_backend && poetry run langflow run \
-		--path $(path) \
+	@make install_backend && uv run langflow run \
+		--frontend-path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
 		--port $(port) \
 		--env-file $(env) \
 		--no-open-browser
 else
-	@make install_backend && poetry run langflow run \
-		--path $(path) \
+	@make install_backend && uv run langflow run \
+		--frontend-path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
 		--port $(port) \
@@ -256,7 +262,7 @@ setup_devcontainer: ## set up the development container
 	make install_backend
 	make install_frontend
 	make build_frontend
-	poetry run langflow --path src/frontend/build
+	uv run langflow --frontend-path src/frontend/build
 
 setup_env: ## set up the environment
 	@sh ./scripts/setup/setup_env.sh
@@ -272,7 +278,7 @@ backend: setup_env install_backend ## run the backend in development mode
 	@-kill -9 $$(lsof -t -i:7860) || true
 ifdef login
 	@echo "Running backend autologin is $(login)";
-	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn \
+	LANGFLOW_AUTO_LOGIN=$(login) uv run uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
@@ -282,7 +288,7 @@ ifdef login
 		$(if $(workers),--workers $(workers),)
 else
 	@echo "Running backend respecting the $(env) file";
-	poetry run uvicorn \
+	uv run uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
@@ -296,54 +302,44 @@ build_and_run: setup_env ## build the project and run it
 	rm -rf dist
 	rm -rf src/backend/base/dist
 	make build
-	poetry run pip install dist/*.tar.gz
-	poetry run langflow run
+	uv run pip install dist/*.tar.gz
+	uv run langflow run
 
 build_and_install: ## build the project and install it
 	@echo 'Removing dist folder'
 	rm -rf dist
 	rm -rf src/backend/base/dist
-	make build && poetry run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
+	make build && uv run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
 
 build: setup_env ## build the frontend static files and package the project
 ifdef base
 	make install_frontendci
 	make build_frontend
-	make build_langflow_base
+	make build_langflow_base args="$(args)"
 endif
 
 ifdef main
 	make install_frontendci
 	make build_frontend
-	make build_langflow_base
-	make build_langflow
+	make build_langflow_base args="$(args)"
+	make build_langflow args="$(args)"
 endif
 
 build_langflow_base:
-	cd src/backend/base && poetry build
+	cd src/backend/base && uv build $(args)
 	rm -rf src/backend/base/langflow/frontend
 
 build_langflow_backup:
-	poetry lock && poetry build
+	uv lock && uv build
 
 build_langflow:
-	cd ./scripts && poetry run python update_dependencies.py
-	poetry lock --no-update
-	poetry build
+	uv lock --no-upgrade
+	uv build $(args)
 ifdef restore
 	mv pyproject.toml.bak pyproject.toml
-	mv poetry.lock.bak poetry.lock
+	mv uv.lock.bak uv.lock
 endif
 
-dev: ## run the project in development mode with docker compose
-	make install_frontend
-ifeq ($(build),1)
-	@echo 'Running docker compose up with build'
-	docker compose $(if $(debug),-f docker-compose.debug.yml) up --build
-else
-	@echo 'Running docker compose up without build'
-	docker compose $(if $(debug),-f docker-compose.debug.yml) up
-endif
 
 docker_build: dockerfile_build clear_dockerimage ## build DockerFile
 
@@ -391,32 +387,34 @@ dcdev_up:
 	docker compose -f docker/dev.docker-compose.yml up --remove-orphans
 
 lock_base:
-	cd src/backend/base && poetry lock
+	cd src/backend/base && uv lock
 
 lock_langflow:
-	poetry lock
+	uv lock
 
 lock: ## lock dependencies
 	@echo 'Locking dependencies'
-	cd src/backend/base && poetry lock --no-update
-	poetry lock --no-update
+	cd src/backend/base && uv lock --no-update
+	uv lock --no-update
 
 update: ## update dependencies
 	@echo 'Updating dependencies'
-	cd src/backend/base && poetry update
-	poetry update
+	cd src/backend/base && uv sync --upgrade
+	uv sync --upgrade
 
 publish_base:
-	cd src/backend/base && poetry publish --skip-existing
+	cd src/backend/base && uv publish
 
 publish_langflow:
-	poetry publish
+	uv publish
 
 publish_base_testpypi:
-	cd src/backend/base && poetry publish --skip-existing -r test-pypi
+	# TODO: update this to use the test-pypi repository
+	cd src/backend/base && uv publish -r test-pypi
 
 publish_langflow_testpypi:
-	poetry publish -r test-pypi
+	# TODO: update this to use the test-pypi repository
+	uv publish -r test-pypi
 
 publish: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
@@ -432,12 +430,13 @@ publish_testpypi: ## build the frontend static files and package the project and
 	@echo 'Publishing the project'
 
 ifdef base
+	#TODO: replace with uvx twine upload dist/*
 	poetry config repositories.test-pypi https://test.pypi.org/legacy/
 	make publish_base_testpypi
 endif
 
 ifdef main
+	#TODO: replace with uvx twine upload dist/*
 	poetry config repositories.test-pypi https://test.pypi.org/legacy/
 	make publish_langflow_testpypi
 endif
-
