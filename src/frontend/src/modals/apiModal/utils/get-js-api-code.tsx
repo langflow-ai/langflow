@@ -52,33 +52,43 @@ export default function getJsApiCode({
         return this.post(endpoint, { input_value: inputValue, input_type: inputType, output_type: outputType, tweaks: tweaks });
     }
   
-    handleStream(streamUrl, onUpdate, onClose, onError) {
-        const eventSource = new EventSource(streamUrl);
-  
-        eventSource.onmessage = event => {
-            const data = JSON.parse(event.data);
-            onUpdate(data);
-        };
-  
-        eventSource.onerror = event => {
-            console.error('Stream Error:', event);
-            onError(event);
-            eventSource.close();
-        };
-  
-        eventSource.addEventListener("close", () => {
+    async handleStream(streamUrl, onUpdate, onClose, onError) {
+      try {
+        const response = await fetch(streamUrl);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
             onClose('Stream closed');
-            eventSource.close();
-        });
-  
-        return eventSource;
+            break;
+          }
+          const chunk = decoder.decode(value);
+          const lines = chunk.split(\'\\n\').filter(line => line.trim() !== '');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                onUpdate(data);
+              } catch (error) {
+                console.error('Error parsing JSON:', error);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Stream Error:', error);
+        onError(error);
+      }
     }
   
     async runFlow(flowIdOrName, inputValue, inputType = 'chat', outputType = 'chat', tweaks, stream = false, onUpdate, onClose, onError) {
         try {
             const initResponse = await this.initiateSession(flowIdOrName, inputValue, inputType, outputType, stream, tweaks);
             if (stream && initResponse?.outputs?.[0]?.outputs?.[0]?.artifacts?.stream_url) {
-                const streamUrl = initResponse.outputs[0].outputs[0].artifacts.stream_url;
+                const streamUrl = this.baseURL + initResponse.outputs[0].outputs[0].artifacts.stream_url;
                 console.log(\`Streaming from: \${streamUrl}\`);
                 this.handleStream(streamUrl, onUpdate, onClose, onError);
             }
@@ -125,7 +135,7 @@ export default function getJsApiCode({
     args[0], // inputValue
     args[1], // inputType
     args[2], // outputType
-    args[3] === 'true' // stream
+    args[3] === 'true' // streaming
   );
   `;
 }

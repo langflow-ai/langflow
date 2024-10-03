@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -74,7 +74,7 @@ class LangFuseTracer(BaseTracer):
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
     ):
-        start_time = datetime.utcnow()
+        start_time = datetime.now(tz=timezone.utc)
         if not self._ready:
             return
 
@@ -103,7 +103,7 @@ class LangFuseTracer(BaseTracer):
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
     ):
-        end_time = datetime.utcnow()
+        end_time = datetime.now(tz=timezone.utc)
         if not self._ready:
             return
 
