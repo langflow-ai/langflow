@@ -15,6 +15,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 interface GetFlowsParams {
   components_only?: boolean;
   get_all?: boolean;
+  header_flows?: boolean;
   folder_id?: string;
   remove_example_flows?: boolean;
   page?: number;
@@ -25,6 +26,7 @@ const addQueryParams = (url: string, params: GetFlowsParams): string => {
   const queryParams = new URLSearchParams();
   if (params.components_only) queryParams.append("components_only", "true");
   if (params.get_all) queryParams.append("get_all", "true");
+  if (params.header_flows) queryParams.append("header_flows", "true");
   if (params.folder_id) queryParams.append("folder_id", params.folder_id);
   if (params.remove_example_flows)
     queryParams.append("remove_example_flows", "true");
