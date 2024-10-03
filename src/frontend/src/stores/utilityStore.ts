@@ -1,3 +1,4 @@
+import { Pagination } from "@/types/utils/types";
 import { UtilityStoreType } from "@/types/zustand/utility";
 import { create } from "zustand";
 
@@ -21,4 +22,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   maxFileSizeUpload: 100 * 1024 * 1024, // 100MB in bytes
   setMaxFileSizeUpload: (maxFileSizeUpload: number) =>
     set({ maxFileSizeUpload: maxFileSizeUpload * 1024 * 1024 }),
+  flowsPagination: {
+    page: 1,
+    size: 10,
+  },
+  setFlowsPagination: (flowsPagination: Pagination) => set({ flowsPagination }),
 }));
