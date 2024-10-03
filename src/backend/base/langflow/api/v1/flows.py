@@ -19,6 +19,7 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
+from langflow.services.database.models.flow.model import FlowSummary
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
@@ -120,7 +121,7 @@ def create_flow(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/", response_model=list[FlowRead] | Page[FlowRead], status_code=200)
+@router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowSummary], status_code=200)
 def read_flows(
     *,
     current_user: User = Depends(get_current_active_user),
@@ -131,6 +132,7 @@ def read_flows(
     folder_id: UUID | None = None,
     params: Params = Depends(),
     remove_example_flows: bool = False,
+    header_flows: bool = False,
 ):
     """
     Retrieve a list of flows with pagination support.
@@ -183,7 +185,11 @@ def read_flows(
                 flows = [flow for flow in flows if flow.is_component]
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
-
+            if header_flows:
+                return [
+                    {"id": flow.id, "name": flow.name, "folder_id": flow.folder_id, "is_component": flow.is_component}
+                    for flow in flows
+                ]  # type: ignore # noqa: E501
             return flows
         return paginate(session, stmt, params=params)
 
