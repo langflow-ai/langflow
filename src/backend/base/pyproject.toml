@@ -157,6 +157,7 @@ flake8-bugbear.extend-immutable-calls = [
     "typer.Option",
 ]
 select = [
+    "A",
     "ASYNC",
     "B",
     "C4",
