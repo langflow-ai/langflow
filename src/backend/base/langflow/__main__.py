@@ -1,3 +1,4 @@
+import inspect
 import platform
 import socket
 import sys
@@ -28,7 +29,6 @@ from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
-from langflow.utils.util import update_settings
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
@@ -157,28 +157,31 @@ def run(
 
     if env_file:
         load_dotenv(env_file, override=True)
+        logger.debug(f"Loading config from file: '{env_file}'")
 
-    update_settings(
-        dev=dev,
-        remove_api_keys=remove_api_keys,
-        cache=cache,
-        components_path=components_path,
-        store=store,
-        auto_saving=auto_saving,
-        auto_saving_interval=auto_saving_interval,
-        health_check_max_retries=health_check_max_retries,
-        max_file_size_upload=max_file_size_upload,
-    )
-    # create path object if path is provided
-    static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
     settings_service = get_settings_service()
-    settings_service.set("backend_only", backend_only)
+
+    arguments, _, _, values = inspect.getargvalues(inspect.currentframe())
+    valid_args = [arg for arg in arguments if values[arg] is not None]
+    for arg in valid_args:
+        if hasattr(settings_service.settings, arg):
+            settings_service.set(arg, values[arg])
+            logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
+
+    host = settings_service.settings.host
+    port = settings_service.settings.port
+    workers = settings_service.settings.workers
+    log_level = settings_service.settings.log_level
+    frontend_path = settings_service.settings.frontend_path
+    backend_only = settings_service.settings.backend_only
+
+    # create path object if frontend_path is provided
+    static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
+
     app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
-
-    settings_service.set("worker_timeout", worker_timeout)
 
     options = {
         "bind": f"{host}:{port}",
