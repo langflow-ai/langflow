@@ -94,7 +94,7 @@ class Settings(BaseSettings):
     """The port on which Langflow will expose Prometheus metrics. 9090 is the default port."""
 
     remove_api_keys: bool = False
-    components_path: list[str] = [str(Path(__file__).parent / "components")]
+    components_path: list[str] = []
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
 

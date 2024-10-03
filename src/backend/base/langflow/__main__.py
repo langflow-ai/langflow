@@ -84,7 +84,7 @@ def run(
     worker_timeout: int | None = typer.Option(None, help="Worker timeout in seconds.", show_default=False),
     port: int | None = typer.Option(None, help="Port to listen on.", show_default=False),
     components_path: Path | None = typer.Option(
-        None,
+        str(Path(__file__).parent / "components"),
         help="Path to the directory containing custom components.",
         show_default=False,
     ),
@@ -164,9 +164,11 @@ def run(
     arguments, _, _, values = inspect.getargvalues(inspect.currentframe())
     valid_args = [arg for arg in arguments if values[arg] is not None]
     for arg in valid_args:
-        if hasattr(settings_service.settings, arg):
+        if arg == "components_path":
+            settings_service.settings.update_settings(components_path=components_path)
+        elif hasattr(settings_service.settings, arg):
             settings_service.set(arg, values[arg])
-            logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
+        logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
     host = settings_service.settings.host
     port = settings_service.settings.port
