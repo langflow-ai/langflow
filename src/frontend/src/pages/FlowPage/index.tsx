@@ -36,6 +36,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+
+  const flowToCanvas = useFlowsManagerStore((state) => state.flowToCanvas);
+
   const { mutateAsync: refreshFlows } = useGetRefreshFlows();
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const getTypes = useTypesStore((state) => state.getTypes);
@@ -105,17 +108,18 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           navigate("/all");
           return;
         }
-
-        setCurrentFlow(isAnExistingFlow);
+        if (flowToCanvas) {
+          setCurrentFlow(flowToCanvas);
+        }
       } else if (!flows) {
         setIsLoading(true);
-        await refreshFlows({ get_all: true });
+        await refreshFlows({ get_all: true, header_flows: true });
         if (!types || Object.keys(types).length === 0) await getTypes();
         setIsLoading(false);
       }
     };
     awaitgetTypes();
-  }, [id, flows, currentFlowId]);
+  }, [id, flows, currentFlowId, flowToCanvas]);
 
   useEffect(() => {
     setOnFlowPage(true);
