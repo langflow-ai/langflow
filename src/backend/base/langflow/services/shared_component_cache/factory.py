@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING
 
-from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.factory import ServiceFactory
 from langflow.services.shared_component_cache.service import SharedComponentCacheService
 

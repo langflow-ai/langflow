@@ -1,6 +1,3 @@
-from langflow.services.cache import CacheService
-
-
 class SharedComponentCacheService(ThreadingInMemoryCache):
     """
     A caching service shared across components.
