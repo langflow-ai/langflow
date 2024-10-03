@@ -13,4 +13,4 @@ class SharedComponentCacheServiceFactory(ServiceFactory):
         super().__init__(SharedComponentCacheService)
 
     def create(self, settings_service: "SettingsService"):
-        return ThreadingInMemoryCache(expiration_time=settings_service.settings.cache_expire)
+        return SharedComponentCacheService(expiration_time=settings_service.settings.cache_expire)
