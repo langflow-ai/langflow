@@ -168,13 +168,18 @@ select = [
     "FA",
     "FLY",
     "FURB",
+    "G",
     "I",
     "ICN",
     "INT",
+    "INP",
+    "ISC",
     "LOG",
     "NPY",
     "PD",
     "PIE",
+    "PT",
+    "PYI",
     "Q",
     "RET",
     "RSE",
@@ -188,6 +193,7 @@ select = [
 ]
 ignore = [
     "COM812", # Messes with the formatter
+    "ISC001", # Messes with the formatter
 ]
 
 [tool.uv]

@@ -35,7 +35,7 @@ class ZepChatMemory(LCChatMemoryComponent):
 
             zep_python.zep_client.API_BASE_PATH = self.api_base_path
         except ImportError as e:
-            msg = "Could not import zep-python package. " "Please install it with `pip install zep-python`."
+            msg = "Could not import zep-python package. Please install it with `pip install zep-python`."
             raise ImportError(msg) from e
 
         zep_client = ZepClient(api_url=self.url, api_key=self.api_key)
