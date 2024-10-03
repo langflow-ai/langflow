@@ -294,6 +294,7 @@ def setup_app(static_files_dir: Path | None = None, backend_only: bool = False) 
         setup_static_files(app, static_files_dir)
     return app
 
+
 if __name__ == "__main__":
     import uvicorn
 

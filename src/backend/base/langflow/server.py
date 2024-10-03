@@ -21,7 +21,7 @@ class LangflowUvicornWorker(UvicornWorker):
 
         loop = asyncio.get_running_loop()
         loop.add_signal_handler(signal.SIGINT, self.handle_exit, signal.SIGINT, None)
-        
+
     async def _serve(self) -> None:
         # We do this to not log the "Worker (pid:XXXXX) was sent SIGINT"
         self._install_sigint_handler()
