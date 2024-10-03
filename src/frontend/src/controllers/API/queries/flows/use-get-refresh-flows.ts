@@ -60,19 +60,11 @@ export const useGetRefreshFlows: useMutationFunctionType<
       const dbDataFlows = await getRefreshFlowsFn(params!);
 
       if (dbDataFlows) {
-        const { data, flows } = processFlows(
-          Array.isArray(dbDataFlows) ? dbDataFlows : dbDataFlows.items,
-        );
+        const flows = Array.isArray(dbDataFlows)
+          ? dbDataFlows
+          : dbDataFlows.items;
 
         setFlows(flows);
-        useTypesStore.setState((state) => ({
-          data: { ...state.data, ["saved_components"]: data },
-          ComponentFields: extractFieldsFromComponenents({
-            ...state.data,
-            ["saved_components"]: data,
-          }),
-        }));
-
         return flows;
       }
       return [];
