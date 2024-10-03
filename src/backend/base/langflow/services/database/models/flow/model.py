@@ -34,7 +34,7 @@ class FlowBase(SQLModel):
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
     webhook: bool | None = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
-    tags: list[str] | None
+    tags: list[str] | None = Field(default=None, nullable=True)
 
     @field_validator("endpoint_name")
     @classmethod
