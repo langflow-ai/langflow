@@ -135,16 +135,17 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   useEffect(() => {
     if (isHighlightingCursor) {
       const cursor = document.body.style.cursor;
-      document.body.style.cursor = 'none';
-      const highlightDiv = document.createElement('div');
-      highlightDiv.style.position = 'fixed';
-      highlightDiv.style.width = '40px';
-      highlightDiv.style.height = '40px';
-      highlightDiv.style.borderRadius = '50%';
-      highlightDiv.style.background = 'radial-gradient(circle, rgba(135,206,250,0.7) 0%, rgba(135,206,250,0) 70%)';
-      highlightDiv.style.pointerEvents = 'none';
-      highlightDiv.style.zIndex = '9999';
-      highlightDiv.style.filter = 'blur(5px)';
+      document.body.style.cursor = "none";
+      const highlightDiv = document.createElement("div");
+      highlightDiv.style.position = "fixed";
+      highlightDiv.style.width = "40px";
+      highlightDiv.style.height = "40px";
+      highlightDiv.style.borderRadius = "50%";
+      highlightDiv.style.background =
+        "radial-gradient(circle, rgba(135,206,250,0.7) 0%, rgba(135,206,250,0) 70%)";
+      highlightDiv.style.pointerEvents = "none";
+      highlightDiv.style.zIndex = "9999";
+      highlightDiv.style.filter = "blur(5px)";
       document.body.appendChild(highlightDiv);
 
       let scale = 1;
@@ -169,13 +170,13 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
       };
 
       //@ts-ignore
-      document.addEventListener('mousemove', moveHighlight);
+      document.addEventListener("mousemove", moveHighlight);
 
       return () => {
         document.body.style.cursor = cursor;
         document.body.removeChild(highlightDiv);
         //@ts-ignore
-        document.removeEventListener('mousemove', moveHighlight);
+        document.removeEventListener("mousemove", moveHighlight);
         clearInterval(blinkInterval);
       };
     }
