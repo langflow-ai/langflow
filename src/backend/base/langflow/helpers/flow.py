@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
@@ -26,40 +28,43 @@ INPUT_TYPE_MAP = {
 
 def list_flows(*, user_id: str | None = None) -> list[Data]:
     if not user_id:
-        raise ValueError("Session is invalid")
+        msg = "Session is invalid"
+        raise ValueError(msg)
     try:
         with session_scope() as session:
             flows = session.exec(
                 select(Flow).where(Flow.user_id == user_id).where(Flow.is_component == False)  # noqa
             ).all()
 
-            flows_data = [flow.to_data() for flow in flows]
-            return flows_data
+            return [flow.to_data() for flow in flows]
     except Exception as e:
-        raise ValueError(f"Error listing flows: {e}")
+        msg = f"Error listing flows: {e}"
+        raise ValueError(msg) from e
 
 
 async def load_flow(
     user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
-) -> "Graph":
+) -> Graph:
     from langflow.graph.graph.base import Graph
     from langflow.processing.process import process_tweaks
 
     if not flow_id and not flow_name:
-        raise ValueError("Flow ID or Flow Name is required")
+        msg = "Flow ID or Flow Name is required"
+        raise ValueError(msg)
     if not flow_id and flow_name:
         flow_id = find_flow(flow_name, user_id)
         if not flow_id:
-            raise ValueError(f"Flow {flow_name} not found")
+            msg = f"Flow {flow_name} not found"
+            raise ValueError(msg)
 
     with session_scope() as session:
         graph_data = flow.data if (flow := session.get(Flow, flow_id)) else None
     if not graph_data:
-        raise ValueError(f"Flow {flow_id} not found")
+        msg = f"Flow {flow_id} not found"
+        raise ValueError(msg)
     if tweaks:
         graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-    graph = Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
-    return graph
+    return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
 
 
 def find_flow(flow_name: str, user_id: str) -> str | None:
@@ -78,7 +83,8 @@ async def run_flow(
     run_id: str | None = None,
 ) -> list[RunOutputs]:
     if user_id is None:
-        raise ValueError("Session is invalid")
+        msg = "Session is invalid"
+        raise ValueError(msg)
     graph = await load_flow(user_id, flow_id, flow_name, tweaks)
     if run_id:
         graph.set_run_id(UUID(run_id))
@@ -116,7 +122,7 @@ async def run_flow(
 
 
 def generate_function_for_flow(
-    inputs: list["Vertex"], flow_id: str, user_id: str | UUID | None
+    inputs: list[Vertex], flow_id: str, user_id: str | UUID | None
 ) -> Callable[..., Awaitable[Any]]:
     """
     Generate a dynamic flow function based on the given inputs and flow ID.
@@ -139,7 +145,10 @@ def generate_function_for_flow(
     """
     # Prepare function arguments with type hints and default values
     args = [
-        f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = {INPUT_TYPE_MAP[input_.base_name]['default']}"
+        (
+            f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = "
+            f"{INPUT_TYPE_MAP[input_.base_name]['default']}"
+        )
         for input_ in inputs
     ]
 
@@ -152,7 +161,7 @@ def generate_function_for_flow(
     # Map original argument names to their corresponding Pythonic variable names in the function
     arg_mappings = ", ".join(
         f'"{original_name}": {name}'
-        for original_name, name in zip(original_arg_names, [arg.split(":")[0] for arg in args])
+        for original_name, name in zip(original_arg_names, [arg.split(":")[0] for arg in args], strict=True)
     )
 
     func_body = f"""
@@ -189,7 +198,7 @@ async def flow_function({func_args}):
 
 
 def build_function_and_schema(
-    flow_data: Data, graph: "Graph", user_id: str | UUID | None
+    flow_data: Data, graph: Graph, user_id: str | UUID | None
 ) -> tuple[Callable[..., Awaitable[Any]], type[BaseModel]]:
     """
     Builds a dynamic function and schema for a given flow.
@@ -208,7 +217,7 @@ def build_function_and_schema(
     return dynamic_flow_function, schema
 
 
-def get_flow_inputs(graph: "Graph") -> list["Vertex"]:
+def get_flow_inputs(graph: Graph) -> list[Vertex]:
     """
     Retrieves the flow inputs from the given graph.
 
@@ -225,7 +234,7 @@ def get_flow_inputs(graph: "Graph") -> list["Vertex"]:
     return inputs
 
 
-def build_schema_from_inputs(name: str, inputs: list["Vertex"]) -> type[BaseModel]:
+def build_schema_from_inputs(name: str, inputs: list[Vertex]) -> type[BaseModel]:
     """
     Builds a schema from the given inputs.
 
@@ -246,7 +255,7 @@ def build_schema_from_inputs(name: str, inputs: list["Vertex"]) -> type[BaseMode
     return create_model(name, **fields)  # type: ignore
 
 
-def get_arg_names(inputs: list["Vertex"]) -> list[dict[str, str]]:
+def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
     """
     Returns a list of dictionaries containing the component name and its corresponding argument name.
 
@@ -254,7 +263,8 @@ def get_arg_names(inputs: list["Vertex"]) -> list[dict[str, str]]:
         inputs (List[Vertex]): A list of Vertex objects representing the inputs.
 
     Returns:
-        List[dict[str, str]]: A list of dictionaries, where each dictionary contains the component name and its argument name.
+        List[dict[str, str]]: A list of dictionaries, where each dictionary contains the component name and its
+            argument name.
     """
     return [
         {"component_name": input_.display_name, "arg_name": input_.display_name.lower().replace(" ", "_")}
@@ -263,7 +273,6 @@ def get_arg_names(inputs: list["Vertex"]) -> list[dict[str, str]]:
 
 
 def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | None = None) -> FlowRead | None:
-    flow_read = None
     with session_scope() as session:
         endpoint_name = None
         try:
@@ -277,8 +286,7 @@ def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | None =
             flow = session.exec(stmt).first()
         if flow is None:
             raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
-        flow_read = FlowRead.model_validate(flow, from_attributes=True)
-    return flow_read
+        return FlowRead.model_validate(flow, from_attributes=True)
 
 
 def generate_unique_flow_name(flow_name, user_id, session):

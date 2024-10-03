@@ -18,4 +18,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   playgroundScrollBehaves: "instant",
   setPlaygroundScrollBehaves: (behaves: ScrollBehavior) =>
     set({ playgroundScrollBehaves: behaves }),
+  maxFileSizeUpload: 100 * 1024 * 1024, // 100MB in bytes
+  setMaxFileSizeUpload: (maxFileSizeUpload: number) =>
+    set({ maxFileSizeUpload: maxFileSizeUpload * 1024 * 1024 }),
 }));

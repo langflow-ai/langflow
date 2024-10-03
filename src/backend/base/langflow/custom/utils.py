@@ -2,7 +2,6 @@ import ast
 import contextlib
 import re
 import traceback
-import warnings
 from typing import Any
 from uuid import UUID
 
@@ -128,7 +127,7 @@ def get_field_properties(extra_field):
 
 
 def process_type(field_type: str):
-    if field_type.startswith("list") or field_type.startswith("List"):
+    if field_type.startswith(("list", "List")):
         return extract_inner_type(field_type)
 
     # field_type is a string can be Prompt or Code too
@@ -177,7 +176,7 @@ def add_new_custom_field(
     field_config["is_list"] = is_list or field_config.get("list", False) or field_contains_list
 
     if "name" in field_config:
-        warnings.warn("The 'name' key in field_config is used to build the object and can't be changed.")
+        logger.warning("The 'name' key in field_config is used to build the object and can't be changed.")
     required = field_config.pop("required", field_required)
     placeholder = field_config.pop("placeholder", "")
 
@@ -226,7 +225,7 @@ def add_extra_fields(frontend_node, field_config, function_args):
             field_required,
             config,
         )
-    if "kwargs" in function_args_names and not all(key in function_args_names for key in field_config.keys()):
+    if "kwargs" in function_args_names and not all(key in function_args_names for key in field_config):
         for field_name, field_config in _field_config.copy().items():
             if "name" not in field_config or field_name == "code":
                 continue
@@ -256,9 +255,8 @@ def run_build_inputs(
 ):
     """Run the build inputs of a custom component."""
     try:
-        field_config = custom_component.build_inputs(user_id=user_id)
+        return custom_component.build_inputs(user_id=user_id)
         # add_extra_fields(frontend_node, field_config, field_config.values())
-        return field_config
     except Exception as exc:
         logger.error(f"Error running build inputs: {exc}")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -267,11 +265,13 @@ def run_build_inputs(
 def get_component_instance(custom_component: CustomComponent, user_id: str | UUID | None = None):
     try:
         if custom_component._code is None:
-            raise ValueError("Code is None")
-        elif isinstance(custom_component._code, str):
+            msg = "Code is None"
+            raise ValueError(msg)
+        if isinstance(custom_component._code, str):
             custom_class = eval_custom_component_code(custom_component._code)
         else:
-            raise ValueError("Invalid code type")
+            msg = "Invalid code type"
+            raise ValueError(msg)
     except Exception as exc:
         logger.error(f"Error while evaluating custom component code: {str(exc)}")
         raise HTTPException(
@@ -283,8 +283,7 @@ def get_component_instance(custom_component: CustomComponent, user_id: str | UUI
         ) from exc
 
     try:
-        custom_instance = custom_class(_user_id=user_id, _code=custom_component._code)
-        return custom_instance
+        return custom_class(_user_id=user_id, _code=custom_component._code)
     except Exception as exc:
         logger.error(f"Error while instantiating custom component: {str(exc)}")
         if hasattr(exc, "detail") and "traceback" in exc.detail:
@@ -301,11 +300,13 @@ def run_build_config(
 
     try:
         if custom_component._code is None:
-            raise ValueError("Code is None")
-        elif isinstance(custom_component._code, str):
+            msg = "Code is None"
+            raise ValueError(msg)
+        if isinstance(custom_component._code, str):
             custom_class = eval_custom_component_code(custom_component._code)
         else:
-            raise ValueError("Invalid code type")
+            msg = "Invalid code type"
+            raise ValueError(msg)
     except Exception as exc:
         logger.error(f"Error while evaluating custom component code: {str(exc)}")
         raise HTTPException(
@@ -501,34 +502,35 @@ def update_field_dict(
     call: bool = False,
 ):
     """Update the field dictionary by calling options() or value() if they are callable"""
-    if ("real_time_refresh" in field_dict or "refresh_button" in field_dict) and any(
-        (
-            field_dict.get("real_time_refresh", False),
-            field_dict.get("refresh_button", False),
+    if (
+        ("real_time_refresh" in field_dict or "refresh_button" in field_dict)
+        and any(
+            (
+                field_dict.get("real_time_refresh", False),
+                field_dict.get("refresh_button", False),
+            )
         )
+        and call
     ):
-        if call:
-            try:
-                dd_build_config = dotdict(build_config)
-                custom_component_instance.update_build_config(
-                    build_config=dd_build_config,
-                    field_value=update_field,
-                    field_name=update_field_value,
-                )
-                build_config = dd_build_config
-            except Exception as exc:
-                logger.error(f"Error while running update_build_config: {str(exc)}")
-                raise UpdateBuildConfigError(f"Error while running update_build_config: {str(exc)}") from exc
+        try:
+            dd_build_config = dotdict(build_config)
+            custom_component_instance.update_build_config(
+                build_config=dd_build_config,
+                field_value=update_field,
+                field_name=update_field_value,
+            )
+            build_config = dd_build_config
+        except Exception as exc:
+            logger.error(f"Error while running update_build_config: {str(exc)}")
+            msg = f"Error while running update_build_config: {str(exc)}"
+            raise UpdateBuildConfigError(msg) from exc
 
     return build_config
 
 
 def sanitize_field_config(field_config: dict | Input):
     # If any of the already existing keys are in field_config, remove them
-    if isinstance(field_config, Input):
-        field_dict = field_config.to_dict()
-    else:
-        field_dict = field_config
+    field_dict = field_config.to_dict() if isinstance(field_config, Input) else field_config
     for key in [
         "name",
         "field_type",

@@ -11,14 +11,20 @@ class ShouldRunNextComponent(CustomComponent):
     name = "ShouldRunNext"
 
     def build(self, llm: LanguageModel, question: str, context: str, retries: int = 3) -> Text:
-        template = "Given the following question and the context below, answer with a yes or no.\n\n{error_message}\n\nQuestion: {question}\n\nContext: {context}\n\nAnswer:"
+        template = (
+            "Given the following question and the context below, answer with a yes or no.\n\n"
+            "{error_message}\n\n"
+            "Question: {question}\n\n"
+            "Context: {context}\n\n"
+            "Answer:"
+        )
 
         prompt = PromptTemplate.from_template(template)
         chain = prompt | llm
         error_message = ""
-        for i in range(retries):
+        for _i in range(retries):
             result = chain.invoke(
-                dict(question=question, context=context, error_message=error_message),
+                {"question": question, "context": context, "error_message": error_message},
                 config={"callbacks": self.get_langchain_callbacks()},
             )
             if isinstance(result, BaseMessage):

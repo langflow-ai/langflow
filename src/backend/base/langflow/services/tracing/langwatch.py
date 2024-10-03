@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
@@ -39,7 +40,8 @@ class LangWatchTracer(BaseTracer):
 
             name_without_id = " - ".join(trace_name.split(" - ")[0:-1])
             self.trace.root_span.update(
-                span_id=f"{self.flow_id}-{nanoid.generate(size=6)}",  # nanoid to make the span_id globally unique, which is required for LangWatch for now
+                # nanoid to make the span_id globally unique, which is required for LangWatch for now
+                span_id=f"{self.flow_id}-{nanoid.generate(size=6)}",
                 name=name_without_id,
                 type="workflow",
             )
@@ -86,7 +88,8 @@ class LangWatchTracer(BaseTracer):
         )
 
         span = self.trace.span(
-            span_id=f"{trace_id}-{nanoid.generate(size=6)}",  # Add a nanoid to make the span_id globally unique, which is required for LangWatch for now
+            # Add a nanoid to make the span_id globally unique, which is required for LangWatch for now
+            span_id=f"{trace_id}-{nanoid.generate(size=6)}",
             name=name_without_id,
             type="component",
             parent=(previous_nodes[-1] if len(previous_nodes) > 0 else self.trace.root_span),
@@ -101,7 +104,7 @@ class LangWatchTracer(BaseTracer):
         trace_name: str,
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
-        logs: list[Log | dict] = [],
+        logs: Sequence[Log | dict] = (),
     ):
         if not self._ready:
             return

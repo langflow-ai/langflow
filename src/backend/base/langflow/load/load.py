@@ -59,14 +59,14 @@ def load_flow_from_json(
     elif isinstance(flow, dict):
         flow_graph = flow
     else:
-        raise TypeError("Input must be either a file path (str) or a JSON object (dict)")
+        msg = "Input must be either a file path (str) or a JSON object (dict)"
+        raise TypeError(msg)
 
     graph_data = flow_graph["data"]
     if tweaks is not None:
         graph_data = process_tweaks(graph_data, tweaks)
 
-    graph = Graph.from_payload(graph_data)
-    return graph
+    return Graph.from_payload(graph_data)
 
 
 def run_flow_from_json(
@@ -98,7 +98,8 @@ def run_flow_from_json(
         env_file (Optional[str], optional): The environment file to load. Defaults to None.
         cache (Optional[str], optional): The cache directory to use. Defaults to None.
         disable_logs (Optional[bool], optional): Whether to disable logs. Defaults to True.
-        fallback_to_env_vars (bool, optional): Whether Global Variables should fallback to environment variables if not found. Defaults to False.
+        fallback_to_env_vars (bool, optional): Whether Global Variables should fallback to environment variables if
+            not found. Defaults to False.
 
     Returns:
         List[RunOutputs]: A list of RunOutputs objects representing the results of running the flow.
@@ -122,7 +123,7 @@ def run_flow_from_json(
         cache=cache,
         disable_logs=disable_logs,
     )
-    result = run_graph(
+    return run_graph(
         graph=graph,
         input_value=input_value,
         input_type=input_type,
@@ -130,4 +131,3 @@ def run_flow_from_json(
         output_component=output_component,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    return result

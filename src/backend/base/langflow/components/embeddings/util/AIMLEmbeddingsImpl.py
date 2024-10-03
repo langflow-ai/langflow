@@ -21,25 +21,24 @@ class AIMLEmbeddingsImpl(BaseModel, Embeddings):
             "Authorization": f"Bearer {self.api_key.get_secret_value()}",
         }
 
-        with httpx.Client() as client:
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = []
-                for i, text in enumerate(texts):
-                    futures.append((i, executor.submit(self._embed_text, client, headers, text)))
+        with httpx.Client() as client, concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for i, text in enumerate(texts):
+                futures.append((i, executor.submit(self._embed_text, client, headers, text)))
 
-                for index, future in futures:
-                    try:
-                        result_data = future.result()
-                        assert len(result_data["data"]) == 1, "Expected one embedding"
-                        embeddings[index] = result_data["data"][0]["embedding"]
-                    except (
-                        httpx.HTTPStatusError,
-                        httpx.RequestError,
-                        json.JSONDecodeError,
-                        KeyError,
-                    ) as e:
-                        logger.error(f"Error occurred: {e}")
-                        raise
+            for index, future in futures:
+                try:
+                    result_data = future.result()
+                    assert len(result_data["data"]) == 1, "Expected one embedding"
+                    embeddings[index] = result_data["data"][0]["embedding"]
+                except (
+                    httpx.HTTPStatusError,
+                    httpx.RequestError,
+                    json.JSONDecodeError,
+                    KeyError,
+                ) as e:
+                    logger.error(f"Error occurred: {e}")
+                    raise
 
         return embeddings  # type: ignore
 
@@ -54,8 +53,7 @@ class AIMLEmbeddingsImpl(BaseModel, Embeddings):
             json=payload,
         )
         response.raise_for_status()
-        result_data = response.json()
-        return result_data
+        return response.json()
 
     def embed_query(self, text: str) -> list[float]:
         return self.embed_documents([text])[0]

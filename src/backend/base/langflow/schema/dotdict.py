@@ -4,7 +4,8 @@ class dotdict(dict):
     It automatically converts nested dictionaries into dotdict instances, enabling dot notation on them as well.
 
     Note:
-        - Only keys that are valid attribute names (e.g., strings that could be variable names) are accessible via dot notation.
+        - Only keys that are valid attribute names (e.g., strings that could be variable names) are accessible via dot
+          notation.
         - Keys which are not valid Python attribute names or collide with the dict method names (like 'items', 'keys')
           should be accessed using the traditional dict['key'] notation.
     """
@@ -28,8 +29,9 @@ class dotdict(dict):
                 value = dotdict(value)
                 self[attr] = value  # Update self to nest dotdict for future accesses
             return value
-        except KeyError:
-            raise AttributeError(f"'dotdict' object has no attribute '{attr}'")
+        except KeyError as e:
+            msg = f"'dotdict' object has no attribute '{attr}'"
+            raise AttributeError(msg) from e
 
     def __setattr__(self, key, value):
         """
@@ -55,8 +57,9 @@ class dotdict(dict):
         """
         try:
             del self[key]
-        except KeyError:
-            raise AttributeError(f"'dotdict' object has no attribute '{key}'")
+        except KeyError as e:
+            msg = f"'dotdict' object has no attribute '{key}'"
+            raise AttributeError(msg) from e
 
     def __missing__(self, key):
         """

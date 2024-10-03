@@ -3,6 +3,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
+from langflow.inputs.inputs import HandleInput
 from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 
 
@@ -55,6 +56,13 @@ class MistralAIModelComponent(LCModelComponent):
         FloatInput(name="top_p", display_name="Top P", advanced=True, value=1),
         IntInput(name="random_seed", display_name="Random Seed", value=1, advanced=True),
         BoolInput(name="safe_mode", display_name="Safe Mode", advanced=True),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -70,12 +78,9 @@ class MistralAIModelComponent(LCModelComponent):
         random_seed = self.random_seed
         safe_mode = self.safe_mode
 
-        if mistral_api_key:
-            api_key = SecretStr(mistral_api_key)
-        else:
-            api_key = None
+        api_key = SecretStr(mistral_api_key) if mistral_api_key else None
 
-        output = ChatMistralAI(
+        return ChatMistralAI(
             max_tokens=max_tokens or None,
             model_name=model_name,
             endpoint=mistral_api_base,
@@ -88,5 +93,3 @@ class MistralAIModelComponent(LCModelComponent):
             random_seed=random_seed,
             safe_mode=safe_mode,
         )
-
-        return output  # type: ignore

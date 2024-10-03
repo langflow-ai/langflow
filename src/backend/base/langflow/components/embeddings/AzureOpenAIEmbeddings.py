@@ -56,7 +56,8 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
         IntInput(
             name="dimensions",
             display_name="Dimensions",
-            info="The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
+            info="The number of dimensions the resulting output embeddings should have. "
+            "Only supported by certain models.",
             advanced=True,
         ),
     ]
@@ -76,6 +77,7 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
                 dimensions=self.dimensions or None,
             )
         except Exception as e:
-            raise ValueError(f"Could not connect to AzureOpenAIEmbeddings API: {str(e)}") from e
+            msg = f"Could not connect to AzureOpenAIEmbeddings API: {str(e)}"
+            raise ValueError(msg) from e
 
         return embeddings
