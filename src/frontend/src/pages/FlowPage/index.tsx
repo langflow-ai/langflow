@@ -1,3 +1,4 @@
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { ENABLE_BRANDING } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -45,10 +46,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
 
   const updatedAt = currentSavedFlow?.updated_at;
-
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
-
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
+
+  const { mutateAsync: getFlow } = useGetFlow();
 
   const handleSave = () => {
     let saving = true;
@@ -108,9 +109,12 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           navigate("/all");
           return;
         }
-        if (flowToCanvas) {
-          setCurrentFlow(flowToCanvas);
-        }
+
+        const isAnExistingFlowId = isAnExistingFlow.id;
+
+        flowToCanvas
+          ? setCurrentFlow(flowToCanvas)
+          : getFlowToAddToCanvas(isAnExistingFlowId);
       } else if (!flows) {
         setIsLoading(true);
         await refreshFlows({ get_all: true, header_flows: true });
@@ -150,6 +154,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       }
     }
   }, [blocker.state, isBuilding]);
+
+  const getFlowToAddToCanvas = async (id: string) => {
+    const flow = await getFlow({ id: id });
+    setCurrentFlow(flow);
+  };
 
   return (
     <>
