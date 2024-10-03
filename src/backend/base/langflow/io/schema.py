@@ -14,6 +14,7 @@ _convert_field_type_to_type: dict[FieldTypes, type] = {
     FieldTypes.TABLE: dict,
     FieldTypes.FILE: str,
     FieldTypes.PROMPT: str,
+    FieldTypes.OTHER: str,
 }
 
 if TYPE_CHECKING:
@@ -30,6 +31,9 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
         field_type = input_model.field_type
         if isinstance(field_type, FieldTypes):
             field_type = _convert_field_type_to_type[field_type]
+        else:
+            msg = f"Invalid field type: {field_type}"
+            raise ValueError(msg)
         if hasattr(input_model, "options") and isinstance(input_model.options, list) and input_model.options:
             literal_string = f"Literal{input_model.options}"
             # validate that the literal_string is a valid literal

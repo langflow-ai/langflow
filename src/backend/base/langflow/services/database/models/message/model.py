@@ -37,19 +37,18 @@ class MessageBase(SQLModel):
                 if hasattr(file, "path") and hasattr(file, "url") and file.path:
                     session_id = message.session_id
                     image_paths.append(f"{session_id}{file.path.split(session_id)[1]}")
-            message.files = image_paths
+            if image_paths:
+                message.files = image_paths
+
         if isinstance(message.timestamp, str):
             timestamp = datetime.fromisoformat(message.timestamp)
         else:
             timestamp = message.timestamp
         if not flow_id and message.flow_id:
             flow_id = message.flow_id
-        if not isinstance(message.text, str):
-            # If the text is not a string, it means it could be
-            # async iterator so we simply add it as an empty string
-            message_text = ""
-        else:
-            message_text = message.text
+        # If the text is not a string, it means it could be
+        # async iterator so we simply add it as an empty string
+        message_text = "" if not isinstance(message.text, str) else message.text
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,

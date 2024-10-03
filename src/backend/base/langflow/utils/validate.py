@@ -124,10 +124,17 @@ def create_function(code, function_name):
     exec_globals = globals().copy()
 
     for node in module.body:
-        if isinstance(node, ast.Import):
+        if isinstance(node, ast.Import | ast.ImportFrom):
             for alias in node.names:
                 try:
-                    exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
+                    if isinstance(node, ast.ImportFrom):
+                        module_name = node.module
+                        exec_globals[alias.asname or alias.name] = getattr(
+                            importlib.import_module(module_name), alias.name
+                        )
+                    else:
+                        module_name = alias.name
+                        exec_globals[alias.asname or alias.name] = importlib.import_module(module_name)
                 except ModuleNotFoundError as e:
                     msg = f"Module {alias.name} not found. Please install it and try again."
                     raise ModuleNotFoundError(msg) from e
@@ -217,9 +224,9 @@ def prepare_global_scope(code, module):
                 imported_module = importlib.import_module(node.module)
                 for alias in node.names:
                     exec_globals[alias.name] = getattr(imported_module, alias.name)
-            except ModuleNotFoundError:
+            except ModuleNotFoundError as e:
                 msg = f"Module {node.module} not found. Please install it and try again"
-                raise ModuleNotFoundError(msg)
+                raise ModuleNotFoundError(msg) from e
     return exec_globals
 
 

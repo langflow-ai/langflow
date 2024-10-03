@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Optional
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from langflow.services.tracing.schema import Log
@@ -27,7 +30,7 @@ class BaseTracer(ABC):
         trace_type: str,
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
-        vertex: Optional["Vertex"] = None,
+        vertex: Vertex | None = None,
     ):
         raise NotImplementedError
 
@@ -38,7 +41,7 @@ class BaseTracer(ABC):
         trace_name: str,
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
-        logs: list[Log | dict] = [],
+        logs: Sequence[Log | dict] = (),
     ):
         raise NotImplementedError
 
@@ -53,5 +56,5 @@ class BaseTracer(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
+    def get_langchain_callback(self) -> BaseCallbackHandler | None:
         raise NotImplementedError

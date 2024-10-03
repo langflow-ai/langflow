@@ -78,7 +78,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                 }
                             )
                             node_data["template"][key]["value"] = value["value"]
-                    for key, value in node_data["template"].items():
+                    for key in node_data["template"]:
                         if key not in latest_template:
                             node_data["template"][key]["input_types"] = DEFAULT_PROMPT_INTUT_TYPES
                 node_changes_log[node_data["display_name"]].append(
@@ -90,17 +90,19 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 )
             else:
                 for attr in NODE_FORMAT_ATTRIBUTES:
-                    if attr in latest_node:
+                    if (
+                        attr in latest_node
                         # Check if it needs to be updated
-                        if latest_node[attr] != node_data.get(attr):
-                            node_changes_log[node_data["display_name"]].append(
-                                {
-                                    "attr": attr,
-                                    "old_value": node_data.get(attr),
-                                    "new_value": latest_node[attr],
-                                }
-                            )
-                            node_data[attr] = latest_node[attr]
+                        and latest_node[attr] != node_data.get(attr)
+                    ):
+                        node_changes_log[node_data["display_name"]].append(
+                            {
+                                "attr": attr,
+                                "old_value": node_data.get(attr),
+                                "new_value": latest_node[attr],
+                            }
+                        )
+                        node_data[attr] = latest_node[attr]
 
                 for field_name, field_dict in latest_template.items():
                     if field_name not in node_data["template"]:
@@ -109,17 +111,20 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                     # The idea here is to update some attributes of the field
                     to_check_attributes = FIELD_FORMAT_ATTRIBUTES
                     for attr in to_check_attributes:
-                        if attr in field_dict and attr in node_data["template"].get(field_name):
+                        if (
+                            attr in field_dict
+                            and attr in node_data["template"].get(field_name)
                             # Check if it needs to be updated
-                            if field_dict[attr] != node_data["template"][field_name][attr]:
-                                node_changes_log[node_data["display_name"]].append(
-                                    {
-                                        "attr": f"{field_name}.{attr}",
-                                        "old_value": node_data["template"][field_name][attr],
-                                        "new_value": field_dict[attr],
-                                    }
-                                )
-                                node_data["template"][field_name][attr] = field_dict[attr]
+                            and field_dict[attr] != node_data["template"][field_name][attr]
+                        ):
+                            node_changes_log[node_data["display_name"]].append(
+                                {
+                                    "attr": f"{field_name}.{attr}",
+                                    "old_value": node_data["template"][field_name][attr],
+                                    "new_value": field_dict[attr],
+                                }
+                            )
+                            node_data["template"][field_name][attr] = field_dict[attr]
             # Remove fields that are not in the latest template
             if node_data.get("display_name") != "Prompt":
                 for field_name in list(node_data["template"].keys()):
@@ -274,16 +279,17 @@ def update_edges_with_latest_component_versions(project_data):
                 source_handle["output_types"] = new_output_types
 
             field_name = target_handle.get("fieldName")
-            if field_name in target_node_data.get("template"):
-                if target_handle["inputTypes"] != target_node_data.get("template").get(field_name).get("input_types"):
-                    edge_changes_log[target_node_data["display_name"]].append(
-                        {
-                            "attr": "inputTypes",
-                            "old_value": target_handle["inputTypes"],
-                            "new_value": target_node_data.get("template").get(field_name).get("input_types"),
-                        }
-                    )
-                    target_handle["inputTypes"] = target_node_data.get("template").get(field_name).get("input_types")
+            if field_name in target_node_data.get("template") and target_handle["inputTypes"] != target_node_data.get(
+                "template"
+            ).get(field_name).get("input_types"):
+                edge_changes_log[target_node_data["display_name"]].append(
+                    {
+                        "attr": "inputTypes",
+                        "old_value": target_handle["inputTypes"],
+                        "new_value": target_node_data.get("template").get(field_name).get("input_types"),
+                    }
+                )
+                target_handle["inputTypes"] = target_node_data.get("template").get(field_name).get("input_types")
             escaped_source_handle = escape_json_dump(source_handle)
             escaped_target_handle = escape_json_dump(target_handle)
             try:
@@ -353,7 +359,7 @@ def load_starter_projects(retries=3, delay=1) -> list[tuple[Path, dict]]:
                     attempt += 1
                     if attempt >= retries:
                         msg = f"Error loading starter project {file}: {e}"
-                        raise ValueError(msg)
+                        raise ValueError(msg) from e
                     time.sleep(delay)  # Wait before retrying
     return starter_projects
 
@@ -384,16 +390,12 @@ def get_project_data(project):
     project_is_component = project.get("is_component")
     project_updated_at = project.get("updated_at")
     if not project_updated_at:
-        project_updated_at = datetime.now(tz=timezone.utc).isoformat()
-        updated_at_datetime = datetime.strptime(project_updated_at, "%Y-%m-%dT%H:%M:%S.%f%z")
+        updated_at_datetime = datetime.now(tz=timezone.utc)
     else:
-        updated_at_datetime = datetime.strptime(project_updated_at, "%Y-%m-%dT%H:%M:%S.%f")
+        updated_at_datetime = datetime.fromisoformat(project_updated_at)
     project_data = project.get("data")
     project_icon = project.get("icon")
-    if project_icon and purely_emoji(project_icon):
-        project_icon = demojize(project_icon)
-    else:
-        project_icon = ""
+    project_icon = demojize(project_icon) if project_icon and purely_emoji(project_icon) else ""
     project_icon_bg_color = project.get("icon_bg_color")
     return (
         project_name,
@@ -525,14 +527,14 @@ def load_flows_from_directory():
                         if hasattr(existing, key):
                             # flow dict from json and db representation are not 100% the same
                             setattr(existing, key, value)
-                    existing.updated_at = datetime.utcnow()
+                    existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
                     existing.user_id = user_id
                     session.add(existing)
                 else:
                     logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
                     flow["user_id"] = user_id
                     flow = Flow.model_validate(flow, from_attributes=True)
-                    flow.updated_at = datetime.utcnow()
+                    flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
                     session.add(flow)
 
 

@@ -72,6 +72,7 @@ def load_flow_from_json(
 def run_flow_from_json(
     flow: Path | str | dict,
     input_value: str,
+    session_id: str | None = None,
     tweaks: dict | None = None,
     input_type: str = "chat",
     output_type: str = "chat",
@@ -89,6 +90,7 @@ def run_flow_from_json(
     Args:
         flow (Union[Path, str, dict]): The path to the JSON file or the JSON dictionary representing the flow.
         input_value (str): The input value to be processed by the flow.
+        session_id (str | None, optional): The session ID to be used for the flow. Defaults to None.
         tweaks (Optional[dict], optional): Optional tweaks to be applied to the flow. Defaults to None.
         input_type (str, optional): The type of the input value. Defaults to "chat".
         output_type (str, optional): The type of the output value. Defaults to "chat".
@@ -125,6 +127,7 @@ def run_flow_from_json(
     )
     return run_graph(
         graph=graph,
+        session_id=session_id,
         input_value=input_value,
         input_type=input_type,
         output_type=output_type,

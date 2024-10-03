@@ -57,7 +57,7 @@ class SubFlowComponent(Component):
         for vertex in inputs_vertex:
             new_vertex_inputs = []
             field_template = vertex.data["node"]["template"]
-            for inp in field_template.keys():
+            for inp in field_template:
                 if inp not in ["code", "_type"]:
                     field_template[inp]["display_name"] = (
                         vertex.display_name + " - " + field_template[inp]["display_name"]
@@ -84,10 +84,10 @@ class SubFlowComponent(Component):
 
     async def generate_results(self) -> list[Data]:
         tweaks: dict = {}
-        for field in self._attributes.keys():
+        for field in self._attributes:
             if field != "flow_name":
                 [node, name] = field.split("|")
-                if node not in tweaks.keys():
+                if node not in tweaks:
                     tweaks[node] = {}
                 tweaks[node][name] = self._attributes[field]
         flow_name = self._attributes.get("flow_name")

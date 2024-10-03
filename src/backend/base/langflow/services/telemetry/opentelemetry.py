@@ -12,7 +12,7 @@ from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDow
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.resources import Resource
 
-# a default OpenTelelmetry meter name
+# a default OpenTelemetry meter name
 langflow_meter_name = "langflow"
 
 """
@@ -64,13 +64,13 @@ class Metric:
         self,
         name: str,
         description: str,
-        type: MetricType,
+        metric_type: MetricType,
         labels: dict[str, bool],
         unit: str = "",
     ):
         self.name = name
         self.description = description
-        self.type = type
+        self.type = metric_type
         self.unit = unit
         self.labels = labels
         self.mandatory_labels = [label for label, required in labels.items() if required]
@@ -114,7 +114,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
     _metrics_registry: dict[str, Metric] = {}
 
     def _add_metric(self, name: str, description: str, unit: str, metric_type: MetricType, labels: dict[str, bool]):
-        metric = Metric(name=name, description=description, type=metric_type, unit=unit, labels=labels)
+        metric = Metric(name=name, description=description, metric_type=metric_type, unit=unit, labels=labels)
         self._metrics_registry[name] = metric
         if labels is None or len(labels) == 0:
             msg = "Labels must be provided for the metric upon registration"

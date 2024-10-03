@@ -62,9 +62,9 @@ class AnthropicModelComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
             from langchain_anthropic.chat_models import ChatAnthropic
-        except ImportError:
+        except ImportError as e:
             msg = "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
-            raise ImportError(msg)
+            raise ImportError(msg) from e
         model = self.model
         anthropic_api_key = self.anthropic_api_key
         max_tokens = self.max_tokens

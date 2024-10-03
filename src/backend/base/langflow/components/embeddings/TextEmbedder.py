@@ -39,10 +39,7 @@ class TextEmbedderComponent(Component):
         embeddings = embedding_model.embed_documents([text_content])
 
         # Assuming the embedding model returns a list of embeddings, we take the first one
-        if embeddings:
-            embedding_vector = embeddings[0]
-        else:
-            embedding_vector = []
+        embedding_vector = embeddings[0] if embeddings else []
 
         # Create a Data object to encapsulate the results
         result_data = Data(data={"text": text_content, "embeddings": embedding_vector})
