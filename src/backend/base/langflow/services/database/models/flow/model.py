@@ -188,10 +188,11 @@ class FlowRead(FlowBase):
     folder_id: UUID | None = Field()
 
 
-class FlowSummary(BaseModel):
+class FlowHeader(BaseModel):
     id: UUID
     name: str
     folder_id: UUID | None = Field()
+    is_component: bool | None = Field()
 
 
 class PaginatedFlowResponse(BaseModel):
