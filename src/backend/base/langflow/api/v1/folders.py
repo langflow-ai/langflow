@@ -24,7 +24,6 @@ from langflow.services.database.models.folder.pagination_model import FolderWith
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session
 
-
 router = APIRouter(prefix="/folders", tags=["Folders"])
 
 
