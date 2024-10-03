@@ -1,6 +1,8 @@
 import { FolderType, PaginatedFolderType } from "@/pages/MainPage/entities";
 import { useQueryFunctionType } from "@/types/api";
+import { processFlows } from "@/utils/reactflowUtils";
 import { UseQueryOptions } from "@tanstack/react-query";
+import { cloneDeep } from "lodash";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -37,7 +39,13 @@ export const useGetFolderQuery: useQueryFunctionType<
   ): Promise<PaginatedFolderType> => {
     const url = addQueryParams(`${getURL("FOLDERS")}/${params.id}`, params);
     const { data } = await api.get<PaginatedFolderType>(url);
-    return data;
+
+    const { flows } = processFlows(data.flows.items);
+
+    const dataProcessed = cloneDeep(data);
+    dataProcessed.flows.items = flows;
+
+    return dataProcessed;
   };
 
   const queryResult = query(
