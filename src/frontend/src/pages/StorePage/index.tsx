@@ -7,9 +7,9 @@ import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 
 import StoreCardComponent from "@/components/storeCardComponent";
-import { useGetTagsQuery } from "@/controllers/API/queries/store";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { useParams } from "react-router-dom";
 import PaginatorComponent from "../../components/paginatorComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
@@ -67,7 +67,8 @@ export default function StorePage(): JSX.Element {
   const [tabActive, setTabActive] = useState("All");
   const [searchNow, setSearchNow] = useState("");
   const [selectFilter, setSelectFilter] = useState("all");
-  const { isFetching, data } = useGetTagsQuery();
+
+  const tags = useUtilityStore((state) => state.tags);
 
   const navigate = useCustomNavigate();
 
@@ -283,8 +284,8 @@ export default function StorePage(): JSX.Element {
             </Select>
             {id === undefined ? (
               <TagsSelector
-                tags={data ?? []}
-                loadingTags={isFetching}
+                tags={tags ?? []}
+                loadingTags={false}
                 disabled={loading}
                 selectedTags={filteredCategories}
                 setSelectedTags={setFilterCategories}
