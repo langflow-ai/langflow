@@ -79,58 +79,71 @@ def set_var_for_macos_issue():
 
 @app.command()
 def run(
-    host: str = typer.Option("127.0.0.1", help="Host to bind the server to."),
-    workers: int = typer.Option(1, help="Number of worker processes."),
-    timeout: int = typer.Option(300, help="Worker timeout in seconds."),
-    port: int = typer.Option(7860, help="Port to listen on."),
+    host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", show_default=False),
+    workers: int = typer.Option(1, help="Number of worker processes.", show_default=False),
+    timeout: int = typer.Option(300, help="Worker timeout in seconds.", show_default=False),
+    port: int = typer.Option(7860, help="Port to listen on.", show_default=False),
     components_path: Path | None = typer.Option(
         Path(__file__).parent / "components",
         help="Path to the directory containing custom components.",
     ),
     # .env file param
-    env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
-    log_level: str = typer.Option("critical", help="Logging level."),
-    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file."),
+    env_file: Path = typer.Option(
+        None,
+        help="Path to the .env file containing environment variables.",
+        show_default=False,
+    ),
+    log_level: str = typer.Option("critical", help="Logging level.", show_default=False),
+    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file.", show_default=False),
     cache: str | None = typer.Option(
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
-        default=None,
+        show_default=False,
     ),
-    dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
+    dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)", show_default=False),
     path: str = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
+        show_default=False,
     ),
     open_browser: bool = typer.Option(
         True,
         help="Open the browser after starting the server.",
+        show_default=False,
     ),
     remove_api_keys: bool = typer.Option(
         False,
         help="Remove API keys from the projects saved in the database.",
+        show_default=False,
     ),
     backend_only: bool = typer.Option(
         False,
         help="Run only the backend server without the frontend.",
+        show_default=False,
     ),
     store: bool = typer.Option(
         True,
         help="Enables the store features.",
+        show_default=False,
     ),
     auto_saving: bool = typer.Option(
         True,
         help="Defines if the auto save is enabled.",
+        show_default=False,
     ),
     auto_saving_interval: int = typer.Option(
         1000,
         help="Defines the debounce time for the auto save.",
+        show_default=False,
     ),
     health_check_max_retries: bool = typer.Option(
         True,
         help="Defines the number of retries for the health check.",
+        show_default=False,
     ),
     max_file_size_upload: int = typer.Option(
         100,
         help="Defines the maximum file size for the upload in MB.",
+        show_default=False,
     ),
 ):
     """
