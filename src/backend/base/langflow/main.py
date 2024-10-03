@@ -3,6 +3,9 @@ import json
 import os
 import re
 import warnings
+import signal
+import sys
+
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
@@ -31,6 +34,7 @@ from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.services.deps import get_cache_service, get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
+from langflow.services.deps import get_db_service
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -79,6 +83,26 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
             response.headers["Content-Type"] = "text/javascript"
         return response
 
+shutdown_event = asyncio.Event()
+
+async def cleanup_db():
+    print("Cleaning up database...")
+    try:
+      db_service = get_db_service()
+      await db_service.teardown()
+      print("Database cleaned up successfully")
+    except Exception as e:
+      print(f"Error cleaning up database: {e}")
+
+def signal_handlers(sig, frame):
+    print(f"Received signal: {sig}. Performing cleanup...")
+    asyncio.run(cleanup_db())
+
+    print("Cleaning up done. Exiting...")
+    sys.exit(0)
+    
+signal.signal(signal.SIGINT, signal_handlers)
+signal.signal(signal.SIGTERM, signal_handlers)
 
 def get_lifespan(fix_migration=False, socketio_server=None, version=None):
     @asynccontextmanager
@@ -269,7 +293,6 @@ def setup_app(static_files_dir: Path | None = None, backend_only: bool = False) 
     if not backend_only and static_files_dir is not None:
         setup_static_files(app, static_files_dir)
     return app
-
 
 if __name__ == "__main__":
     import uvicorn
