@@ -17,24 +17,24 @@ class ReActCompletionDecider(BaseModel):
         Determines whether the task is complete based on the provided logic.
         Returns True if the task is complete, otherwise False.
         """
-        # Example logic: If the logic mentions finality or no further actions needed
-        if "final answer" in logic.lower() or "no further actions" in logic.lower():
-            return True
-        return False
+        return "final answer" in logic.lower() or "no further actions" in logic.lower()
 
     class Config:
         schema_extra = {
             "example": [
                 {
-                    "logic": "The list comprehension has been correctly implemented and tested. There are no further actions required.",
+                    "logic": "The list comprehension has been correctly implemented and tested. There are no further "
+                    "actions required.",
                     "is_complete": True,
                 },
                 {
-                    "logic": "The list comprehension has been implemented, but I need to test if it behaves the same as the for loop.",
+                    "logic": "The list comprehension has been implemented, but I need to test if it behaves the same "
+                    "as the for loop.",
                     "is_complete": False,
                 },
                 {
-                    "logic": "I have verified that the list comprehension achieves the same results as the original for loop. No further actions are needed.",
+                    "logic": "I have verified that the list comprehension achieves the same results as the original "
+                    "for loop. No further actions are needed.",
                     "is_complete": True,
                 },
                 {
@@ -58,7 +58,8 @@ class ReActThoughtGenerator(BaseModel):
     action: str = Field(..., description="Actions that need to be taken to complete the thought.")
     answer: str | None = Field(
         ...,
-        description="A string that represents the final answer to the question. Only provide this if you are sure of the answer.",
+        description="A string that represents the final answer to the question. Only provide this if you are sure of "
+        "the answer.",
     )
 
     class Config:
@@ -67,23 +68,28 @@ class ReActThoughtGenerator(BaseModel):
                 {
                     "thought": "I want to refactor a function that currently uses a `for` loop to generate a list. \
                     Using list comprehension will make the code more concise.",
-                    "action": "Analyze the function to determine what the `for` loop does, and how it can be rewritten in a list comprehension.",
+                    "action": "Analyze the function to determine what the `for` loop does, and how it can be "
+                    "rewritten in a list comprehension.",
                     "answer": None,
                 },
                 {
                     "thought": "The function is currently looping through a list of numbers, squaring each number, \
-                    and appending it to a new list using a `for` loop. A list comprehension can achieve the same result in a single line.",
+                    and appending it to a new list using a `for` loop. A list comprehension can achieve the same "
+                    "result in a single line.",
                     "action": "Rewrite the `for` loop as a list comprehension that performs the same operation.",
                     "answer": None,
                 },
                 {
-                    "thought": "The `for` loop is iterating over a list called `numbers`, squaring each element and appending it to a new list `squared_numbers`. \
+                    "thought": "The `for` loop is iterating over a list called `numbers`, squaring each element and "
+                    "appending it to a new list `squared_numbers`. \
                     The list comprehension would look like this: `squared_numbers = [x ** 2 for x in numbers]`.",
-                    "action": "Check that the list comprehension is syntactically correct and performs the same operation as the original loop.",
+                    "action": "Check that the list comprehension is syntactically correct and performs the same "
+                    "operation as the original loop.",
                     "answer": None,
                 },
                 {
-                    "thought": "The refactored list comprehension correctly squares each element of the list and returns the same result as the original `for` loop. \
+                    "thought": "The refactored list comprehension correctly squares each element of the list and "
+                    "returns the same result as the original `for` loop. \
                     The code is now more concise and easier to read.",
                     "action": "None",
                     "answer": "The final refactored code is: `squared_numbers = [x ** 2 for x in numbers]`. This "

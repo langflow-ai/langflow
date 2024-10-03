@@ -1,6 +1,5 @@
 from enum import Enum
 from typing import (
-    Optional,
     TypedDict,
     Union,
     get_args,
@@ -59,11 +58,11 @@ def typed_dict_to_basemodel(name: str, typed_dict: type[TypedDict], created_mode
             # Handle Optional (Union[..., NoneType])
             non_none_args = [arg for arg in args_inner if arg is not type(None)]
             if len(non_none_args) == 1:
-                return Optional[process_hint(non_none_args[0])]
+                return process_hint(non_none_args[0]) | None
             return hint_type
         if origin_inner is NotRequired:
             # Handle NotRequired explicitly, treat as Optional
-            return Optional[args_inner[0]]
+            return args_inner[0] | None
         return hint_type
 
     for field, hint in hints.items():

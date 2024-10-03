@@ -31,7 +31,7 @@ data = json.loads(response.text)
 
 # Extract the model names into a Python list
 litellm_model_names = []
-for model, details in data.items():
+for model, _ in data.items():
     if model != "sample_spec":
         # litellm_model_names.append(f"{details['litellm_provider']}/{model}")
         litellm_model_names.append(model)
