@@ -1,4 +1,4 @@
-import { Pagination } from "@/types/utils/types";
+import { Pagination, Tag } from "@/types/utils/types";
 
 export type UtilityStoreType = {
   selectedItems: any[];
@@ -11,4 +11,6 @@ export type UtilityStoreType = {
   setMaxFileSizeUpload: (maxFileSizeUpload: number) => void;
   flowsPagination: Pagination;
   setFlowsPagination: (pagination: Pagination) => void;
+  tags: Tag[];
+  setTags: (tags: Tag[]) => void;
 };
