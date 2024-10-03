@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
+import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useState } from "react";
-
+import { useParams } from "react-router-dom";
 import { newFlowModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import GetStartedComponent from "./components/GetStartedComponent";
@@ -26,6 +29,9 @@ export default function TemplatesModal({
   setOpen,
 }: newFlowModalPropsType): JSX.Element {
   const [currentTab, setCurrentTab] = useState("get-started");
+  const addFlow = useAddFlow();
+  const navigate = useCustomNavigate();
+  const { folderId } = useParams();
 
   // Define categories and their items
   const categories: Category[] = [
@@ -53,6 +59,14 @@ export default function TemplatesModal({
       ],
     },
   ];
+
+  const handleCreateBlankProject = () => {
+    addFlow().then((id) => {
+      navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
+      setOpen(false);
+    });
+    track("New Flow Created", { template: "Blank Flow" });
+  };
 
   return (
     <BaseModal size="templates" open={open} setOpen={setOpen} className="p-0">
@@ -89,7 +103,9 @@ export default function TemplatesModal({
                     Begin a fresh project to build from scratch.
                   </div>
                 </div>
-                <Button size="sm">Create Blank Project</Button>
+                <Button size="sm" onClick={handleCreateBlankProject}>
+                  Create Blank Project
+                </Button>
               </div>
             </BaseModal.Footer>
           </div>
