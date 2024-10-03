@@ -126,10 +126,7 @@ def save_uploaded_file(file: UploadFile, folder_name):
     cache_path = Path(CACHE_DIR)
     folder_path = cache_path / folder_name
     filename = file.filename
-    if isinstance(filename, str) or isinstance(filename, Path):
-        file_extension = Path(filename).suffix
-    else:
-        file_extension = ""
+    file_extension = Path(filename).suffix if isinstance(filename, str | Path) else ""
     file_object = file.file
 
     # Create the folder if it doesn't exist

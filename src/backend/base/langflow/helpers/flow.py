@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
@@ -37,12 +39,12 @@ def list_flows(*, user_id: str | None = None) -> list[Data]:
             return [flow.to_data() for flow in flows]
     except Exception as e:
         msg = f"Error listing flows: {e}"
-        raise ValueError(msg)
+        raise ValueError(msg) from e
 
 
 async def load_flow(
     user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
-) -> "Graph":
+) -> Graph:
     from langflow.graph.graph.base import Graph
     from langflow.processing.process import process_tweaks
 
@@ -120,7 +122,7 @@ async def run_flow(
 
 
 def generate_function_for_flow(
-    inputs: list["Vertex"], flow_id: str, user_id: str | UUID | None
+    inputs: list[Vertex], flow_id: str, user_id: str | UUID | None
 ) -> Callable[..., Awaitable[Any]]:
     """
     Generate a dynamic flow function based on the given inputs and flow ID.
@@ -159,7 +161,7 @@ def generate_function_for_flow(
     # Map original argument names to their corresponding Pythonic variable names in the function
     arg_mappings = ", ".join(
         f'"{original_name}": {name}'
-        for original_name, name in zip(original_arg_names, [arg.split(":")[0] for arg in args])
+        for original_name, name in zip(original_arg_names, [arg.split(":")[0] for arg in args], strict=True)
     )
 
     func_body = f"""
@@ -196,7 +198,7 @@ async def flow_function({func_args}):
 
 
 def build_function_and_schema(
-    flow_data: Data, graph: "Graph", user_id: str | UUID | None
+    flow_data: Data, graph: Graph, user_id: str | UUID | None
 ) -> tuple[Callable[..., Awaitable[Any]], type[BaseModel]]:
     """
     Builds a dynamic function and schema for a given flow.
@@ -215,7 +217,7 @@ def build_function_and_schema(
     return dynamic_flow_function, schema
 
 
-def get_flow_inputs(graph: "Graph") -> list["Vertex"]:
+def get_flow_inputs(graph: Graph) -> list[Vertex]:
     """
     Retrieves the flow inputs from the given graph.
 
@@ -232,7 +234,7 @@ def get_flow_inputs(graph: "Graph") -> list["Vertex"]:
     return inputs
 
 
-def build_schema_from_inputs(name: str, inputs: list["Vertex"]) -> type[BaseModel]:
+def build_schema_from_inputs(name: str, inputs: list[Vertex]) -> type[BaseModel]:
     """
     Builds a schema from the given inputs.
 
@@ -253,7 +255,7 @@ def build_schema_from_inputs(name: str, inputs: list["Vertex"]) -> type[BaseMode
     return create_model(name, **fields)  # type: ignore
 
 
-def get_arg_names(inputs: list["Vertex"]) -> list[dict[str, str]]:
+def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
     """
     Returns a list of dictionaries containing the component name and its corresponding argument name.
 

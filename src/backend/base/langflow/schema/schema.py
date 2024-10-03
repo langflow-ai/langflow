@@ -56,12 +56,13 @@ def get_type(payload):
         case str():
             result = LogType.TEXT
 
-    if result == LogType.UNKNOWN:
-        if payload and isinstance(payload, Generator):
-            result = LogType.STREAM
-
-        elif isinstance(payload, Message) and isinstance(payload.text, Generator):
-            result = LogType.STREAM
+    if result == LogType.UNKNOWN and (
+        payload
+        and isinstance(payload, Generator)
+        or isinstance(payload, Message)
+        and isinstance(payload.text, Generator)
+    ):
+        result = LogType.STREAM
 
     return result
 

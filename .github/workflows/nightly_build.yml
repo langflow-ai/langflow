@@ -28,24 +28,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: true
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
         with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-      - name: "Set up Python"
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: "pyproject.toml"
-      - name: Restore uv cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.uv-cache
-          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-            uv-${{ runner.os }}
+          ref: ${{ github.ref }}
       - name: Install the project
         run: uv sync --dev
 
@@ -53,7 +39,7 @@ jobs:
         id: generate_main_tag
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
-          MAIN_TAG="$(uv run python ./scripts/ci/pypi_nightly_tag.py main)"
+          MAIN_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py main)"
           echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
           echo "main_tag=$MAIN_TAG"
 
@@ -72,7 +58,7 @@ jobs:
         if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'false' }}
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
-          BASE_TAG="$(uv run python ./scripts/ci/pypi_nightly_tag.py base)"
+          BASE_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py base)"
           echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
           echo "base_tag=$BASE_TAG"
 
@@ -85,24 +71,26 @@ jobs:
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
 
-          # WARNING: These scripts must be run in this order.
-          # Poetry will use a different cached virtual environment once the main pyproject.toml
-          # project-name is updated, which does not have dependencies installed.
           BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
           echo "Updating base project version to $BASE_TAG"
-          uv run python ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
-          uv run python ./scripts/ci/update_pyproject_version.py $BASE_TAG base
+          uv run ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
+          uv run ./scripts/ci/update_pyproject_version.py $BASE_TAG base
 
           # This updates the dependency of langflow-base to langflow-base-nightly in {project_root}/pyproject.toml
-          uv run python ./scripts/ci/update_lf_base_dependency.py $BASE_TAG
+          # Note: Still necessary for poetry
+          uv run ./scripts/ci/update_lf_base_dependency.py $BASE_TAG
 
           # Use the main tag created earlier
           MAIN_TAG="${{ steps.generate_main_tag.outputs.main_tag }}"
           echo "Updating main project version to $MAIN_TAG"
-          uv run python ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
-          uv run python ./scripts/ci/update_pyproject_name.py langflow-nightly main
+          uv run ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
+          uv run ./scripts/ci/update_pyproject_name.py langflow-nightly main
+          uv run ./scripts/ci/update_uv_dependency.py $BASE_TAG
 
-          git add pyproject.toml src/backend/base/pyproject.toml
+          uv lock
+          cd src/backend/base && uv lock && cd ../../..
+
+          git add pyproject.toml src/backend/base/pyproject.toml uv.lock src/backend/base/uv.lock
           git commit -m "Update version and project name"
 
           echo "Tagging main with $MAIN_TAG"

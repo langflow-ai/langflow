@@ -188,9 +188,7 @@ class PythonCodeStructuredTool(LCToolComponent):
                 schema_annotation = Any
             schema_fields[field_name] = (
                 schema_annotation,
-                Field(
-                    default=func_arg["default"] if "default" in func_arg else Undefined, description=field_description
-                ),
+                Field(default=func_arg.get("default", Undefined), description=field_description),
             )
 
         if "temp_annotation_type" in _globals:

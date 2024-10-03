@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from langflow.services.base import Service
 from langflow.services.settings.auth import AuthSettings
 from langflow.services.settings.base import Settings
@@ -12,7 +14,7 @@ class SettingsService(Service):
         self.auth_settings: AuthSettings = auth_settings
 
     @classmethod
-    def initialize(cls) -> "SettingsService":
+    def initialize(cls) -> SettingsService:
         # Check if a string is a valid path or a file name
 
         settings = Settings()

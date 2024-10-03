@@ -2012,61 +2012,6 @@ snowflake = ["snowflake-snowpark-python"]
 weaviate = ["weaviate-client (>=4.6.5,<4.7.0)"]
 
 [[package]]
-name = "duckdb"
-version = "1.1.0"
-description = "DuckDB in-process database"
-optional = false
-python-versions = ">=3.7.0"
-files = [
-    {file = "duckdb-1.1.0-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:5e4cbc408e6e41146dea89b9044dae7356e353db0c96b183e5583ee02bc6ae5d"},
-    {file = "duckdb-1.1.0-cp310-cp310-macosx_12_0_universal2.whl", hash = "sha256:6370ae27ec8167ccfbefb94f58ad9fdc7bac142399960549d6d367f233189868"},
-    {file = "duckdb-1.1.0-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:4e1c3414f7fd01f4810dc8b335deffc91933a159282d65fef11c1286bc0ded04"},
-    {file = "duckdb-1.1.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c6bc2a58689adf5520303c5f68b065b9f980bd31f1366c541b8c7490abaf55cd"},
-    {file = "duckdb-1.1.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d02be208d2885ca085d4c852b911493b8cdac9d6eae893259da32bd72a437c25"},
-    {file = "duckdb-1.1.0-cp310-cp310-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:655df442ceebfc6f3fd6c8766e04b60d44dddedfa90275d794f9fab2d3180879"},
-    {file = "duckdb-1.1.0-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:6e183729bb64be7798ccbfda6283ebf423c869268c25af2b56929e48f763be2f"},
-    {file = "duckdb-1.1.0-cp310-cp310-win_amd64.whl", hash = "sha256:61fb838da51e07ceb0222c4406b059b90e10efcc453c19a3650b73c0112138c4"},
-    {file = "duckdb-1.1.0-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:7807e2f0d3344668e433f0dc1f54bfaddd410589611393e9a7ed56f8dec9514f"},
-    {file = "duckdb-1.1.0-cp311-cp311-macosx_12_0_universal2.whl", hash = "sha256:3da30b7b466f710d52caa1fdc3ef0bf4176ad7f115953cd9f8b0fbf0f723778f"},
-    {file = "duckdb-1.1.0-cp311-cp311-macosx_12_0_x86_64.whl", hash = "sha256:b9b6a77ef0183f561b1fc2945fcc762a71570ffd33fea4e3a855d413ed596fe4"},
-    {file = "duckdb-1.1.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:16243e66a9fd0e64ee265f2634d137adc6593f54ddf3ef55cb8a29e1decf6e54"},
-    {file = "duckdb-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:42b910a149e00f40a1766dc74fa309d4255b912a5d2fdcc387287658048650f6"},
-    {file = "duckdb-1.1.0-cp311-cp311-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:47849d546dc4238c0f20e95fe53b621aa5b08684e68fff91fd84a7092be91a17"},
-    {file = "duckdb-1.1.0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:11ec967b67159361ceade34095796a8d19368ea5c30cad988f44896b082b0816"},
-    {file = "duckdb-1.1.0-cp311-cp311-win_amd64.whl", hash = "sha256:510b5885ed6c267b9c0e1e7c6138fdffc2dd6f934a5a95b76da85da127213338"},
-    {file = "duckdb-1.1.0-cp312-cp312-macosx_12_0_arm64.whl", hash = "sha256:657bc7ac64d5faf069a782ae73afac51ef30ae2e5d0e09ce6a09d03db84ab35e"},
-    {file = "duckdb-1.1.0-cp312-cp312-macosx_12_0_universal2.whl", hash = "sha256:89f3de8cba57d19b41cd3c47dd06d979bd2a2ffead115480e37afbe72b02896d"},
-    {file = "duckdb-1.1.0-cp312-cp312-macosx_12_0_x86_64.whl", hash = "sha256:f6486323ab20656d22ffa8f3c6e109dde30d0b327b7c831f22ebcfe747f97fb0"},
-    {file = "duckdb-1.1.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:78a4510f82431ee3f14db689fe8727a4a9062c8f2fbb3bcfe3bfad3c1a198004"},
-    {file = "duckdb-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:64bf2a6e23840d662bd2ac09206a9bd4fa657418884d69e5c352d4456dc70b3c"},
-    {file = "duckdb-1.1.0-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:23fc9aa0af74e3803ed90c8d98280fd5bcac8c940592bf6288e8fd60fb051d00"},
-    {file = "duckdb-1.1.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:1f3aea31341ce400640dd522e4399b941f66df17e39884f446638fe958d6117c"},
-    {file = "duckdb-1.1.0-cp312-cp312-win_amd64.whl", hash = "sha256:3db4ab31c20de4edaef152930836b38e7662cd71370748fdf2c38ba9cf854dc4"},
-    {file = "duckdb-1.1.0-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e3b6b4fe1edfe35f64f403a9f0ab75258cee35abd964356893ee37424174b7e4"},
-    {file = "duckdb-1.1.0-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:aad02f50d5a2020822d1638fc1a9bcf082056f11d2e15ccfc1c1ed4d0f85a3be"},
-    {file = "duckdb-1.1.0-cp37-cp37m-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:eb66e9e7391801928ea134dcab12d2e4c97f2ce0391c603a3e480bbb15830bc8"},
-    {file = "duckdb-1.1.0-cp37-cp37m-musllinux_1_2_x86_64.whl", hash = "sha256:069fb7bca459e31edb32a61f0eea95d7a8a766bef7b8318072563abf8e939593"},
-    {file = "duckdb-1.1.0-cp37-cp37m-win_amd64.whl", hash = "sha256:e39f9b7b62e64e10d421ff04480290a70129c38067d1a4f600e9212b10542c5a"},
-    {file = "duckdb-1.1.0-cp38-cp38-macosx_12_0_arm64.whl", hash = "sha256:55ef98bcc7ba745752607f1b926e8d9b7ce32c42c423bbad10c44820aefe23a7"},
-    {file = "duckdb-1.1.0-cp38-cp38-macosx_12_0_universal2.whl", hash = "sha256:e2a08175e43b865c1e9611efd18cacd29ddd69093de442b1ebdf312071df7719"},
-    {file = "duckdb-1.1.0-cp38-cp38-macosx_12_0_x86_64.whl", hash = "sha256:0e3644b1f034012d82b9baa12a7ea306fe71dc6623731b28c753c4a617ff9499"},
-    {file = "duckdb-1.1.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:211a33c1ddb5cc609f75eb43772b0b03b45d2fa89bec107e4715267ca907806a"},
-    {file = "duckdb-1.1.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8e74b6f8a5145abbf7e6c1a2a61f0adbcd493c19b358f524ec9a3cebdf362abb"},
-    {file = "duckdb-1.1.0-cp38-cp38-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:58f1633dd2c5af5088ae2d119418e200855d0699d84f2fae9d46d30f404bcead"},
-    {file = "duckdb-1.1.0-cp38-cp38-musllinux_1_2_x86_64.whl", hash = "sha256:d18caea926b1e301c29b140418fca697aad728129e269b4f82c2795a184549e1"},
-    {file = "duckdb-1.1.0-cp38-cp38-win_amd64.whl", hash = "sha256:cd9fb1408942411ad360f8414bc3fbf0091c396ca903d947a10f2e31324d5cbd"},
-    {file = "duckdb-1.1.0-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:bd11bc899cebf5ff936d1276a2dfb7b7db08aba3bcc42924afeafc2163bddb43"},
-    {file = "duckdb-1.1.0-cp39-cp39-macosx_12_0_universal2.whl", hash = "sha256:53825a63193c582a78c152ea53de8d145744ddbeea18f452625a82ebc33eb14a"},
-    {file = "duckdb-1.1.0-cp39-cp39-macosx_12_0_x86_64.whl", hash = "sha256:29dc18087de47563b3859a6b98bbed96e1c96ce5db829646dc3b16a916997e7d"},
-    {file = "duckdb-1.1.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ecb19319883564237a7a03a104dbe7f445e73519bb67108fcab3d19b6b91fe30"},
-    {file = "duckdb-1.1.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:aac2fcabe2d5072c252d0b3087365f431de812d8199705089fb073e4d039d19c"},
-    {file = "duckdb-1.1.0-cp39-cp39-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d89eaaa5df8a57e7d2bc1f4c46493bb1fee319a00155f2015810ad2ace6570ae"},
-    {file = "duckdb-1.1.0-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:d86a6926313913cd2cc7e08816d3e7f72ba340adf2959279b1a80058be6526d9"},
-    {file = "duckdb-1.1.0-cp39-cp39-win_amd64.whl", hash = "sha256:d8333f3e85fa2a0f1c222b752c2bd42ea875235ff88492f7bcbb6867d0f644eb"},
-    {file = "duckdb-1.1.0.tar.gz", hash = "sha256:b4d4c12b1f98732151bd31377753e0da1a20f6423016d2d097d2e31953ec7c23"},
-]
-
-[[package]]
 name = "duckduckgo-search"
 version = "6.2.12"
 description = "Search for words, documents, images, news, maps and text translation using the DuckDuckGo.com search engine."
@@ -2172,6 +2117,8 @@ files = [
 
 [package.dependencies]
 elastic-transport = ">=8.13,<9"
+numpy = {version = ">=1", optional = true, markers = "extra == \"vectorstore-mmr\""}
+simsimd = {version = ">=3", optional = true, markers = "extra == \"vectorstore-mmr\""}
 
 [package.extras]
 async = ["aiohttp (>=3,<4)"]
@@ -2286,6 +2233,16 @@ dev = ["dj-database-url", "dj-email-url", "django-cache-url", "flake8 (==4.0.1)"
 django = ["dj-database-url", "dj-email-url", "django-cache-url"]
 lint = ["flake8 (==4.0.1)", "flake8-bugbear (==21.9.2)", "mypy (==0.910)", "pre-commit (>=2.4,<3.0)"]
 tests = ["dj-database-url", "dj-email-url", "django-cache-url", "pytest"]
+
+[[package]]
+name = "events"
+version = "0.5"
+description = "Bringing the elegance of C# EventHandler to Python"
+optional = false
+python-versions = "*"
+files = [
+    {file = "Events-0.5-py3-none-any.whl", hash = "sha256:a7286af378ba3e46640ac9825156c93bdba7502174dd696090fdfcd4d80a1abd"},
+]
 
 [[package]]
 name = "exceptiongroup"
@@ -4761,6 +4718,21 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<9.0.0"
 typing-extensions = ">=4.7"
 
 [[package]]
+name = "langchain-elasticsearch"
+version = "0.2.2"
+description = "An integration package connecting Elasticsearch and LangChain"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "langchain_elasticsearch-0.2.2-py3-none-any.whl", hash = "sha256:2b0ae1637afc6890c371fc67be2151954db3c7f5382a07dafe4cf3bd762c6f26"},
+    {file = "langchain_elasticsearch-0.2.2.tar.gz", hash = "sha256:7abe1cdee9f3b1a5f4152d2f79514359d0b95dc6d3923d3adb4ac431be854545"},
+]
+
+[package.dependencies]
+elasticsearch = {version = ">=8.13.1,<9.0.0", extras = ["vectorstore-mmr"]}
+langchain-core = ">=0.1.50,<0.3"
+
+[[package]]
 name = "langchain-experimental"
 version = "0.0.61"
 description = "Building applications with LLMs through composability"
@@ -6498,6 +6470,30 @@ typing-extensions = ">=4.11,<5"
 
 [package.extras]
 datalib = ["numpy (>=1)", "pandas (>=1.2.3)", "pandas-stubs (>=1.1.0.11)"]
+
+[[package]]
+name = "opensearch-py"
+version = "2.7.1"
+description = "Python client for OpenSearch"
+optional = false
+python-versions = "<4,>=3.8"
+files = [
+    {file = "opensearch_py-2.7.1-py3-none-any.whl", hash = "sha256:5417650eba98a1c7648e502207cebf3a12beab623ffe0ebbf55f9b1b4b6e44e9"},
+    {file = "opensearch_py-2.7.1.tar.gz", hash = "sha256:67ab76e9373669bc71da417096df59827c08369ac3795d5438c9a8be21cbd759"},
+]
+
+[package.dependencies]
+certifi = ">=2024.07.04"
+Events = "*"
+python-dateutil = "*"
+requests = ">=2.32.0,<3.0.0"
+urllib3 = {version = ">=1.26.19,<2.2.0 || >2.2.0,<2.2.1 || >2.2.1,<3", markers = "python_version >= \"3.10\""}
+
+[package.extras]
+async = ["aiohttp (>=3.9.4,<4)"]
+develop = ["black (>=24.3.0)", "botocore", "coverage (<8.0.0)", "jinja2", "myst-parser", "pytest (>=3.0.0)", "pytest-cov", "pytest-mock (<4.0.0)", "pytz", "pyyaml", "requests (>=2.0.0,<3.0.0)", "sphinx", "sphinx-copybutton", "sphinx-rtd-theme"]
+docs = ["aiohttp (>=3.9.4,<4)", "myst-parser", "sphinx", "sphinx-copybutton", "sphinx-rtd-theme"]
+kerberos = ["requests-kerberos"]
 
 [[package]]
 name = "opentelemetry-api"
@@ -9827,6 +9823,108 @@ files = [
 ]
 
 [[package]]
+name = "simsimd"
+version = "5.4.2"
+description = "Fastest SIMD-Accelerated Vector Similarity Functions for x86 and Arm"
+optional = false
+python-versions = "*"
+files = [
+    {file = "simsimd-5.4.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:66a7c5aad04748a22e872e830a3903d0c75e6cb768de3793dc35e4d882637303"},
+    {file = "simsimd-5.4.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:122017c54782c600fe323d94d58954a742a40966780f778cefdd19d2754f72e1"},
+    {file = "simsimd-5.4.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:abee498ec2d1e58022af112574136e9e0c96eb009d9cdba052ae5991eca1358d"},
+    {file = "simsimd-5.4.2-cp310-cp310-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:2be43ce56c6557299ae4b65fe7a8ba0b347c21cc18d2fde2e6d8601b2ac384f4"},
+    {file = "simsimd-5.4.2-cp310-cp310-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:97d5bf0e3e5728f0dc9d18f274d2d62451132ab007ea1f5bb0ec41f0499628b2"},
+    {file = "simsimd-5.4.2-cp310-cp310-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:e6374c10dff1b8273f02e04be7573278e6811881e789d2b23d20f03731d62516"},
+    {file = "simsimd-5.4.2-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:72e3f0dfde8c8b3dd8082cb418c3c73f969fd4b09913e5a22cda4eb1639a4bf7"},
+    {file = "simsimd-5.4.2-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:657bc36805d31c536e0d3c5cf5fec86f4213ea7aea17d802a4fa39ea6ddfd4ad"},
+    {file = "simsimd-5.4.2-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:0163396e23b8c0d764a7847e91135bd3a06ee175d6620889cf21f44602b06d81"},
+    {file = "simsimd-5.4.2-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:64886dc6c28135d9304f33514cf60d9f055ceaf3cb63a70e77b9fdf283c29589"},
+    {file = "simsimd-5.4.2-cp310-cp310-musllinux_1_2_ppc64le.whl", hash = "sha256:4c2bcf56a16eeca463b838843ca80ea7c201cf6cd01de82b2ffbb55aa745780e"},
+    {file = "simsimd-5.4.2-cp310-cp310-musllinux_1_2_s390x.whl", hash = "sha256:f5f4d835afc06a3c6483eecead4670ff395a21cc397822130cf1689dcc93aa31"},
+    {file = "simsimd-5.4.2-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:5c2978807a7f8711a5c98b485243a88ba709d27f39d869305d90eb6066eae6ed"},
+    {file = "simsimd-5.4.2-cp310-cp310-win32.whl", hash = "sha256:3f83fe2f9bb1ff4fac7157f3be657fa8a18aff3351fb0488e1cf2d541c79139a"},
+    {file = "simsimd-5.4.2-cp310-cp310-win_amd64.whl", hash = "sha256:d52095f31a52f4081c49e0dee43df09fb28a63d018f8a4ed68e454254c97ec8d"},
+    {file = "simsimd-5.4.2-cp310-cp310-win_arm64.whl", hash = "sha256:e90ca7cce00d464ba1f045a2a70f3a6ec37b4620b1855c759f158661ca33e3b5"},
+    {file = "simsimd-5.4.2-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:9a5a8a0767042b97e3f9e1f3dca3a42007b8b47c7936606d7239c077efd35345"},
+    {file = "simsimd-5.4.2-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:9084bc98f414dd0343dd2cadc878143458480cc79cbcbd47abe389455c905512"},
+    {file = "simsimd-5.4.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:843d2ef7eaeb7ca741cf6acfe49a1854d29fd65f50b9cca37e82b8301a23d175"},
+    {file = "simsimd-5.4.2-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:301865384756be7af15bf24f7544bbf120c381ac24a0b0b837defa1bc7f0726c"},
+    {file = "simsimd-5.4.2-cp311-cp311-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:00b685c51a87506e58bfa1f53d3b1d346e8e09d99dfadaf5f330672235799a39"},
+    {file = "simsimd-5.4.2-cp311-cp311-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:53485eac53af43b867fef7dcc9f4323a63933632fc9ed7171af2ab3aa95ea3d0"},
+    {file = "simsimd-5.4.2-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:ade8e270ef941d4b4148371d5a5f67dc9302843dbf2c6a6e90d8d165f0dea1a1"},
+    {file = "simsimd-5.4.2-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:ed4d7b4dff94296f698de500097c87d5f8c6935b12e210d9c521b5080cac6be9"},
+    {file = "simsimd-5.4.2-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:429b998a57826a7b8720088320ef5dca1346abcd43e72ce541b5cc5fbe6f4cd6"},
+    {file = "simsimd-5.4.2-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:f24d09407f9ada45ade23afed95294b0f0f01743b8f16cbad6f1c46d69cc15a0"},
+    {file = "simsimd-5.4.2-cp311-cp311-musllinux_1_2_ppc64le.whl", hash = "sha256:525f4049618a21ed1ec775c77c6d4a261526605b4fed0f5e3832cb38e9e08fef"},
+    {file = "simsimd-5.4.2-cp311-cp311-musllinux_1_2_s390x.whl", hash = "sha256:47d5f48b1599718cb7a7968281c2c981cbad7949ca42218e74d7c3f1a9614086"},
+    {file = "simsimd-5.4.2-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:f7b075618654fd7676b2b11493edf723c670c864f63bfbf97b2f68cabd9b01d2"},
+    {file = "simsimd-5.4.2-cp311-cp311-win32.whl", hash = "sha256:9dcfe6c9d0ed020f9a886331ea52dac3874703b4790a54963661e7ddd6a7e42a"},
+    {file = "simsimd-5.4.2-cp311-cp311-win_amd64.whl", hash = "sha256:e6656717cdb4c50c5ae120d01a2ffcec3175dd4bbedf0c3223c2b76c4db3f5ed"},
+    {file = "simsimd-5.4.2-cp311-cp311-win_arm64.whl", hash = "sha256:e25fd6110d977737f5a73a701eecf0a393d4d2231301d4ee8cf9223bdade02db"},
+    {file = "simsimd-5.4.2-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:a5e81fb7aa2965fe7758d281280728f44beced50a5f8c7fa21d0f26ffbea7ce3"},
+    {file = "simsimd-5.4.2-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:62d861b019be3c3cf492926b61464954f62e76f4d6f67abeeef5c13046694e53"},
+    {file = "simsimd-5.4.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:d0e48b4d40cf54ded06a98509bec8a0ecd2574878afd807b92cce02fc2ed6640"},
+    {file = "simsimd-5.4.2-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:2e42395167d7ee6e052a1ba60789ab0ca1f17eccc4f5d5cd4de7dd8777a271ad"},
+    {file = "simsimd-5.4.2-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:38caa7cb803d037adb16d7a1ebe91bfdf2f7d844de1b3d23a8d4c461eea98f13"},
+    {file = "simsimd-5.4.2-cp312-cp312-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:048659b51556558aba3e268b4a0a523eee7b9e2c5cd6683d86d6af75ce598193"},
+    {file = "simsimd-5.4.2-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:b25eb72e4ee9e7a51d9658ea5485afac8a6d4e00dadda61e4e275c0617d706a9"},
+    {file = "simsimd-5.4.2-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:b70b629f538388cf3817a887d9068b393952fe62b236484436324355bfd83809"},
+    {file = "simsimd-5.4.2-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:3039650261f196abf251ee5fa58ce9bfae6bd571d7b48c525deeba6fe3ff1385"},
+    {file = "simsimd-5.4.2-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:fa4adee01d5bdd64f3fbd8397a54675d8bc32a8a04c68643ae7724281fa53fab"},
+    {file = "simsimd-5.4.2-cp312-cp312-musllinux_1_2_ppc64le.whl", hash = "sha256:6f2a7469a3775e14e92db5333e13ae76df7bb84105e6d5c35274cde3f77ffe4b"},
+    {file = "simsimd-5.4.2-cp312-cp312-musllinux_1_2_s390x.whl", hash = "sha256:d75dbbddf28ee09e05d112e0f993f09fc2b8500ead7f4dbe6ca2f1ca29708f01"},
+    {file = "simsimd-5.4.2-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:da4994ad65ca44e5bb2a5d9c1240021c29f86b74931c3a4bd8cc2e3a2c1908a2"},
+    {file = "simsimd-5.4.2-cp312-cp312-win32.whl", hash = "sha256:9c3545fff1401abd566a40e2bee63ac59a2bfdc971b47309595435ead0037fa6"},
+    {file = "simsimd-5.4.2-cp312-cp312-win_amd64.whl", hash = "sha256:4363255646f9fc1916fd541383a27f6d02483bbfdc9f8e0a501060f258af4fb0"},
+    {file = "simsimd-5.4.2-cp312-cp312-win_arm64.whl", hash = "sha256:a099b91cd56c96437dfe03ddf9f47c2135a42a45e57f2a6aa6f571cf1f7125bd"},
+    {file = "simsimd-5.4.2-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:dd7d651b7f2c06772eb70d6ae8bcea37e2674f227472a6faf949e6358ec1fb0f"},
+    {file = "simsimd-5.4.2-cp37-cp37m-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:1457733032b4177178caab9bc4546f6293c3e6f0fa09fb25460d606dcf2c6e15"},
+    {file = "simsimd-5.4.2-cp37-cp37m-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:6fbe6016f1f39a3a6e10d413a86ab9a02f847dba85a4902c05bc40bece2be197"},
+    {file = "simsimd-5.4.2-cp37-cp37m-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:591652ca3c1dc4be6916b9ca1f5783acee71663e5408327acfb7d9454954914a"},
+    {file = "simsimd-5.4.2-cp37-cp37m-manylinux_2_28_aarch64.whl", hash = "sha256:2549a455f95cd686017ce96394b87c27ce1b07f14c22e62cf2970a1d0c8c02ae"},
+    {file = "simsimd-5.4.2-cp37-cp37m-manylinux_2_28_x86_64.whl", hash = "sha256:08f3d084e72fecfd429ff1da796f4b80a0cf6c501f270a440c35069d3a04a7be"},
+    {file = "simsimd-5.4.2-cp37-cp37m-musllinux_1_2_aarch64.whl", hash = "sha256:7e586811fb00434434bd5a3378babf9a818d1704b1f4a919765ecc20be4f1d98"},
+    {file = "simsimd-5.4.2-cp37-cp37m-musllinux_1_2_i686.whl", hash = "sha256:e5ee764939640cbc0af11055f3959a25fb95e6c57c2900f650ea81cfbbfeca4d"},
+    {file = "simsimd-5.4.2-cp37-cp37m-musllinux_1_2_ppc64le.whl", hash = "sha256:22f7d140c74d0a28db8e369ff3d9a1334d04500bbea5b0a826b91450dd521ec0"},
+    {file = "simsimd-5.4.2-cp37-cp37m-musllinux_1_2_s390x.whl", hash = "sha256:d68d392c6482039ce4d25c0352532749c5d7b5bbfaa847f98baa023308728140"},
+    {file = "simsimd-5.4.2-cp37-cp37m-musllinux_1_2_x86_64.whl", hash = "sha256:0256d95bb6ffa01e4c200752cfc7f48ba52a22e4d0b655aa88d5ab79d1860c79"},
+    {file = "simsimd-5.4.2-cp37-cp37m-win32.whl", hash = "sha256:c63195c2f8551e0aa599959ce119bd29947f561bb98569889ee08eb084bd5a30"},
+    {file = "simsimd-5.4.2-cp37-cp37m-win_amd64.whl", hash = "sha256:77e13e55ae7e9a7e9dc16fd85a4ce5c48543681dd382a38ec3691f186894dc3d"},
+    {file = "simsimd-5.4.2-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:4833ca6bfd3fe6625e02279d76788850521d2bc3985b4a686cf80a073a3385d8"},
+    {file = "simsimd-5.4.2-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:84df304e7da94428af75f53970b99f55987660d38ddcd55a48422f73e2c82f04"},
+    {file = "simsimd-5.4.2-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:203e0dd865e241e8bb9bb3fb54ea7389ec789fc2c8c6498b55acfa43ac976df2"},
+    {file = "simsimd-5.4.2-cp38-cp38-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:96969b2e04bf35b04cb865c9aaa3ce71193169b6b291a49f9db75a5736ec17d8"},
+    {file = "simsimd-5.4.2-cp38-cp38-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:18012060bea0e4920842d67af4505ae6f9c7712ea8401b058befe17006441661"},
+    {file = "simsimd-5.4.2-cp38-cp38-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:dca1a480f68083fc91ce7e75a2cd8881b7da475484451db31c2cc74423cef73f"},
+    {file = "simsimd-5.4.2-cp38-cp38-manylinux_2_28_aarch64.whl", hash = "sha256:2affda3fa0344579b0b6f745b87b13ffd6eb6292fb498ec07bb9055cf06216e9"},
+    {file = "simsimd-5.4.2-cp38-cp38-manylinux_2_28_x86_64.whl", hash = "sha256:aee9c2bc6c4dce1e5a500aece59b5aa619c34236e9f77773100056cf8506eff6"},
+    {file = "simsimd-5.4.2-cp38-cp38-musllinux_1_2_aarch64.whl", hash = "sha256:cf4ec869f7518f2a0dd8d50b0d4307962c1f6ae3f361f6ffdc2f475d18afd57e"},
+    {file = "simsimd-5.4.2-cp38-cp38-musllinux_1_2_i686.whl", hash = "sha256:a0433ffa2fa10389198924c242dff2c267fad33a6670151aaa8280d94af3db16"},
+    {file = "simsimd-5.4.2-cp38-cp38-musllinux_1_2_ppc64le.whl", hash = "sha256:0142ae015a7dbb4902282ba0fc5e72be147d6ea3fa9fed2672e44c6ff00511f7"},
+    {file = "simsimd-5.4.2-cp38-cp38-musllinux_1_2_s390x.whl", hash = "sha256:273b858d167d3190ec4d35f3d151e0dee2b5a242ccb385693ca949ee899b6c62"},
+    {file = "simsimd-5.4.2-cp38-cp38-musllinux_1_2_x86_64.whl", hash = "sha256:292d5e2ca077413a58f5cc31e96e5533f001c5df73468712abe31ad5ddac163a"},
+    {file = "simsimd-5.4.2-cp38-cp38-win32.whl", hash = "sha256:3a53a30e814e11cb5cf802695c6ea1e25629dacf1f7d453681943176386c69b7"},
+    {file = "simsimd-5.4.2-cp38-cp38-win_amd64.whl", hash = "sha256:20c3d90d2c417145d0953ee1cc2f015e514fad198fcf500d3351984d479e25c0"},
+    {file = "simsimd-5.4.2-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:1a94a17bd8cd18ffd611125ab8a42b8c0cc7ebd18d16a651d096a683a2f40818"},
+    {file = "simsimd-5.4.2-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:4577b8d7b746536752297fba97116f74da23be3b52b7a955846c2d6ec7aaea51"},
+    {file = "simsimd-5.4.2-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:34ae1cde6644caba81ceaed8ae429ee470fef39fc9b6be2cfffb8ea0e1092b20"},
+    {file = "simsimd-5.4.2-cp39-cp39-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:70647c3ff8f24682c0211fc0b88d9fb3a2a7f4a193cd44975d87c215b8f11f34"},
+    {file = "simsimd-5.4.2-cp39-cp39-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:6ef37e04858e3dca6d92ff8e27767c5299d634ee91af1e765382d98fe86c54c0"},
+    {file = "simsimd-5.4.2-cp39-cp39-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:fbef168a7362b46aa972e9f7b33ad120d9eb637291f7cb971e30374fdc92f0e1"},
+    {file = "simsimd-5.4.2-cp39-cp39-manylinux_2_28_aarch64.whl", hash = "sha256:5f1222baa12b44604ece0febf3adacd279f2866f13751cb0c56d23abf3cc279a"},
+    {file = "simsimd-5.4.2-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:dfab8bea75f6cc5717131723c13b727f2d70cb0f8268bf0217e8835b720debd6"},
+    {file = "simsimd-5.4.2-cp39-cp39-musllinux_1_2_aarch64.whl", hash = "sha256:0fc362bddd831ab2adebee47ea882a170b3b1275bb462ae68329caea0609255b"},
+    {file = "simsimd-5.4.2-cp39-cp39-musllinux_1_2_i686.whl", hash = "sha256:298ccf4ff37e6fc43201245657d65470098694835771d126322ab671f479a54f"},
+    {file = "simsimd-5.4.2-cp39-cp39-musllinux_1_2_ppc64le.whl", hash = "sha256:6f3a5c87f10dd2cc858df4c6dbff0b27905547e05e96944fa4d960cebfbc1e2b"},
+    {file = "simsimd-5.4.2-cp39-cp39-musllinux_1_2_s390x.whl", hash = "sha256:482eb8e6839eba91819f24f1759c5d604fe8b7e0eed576ef99fb1efce7e9675f"},
+    {file = "simsimd-5.4.2-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:f811d03685b177d8054e20a3a7ba4e9c714ab6eb0c956d9d56cad78e4c2c14dc"},
+    {file = "simsimd-5.4.2-cp39-cp39-win32.whl", hash = "sha256:daac1a76a6c85cfd837510f79c6dbee62d5bc1f448a013a9b4937d6a66fe1cd1"},
+    {file = "simsimd-5.4.2-cp39-cp39-win_amd64.whl", hash = "sha256:bdb92fa486c735cbd7eb6074e0c529cd2665898db9ee70d4801e0581a937febe"},
+    {file = "simsimd-5.4.2-cp39-cp39-win_arm64.whl", hash = "sha256:a7b8afe88c1cc8a06b61932126c0aee1af82d0de45a13135e40a9f406d5a909f"},
+    {file = "simsimd-5.4.2.tar.gz", hash = "sha256:86ef77a237f47bddbdd8e89b36a8096fad461197d6f7ba20602a863191196542"},
+]
+
+[[package]]
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
@@ -12171,4 +12269,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "b8b616387b7386f9beab685fcff95ca507f802eb9dc22bd9ae182f0793b11170"
+content-hash = "4f9dbbdd9929d50f643790fbae6ecb8e2f052c2a0c399dd79efb6840450bf48d"

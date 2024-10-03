@@ -124,9 +124,9 @@ class ChatLiteLLMModelComponent(LCModelComponent):
 
             litellm.drop_params = True
             litellm.set_verbose = self.verbose
-        except ImportError:
-            msg = "Could not import litellm python package. " "Please install it with `pip install litellm`"
-            raise ChatLiteLLMException(msg)
+        except ImportError as e:
+            msg = "Could not import litellm python package. Please install it with `pip install litellm`"
+            raise ChatLiteLLMException(msg) from e
         # Remove empty keys
         if "" in self.kwargs:
             del self.kwargs[""]

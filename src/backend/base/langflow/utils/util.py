@@ -56,9 +56,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
                     elif name_ not in ["name"]:
                         variables[class_field_items][name_] = value_
 
-                variables[class_field_items]["placeholder"] = (
-                    docs.params[class_field_items] if class_field_items in docs.params else ""
-                )
+                variables[class_field_items]["placeholder"] = docs.params.get(class_field_items, "")
             # Adding function to base classes to allow
             # the output to be a function
             base_classes = get_base_classes(_class)
@@ -144,7 +142,7 @@ def get_base_classes(cls):
         bases = cls.__bases__
         result = []
         for base in bases:
-            if any(type in base.__module__ for type in ["pydantic", "abc"]):
+            if any(_type in base.__module__ for _type in ["pydantic", "abc"]):
                 continue
             result.append(base.__name__)
             base_classes = get_base_classes(base)

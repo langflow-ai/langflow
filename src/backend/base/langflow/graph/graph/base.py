@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import copy
 import json
 import uuid
-import warnings
 from collections import defaultdict, deque
 from collections.abc import Generator, Iterable
 from datetime import datetime, timezone
@@ -26,6 +26,7 @@ from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.state_model import create_state_model_from_graph
 from langflow.graph.graph.utils import (
     find_all_cycle_edges,
+    find_cycle_vertices,
     find_start_component_id,
     has_cycle,
     process_flow,
@@ -42,6 +43,7 @@ from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.schema import GetCache, SetCache
 from langflow.services.deps import get_chat_service, get_tracing_service
+from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
@@ -114,6 +116,7 @@ class Graph:
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
         self._is_cyclic: bool | None = None
         self._cycles: list[tuple[str, str]] | None = None
+        self._cycle_vertices: set[str] | None = None
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         try:
@@ -262,11 +265,11 @@ class Graph:
             input_field = target_vertex.get_input(input_name)
             input_types = input_field.input_types
             input_field_type = str(input_field.field_type)
-        except ValueError:
+        except ValueError as e:
             input_field = target_vertex.data.get("node", {}).get("template", {}).get(input_name)
             if not input_field:
                 msg = f"Input field {input_name} not found in target vertex {target_id}"
-                raise ValueError(msg)
+                raise ValueError(msg) from e
             input_types = input_field.get("input_types", [])
             input_field_type = input_field.get("type", "")
 
@@ -345,6 +348,9 @@ class Graph:
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
     ) -> Generator:
+        if self.is_cyclic and max_iterations is None:
+            msg = "You must specify a max_iterations if the graph is cyclic"
+            raise ValueError(msg)
         if config is not None:
             self.__apply_config(config)
         #! Change this ASAP
@@ -792,7 +798,7 @@ class Graph:
             types = []
         for _ in range(len(inputs) - len(types)):
             types.append("chat")  # default to chat
-        for run_inputs, components, input_type in zip(inputs, inputs_components, types):
+        for run_inputs, components, input_type in zip(inputs, inputs_components, types, strict=True):
             run_outputs = await self._run(
                 inputs=run_inputs,
                 input_components=components,
@@ -1061,10 +1067,7 @@ class Graph:
         same_length = len(vertex.edges) == len(other_vertex.edges)
         if not same_length:
             return False
-        for edge in vertex.edges:
-            if edge not in other_vertex.edges:
-                return False
-        return True
+        return all(edge in other_vertex.edges for edge in vertex.edges)
 
     def update(self, other: Graph) -> Graph:
         # Existing vertices in self graph
@@ -1080,10 +1083,8 @@ class Graph:
 
         # Remove vertices that are not in the other graph
         for vertex_id in removed_vertex_ids:
-            try:
+            with contextlib.suppress(ValueError):
                 self.remove_vertex(vertex_id)
-            except ValueError:
-                pass
 
         # The order here matters because adding the vertex is required
         # if any of them have edges that point to any of the new vertices
@@ -1175,10 +1176,25 @@ class Graph:
         # This is a hack to make sure that the LLM vertex is sent to
         # the toolkit vertex
         self._build_vertex_params()
+        run_until_complete(self._instantiate_components_in_vertices())
+        self._set_cache_to_vertices_in_cycle()
 
-        # Now that we have the vertices and edges
-        # We need to map the vertices that are connected to
-        # to ChatVertex instances
+    def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
+        """Returns the edges of the graph as a list of tuples."""
+        return [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
+
+    def _set_cache_to_vertices_in_cycle(self) -> None:
+        """Sets the cache to the vertices in cycle."""
+        edges = self._get_edges_as_list_of_tuples()
+        cycle_vertices = set(find_cycle_vertices(edges))
+        for vertex in self.vertices:
+            if vertex.id in cycle_vertices:
+                vertex.apply_on_outputs(lambda output_object: setattr(output_object, "cache", False))
+
+    async def _instantiate_components_in_vertices(self) -> None:
+        """Instantiates the components in the vertices."""
+        for vertex in self.vertices:
+            await vertex.instantiate_component(self.user_id)
 
     def remove_vertex(self, vertex_id: str) -> None:
         """Removes a vertex from the graph."""
@@ -1203,9 +1219,9 @@ class Graph:
         """Returns a vertex by id."""
         try:
             return self.vertex_map[vertex_id]
-        except KeyError:
+        except KeyError as e:
             msg = f"Vertex {vertex_id} not found"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
     def get_root_of_group_node(self, vertex_id: str) -> Vertex:
         """Returns the root of a group node."""
@@ -1640,6 +1656,13 @@ class Graph:
                 self._cycles = find_all_cycle_edges(entry_vertex, edges)
         return self._cycles
 
+    @property
+    def cycle_vertices(self):
+        if self._cycle_vertices is None:
+            edges = self._get_edges_as_list_of_tuples()
+            self._cycle_vertices = set(find_cycle_vertices(edges))
+        return self._cycle_vertices
+
     def _build_edges(self) -> list[CycleEdge]:
         """Builds the edges of the graph."""
         # Edge takes two vertices as arguments, so we need to build the vertices first
@@ -1650,7 +1673,7 @@ class Graph:
             new_edge = self.build_edge(edge)
             edges.add(new_edge)
         if self.vertices and not edges:
-            warnings.warn("Graph has vertices but no edges")
+            logger.warning("Graph has vertices but no edges")
         return list(cast(Iterable[CycleEdge], edges))
 
     def build_edge(self, edge: EdgeData) -> CycleEdge | Edge:
@@ -1663,7 +1686,7 @@ class Graph:
         if target is None:
             msg = f"Target vertex {edge['target']} not found"
             raise ValueError(msg)
-        if (source.id, target.id) in self.cycles:
+        if any(v in self.cycle_vertices for v in [source.id, target.id]):
             new_edge: CycleEdge | Edge = CycleEdge(source, target, edge)
         else:
             new_edge = Edge(source, target, edge)

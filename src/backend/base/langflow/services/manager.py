@@ -132,7 +132,7 @@ class ServiceManager:
                 module = importlib.import_module(module_name)
 
                 # Find all classes in the module that are subclasses of ServiceFactory
-                for name, obj in inspect.getmembers(module, inspect.isclass):
+                for _, obj in inspect.getmembers(module, inspect.isclass):
                     if issubclass(obj, ServiceFactory) and obj is not ServiceFactory:
                         factories.append(obj())
                         break

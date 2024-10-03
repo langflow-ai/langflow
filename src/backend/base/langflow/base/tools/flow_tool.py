@@ -1,8 +1,10 @@
-import warnings
+from __future__ import annotations
+
 from typing import Any
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, ToolException
+from loguru import logger
 from pydantic.v1 import BaseModel
 
 from langflow.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
@@ -18,7 +20,7 @@ class FlowTool(BaseTool):
     graph: Graph | None = None
     flow_id: str | None = None
     user_id: str | None = None
-    inputs: list["Vertex"] = []
+    inputs: list[Vertex] = []
     get_final_results_only: bool = True
 
     @property
@@ -43,7 +45,7 @@ class FlowTool(BaseTool):
         """Use the tool."""
         args_names = get_arg_names(self.inputs)
         if len(args_names) == len(args):
-            kwargs = {arg["arg_name"]: arg_value for arg, arg_value in zip(args_names, args)}
+            kwargs = {arg["arg_name"]: arg_value for arg, arg_value in zip(args_names, args, strict=True)}
         elif len(args_names) != len(args) and len(args) != 0:
             msg = "Number of arguments does not match the number of inputs. Pass keyword arguments instead."
             raise ToolException(msg)
@@ -75,7 +77,7 @@ class FlowTool(BaseTool):
             raise ToolException(msg)
 
         if len(args) == len(args_names):
-            kwargs = {arg_name["arg_name"]: arg_value for arg_name, arg_value in zip(args_names, args)}
+            kwargs = {arg_name["arg_name"]: arg_value for arg_name, arg_value in zip(args_names, args, strict=True)}
 
         missing_args = [arg["arg_name"] for arg in args_names if arg["arg_name"] not in kwargs]
         if missing_args:
@@ -99,7 +101,7 @@ class FlowTool(BaseTool):
         try:
             run_id = self.graph.run_id if self.graph else None
         except Exception as e:
-            warnings.warn(f"Failed to set run_id: {e}")
+            logger.warning(f"Failed to set run_id: {e}")
             run_id = None
         run_outputs = await run_flow(
             tweaks={key: {"input_value": value} for key, value in tweaks.items()},

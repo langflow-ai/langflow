@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
@@ -127,7 +129,7 @@ async def auto_login(
 async def refresh_token(
     request: Request,
     response: Response,
-    settings_service: "SettingsService" = Depends(get_settings_service),
+    settings_service: SettingsService = Depends(get_settings_service),
     db: Session = Depends(get_session),
 ):
     auth_settings = settings_service.auth_settings

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import io
 import json
 import re
@@ -123,7 +125,7 @@ def read_flows(
     *,
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session),
-    settings_service: "SettingsService" = Depends(get_settings_service),
+    settings_service: SettingsService = Depends(get_settings_service),
     remove_example_flows: bool = False,
     components_only: bool = False,
 ):
@@ -184,7 +186,7 @@ def read_flow(
     session: Session = Depends(get_session),
     flow_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    settings_service: "SettingsService" = Depends(get_settings_service),
+    settings_service: SettingsService = Depends(get_settings_service),
 ):
     """Read a flow."""
     auth_settings = settings_service.auth_settings
@@ -310,10 +312,7 @@ async def upload_file(
     contents = await file.read()
     data = orjson.loads(contents)
     response_list = []
-    if "flows" in data:
-        flow_list = FlowListCreate(**data)
-    else:
-        flow_list = FlowListCreate(flows=[FlowCreate(**data)])
+    flow_list = FlowListCreate(**data) if "flows" in data else FlowListCreate(flows=[FlowCreate(**data)])
     # Now we set the user_id for all flows
     for flow in flow_list.flows:
         flow.user_id = current_user.id
@@ -391,7 +390,7 @@ async def download_multiple_file(
         zip_stream.seek(0)
 
         # Generate the filename with the current datetime
-        current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
         filename = f"{current_time}_langflow_flows.zip"
 
         return StreamingResponse(

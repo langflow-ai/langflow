@@ -1,6 +1,7 @@
 import { AIMLIcon } from "@/icons/AIML";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import Perplexity from "@/icons/Perplexity/Perplexity";
+import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
@@ -216,6 +217,7 @@ import { NotionIcon } from "../icons/Notion";
 import { NvidiaIcon } from "../icons/Nvidia";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
+import { OpenSearch } from "../icons/OpenSearch";
 import { PineconeIcon } from "../icons/Pinecone";
 import { PostgresIcon } from "../icons/Postgres";
 import { PythonIcon } from "../icons/Python";
@@ -298,6 +300,8 @@ export const nodeColors: { [char: string]: string } = {
   wrappers: "#E6277A",
   notion: "#000000",
   Notion: "#000000",
+  AssemblyAI: "#213ED7",
+  assemblyai: "#213ED7",
   helpers: "#31A3CC",
   prototypes: "#E6277A",
   astra_assistants: "#272541",
@@ -326,6 +330,8 @@ export const nodeNames: { [char: string]: string } = {
   models: "Models",
   notion: "Notion",
   Notion: "Notion",
+  AssemblyAI: "AssemblyAI",
+  assemblyai: "AssemblyAI",
   model_specs: "Model Specs",
   chains: "Chains",
   agents: "Agents",
@@ -392,6 +398,7 @@ export const nodeIconsLucide: iconsType = {
   Amazon: AWSIcon,
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
+  assemblyai: AssemblyAIIcon,
   AssemblyAI: AssemblyAIIcon,
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
@@ -635,5 +642,7 @@ export const nodeIconsLucide: iconsType = {
   OptionIcon: OptionIcon,
   Option: OptionIcon,
   Perplexity,
+  TavilyIcon,
   DuckDuckGo: DuckDuckGoIcon,
+  OpenSearch,
 };

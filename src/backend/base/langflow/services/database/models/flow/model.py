@@ -1,7 +1,6 @@
 # Path: src/backend/langflow/services/database/models/flow/model.py
 
 import re
-import warnings
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
@@ -9,6 +8,7 @@ from uuid import UUID, uuid4
 import emoji
 from emoji import purely_emoji  # type: ignore
 from fastapi import HTTPException, status
+from loguru import logger
 from pydantic import field_serializer, field_validator
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
@@ -28,11 +28,13 @@ class FlowBase(SQLModel):
     description: str | None = Field(default=None, sa_column=Column(Text, index=True, nullable=True))
     icon: str | None = Field(default=None, nullable=True)
     icon_bg_color: str | None = Field(default=None, nullable=True)
+    gradient: str | None = Field(default=None, nullable=True)
     data: dict | None = Field(default=None, nullable=True)
     is_component: bool | None = Field(default=False, nullable=True)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
     webhook: bool | None = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
+    tags: list[str] | None = None
 
     @field_validator("endpoint_name")
     @classmethod
@@ -87,8 +89,7 @@ class FlowBase(SQLModel):
 
         emoji_value = emoji.emojize(v, variant="emoji_type")
         if v == emoji_value:
-            warnings.warn(f"Invalid emoji. {v} is not a valid emoji.")
-            icon = v
+            logger.warning(f"Invalid emoji. {v} is not a valid emoji.")
         icon = emoji_value
 
         if purely_emoji(icon):
@@ -116,10 +117,10 @@ class FlowBase(SQLModel):
             raise ValueError(msg)
 
         # data must contain nodes and edges
-        if "nodes" not in v.keys():
+        if "nodes" not in v:
             msg = "Flow must have nodes"
             raise ValueError(msg)
-        if "edges" not in v.keys():
+        if "edges" not in v:
             msg = "Flow must have edges"
             raise ValueError(msg)
 
@@ -152,6 +153,7 @@ class Flow(FlowBase, table=True):  # type: ignore
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     user_id: UUID | None = Field(index=True, foreign_key="user.id", nullable=True)
     user: "User" = Relationship(back_populates="flows")
+    tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
     messages: list["MessageTable"] = Relationship(back_populates="flow")

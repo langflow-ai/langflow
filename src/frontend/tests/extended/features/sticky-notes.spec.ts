@@ -30,8 +30,15 @@ test("user should be able to interact with sticky notes", async ({ page }) => {
     control = "Meta";
   }
 
-  const noteText = `
-  Artificial Intelligence (AI) has rapidly evolved from a speculative concept in science fiction to a transformative force reshaping industries and everyday life. The term AI encompasses a broad range of technologies, from simple algorithms designed to perform specific tasks to complex systems capable of learning and adapting independently. As AI continues to advance, its applications are becoming increasingly diverse, impacting everything from healthcare to finance, entertainment, and beyond.
+  const randomTitle = Math.random()
+    .toString(36)
+    .substring(7)
+    .padEnd(8, "x")
+    .substring(0, 8);
+
+  const noteText = `# ${randomTitle}
+
+Artificial Intelligence (AI) has rapidly evolved from a speculative concept in science fiction to a transformative force reshaping industries and everyday life. The term AI encompasses a broad range of technologies, from simple algorithms designed to perform specific tasks to complex systems capable of learning and adapting independently. As AI continues to advance, its applications are becoming increasingly diverse, impacting everything from healthcare to finance, entertainment, and beyond.
 
 At its core, AI is about creating systems that can perform tasks that would typically require human intelligence. This includes abilities such as visual perception, speech recognition, decision-making, and even language translation. The development of AI can be traced back to the mid-20th century, when pioneers like Alan Turing began exploring the idea of machines that could think. Turing's famous "Turing Test" proposed a benchmark for AI, where a machine would be considered intelligent if it could engage in a conversation with a human without being detected as a machine.
 
@@ -49,8 +56,6 @@ Despite its many benefits, AI also raises important ethical and societal questio
 
 The future of AI is both exciting and uncertain. As the technology continues to advance, it will undoubtedly bring about profound changes in society. The challenge will be to harness AI's potential for good while addressing the ethical and societal issues that arise. Whether it's through smarter healthcare, more efficient transportation, or enhanced creativity, AI has the potential to reshape the world in ways we are only beginning to imagine. The journey of AI is far from over, and its impact will be felt for generations to come.
   `;
-
-  const randomTitle = Math.random().toString(36).substring(7);
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
@@ -70,6 +75,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
   await page.waitForTimeout(1000);
 
   const targetElement = await page.locator('//*[@id="react-flow-id"]');
+  await targetElement.click();
 
   await page.mouse.up();
   await page.mouse.down();
@@ -84,19 +90,12 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   await page.getByTestId("note_node").click();
 
-  await page.getByTestId("title-Note").dblclick();
-  await page.waitForTimeout(1000);
-  await page.getByTestId("popover-anchor-input-title-Note").fill(randomTitle);
-
-  await page.getByTestId("note_icon").first().dblclick();
-
   await page.locator(".generic-node-desc").last().dblclick();
   await page.getByTestId("textarea").fill(noteText);
 
   expect(await page.getByText("2500/2500")).toBeVisible();
 
-  await page.getByTestId("note_icon").first().dblclick();
-
+  await targetElement.click();
   const textMarkdown = await page.locator(".markdown").innerText();
 
   const textLength = textMarkdown.length;
@@ -110,7 +109,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   let hasStyles = await element?.evaluate((el) => {
     const style = window.getComputedStyle(el);
-    return style.backgroundColor === "rgb(224, 231, 255)";
+    return style.backgroundColor === "rgb(241, 245, 249)";
   });
   expect(hasStyles).toBe(true);
 

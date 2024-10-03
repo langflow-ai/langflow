@@ -49,7 +49,7 @@ class SQLExecutorComponent(CustomComponent):
             database = SQLDatabase.from_uri(database_url)
         except Exception as e:
             msg = f"An error occurred while connecting to the database: {e}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
         try:
             tool = QuerySQLDataBaseTool(db=database)
             result = tool.run(query, include_columns=include_columns)
