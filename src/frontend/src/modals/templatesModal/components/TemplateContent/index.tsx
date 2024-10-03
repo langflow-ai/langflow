@@ -2,7 +2,8 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useState } from "react";
+import Fuse from "fuse.js";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ForwardedIconComponent } from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
@@ -17,6 +18,7 @@ interface TemplateContentProps {
 export default function TemplateContent({ currentTab }: TemplateContentProps) {
   const examples = useFlowsManagerStore((state) => state.examples);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filteredExamples, setFilteredExamples] = useState(examples);
   const addFlow = useAddFlow();
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
@@ -24,9 +26,16 @@ export default function TemplateContent({ currentTab }: TemplateContentProps) {
 
   const folderIdUrl = folderId ?? myCollectionId;
 
-  const filteredExamples = examples.filter((example) =>
-    example.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const fuse = new Fuse(examples, { keys: ["name", "description"] });
+
+  useEffect(() => {
+    if (searchQuery === "") {
+      setFilteredExamples(examples);
+    } else {
+      const searchResults = fuse.search(searchQuery);
+      setFilteredExamples(searchResults.map((result) => result.item));
+    }
+  }, [searchQuery, examples]);
 
   const handleCardClick = (example) => {
     updateIds(example.data);
@@ -38,7 +47,7 @@ export default function TemplateContent({ currentTab }: TemplateContentProps) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-hidden">
-      <div className="relative flex-1 md:grow-0">
+      <div className="relative flex-1 p-px md:grow-0">
         <ForwardedIconComponent
           name="Search"
           className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
