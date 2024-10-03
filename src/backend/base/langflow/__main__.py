@@ -81,7 +81,7 @@ def set_var_for_macos_issue():
 def run(
     host: str | None = typer.Option(None, help="Host to bind the server to.", show_default=False),
     workers: int | None = typer.Option(None, help="Number of worker processes.", show_default=False),
-    timeout: int | None = typer.Option(None, help="Worker timeout in seconds.", show_default=False),
+    worker_timeout: int | None = typer.Option(None, help="Worker timeout in seconds.", show_default=False),
     port: int | None = typer.Option(None, help="Port to listen on.", show_default=False),
     components_path: Path | None = typer.Option(
         None,
@@ -102,7 +102,7 @@ def run(
         show_default=False,
     ),
     dev: bool | None = typer.Option(None, help="Run in development mode (may contain bugs)", show_default=False),
-    path: str = typer.Option(
+    frontend_path: str | None = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
         show_default=False,
@@ -170,7 +170,7 @@ def run(
         max_file_size_upload=max_file_size_upload,
     )
     # create path object if path is provided
-    static_files_dir: Path | None = Path(path) if path else None
+    static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
     settings_service = get_settings_service()
     settings_service.set("backend_only", backend_only)
     app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
@@ -178,12 +178,12 @@ def run(
     if is_port_in_use(port, host):
         port = get_free_port(port)
 
-    settings_service.set("worker_timeout", timeout)
+    settings_service.set("worker_timeout", worker_timeout)
 
     options = {
         "bind": f"{host}:{port}",
         "workers": get_number_of_workers(workers),
-        "timeout": timeout,
+        "timeout": worker_timeout,
     }
 
     # Define an env variable to know if we are just testing the server
