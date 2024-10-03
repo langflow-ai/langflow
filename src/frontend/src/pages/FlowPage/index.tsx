@@ -109,7 +109,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         setCurrentFlow(isAnExistingFlow);
       } else if (!flows) {
         setIsLoading(true);
-        await refreshFlows(undefined);
+        await refreshFlows({ get_all: true });
         if (!types || Object.keys(types).length === 0) await getTypes();
         setIsLoading(false);
       }
