@@ -186,6 +186,12 @@ class FlowRead(FlowBase):
     folder_id: UUID | None = Field()
 
 
+class FlowSummary(BaseModel):
+    id: UUID
+    name: str
+    folder_id: UUID | None = Field()
+
+
 class PaginatedFlowResponse(BaseModel):
     flows: list[FlowRead]
     total: int
