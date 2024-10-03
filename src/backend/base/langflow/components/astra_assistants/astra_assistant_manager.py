@@ -74,7 +74,7 @@ class AstraAssistantManager(ComponentWithCache):
         self.tool_output = None
         self.thread_id = None
         self.assistant_id = None
-        self.client = get_patched_openai_client(self.shared_component_cache)
+        self.client = get_patched_openai_client(self._shared_component_cache)
 
     async def get_assistant_response(self) -> Message:
         await self.initialize()

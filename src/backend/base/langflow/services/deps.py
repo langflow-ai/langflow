@@ -216,7 +216,7 @@ def get_shared_component_cache_service() -> CacheService:
     Returns:
         The cache service instance.
     """
-    from langflow.services.cache.factory import SharedComponentCacheServiceFactory
+    from langflow.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
 
     return get_service(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, SharedComponentCacheServiceFactory())  # type: ignore
 

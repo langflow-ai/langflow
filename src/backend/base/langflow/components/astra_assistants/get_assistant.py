@@ -28,7 +28,7 @@ class AssistantsGetAssistantName(ComponentWithCache):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.client = get_patched_openai_client(self.shared_component_cache)
+        self.client = get_patched_openai_client(self._shared_component_cache)
 
     def process_inputs(self) -> Message:
         assistant = self.client.beta.assistants.retrieve(
