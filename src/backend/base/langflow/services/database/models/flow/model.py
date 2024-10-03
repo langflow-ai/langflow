@@ -34,7 +34,7 @@ class FlowBase(SQLModel):
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
     webhook: bool | None = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
-    tags: list[str] | None = Field(default=None, nullable=True)
+    tags: list[str] | None = None
 
     @field_validator("endpoint_name")
     @classmethod
@@ -153,7 +153,7 @@ class Flow(FlowBase, table=True):  # type: ignore
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     user_id: UUID | None = Field(index=True, foreign_key="user.id", nullable=True)
     user: "User" = Relationship(back_populates="flows")
-    tags: list[str] | None = Field(sa_column=Column(JSON), default=True)
+    tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
     messages: list["MessageTable"] = Relationship(back_populates="flow")
