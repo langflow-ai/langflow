@@ -57,16 +57,33 @@ export const useGetRefreshFlows: useMutationFunctionType<
     params?: GetFlowsParams,
   ): Promise<FlowType[] | PaginatedFlowsType> => {
     try {
-      const dbDataFlows = await getRefreshFlowsFn(params!);
+      await getRefreshFlowsFn(params!).then(async (dbDataFlows) => {
+        const dbDataComponents = await getRefreshFlowsFn({
+          components_only: true,
+          get_all: true,
+        });
 
-      if (dbDataFlows) {
-        const flows = Array.isArray(dbDataFlows)
-          ? dbDataFlows
-          : dbDataFlows.items;
+        if (dbDataComponents) {
+          const { data } = processFlows(dbDataComponents as FlowType[]);
+          useTypesStore.setState((state) => ({
+            data: { ...state.data, ["saved_components"]: data },
+            ComponentFields: extractFieldsFromComponenents({
+              ...state.data,
+              ["saved_components"]: data,
+            }),
+          }));
+        }
 
-        setFlows(flows);
-        return flows;
-      }
+        if (dbDataFlows) {
+          const flows = Array.isArray(dbDataFlows)
+            ? dbDataFlows
+            : dbDataFlows.items;
+
+          setFlows(flows);
+          return flows;
+        }
+      });
+
       return [];
     } catch (e) {
       setErrorData({
