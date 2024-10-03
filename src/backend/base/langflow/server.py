@@ -7,31 +7,12 @@ from gunicorn.app.base import BaseApplication  # type: ignore
 from uvicorn.workers import UvicornWorker
 
 from langflow.logging.logger import InterceptHandler  # type: ignore
-from langflow.services.deps import get_database_service
 
 
 class LangflowUvicornWorker(UvicornWorker):
     CONFIG_KWARGS = {"loop": "asyncio"}
 
-    async def handle_cleanup_and_exit(self, sig, frame):
-        await self.cleanup_db()
-        super().handle_exit(sig, frame)
-
-    async def handle_cleanup_and_quit(self, sig, frame):
-        await self.cleanup_db()
-        super().handle_quit(sig, frame)
-
-    async def cleanup_db(self):
-        print("Cleaning up database...")
-
-        try:
-            db_service = get_database_service()
-            await db_service.teardown()
-            print("Database cleaned up successfully")
-        except Exception as e:
-            print(f"Error cleaning up database: {e}")
-
-    def _install_signal_handlers(self) -> None:
+    def _install_sigint_handler(self) -> None:
         """Install a SIGQUIT handler on workers.
 
         - https://github.com/encode/uvicorn/issues/1116
@@ -39,16 +20,11 @@ class LangflowUvicornWorker(UvicornWorker):
         """
 
         loop = asyncio.get_running_loop()
-        # TODO: using quit or exit?
-        # https://github.com/benoitc/gunicorn/blob/master/gunicorn/workers/base.py
-        # https://github.com/Kludex/uvicorn-worker/blob/main/uvicorn_worker/_workers.py
-        loop.add_signal_handler(signal.SIGINT, self.handle_cleanup_and_quit, signal.SIGINT, None)
-        loop.add_signal_handler(signal.SIGQUIT, self.handle_cleanup_and_exit, signal.SIGQUIT, None)
-        loop.add_signal_handler(signal.SIGTERM, self.handle_cleanup_and_exit, signal.SIGTERM, None)
-
+        loop.add_signal_handler(signal.SIGINT, self.handle_exit, signal.SIGINT, None)
+        
     async def _serve(self) -> None:
         # We do this to not log the "Worker (pid:XXXXX) was sent SIGINT"
-        self._install_signal_handlers()
+        self._install_sigint_handler()
         await super()._serve()
 
 
