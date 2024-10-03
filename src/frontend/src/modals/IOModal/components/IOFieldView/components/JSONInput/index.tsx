@@ -1,7 +1,7 @@
+import { IOJSONInputComponentType } from "@/types/components";
 import { useEffect, useRef } from "react";
 import JsonView from "react18-json-view";
 import { useDarkStore } from "../../../../../../stores/darkStore";
-import { IOJSONInputComponentType } from "@/types/components";
 
 export default function IoJsonInput({
   value = [],

@@ -28,12 +28,14 @@ export default function MultiselectComponent({
   combobox,
   editNode = false,
   id = "",
-}: InputProps<string[],MultiselectComponentType>): JSX.Element {
+}: InputProps<string[], MultiselectComponentType>): JSX.Element {
   const [open, setOpen] = useState(false);
 
   const refButton = useRef<HTMLButtonElement>(null);
 
-  const PopoverContentDropdown = editNode ? PopoverContent : PopoverContentWithoutPortal;
+  const PopoverContentDropdown = editNode
+    ? PopoverContent
+    : PopoverContentWithoutPortal;
 
   const [customValues, setCustomValues] = useState<string[]>([]);
   const [searchValue, setSearchValue] = useState("");
@@ -61,7 +63,7 @@ export default function MultiselectComponent({
 
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
-      handleOnNewValue({value: []}, { skipSnapshot: true });
+      handleOnNewValue({ value: [] }, { skipSnapshot: true });
     }
   }, [disabled]);
 
@@ -91,9 +93,9 @@ export default function MultiselectComponent({
 
   const handleOptionSelect = (currentValue) => {
     if (value.includes(currentValue)) {
-      handleOnNewValue({value: value.filter((v) => v !== currentValue)})
+      handleOnNewValue({ value: value.filter((v) => v !== currentValue) });
     } else {
-      handleOnNewValue({value: [...value, currentValue]})
+      handleOnNewValue({ value: [...value, currentValue] });
     }
   };
 
@@ -197,9 +199,7 @@ export default function MultiselectComponent({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      {(
-        renderDropdownTrigger()
-      )}
+      {renderDropdownTrigger()}
       <PopoverContentDropdown
         onOpenAutoFocus={(event) => event.preventDefault()}
         side="bottom"

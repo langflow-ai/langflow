@@ -20,7 +20,7 @@ export default function CodeAreaComponent({
   useEffect(() => {
     if (disabled && componentValue !== "") {
       setComponentValue("");
-      handleOnNewValue({value: ""});
+      handleOnNewValue({ value: "" });
     }
   }, [disabled]);
 
@@ -29,7 +29,7 @@ export default function CodeAreaComponent({
   }, [value]);
 
   const handleValueChange = (newValue) => {
-    handleOnNewValue({value: newValue});
+    handleOnNewValue({ value: newValue });
   };
 
   const renderInputText = () => (

@@ -8,7 +8,7 @@ import { Input } from "../../../ui/input";
 import { InputListComponentType, InputProps } from "../../types";
 
 export default function InputListComponent({
-  value=[""],
+  value = [""],
   handleOnNewValue,
   disabled,
   editNode = false,
@@ -17,7 +17,7 @@ export default function InputListComponent({
 }: InputProps<string[], InputListComponentType>): JSX.Element {
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
-      handleOnNewValue({value: [""]}, {skipSnapshot: true});
+      handleOnNewValue({ value: [""] }, { skipSnapshot: true });
     }
   }, [disabled]);
 
@@ -31,21 +31,21 @@ export default function InputListComponent({
   const handleInputChange = (index, newValue) => {
     const newInputList = _.cloneDeep(value);
     newInputList[index] = newValue;
-    handleOnNewValue({value: newInputList});
+    handleOnNewValue({ value: newInputList });
   };
 
   const addNewInput = (e) => {
     e.preventDefault();
     const newInputList = _.cloneDeep(value);
     newInputList.push("");
-    handleOnNewValue({value: newInputList});
+    handleOnNewValue({ value: newInputList });
   };
 
   const removeInput = (index, e) => {
     e.preventDefault();
     const newInputList = _.cloneDeep(value);
     newInputList.splice(index, 1);
-    handleOnNewValue({value: newInputList});
+    handleOnNewValue({ value: newInputList });
   };
 
   const getButtonClassName = () =>

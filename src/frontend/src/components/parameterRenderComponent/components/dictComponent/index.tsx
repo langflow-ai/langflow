@@ -12,10 +12,10 @@ export default function DictComponent({
   disabled,
   editNode = false,
   id = "",
-}: InputProps<object|object[]|string>): JSX.Element {
+}: InputProps<object | object[] | string>): JSX.Element {
   useEffect(() => {
     if (disabled) {
-      handleOnNewValue({value:{}});
+      handleOnNewValue({ value: {} });
     }
   }, [disabled]);
 
@@ -31,7 +31,7 @@ export default function DictComponent({
           <DictAreaModal
             value={(value || "").toString() === "{}" ? {} : value}
             onChange={(obj) => {
-              handleOnNewValue({value:obj});
+              handleOnNewValue({ value: obj });
             }}
             disabled={disabled}
           >

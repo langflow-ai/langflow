@@ -12,14 +12,11 @@ export default function LinkComponent({
   text,
   icon,
   editNode = false,
-  handleOnNewValue
-}: InputProps<string,LinkComponentType>): JSX.Element {
-
-  function handleOpenLink(){
+  handleOnNewValue,
+}: InputProps<string, LinkComponentType>): JSX.Element {
+  function handleOpenLink() {
     if (value) {
-      const url = !/^https?:\/\//i.test(value)
-        ? `https://${value}`
-        : value;
+      const url = !/^https?:\/\//i.test(value) ? `https://${value}` : value;
       window.open(url, "_blank", "noopener,noreferrer");
     }
   }
@@ -53,10 +50,7 @@ export default function LinkComponent({
         size="sm"
         className={buttonClassName}
       >
-        <ButtonContent
-          icon={icon ?? DEFAULT_ICON}
-          text={text ?? ""}
-        />
+        <ButtonContent icon={icon ?? DEFAULT_ICON} text={text ?? ""} />
       </Button>
     </div>
   );

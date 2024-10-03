@@ -14,10 +14,9 @@ export function RefreshParameterComponent({
   handleNodeClass,
   nodeId,
   name,
-}:
-{
+}: {
   children: React.ReactElement<InputProps>;
-  templateData: Partial<InputFieldType>
+  templateData: Partial<InputFieldType>;
   disabled: boolean;
   nodeClass: APIClassType;
   editNode: boolean;

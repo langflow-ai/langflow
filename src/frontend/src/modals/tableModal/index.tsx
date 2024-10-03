@@ -17,30 +17,35 @@ interface TableModalProps extends TableComponentProps {
 const TableModal = forwardRef<
   ElementRef<typeof TableComponent>,
   TableModalProps
->(({ tableTitle, description, children, disabled, ...props }: TableModalProps, ref) => {
-  return (
-    <BaseModal disable={disabled}>
-      <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={description}>
-        <span className="pr-2">{tableTitle}</span>
-        <ForwardedIconComponent name="Table" className="mr-2 h-4 w-4" />
-      </BaseModal.Header>
-      <BaseModal.Content>
-        <TableComponent
-          className="h-full w-full"
-          ref={ref}
-          {...props}
-        ></TableComponent>
-      </BaseModal.Content>
-      <BaseModal.Footer>
-        <DialogClose>
-          <div className="flex w-full justify-end gap-2 pt-2">
-            <Button>Close</Button>
-          </div>
-        </DialogClose>
-      </BaseModal.Footer>
-    </BaseModal>
-  );
-});
+>(
+  (
+    { tableTitle, description, children, disabled, ...props }: TableModalProps,
+    ref,
+  ) => {
+    return (
+      <BaseModal disable={disabled}>
+        <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
+        <BaseModal.Header description={description}>
+          <span className="pr-2">{tableTitle}</span>
+          <ForwardedIconComponent name="Table" className="mr-2 h-4 w-4" />
+        </BaseModal.Header>
+        <BaseModal.Content>
+          <TableComponent
+            className="h-full w-full"
+            ref={ref}
+            {...props}
+          ></TableComponent>
+        </BaseModal.Content>
+        <BaseModal.Footer>
+          <DialogClose>
+            <div className="flex w-full justify-end gap-2 pt-2">
+              <Button>Close</Button>
+            </div>
+          </DialogClose>
+        </BaseModal.Footer>
+      </BaseModal>
+    );
+  },
+);
 
 export default TableModal;

@@ -17,7 +17,7 @@ export default function TableNodeComponent({
   columns,
   handleOnNewValue,
   disabled = false,
-}: InputProps<any[],TableComponentType>): JSX.Element {
+}: InputProps<any[], TableComponentType>): JSX.Element {
   const dataTypeDefinitions: {
     [cellDataType: string]: DataTypeDefinition<any>;
   } = useMemo(() => {
@@ -69,7 +69,7 @@ export default function TableNodeComponent({
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
       const rows: any = [];
       agGrid.current.api.forEachNode((node) => rows.push(node.data));
-      handleOnNewValue({value: rows});
+      handleOnNewValue({ value: rows });
     }
   }
   function deleteRow() {
@@ -86,7 +86,7 @@ export default function TableNodeComponent({
       const toDuplicate = selectedNodes.map((node) => cloneDeep(node.data));
       setSelectedNodes([]);
       const rows: any = [];
-      handleOnNewValue({value: [...value, ...toDuplicate]});
+      handleOnNewValue({ value: [...value, ...toDuplicate] });
     }
   }
   function addRow() {
@@ -94,7 +94,7 @@ export default function TableNodeComponent({
     componentColumns.forEach((column) => {
       newRow[column.name] = null;
     });
-    handleOnNewValue({value: [...value, newRow]});
+    handleOnNewValue({ value: [...value, newRow] });
   }
 
   function updateComponent() {

@@ -17,10 +17,13 @@ export default function KeypairListComponent({
   editNode = false,
   isList = true,
   id,
-}: InputProps<object[]|object|string,KeyPairListComponentType>): JSX.Element {
+}: InputProps<
+  object[] | object | string,
+  KeyPairListComponentType
+>): JSX.Element {
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
-      handleOnNewValue({value: [{ "": "" }]});
+      handleOnNewValue({ value: [{ "": "" }] });
     }
   }, [disabled]);
 
@@ -37,8 +40,8 @@ export default function KeypairListComponent({
     const valueToNumbers = convertValuesToNumbers(newValue);
     setDuplicateKey(hasDuplicateKeys(valueToNumbers));
     if (isList) {
-      handleOnNewValue({value: valueToNumbers});
-    } else handleOnNewValue({value: valueToNumbers[0]});
+      handleOnNewValue({ value: valueToNumbers });
+    } else handleOnNewValue({ value: valueToNumbers[0] });
   };
 
   const handleChangeKey = (event, idx) => {
@@ -64,13 +67,13 @@ export default function KeypairListComponent({
   const addNewKeyValuePair = () => {
     const newValues = cloneDeep(values);
     newValues.push({ "": "" });
-    handleOnNewValue({value: newValues});
+    handleOnNewValue({ value: newValues });
   };
 
   const removeKeyValuePair = (index) => {
     const newValues = cloneDeep(values);
     newValues.splice(index, 1);
-    handleOnNewValue({value: newValues});
+    handleOnNewValue({ value: newValues });
   };
 
   const getInputClassName = (isEditNode, isDuplicateKey) => {

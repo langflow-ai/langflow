@@ -18,7 +18,7 @@ export default function TextAreaComponent({
   // Clear text area
   useEffect(() => {
     if (disabled && value !== "") {
-      handleOnNewValue({value: ""}, {skipSnapshot: true});
+      handleOnNewValue({ value: "" }, { skipSnapshot: true });
     }
   }, [disabled]);
 
@@ -38,7 +38,7 @@ export default function TextAreaComponent({
       )}
       rows={1}
       placeholder="Type something..."
-      onChange={(event) => handleOnNewValue({value: event.target.value})}
+      onChange={(event) => handleOnNewValue({ value: event.target.value })}
     />
   );
 
@@ -46,7 +46,7 @@ export default function TextAreaComponent({
     <ComponentTextModal
       changeVisibility={updateVisibility}
       value={value}
-      setValue={(value) => handleOnNewValue({value: value})}
+      setValue={(value) => handleOnNewValue({ value: value })}
       disabled={disabled}
       password={password}
     >

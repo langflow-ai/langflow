@@ -16,7 +16,7 @@ export default function FloatComponent({
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
-      handleOnNewValue({value:""},{skipSnapshot:true});
+      handleOnNewValue({ value: "" }, { skipSnapshot: true });
     }
   }, [disabled]);
 
@@ -30,7 +30,7 @@ export default function FloatComponent({
   };
 
   const handleChange = (event) => {
-    handleOnNewValue({value:Number(event.target.value)});
+    handleOnNewValue({ value: Number(event.target.value) });
   };
 
   return (

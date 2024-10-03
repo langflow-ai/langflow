@@ -121,8 +121,6 @@ export type outputComponentType = {
   proxy?: OutputFieldProxyType;
 };
 
-
-
 export type DisclosureComponentType = {
   children: ReactNode;
   defaultOpen: boolean;
@@ -154,7 +152,6 @@ export type IntComponentType = {
   editNode?: boolean;
   id?: string;
 };
-
 
 export type FilePreviewType = {
   loading: boolean;

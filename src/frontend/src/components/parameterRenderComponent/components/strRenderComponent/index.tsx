@@ -1,7 +1,7 @@
-import InputGlobalComponent from "../inputGlobalComponent";
-import TextAreaComponent from "../textAreaComponent";
 import { InputProps, StrRenderComponentType } from "../../types";
 import DropdownComponent from "../dropdownComponent";
+import InputGlobalComponent from "../inputGlobalComponent";
+import TextAreaComponent from "../textAreaComponent";
 
 export function StrRenderComponent({
   templateData,

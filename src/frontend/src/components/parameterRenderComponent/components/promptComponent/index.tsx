@@ -59,7 +59,7 @@ export default function PromptAreaComponent({
         field_name={field_name}
         readonly={readonly}
         value={value}
-        setValue={()=>handleOnNewValue({value: ""})}
+        setValue={() => handleOnNewValue({ value: "" })}
         nodeClass={nodeClass}
         setNodeClass={handleNodeClass}
       >

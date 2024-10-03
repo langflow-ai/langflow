@@ -22,7 +22,7 @@ export default function IntComponent({
   // Clear component state
   useEffect(() => {
     if (disabled && value !== 0) {
-      handleOnNewValue({value:0},{skipSnapshot:true});
+      handleOnNewValue({ value: 0 }, { skipSnapshot: true });
     }
   }, [disabled, handleOnNewValue]);
 
@@ -35,7 +35,7 @@ export default function IntComponent({
 
   const handleChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCursor(e.target.selectionStart);
-    handleOnNewValue({value:Number(e.target.value)});
+    handleOnNewValue({ value: Number(e.target.value) });
   };
 
   const getStepValue = () => {
@@ -58,7 +58,7 @@ export default function IntComponent({
   };
 
   const handleNumberChange = (newValue) => {
-    handleOnNewValue({value:Number(newValue)});
+    handleOnNewValue({ value: Number(newValue) });
   };
 
   const handleInputChange = (event) => {

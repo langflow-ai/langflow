@@ -32,7 +32,10 @@ export default function InputGlobalComponent({
         load_from_db &&
         !globalVariables.find((variable) => variable.name === value)
       ) {
-        handleOnNewValue({value: "", load_from_db: false}, {skipSnapshot: true});
+        handleOnNewValue(
+          { value: "", load_from_db: false },
+          { skipSnapshot: true },
+        );
       }
   }, [globalVariables]);
 
@@ -45,7 +48,7 @@ export default function InputGlobalComponent({
         {
           onSuccess: () => {
             if (value === key && load_from_db) {
-              handleOnNewValue({value: "", load_from_db: false})
+              handleOnNewValue({ value: "", load_from_db: false });
             }
           },
           onError: () => {
@@ -114,17 +117,21 @@ export default function InputGlobalComponent({
       selectedOption={
         load_from_db &&
         globalVariables &&
-        globalVariables
-          ?.map((variable) => variable.name)
-          .includes(value ?? "")
+        globalVariables?.map((variable) => variable.name).includes(value ?? "")
           ? value
           : ""
       }
       setSelectedOption={(value) => {
-        handleOnNewValue({value: value, load_from_db: value !== "" ? true : false});
+        handleOnNewValue({
+          value: value,
+          load_from_db: value !== "" ? true : false,
+        });
       }}
       onChange={(value, skipSnapshot) => {
-        handleOnNewValue({value: value, load_from_db:false}, {skipSnapshot});
+        handleOnNewValue(
+          { value: value, load_from_db: false },
+          { skipSnapshot },
+        );
       }}
     />
   );

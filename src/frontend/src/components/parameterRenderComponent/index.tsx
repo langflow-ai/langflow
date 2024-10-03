@@ -5,19 +5,19 @@ import { useMemo } from "react";
 import TableNodeComponent from "./components/TableNodeComponent";
 import CodeAreaComponent from "./components/codeAreaComponent";
 import DictComponent from "./components/dictComponent";
+import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
 import InputFileComponent from "./components/inputFileComponent";
+import InputListComponent from "./components/inputListComponent";
 import IntComponent from "./components/intComponent";
 import KeypairListComponent from "./components/keypairListComponent";
 import LinkComponent from "./components/linkComponent";
+import MultiselectComponent from "./components/multiselectComponent";
 import PromptAreaComponent from "./components/promptComponent";
-import ToggleShadComponent from "./components/toggleShadComponent";
 import { RefreshParameterComponent } from "./components/refreshParameterComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
-import { EmptyParameterComponent } from "./components/emptyParameterComponent";
+import ToggleShadComponent from "./components/toggleShadComponent";
 import { InputProps } from "./types";
-import InputListComponent from "./components/inputListComponent";
-import MultiselectComponent from "./components/multiselectComponent";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -95,12 +95,7 @@ export function ParameterRenderComponent({
     }
     switch (templateData.type) {
       case "NestedDict":
-        return (
-          <DictComponent
-            {...baseInputProps}
-            id={`dict_${id}`}
-          />
-        );
+        return <DictComponent {...baseInputProps} id={`dict_${id}`} />;
       case "dict":
         return (
           <KeypairListComponent
@@ -110,12 +105,7 @@ export function ParameterRenderComponent({
           />
         );
       case "bool":
-        return (
-          <ToggleShadComponent
-            {...baseInputProps}
-            id={`toggle_${id}`}
-          />
-        );
+        return <ToggleShadComponent {...baseInputProps} id={`toggle_${id}`} />;
       case "link":
         return (
           <LinkComponent
@@ -159,12 +149,7 @@ export function ParameterRenderComponent({
           />
         );
       case "code":
-        return (
-          <CodeAreaComponent
-            {...baseInputProps}
-            id={`codearea_${id}`}
-          />
-        );
+        return <CodeAreaComponent {...baseInputProps} id={`codearea_${id}`} />;
       case "table":
         return (
           <TableNodeComponent
@@ -175,11 +160,7 @@ export function ParameterRenderComponent({
           />
         );
       default:
-        return (
-          <EmptyParameterComponent
-            {...baseInputProps}
-          />
-        );
+        return <EmptyParameterComponent {...baseInputProps} />;
     }
   };
 

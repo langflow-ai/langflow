@@ -79,6 +79,6 @@ export type InputGlobalComponentType = {
   password: boolean | undefined;
 };
 export type MultiselectComponentType = {
-    options: string[];
-    combobox?: boolean;
-  };
+  options: string[];
+  combobox?: boolean;
+};

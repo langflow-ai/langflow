@@ -28,8 +28,7 @@ export default function ToggleShadComponent({
       if (editNode) {
         scaleX = 0.6;
         scaleY = 0.6;
-      }
-      else {
+      } else {
         scaleX = 1;
         scaleY = 1;
       }
@@ -47,7 +46,9 @@ export default function ToggleShadComponent({
       className=""
       checked={value}
       onCheckedChange={(isEnabled: boolean) => {
-        const data = showToogle ? { advanced: !isEnabled } : { value: isEnabled };
+        const data = showToogle
+          ? { advanced: !isEnabled }
+          : { value: isEnabled };
         handleOnNewValue(data);
       }}
     ></Switch>

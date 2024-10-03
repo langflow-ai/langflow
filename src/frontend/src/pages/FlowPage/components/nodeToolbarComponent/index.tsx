@@ -3,6 +3,7 @@ import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import CodeAreaModal from "@/modals/codeAreaModal";
 import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
@@ -41,7 +42,6 @@ import {
 import useShortcuts from "./hooks/use-shortcuts";
 import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
-import CodeAreaModal from "@/modals/codeAreaModal";
 
 export default function NodeToolbarComponent({
   data,
