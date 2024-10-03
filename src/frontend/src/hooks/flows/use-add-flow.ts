@@ -28,13 +28,19 @@ const useAddFlow = () => {
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const { deleteFlow } = useDeleteFlow();
 
+  const { setFlowToCanvas } = useFlowsManagerStore();
+
   const { folderId } = useParams();
 
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const { mutate: postAddFlow } = usePostAddFlow();
 
-  const addFlow = async (params?: { flow?: FlowType; override?: boolean }) => {
+  const addFlow = async (params?: {
+    flow?: FlowType;
+    override?: boolean;
+    new_blank?: boolean;
+  }) => {
     return new Promise(async (resolve, reject) => {
       const flow = cloneDeep(params?.flow) ?? undefined;
       let flowData = flow
@@ -78,6 +84,11 @@ const useAddFlow = () => {
               ["saved_components"]: data,
             }),
           }));
+
+          if (params?.new_blank) {
+            setFlowToCanvas(createdFlow);
+          }
+
           resolve(createdFlow.id);
         },
         onError: (error) => {

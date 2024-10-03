@@ -6,12 +6,14 @@ import { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { useGetRefreshFlows } from "../flows/use-get-refresh-flows";
 
 export const useGetFoldersQuery: useQueryFunctionType<
   undefined,
   FolderType[]
 > = (options) => {
   const { query } = UseRequestProcessor();
+  const { mutateAsync: refreshFlows } = useGetRefreshFlows();
 
   const setMyCollectionId = useFolderStore((state) => state.setMyCollectionId);
   const setFolders = useFolderStore((state) => state.setFolders);
@@ -25,6 +27,7 @@ export const useGetFoldersQuery: useQueryFunctionType<
     setFolders(data);
     const { getTypes, types } = useTypesStore.getState();
 
+    await refreshFlows({ get_all: true, header_flows: true });
     if (!types || Object.keys(types).length === 0) await getTypes();
 
     return data;
