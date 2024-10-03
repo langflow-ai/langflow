@@ -17,12 +17,12 @@ if TYPE_CHECKING:
     from langflow.io import Output
 
 
-def _get_input_type(input: InputTypes):
-    if input.input_types:
-        if len(input.input_types) == 1:
-            return input.input_types[0]
-        return " | ".join(input.input_types)
-    return input.field_type
+def _get_input_type(_input: InputTypes):
+    if _input.input_types:
+        if len(_input.input_types) == 1:
+            return _input.input_types[0]
+        return " | ".join(_input.input_types)
+    return _input.field_type
 
 
 def build_description(component: Component, output: Output):
