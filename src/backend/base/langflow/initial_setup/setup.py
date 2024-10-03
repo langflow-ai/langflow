@@ -397,6 +397,8 @@ def get_project_data(project):
     project_icon = project.get("icon")
     project_icon = demojize(project_icon) if project_icon and purely_emoji(project_icon) else ""
     project_icon_bg_color = project.get("icon_bg_color")
+    project_gradient = project.get("gradient")
+    project_tags = project.get("tags")
     return (
         project_name,
         project_description,
@@ -405,6 +407,8 @@ def get_project_data(project):
         project_data,
         project_icon,
         project_icon_bg_color,
+        project_gradient,
+        project_tags,
     )
 
 
@@ -442,6 +446,8 @@ def create_new_project(
     project_is_component,
     updated_at_datetime,
     project_data,
+    project_gradient,
+    project_tags,
     project_icon,
     project_icon_bg_color,
     new_folder_id,
@@ -456,6 +462,8 @@ def create_new_project(
         is_component=project_is_component,
         updated_at=updated_at_datetime,
         folder_id=new_folder_id,
+        gradient=project_gradient,
+        tags=project_tags,
     )
     db_flow = Flow.model_validate(new_project, from_attributes=True)
     session.add(db_flow)
@@ -569,6 +577,8 @@ async def create_or_update_starter_projects(get_all_components_coro: Awaitable[d
                 project_data,
                 project_icon,
                 project_icon_bg_color,
+                project_gradient,
+                project_tags,
             ) = get_project_data(project)
             updated_project_data = update_projects_components_with_latest_component_versions(
                 project_data.copy(), all_types_dict
@@ -588,15 +598,17 @@ async def create_or_update_starter_projects(get_all_components_coro: Awaitable[d
                     session.delete(existing_project)
 
                 create_new_project(
-                    session,
-                    project_name,
-                    project_description,
-                    project_is_component,
-                    updated_at_datetime,
-                    project_data,
-                    project_icon,
-                    project_icon_bg_color,
-                    new_folder.id,
+                    session=session,
+                    project_name=project_name,
+                    project_description=project_description,
+                    project_is_component=project_is_component,
+                    updated_at_datetime=updated_at_datetime,
+                    project_data=project_data,
+                    project_icon=project_icon,
+                    project_icon_bg_color=project_icon_bg_color,
+                    project_gradient=project_gradient,
+                    project_tags=project_tags,
+                    new_folder_id=new_folder.id,
                 )
 
 
