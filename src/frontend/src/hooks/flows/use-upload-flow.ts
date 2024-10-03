@@ -90,7 +90,7 @@ const useUploadFlow = () => {
             throw new Error("Invalid flow data");
           }
         }
-        await refreshFlows({ get_all: true });
+        await refreshFlows({ get_all: true, header_flows: true });
       }
     } catch (e) {
       throw e;
