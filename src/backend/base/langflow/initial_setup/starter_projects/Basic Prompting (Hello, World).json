@@ -922,5 +922,6 @@
   "id": "fd36e130-512d-48e6-96cc-f1e03c5d3a18",
   "is_component": false,
   "last_tested_version": "1.0.18",
-  "name": "Basic Prompting (Hello, World)"
+  "name": "Basic Prompting (Hello, World)",
+  "tags": ["chatbots", "openai"]
 }
