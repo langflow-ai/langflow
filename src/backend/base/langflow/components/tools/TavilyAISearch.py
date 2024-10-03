@@ -1,3 +1,5 @@
+from typing import Any
+
 import httpx
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
@@ -145,7 +147,7 @@ Note: Check 'Advanced' for all options.
             if include_images and search_results.get("images"):
                 data_results.append(Data(data={"images": search_results["images"]}))
 
-            self.status = data_results
+            self.status: Any = data_results
             return data_results
 
         except httpx.HTTPStatusError as e:
