@@ -46,10 +46,13 @@ const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
     exact: true,
   });
 
-  const onPaginate = (newPageIndex: number, newPageSize: number) => {
-    setPageIndex(newPageIndex);
-    setPageSize(newPageSize);
-  };
+  const handlePageChange = useCallback(
+    (newPageIndex: number, newPageSize: number) => {
+      setPageIndex(newPageIndex);
+      setPageSize(newPageSize);
+    },
+    [],
+  );
 
   const onChangeTab = useCallback((newFilter: string) => {
     setFilter(newFilter);
@@ -85,7 +88,6 @@ const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
       />
       <div className="mt-5 flex h-full flex-col">
         <ComponentsComponent
-          key={`${type}-${filter}-${search}`}
           type={type}
           currentFolder={data.flows}
           pagination={data.pagination}
@@ -93,7 +95,7 @@ const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
           isLoading={
             isFetching || isLoadingFolders || isDeleting || isAddingFlow
           }
-          onPaginate={onPaginate}
+          onPaginate={handlePageChange}
         />
       </div>
     </>
