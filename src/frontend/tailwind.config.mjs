@@ -26,7 +26,7 @@ const config = {
     "bg-status-red",
     "bg-status-yellow",
   ],
-  important: true,
+  important: false,
   theme: {
     container: {
       center: true,
