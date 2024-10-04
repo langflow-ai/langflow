@@ -52,7 +52,17 @@ export const useGetFolderQuery: useQueryFunctionType<
   };
 
   const queryResult = query(
-    ["useGetFolder", params.id],
+    [
+      "useGetFolder",
+      params.id,
+      {
+        page: params.page,
+        size: params.size,
+        is_component: params.is_component,
+        is_flow: params.is_flow,
+        search: params.search,
+      },
+    ],
     () => getFolderFn(params),
     {
       refetchOnWindowFocus: false,
