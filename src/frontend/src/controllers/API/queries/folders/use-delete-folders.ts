@@ -31,14 +31,8 @@ export const useDeleteFolders: useMutationFunctionType<
     DeleteFoldersParams
   > = mutate(["useDeleteFolders"], deleteFolder, {
     ...options,
-    onSettled: () => {
-      queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
-    },
-    onSuccess: (id) => {
-      queryClient.removeQueries({
-        queryKey: ["useGetFolder", { id }],
-        exact: true,
-      });
+    onSettled: (id) => {
+      queryClient.refetchQueries({ queryKey: ["useGetFolders", id] });
     },
   });
 
