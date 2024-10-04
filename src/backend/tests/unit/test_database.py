@@ -423,11 +423,13 @@ async def test_load_flows(client: TestClient, load_flows_dir):
     response = await client.get("api/v1/flows/c54f9130-f2fa-4a3e-b22a-3856d946351b")
     assert response.status_code == 200
     assert response.json()["name"] == "BasicExample"
+    assert response.json()["folder_id"] is not None
     # re-run to ensure updates work well
     load_flows_from_directory()
     response = await client.get("api/v1/flows/c54f9130-f2fa-4a3e-b22a-3856d946351b")
     assert response.status_code == 200
     assert response.json()["name"] == "BasicExample"
+    assert response.json()["folder_id"] is not None
 
 
 def test_sqlite_pragmas():
