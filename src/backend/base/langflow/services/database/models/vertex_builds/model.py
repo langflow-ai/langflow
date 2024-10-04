@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_serializer, field_validator
-from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 from sqlalchemy import Text
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
