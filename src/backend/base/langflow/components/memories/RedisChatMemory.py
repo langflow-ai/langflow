@@ -33,10 +33,11 @@ class RedisIndexChatMemory(LCChatMemoryComponent):
 
     def build_message_history(self) -> BaseChatMessageHistory:
         kwargs = {}
+        password: str | None = self.password
         if self.key_prefix:
             kwargs["key_prefix"] = self.key_prefix
-        if self.password is not None and self.password != "":
-            self.password = parse.quote_plus(self.password)
+        if password is not None and password != "":
+            password = parse.quote_plus(password)
 
         url = f"redis://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"
         return RedisChatMessageHistory(session_id=self.session_id, url=url, **kwargs)
