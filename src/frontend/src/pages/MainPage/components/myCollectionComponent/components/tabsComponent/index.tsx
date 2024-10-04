@@ -1,5 +1,5 @@
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { useEffect } from "react";
+import { useCallback } from "react";
 
 type TabsSearchComponentProps = {
   tabsOptions: string[];
@@ -16,59 +16,49 @@ const TabsSearchComponent = ({
 }: TabsSearchComponentProps) => {
   const navigate = useCustomNavigate();
 
-  const changeLocation = (tabOption) => {
-    const location = window.location.pathname;
-    let newLocation = "";
-    switch (tabOption) {
-      case "Flows":
-        newLocation = location.replace(/.*\/(?:all|components)/, "/flows");
-        break;
-      case "Components":
-        newLocation = location.replace(/.*\/(?:flows|all)/, "/components");
-        break;
-      default:
-        newLocation = location.replace(/.*\/(?:flows|components)/, "/all");
-        break;
-    }
-    navigate(newLocation);
-  };
-
-  useEffect(() => {
-    const path = window.location.pathname;
-    if (path.includes("components")) {
-      setActiveTab("Components");
-    } else if (path.includes("flows")) {
-      setActiveTab("Flows");
-    } else {
-      setActiveTab("All");
-    }
-  }, [window.location.pathname]);
+  const changeLocation = useCallback(
+    (tabOption: string) => {
+      const location = window.location.pathname;
+      let newLocation = "";
+      switch (tabOption) {
+        case "Flows":
+          newLocation = location.replace(/.*\/(?:all|components)/, "/flows");
+          break;
+        case "Components":
+          newLocation = location.replace(/.*\/(?:flows|all)/, "/components");
+          break;
+        default:
+          newLocation = location.replace(/.*\/(?:flows|components)/, "/all");
+          break;
+      }
+      navigate(newLocation);
+      setActiveTab(tabOption);
+    },
+    [navigate, setActiveTab],
+  );
 
   return (
     <>
       <div className="ml-4 flex w-full gap-2 border-b border-border">
-        {tabsOptions.map((tabOption, index) => {
-          return (
-            <button
-              key={index}
-              data-testid={`${tabOption}-button-store`}
-              disabled={loading}
-              onClick={() => {
-                changeLocation(tabOption);
-              }}
-              className={
-                (tabActive === tabOption
-                  ? "border-b-2 border-primary p-3"
-                  : "border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
-                (loading ? " cursor-not-allowed" : "")
-              }
-            >
-              {tabOption}
-            </button>
-          );
-        })}
+        {tabsOptions.map((tabOption, index) => (
+          <button
+            key={index}
+            data-testid={`${tabOption}-button-store`}
+            disabled={loading}
+            onClick={() => changeLocation(tabOption)}
+            className={
+              (tabActive === tabOption
+                ? "border-b-2 border-primary p-3"
+                : "border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
+              (loading ? " cursor-not-allowed" : "")
+            }
+          >
+            {tabOption}
+          </button>
+        ))}
       </div>
     </>
   );
 };
+
 export default TabsSearchComponent;
