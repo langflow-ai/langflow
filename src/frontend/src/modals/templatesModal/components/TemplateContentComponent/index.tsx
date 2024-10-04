@@ -3,7 +3,7 @@ import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import Fuse from "fuse.js";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ForwardedIconComponent } from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
@@ -27,6 +27,7 @@ export default function TemplateContentComponent({
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const folderIdUrl = folderId ?? myCollectionId;
 
@@ -36,11 +37,20 @@ export default function TemplateContentComponent({
   );
 
   useEffect(() => {
+    // Reset search query when currentTab changes
+    setSearchQuery("");
+  }, [currentTab]);
+
+  useEffect(() => {
     if (searchQuery === "") {
       setFilteredExamples(examples);
     } else {
       const searchResults = fuse.search(searchQuery);
       setFilteredExamples(searchResults.map((result) => result.item));
+    }
+    // Scroll to the top when search query changes
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
     }
   }, [searchQuery, examples, fuse]);
 
@@ -69,7 +79,10 @@ export default function TemplateContentComponent({
           className="w-full rounded-lg bg-background pl-8 lg:w-3/4"
         />
       </div>
-      <div className="flex flex-1 flex-col gap-6 overflow-auto">
+      <div
+        ref={scrollContainerRef}
+        className="flex flex-1 flex-col gap-6 overflow-auto"
+      >
         {currentTab === "all-templates" ? (
           categories.map(
             (value) =>
