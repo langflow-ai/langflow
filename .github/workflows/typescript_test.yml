@@ -26,7 +26,6 @@ on:
         default: "tests"
 
 env:
-  POETRY_VERSION: "1.8.3"
   NODE_VERSION: "21"
   PYTHON_VERSION: "3.12"
   # Define the directory where Playwright browsers will be installed.
@@ -103,18 +102,12 @@ jobs:
           npx playwright install-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }} + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_caching"
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          cache-key: tests
-
-      - name: Install Python dependencies
-        run: |
-          poetry env use ${{ env.PYTHON_VERSION }}
-          poetry lock --no-update
-          poetry install
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Install the project
+        run: uv sync --dev
 
       - name: create .env
         run: |
@@ -137,6 +130,9 @@ jobs:
           name: blob-report-${{ matrix.shardIndex }}
           path: src/frontend/blob-report
           retention-days: 1
+
+      - name: Minimize uv cache
+        run: uv cache prune --ci
 
   merge-reports:
     # We need to repeat the condition at every step
