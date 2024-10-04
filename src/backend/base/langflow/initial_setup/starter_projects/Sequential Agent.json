@@ -2498,5 +2498,7 @@
   "id": "c2e3229c-813e-43eb-9041-cdfcfab90e08",
   "is_component": false,
   "last_tested_version": "1.0.15",
-  "name": "Sequential Tasks Agent"
+  "name": "Sequential Tasks Agent",
+  "tags": ["agents", "openai", "chatbots"],
+  "icon": "ListOrdered"
 }

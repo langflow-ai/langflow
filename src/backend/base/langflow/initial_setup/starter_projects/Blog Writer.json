@@ -1076,5 +1076,7 @@
   "id": "92d42e25-91d4-4108-8187-92fc53fc9778",
   "is_component": false,
   "last_tested_version": "1.0.17",
-  "name": "Blog Writer"
+  "name": "Blog Writer",
+  "tags": ["openai"],
+  "icon": "FileText"
 }

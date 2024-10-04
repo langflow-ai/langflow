@@ -4096,5 +4096,7 @@
   "id": "93709197-049c-41fa-ab4d-f871c20e83eb",
   "is_component": false,
   "last_tested_version": "1.0.17",
-  "name": "Dynamic Agent"
+  "name": "Dynamic Agent",
+  "tags": ["agents", "openai", "chatbots"],
+  "icon": "Users"
 }

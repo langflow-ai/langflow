@@ -1198,5 +1198,7 @@
   "id": "6fb449a7-563c-446e-82d2-36f3defb9a48",
   "is_component": false,
   "last_tested_version": "1.0.9",
-  "name": "Document QA"
+  "name": "Document QA",
+  "tags": ["chatbots", "openai"],
+  "icon": "FileText"
 }

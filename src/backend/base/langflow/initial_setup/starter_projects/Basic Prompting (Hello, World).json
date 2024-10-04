@@ -923,5 +923,7 @@
   "is_component": false,
   "last_tested_version": "1.0.18",
   "name": "Basic Prompting (Hello, World)",
-  "tags": ["chatbots", "openai"]
+  "tags": ["chatbots", "openai"],
+  "gradient": "oaidfnoaienfwpiawjde",
+  "icon": "BotMessageSquare"
 }

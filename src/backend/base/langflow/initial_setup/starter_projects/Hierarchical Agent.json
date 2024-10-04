@@ -2682,5 +2682,7 @@
   "id": "6302081f-5af2-4b9f-bd19-2baaf7218ba6",
   "is_component": false,
   "last_tested_version": "1.0.12",
-  "name": "Hierarchical Tasks Agent"
+  "name": "Hierarchical Tasks Agent",
+  "tags": ["agents", "openai", "chatbots"],
+  "icon": "GitFork"
 }

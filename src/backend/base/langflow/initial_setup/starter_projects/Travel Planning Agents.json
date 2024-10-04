@@ -2211,5 +2211,7 @@
   "id": "c15755c5-264b-4ca7-bed8-9bbf605307f1",
   "is_component": false,
   "last_tested_version": "1.0.17",
-  "name": "Travel Planning Agents"
+  "name": "Travel Planning Agents",
+  "tags": ["agents", "openai", "chatbots"],
+  "icon": "Plane"
 }

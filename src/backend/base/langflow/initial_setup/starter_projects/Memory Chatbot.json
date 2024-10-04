@@ -1140,5 +1140,7 @@
   "id": "ff6810d0-1d7b-4455-9b35-c9f54f7d63b6",
   "is_component": false,
   "last_tested_version": "1.0.9",
-  "name": "Memory Chatbot"
+  "name": "Memory Chatbot",
+  "tags": ["chatbots", "openai"],
+  "icon": "MessagesSquare"
 }

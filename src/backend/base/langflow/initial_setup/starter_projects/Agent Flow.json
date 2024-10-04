@@ -1345,5 +1345,7 @@
   "id": "beda74a3-7e03-4c14-a148-a7740e810dbf",
   "is_component": false,
   "last_tested_version": "1.0.17",
-  "name": "Simple Agent"
+  "name": "Simple Agent",
+  "tags": ["agents", "openai", "chatbots"],
+  "icon": "Users"
 }

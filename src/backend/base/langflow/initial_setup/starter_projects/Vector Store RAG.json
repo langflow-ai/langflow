@@ -3037,11 +3037,7 @@
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [
-                  "input_value",
-                  "stream",
-                  "system_message"
-                ],
+                "required_inputs": ["input_value", "stream", "system_message"],
                 "selected": "Message",
                 "types": ["Message"],
                 "value": "__UNDEFINED__"
@@ -3432,5 +3428,7 @@
   "id": "87aff7ff-7c7f-4965-a5b1-155b18ae43de",
   "is_component": false,
   "last_tested_version": "1.0.18",
-  "name": "Vector Store RAG"
+  "name": "Vector Store RAG",
+  "tags": ["openai", "astradb", "chatbots", "rag"],
+  "icon": "Database"
 }
