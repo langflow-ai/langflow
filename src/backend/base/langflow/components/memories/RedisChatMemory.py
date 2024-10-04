@@ -1,8 +1,10 @@
-from langchain_community.chat_message_histories.redis import RedisChatMessageHistory
-from langflow.base.memory.model import LCChatMemoryComponent
-from langflow.inputs import MessageTextInput, SecretStrInput, StrInput, IntInput
-from langflow.field_typing import BaseChatMessageHistory
 from urllib import parse
+
+from langchain_community.chat_message_histories.redis import RedisChatMessageHistory
+
+from langflow.base.memory.model import LCChatMemoryComponent
+from langflow.field_typing import BaseChatMessageHistory
+from langflow.inputs import IntInput, MessageTextInput, SecretStrInput, StrInput
 
 
 class RedisIndexChatMemory(LCChatMemoryComponent):
