@@ -1,4 +1,6 @@
+import buildQueryStringUrl from "@/controllers/utils/create-query-param-string";
 import { FolderType, PaginatedFolderType } from "@/pages/MainPage/entities";
+import { useFolderStore } from "@/stores/foldersStore";
 import { useQueryFunctionType } from "@/types/api";
 import { processFlows } from "@/utils/reactflowUtils";
 import { UseQueryOptions } from "@tanstack/react-query";
@@ -17,26 +19,27 @@ interface IGetFolder {
 }
 
 const addQueryParams = (url: string, params: IGetFolder): string => {
-  const queryParams = new URLSearchParams();
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.size) queryParams.append("size", params.size.toString());
-  if (params.is_component)
-    queryParams.append("is_component", params.is_component.toString());
-  if (params.is_flow) queryParams.append("is_flow", params.is_flow.toString());
-  if (params.search) queryParams.append("search", params.search);
-  const queryString = queryParams.toString();
-  return queryString ? `${url}?${queryString}` : url;
+  return buildQueryStringUrl(url, params);
 };
 
 export const useGetFolderQuery: useQueryFunctionType<
   IGetFolder,
-  PaginatedFolderType
+  PaginatedFolderType | undefined
 > = (params, options) => {
   const { query } = UseRequestProcessor();
 
+  const folders = useFolderStore((state) => state.folders);
+
   const getFolderFn = async (
     params: IGetFolder,
-  ): Promise<PaginatedFolderType> => {
+  ): Promise<PaginatedFolderType | undefined> => {
+    if (params.id) {
+      const existingFolder = folders.find((f) => f.id === params.id);
+      if (!existingFolder) {
+        return;
+      }
+    }
+
     const url = addQueryParams(`${getURL("FOLDERS")}/${params.id}`, params);
     const { data } = await api.get<PaginatedFolderType>(url);
 
@@ -49,9 +52,12 @@ export const useGetFolderQuery: useQueryFunctionType<
   };
 
   const queryResult = query(
-    ["useGetFolder", params],
+    ["useGetFolder", params.id],
     () => getFolderFn(params),
-    options as UseQueryOptions<any, Error, PaginatedFolderType, any>,
+    {
+      refetchOnWindowFocus: false,
+      ...options,
+    },
   );
 
   return queryResult;
