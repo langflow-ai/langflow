@@ -218,6 +218,7 @@ import { GroqIcon } from "../icons/Groq";
 import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
+import { LMStudioIcon } from "../icons/LMStudio";
 import { LangChainIcon } from "../icons/LangChain";
 import { MaritalkIcon } from "../icons/Maritalk";
 import { MetaIcon } from "../icons/Meta";
@@ -369,6 +370,7 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  LMStudio: LMStudioIcon,
   X: X,
   Notify: Bell,
   ListFlows: Group,
