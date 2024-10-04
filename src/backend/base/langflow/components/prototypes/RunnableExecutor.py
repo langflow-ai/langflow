@@ -1,43 +1,51 @@
-from langchain_core.runnables import Runnable
+from langchain.agents import AgentExecutor
 
-from langflow.custom import CustomComponent
-from langflow.field_typing import Text
+from langflow.custom import Component
+from langflow.inputs import BoolInput, HandleInput, MessageTextInput
+from langflow.schema.message import Message
+from langflow.template import Output
 
 
-class RunnableExecComponent(CustomComponent):
+class RunnableExecComponent(Component):
     description = "Execute a runnable. It will try to guess the input and output keys."
     display_name = "Runnable Executor"
     name = "RunnableExecutor"
     beta: bool = True
-    field_order = [
-        "input_key",
-        "output_key",
-        "input_value",
-        "runnable",
+
+    inputs = [
+        MessageTextInput(name="input_value", display_name="Input", required=True),
+        HandleInput(
+            name="runnable",
+            display_name="Agent Executor",
+            input_types=["Chain", "AgentExecutor", "Agent", "Runnable"],
+            required=True,
+        ),
+        MessageTextInput(
+            name="input_key",
+            display_name="Input Key",
+            value="input",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="output_key",
+            display_name="Output Key",
+            value="output",
+            advanced=True,
+        ),
+        BoolInput(
+            name="use_stream",
+            display_name="Stream",
+            value=False,
+        ),
     ]
 
-    def build_config(self):
-        return {
-            "input_key": {
-                "display_name": "Input Key",
-                "info": "The key to use for the input.",
-                "advanced": True,
-            },
-            "input_value": {
-                "display_name": "Inputs",
-                "info": "The inputs to pass to the runnable.",
-            },
-            "runnable": {
-                "display_name": "Runnable",
-                "info": "The runnable to execute.",
-                "input_types": ["Chain", "AgentExecutor", "Agent", "Runnable"],
-            },
-            "output_key": {
-                "display_name": "Output Key",
-                "info": "The key to use for the output.",
-                "advanced": True,
-            },
-        }
+    outputs = [
+        Output(
+            display_name="Text",
+            name="text",
+            method="build_executor",
+        ),
+    ]
 
     def get_output(self, result, input_key, output_key):
         """
@@ -107,17 +115,24 @@ class RunnableExecComponent(CustomComponent):
                 status = f"Warning: The input key is not '{input_key}'. The input key is '{runnable.input_keys}'."
         return input_dict, status
 
-    def build(
-        self,
-        input_value: Text,
-        runnable: Runnable,
-        input_key: str = "input",
-        output_key: str = "output",
-    ) -> Text:
-        input_dict, status = self.get_input_dict(runnable, input_key, input_value)
-        result = runnable.invoke(input_dict)
-        result_value, _status = self.get_output(result, input_key, output_key)
+    async def build_executor(self) -> Message:
+        input_dict, status = self.get_input_dict(self.runnable, self.input_key, self.input_value)
+        if not isinstance(self.runnable, AgentExecutor):
+            msg = "The runnable must be an AgentExecutor"
+            raise ValueError(msg)
+
+        if self.use_stream:
+            return self.astream_events(input_dict)
+        result = await self.runnable.ainvoke(input_dict)
+        result_value, _status = self.get_output(result, self.input_key, self.output_key)
         status += _status
         status += f"\n\nOutput: {result_value}\n\nRaw Output: {result}"
         self.status = status
         return result_value
+
+    async def astream_events(self, runnable_input):
+        async for event in self.runnable.astream_events(runnable_input, version="v1"):
+            if event.get("event") != "on_chat_model_stream":
+                continue
+
+            yield event.get("data").get("chunk")

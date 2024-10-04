@@ -2,7 +2,7 @@ from langchain.chains import LLMMathChain
 
 from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
-from langflow.inputs import MultilineInput, HandleInput
+from langflow.inputs import HandleInput, MultilineInput
 from langflow.template import Output
 
 
@@ -23,7 +23,9 @@ class LLMMathChainComponent(LCChainComponent):
 
     def invoke_chain(self) -> Message:
         chain = LLMMathChain.from_llm(llm=self.llm)
-        response = chain.invoke({chain.input_key: self.input_value})
+        response = chain.invoke(
+            {chain.input_key: self.input_value}, config={"callbacks": self.get_langchain_callbacks()}
+        )
         result = response.get(chain.output_key, "")
         result = str(result)
         self.status = result

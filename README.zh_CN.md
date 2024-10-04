@@ -27,7 +27,11 @@
 
 <div align="center">
   <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/英文-d9d9d9"></a>
+  <a href="./README.PT.md"><img alt="README in Portuguese" src="https://img.shields.io/badge/Portuguese-d9d9d9"></a>
+  <a href="./README.ES.md"><img alt="README in Spanish" src="https://img.shields.io/badge/Spanish-d9d9d9"></a>  
   <a href="./README.zh_CN.md"><img alt="README in Simplified Chinese" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
+  <a href="./README.ja.md"><img alt="README in Japanese" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
+  <a href="./README.KR.md"><img alt="README in KOREAN" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
 </div>
 
 <p align="center">
@@ -40,9 +44,9 @@
 - [📦 快速开始](#-快速开始)
 - [🎨 创建工作流](#-创建工作流)
 - [部署](#部署)
-  - [在Google Cloud Platform上部署Langflow](#在google-cloud-platform上部署langflow)
-  - [在Railway上部署](#在railway上部署)
-  - [在Render上部署](#在render上部署)
+  - [在 Google Cloud Platform 上部署 Langflow](#在google-cloud-platform上部署langflow)
+  - [在 Railway 上部署](#在railway上部署)
+  - [在 Render 上部署](#在render上部署)
 - [🖥️ 命令行界面 (CLI)](#️-命令行界面-cli)
   - [用法](#用法)
     - [环境变量](#环境变量)
@@ -63,7 +67,7 @@ python -m pip install langflow --pre --force-reinstall
 python -m pip install langflow -U
 ```
 
-然后运行Langflow：
+然后运行 Langflow：
 
 ```shell
 python -m langflow run
@@ -89,7 +93,7 @@ results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 
 # 部署
 
-## 在Google Cloud Platform上部署Langflow
+## 在 Google Cloud Platform 上部署 Langflow
 
 请按照我们的分步指南使用 Google Cloud Shell 在 Google Cloud Platform (GCP) 上部署 Langflow。该指南在 [**Langflow in Google Cloud Platform**](GCP_DEPLOYMENT.md) 文档中提供。
 
@@ -97,7 +101,7 @@ results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/langflow-ai/langflow&working_dir=scripts/gcp&shellonly=true&tutorial=walkthroughtutorial_spot.md)
 
-## 在Railway上部署
+## 在 Railway 上部署
 
 使用此模板在 Railway 上部署 Langflow 1.0 预览版：
 
@@ -107,7 +111,7 @@ results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
 
-## 在Render上部署
+## 在 Render 上部署
 
 <a href="https://render.com/deploy?repo=https://github.com/langflow-ai/langflow/tree/dev">
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
@@ -115,11 +119,11 @@ results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 
 # 🖥️ 命令行界面 (CLI)
 
-Langflow提供了一个命令行界面以便于平台的管理和配置。
+Langflow 提供了一个命令行界面以便于平台的管理和配置。
 
 ## 用法
 
-您可以使用以下命令运行Langflow：
+您可以使用以下命令运行 Langflow：
 
 ```shell
 langflow run [OPTIONS]
@@ -128,7 +132,7 @@ langflow run [OPTIONS]
 命令行参数的详细说明：
 
 - `--help`: 显示所有可用参数。
-- `--host`: 定义绑定服务器的主机host参数，可以使用 LANGFLOW_HOST 环境变量设置，默认值为 127.0.0.1。
+- `--host`: 定义绑定服务器的主机 host 参数，可以使用 LANGFLOW_HOST 环境变量设置，默认值为 127.0.0.1。
 - `--workers`: 设置工作进程的数量，可以使用 LANGFLOW_WORKERS 环境变量设置，默认值为 1。
 - `--timeout`: 设置工作进程的超时时间（秒），默认值为 60。
 - `--port`: 设置服务监听的端口，可以使用 LANGFLOW_PORT 环境变量设置，默认值为 7860。
@@ -138,9 +142,9 @@ langflow run [OPTIONS]
 - `--components-path`: 指定包含自定义组件的目录路径，可以使用 LANGFLOW_COMPONENTS_PATH 环境变量设置，默认值为 langflow/components。
 - `--log-file`: 指定日志文件的路径，可以使用 LANGFLOW_LOG_FILE 环境变量设置，默认值为 logs/langflow.log。
 - `--cache`: 选择要使用的缓存类型，可选项为 InMemoryCache 和 SQLiteCache，可以使用 LANGFLOW_LANGCHAIN_CACHE 环境变量设置，默认值为 SQLiteCache。
-- `--dev/--no-dev`: 切换开发/非开发模式，默认值为 no-dev即非开发模式。
+- `--dev/--no-dev`: 切换开发/非开发模式，默认值为 no-dev 即非开发模式。
 - `--path`: 指定包含前端构建文件的目录路径，此参数仅用于开发目的，可以使用 LANGFLOW_FRONTEND_PATH 环境变量设置。
-- `--open-browser/--no-open-browser`: 切换启动服务器后是否打开浏览器，可以使用 LANGFLOW_OPEN_BROWSER 环境变量设置，默认值为 open-browser即启动后打开浏览器。
+- `--open-browser/--no-open-browser`: 切换启动服务器后是否打开浏览器，可以使用 LANGFLOW_OPEN_BROWSER 环境变量设置，默认值为 open-browser 即启动后打开浏览器。
 - `--remove-api-keys/--no-remove-api-keys`: 切换是否从数据库中保存的项目中移除 API 密钥，可以使用 LANGFLOW_REMOVE_API_KEYS 环境变量设置，默认值为 no-remove-api-keys。
 - `--install-completion [bash|zsh|fish|powershell|pwsh]`: 为指定的 shell 安装自动补全。
 - `--show-completion [bash|zsh|fish|powershell|pwsh]`: 显示指定 shell 的自动补全，使您可以复制或自定义安装。

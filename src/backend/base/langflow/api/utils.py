@@ -1,18 +1,22 @@
+from __future__ import annotations
+
 import uuid
-import warnings
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
+from loguru import logger
+from sqlalchemy import delete
 from sqlmodel import Session
 
 from langflow.graph.graph.base import Graph
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.store.schema import StoreComponentCreate
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
     from langflow.services.database.models.flow.model import Flow
 
 
@@ -67,7 +71,7 @@ def build_input_keys_response(langchain_object, artifacts):
     return input_keys_response
 
 
-def validate_is_component(flows: list["Flow"]):
+def validate_is_component(flows: list[Flow]):
     for flow in flows:
         if not flow.data or flow.is_component is not None:
             continue
@@ -86,16 +90,18 @@ def get_is_component_from_data(data: dict):
 
 
 async def check_langflow_version(component: StoreComponentCreate):
-    from langflow.version.version import __version__ as current_version  # type: ignore
+    from langflow.utils.version import get_version_info
+
+    __version__ = get_version_info()["version"]
 
     if not component.last_tested_version:
-        component.last_tested_version = current_version
+        component.last_tested_version = __version__
 
     langflow_version = get_lf_version_from_pypi()
     if langflow_version is None:
         raise HTTPException(status_code=500, detail="Unable to verify the latest version of Langflow")
-    elif langflow_version != component.last_tested_version:
-        warnings.warn(
+    if langflow_version != component.last_tested_version:
+        logger.warning(
             f"Your version of Langflow ({component.last_tested_version}) is outdated. "
             f"Please update to the latest version ({langflow_version}) and try again."
         )
@@ -111,28 +117,25 @@ def format_elapsed_time(elapsed_time: float) -> str:
     if elapsed_time < 1:
         milliseconds = int(round(elapsed_time * 1000))
         return f"{milliseconds} ms"
-    elif elapsed_time < 60:
+    if elapsed_time < 60:
         seconds = round(elapsed_time, 2)
         unit = "second" if seconds == 1 else "seconds"
         return f"{seconds} {unit}"
-    else:
-        minutes = int(elapsed_time // 60)
-        seconds = round(elapsed_time % 60, 2)
-        minutes_unit = "minute" if minutes == 1 else "minutes"
-        seconds_unit = "second" if seconds == 1 else "seconds"
-        return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
+    minutes = int(elapsed_time // 60)
+    seconds = round(elapsed_time % 60, 2)
+    minutes_unit = "minute" if minutes == 1 else "minutes"
+    seconds_unit = "second" if seconds == 1 else "seconds"
+    return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
+async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
     """Build and cache the graph."""
-    flow: Optional[Flow] = session.get(Flow, flow_id)
-    if not flow or not flow.data:
-        raise ValueError("Invalid flow ID")
-    graph = Graph.from_payload(flow.data, flow_id, flow_name=flow.name, user_id=str(flow.user_id))
+    graph = Graph.from_payload(payload, flow_id, **kwargs)
     for vertex_id in graph._has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
-            raise ValueError(f"Vertex {vertex_id} not found")
+            msg = f"Vertex {vertex_id} not found"
+            raise ValueError(msg)
         if not vertex._raw_params.get("session_id"):
             vertex.update_raw_params({"session_id": flow_id}, overwrite=True)
 
@@ -140,13 +143,27 @@ async def build_graph_from_db(flow_id: str, session: Session, chat_service: "Cha
     graph.set_run_id(run_id)
     graph.set_run_name()
     await graph.initialize_run()
+    return graph
+
+
+async def build_graph_from_db_no_cache(flow_id: str, session: Session):
+    """Build and cache the graph."""
+    flow: Flow | None = session.get(Flow, flow_id)
+    if not flow or not flow.data:
+        msg = "Invalid flow ID"
+        raise ValueError(msg)
+    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
+
+
+async def build_graph_from_db(flow_id: str, session: Session, chat_service: ChatService):
+    graph = await build_graph_from_db_no_cache(flow_id, session)
     await chat_service.set_cache(flow_id, graph)
     return graph
 
 
 async def build_and_cache_graph_from_data(
     flow_id: str,
-    chat_service: "ChatService",
+    chat_service: ChatService,
     graph_data: dict,
 ):  # -> Graph | Any:
     """Build and cache the graph."""
@@ -179,43 +196,6 @@ def format_exception_message(exc: Exception) -> str:
     return str(exc)
 
 
-async def get_next_runnable_vertices(
-    graph: Graph,
-    vertex: "Vertex",
-    vertex_id: str,
-    chat_service: ChatService,
-    flow_id: str,
-):
-    """
-    Retrieves the next runnable vertices in the graph for a given vertex.
-
-    Args:
-        graph (Graph): The graph object representing the flow.
-        vertex (Vertex): The current vertex.
-        vertex_id (str): The ID of the current vertex.
-        chat_service (ChatService): The chat service object.
-        flow_id (str): The ID of the flow.
-
-    Returns:
-        list: A list of IDs of the next runnable vertices.
-
-    """
-    async with chat_service._cache_locks[flow_id] as lock:
-        graph.remove_from_predecessors(vertex_id)
-        direct_successors_ready = [v for v in vertex.successors_ids if graph.is_vertex_runnable(v)]
-        if not direct_successors_ready:
-            # No direct successors ready, look for runnable predecessors of successors
-            next_runnable_vertices = graph.find_runnable_predecessors_for_successors(vertex_id)
-        else:
-            next_runnable_vertices = direct_successors_ready
-
-        for v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
-            graph.vertices_to_run.remove(v_id)
-            graph.remove_from_predecessors(v_id)
-        await chat_service.set_cache(key=flow_id, data=graph, lock=lock)
-    return next_runnable_vertices
-
-
 def get_top_level_vertices(graph, vertices_ids):
     """
     Retrieves the top-level vertices from the given graph based on the provided vertex IDs.
@@ -243,3 +223,41 @@ def parse_exception(exc):
     if hasattr(exc, "body"):
         return exc.body["message"]
     return str(exc)
+
+
+def get_suggestion_message(outdated_components: list[str]) -> str:
+    """Get the suggestion message for the outdated components."""
+    count = len(outdated_components)
+    if count == 0:
+        return "The flow contains no outdated components."
+    if count == 1:
+        return (
+            "The flow contains 1 outdated component. "
+            f"We recommend updating the following component: {outdated_components[0]}."
+        )
+    components = ", ".join(outdated_components)
+    return (
+        f"The flow contains {count} outdated components. "
+        f"We recommend updating the following components: {components}."
+    )
+
+
+def parse_value(value: Any, input_type: str) -> Any:
+    """Helper function to parse the value based on input type."""
+    if value == "":
+        return value
+    if input_type == "IntInput":
+        return int(value) if value is not None else None
+    if input_type == "FloatInput":
+        return float(value) if value is not None else None
+    return value
+
+
+async def cascade_delete_flow(session: Session, flow: Flow):
+    try:
+        session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))  # type: ignore
+        session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))  # type: ignore
+        session.exec(delete(Flow).where(Flow.id == flow.id))  # type: ignore
+    except Exception as e:
+        msg = f"Unable to cascade delete flow: ${flow.id}"
+        raise RuntimeError(msg, e) from e

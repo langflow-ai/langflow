@@ -1,14 +1,16 @@
-from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
+from sqlalchemy.exc import NoResultFound
+from sqlmodel import Session
 
-from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.user.model import User
-from langflow.services.database.models.variable import Variable, VariableCreate, VariableRead, VariableUpdate
-from langflow.services.deps import get_session, get_settings_service
+from langflow.services.database.models.variable import VariableCreate, VariableRead, VariableUpdate
+from langflow.services.deps import get_session, get_settings_service, get_variable_service
+from langflow.services.variable.base import VariableService
+from langflow.services.variable.constants import GENERIC_TYPE
+from langflow.services.variable.service import DatabaseVariableService
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
 
@@ -20,36 +22,30 @@ def create_variable(
     variable: VariableCreate,
     current_user: User = Depends(get_current_active_user),
     settings_service=Depends(get_settings_service),
+    variable_service: DatabaseVariableService = Depends(get_variable_service),
 ):
     """Create a new variable."""
     try:
-        # check if variable name already exists
-        variable_exists = session.exec(
-            select(Variable).where(
-                Variable.name == variable.name,
-                Variable.user_id == current_user.id,
-            )
-        ).first()
-        if variable_exists:
+        if not variable.name and not variable.value:
+            raise HTTPException(status_code=400, detail="Variable name and value cannot be empty")
+
+        if not variable.name:
+            raise HTTPException(status_code=400, detail="Variable name cannot be empty")
+
+        if not variable.value:
+            raise HTTPException(status_code=400, detail="Variable value cannot be empty")
+
+        if variable.name in variable_service.list_variables(user_id=current_user.id, session=session):
             raise HTTPException(status_code=400, detail="Variable name already exists")
 
-        variable_dict = variable.model_dump()
-        variable_dict["user_id"] = current_user.id
-
-        db_variable = Variable.model_validate(variable_dict)
-        if not db_variable.name and not db_variable.value:
-            raise HTTPException(status_code=400, detail="Variable name and value cannot be empty")
-        elif not db_variable.name:
-            raise HTTPException(status_code=400, detail="Variable name cannot be empty")
-        elif not db_variable.value:
-            raise HTTPException(status_code=400, detail="Variable value cannot be empty")
-        encrypted = auth_utils.encrypt_api_key(db_variable.value, settings_service=settings_service)
-        db_variable.value = encrypted
-        db_variable.user_id = current_user.id
-        session.add(db_variable)
-        session.commit()
-        session.refresh(db_variable)
-        return db_variable
+        return variable_service.create_variable(
+            user_id=current_user.id,
+            name=variable.name,
+            value=variable.value,
+            default_fields=variable.default_fields or [],
+            _type=variable.type or GENERIC_TYPE,
+            session=session,
+        )
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -61,11 +57,11 @@ def read_variables(
     *,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
+    variable_service: DatabaseVariableService = Depends(get_variable_service),
 ):
     """Read all variables."""
     try:
-        variables = session.exec(select(Variable).where(Variable.user_id == current_user.id)).all()
-        return variables
+        return variable_service.get_all(user_id=current_user.id, session=session)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -77,22 +73,19 @@ def update_variable(
     variable_id: UUID,
     variable: VariableUpdate,
     current_user: User = Depends(get_current_active_user),
+    variable_service: DatabaseVariableService = Depends(get_variable_service),
 ):
     """Update a variable."""
     try:
-        db_variable = session.exec(
-            select(Variable).where(Variable.id == variable_id, Variable.user_id == current_user.id)
-        ).first()
-        if not db_variable:
-            raise HTTPException(status_code=404, detail="Variable not found")
+        return variable_service.update_variable_fields(
+            user_id=current_user.id,
+            variable_id=variable_id,
+            variable=variable,
+            session=session,
+        )
+    except NoResultFound as e:
+        raise HTTPException(status_code=404, detail="Variable not found") from e
 
-        variable_data = variable.model_dump(exclude_unset=True)
-        for key, value in variable_data.items():
-            setattr(db_variable, key, value)
-        db_variable.updated_at = datetime.now(timezone.utc)
-        session.commit()
-        session.refresh(db_variable)
-        return db_variable
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -103,15 +96,10 @@ def delete_variable(
     session: Session = Depends(get_session),
     variable_id: UUID,
     current_user: User = Depends(get_current_active_user),
+    variable_service: VariableService = Depends(get_variable_service),
 ):
     """Delete a variable."""
     try:
-        db_variable = session.exec(
-            select(Variable).where(Variable.id == variable_id, Variable.user_id == current_user.id)
-        ).first()
-        if not db_variable:
-            raise HTTPException(status_code=404, detail="Variable not found")
-        session.delete(db_variable)
-        session.commit()
+        variable_service.delete_variable_by_id(user_id=current_user.id, variable_id=variable_id, session=session)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

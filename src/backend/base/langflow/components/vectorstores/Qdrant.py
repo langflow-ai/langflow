@@ -1,19 +1,17 @@
-from typing import List
-
+from langchain.embeddings.base import Embeddings
 from langchain_community.vectorstores import Qdrant
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
+    DataInput,
     DropdownInput,
     HandleInput,
     IntInput,
-    StrInput,
-    SecretStrInput,
-    DataInput,
     MultilineInput,
+    SecretStrInput,
+    StrInput,
 )
-
 from langflow.schema import Data
 
 
@@ -21,7 +19,6 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Qdrant"
     description = "Qdrant Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
-    name = "Qdrant"
     icon = "Qdrant"
 
     inputs = [
@@ -59,26 +56,24 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> Qdrant:
-        return self._build_qdrant()
-
-    def _build_qdrant(self) -> Qdrant:
         qdrant_kwargs = {
             "collection_name": self.collection_name,
             "content_payload_key": self.content_payload_key,
-            "distance_func": self.distance_func,
             "metadata_payload_key": self.metadata_payload_key,
         }
 
         server_kwargs = {
-            "host": self.host,
-            "port": self.port,
-            "grpc_port": self.grpc_port,
+            "host": self.host if self.host else None,
+            "port": int(self.port),  # Ensure port is an integer
+            "grpc_port": int(self.grpc_port),  # Ensure grpc_port is an integer
             "api_key": self.api_key,
             "prefix": self.prefix,
-            "timeout": self.timeout,
-            "path": self.path,
-            "url": self.url,
+            # Ensure timeout is an integer
+            "timeout": int(self.timeout) if self.timeout else None,
+            "path": self.path if self.path else None,
+            "url": self.url if self.url else None,
         }
 
         server_kwargs = {k: v for k, v in server_kwargs.items() if v is not None}
@@ -90,18 +85,22 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             else:
                 documents.append(_input)
 
+        if not isinstance(self.embedding, Embeddings):
+            msg = "Invalid embedding object"
+            raise ValueError(msg)
+
         if documents:
-            qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs)
+            qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs, **server_kwargs)
         else:
             from qdrant_client import QdrantClient
 
             client = QdrantClient(**server_kwargs)
-            qdrant = Qdrant(embedding_function=self.embedding.embed_query, client=client, **qdrant_kwargs)
+            qdrant = Qdrant(embeddings=self.embedding, client=client, **qdrant_kwargs)
 
         return qdrant
 
-    def search_documents(self) -> List[Data]:
-        vector_store = self._build_qdrant()
+    def search_documents(self) -> list[Data]:
+        vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
@@ -112,5 +111,4 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

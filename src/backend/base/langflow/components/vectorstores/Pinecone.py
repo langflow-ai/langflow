@@ -1,17 +1,15 @@
-from typing import List
-
 from langchain_pinecone import Pinecone
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
+    DataInput,
     DropdownInput,
     HandleInput,
     IntInput,
-    StrInput,
-    SecretStrInput,
-    DataInput,
     MultilineInput,
+    SecretStrInput,
+    StrInput,
 )
 from langflow.schema import Data
 
@@ -57,10 +55,8 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> Pinecone:
-        return self._build_pinecone()
-
-    def _build_pinecone(self) -> Pinecone:
         from langchain_pinecone._utilities import DistanceStrategy
         from langchain_pinecone.vectorstores import Pinecone
 
@@ -85,11 +81,10 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
 
         if documents:
             pinecone.add_documents(documents)
-
         return pinecone
 
-    def search_documents(self) -> List[Data]:
-        vector_store = self._build_pinecone()
+    def search_documents(self) -> list[Data]:
+        vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
@@ -100,5 +95,4 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

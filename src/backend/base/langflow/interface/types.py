@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import json
-
 from typing import TYPE_CHECKING
+
 from loguru import logger
 
 from langflow.custom.utils import abuild_custom_components, build_custom_components
@@ -13,14 +15,12 @@ if TYPE_CHECKING:
 
 async def aget_all_types_dict(components_paths):
     """Get all types dictionary combining native and custom components."""
-    custom_components_from_file = await abuild_custom_components(components_paths=components_paths)
-    return custom_components_from_file
+    return await abuild_custom_components(components_paths=components_paths)
 
 
 def get_all_types_dict(components_paths):
     """Get all types dictionary combining native and custom components."""
-    custom_components_from_file = build_custom_components(components_paths=components_paths)
-    return custom_components_from_file
+    return build_custom_components(components_paths=components_paths)
 
 
 # TypeError: unhashable type: 'list'
@@ -57,15 +57,18 @@ def get_all_components(components_paths, as_dict=False):
     return components
 
 
+all_types_dict_cache = None
+
+
 async def get_and_cache_all_types_dict(
-    settings_service: "SettingsService",
-    cache_service: "CacheService",
+    settings_service: SettingsService,
+    cache_service: CacheService,
     force_refresh: bool = False,
     lock: asyncio.Lock | None = None,
 ):
-    all_types_dict = await cache_service.get(key="all_types_dict", lock=lock)
-    if not all_types_dict or force_refresh:
+    global all_types_dict_cache
+    if all_types_dict_cache is None:
         logger.debug("Building langchain types dict")
-        all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
-    await cache_service.set(key="all_types_dict", value=all_types_dict, lock=lock)
-    return all_types_dict
+        all_types_dict_cache = await aget_all_types_dict(settings_service.settings.components_path)
+
+    return all_types_dict_cache

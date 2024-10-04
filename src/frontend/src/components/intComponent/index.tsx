@@ -1,10 +1,14 @@
-import { useEffect } from "react";
-import { IntComponentType } from "../../types/components";
+import { cn } from "@/utils/utils";
 import {
-  handleKeyDown,
-  handleOnlyIntegerInput,
-} from "../../utils/reactflowUtils";
-import { Input } from "../ui/input";
+  NumberDecrementStepper,
+  NumberIncrementStepper,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+} from "@chakra-ui/number-input";
+import { useEffect, useRef, useState } from "react";
+import { IntComponentType } from "../../types/components";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 
 export default function IntComponent({
   value,
@@ -15,40 +19,82 @@ export default function IntComponent({
   id = "",
 }: IntComponentType): JSX.Element {
   const min = -Infinity;
-
   // Clear component state
   useEffect(() => {
-    if (disabled && value !== "") {
-      onChange("", undefined, true);
+    if (disabled && value !== 0) {
+      onChange(0, undefined, true);
     }
   }, [disabled, onChange]);
 
+  const [cursor, setCursor] = useState<number | null>(null);
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    ref.current?.setSelectionRange(cursor, cursor);
+  }, [ref, cursor, value]);
+
+  const handleChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCursor(e.target.selectionStart);
+    onChange(Number(e.target.value));
+  };
+
+  const getStepValue = () => {
+    return (Number.isInteger(rangeSpec?.step) ? rangeSpec.step : 1) ?? 1;
+  };
+
+  const getMinValue = () => {
+    return rangeSpec?.min ?? min;
+  };
+
+  const getMaxValue = () => {
+    return rangeSpec?.max ?? undefined;
+  };
+
+  const getInputClassName = () => {
+    return cn(
+      editNode ? "input-edit-node" : "",
+      "nopan nodelete nodrag noflow primary-input",
+    );
+  };
+
+  const handleNumberChange = (newValue) => {
+    onChange(Number(newValue));
+  };
+
+  const handleInputChange = (event) => {
+    const inputValue = Number(event.target.value);
+    if (inputValue < getMinValue()) {
+      event.target.value = getMinValue().toString();
+    }
+  };
+
+  const inputRef = useRef(null);
+
   return (
     <div className="w-full">
-      <Input
+      <NumberInput
         id={id}
-        onKeyDown={(event) => {
-          handleOnlyIntegerInput(event);
-          handleKeyDown(event, value, "");
-        }}
-        type="number"
-        step={rangeSpec?.step ?? 1}
-        min={rangeSpec?.min ?? min}
-        max={rangeSpec?.max ?? undefined}
-        onInput={(event: React.ChangeEvent<HTMLInputElement>) => {
-          if (Number(event.target.value) < min) {
-            event.target.value = min.toString();
-          }
-        }}
+        step={getStepValue()}
+        min={getMinValue()}
+        max={getMaxValue()}
+        onChange={handleNumberChange}
         value={value ?? ""}
-        className={editNode ? "input-edit-node" : ""}
-        disabled={disabled}
-        placeholder={editNode ? "Integer number" : "Type an integer number"}
-        onChange={(event) => {
-          onChange(event.target.value);
-        }}
-        data-testid={id}
-      />
+      >
+        <NumberInputField
+          className={getInputClassName()}
+          onChange={handleChangeInput}
+          onKeyDown={(event) => handleKeyDown(event, value, "")}
+          onInput={handleInputChange}
+          disabled={disabled}
+          placeholder={editNode ? "Integer number" : "Type an integer number"}
+          data-testid={id}
+          ref={inputRef}
+        />
+        <NumberInputStepper paddingRight={10}>
+          <NumberIncrementStepper fontSize={8} marginTop={6} />
+          <NumberDecrementStepper fontSize={8} marginBottom={6} />
+        </NumberInputStepper>
+      </NumberInput>
     </div>
   );
 }

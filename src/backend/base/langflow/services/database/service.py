@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import time
-from datetime import datetime
+from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,7 +18,10 @@ from sqlmodel import Session, SQLModel, create_engine, select, text
 from langflow.services.base import Service
 from langflow.services.database import models  # noqa
 from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.database.utils import Result, TableResults, migrate_messages_from_monitor_service_to_database
+from langflow.services.database.utils import (
+    Result,
+    TableResults,
+)
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
@@ -28,10 +34,11 @@ if TYPE_CHECKING:
 class DatabaseService(Service):
     name = "database_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         if settings_service.settings.database_url is None:
-            raise ValueError("No database URL provided")
+            msg = "No database URL provided"
+            raise ValueError(msg)
         self.database_url: str = settings_service.settings.database_url
         # This file is in langflow.services.database.manager.py
         # the ini is in langflow
@@ -40,14 +47,22 @@ class DatabaseService(Service):
         self.alembic_cfg_path = langflow_dir / "alembic.ini"
         self.engine = self._create_engine()
 
-    def _create_engine(self) -> "Engine":
+    def _create_engine(self) -> Engine:
         """Create the engine for the database."""
-        settings_service = get_settings_service()
-        if settings_service.settings.database_url and settings_service.settings.database_url.startswith("sqlite"):
-            connect_args = {"check_same_thread": False}
+        if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
+            "sqlite"
+        ):
+            connect_args = {
+                "check_same_thread": False,
+                "timeout": self.settings_service.settings.db_connect_timeout,
+            }
         else:
             connect_args = {}
         try:
+            # register the event listener for sqlite as part of this class.
+            # Using decorator will make the method not able to use self
+            event.listen(Engine, "connect", self.on_connection)
+
             return create_engine(
                 self.database_url,
                 connect_args=connect_args,
@@ -55,43 +70,39 @@ class DatabaseService(Service):
                 max_overflow=self.settings_service.settings.max_overflow,
             )
         except sa.exc.NoSuchModuleError as exc:
-            # sqlalchemy.exc.NoSuchModuleError: Can't load plugin: sqlalchemy.dialects:postgres
             if "postgres" in str(exc) and not self.database_url.startswith("postgresql"):
                 # https://stackoverflow.com/questions/62688256/sqlalchemy-exc-nosuchmoduleerror-cant-load-plugin-sqlalchemy-dialectspostgre
                 self.database_url = self.database_url.replace("postgres://", "postgresql://")
                 logger.warning(
-                    "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. To avoid this warning, update the database URL."
+                    "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. "
+                    "To avoid this warning, update the database URL."
                 )
                 return self._create_engine()
-            raise RuntimeError("Error creating database engine") from exc
+            msg = "Error creating database engine"
+            raise RuntimeError(msg) from exc
 
-    @event.listens_for(Engine, "connect")
-    def on_connection(dbapi_connection, connection_record):
+    def on_connection(self, dbapi_connection, connection_record):
         from sqlite3 import Connection as sqliteConnection
 
         if isinstance(dbapi_connection, sqliteConnection):
-            logger.info("sqlite connect listener, setting pragmas")
-            cursor = dbapi_connection.cursor()
-            try:
-                cursor.execute("PRAGMA synchronous = NORMAL")
-                cursor.execute("PRAGMA journal_mode = WAL")
-                cursor.close()
-            except OperationalError as oe:
-                logger.warning("Failed to set PRAGMA: ", {oe})
+            pragmas: dict | None = self.settings_service.settings.sqlite_pragmas
+            pragmas_list = []
+            for key, val in pragmas.items() or {}:
+                pragmas_list.append(f"PRAGMA {key} = {val}")
+            logger.info(f"sqlite connection, setting pragmas: {str(pragmas_list)}")
+            if pragmas_list:
+                cursor = dbapi_connection.cursor()
+                try:
+                    for pragma in pragmas_list:
+                        try:
+                            cursor.execute(pragma)
+                        except OperationalError as oe:
+                            logger.error(f"Failed to set PRAGMA {pragma}: ", {oe})
+                finally:
+                    cursor.close()
 
-    def __enter__(self):
-        self._session = Session(self.engine)
-        return self._session
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_type is not None:  # If an exception has been raised
-            logger.error(f"Session rollback because of exception: {exc_type.__name__} {exc_value}")
-            self._session.rollback()
-        else:
-            self._session.commit()
-        self._session.close()
-
-    def get_session(self):
+    @contextmanager
+    def with_session(self):
         with Session(self.engine) as session:
             yield session
 
@@ -101,7 +112,7 @@ class DatabaseService(Service):
         # associated with them
         settings_service = get_settings_service()
         if settings_service.auth_settings.AUTO_LOGIN:
-            with Session(self.engine) as session:
+            with self.with_session() as session:
                 flows = session.exec(select(models.Flow).where(models.Flow.user_id is None)).all()
                 if flows:
                     logger.debug("Migrating flows to default superuser")
@@ -109,7 +120,8 @@ class DatabaseService(Service):
                     user = get_user_by_username(session, username)
                     if not user:
                         logger.error("Default superuser not found")
-                        raise RuntimeError("Default superuser not found")
+                        msg = "Default superuser not found"
+                        raise RuntimeError(msg)
                     for flow in flows:
                         flow.user_id = user.id
                     session.commit()
@@ -118,7 +130,7 @@ class DatabaseService(Service):
     def check_schema_health(self) -> bool:
         inspector = inspect(self.engine)
 
-        model_mapping = {
+        model_mapping: dict[str, type[SQLModel]] = {
             "flow": models.Flow,
             "user": models.User,
             "apikey": models.ApiKey,
@@ -165,55 +177,53 @@ class DatabaseService(Service):
         # which is a buffer
         # I don't want to output anything
         # subprocess.DEVNULL is an int
-        buffer = open(self.script_location / "alembic.log", "w")
-        alembic_cfg = Config(stdout=buffer)
-        # alembic_cfg.attributes["connection"] = session
-        alembic_cfg.set_main_option("script_location", str(self.script_location))
-        alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
+        with open(self.script_location / "alembic.log", "w") as buffer:
+            alembic_cfg = Config(stdout=buffer)
+            # alembic_cfg.attributes["connection"] = session
+            alembic_cfg.set_main_option("script_location", str(self.script_location))
+            alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
 
-        should_initialize_alembic = False
-        with Session(self.engine) as session:
-            # If the table does not exist it throws an error
-            # so we need to catch it
-            try:
-                session.exec(text("SELECT * FROM alembic_version"))
-            except Exception:
-                logger.info("Alembic not initialized")
-                should_initialize_alembic = True
+            should_initialize_alembic = False
+            with self.with_session() as session:
+                # If the table does not exist it throws an error
+                # so we need to catch it
+                try:
+                    session.exec(text("SELECT * FROM alembic_version"))
+                except Exception:
+                    logger.info("Alembic not initialized")
+                    should_initialize_alembic = True
 
+            if should_initialize_alembic:
+                try:
+                    self.init_alembic(alembic_cfg)
+                except Exception as exc:
+                    logger.error(f"Error initializing alembic: {exc}")
+                    msg = "Error initializing alembic"
+                    raise RuntimeError(msg) from exc
             else:
                 logger.info("Alembic already initialized")
-        if should_initialize_alembic:
+
+            logger.info(f"Running DB migrations in {self.script_location}")
+
             try:
-                self.init_alembic(alembic_cfg)
+                buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")
+                command.check(alembic_cfg)
             except Exception as exc:
-                logger.error(f"Error initializing alembic: {exc}")
-                raise RuntimeError("Error initializing alembic") from exc
+                if isinstance(exc, util.exc.CommandError | util.exc.AutogenerateDiffsDetected):
+                    command.upgrade(alembic_cfg, "head")
+                    time.sleep(3)
 
-        logger.info(f"Running DB migrations in {self.script_location}")
+            try:
+                buffer.write(f"{datetime.now(tz=timezone.utc).astimezone()}: Checking migrations\n")
+                command.check(alembic_cfg)
+            except util.exc.AutogenerateDiffsDetected as exc:
+                logger.error(f"AutogenerateDiffsDetected: {exc}")
+                if not fix:
+                    msg = f"There's a mismatch between the models and the database.\n{exc}"
+                    raise RuntimeError(msg) from exc
 
-        try:
-            buffer.write(f"{datetime.now().isoformat()}: Checking migrations\n")
-            command.check(alembic_cfg)
-        except Exception as exc:
-            if isinstance(exc, (util.exc.CommandError, util.exc.AutogenerateDiffsDetected)):
-                command.upgrade(alembic_cfg, "head")
-                time.sleep(3)
-
-        try:
-            buffer.write(f"{datetime.now().isoformat()}: Checking migrations\n")
-            command.check(alembic_cfg)
-        except util.exc.AutogenerateDiffsDetected as exc:
-            logger.error(f"AutogenerateDiffsDetected: {exc}")
-            if not fix:
-                raise RuntimeError(f"There's a mismatch between the models and the database.\n{exc}")
-        try:
-            migrate_messages_from_monitor_service_to_database(session)
-        except Exception as exc:
-            logger.error(f"Error migrating messages from monitor service to database: {exc}")
-
-        if fix:
-            self.try_downgrade_upgrade_until_success(alembic_cfg)
+            if fix:
+                self.try_downgrade_upgrade_until_success(alembic_cfg)
 
     def try_downgrade_upgrade_until_success(self, alembic_cfg, retries=5):
         # Try -1 then head, if it fails, try -2 then head, etc.
@@ -266,7 +276,7 @@ class DatabaseService(Service):
 
         inspector = inspect(self.engine)
         table_names = inspector.get_table_names()
-        current_tables = ["flow", "user", "apikey"]
+        current_tables = ["flow", "user", "apikey", "folder", "message", "variable", "transaction", "vertex_build"]
 
         if table_names and all(table in table_names for table in current_tables):
             logger.debug("Database and tables already exist")
@@ -281,7 +291,8 @@ class DatabaseService(Service):
                 logger.warning(f"Table {table} already exists, skipping. Exception: {oe}")
             except Exception as exc:
                 logger.error(f"Error creating table {table}: {exc}")
-                raise RuntimeError(f"Error creating table {table}") from exc
+                msg = f"Error creating table {table}"
+                raise RuntimeError(msg) from exc
 
         # Now check if the required tables exist, if not, something went wrong.
         inspector = inspect(self.engine)
@@ -290,21 +301,21 @@ class DatabaseService(Service):
             if table not in table_names:
                 logger.error("Something went wrong creating the database and tables.")
                 logger.error("Please check your database settings.")
-                raise RuntimeError("Something went wrong creating the database and tables.")
+                msg = "Something went wrong creating the database and tables."
+                raise RuntimeError(msg)
 
         logger.debug("Database and tables created successfully")
 
-    def teardown(self):
+    async def teardown(self):
         logger.debug("Tearing down database")
         try:
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
             # using the SUPERUSER to get the user
-            with Session(self.engine) as session:
+            with self.with_session() as session:
                 teardown_superuser(settings_service, session)
 
         except Exception as exc:
             logger.error(f"Error tearing down database: {exc}")
 
-        self.engine.dispose()
         self.engine.dispose()

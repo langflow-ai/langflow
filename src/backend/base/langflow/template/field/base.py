@@ -1,5 +1,9 @@
+from collections.abc import Callable  # noqa: I001
 from enum import Enum
-from typing import Any, Callable, GenericAlias, Optional, Union, _GenericAlias, _UnionGenericAlias  # type: ignore
+from typing import Any  # noqa
+from typing import GenericAlias  # type: ignore
+from typing import _GenericAlias  # type: ignore
+from typing import _UnionGenericAlias  # type: ignore
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
@@ -43,42 +47,42 @@ class Input(BaseModel):
     file_types: list[str] = Field(default=[], serialization_alias="fileTypes")
     """List of file types associated with the field . Default is an empty list."""
 
-    file_path: Optional[str] = ""
+    file_path: str | None = ""
     """The file path of the field if it is a file. Defaults to None."""
 
-    password: bool = False
-    """Specifies if the field is a password. Defaults to False."""
+    password: bool | None = None
+    """Specifies if the field is a password. Defaults to None."""
 
-    options: Optional[Union[list[str], Callable]] = None
+    options: list[str] | Callable | None = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
 
-    name: Optional[str] = None
+    name: str | None = None
     """Name of the field. Default is an empty string."""
 
-    display_name: Optional[str] = None
+    display_name: str | None = None
     """Display name of the field. Defaults to None."""
 
     advanced: bool = False
     """Specifies if the field will an advanced parameter (hidden). Defaults to False."""
 
-    input_types: Optional[list[str]] = None
+    input_types: list[str] | None = None
     """List of input types for the handle when the field has more than one type. Default is an empty list."""
 
     dynamic: bool = False
     """Specifies if the field is dynamic. Defaults to False."""
 
-    info: Optional[str] = ""
+    info: str | None = ""
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
 
-    real_time_refresh: Optional[bool] = None
+    real_time_refresh: bool | None = None
     """Specifies if the field should have real time refresh. `refresh_button` must be False. Defaults to None."""
 
-    refresh_button: Optional[bool] = None
+    refresh_button: bool | None = None
     """Specifies if the field should have a refresh button. Defaults to False."""
-    refresh_button_text: Optional[str] = None
+    refresh_button_text: str | None = None
     """Specifies the text for the refresh button. Defaults to None."""
 
-    range_spec: Optional[RangeSpec] = Field(default=None, serialization_alias="rangeSpec")
+    range_spec: RangeSpec | None = Field(default=None, serialization_alias="rangeSpec")
     """Range specification for the field. Defaults to None."""
 
     load_from_db: bool = False
@@ -93,9 +97,8 @@ class Input(BaseModel):
     def serialize_model(self, handler):
         result = handler(self)
         # If the field is str, we add the Text input type
-        if self.field_type in ["str", "Text"]:
-            if "input_types" not in result:
-                result["input_types"] = ["Text"]
+        if self.field_type in ["str", "Text"] and "input_types" not in result:
+            result["input_types"] = ["Text"]
         if self.field_type == Text:
             result["type"] = "str"
         else:
@@ -115,7 +118,7 @@ class Input(BaseModel):
 
     @field_serializer("field_type")
     def serialize_field_type(self, value, _info):
-        if value == float and self.range_spec is None:
+        if value is float and self.range_spec is None:
             self.range_spec = RangeSpec()
         return value
 
@@ -134,7 +137,8 @@ class Input(BaseModel):
     @field_validator("file_types")
     def validate_file_types(cls, value):
         if not isinstance(value, list):
-            raise ValueError("file_types must be a list")
+            msg = "file_types must be a list"
+            raise ValueError(msg)
         return [
             (f".{file_type}" if isinstance(file_type, str) and not file_type.startswith(".") else file_type)
             for file_type in value
@@ -146,45 +150,49 @@ class Input(BaseModel):
         # If the user passes CustomComponent as a type insteado of "CustomComponent" we need to convert it to a string
         # this should be done for all types
         # How to check if v is a type?
-        if isinstance(v, (type, _GenericAlias, GenericAlias, _UnionGenericAlias)):
+        if isinstance(v, type | _GenericAlias | GenericAlias | _UnionGenericAlias):
             v = post_process_type(v)[0]
             v = format_type(v)
         elif not isinstance(v, str):
-            raise ValueError(f"type must be a string or a type, not {type(v)}")
+            msg = f"type must be a string or a type, not {type(v)}"
+            raise ValueError(msg)
         return v
 
 
 class Output(BaseModel):
-    types: Optional[list[str]] = Field(default=[])
+    types: list[str] = Field(default=[])
     """List of output types for the field."""
 
-    selected: Optional[str] = Field(default=None)
+    selected: str | None = Field(default=None)
     """The selected output type for the field."""
 
     name: str = Field(description="The name of the field.")
     """The name of the field."""
 
-    hidden: Optional[bool] = Field(default=None)
+    hidden: bool | None = Field(default=None)
     """Dictates if the field is hidden."""
 
-    display_name: Optional[str] = Field(default=None)
+    display_name: str | None = Field(default=None)
     """The display name of the field."""
 
-    method: Optional[str] = Field(default=None)
+    method: str | None = Field(default=None)
     """The method to use for the output."""
 
-    value: Optional[Any] = Field(default=UNDEFINED)
+    value: Any | None = Field(default=UNDEFINED)
+    """The result of the Output. Dynamically updated as execution occurs."""
 
     cache: bool = Field(default=True)
+
+    required_inputs: list[str] | None = Field(default=None)
+    """List of required inputs for this output."""
 
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
 
     def add_types(self, _type: list[Any]):
-        for type_ in _type:
-            if self.types is None:
-                self.types = []
-            self.types.append(type_)
+        if self.types is None:
+            self.types = []
+        self.types.extend([t for t in _type if t not in self.types])
 
     def set_selected(self):
         if not self.selected and self.types:
@@ -203,7 +211,8 @@ class Output(BaseModel):
         if self.value == UNDEFINED.value:
             self.value = UNDEFINED
         if self.name is None:
-            raise ValueError("name must be set")
+            msg = "name must be set"
+            raise ValueError(msg)
         if self.display_name is None:
             self.display_name = self.name
         return self

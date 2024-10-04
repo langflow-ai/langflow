@@ -38,11 +38,13 @@ export type shortcutsStoreType = {
   duplicate: string;
   component: string;
   docs: string;
+  changes: string;
   save: string;
   delete: string;
   update: string;
   download: string;
   freeze: string;
+  FreezePath: string;
   shortcuts: Array<{
     name: string;
     shortcut: string;

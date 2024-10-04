@@ -272,3 +272,7 @@ prof/*
 src/frontend/temp
 *-shm
 *-wal
+.history
+
+.dspy_cache/
+cache.db

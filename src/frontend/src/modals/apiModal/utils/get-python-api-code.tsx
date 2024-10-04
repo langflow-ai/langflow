@@ -1,3 +1,5 @@
+import { GetCodeType } from "@/types/tweaks";
+
 /**
  * Function to get the python code for the API
  * @param {string} flowId - The id of the flow
@@ -6,22 +8,17 @@
  * @param {string} [endpointName] - The optional endpoint name
  * @returns {string} - The python code
  */
-export default function getPythonApiCode(
-  flowId: string,
-  isAuth: boolean,
-  tweaksBuildedObject: any[],
-  endpointName?: string | null,
-): string {
+export default function getPythonApiCode({
+  flowId,
+  tweaksBuildedObject,
+  endpointName,
+}: GetCodeType): string {
   let tweaksString = "{}";
-  if (tweaksBuildedObject && tweaksBuildedObject.length > 0) {
-    const tweaksObject = tweaksBuildedObject[0];
-    if (!tweaksObject) {
-      throw new Error("expected tweaks");
-    }
-    tweaksString = JSON.stringify(tweaksObject, null, 2)
+  if (tweaksBuildedObject)
+    tweaksString = JSON.stringify(tweaksBuildedObject, null, 2)
       .replace(/true/g, "True")
-      .replace(/false/g, "False");
-  }
+      .replace(/false/g, "False")
+      .replace(/null|undefined/g, "None");
 
   return `import argparse
 import json
@@ -35,7 +32,7 @@ except ImportError:
     warnings.warn("Langflow provides a function to help you upload files to the flow. Please install langflow to use it.")
     upload_file = None
 
-BASE_API_URL = "${window.location.protocol}//${window.location.host}/api/v1/run"
+BASE_API_URL = "${window.location.protocol}//${window.location.host}"
 FLOW_ID = "${flowId}"
 ENDPOINT = "${endpointName || ""}" ${
     endpointName
@@ -61,7 +58,7 @@ def run_flow(message: str,
     :param tweaks: Optional tweaks to customize the flow
     :return: The JSON response from the flow
     """
-    api_url = f"{BASE_API_URL}/{endpoint}"
+    api_url = f"{BASE_API_URL}/api/v1/run/{endpoint}"
 
     payload = {
         "input_value": message,
@@ -99,7 +96,7 @@ def main():
             raise ImportError("Langflow is not installed. Please install it to use the upload_file function.")
         elif not args.components:
             raise ValueError("You need to provide the components to upload the file to.")
-        tweaks = upload_file(file_path=args.upload_file, host=BASE_API_URL, flow_id=ENDPOINT, components=args.components, tweaks=tweaks)
+        tweaks = upload_file(file_path=args.upload_file, host=BASE_API_URL, flow_id=args.endpoint, components=[args.components], tweaks=tweaks)
 
     response = run_flow(
         message=args.message,

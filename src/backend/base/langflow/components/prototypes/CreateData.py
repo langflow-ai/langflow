@@ -1,13 +1,11 @@
 from typing import Any
 
 from langflow.custom import Component
-from langflow.inputs.inputs import IntInput, MessageTextInput
-from langflow.io import Output
-
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.inputs.inputs import BoolInput, DictInput, IntInput, MessageTextInput
+from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
-from langflow.template.field.base import Input
 
 
 class CreateDataComponent(Component):
@@ -21,9 +19,21 @@ class CreateDataComponent(Component):
             display_name="Number of Fields",
             info="Number of fields to be added to the record.",
             real_time_refresh=True,
+            value=1,
             range_spec=RangeSpec(min=1, max=15, step=1, step_type="int"),
         ),
-        MessageTextInput(name="text_key", display_name="Text Key", info="Key to be used as text.", advanced=True),
+        MessageTextInput(
+            name="text_key",
+            display_name="Text Key",
+            info="Key that identifies the field to be used as the text content.",
+            advanced=True,
+        ),
+        BoolInput(
+            name="text_key_validator",
+            display_name="Text Key Validator",
+            advanced=True,
+            info="If enabled, checks if the given 'Text Key' is present in the given 'Data'.",
+        ),
     ]
 
     outputs = [
@@ -32,7 +42,7 @@ class CreateDataComponent(Component):
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "number_of_fields":
-            default_keys = ["code", "_type", "number_of_fields", "text_key"]
+            default_keys = ["code", "_type", "number_of_fields", "text_key", "text_key_validator"]
             try:
                 field_value_int = int(field_value)
             except ValueError:
@@ -40,7 +50,8 @@ class CreateDataComponent(Component):
             existing_fields = {}
             if field_value_int > 15:
                 build_config["number_of_fields"]["value"] = 15
-                raise ValueError("Number of fields cannot exceed 15. Try using a Component to combine two Data.")
+                msg = "Number of fields cannot exceed 15. Try using a Component to combine two Data."
+                raise ValueError(msg)
             if len(build_config) > len(default_keys):
                 # back up the existing template fields
                 for key in build_config.copy():
@@ -53,11 +64,10 @@ class CreateDataComponent(Component):
                     field = existing_fields[key]
                     build_config[key] = field
                 else:
-                    field = Input(
+                    field = DictInput(
                         display_name=f"Field {i}",
                         name=key,
                         info=f"Key for field {i}.",
-                        field_type="dict",
                         input_types=["Text", "Data"],
                     )
                     build_config[field.name] = field.to_dict()
@@ -65,31 +75,30 @@ class CreateDataComponent(Component):
             build_config["number_of_fields"]["value"] = field_value_int
         return build_config
 
-    async def build_data(
-        self,
-        number_of_fields: int = 0,
-        text_key: str = "text",
-        **kwargs,
-    ) -> Data:
+    async def build_data(self) -> Data:
+        data = self.get_data()
+        return_data = Data(data=data, text_key=self.text_key)
+        self.status = return_data
+        if self.text_key_validator:
+            self.validate_text_key()
+        return return_data
+
+    def get_data(self):
+        """Function to get the Data from the attributes"""
         data = {}
-        for value_dict in kwargs.values():
+        for value_dict in self._attributes.values():
             if isinstance(value_dict, dict):
                 # Check if the value of the value_dict is a Data
                 value_dict = {
                     key: value.get_text() if isinstance(value, Data) else value for key, value in value_dict.items()
                 }
                 data.update(value_dict)
-        return_data = Data(data=data, text_key=text_key)
-        self.status = return_data
-        return return_data
+        return data
 
-    def post_code_processing(self, new_build_config: dict, current_build_config: dict):
-        """
-        This function is called after the code validation is done.
-        """
-        frontend_node = super().post_code_processing(new_build_config, current_build_config)
-        new_build_config = self.update_build_config(
-            frontend_node["template"], frontend_node["template"]["number_of_fields"]["value"], "number_of_fields"
-        )
-        frontend_node = super().post_code_processing(new_build_config, current_build_config)
-        return frontend_node
+    def validate_text_key(self):
+        """This function validates that the Text Key is one of the keys in the Data"""
+        data_keys = self.get_data().keys()
+        if self.text_key not in data_keys and self.text_key != "":
+            formatted_data_keys = ", ".join(data_keys)
+            msg = f"Text Key: '{self.text_key}' not found in the Data keys: '{formatted_data_keys}'"
+            raise ValueError(msg)

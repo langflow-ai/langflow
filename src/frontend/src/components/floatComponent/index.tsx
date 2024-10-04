@@ -20,36 +20,35 @@ export default function FloatComponent({
     }
   }, [disabled]);
 
+  const handleInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = Number(event.target.value);
+    if (inputValue < min) {
+      event.target.value = min.toString();
+    } else if (inputValue > max) {
+      event.target.value = max.toString();
+    }
+  };
+
+  const handleChange = (event) => {
+    onChange(Number(event.target.value));
+  };
+
   return (
     <div className="w-full">
       <Input
         id="float-input"
+        data-testid="float-input"
         type="number"
         step={step}
         min={min}
-        onInput={(event: React.ChangeEvent<HTMLInputElement>) => {
-          if (Number(event.target.value) < min) {
-            event.target.value = min.toString();
-          }
-          if (Number(event.target.value) > max) {
-            event.target.value = max.toString();
-          }
-        }}
         max={max}
         value={value ?? ""}
         disabled={disabled}
         className={editNode ? "input-edit-node" : ""}
-        placeholder={
-          editNode
-            ? `Enter a value between ${min} and ${max}`
-            : `Enter a value between ${min} and ${max}`
-        }
-        onChange={(event) => {
-          onChange(event.target.value);
-        }}
-        onKeyDown={(e) => {
-          handleKeyDown(e, value, "");
-        }}
+        placeholder="Enter a value"
+        onInput={handleInput}
+        onChange={handleChange}
+        onKeyDown={(e) => handleKeyDown(e, value, "")}
       />
     </div>
   );

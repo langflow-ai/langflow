@@ -4,8 +4,11 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { useEffect, useState } from "react";
+import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
+import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
+import ReactAce from "react-ace/lib/ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -20,12 +23,13 @@ import {
   CODE_PROMPT_DIALOG_SUBTITLE,
   EDIT_CODE_TITLE,
 } from "../../constants/constants";
-import { postCustomComponent, postValidateCode } from "../../controllers/API";
+import { postCustomComponent } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { CodeErrorDataTypeAPI } from "../../types/api";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
+import ConfirmationModal from "../confirmationModal";
 
 export default function CodeAreaModal({
   value,
@@ -47,9 +51,14 @@ export default function CodeAreaModal({
   const [height, setHeight] = useState<string | null>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [openConfirmation, setOpenConfirmation] = useState(false);
+  const codeRef = useRef<ReactAce | null>(null);
+  const { mutate, isPending } = usePostValidateCode();
   const [error, setError] = useState<{
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
+
+  const { mutate: validateComponentCode } = usePostValidateComponentCode();
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
@@ -60,58 +69,67 @@ export default function CodeAreaModal({
   }, []);
 
   function processNonDynamicField() {
-    postValidateCode(code)
-      .then((apiReturn) => {
-        if (apiReturn.data) {
-          let importsErrors = apiReturn.data.imports.errors;
-          let funcErrors = apiReturn.data.function.errors;
-          if (funcErrors.length === 0 && importsErrors.length === 0) {
-            setSuccessData({
-              title: CODE_SUCCESS_ALERT,
-            });
-            setOpen(false);
-            setValue(code);
-            // setValue(code);
+    mutate(
+      { code },
+      {
+        onSuccess: (apiReturn) => {
+          if (apiReturn) {
+            let importsErrors = apiReturn.imports.errors;
+            let funcErrors = apiReturn.function.errors;
+            if (funcErrors.length === 0 && importsErrors.length === 0) {
+              setSuccessData({
+                title: CODE_SUCCESS_ALERT,
+              });
+              setOpen(false);
+              setValue(code);
+              // setValue(code);
+            } else {
+              if (funcErrors.length !== 0) {
+                setErrorData({
+                  title: FUNC_ERROR_ALERT,
+                  list: funcErrors,
+                });
+              }
+              if (importsErrors.length !== 0) {
+                setErrorData({
+                  title: IMPORT_ERROR_ALERT,
+                  list: importsErrors,
+                });
+              }
+            }
           } else {
-            if (funcErrors.length !== 0) {
-              setErrorData({
-                title: FUNC_ERROR_ALERT,
-                list: funcErrors,
-              });
-            }
-            if (importsErrors.length !== 0) {
-              setErrorData({
-                title: IMPORT_ERROR_ALERT,
-                list: importsErrors,
-              });
-            }
+            setErrorData({
+              title: BUG_ALERT,
+            });
           }
-        } else {
+        },
+        onError: (error) => {
           setErrorData({
-            title: BUG_ALERT,
+            title: CODE_ERROR_ALERT,
+            list: [error.response.data.detail],
           });
-        }
-      })
-      .catch((_) => {
-        setErrorData({
-          title: CODE_ERROR_ALERT,
-        });
-      });
+        },
+      },
+    );
   }
 
   function processDynamicField() {
-    postCustomComponent(code, nodeClass!)
-      .then((apiReturn) => {
-        const { data, type } = apiReturn.data;
-        if (data && type) {
-          setNodeClass(data, code, type);
-          setError({ detail: { error: undefined, traceback: undefined } });
-          setOpen(false);
-        }
-      })
-      .catch((err) => {
-        setError(err.response.data);
-      });
+    validateComponentCode(
+      { code, frontend_node: nodeClass! },
+      {
+        onSuccess: ({ data, type }) => {
+          if (data && type) {
+            setValue(code);
+            setNodeClass(data, type);
+            setError({ detail: { error: undefined, traceback: undefined } });
+            setOpen(false);
+          }
+        },
+        onError: (error) => {
+          setError(error.response.data);
+        },
+      },
+    );
   }
 
   function processCode() {
@@ -120,10 +138,6 @@ export default function CodeAreaModal({
     } else {
       processDynamicField();
     }
-  }
-
-  function handleClick() {
-    processCode();
   }
 
   useEffect(() => {
@@ -143,11 +157,36 @@ export default function CodeAreaModal({
   }, [error, setHeight]);
 
   useEffect(() => {
+    if (!openConfirmation) {
+      codeRef.current?.editor.focus();
+    }
+  }, [openConfirmation]);
+
+  useEffect(() => {
     setCode(value);
   }, [value, open]);
 
   return (
-    <BaseModal open={open} setOpen={setOpen}>
+    <BaseModal
+      onEscapeKeyDown={(e) => {
+        e.preventDefault();
+        if (code === value) {
+          setOpen(false);
+        } else {
+          if (
+            !(
+              codeRef.current?.editor.completer.popup &&
+              codeRef.current?.editor.completer.popup.isOpen
+            )
+          ) {
+            setOpenConfirmation(true);
+          }
+        }
+      }}
+      open={open}
+      setOpen={setOpen}
+      size="x-large"
+    >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
         <span className="pr-2"> {EDIT_CODE_TITLE} </span>
@@ -167,6 +206,7 @@ export default function CodeAreaModal({
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-full w-full">
             <AceEditor
+              ref={codeRef}
               readOnly={readonly}
               value={code}
               mode="python"
@@ -192,7 +232,12 @@ export default function CodeAreaModal({
             }
           >
             <div className="mt-5 h-full max-h-[10rem] w-full overflow-y-auto overflow-x-clip text-left custom-scroll">
-              <h1 className="text-lg text-error">{error?.detail?.error}</h1>
+              <h1
+                data-testid="title_error_code_modal"
+                className="text-lg text-error"
+              >
+                {error?.detail?.error}
+              </h1>
               <div className="ml-2 mt-2 w-full text-sm text-destructive word-break-break-word">
                 <span className="w-full word-break-break-word">
                   {error?.detail?.traceback}
@@ -203,7 +248,7 @@ export default function CodeAreaModal({
           <div className="flex h-fit w-full justify-end">
             <Button
               className="mt-3"
-              onClick={handleClick}
+              onClick={processCode}
               type="submit"
               id="checkAndSaveBtn"
               disabled={readonly}
@@ -212,6 +257,30 @@ export default function CodeAreaModal({
             </Button>
           </div>
         </div>
+        <ConfirmationModal
+          onClose={() => {
+            setOpenConfirmation(false);
+          }}
+          onEscapeKeyDown={(e) => {
+            e.stopPropagation();
+            setOpenConfirmation(false);
+          }}
+          size="x-small"
+          icon="AlertTriangle"
+          confirmationText="Check & Save"
+          cancelText="Discard Changes"
+          open={openConfirmation}
+          onCancel={() => setOpen(false)}
+          onConfirm={() => {
+            processCode();
+            setOpenConfirmation(false);
+          }}
+          title="Caution"
+        >
+          <ConfirmationModal.Content>
+            <p>Are you sure you want to exit without saving your changes?</p>
+          </ConfirmationModal.Content>
+        </ConfirmationModal>
       </BaseModal.Content>
     </BaseModal>
   );

@@ -3,7 +3,7 @@ import IconComponent from "../../../../components/genericIconComponent";
 import { DisclosureComponentType } from "../../../../types/components";
 
 export default function ParentDisclosureComponent({
-  button: { title, Icon, buttons = [] },
+  button: { title, Icon, buttons = [], beta },
   children,
   defaultOpen,
   testId,
@@ -18,8 +18,8 @@ export default function ParentDisclosureComponent({
               data-testid={testId}
             >
               <div className="flex items-baseline gap-1 align-baseline">
-                <span className="parent-disclosure-title">{title}</span>
-                {title === "Experimental" && (
+                <span className="text-sm font-medium">{title}</span>
+                {beta && (
                   <div className="h-fit rounded-full bg-beta-background px-2 py-1 text-xs/3 font-semibold text-beta-foreground-soft">
                     BETA
                   </div>
@@ -33,7 +33,8 @@ export default function ParentDisclosureComponent({
                 ))}
                 <div>
                   <IconComponent
-                    name="ChevronsUpDownIcon"
+                    skipFallback
+                    name={open ? "chevron-down" : "chevron-right"}
                     className={`${
                       open || defaultOpen ? "" : ""
                     } h-4 w-4 text-foreground`}

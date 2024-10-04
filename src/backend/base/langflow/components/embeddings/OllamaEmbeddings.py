@@ -16,7 +16,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         MessageTextInput(
             name="model",
             display_name="Ollama Model",
-            value="llama2",
+            value="llama3.1",
         ),
         MessageTextInput(
             name="base_url",
@@ -43,5 +43,6 @@ class OllamaEmbeddingsComponent(LCModelComponent):
                 temperature=self.temperature,
             )  # type: ignore
         except Exception as e:
-            raise ValueError("Could not connect to Ollama API.") from e
+            msg = "Could not connect to Ollama API."
+            raise ValueError(msg) from e
         return output

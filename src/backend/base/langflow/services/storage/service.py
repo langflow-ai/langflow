@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
@@ -11,7 +13,7 @@ if TYPE_CHECKING:
 class StorageService(Service):
     name = "storage_service"
 
-    def __init__(self, session_service: "SessionService", settings_service: "SettingsService"):
+    def __init__(self, session_service: SessionService, settings_service: SettingsService):
         self.settings_service = settings_service
         self.session_service = session_service
         self.set_ready()
@@ -38,5 +40,5 @@ class StorageService(Service):
     async def delete_file(self, flow_id: str, file_name: str) -> bool:
         raise NotImplementedError
 
-    def teardown(self):
+    async def teardown(self):
         raise NotImplementedError

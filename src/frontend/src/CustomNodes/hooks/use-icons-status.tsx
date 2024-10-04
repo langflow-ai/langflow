@@ -10,15 +10,22 @@ const useIconStatus = (
   validationStatus: VertexBuildTypeAPI | null,
 ) => {
   const conditionSuccess =
-    !(!buildStatus || buildStatus === BuildStatus.TO_BUILD) &&
-    validationStatus &&
-    validationStatus.valid;
+    buildStatus === BuildStatus.BUILT ||
+    (!(!buildStatus || buildStatus === BuildStatus.TO_BUILD) &&
+      validationStatus &&
+      validationStatus.valid);
   const conditionError = buildStatus === BuildStatus.ERROR;
   const conditionInactive = buildStatus === BuildStatus.INACTIVE;
 
   const renderIconStatus = () => {
     if (buildStatus === BuildStatus.BUILDING) {
-      return <Loading className="mr-1 text-medium-indigo" size={20} />;
+      return (
+        <Loading
+          data-testid="loading_icon"
+          className="mr-1 text-medium-indigo"
+          size={20}
+        />
+      );
     } else {
       return (
         <>

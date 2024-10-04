@@ -1,3 +1,4 @@
+import { useUtilityStore } from "@/stores/utilityStore";
 import Convert from "ansi-to-html";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
@@ -9,7 +10,10 @@ import Robot from "../../../../../assets/robot.png";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent";
 import IconComponent from "../../../../../components/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
-import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
+import {
+  EMPTY_INPUT_SEND_MESSAGE,
+  EMPTY_OUTPUT_SEND_MESSAGE,
+} from "../../../../../constants/constants";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
@@ -35,9 +39,15 @@ export default function ChatMessage({
   const [chatMessage, setChatMessage] = useState(chatMessageString);
   const [isStreaming, setIsStreaming] = useState(false);
   const eventSource = useRef<EventSource | undefined>(undefined);
-  const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const chatMessageRef = useRef(chatMessage);
+
+  const playgroundScrollBehaves = useUtilityStore(
+    (state) => state.playgroundScrollBehaves,
+  );
+  const setPlaygroundScrollBehaves = useUtilityStore(
+    (state) => state.setPlaygroundScrollBehaves,
+  );
 
   // Sync ref with state
   useEffect(() => {
@@ -105,24 +115,32 @@ export default function ChatMessage({
   useEffect(() => {
     const element = document.getElementById("last-chat-message");
     if (element) {
-      setTimeout(() => {
-        element.scrollIntoView({ behavior: "smooth" });
-      }, 200);
+      if (playgroundScrollBehaves === "instant") {
+        element.scrollIntoView({ behavior: playgroundScrollBehaves });
+        setPlaygroundScrollBehaves("smooth");
+      } else {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: playgroundScrollBehaves });
+        }, 200);
+      }
     }
   }, [lastMessage]);
 
+  let decodedMessage = chatMessage ?? "";
+  try {
+    decodedMessage = decodeURIComponent(chatMessage);
+  } catch (e) {
+    console.error(e);
+  }
+  const isEmpty = decodedMessage?.trim() === "";
+
   return (
     <>
-      <div
-        className={classNames(
-          "form-modal-chat-position",
-          chat.isSend ? "" : " ",
-        )}
-      >
+      <div className={cn("form-modal-chat-position", chat.isSend ? "" : " ")}>
         <div
-          className={classNames(
-            "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3",
-          )}
+          className={
+            "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3"
+          }
         >
           <div className="flex flex-col items-center gap-1">
             <div
@@ -170,7 +188,10 @@ export default function ChatMessage({
               )}
               {chat.thought && chat.thought !== "" && !hidden && <br></br>}
               <div className="flex w-full flex-col">
-                <div className="flex w-full flex-col dark:text-white">
+                <div
+                  className="flex w-full flex-col dark:text-white"
+                  data-testid="div-chat-message"
+                >
                   <div
                     data-testid={
                       "chat-message-" + chat.sender_name + "-" + chatMessage
@@ -179,7 +200,7 @@ export default function ChatMessage({
                   >
                     {useMemo(
                       () =>
-                        chatMessage === "" && lockChat ? (
+                        isEmpty && lockChat ? (
                           <IconComponent
                             name="MoreHorizontal"
                             className="h-8 w-8 animate-pulse"
@@ -190,7 +211,7 @@ export default function ChatMessage({
                             rehypePlugins={[rehypeMathjax]}
                             className={cn(
                               "markdown prose flex flex-col word-break-break-word dark:prose-invert",
-                              chatMessage === ""
+                              isEmpty
                                 ? "text-chat-trigger-disabled"
                                 : "text-primary",
                             )}
@@ -251,8 +272,8 @@ export default function ChatMessage({
                               },
                             }}
                           >
-                            {chatMessage === ""
-                              ? EMPTY_INPUT_SEND_MESSAGE
+                            {isEmpty && !chat.stream_url
+                              ? EMPTY_OUTPUT_SEND_MESSAGE
                               : chatMessage}
                           </Markdown>
                         ),
@@ -276,20 +297,13 @@ export default function ChatMessage({
                   Display Prompt
                   <IconComponent
                     name="ChevronDown"
-                    className={
-                      "h-3 w-3 transition-all " +
-                      (promptOpen ? "rotate-180" : "")
-                    }
+                    className={`h-3 w-3 transition-all ${promptOpen ? "rotate-180" : ""}`}
                   />
                 </button>
                 <span
                   className={cn(
                     "prose word-break-break-word dark:prose-invert",
-                    chatMessage !== ""
-                      ? EMPTY_INPUT_SEND_MESSAGE
-                      : chatMessage
-                        ? "text-primary"
-                        : "text-chat-trigger-disabled",
+                    !isEmpty ? "text-primary" : "text-chat-trigger-disabled",
                   )}
                 >
                   {promptOpen
@@ -321,25 +335,21 @@ export default function ChatMessage({
                         }
                         return <p>{parts}</p>;
                       })
-                    : chatMessage === ""
+                    : isEmpty
                       ? EMPTY_INPUT_SEND_MESSAGE
                       : chatMessage}
                 </span>
               </>
             ) : (
               <div className="flex flex-col">
-                <span
-                  className={`prose word-break-break-word dark:prose-invert ${
-                    chatMessage === ""
-                      ? "text-chat-trigger-disabled"
-                      : "text-primary"
+                <div
+                  className={`whitespace-pre-wrap break-words ${
+                    isEmpty ? "text-chat-trigger-disabled" : "text-primary"
                   }`}
-                  data-testid={
-                    "chat-message-" + chat.sender_name + "-" + chatMessage
-                  }
+                  data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                 >
-                  {chatMessage === "" ? EMPTY_INPUT_SEND_MESSAGE : chatMessage}
-                </span>
+                  {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
+                </div>
                 {chat.files && (
                   <div className="my-2 flex flex-col gap-5">
                     {chat.files.map((file, index) => {
@@ -359,7 +369,7 @@ export default function ChatMessage({
           </div>
         )}
       </div>
-      <div id={lastMessage ? "last-chat-message" : ""}></div>
+      <div id={lastMessage ? "last-chat-message" : undefined} />
     </>
   );
 }

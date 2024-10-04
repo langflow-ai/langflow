@@ -17,44 +17,66 @@ export default function NewFlowModal({
           Get Started
         </span>
       </BaseModal.Header>
-      <BaseModal.Content>
-        <div className="mb-5 grid h-fit w-full grid-cols-3 gap-4 overflow-auto pb-6 custom-scroll">
-          <NewFlowCardComponent />
+      <BaseModal.Content overflowHidden>
+        <div className="overflow-y-auto rounded-md border bg-muted p-4">
+          <div className="grid w-full grid-cols-3 gap-4">
+            <NewFlowCardComponent />
 
-          {examples.find((e) => e.name == "Basic Prompting (Hello, World)") && (
-            <UndrawCardComponent
-              key={0}
-              flow={
-                examples.find(
-                  (e) => e.name == "Basic Prompting (Hello, World)",
-                )!
-              }
-            />
-          )}
-          {examples.find((e) => e.name == "Memory Chatbot") && (
-            <UndrawCardComponent
-              key={1}
-              flow={examples.find((e) => e.name == "Memory Chatbot")!}
-            />
-          )}
-          {examples.find((e) => e.name == "Document QA") && (
-            <UndrawCardComponent
-              key={2}
-              flow={examples.find((e) => e.name == "Document QA")!}
-            />
-          )}
-          {examples.find((e) => e.name == "Blog Writer") && (
-            <UndrawCardComponent
-              key={3}
-              flow={examples.find((e) => e.name == "Blog Writer")!}
-            />
-          )}
-          {examples.find((e) => e.name == "Vector Store RAG") && (
-            <UndrawCardComponent
-              key={4}
-              flow={examples.find((e) => e.name == "Vector Store RAG")!}
-            />
-          )}
+            {examples.find(
+              (e) => e.name == "Basic Prompting (Hello, World)",
+            ) && (
+              <UndrawCardComponent
+                key={0}
+                flow={
+                  examples.find(
+                    (e) => e.name == "Basic Prompting (Hello, World)",
+                  )!
+                }
+              />
+            )}
+            {examples.find((e) => e.name == "Memory Chatbot") && (
+              <UndrawCardComponent
+                key={1}
+                flow={examples.find((e) => e.name == "Memory Chatbot")!}
+              />
+            )}
+            {examples.find((e) => e.name == "Document QA") && (
+              <UndrawCardComponent
+                key={2}
+                flow={examples.find((e) => e.name == "Document QA")!}
+              />
+            )}
+            {examples.find((e) => e.name == "Blog Writer") && (
+              <UndrawCardComponent
+                key={3}
+                flow={examples.find((e) => e.name == "Blog Writer")!}
+              />
+            )}
+            {examples.find((e) => e.name == "Vector Store RAG") && (
+              <UndrawCardComponent
+                key={4}
+                flow={examples.find((e) => e.name == "Vector Store RAG")!}
+              />
+            )}
+            {examples.find((e) => e.name == "Simple Agent") && (
+              <UndrawCardComponent
+                key={5}
+                flow={examples.find((e) => e.name == "Simple Agent")!}
+              />
+            )}
+            {examples.find((e) => e.name == "Travel Planning Agents") && (
+              <UndrawCardComponent
+                key={6}
+                flow={examples.find((e) => e.name == "Travel Planning Agents")!}
+              />
+            )}
+            {examples.find((e) => e.name == "Dynamic Agent") && (
+              <UndrawCardComponent
+                key={7}
+                flow={examples.find((e) => e.name == "Dynamic Agent")!}
+              />
+            )}
+          </div>
         </div>
       </BaseModal.Content>
     </BaseModal>

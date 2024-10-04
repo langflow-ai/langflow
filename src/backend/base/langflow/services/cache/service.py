@@ -3,17 +3,15 @@ import pickle
 import threading
 import time
 from collections import OrderedDict
-from typing import Generic, Optional
+from typing import Generic, Union
 
 from loguru import logger
 
 from langflow.services.cache.base import AsyncBaseCacheService, AsyncLockType, CacheService, LockType
-from langflow.services.cache.utils import CacheMiss
-
-CACHE_MISS = CacheMiss()
+from langflow.services.cache.utils import CACHE_MISS
 
 
-class ThreadingInMemoryCache(CacheService, Generic[LockType]):
+class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
     """
     A simple in-memory cache using an OrderedDict.
 
@@ -52,7 +50,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         self.max_size = max_size
         self.expiration_time = expiration_time
 
-    def get(self, key, lock: Optional[threading.Lock] = None):
+    def get(self, key, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """
         Retrieve an item from the cache.
 
@@ -74,16 +72,11 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
                 # Move the key to the end to make it recently used
                 self._cache.move_to_end(key)
                 # Check if the value is pickled
-                if isinstance(item["value"], bytes):
-                    value = pickle.loads(item["value"])
-                else:
-                    value = item["value"]
-                return value
-            else:
-                self.delete(key)
+                return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
+            self.delete(key)
         return None
 
-    def set(self, key, value, lock: Optional[threading.Lock] = None):
+    def set(self, key, value, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """
         Add an item to the cache.
 
@@ -104,7 +97,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
 
             self._cache[key] = {"value": value, "time": time.time()}
 
-    def upsert(self, key, value, lock: Optional[threading.Lock] = None):
+    def upsert(self, key, value, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """
         Inserts or updates a value in the cache.
         If the existing value and the new value are both dictionaries, they are merged.
@@ -121,7 +114,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
 
             self.set(key, value)
 
-    def get_or_set(self, key, value, lock: Optional[threading.Lock] = None):
+    def get_or_set(self, key, value, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """
         Retrieve an item from the cache. If the item does not exist,
         set it with the provided value.
@@ -139,7 +132,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
             self.set(key, value)
             return value
 
-    def delete(self, key, lock: Optional[threading.Lock] = None):
+    def delete(self, key, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """
         Remove an item from the cache.
 
@@ -149,7 +142,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         with lock or self._lock:
             self._cache.pop(key, None)
 
-    def clear(self, lock: Optional[threading.Lock] = None):
+    def clear(self, lock: Union[threading.Lock, None] = None):  # noqa: UP007
         """
         Clear all items from the cache.
         """
@@ -181,7 +174,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
 
 
-class RedisCache(CacheService, Generic[LockType]):
+class RedisCache(AsyncBaseCacheService, Generic[LockType]):  # type: ignore
     """
     A Redis-based cache implementation.
 
@@ -218,10 +211,11 @@ class RedisCache(CacheService, Generic[LockType]):
         try:
             import redis
         except ImportError as exc:
-            raise ImportError(
+            msg = (
                 "RedisCache requires the redis-py package."
                 " Please install Langflow with the deploy extra: pip install langflow[deploy]"
-            ) from exc
+            )
+            raise ImportError(msg) from exc
         logger.warning(
             "RedisCache is an experimental feature and may not work as expected."
             " Please report any issues to our GitHub repository."
@@ -273,9 +267,11 @@ class RedisCache(CacheService, Generic[LockType]):
             if pickled := pickle.dumps(value):
                 result = self._client.setex(str(key), self.expiration_time, pickled)
                 if not result:
-                    raise ValueError("RedisCache could not set the value.")
+                    msg = "RedisCache could not set the value."
+                    raise ValueError(msg)
         except TypeError as exc:
-            raise TypeError("RedisCache only accepts values that can be pickled. ") from exc
+            msg = "RedisCache only accepts values that can be pickled. "
+            raise TypeError(msg) from exc
 
     async def upsert(self, key, value, lock=None):
         """
@@ -331,7 +327,7 @@ class RedisCache(CacheService, Generic[LockType]):
         return f"RedisCache(expiration_time={self.expiration_time})"
 
 
-class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
+class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type: ignore
     def __init__(self, max_size=None, expiration_time=3600):
         self.cache = OrderedDict()
 
@@ -339,7 +335,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         self.max_size = max_size
         self.expiration_time = expiration_time
 
-    async def get(self, key, lock: Optional[asyncio.Lock] = None):
+    async def get(self, key, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 return await self._get(key)
@@ -352,12 +348,11 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
             if time.time() - item["time"] < self.expiration_time:
                 self.cache.move_to_end(key)
                 return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
-            else:
-                logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
-                await self._delete(key)  # Log before deleting the expired item
+            logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
+            await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS
 
-    async def set(self, key, value, lock: Optional[asyncio.Lock] = None):
+    async def set(self, key, value, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 await self._set(
@@ -376,7 +371,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         self.cache[key] = {"value": value, "time": time.time()}
         self.cache.move_to_end(key)
 
-    async def delete(self, key, lock: Optional[asyncio.Lock] = None):
+    async def delete(self, key, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 await self._delete(key)
@@ -387,7 +382,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         if key in self.cache:
             del self.cache[key]
 
-    async def clear(self, lock: Optional[asyncio.Lock] = None):
+    async def clear(self, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 await self._clear()
@@ -397,7 +392,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
     async def _clear(self):
         self.cache.clear()
 
-    async def upsert(self, key, value, lock: Optional[asyncio.Lock] = None):
+    async def upsert(self, key, value, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 await self._upsert(key, value)

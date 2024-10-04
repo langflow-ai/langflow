@@ -1,4 +1,8 @@
+import { INVALID_FILE_SIZE_ALERT } from "@/constants/alerts_constants";
+import { useDeleteBuilds } from "@/controllers/API/queries/_builds";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { track } from "@/customization/utils/analytics";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -10,11 +14,10 @@ import {
   FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "../../../../constants/constants";
-import { deleteFlowPool } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { VertexBuildTypeAPI, sendAllProps } from "../../../../types/api";
+import { VertexBuildTypeAPI } from "../../../../types/api";
 import { ChatMessageType } from "../../../../types/chat";
 import { FilePreviewType, chatViewProps } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
@@ -40,6 +43,8 @@ export default function ChatView({
   const outputIds = outputs.map((obj) => obj.id);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const [id, setId] = useState<string>("");
+  const { mutate: mutateDeleteFlowPool } = useDeleteBuilds();
+  const maxFileSizeUpload = useUtilityStore((state) => state.maxFileSizeUpload);
 
   //build chat history
   useEffect(() => {
@@ -79,7 +84,6 @@ export default function ChatView({
 
           const is_ai =
             sender === "Machine" || sender === null || sender === undefined;
-
           return {
             isSend: !is_ai,
             message,
@@ -116,9 +120,15 @@ export default function ChatView({
 
   function clearChat(): void {
     setChatHistory([]);
-    deleteFlowPool(currentFlowId).then((_) => {
-      CleanFlowPool();
-    });
+
+    mutateDeleteFlowPool(
+      { flowId: currentFlowId },
+      {
+        onSuccess: () => {
+          CleanFlowPool();
+        },
+      },
+    );
     //TODO tell backend to clear chat session
     if (lockChat) setLockChat(false);
   }
@@ -149,12 +159,7 @@ export default function ChatView({
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
-    setIsDragging,
-    setFiles,
-    currentFlowId,
-    setErrorData,
-  );
+  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(setIsDragging);
 
   const onDrop = (e) => {
     e.preventDefault();
@@ -171,6 +176,13 @@ export default function ChatView({
     if (files) {
       const file = files?.[0];
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
+      if (file.size > maxFileSizeUpload) {
+        setErrorData({
+          title: INVALID_FILE_SIZE_ALERT(maxFileSizeUpload / 1024 / 1024),
+        });
+        return;
+      }
+
       if (
         !fileExtension ||
         !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
@@ -206,13 +218,17 @@ export default function ChatView({
               return newFiles;
             });
           },
-          onError: () => {
+          onError: (error) => {
             setFiles((prev) => {
               const newFiles = [...prev];
               const updatedIndex = newFiles.findIndex((file) => file.id === id);
               newFiles[updatedIndex].loading = false;
               newFiles[updatedIndex].error = true;
               return newFiles;
+            });
+            setErrorData({
+              title: "Error uploading file",
+              list: [error.response?.data?.detail],
             });
           },
         },
@@ -283,9 +299,10 @@ export default function ChatView({
               chatValue={chatValue}
               noInput={!inputTypes.includes("ChatInput")}
               lockChat={lockChat}
-              sendMessage={({ repeat, files }) =>
-                sendMessage({ repeat, files })
-              }
+              sendMessage={({ repeat, files }) => {
+                sendMessage({ repeat, files });
+                track("Playground Message Sent");
+              }}
               setChatValue={(value) => {
                 setChatValue(value);
               }}

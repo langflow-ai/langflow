@@ -1,15 +1,19 @@
+import { CustomNavigate } from "@/customization/components/custom-navigate";
+import { LoadingPage } from "@/pages/LoadingPage";
+import useAuthStore from "@/stores/authStore";
 import { useContext } from "react";
-import { Navigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/authContext";
 
 export const ProtectedAdminRoute = ({ children }) => {
-  const { isAdmin, isAuthenticated, logout, userData, autoLogin } =
-    useContext(AuthContext);
+  const { userData } = useContext(AuthContext);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const autoLogin = useAuthStore((state) => state.autoLogin);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
 
   if (!isAuthenticated) {
-    logout();
+    return <LoadingPage />;
   } else if ((userData && !isAdmin) || autoLogin) {
-    return <Navigate to="/" replace />;
+    return <CustomNavigate to="/" replace />;
   } else {
     return children;
   }

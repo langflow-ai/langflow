@@ -1,13 +1,18 @@
-from typing import Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
 from langflow.services.deps import get_settings_service
 from langflow.services.plugins.base import CallbackPlugin
 
+if TYPE_CHECKING:
+    from langfuse import Langfuse  # type: ignore
+
 
 class LangfuseInstance:
-    _instance = None
+    _instance: Langfuse | None = None
 
     @classmethod
     def get(cls):
@@ -62,7 +67,7 @@ class LangfusePlugin(CallbackPlugin):
     def get(self):
         return LangfuseInstance.get()
 
-    def get_callback(self, _id: Optional[str] = None):
+    def get_callback(self, _id: str | None = None):
         if _id is None:
             _id = "default"
 

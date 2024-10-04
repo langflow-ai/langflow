@@ -1,8 +1,9 @@
 import base64
 import random
 import warnings
+from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Coroutine, Optional, Union
+from typing import Annotated
 from uuid import UUID
 
 from cryptography.fernet import Fernet
@@ -16,7 +17,7 @@ from starlette.websockets import WebSocket
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
-from langflow.services.database.models.user.model import User
+from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session, get_settings_service
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
@@ -32,9 +33,9 @@ async def api_key_security(
     query_param: str = Security(api_key_query),
     header_param: str = Security(api_key_header),
     db: Session = Depends(get_session),
-) -> Optional[User]:
+) -> UserRead | None:
     settings_service = get_settings_service()
-    result: Optional[Union[ApiKey, User]] = None
+    result: ApiKey | User | None = None
     if settings_service.auth_settings.AUTO_LOGIN:
         # Get the first user
         if not settings_service.auth_settings.SUPERUSER:
@@ -63,9 +64,11 @@ async def api_key_security(
             detail="Invalid or missing API key",
         )
     if isinstance(result, ApiKey):
-        return result.user
-    elif isinstance(result, User):
-        return result
+        return UserRead.model_validate(result.user, from_attributes=True)
+    if isinstance(result, User):
+        return UserRead.model_validate(result, from_attributes=True)
+    msg = "Invalid result type"
+    raise ValueError(msg)
 
 
 async def get_current_user(
@@ -76,15 +79,14 @@ async def get_current_user(
 ) -> User:
     if token:
         return await get_current_user_by_jwt(token, db)
-    else:
-        user = await api_key_security(query_param, header_param, db)
-        if user:
-            return user
+    user = await api_key_security(query_param, header_param, db)
+    if user:
+        return user
 
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or missing API key",
-        )
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Invalid or missing API key",
+    )
 
 
 async def get_current_user_by_jwt(
@@ -153,15 +155,14 @@ async def get_current_user_for_websocket(
     websocket: WebSocket,
     db: Session = Depends(get_session),
     query_param: str = Security(api_key_query),
-) -> Optional[User]:
+) -> User | None:
     token = websocket.query_params.get("token")
     api_key = websocket.query_params.get("x-api-key")
     if token:
         return await get_current_user_by_jwt(token, db)
-    elif api_key:
+    if api_key:
         return await api_key_security(api_key, query_param, db)
-    else:
-        return None
+    return None
 
 
 def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
@@ -305,7 +306,13 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
             )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
-        if user_id is None or token_type is None:
+
+        if user_id is None or token_type == "":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+        user_exists = get_user_by_id(db, user_id)
+
+        if user_exists is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
         return create_user_tokens(user_id, db)
@@ -318,7 +325,7 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
         ) from e
 
 
-def authenticate_user(username: str, password: str, db: Session = Depends(get_session)) -> Optional[User]:
+def authenticate_user(username: str, password: str, db: Session = Depends(get_session)) -> User | None:
     user = get_user_by_username(db, username)
 
     if not user:
@@ -354,8 +361,7 @@ def ensure_valid_key(s: str) -> bytes:
 def get_fernet(settings_service=Depends(get_settings_service)):
     SECRET_KEY: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
     valid_key = ensure_valid_key(SECRET_KEY)
-    fernet = Fernet(valid_key)
-    return fernet
+    return Fernet(valid_key)
 
 
 def encrypt_api_key(api_key: str, settings_service=Depends(get_settings_service)):
@@ -367,10 +373,11 @@ def encrypt_api_key(api_key: str, settings_service=Depends(get_settings_service)
 
 def decrypt_api_key(encrypted_api_key: str, settings_service=Depends(get_settings_service)):
     fernet = get_fernet(settings_service)
+    decrypted_key = ""
     # Two-way decryption
     if isinstance(encrypted_api_key, str):
-        encoded_bytes = encrypted_api_key.encode()
-    else:
-        encoded_bytes = encrypted_api_key
-    decrypted_key = fernet.decrypt(encoded_bytes).decode()
+        try:
+            decrypted_key = fernet.decrypt(encrypted_api_key.encode()).decode()
+        except Exception:
+            decrypted_key = fernet.decrypt(encrypted_api_key).decode()
     return decrypted_key

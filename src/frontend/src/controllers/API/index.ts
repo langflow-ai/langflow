@@ -1,35 +1,25 @@
-import { ColDef, ColGroupDef } from "ag-grid-community";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { Edge, Node, ReactFlowJsonObject } from "reactflow";
-import { BASE_URL_API, MAX_BATCH_SIZE } from "../../constants/constants";
+import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
-  APITemplateType,
   Component,
   CustomComponentRequest,
-  LoginType,
-  ProfilePicturesTypeAPI,
+  PromptTypeAPI,
   Users,
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
-  changeUser,
-  resetPasswordType,
   sendAllProps,
 } from "../../types/api/index";
-import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
-import { Message } from "../../types/messages";
 import { StoreComponentResponse } from "../../types/store";
 import { FlowPoolType } from "../../types/zustand/flow";
-import { extractColumnsFromRows } from "../../utils/utils";
 import {
   APIClassType,
   BuildStatusTypeAPI,
   InitTypeAPI,
-  PromptTypeAPI,
   UploadFileTypeAPI,
-  errorsTypeAPI,
 } from "./../../types/api/index";
 
 /**
@@ -49,7 +39,7 @@ const GITHUB_API_URL = "https://api.github.com";
 export async function getRepoStars(owner: string, repo: string) {
   try {
     const response = await api.get(`${GITHUB_API_URL}/repos/${owner}/${repo}`);
-    return response.data.stargazers_count;
+    return response?.data.stargazers_count;
   } catch (error) {
     console.error("Error fetching repository data:", error);
     return null;
@@ -64,12 +54,6 @@ export async function getRepoStars(owner: string, repo: string) {
  */
 export async function sendAll(data: sendAllProps) {
   return await api.post(`${BASE_URL_API}predict`, data);
-}
-
-export async function postValidateCode(
-  code: string,
-): Promise<AxiosResponse<errorsTypeAPI>> {
-  return await api.post(`${BASE_URL_API}validate/code`, { code });
 }
 
 /**
@@ -101,7 +85,7 @@ export async function getExamples(): Promise<FlowType[]> {
     "https://api.github.com/repos/langflow-ai/langflow_examples/contents/examples?ref=main";
   const response = await api.get(url);
 
-  const jsonFiles = response.data.filter((file: any) => {
+  const jsonFiles = response?.data.filter((file: any) => {
     return file.name.endsWith(".json");
   });
 
@@ -140,38 +124,10 @@ export async function saveFlowToDatabase(newFlow: {
       endpoint_name: newFlow.endpoint_name,
     });
 
-    if (response.status !== 201) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-/**
- * Updates an existing flow in the database.
- *
- * @param {FlowType} updatedFlow - The updated flow data.
- * @returns {Promise<any>} The updated flow data.
- * @throws Will throw an error if the update fails.
- */
-export async function updateFlowInDatabase(
-  updatedFlow: FlowType,
-): Promise<FlowType> {
-  try {
-    const response = await api.patch(`${BASE_URL_API}flows/${updatedFlow.id}`, {
-      name: updatedFlow.name,
-      data: updatedFlow.data,
-      description: updatedFlow.description,
-      folder_id: updatedFlow.folder_id === "" ? null : updatedFlow.folder_id,
-      endpoint_name: updatedFlow.endpoint_name,
-    });
-
-    if (response?.status !== 200) {
+    if (response?.status !== 201) {
       throw new Error(`HTTP error! status: ${response?.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -187,23 +143,10 @@ export async function updateFlowInDatabase(
 export async function readFlowsFromDatabase() {
   try {
     const response = await api.get(`${BASE_URL_API}flows/`);
-    if (response?.status !== 200) {
+    if (response && response?.status !== 200) {
       throw new Error(`HTTP error! status: ${response?.status}`);
     }
-    return response.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-export async function downloadFlowsFromDatabase() {
-  try {
-    const response = await api.get(`${BASE_URL_API}flows/download/`);
-    if (response?.status !== 200) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -217,7 +160,7 @@ export async function uploadFlowsToDatabase(flows: FormData) {
     if (response?.status !== 201) {
       throw new Error(`HTTP error! status: ${response?.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -237,7 +180,7 @@ export async function deleteFlowFromDatabase(flowId: string) {
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -254,10 +197,10 @@ export async function deleteFlowFromDatabase(flowId: string) {
 export async function getFlowFromDatabase(flowId: number) {
   try {
     const response = await api.get(`${BASE_URL_API}flows/${flowId}`);
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (response && response?.status !== 200) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -276,33 +219,7 @@ export async function getFlowStylesFromDatabase() {
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-/**
- * Saves a new flow style to the database.
- *
- * @param {FlowStyleType} flowStyle - The flow style data to save.
- * @returns {Promise<any>} The saved flow style data.
- * @throws Will throw an error if saving fails.
- */
-export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
-  try {
-    const response = await api.post(`${BASE_URL_API}flow_styles/`, flowStyle, {
-      headers: {
-        accept: "application/json",
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (response.status !== 201) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -316,7 +233,7 @@ export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
  */
 export async function getVersion() {
   const response = await api.get(`${BASE_URL_API}version`);
-  return response.data;
+  return response?.data;
 }
 
 /**
@@ -362,19 +279,6 @@ export async function uploadFile(
   return await api.post(`${BASE_URL_API}files/upload/${id}`, formData);
 }
 
-export async function getProfilePictures(): Promise<ProfilePicturesTypeAPI | null> {
-  try {
-    const res = await api.get(`${BASE_URL_API}files/profile_pictures/list`);
-
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
-  return null;
-}
-
 export async function postCustomComponent(
   code: string,
   apiClass: APIClassType,
@@ -384,59 +288,6 @@ export async function postCustomComponent(
     code,
     frontend_node: apiClass,
   });
-}
-
-export async function postCustomComponentUpdate(
-  code: string,
-  template: APITemplateType,
-  field: string,
-  field_value: any,
-): Promise<AxiosResponse<APIClassType>> {
-  return await api.post(`${BASE_URL_API}custom_component/update`, {
-    code,
-    template,
-    field,
-    field_value,
-  });
-}
-
-export async function onLogin(user: LoginType) {
-  try {
-    const response = await api.post(
-      `${BASE_URL_API}login`,
-      new URLSearchParams({
-        username: user.username,
-        password: user.password,
-      }).toString(),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      },
-    );
-
-    if (response.status === 200) {
-      const data = response.data;
-      return data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function autoLogin(abortSignal) {
-  try {
-    const response = await api.get(`${BASE_URL_API}auto_login`, {
-      signal: abortSignal,
-    });
-
-    if (response.status === 200) {
-      const data = response.data;
-      return data;
-    }
-  } catch (error) {
-    throw error;
-  }
 }
 
 export async function renewAccessToken() {
@@ -460,18 +311,6 @@ export async function getLoggedUser(): Promise<Users | null> {
   return null;
 }
 
-export async function addUser(user: UserInputType): Promise<Array<Users>> {
-  try {
-    const res = await api.post(`${BASE_URL_API}users/`, user);
-    if (res.status !== 201) {
-      throw new Error(res.data.detail);
-    }
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
-}
-
 export async function getUsersPage(
   skip: number,
   limit: number,
@@ -487,42 +326,6 @@ export async function getUsersPage(
     throw error;
   }
   return [];
-}
-
-export async function deleteUser(user_id: string) {
-  try {
-    const res = await api.delete(`${BASE_URL_API}users/${user_id}`);
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function updateUser(user_id: string, user: changeUser) {
-  try {
-    const res = await api.patch(`${BASE_URL_API}users/${user_id}`, user);
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function resetPassword(user_id: string, user: resetPasswordType) {
-  try {
-    const res = await api.patch(
-      `${BASE_URL_API}users/${user_id}/reset-password`,
-      user,
-    );
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
 }
 
 export async function getApiKey() {
@@ -607,7 +410,7 @@ export async function saveFlowStore(
     if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -629,7 +432,7 @@ export async function getStoreComponents({
   limit = 9999999,
   is_component = null,
   sort = "-count(liked_by)",
-  tags = [] || null,
+  tags = [],
   liked = null,
   isPrivate = null,
   search = null,
@@ -862,7 +665,7 @@ export async function updateFlowStore(
     if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -872,73 +675,9 @@ export async function updateFlowStore(
 export async function requestLogout() {
   try {
     const response = await api.post(`${BASE_URL_API}logout`);
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
-    throw error;
-  }
-}
-
-export async function getGlobalVariables(): Promise<{
-  [key: string]: { id: string; type: string; default_fields: string[] };
-}> {
-  const globalVariables = {};
-  (await api.get(`${BASE_URL_API}variables/`)).data.forEach((element) => {
-    globalVariables[element.name] = {
-      id: element.id,
-      type: element.type,
-      default_fields: element.default_fields,
-    };
-  });
-  return globalVariables;
-}
-
-export async function registerGlobalVariable({
-  name,
-  value,
-  type,
-  default_fields = [],
-}: {
-  name: string;
-  value: string;
-  type?: string;
-  default_fields?: string[];
-}): Promise<AxiosResponse<{ name: string; id: string; type: string }>> {
-  try {
-    const response = await api.post(`${BASE_URL_API}variables/`, {
-      name,
-      value,
-      type,
-      default_fields: default_fields,
-    });
-    return response;
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function deleteGlobalVariable(id: string) {
-  try {
-    const response = await api.delete(`${BASE_URL_API}variables/${id}`);
-    return response;
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function updateGlobalVariable(
-  name: string,
-  value: string,
-  id: string,
-) {
-  try {
-    const response = api.patch(`${BASE_URL_API}variables/${id}`, {
-      name,
-      value,
-    });
-
-    return response;
-  } catch (error) {
     throw error;
   }
 }
@@ -998,16 +737,11 @@ export async function downloadImage({ flowId, fileName }): Promise<any> {
 
 export async function getFlowPool({
   flowId,
-  nodeId,
 }: {
   flowId: string;
-  nodeId?: string;
 }): Promise<AxiosResponse<{ vertex_builds: FlowPoolType }>> {
   const config = {};
   config["params"] = { flow_id: flowId };
-  if (nodeId) {
-    config["params"] = { nodeId };
-  }
   return await api.get(`${BASE_URL_API}monitor/builds`, config);
 }
 
@@ -1017,99 +751,4 @@ export async function deleteFlowPool(
   const config = {};
   config["params"] = { flow_id: flowId };
   return await api.delete(`${BASE_URL_API}monitor/builds`, config);
-}
-
-/**
- * Deletes multiple flow components by their IDs.
- * @param flowIds - An array of flow IDs to be deleted.
- * @param token - The authorization token for the API request.
- * @returns A promise that resolves to an array of AxiosResponse objects representing the delete responses.
- */
-export async function multipleDeleteFlowsComponents(
-  flowIds: string[],
-): Promise<AxiosResponse<any>[]> {
-  const batches: string[][] = [];
-
-  // Split the flowIds into batches
-  for (let i = 0; i < flowIds.length; i += MAX_BATCH_SIZE) {
-    batches.push(flowIds.slice(i, i + MAX_BATCH_SIZE));
-  }
-
-  // Function to delete a batch of flow IDs
-  const deleteBatch = async (batch: string[]): Promise<AxiosResponse<any>> => {
-    try {
-      return await api.delete(`${BASE_URL_API}flows/`, {
-        data: batch,
-      });
-    } catch (error) {
-      console.error("Error deleting flows:", error);
-      throw error;
-    }
-  };
-
-  // Execute all delete requests
-  const responses: Promise<AxiosResponse<any>>[] = batches.map((batch) =>
-    deleteBatch(batch),
-  );
-
-  // Return the responses after all requests are completed
-  return Promise.all(responses);
-}
-
-export async function getTransactionTable(
-  id: string,
-  mode: "intersection" | "union",
-  params = {},
-): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
-  const config = {};
-  config["params"] = { flow_id: id };
-  if (params) {
-    config["params"] = { ...config["params"], ...params };
-  }
-  const rows = await api.get(`${BASE_URL_API}monitor/transactions`, config);
-  const columns = extractColumnsFromRows(rows.data, mode);
-  return { rows: rows.data, columns };
-}
-
-export async function getMessagesTable(
-  mode: "intersection" | "union",
-  id?: string,
-  excludedFields?: string[],
-  params = {},
-): Promise<{ rows: Array<Message>; columns: Array<ColDef | ColGroupDef> }> {
-  const config = {};
-  if (id) {
-    config["params"] = { flow_id: id };
-  }
-  if (params) {
-    config["params"] = { ...config["params"], ...params };
-  }
-  const rows = await api.get(`${BASE_URL_API}monitor/messages`, config);
-
-  const rowsOrganized = rows.data;
-
-  const columns = extractColumnsFromRows(rowsOrganized, mode, excludedFields);
-  const sessions = new Set<string>();
-  rowsOrganized.forEach((row) => {
-    sessions.add(row.session_id);
-  });
-  return { rows: rowsOrganized, columns };
-}
-
-export async function deleteMessagesFn(ids: string[]) {
-  try {
-    return await api.delete(`${BASE_URL_API}monitor/messages`, {
-      data: ids,
-    });
-  } catch (error) {
-    console.error("Error deleting flows:", error);
-    throw error;
-  }
-}
-
-export async function updateMessageApi(data: Message) {
-  if (data.files && typeof data.files === "string") {
-    data.files = JSON.parse(data.files);
-  }
-  return await api.put(`${BASE_URL_API}monitor/messages/${data.id}`, data);
 }

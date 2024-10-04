@@ -1,12 +1,15 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
+
+from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from loguru import logger
 
 from langflow.api.v1.schemas import ChatResponse, PromptResponse
 from langflow.services.deps import get_chat_service, get_socket_service
 from langflow.utils.util import remove_ansi_escape_codes
-from langchain_core.agents import AgentAction, AgentFinish
 
 if TYPE_CHECKING:
     from langflow.services.socket.service import SocketIOService
@@ -24,7 +27,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
     def __init__(self, session_id: str):
         self.chat_service = get_chat_service()
         self.client_id = session_id
-        self.socketio_service: "SocketIOService" = get_socket_service()
+        self.socketio_service: SocketIOService = get_socket_service()
         self.sid = session_id
         # self.socketio_service = self.chat_service.active_connections[self.client_id]
 
@@ -32,7 +35,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
         resp = ChatResponse(message=token, type="stream", intermediate_steps="")
         await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
 
-    async def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs: Any) -> Any:
+    async def on_tool_start(self, serialized: dict[str, Any], input_str: str, **kwargs: Any) -> Any:
         """Run when tool starts running."""
         resp = ChatResponse(
             message="",
@@ -79,8 +82,8 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
         error: BaseException,
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
-        tags: Optional[List[str]] = None,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
         **kwargs: Any,
     ) -> None:
         """Run when tool errors."""

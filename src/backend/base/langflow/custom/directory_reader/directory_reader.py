@@ -6,7 +6,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from langflow.custom import CustomComponent
+from langflow.custom import Component
 
 
 class CustomComponentPathValueError(ValueError):
@@ -109,7 +109,7 @@ class DirectoryReader:
         """
         if not os.path.isfile(file_path):
             return None
-        with open(file_path, "r", encoding="utf-8") as file:
+        with open(file_path, encoding="utf-8") as file:
             # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069: character maps to <undefined>
             try:
                 return file.read()
@@ -124,7 +124,8 @@ class DirectoryReader:
         Walk through the directory path and return a list of all .py files.
         """
         if not (safe_path := self.get_safe_path()):
-            raise CustomComponentPathValueError(f"The path needs to start with '{self.base_path}'.")
+            msg = f"The path needs to start with '{self.base_path}'."
+            raise CustomComponentPathValueError(msg)
 
         file_list = []
         safe_path_obj = Path(safe_path)
@@ -221,21 +222,20 @@ class DirectoryReader:
 
         if file_content is None:
             return False, f"Could not read {file_path}"
-        elif self.is_empty_file(file_content):
+        if self.is_empty_file(file_content):
             return False, "Empty file"
-        elif not self.validate_code(file_content):
+        if not self.validate_code(file_content):
             return False, "Syntax error"
-        elif self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
+        if self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
             "Optional", file_content
         ):
             return (
                 False,
                 "Type hint 'Optional' is used but not imported in the code.",
             )
-        else:
-            if self.compress_code_field:
-                file_content = str(StringCompressor(file_content).compress_string())
-            return True, file_content
+        if self.compress_code_field:
+            file_content = str(StringCompressor(file_content).compress_string())
+        return True, file_content
 
     def build_component_menu_list(self, file_paths):
         """
@@ -299,21 +299,20 @@ class DirectoryReader:
 
         if file_content is None:
             return False, f"Could not read {file_path}"
-        elif self.is_empty_file(file_content):
+        if self.is_empty_file(file_content):
             return False, "Empty file"
-        elif not self.validate_code(file_content):
+        if not self.validate_code(file_content):
             return False, "Syntax error"
-        elif self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
+        if self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
             "Optional", file_content
         ):
             return (
                 False,
                 "Type hint 'Optional' is used but not imported in the code.",
             )
-        else:
-            if self.compress_code_field:
-                file_content = str(StringCompressor(file_content).compress_string())
-            return True, file_content
+        if self.compress_code_field:
+            file_content = str(StringCompressor(file_content).compress_string())
+        return True, file_content
 
     async def get_output_types_from_code_async(self, code: str):
         return await asyncio.to_thread(self.get_output_types_from_code, code)
@@ -325,7 +324,7 @@ class DirectoryReader:
         tasks = [self.process_file_async(file_path) for file_path in file_paths]
         results = await asyncio.gather(*tasks)
 
-        for file_path, (validation_result, result_content) in zip(file_paths, results):
+        for file_path, (validation_result, result_content) in zip(file_paths, results, strict=True):
             menu_name = os.path.basename(os.path.dirname(file_path))
             filename = os.path.basename(file_path)
 
@@ -348,7 +347,7 @@ class DirectoryReader:
                 try:
                     output_types = await self.get_output_types_from_code_async(result_content)
                 except Exception as exc:
-                    logger.exception(f"Error while getting output types from code: {str(exc)}")
+                    logger.error(f"Error while getting output types from code: {str(exc)}")
                     output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]
@@ -373,7 +372,7 @@ class DirectoryReader:
         """
         Get the output types from the code.
         """
-        custom_component = CustomComponent(code=code)
+        custom_component = Component(_code=code)
         types_list = custom_component.get_function_entrypoint_return_type
 
         # Get the name of types classes

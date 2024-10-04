@@ -1,3 +1,4 @@
+import { FlowType } from "@/types/flow";
 import {
   Connection,
   Edge,
@@ -53,9 +54,19 @@ export type FlowPoolType = {
 };
 
 export type FlowStoreType = {
+  autoSaveFlow: (() => void) | undefined;
+  componentsToUpdate: boolean;
+  updateComponentsToUpdate: (nodes: Node[]) => void;
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;
+  setHasIO: (hasIO: boolean) => void;
+  setInputs: (
+    inputs: Array<{ type: string; id: string; displayName: string }>,
+  ) => void;
+  setOutputs: (
+    outputs: Array<{ type: string; id: string; displayName: string }>,
+  ) => void;
   inputs: Array<{
     type: string;
     id: string;
@@ -74,11 +85,7 @@ export type FlowStoreType = {
   isPending: boolean;
   setIsBuilding: (isBuilding: boolean) => void;
   setPending: (isPending: boolean) => void;
-  resetFlow: (flow: {
-    nodes: Node[];
-    edges: Edge[];
-    viewport: Viewport;
-  }) => void;
+  resetFlow: (flow: FlowType | undefined) => void;
   reactFlowInstance: ReactFlowInstance | null;
   setReactFlowInstance: (newState: ReactFlowInstance) => void;
   flowState: FlowState | undefined;
@@ -92,15 +99,13 @@ export type FlowStoreType = {
   edges: Edge[];
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
-  setNodes: (
-    update: Node[] | ((oldState: Node[]) => Node[]),
-    skipSave?: boolean,
+  setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void;
+  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void;
+  setNode: (
+    id: string,
+    update: Node | ((oldState: Node) => Node),
+    isUserChange?: boolean,
   ) => void;
-  setEdges: (
-    update: Edge[] | ((oldState: Edge[]) => Edge[]),
-    skipSave?: boolean,
-  ) => void;
-  setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void;
   getNode: (id: string) => Node | undefined;
   deleteNode: (nodeId: string | Array<string>) => void;
   deleteEdge: (edgeId: string | Array<string>) => void;
@@ -138,7 +143,7 @@ export type FlowStoreType = {
     vertices: {
       verticesIds: string[];
       verticesLayers: VertexLayerElementType[][];
-      runId: string;
+      runId?: string;
       verticesToRun: string[];
     } | null,
   ) => void;
@@ -147,7 +152,7 @@ export type FlowStoreType = {
   verticesBuild: {
     verticesIds: string[];
     verticesLayers: VertexLayerElementType[][];
-    runId: string;
+    runId?: string;
     verticesToRun: string[];
   } | null;
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
@@ -163,4 +168,65 @@ export type FlowStoreType = {
   getNodePosition: (nodeId: string) => { x: number; y: number };
   setLockChat: (lock: boolean) => void;
   lockChat: boolean;
+  updateFreezeStatus: (nodeIds: string[], freeze: boolean) => void;
+  currentFlow: FlowType | undefined;
+  setCurrentFlow: (flow: FlowType | undefined) => void;
+  updateCurrentFlow: ({
+    nodes,
+    edges,
+    viewport,
+  }: {
+    nodes?: Node[];
+    edges?: Edge[];
+    viewport?: Viewport;
+  }) => void;
+  handleDragging:
+    | {
+        source: string | undefined;
+        sourceHandle: string | undefined;
+        target: string | undefined;
+        targetHandle: string | undefined;
+        type: string;
+        color: string;
+      }
+    | undefined;
+  setHandleDragging: (
+    data:
+      | {
+          source: string | undefined;
+          sourceHandle: string | undefined;
+          target: string | undefined;
+          targetHandle: string | undefined;
+          type: string;
+          color: string;
+        }
+      | undefined,
+  ) => void;
+
+  filterType:
+    | {
+        source: string | undefined;
+        sourceHandle: string | undefined;
+        target: string | undefined;
+        targetHandle: string | undefined;
+        type: string;
+        color: string;
+      }
+    | undefined;
+  setFilterType: (
+    data:
+      | {
+          source: string | undefined;
+          sourceHandle: string | undefined;
+          target: string | undefined;
+          targetHandle: string | undefined;
+          type: string;
+          color: string;
+        }
+      | undefined,
+  ) => void;
+  updateEdgesRunningByNodes: (ids: string[], running: boolean) => void;
+  stopBuilding: () => void;
+  buildController: AbortController;
+  setBuildController: (controller: AbortController) => void;
 };

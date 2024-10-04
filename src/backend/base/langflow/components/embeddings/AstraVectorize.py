@@ -1,12 +1,16 @@
 from typing import Any
+
 from langflow.custom import Component
-from langflow.inputs.inputs import DictInput, SecretStrInput, MessageTextInput, DropdownInput
+from langflow.inputs.inputs import DictInput, DropdownInput, MessageTextInput, SecretStrInput
 from langflow.template.field.base import Output
 
 
-class AstraVectorize(Component):
-    display_name: str = "Astra Vectorize"
-    description: str = "Configuration options for Astra Vectorize server-side embeddings."
+class AstraVectorizeComponent(Component):
+    display_name: str = "Astra Vectorize [DEPRECATED]"
+    description: str = (
+        "Configuration options for Astra Vectorize server-side embeddings. "
+        "This component is deprecated. Please use the Astra DB Component directly."
+    )
     documentation: str = "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html"
     icon = "AstraDB"
     name = "AstraVectorize"
@@ -59,19 +63,29 @@ class AstraVectorize(Component):
         MessageTextInput(
             name="model_name",
             display_name="Model Name",
-            info=f"The embedding model to use for the selected provider. Each provider has a different set of models "
-            f"available (https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n{VECTORIZE_MODELS_STR}",
+            info="The embedding model to use for the selected provider. Each provider has a different set of models "
+            f"available (full list at https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n{VECTORIZE_MODELS_STR}",
             required=True,
+        ),
+        MessageTextInput(
+            name="api_key_name",
+            display_name="API Key name",
+            info="The name of the embeddings provider API key stored on Astra. "
+            "If set, it will override the 'ProviderKey' in the authentication parameters.",
+        ),
+        DictInput(
+            name="authentication",
+            display_name="Authentication parameters",
+            is_list=True,
+            advanced=True,
         ),
         SecretStrInput(
             name="provider_api_key",
             display_name="Provider API Key",
-            info="An alternative to the Astra Authentication that passes an API key for the provider with each request to Astra DB. This may be used when Vectorize is configured for the collection, but no corresponding provider secret is stored within Astra's key management system.",
-        ),
-        MessageTextInput(
-            name="api_key_name",
-            display_name="Provider API Key Name",
-            info="The name of the embeddings provider API key stored on Astra. If set, it will override the 'ProviderKey' in the authentication parameters.",
+            info="An alternative to the Astra Authentication that passes an API key for the provider with each request "
+            "to Astra DB. "
+            "This may be used when Vectorize is configured for the collection, "
+            "but no corresponding provider secret is stored within Astra's key management system.",
             advanced=True,
         ),
         DictInput(
@@ -93,7 +107,7 @@ class AstraVectorize(Component):
 
     def build_options(self) -> dict[str, Any]:
         provider_value = self.VECTORIZE_PROVIDERS_MAPPING[self.provider][0]
-        authentication = {**self.authentication}
+        authentication = {**(self.authentication or {})}
         api_key_name = self.api_key_name
         if api_key_name:
             authentication["providerKey"] = api_key_name
@@ -103,7 +117,7 @@ class AstraVectorize(Component):
                 "provider": provider_value,
                 "modelName": self.model_name,
                 "authentication": authentication,
-                "parameters": self.model_parameters,
+                "parameters": self.model_parameters or {},
             },
             "collection_embedding_api_key": self.provider_api_key,
         }

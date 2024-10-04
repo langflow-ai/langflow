@@ -2,6 +2,17 @@ name: CI
 
 on:
   workflow_call:
+    inputs:
+      python-versions:
+        description: "Python Versions"
+        required: false
+        type: string
+        default: "['3.10']"
+      frontend-tests-folder:
+        description: "Frontend Tests Folder"
+        required: false
+        type: string
+        default: "tests/core"
   workflow_dispatch:
     inputs:
       branch:
@@ -16,16 +27,34 @@ on:
         description: "Store API Key"
         required: false
         type: string
+      python-versions:
+        description: "Python Versions"
+        required: false
+        type: string
+        default: "['3.10']"
   pull_request:
-
-
+    types: [synchronize, labeled]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  set-ci-condition:
+    name: Should Run CI
+    runs-on: ubuntu-latest
+    outputs:
+      should-run-ci: ${{ (contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') }}
+    steps:
+      #  Do anything just to make the job run
+      - run: echo "Debug CI Condition"
+      - run: echo "Labels -> ${{ join(github.event.pull_request.labels.*.name, ',') }}"
+      - run: echo "IsDraft -> ${{ github.event.pull_request.draft }}"
+      - run: echo "Event name -> ${{ github.event_name }}"
   path-filter:
+    needs: set-ci-condition
+    if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' }}
+
     name: Filter Paths
     runs-on: ubuntu-latest
     outputs:
@@ -42,33 +71,23 @@ jobs:
         id: filter
         uses: dorny/paths-filter@v3
         with:
-          filters: |
-            python:
-              - "src/backend/**"
-              - "src/backend/**.py"
-              - "pyproject.toml"
-              - "poetry.lock"
-              - "**/python_test.yml"
-            tests:
-              - "tests/**"
-              - "src/frontend/tests/**"
-            frontend:
-              - "src/frontend/**"
-              - "**/typescript_test.yml"
-            docs:
-              - "docs/**"
+          filters: ./.github/changes-filter.yaml
 
   test-backend:
     needs: path-filter
     name: Run Backend Tests
     if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.tests == 'true' }}
     uses: ./.github/workflows/python_test.yml
+    with:
+      python-versions: ${{ inputs.python-versions || '["3.10"]' }}
 
   test-frontend:
     needs: path-filter
     name: Run Frontend Tests
     if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.tests == 'true' }}
     uses: ./.github/workflows/typescript_test.yml
+    with:
+      tests_folder: ${{ inputs.frontend-tests-folder }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
@@ -89,14 +108,21 @@ jobs:
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
-    needs: [test-backend, test-frontend, lint-backend, test-docs-build]
-    if: |
-      always()
+    needs:
+      [
+        test-backend,
+        test-frontend,
+        lint-backend,
+        test-docs-build,
+        set-ci-condition,
+      ]
+
+    if: always()
     runs-on: ubuntu-latest
     env:
       JOBS_JSON: ${{ toJSON(needs) }}
       RESULTS_JSON: ${{ toJSON(needs.*.result) }}
-      EXIT_CODE: ${{!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && '0' || '1'}}
+      EXIT_CODE: ${{!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.set-ci-condition.outputs.should-run-ci == 'true' && '0' || '1'}}
     steps:
       - name: "CI Success"
         run: |

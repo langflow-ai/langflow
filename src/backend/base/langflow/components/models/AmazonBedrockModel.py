@@ -1,10 +1,8 @@
-from langchain_aws import ChatBedrock
-
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.inputs import MessageTextInput
-from langflow.io import BoolInput, DictInput, DropdownInput, MessageInput
+from langflow.inputs import MessageTextInput, SecretStrInput
+from langflow.inputs.inputs import HandleInput
+from langflow.io import DictInput, DropdownInput
 
 
 class AmazonBedrockComponent(LCModelComponent):
@@ -13,8 +11,7 @@ class AmazonBedrockComponent(LCModelComponent):
     icon = "Amazon"
     name = "AmazonBedrockModel"
 
-    inputs = [
-        MessageInput(name="input_value", display_name="Input"),
+    inputs = LCModelComponent._base_inputs + [
         DropdownInput(
             name="model_id",
             display_name="Model ID",
@@ -53,35 +50,60 @@ class AmazonBedrockComponent(LCModelComponent):
             ],
             value="anthropic.claude-3-haiku-20240307-v1:0",
         ),
-        MessageTextInput(name="credentials_profile_name", display_name="Credentials Profile Name"),
+        SecretStrInput(name="aws_access_key", display_name="Access Key"),
+        SecretStrInput(name="aws_secret_key", display_name="Secret Key"),
+        MessageTextInput(name="credentials_profile_name", display_name="Credentials Profile Name", advanced=True),
         MessageTextInput(name="region_name", display_name="Region Name", value="us-east-1"),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True, is_list=True),
         MessageTextInput(name="endpoint_url", display_name="Endpoint URL", advanced=True),
-        MessageTextInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
             advanced=True,
+            input_types=["OutputParser"],
         ),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        model_id = self.model_id
-        credentials_profile_name = self.credentials_profile_name
-        region_name = self.region_name
-        model_kwargs = self.model_kwargs
-        endpoint_url = self.endpoint_url
-        stream = self.stream
+        try:
+            from langchain_aws import ChatBedrock
+        except ImportError as e:
+            msg = "langchain_aws is not installed. Please install it with `pip install langchain_aws`."
+            raise ImportError(msg) from e
+        if self.aws_access_key:
+            import boto3  # type: ignore
+
+            session = boto3.Session(
+                aws_access_key_id=self.aws_access_key,
+                aws_secret_access_key=self.aws_secret_key,
+            )
+        elif self.credentials_profile_name:
+            import boto3
+
+            session = boto3.Session(profile_name=self.credentials_profile_name)
+        else:
+            import boto3
+
+            session = boto3.Session()
+
+        client_params = {}
+        if self.endpoint_url:
+            client_params["endpoint_url"] = self.endpoint_url
+        if self.region_name:
+            client_params["region_name"] = self.region_name
+
+        boto3_client = session.client("bedrock-runtime", **client_params)
         try:
             output = ChatBedrock(  # type: ignore
-                credentials_profile_name=credentials_profile_name,
-                model_id=model_id,
-                region_name=region_name,
-                model_kwargs=model_kwargs,
-                endpoint_url=endpoint_url,
-                streaming=stream,
+                client=boto3_client,
+                model_id=self.model_id,
+                region_name=self.region_name,
+                model_kwargs=self.model_kwargs,
+                endpoint_url=self.endpoint_url,
+                streaming=self.stream,
             )
         except Exception as e:
-            raise ValueError("Could not connect to AmazonBedrock API.") from e
+            msg = "Could not connect to AmazonBedrock API."
+            raise ValueError(msg) from e
         return output  # type: ignore

@@ -1,48 +1,57 @@
+from __future__ import annotations
+
 import ast
 import asyncio
 import inspect
 import os
 import traceback
 import types
+from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional, Set
+from typing import TYPE_CHECKING, Any
 
+import pandas as pd
 from loguru import logger
 
+from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, UnbuiltResult
-from langflow.interface.initialize import loading
+from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
+from langflow.graph.vertex.schema import NodeData
+from langflow.interface import initialize
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
-from langflow.schema.schema import INPUT_FIELD_NAME, OutputLog, build_output_logs
+from langflow.schema.data import Data
+from langflow.schema.message import Message
+from langflow.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
 from langflow.services.deps import get_storage_service
-from langflow.services.monitor.utils import log_transaction
+from langflow.services.tracing.schema import Log
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async, unescape_string
 
 if TYPE_CHECKING:
-    from langflow.graph.edge.base import ContractEdge
+    from langflow.custom import Component
+    from langflow.graph.edge.base import CycleEdge, Edge
     from langflow.graph.graph.base import Graph
 
 
 class VertexStates(str, Enum):
     """Vertex are related to it being active, inactive, or in an error state."""
 
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    ERROR = "error"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    ERROR = "ERROR"
 
 
 class Vertex:
     def __init__(
         self,
-        data: Dict,
-        graph: "Graph",
-        base_type: Optional[str] = None,
+        data: NodeData,
+        graph: Graph,
+        base_type: str | None = None,
         is_task: bool = False,
-        params: Optional[Dict] = None,
+        params: dict | None = None,
     ) -> None:
         # is_external means that the Vertex send or receives data from
         # an external source (e.g the chat)
@@ -59,36 +68,52 @@ class Vertex:
         self.has_external_input = False
         self.has_external_output = False
         self.graph = graph
-        self._data = data
-        self.base_type: Optional[str] = base_type
-        self.outputs: List[Dict] = []
+        self._data = data.copy()
+        self.base_type: str | None = base_type
+        self.outputs: list[dict] = []
         self._parse_data()
         self._built_object = UnbuiltObject()
         self._built_result = None
         self._built = False
-        self.artifacts: Dict[str, Any] = {}
-        self.artifacts_raw: Dict[str, Any] = {}
-        self.artifacts_type: Dict[str, str] = {}
-        self.steps: List[Callable] = [self._build]
-        self.steps_ran: List[Callable] = []
-        self.task_id: Optional[str] = None
+        self._successors_ids: list[str] | None = None
+        self.artifacts: dict[str, Any] = {}
+        self.artifacts_raw: dict[str, Any] = {}
+        self.artifacts_type: dict[str, str] = {}
+        self.steps: list[Callable] = [self._build]
+        self.steps_ran: list[Callable] = []
+        self.task_id: str | None = None
         self.is_task = is_task
         self.params = params or {}
-        self.parent_node_id: Optional[str] = self._data.get("parent_node_id")
-        self.load_from_db_fields: List[str] = []
+        self.parent_node_id: str | None = self._data.get("parent_node_id")
+        self.load_from_db_fields: list[str] = []
         self.parent_is_top_level = False
         self.layer = None
-        self.result: Optional[ResultData] = None
-        self.results: Dict[str, Any] = {}
-        self.outputs_logs: Dict[str, OutputLog] = {}
+        self.result: ResultData | None = None
+        self.results: dict[str, Any] = {}
+        self.outputs_logs: dict[str, OutputValue] = {}
+        self.logs: dict[str, Log] = {}
+        self._has_cycle_edges = False
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
         except ValueError:
             self.is_interface_component = False
 
         self.use_result = False
-        self.build_times: List[float] = []
+        self.build_times: list[float] = []
         self.state = VertexStates.ACTIVE
+
+    def set_input_value(self, name: str, value: Any):
+        if self._custom_component is None:
+            msg = f"Vertex {self.id} does not have a component instance."
+            raise ValueError(msg)
+        self._custom_component._set_input_value(name, value)
+
+    def to_data(self):
+        return self._data
+
+    def add_component_instance(self, component_instance: Component):
+        component_instance.set_vertex(self)
+        self._custom_component = component_instance
 
     def add_result(self, name: str, result: Any):
         self.results[name] = result
@@ -108,6 +133,9 @@ class Vertex:
         elif self.state == VertexStates.ACTIVE and self.id in self.graph.inactivated_vertices:
             self.graph.inactivated_vertices.remove(self.id)
 
+    def is_active(self):
+        return self.state == VertexStates.ACTIVE
+
     @property
     def avg_build_time(self):
         return sum(self.build_times) / len(self.build_times) if self.build_times else 0
@@ -126,7 +154,7 @@ class Vertex:
             result = self._built_object
             # if it is not a dict or a string and hasattr model_dump then
             # return the model_dump
-            if not isinstance(result, (dict, str)) and hasattr(result, "content"):
+            if not isinstance(result, dict | str) and hasattr(result, "content"):
                 return result.content
             return result
         if isinstance(self._built_object, str):
@@ -140,31 +168,31 @@ class Vertex:
         pass
 
     @property
-    def edges(self) -> List["ContractEdge"]:
+    def edges(self) -> list[CycleEdge]:
         return self.graph.get_vertex_edges(self.id)
 
     @property
-    def outgoing_edges(self) -> List["ContractEdge"]:
+    def outgoing_edges(self) -> list[CycleEdge]:
         return [edge for edge in self.edges if edge.source_id == self.id]
 
     @property
-    def incoming_edges(self) -> List["ContractEdge"]:
+    def incoming_edges(self) -> list[CycleEdge]:
         return [edge for edge in self.edges if edge.target_id == self.id]
 
     @property
-    def edges_source_names(self) -> Set[str | None]:
+    def edges_source_names(self) -> set[str | None]:
         return {edge.source_handle.name for edge in self.edges}
 
     @property
-    def predecessors(self) -> List["Vertex"]:
+    def predecessors(self) -> list[Vertex]:
         return self.graph.get_predecessors(self)
 
     @property
-    def successors(self) -> List["Vertex"]:
+    def successors(self) -> list[Vertex]:
         return self.graph.get_successors(self)
 
     @property
-    def successors_ids(self) -> List[str]:
+    def successors_ids(self) -> list[str]:
         return self.graph.successor_map.get(self.id, [])
 
     def __getstate__(self):
@@ -180,14 +208,15 @@ class Vertex:
         self._built_object = state.get("_built_object") or UnbuiltObject()
         self._built_result = state.get("_built_result") or UnbuiltResult()
 
-    def set_top_level(self, top_level_vertices: List[str]) -> None:
+    def set_top_level(self, top_level_vertices: list[str]) -> None:
         self.parent_is_top_level = self.parent_node_id in top_level_vertices
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
         if self.data["node"]["template"]["_type"] == "Component":
             if "outputs" not in self.data["node"]:
-                raise ValueError(f"Outputs not found for {self.display_name}")
+                msg = f"Outputs not found for {self.display_name}"
+                raise ValueError(msg)
             self.outputs = self.data["node"]["outputs"]
         else:
             self.outputs = self.data["node"].get("outputs", [])
@@ -228,12 +257,44 @@ class Vertex:
                     self.base_type = base_type
                     break
 
+    def get_value_from_template_dict(self, key: str):
+        template_dict = self.data.get("node", {}).get("template", {})
+        if key not in template_dict:
+            msg = f"Key {key} not found in template dict"
+            raise ValueError(msg)
+        return template_dict.get(key, {}).get("value")
+
     def get_task(self):
         # using the task_id, get the task from celery
         # and return it
         from celery.result import AsyncResult  # type: ignore
 
         return AsyncResult(self.task_id)
+
+    def _set_params_from_normal_edge(self, params: dict, edge: Edge, template_dict: dict):
+        param_key = edge.target_param
+
+        # If the param_key is in the template_dict and the edge.target_id is the current node
+        # We check this to make sure params with the same name but different target_id
+        # don't get overwritten
+        if param_key in template_dict and edge.target_id == self.id:
+            if template_dict[param_key].get("list"):
+                if param_key not in params:
+                    params[param_key] = []
+                params[param_key].append(self.graph.get_vertex(edge.source_id))
+            elif edge.target_id == self.id:
+                if isinstance(template_dict[param_key].get("value"), dict):
+                    # we don't know the key of the dict but we need to set the value
+                    # to the vertex that is the source of the edge
+                    param_dict = template_dict[param_key]["value"]
+                    if not param_dict or len(param_dict) != 1:
+                        params[param_key] = self.graph.get_vertex(edge.source_id)
+                    else:
+                        params[param_key] = {key: self.graph.get_vertex(edge.source_id) for key in param_dict}
+
+                else:
+                    params[param_key] = self.graph.get_vertex(edge.source_id)
+        return params
 
     def _build_params(self):
         # sourcery skip: merge-list-append, remove-redundant-if
@@ -253,7 +314,8 @@ class Vertex:
         # and use that as the value for the param
 
         if self.graph is None:
-            raise ValueError("Graph not found")
+            msg = "Graph not found"
+            raise ValueError(msg)
 
         if self.updated_raw_params:
             self.updated_raw_params = False
@@ -265,29 +327,7 @@ class Vertex:
         for edge in self.edges:
             if not hasattr(edge, "target_param"):
                 continue
-            param_key = edge.target_param
-
-            # If the param_key is in the template_dict and the edge.target_id is the current node
-            # We check this to make sure params with the same name but different target_id
-            # don't get overwritten
-            if param_key in template_dict and edge.target_id == self.id:
-                if template_dict[param_key].get("list"):
-                    if param_key not in params:
-                        params[param_key] = []
-                    params[param_key].append(self.graph.get_vertex(edge.source_id))
-                elif edge.target_id == self.id:
-                    if isinstance(template_dict[param_key].get("value"), dict):
-                        # we don't know the key of the dict but we need to set the value
-                        # to the vertex that is the source of the edge
-                        param_dict = template_dict[param_key]["value"]
-                        if param_dict:
-                            params[param_key] = {
-                                key: self.graph.get_vertex(edge.source_id) for key in param_dict.keys()
-                            }
-                        else:
-                            params[param_key] = self.graph.get_vertex(edge.source_id)
-                    else:
-                        params[param_key] = self.graph.get_vertex(edge.source_id)
+            params = self._set_params_from_normal_edge(params, edge, template_dict)
 
         load_from_db_fields = []
         for field_name, field in template_dict.items():
@@ -360,16 +400,24 @@ class Vertex:
                         params[field_name] = [unescape_string(v) for v in val]
                     elif isinstance(val, str):
                         params[field_name] = unescape_string(val)
+                    elif isinstance(val, Data):
+                        params[field_name] = unescape_string(val.get_text())
                 elif field.get("type") == "bool" and val is not None:
                     if isinstance(val, bool):
                         params[field_name] = val
                     elif isinstance(val, str):
                         params[field_name] = val != ""
+                elif field.get("type") == "table" and val is not None:
+                    # check if the value is a list of dicts
+                    # if it is, create a pandas dataframe from it
+                    if isinstance(val, list) and all(isinstance(item, dict) for item in val):
+                        params[field_name] = pd.DataFrame(val)
+                    else:
+                        msg = f"Invalid value type {type(val)} for field {field_name}"
+                        raise ValueError(msg)
                 elif val is not None and val != "":
                     params[field_name] = val
 
-                elif val is not None and val != "":
-                    params[field_name] = val
                 if field.get("load_from_db"):
                     load_from_db_fields.append(field_name)
 
@@ -406,22 +454,55 @@ class Vertex:
         self.params = self._raw_params.copy()
         self.updated_raw_params = True
 
+    def has_cycle_edges(self):
+        """
+        Checks if the vertex has any cycle edges.
+        """
+        return self._has_cycle_edges
+
+    async def instantiate_component(self, user_id=None):
+        if not self._custom_component:
+            self._custom_component, _ = await initialize.loading.instantiate_class(
+                user_id=user_id,
+                vertex=self,
+            )
+
     async def _build(
         self,
         fallback_to_env_vars,
         user_id=None,
+        event_manager: EventManager | None = None,
     ):
         """
         Initiate the build process.
         """
         logger.debug(f"Building {self.display_name}")
         await self._build_each_vertex_in_params_dict(user_id)
-        await self._get_and_instantiate_class(user_id, fallback_to_env_vars)
+
+        if self.base_type is None:
+            msg = f"Base type for vertex {self.display_name} not found"
+            raise ValueError(msg)
+
+        if not self._custom_component:
+            custom_component, custom_params = await initialize.loading.instantiate_class(
+                user_id=user_id, vertex=self, event_manager=event_manager
+            )
+        else:
+            custom_component = self._custom_component
+            self._custom_component.set_event_manager(event_manager)
+            custom_params = initialize.loading.get_params(self.params)
+
+        await self._build_results(
+            custom_component=custom_component,
+            custom_params=custom_params,
+            fallback_to_env_vars=fallback_to_env_vars,
+        )
+
         self._validate_built_object()
 
         self._built = True
 
-    def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[dict]:
+    def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:
         """
         Extracts messages from the artifacts.
 
@@ -432,16 +513,28 @@ class Vertex:
             List[str]: The extracted messages.
         """
         try:
+            text = artifacts["text"]
+            sender = artifacts.get("sender")
+            sender_name = artifacts.get("sender_name")
+            session_id = artifacts.get("session_id")
+            stream_url = artifacts.get("stream_url")
+            files = [{"path": file} if isinstance(file, str) else file for file in artifacts.get("files", [])]
+            component_id = self.id
+            _type = self.artifacts_type
+
+            if isinstance(sender_name, Data | Message):
+                sender_name = sender_name.get_text()
+
             messages = [
                 ChatOutputResponse(
-                    message=artifacts["text"],
-                    sender=artifacts.get("sender"),
-                    sender_name=artifacts.get("sender_name"),
-                    session_id=artifacts.get("session_id"),
-                    stream_url=artifacts.get("stream_url"),
-                    files=[{"path": file} if isinstance(file, str) else file for file in artifacts.get("files", [])],
-                    component_id=self.id,
-                    type=self.artifacts_type,
+                    message=text,
+                    sender=sender,
+                    sender_name=sender_name,
+                    session_id=session_id,
+                    stream_url=stream_url,
+                    files=files,
+                    component_id=component_id,
+                    type=_type,
                 ).model_dump(exclude_none=True)
             ]
         except KeyError:
@@ -455,14 +548,12 @@ class Vertex:
         # to the frontend
         self.set_artifacts()
         artifacts = self.artifacts_raw
-        if isinstance(artifacts, dict):
-            messages = self.extract_messages_from_artifacts(artifacts)
-        else:
-            messages = []
+        messages = self.extract_messages_from_artifacts(artifacts) if isinstance(artifacts, dict) else []
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
             outputs=self.outputs_logs,
+            logs=self.logs,
             messages=messages,
             component_display_name=self.display_name,
             component_id=self.id,
@@ -495,7 +586,7 @@ class Vertex:
     async def _build_dict_and_update_params(
         self,
         key,
-        vertices_dict: Dict[str, "Vertex"],
+        vertices_dict: dict[str, Vertex],
     ):
         """
         Iterates over a dictionary of vertices, builds each and updates the params dictionary.
@@ -504,7 +595,7 @@ class Vertex:
             if not self._is_vertex(value):
                 self.params[key][sub_key] = value
             else:
-                result = await value.get_result(self)
+                result = await value.get_result(self, target_handle_name=key)
                 self.params[key][sub_key] = result
 
     def _is_vertex(self, value):
@@ -519,7 +610,7 @@ class Vertex:
         """
         return all(self._is_vertex(vertex) for vertex in value)
 
-    async def get_result(self, requester: "Vertex") -> Any:
+    async def get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
         """
         Retrieves the result of the vertex.
 
@@ -529,9 +620,9 @@ class Vertex:
             The result of the vertex.
         """
         async with self._lock:
-            return await self._get_result(requester)
+            return await self._get_result(requester, target_handle_name)
 
-    async def _get_result(self, requester: "Vertex") -> Any:
+    async def _get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
         """
         Retrieves the result of the built component.
 
@@ -542,19 +633,22 @@ class Vertex:
         """
         flow_id = self.graph.flow_id
         if not self._built:
-            log_transaction(flow_id, source=self, target=requester, status="error")
-            raise ValueError(f"Component {self.display_name} has not been built yet")
+            if flow_id:
+                asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="error"))
+            msg = f"Component {self.display_name} has not been built yet"
+            raise ValueError(msg)
 
         result = self._built_result if self.use_result else self._built_object
-        log_transaction(flow_id, source=self, target=requester, status="success")
+        if flow_id:
+            asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="success"))
         return result
 
-    async def _build_vertex_and_update_params(self, key, vertex: "Vertex"):
+    async def _build_vertex_and_update_params(self, key, vertex: Vertex):
         """
         Builds a given vertex and updates the params dictionary accordingly.
         """
 
-        result = await vertex.get_result(self)
+        result = await vertex.get_result(self, target_handle_name=key)
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
@@ -563,14 +657,14 @@ class Vertex:
     async def _build_list_of_vertices_and_update_params(
         self,
         key,
-        vertices: List["Vertex"],
+        vertices: list[Vertex],
     ):
         """
         Iterates over a list of vertices, builds each and updates the params dictionary.
         """
         self.params[key] = []
         for vertex in vertices:
-            result = await vertex.get_result(self)
+            result = await vertex.get_result(self, target_handle_name=key)
             # Weird check to see if the params[key] is a list
             # because sometimes it is a Data and breaks the code
             if not isinstance(self.params[key], list):
@@ -586,10 +680,11 @@ class Vertex:
                     self.params[key].append(result)
                 except AttributeError as e:
                     logger.exception(e)
-                    raise ValueError(
+                    msg = (
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
-                        f"Error building Component {self.display_name}:\n\n{str(e)}"
-                    ) from e
+                        f"Error building Component {self.display_name}: \n\n{str(e)}"
+                    )
+                    raise ValueError(msg) from e
 
     def _handle_func(self, key, result):
         """
@@ -613,26 +708,26 @@ class Vertex:
         if isinstance(self.params[key], list):
             self.params[key].extend(result)
 
-    async def _get_and_instantiate_class(self, user_id=None, fallback_to_env_vars=False):
-        """
-        Gets the class from a dictionary and instantiates it with the params.
-        """
-        if self.base_type is None:
-            raise ValueError(f"Base type for vertex {self.display_name} not found")
+    async def _build_results(self, custom_component, custom_params, fallback_to_env_vars=False):
         try:
-            result = await loading.instantiate_class(
-                user_id=user_id,
-                fallback_to_env_vars=fallback_to_env_vars,
+            result = await initialize.loading.get_instance_results(
+                custom_component=custom_component,
+                custom_params=custom_params,
                 vertex=self,
+                fallback_to_env_vars=fallback_to_env_vars,
+                base_type=self.base_type,
             )
+
             self.outputs_logs = build_output_logs(self, result)
+
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             tb = traceback.format_exc()
             logger.exception(exc)
-            raise ComponentBuildException(f"Error building Component {self.display_name}:\n\n{exc}", tb) from exc
+            msg = f"Error building Component {self.display_name}: \n\n{exc}"
+            raise ComponentBuildException(msg, tb) from exc
 
-    def _update_built_object_and_artifacts(self, result):
+    def _update_built_object_and_artifacts(self, result: Any | tuple[Any, dict] | tuple[Component, Any, dict]):
         """
         Updates the built object and its artifacts.
         """
@@ -641,8 +736,11 @@ class Vertex:
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
                 self._custom_component, self._built_object, self.artifacts = result
+                self.logs = self._custom_component._output_logs
                 self.artifacts_raw = self.artifacts.get("raw", None)
-                self.artifacts_type = self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
+                self.artifacts_type = {
+                    self.outputs[0]["name"]: self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
+                }
                 self.artifacts = {self.outputs[0]["name"]: self.artifacts}
         else:
             self._built_object = result
@@ -652,18 +750,20 @@ class Vertex:
         Checks if the built object is None and raises a ValueError if so.
         """
         if isinstance(self._built_object, UnbuiltObject):
-            raise ValueError(f"{self.display_name}: {self._built_object_repr()}")
-        elif self._built_object is None:
+            msg = f"{self.display_name}: {self._built_object_repr()}"
+            raise ValueError(msg)
+        if self._built_object is None:
             message = f"{self.display_name} returned None."
             if self.base_type == "custom_components":
                 message += " Make sure your build method returns a component."
 
             logger.warning(message)
-        elif isinstance(self._built_object, (Iterator, AsyncIterator)):
+        elif isinstance(self._built_object, Iterator | AsyncIterator):
             if self.display_name in ["Text Output"]:
-                raise ValueError(f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead.")
+                msg = f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
+                raise ValueError(msg)
 
-    def _reset(self, params_update: Optional[Dict[str, Any]] = None):
+    def _reset(self, params_update: dict[str, Any] | None = None):
         self._built = False
         self._built_object = UnbuiltObject()
         self._built_result = UnbuiltResult()
@@ -683,20 +783,21 @@ class Vertex:
     async def build(
         self,
         user_id=None,
-        inputs: Optional[Dict[str, Any]] = None,
-        files: Optional[list[str]] = None,
-        requester: Optional["Vertex"] = None,
+        inputs: dict[str, Any] | None = None,
+        files: list[str] | None = None,
+        requester: Vertex | None = None,
+        event_manager: EventManager | None = None,
         **kwargs,
     ) -> Any:
         async with self._lock:
             if self.state == VertexStates.INACTIVE:
                 # If the vertex is inactive, return None
                 self.build_inactive()
-                return
+                return None
 
             if self.frozen and self._built:
-                return self.get_requester_result(requester)
-            elif self._built and requester is not None:
+                return await self.get_requester_result(requester)
+            if self._built and requester is not None:
                 # This means that the vertex has already been built
                 # and we are just getting the result for the requester
                 return await self.get_requester_result(requester)
@@ -715,17 +816,16 @@ class Vertex:
             for step in self.steps:
                 if step not in self.steps_ran:
                     if inspect.iscoroutinefunction(step):
-                        await step(user_id=user_id, **kwargs)
+                        await step(user_id=user_id, event_manager=event_manager, **kwargs)
                     else:
-                        step(user_id=user_id, **kwargs)
+                        step(user_id=user_id, event_manager=event_manager, **kwargs)
                     self.steps_ran.append(step)
 
             self._finalize_build()
 
-        result = await self.get_requester_result(requester)
-        return result
+        return await self.get_requester_result(requester)
 
-    async def get_requester_result(self, requester: Optional["Vertex"]):
+    async def get_requester_result(self, requester: Vertex | None):
         # If the requester is None, this means that
         # the Vertex is the root of the graph
         if requester is None:
@@ -740,7 +840,7 @@ class Vertex:
             else await requester_edge.get_result_from_source(source=self, target=requester)
         )
 
-    def add_edge(self, edge: "ContractEdge") -> None:
+    def add_edge(self, edge: CycleEdge) -> None:
         if edge not in self.edges:
             self.edges.append(edge)
 
@@ -767,3 +867,10 @@ class Vertex:
     def _built_object_repr(self):
         # Add a message with an emoji, stars for sucess,
         return "Built successfully ✨" if self._built_object is not None else "Failed to build 😵‍💫"
+
+    def apply_on_outputs(self, func: Callable[[Any], Any]):
+        """Applies a function to the outputs of the vertex."""
+        if not self._custom_component or not self._custom_component.outputs:
+            return
+        # Apply the function to each output
+        [func(output) for output in self._custom_component.outputs]

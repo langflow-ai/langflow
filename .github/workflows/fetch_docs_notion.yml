@@ -1,0 +1,61 @@
+name: Fetch Docs from Notion
+
+on:
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "21"
+
+jobs:
+  fetch-docs:
+    name: Fetch Docs from Notion
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get current date
+        id: date
+        run: echo "DATE=$(date +'%Y%m%d%H%M%S')" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        id: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache Node.js dependencies
+        uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('docs/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install Node.js dependencies
+        run: |
+          cd docs
+          npm install --legacy-peer-deps
+        if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
+
+      - name: Fetch Docs from Notion
+        run: |
+          cd docs
+          npm run pull
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DOCS_ROOT_PAGE_ID: ${{ secrets.NOTION_DOCS_ROOT_PAGE_ID }}
+
+      - name: Create Pull Request
+        id: create_pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Update docs from Notion
+          branch: update-docs-${{ steps.date.outputs.DATE }}
+          base: main
+          title: "docs: update docs from notion"
+          body: This PR updates the documentation from Notion.
+          labels: documentation

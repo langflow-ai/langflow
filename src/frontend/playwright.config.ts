@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { PORT } from "./src/customization/config-constants";
 dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -23,7 +24,7 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: 2,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  timeout: 120 * 1000,
+  timeout: 3 * 60 * 1000,
   // reporter: [
   //   ["html", { open: "never", outputFolder: "playwright-report/test-results" }],
   // ],
@@ -31,7 +32,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://localhost:3000/",
+    baseURL: `http://localhost:${PORT || 3000}/`,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
@@ -54,7 +55,37 @@ export default defineConfig({
         },
       },
     },
-
+    // {
+    //   name: "firefox",
+    //   use: {
+    //     ...devices["Desktop Firefox"],
+    //     launchOptions: {
+    //       // headless: false,
+    //       firefoxUserPrefs: {
+    //         "dom.events.asyncClipboard.readText": true,
+    //         "dom.events.testing.asyncClipboard": true,
+    //       },
+    //     },
+    //   },
+    // },
+    // {
+    //   name: "safari",
+    //   use: {
+    //     ...devices["Desktop Safari"],
+    //     launchOptions: {
+    //       // headless: false,
+    //     },
+    //   },
+    // },
+    // {
+    //   name: "arc",
+    //   use: {
+    //     ...devices["Desktop Arc"],
+    //     launchOptions: {
+    //       // headless: false,
+    //     },
+    //   },
+    // },
     // {
     //   name: "firefox",
     //   use: {
@@ -85,7 +116,7 @@ export default defineConfig({
     },
     {
       command: "npm start",
-      port: 3000,
+      port: PORT || 3000,
       env: {
         VITE_PROXY_TARGET: "http://127.0.0.1:7860",
       },

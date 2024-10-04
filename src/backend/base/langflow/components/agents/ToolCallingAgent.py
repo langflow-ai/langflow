@@ -1,111 +1,45 @@
-from typing import Dict, List, cast
+from langchain.agents import create_tool_calling_agent
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate
 
-from langchain.agents import AgentExecutor, BaseSingleActionAgent
-from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate
-
-from langflow.custom import Component
-from langflow.io import BoolInput, HandleInput, MessageTextInput, Output
+from langflow.base.agents.agent import LCToolsAgentComponent
+from langflow.inputs import MultilineInput
+from langflow.inputs.inputs import DataInput, HandleInput
 from langflow.schema import Data
-from langflow.schema.message import Message
 
 
-class ToolCallingAgentComponent(Component):
+class ToolCallingAgentComponent(LCToolsAgentComponent):
     display_name: str = "Tool Calling Agent"
-    description: str = "Agent that uses tools. Only models that are compatible with function calling are supported."
+    description: str = "Agent that uses tools"
     icon = "LangChain"
     beta = True
     name = "ToolCallingAgent"
 
-    inputs = [
-        MessageTextInput(
+    inputs = LCToolsAgentComponent._base_inputs + [
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        MultilineInput(
             name="system_prompt",
             display_name="System Prompt",
             info="System prompt for the agent.",
             value="You are a helpful assistant",
         ),
-        MessageTextInput(
-            name="input_value",
-            display_name="Inputs",
-            info="Input text to pass to the agent.",
+        MultilineInput(
+            name="user_prompt", display_name="Prompt", info="This prompt must contain 'input' key.", value="{input}"
         ),
-        MessageTextInput(
-            name="user_prompt",
-            display_name="Prompt",
-            info="This prompt must contain 'input' key.",
-            value="{input}",
-            advanced=True,
-        ),
-        BoolInput(
-            name="handle_parsing_errors",
-            display_name="Handle Parsing Errors",
-            info="If True, the agent will handle parsing errors. If False, the agent will raise an error.",
-            advanced=True,
-            value=True,
-        ),
-        HandleInput(
-            name="memory",
-            display_name="Memory",
-            input_types=["Data"],
-            info="Memory to use for the agent.",
-        ),
-        HandleInput(
-            name="tools",
-            display_name="Tools",
-            input_types=["Tool"],
-            is_list=True,
-        ),
-        HandleInput(
-            name="llm",
-            display_name="LLM",
-            input_types=["LanguageModel"],
-        ),
+        DataInput(name="chat_history", display_name="Chat History", is_list=True, advanced=True),
     ]
 
-    outputs = [
-        Output(display_name="Text", name="text_output", method="run_agent"),
-    ]
+    def get_chat_history_data(self) -> list[Data] | None:
+        return self.chat_history
 
-    async def run_agent(self) -> Message:
+    def create_agent_runnable(self):
         if "input" not in self.user_prompt:
-            raise ValueError("Prompt must contain 'input' key.")
+            msg = "Prompt must contain 'input' key."
+            raise ValueError(msg)
         messages = [
             ("system", self.system_prompt),
-            (
-                "placeholder",
-                "{chat_history}",
-            ),
-            ("human", self.user_prompt),
+            ("placeholder", "{chat_history}"),
+            HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=["input"], template=self.user_prompt)),
             ("placeholder", "{agent_scratchpad}"),
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
-        agent = create_tool_calling_agent(self.llm, self.tools, prompt)
-
-        runnable = AgentExecutor.from_agent_and_tools(
-            agent=cast(BaseSingleActionAgent, agent),
-            tools=self.tools,
-            verbose=True,
-            handle_parsing_errors=self.handle_parsing_errors,
-        )
-        input_dict: dict[str, str | list[Dict[str, str]]] = {"input": self.input_value}
-        if hasattr(self, "memory") and self.memory:
-            input_dict["chat_history"] = self.convert_chat_history(self.memory)
-        result = await runnable.ainvoke(input_dict)
-
-        if "output" not in result:
-            raise ValueError("Output key not found in result. Tried 'output'.")
-
-        results = result["output"]
-        if isinstance(results, list):
-            result_string = "\n".join([r["text"] for r in results if "text" in r and r.get("type") == "text"])
-        else:
-            result_string = results
-        self.status = result_string
-        return Message(text=result_string)
-
-    def convert_chat_history(self, chat_history: List[Data]) -> List[Dict[str, str]]:
-        messages = []
-        for item in chat_history:
-            role = "user" if item.sender == "User" else "assistant"
-            messages.append({"role": role, "content": item.text})
-        return messages
+        return create_tool_calling_agent(self.llm, self.tools, prompt)

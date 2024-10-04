@@ -1,5 +1,5 @@
 import time
-from typing import Callable
+from collections.abc import Callable
 
 import socketio  # type: ignore
 from sqlmodel import select
@@ -7,10 +7,10 @@ from sqlmodel import select
 from langflow.api.utils import format_elapsed_time
 from langflow.api.v1.schemas import ResultDataResponse, VertexBuildResponse
 from langflow.graph.graph.base import Graph
+from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_session
-from langflow.services.monitor.utils import log_vertex_build
 
 
 def set_socketio_server(socketio_server):
@@ -86,7 +86,7 @@ async def build_vertex(
             result_dict = ResultDataResponse(results={})
             artifacts = {}
         set_cache(flow_id, graph)
-        await log_vertex_build(
+        log_vertex_build(
             flow_id=flow_id,
             vertex_id=vertex_id,
             valid=valid,

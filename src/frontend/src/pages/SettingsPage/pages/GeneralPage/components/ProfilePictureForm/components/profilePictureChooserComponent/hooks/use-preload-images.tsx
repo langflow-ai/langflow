@@ -2,8 +2,9 @@ import { useEffect } from "react";
 import { BASE_URL_API } from "../../../../../../../../../constants/constants";
 
 const usePreloadImages = (
-  profilePictures: { [key: string]: string[] },
   setImagesLoaded: (value: boolean) => void,
+  loading: boolean,
+  profilePictures?: { [key: string]: string[] },
 ) => {
   const preloadImages = async (imageUrls) => {
     return Promise.all(
@@ -20,6 +21,7 @@ const usePreloadImages = (
   };
 
   useEffect(() => {
+    if (loading || !profilePictures) return;
     const imageArray: string[] = [];
 
     Object.keys(profilePictures).flatMap((folder) =>
@@ -33,7 +35,7 @@ const usePreloadImages = (
     preloadImages(imageArray).then(() => {
       setImagesLoaded(true);
     });
-  }, [profilePictures]);
+  }, [profilePictures, loading]);
 
   return;
 };

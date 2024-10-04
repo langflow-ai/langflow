@@ -1,7 +1,7 @@
 from langchain_openai import AzureOpenAIEmbeddings
-from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
+from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.field_typing import Embeddings
 from langflow.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 
@@ -23,6 +23,13 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
     ]
 
     inputs = [
+        DropdownInput(
+            name="model",
+            display_name="Model",
+            advanced=False,
+            options=OPENAI_EMBEDDING_MODEL_NAMES,
+            value=OPENAI_EMBEDDING_MODEL_NAMES[0],
+        ),
         MessageTextInput(
             name="azure_endpoint",
             display_name="Azure Endpoint",
@@ -49,7 +56,8 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
         IntInput(
             name="dimensions",
             display_name="Dimensions",
-            info="The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
+            info="The number of dimensions the resulting output embeddings should have. "
+            "Only supported by certain models.",
             advanced=True,
         ),
     ]
@@ -59,20 +67,17 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        if not self.api_key:
-            raise ValueError("API Key is required")
-
-        azure_api_key = SecretStr(self.api_key)
-
         try:
             embeddings = AzureOpenAIEmbeddings(
+                model=self.model,
                 azure_endpoint=self.azure_endpoint,
                 azure_deployment=self.azure_deployment,
                 api_version=self.api_version,
-                api_key=azure_api_key,
-                dimensions=self.dimensions,
+                api_key=self.api_key,
+                dimensions=self.dimensions or None,
             )
         except Exception as e:
-            raise ValueError("Could not connect to AzureOpenAIEmbeddings API.") from e
+            msg = f"Could not connect to AzureOpenAIEmbeddings API: {str(e)}"
+            raise ValueError(msg) from e
 
         return embeddings

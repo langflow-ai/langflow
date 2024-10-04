@@ -1,4 +1,5 @@
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
@@ -21,7 +22,7 @@ import UploadFileButton from "./components/uploadFileButton";
 import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
-export default function ChattInput({
+export default function ChatInput({
   lockChat,
   chatValue,
   sendMessage,
@@ -32,17 +33,16 @@ export default function ChattInput({
   setFiles,
   isDragging,
 }: ChatInputType): JSX.Element {
-  const [repeat, setRepeat] = useState(1);
-  const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [inputFocus, setInputFocus] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { validateFileSize } = useFileSizeValidator(setErrorData);
 
   useFocusOnUnlock(lockChat, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
 
-  const { mutate, isPending } = usePostUploadFile();
+  const { mutate } = usePostUploadFile();
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
@@ -64,9 +64,12 @@ export default function ChattInput({
       const fileInput = event.target as HTMLInputElement;
       file = fileInput.files?.[0] ?? null;
     }
-
     if (file) {
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+      if (!validateFileSize(file)) {
+        return;
+      }
 
       if (
         !fileExtension ||
@@ -101,13 +104,17 @@ export default function ChattInput({
               return newFiles;
             });
           },
-          onError: () => {
+          onError: (error) => {
             setFiles((prev) => {
               const newFiles = [...prev];
               const updatedIndex = newFiles.findIndex((file) => file.id === id);
               newFiles[updatedIndex].loading = false;
               newFiles[updatedIndex].error = true;
               return newFiles;
+            });
+            setErrorData({
+              title: "Error uploading file",
+              list: [error.response?.data?.detail],
             });
           },
         },
@@ -128,7 +135,7 @@ export default function ChattInput({
 
   const send = () => {
     sendMessage({
-      repeat,
+      repeat: 1,
       files: files.map((file) => file.path ?? "").filter((file) => file !== ""),
     });
     setFiles([]);
@@ -138,7 +145,6 @@ export default function ChattInput({
     return (
       event.key === "Enter" &&
       !lockChat &&
-      !saveLoading &&
       !event.shiftKey &&
       !event.nativeEvent.isComposing
     );
@@ -158,7 +164,6 @@ export default function ChattInput({
           send={send}
           lockChat={lockChat}
           noInput={noInput}
-          saveLoading={saveLoading}
           chatValue={chatValue}
           setChatValue={setChatValue}
           CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
@@ -173,7 +178,6 @@ export default function ChattInput({
             send={send}
             lockChat={lockChat}
             noInput={noInput}
-            saveLoading={saveLoading}
             chatValue={chatValue}
             files={files}
           />
@@ -181,11 +185,11 @@ export default function ChattInput({
 
         <div
           className={`absolute bottom-2 left-4 ${
-            lockChat || saveLoading ? "cursor-not-allowed" : ""
+            lockChat ? "cursor-not-allowed" : ""
           }`}
         >
           <UploadFileButton
-            lockChat={lockChat || saveLoading}
+            lockChat={lockChat}
             fileInputRef={fileInputRef}
             handleFileChange={handleFileChange}
             handleButtonClick={handleButtonClick}

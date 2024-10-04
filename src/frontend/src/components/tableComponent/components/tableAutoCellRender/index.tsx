@@ -6,21 +6,32 @@ import ObjectRender from "../../../objectRender";
 import StringReader from "../../../stringReaderComponent";
 import { Badge } from "../../../ui/badge";
 
+interface CustomCellRender extends CustomCellRendererProps {
+  formatter?: "json" | "text";
+}
+
 export default function TableAutoCellRender({
   value,
   setValue,
   colDef,
-}: CustomCellRendererProps) {
+  formatter,
+  api,
+}: CustomCellRender) {
   function getCellType() {
-    switch (typeof value) {
+    let format: string = formatter ? formatter : typeof value;
+    //convert text to string to bind to the string reader
+    format = format === "text" ? "string" : format;
+    format = format === "json" ? "object" : format;
+
+    switch (format) {
       case "object":
-        if (value === null) {
-          return String(value);
-        } else if (Array.isArray(value)) {
-          return <ObjectRender object={value} />;
-        } else {
-          return <ObjectRender object={value} />;
-        }
+        return (
+          <ObjectRender
+            setValue={!!colDef?.onCellValueChanged ? setValue : undefined}
+            object={value}
+          />
+        );
+
       case "string":
         if (isTimeStampString(value)) {
           return <DateReader date={value} />;
@@ -53,7 +64,10 @@ export default function TableAutoCellRender({
         } else {
           return (
             <StringReader
-              editable={!!colDef?.onCellValueChanged}
+              editable={
+                !!colDef?.onCellValueChanged ||
+                !!api.getGridOption("onCellValueChanged")
+              }
               setValue={setValue!}
               string={value}
             />

@@ -1,6 +1,10 @@
+import {
+  useResetPassword,
+  useUpdateUser,
+} from "@/controllers/API/queries/auth";
 import * as Form from "@radix-ui/react-form";
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import InputComponent from "../../components/inputComponent";
@@ -13,9 +17,7 @@ import {
 } from "../../constants/alerts_constants";
 import { CONTROL_PATCH_USER_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import { resetPassword, updateUser } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import {
   inputHandlerEventType,
   patchUserInputStateType,
@@ -23,22 +25,16 @@ import {
 import { gradients } from "../../utils/styleUtils";
 import GradientChooserComponent from "../SettingsPage/pages/GeneralPage/components/ProfilePictureForm/components/profilePictureChooserComponent";
 export default function ProfileSettingsPage(): JSX.Element {
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
-  );
-
   const [inputState, setInputState] = useState<patchUserInputStateType>(
     CONTROL_PATCH_USER_STATE,
   );
-
-  // set null id
-  useEffect(() => {
-    setCurrentFlowId("");
-  }, []);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
   const { password, cnfPassword, gradient } = inputState;
+
+  const { mutate: mutateResetPassword } = useResetPassword();
+  const { mutate: mutatePatchUser } = useUpdateUser();
 
   async function handlePatchUser() {
     if (password !== cnfPassword) {
@@ -48,26 +44,43 @@ export default function ProfileSettingsPage(): JSX.Element {
       });
       return;
     }
-    try {
-      if (password !== "") await resetPassword(userData!.id, { password });
-      if (gradient !== "")
-        await updateUser(userData!.id, { profile_image: gradient });
-      if (gradient !== "") {
-        let newUserData = cloneDeep(userData);
-        newUserData!.profile_image = gradient;
-
-        setUserData(newUserData);
-      }
-      handleInput({ target: { name: "password", value: "" } });
-      handleInput({ target: { name: "cnfPassword", value: "" } });
-      setSuccessData({ title: SAVE_SUCCESS_ALERT });
-    } catch (error) {
-      setErrorData({
-        title: SAVE_ERROR_ALERT,
-        list: [(error as any).response.data.detail],
-      });
+    if (password !== "") {
+      mutateResetPassword(
+        { user_id: userData!.id, password: { password } },
+        {
+          onSuccess: successUpdates,
+          onError: errorUpdates,
+        },
+      );
+    }
+    if (gradient !== "") {
+      mutatePatchUser(
+        { user_id: userData!.id, user: { profile_image: gradient } },
+        {
+          onSuccess: successUpdates,
+          onError: errorUpdates,
+        },
+      );
     }
   }
+
+  const errorUpdates = (error) => {
+    setErrorData({
+      title: SAVE_ERROR_ALERT,
+      list: [(error as any).response.data.detail],
+    });
+  };
+
+  const successUpdates = () => {
+    if (gradient !== "") {
+      let newUserData = cloneDeep(userData);
+      newUserData!.profile_image = gradient;
+      setUserData(newUserData);
+    }
+    handleInput({ target: { name: "password", value: "" } });
+    handleInput({ target: { name: "cnfPassword", value: "" } });
+    setSuccessData({ title: SAVE_SUCCESS_ALERT });
+  };
 
   function handleInput({
     target: { name, value },
@@ -154,10 +167,10 @@ export default function ProfileSettingsPage(): JSX.Element {
                 <GradientChooserComponent
                   value={
                     gradient == ""
-                      ? userData?.profile_image ??
+                      ? (userData?.profile_image ??
                         gradients[
                           parseInt(userData?.id ?? "", 30) % gradients.length
-                        ]
+                        ])
                       : gradient
                   }
                   onChange={(value) => {

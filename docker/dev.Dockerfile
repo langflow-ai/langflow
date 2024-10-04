@@ -1,18 +1,28 @@
-FROM python:3.10-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+ENV TZ=UTC
 
 WORKDIR /app
 
-# Install Poetry
-RUN apt-get update && apt-get install gcc g++ curl build-essential postgresql-server-dev-all -y
-RUN curl -sSL https://install.python-poetry.org | python3 -
-# # Add Poetry to PATH
-ENV PATH="${PATH}:/root/.local/bin"
-# # Copy the pyproject.toml and poetry.lock files
-COPY poetry.lock pyproject.toml ./
-# Copy the rest of the application codes
-COPY ./ ./
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    npm \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
-RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
+COPY . /app
 
-CMD ["uvicorn", "--factory", "langflow.main:create_app", "--host", "0.0.0.0", "--port", "7860", "--reload", "--log-level", "debug", "--loop", "asyncio"]
+# Install dependencies using uv
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=README.md,target=README.md \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
+    --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
+    --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev
+
+EXPOSE 7860
+EXPOSE 3000
+
+CMD ["./docker/dev.start.sh"]

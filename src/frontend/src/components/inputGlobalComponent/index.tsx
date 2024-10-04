@@ -1,12 +1,13 @@
+import {
+  useDeleteGlobalVariables,
+  useGetGlobalVariables,
+} from "@/controllers/API/queries/variables";
 import { useEffect } from "react";
-import { Controller } from "react-hook-form";
-import { deleteGlobalVariable } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
-import { useGlobalVariablesStore } from "../../stores/globalVariablesStore/globalVariables";
 import { InputGlobalComponentType } from "../../types/components";
 import { cn } from "../../utils/utils";
-import AddNewVariableButton from "../addNewVariableButtonComponent/addNewVariableButton";
+import GlobalVariableModal from "../GlobalVariableModal/GlobalVariableModal";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { CommandItem } from "../ui/command";
@@ -18,39 +19,41 @@ export default function InputGlobalComponent({
   data,
   editNode = false,
 }: InputGlobalComponentType): JSX.Element {
-  const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries,
-  );
-
-  const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
-  const removeGlobalVariable = useGlobalVariablesStore(
-    (state) => state.removeGlobalVariable,
-  );
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
+  const { data: globalVariables } = useGetGlobalVariables();
+  const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
+
   useEffect(() => {
-    if (data && globalVariablesEntries)
-      if (data.load_from_db && !globalVariablesEntries.includes(data.value)) {
+    if (data && globalVariables)
+      if (
+        data.load_from_db &&
+        !globalVariables.find((variable) => variable.name === data.value)
+      ) {
         onChange("", false, true);
       }
-  }, [globalVariablesEntries]);
+  }, [globalVariables]);
 
   async function handleDelete(key: string) {
-    const id = getVariableId(key);
+    if (!globalVariables) return;
+    const id = globalVariables.find((variable) => variable.name === key)?.id;
     if (id !== undefined) {
-      await deleteGlobalVariable(id)
-        .then(() => {
-          removeGlobalVariable(key);
-          if (data?.value === key && data?.load_from_db) {
-            onChange("", false);
-          }
-        })
-        .catch(() => {
-          setErrorData({
-            title: "Error deleting variable",
-            list: [cn("ID not found for variable: ", key)],
-          });
-        });
+      mutateDeleteGlobalVariable(
+        { id },
+        {
+          onSuccess: () => {
+            if (data?.value === key && data?.load_from_db) {
+              onChange("", false);
+            }
+          },
+          onError: () => {
+            setErrorData({
+              title: "Error deleting variable",
+              list: [cn("ID not found for variable: ", key)],
+            });
+          },
+        },
+      );
     } else {
       setErrorData({
         title: "Error deleting variable",
@@ -65,11 +68,11 @@ export default function InputGlobalComponent({
       disabled={disabled}
       password={data.password ?? false}
       value={data.value ?? ""}
-      options={globalVariablesEntries}
+      options={globalVariables?.map((variable) => variable.name) ?? []}
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
       optionsButton={
-        <AddNewVariableButton>
+        <GlobalVariableModal>
           <CommandItem value="doNotFilter-addNewVariable">
             <ForwardedIconComponent
               name="Plus"
@@ -78,7 +81,7 @@ export default function InputGlobalComponent({
             />
             <span>Add New Variable</span>
           </CommandItem>
-        </AddNewVariableButton>
+        </GlobalVariableModal>
       }
       optionButton={(option) => (
         <DeleteConfirmationModal
@@ -108,8 +111,10 @@ export default function InputGlobalComponent({
       )}
       selectedOption={
         data?.load_from_db &&
-        globalVariablesEntries &&
-        globalVariablesEntries.includes(data?.value ?? "")
+        globalVariables &&
+        globalVariables
+          ?.map((variable) => variable.name)
+          .includes(data?.value ?? "")
           ? data?.value
           : ""
       }

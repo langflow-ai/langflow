@@ -12,7 +12,7 @@ interface versionQueryResponse {
 export const useGetVersionQuery: useQueryFunctionType<
   undefined,
   versionQueryResponse
-> = (_, options) => {
+> = (options) => {
   const { query } = UseRequestProcessor();
 
   const getVersionFn = async () => {
@@ -26,7 +26,10 @@ export const useGetVersionQuery: useQueryFunctionType<
     return data;
   };
 
-  const queryResult = query(["useGetVersionQuery"], responseFn, { ...options });
+  const queryResult = query(["useGetVersionQuery"], responseFn, {
+    refetchOnWindowFocus: false,
+    ...options,
+  });
 
   return queryResult;
 };

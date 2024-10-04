@@ -1,31 +1,27 @@
-from typing import Any, List, Optional
+from typing import Any
 
-from langflow.base.flow_processing.utils import build_data_from_result_data
-from langflow.custom import CustomComponent
-from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
-from langflow.graph.vertex.base import Vertex
-from langflow.helpers.flow import get_flow_inputs
-from langflow.schema import Data
-from langflow.schema.dotdict import dotdict
-from langflow.template.field.base import Input
 from loguru import logger
 
+from langflow.base.flow_processing.utils import build_data_from_result_data
+from langflow.custom import Component
+from langflow.graph.graph.base import Graph
+from langflow.graph.vertex.base import Vertex
+from langflow.helpers.flow import get_flow_inputs
+from langflow.io import DropdownInput, Output
+from langflow.schema import Data, dotdict
 
-class SubFlowComponent(CustomComponent):
+
+class SubFlowComponent(Component):
     display_name = "Sub Flow"
-    description = (
-        "Dynamically Generates a Component from a Flow. The output is a list of data with keys 'result' and 'message'."
-    )
+    description = "Generates a Component from a Flow, with all of its inputs, and "
     name = "SubFlow"
     beta: bool = True
-    field_order = ["flow_name"]
 
-    def get_flow_names(self) -> List[str]:
-        flow_datas = self.list_flows()
-        return [flow_data.data["name"] for flow_data in flow_datas]
+    def get_flow_names(self) -> list[str]:
+        flow_data = self.list_flows()
+        return [flow_data.data["name"] for flow_data in flow_data]
 
-    def get_flow(self, flow_name: str) -> Optional[Data]:
+    def get_flow(self, flow_name: str) -> Data | None:
         flow_datas = self.list_flows()
         for flow_data in flow_datas:
             if flow_data.data["name"] == flow_name:
@@ -33,18 +29,18 @@ class SubFlowComponent(CustomComponent):
         return None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        logger.debug(f"Updating build config with field value {field_value} and field name {field_name}")
         if field_name == "flow_name":
             build_config["flow_name"]["options"] = self.get_flow_names()
-        # Clean up the build config
+
         for key in list(build_config.keys()):
-            if key not in self.field_order + ["code", "_type", "get_final_results_only"]:
+            if key not in [x.name for x in self.inputs] + ["code", "_type", "get_final_results_only"]:
                 del build_config[key]
         if field_value is not None and field_name == "flow_name":
             try:
                 flow_data = self.get_flow(field_value)
                 if not flow_data:
-                    raise ValueError(f"Flow {field_value} not found.")
+                    msg = f"Flow {field_value} not found."
+                    raise ValueError(msg)
                 graph = Graph.from_payload(flow_data.data["data"])
                 # Get all inputs from the graph
                 inputs = get_flow_inputs(graph)
@@ -55,62 +51,58 @@ class SubFlowComponent(CustomComponent):
 
         return build_config
 
-    def add_inputs_to_build_config(self, inputs: List[Vertex], build_config: dotdict):
-        new_fields: list[Input] = []
-        for vertex in inputs:
-            field = Input(
-                display_name=vertex.display_name,
-                name=vertex.id,
-                info=vertex.description,
-                field_type="str",
-                value=None,
-            )
-            new_fields.append(field)
-        logger.debug(new_fields)
+    def add_inputs_to_build_config(self, inputs_vertex: list[Vertex], build_config: dotdict):
+        new_fields: list[dotdict] = []
+
+        for vertex in inputs_vertex:
+            new_vertex_inputs = []
+            field_template = vertex.data["node"]["template"]
+            for inp in field_template:
+                if inp not in ["code", "_type"]:
+                    field_template[inp]["display_name"] = (
+                        vertex.display_name + " - " + field_template[inp]["display_name"]
+                    )
+                    field_template[inp]["name"] = vertex.id + "|" + inp
+                    new_vertex_inputs.append(field_template[inp])
+            new_fields += new_vertex_inputs
         for field in new_fields:
-            build_config[field.name] = field.to_dict()
+            build_config[field["name"]] = field
         return build_config
 
-    def build_config(self):
-        return {
-            "input_value": {
-                "display_name": "Input Value",
-                "multiline": True,
-            },
-            "flow_name": {
-                "display_name": "Flow Name",
-                "info": "The name of the flow to run.",
-                "options": [],
-                "real_time_refresh": True,
-                "refresh_button": True,
-            },
-            "tweaks": {
-                "display_name": "Tweaks",
-                "info": "Tweaks to apply to the flow.",
-            },
-            "get_final_results_only": {
-                "display_name": "Get Final Results Only",
-                "info": "If False, the output will contain all outputs from the flow.",
-                "advanced": True,
-            },
-        }
+    inputs = [
+        DropdownInput(
+            name="flow_name",
+            display_name="Flow Name",
+            info="The name of the flow to run.",
+            options=[],
+            refresh_button=True,
+            real_time_refresh=True,
+        ),
+    ]
 
-    async def build(self, flow_name: str, get_final_results_only: bool = True, **kwargs) -> List[Data]:
-        tweaks = {key: {"input_value": value} for key, value in kwargs.items()}
-        run_outputs: List[Optional[RunOutputs]] = await self.run_flow(
+    outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="generate_results")]
+
+    async def generate_results(self) -> list[Data]:
+        tweaks: dict = {}
+        for field in self._attributes:
+            if field != "flow_name":
+                [node, name] = field.split("|")
+                if node not in tweaks:
+                    tweaks[node] = {}
+                tweaks[node][name] = self._attributes[field]
+        flow_name = self._attributes.get("flow_name")
+        run_outputs = await self.run_flow(
             tweaks=tweaks,
             flow_name=flow_name,
+            output_type="all",
         )
+        data: list[Data] = []
         if not run_outputs:
-            return []
+            return data
         run_output = run_outputs[0]
 
-        data = []
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    data.extend(build_data_from_result_data(output, get_final_results_only))
-
-        self.status = data
-        logger.debug(data)
+                    data.extend(build_data_from_result_data(output))
         return data

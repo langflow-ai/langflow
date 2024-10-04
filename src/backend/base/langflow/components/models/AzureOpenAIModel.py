@@ -1,9 +1,10 @@
 from langchain_openai import AzureChatOpenAI
-from langflow.base.constants import STREAM_INFO_TEXT
+
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, SecretStrInput, StrInput
+from langflow.inputs.inputs import HandleInput
+from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
@@ -26,7 +27,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         "2024-05-13",
     ]
 
-    inputs = [
+    inputs = LCModelComponent._base_inputs + [
         MessageTextInput(
             name="azure_endpoint",
             display_name="Azure Endpoint",
@@ -48,13 +49,12 @@ class AzureChatOpenAIComponent(LCModelComponent):
             advanced=True,
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
         ),
-        MessageInput(name="input_value", display_name="Input"),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
             advanced=True,
-            info="System message to pass to the model.",
+            input_types=["OutputParser"],
         ),
     ]
 
@@ -78,6 +78,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
                 streaming=stream,
             )
         except Exception as e:
-            raise ValueError(f"Could not connect to AzureOpenAI API: {str(e)}") from e
+            msg = f"Could not connect to AzureOpenAI API: {str(e)}"
+            raise ValueError(msg) from e
 
         return output  # type: ignore

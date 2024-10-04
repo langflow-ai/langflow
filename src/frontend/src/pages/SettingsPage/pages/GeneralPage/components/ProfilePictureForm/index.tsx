@@ -1,9 +1,9 @@
 import {
-  ProfilePicturesResponse,
+  ProfilePicturesQueryResponse,
   useGetProfilePicturesQuery,
 } from "@/controllers/API/queries/files";
 import * as Form from "@radix-ui/react-form";
-import { useEffect, useState } from "react";
+import { UseQueryResult } from "@tanstack/react-query";
 import { Button } from "../../../../../../components/ui/button";
 import {
   Card,
@@ -20,7 +20,7 @@ type ProfilePictureFormComponentProps = {
   profilePicture: string;
   handleInput: (event: any) => void;
   handlePatchProfilePicture: (gradient: string) => void;
-  handleGetProfilePictures: () => ProfilePicturesResponse | undefined;
+  handleGetProfilePictures: UseQueryResult<ProfilePicturesQueryResponse>;
   userData: any;
 };
 const ProfilePictureFormComponent = ({
@@ -30,27 +30,7 @@ const ProfilePictureFormComponent = ({
   handleGetProfilePictures,
   userData,
 }: ProfilePictureFormComponentProps) => {
-  const [profilePictures, setProfilePictures] = useState<{
-    [key: string]: string[];
-  }>({});
-
-  const { data: response, isFetching } = useGetProfilePicturesQuery({});
-
-  useEffect(() => {
-    if (response?.files) {
-      response?.files?.forEach((profile_picture) => {
-        const [folder, path] = profile_picture.split("/");
-        setProfilePictures((prev) => {
-          if (prev[folder]) {
-            prev[folder].push(path);
-          } else {
-            prev[folder] = [path];
-          }
-          return prev;
-        });
-      });
-    }
-  }, [response]);
+  const { isLoading, data, isFetching } = useGetProfilePicturesQuery();
 
   return (
     <Form.Root
@@ -69,14 +49,14 @@ const ProfilePictureFormComponent = ({
         <CardContent>
           <div className="py-2">
             <ProfilePictureChooserComponent
-              profilePictures={profilePictures}
-              loading={isFetching}
+              profilePictures={data}
+              loading={isLoading || isFetching}
               value={
                 profilePicture == ""
-                  ? userData?.profile_image ??
+                  ? (userData?.profile_image ??
                     gradients[
                       parseInt(userData?.id ?? "", 30) % gradients.length
-                    ]
+                    ])
                   : profilePicture
               }
               onChange={(value) => {

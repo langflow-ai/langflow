@@ -1,6 +1,6 @@
+import { CustomWrapper } from "@/customization/custom-wrapper";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
-import { BrowserRouter } from "react-router-dom";
 import { ReactFlowProvider } from "reactflow";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { ApiInterceptor } from "../controllers/API/api";
@@ -11,10 +11,10 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context
   return (
     <>
-      <BrowserRouter>
+      <CustomWrapper>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <TooltipProvider>
+            <TooltipProvider skipDelayDuration={0}>
               <ReactFlowProvider>
                 <ApiInterceptor />
                 {children}
@@ -22,7 +22,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
             </TooltipProvider>
           </AuthProvider>
         </QueryClientProvider>
-      </BrowserRouter>
+      </CustomWrapper>
     </>
   );
 }

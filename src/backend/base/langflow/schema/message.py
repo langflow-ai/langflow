@@ -1,5 +1,8 @@
+import asyncio
+import json
+from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import Annotated, Any, AsyncIterator, Iterator, List, Optional
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
@@ -9,14 +12,28 @@ from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
-from pydantic import BeforeValidator, ConfigDict, Field, field_serializer, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_serializer, field_validator
 
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
+from langflow.utils.constants import (
+    MESSAGE_SENDER_AI,
+    MESSAGE_SENDER_NAME_AI,
+    MESSAGE_SENDER_NAME_USER,
+    MESSAGE_SENDER_USER,
+)
 
 
-def _timestamp_to_str(timestamp: datetime) -> str:
+def _timestamp_to_str(timestamp: datetime | str) -> str:
+    if isinstance(timestamp, str):
+        # Just check if the string is a valid datetime
+        try:
+            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
+            return timestamp
+        except ValueError as e:
+            msg = f"Invalid timestamp: {timestamp}"
+            raise ValueError(msg) from e
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -24,15 +41,15 @@ class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
     text_key: str = "text"
-    text: Optional[str | AsyncIterator | Iterator] = Field(default="")
-    sender: Optional[str] = None
-    sender_name: Optional[str] = None
-    files: Optional[list[str | Image]] = Field(default=[])
-    session_id: Optional[str] = Field(default="")
+    text: str | AsyncIterator | Iterator | None = Field(default="")
+    sender: str | None = None
+    sender_name: str | None = None
+    files: list[str | Image] | None = Field(default=[])
+    session_id: str | None = Field(default="")
     timestamp: Annotated[str, BeforeValidator(_timestamp_to_str)] = Field(
-        default=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     )
-    flow_id: Optional[str | UUID] = None
+    flow_id: str | UUID | None = None
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -57,7 +74,7 @@ class Message(Data):
         return value
 
     def model_post_init(self, __context: Any) -> None:
-        new_files: List[Any] = []
+        new_files: list[Any] = []
         for file in self.files or []:
             if is_image_file(file):
                 new_files.append(Image(path=file))
@@ -86,24 +103,35 @@ class Message(Data):
         # they are: "text", "sender"
         if self.text is None or not self.sender:
             logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
+        text = "" if not isinstance(self.text, str) else self.text
 
-        if self.sender == "User" or not self.sender:
+        if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
-                contents = [{"type": "text", "text": self.text}]
-                contents.extend(self.get_file_content_dicts())
+                contents = [{"type": "text", "text": text}]
+                contents.extend(self.sync_get_file_content_dicts())
                 human_message = HumanMessage(content=contents)  # type: ignore
             else:
-                if not isinstance(self.text, str):
-                    text = ""
-                else:
-                    text = self.text
-                human_message = HumanMessage(
-                    content=text,
-                )
-
+                human_message = HumanMessage(content=text)
             return human_message
 
-        return AIMessage(content=self.text)  # type: ignore
+        return AIMessage(content=text)  # type: ignore
+
+    @classmethod
+    def from_lc_message(cls, lc_message: BaseMessage) -> "Message":
+        if lc_message.type == "human":
+            sender = MESSAGE_SENDER_USER
+            sender_name = MESSAGE_SENDER_NAME_USER
+        elif lc_message.type == "ai":
+            sender = MESSAGE_SENDER_AI
+            sender_name = MESSAGE_SENDER_NAME_AI
+        elif lc_message.type == "system":
+            sender = "System"
+            sender_name = "System"
+        else:
+            sender = lc_message.type
+            sender_name = lc_message.type
+
+        return cls(text=lc_message.content, sender=sender, sender_name=sender_name)
 
     @classmethod
     def from_data(cls, data: "Data") -> "Message":
@@ -129,12 +157,16 @@ class Message(Data):
 
     @field_serializer("text", mode="plain")
     def serialize_text(self, value):
-        if isinstance(value, AsyncIterator):
-            return ""
-        elif isinstance(value, Iterator):
+        if isinstance(value, AsyncIterator | Iterator):
             return ""
         return value
 
+    def sync_get_file_content_dicts(self):
+        coro = self.get_file_content_dicts()
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(coro)
+
+    # Keep this async method for backwards compatibility
     async def get_file_content_dicts(self):
         content_dicts = []
         files = await get_file_paths(self.files)
@@ -144,28 +176,31 @@ class Message(Data):
                 content_dicts.append(file.to_content_dict())
             else:
                 image_template = ImagePromptTemplate()
-                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})
+                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})  # type: ignore
                 content_dicts.append({"type": "image_url", "image_url": image_prompt_value.image_url})
         return content_dicts
 
     def load_lc_prompt(self):
         if "prompt" not in self:
-            raise ValueError("Prompt is required.")
-        loaded_prompt = load(self.prompt)
-        # Rebuild HumanMessages if they are instance of BaseMessage
-        if isinstance(loaded_prompt, ChatPromptTemplate):
-            messages = []
-            for message in loaded_prompt.messages:
-                if isinstance(message, HumanMessage):
+            msg = "Prompt is required."
+            raise ValueError(msg)
+        # self.prompt was passed through jsonable_encoder
+        # so inner messages are not BaseMessage
+        # we need to convert them to BaseMessage
+        messages = []
+        for message in self.prompt.get("kwargs", {}).get("messages", []):
+            match message:
+                case HumanMessage():
                     messages.append(message)
-                elif message.type == "human":
-                    messages.append(HumanMessage(content=message.content))
-                elif message.type == "system":
-                    messages.append(SystemMessage(content=message.content))
-                elif message.type == "ai":
-                    messages.append(AIMessage(content=message.content))
-            loaded_prompt.messages = messages
-        return loaded_prompt
+                case _ if message.get("type") == "human":
+                    messages.append(HumanMessage(content=message.get("content")))
+                case _ if message.get("type") == "system":
+                    messages.append(SystemMessage(content=message.get("content")))
+                case _ if message.get("type") == "ai":
+                    messages.append(AIMessage(content=message.get("content")))
+
+        self.prompt["kwargs"]["messages"] = messages
+        return load(self.prompt)
 
     @classmethod
     def from_lc_prompt(
@@ -197,6 +232,84 @@ class Message(Data):
             message = HumanMessage(content=[{"type": "text", "text": text}] + contents)
 
         prompt_template = ChatPromptTemplate.from_messages([message])  # type: ignore
+
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
         return instance
+
+    @classmethod
+    def sync_from_template_and_variables(cls, template: str, **variables):
+        # Run the async version in a sync way
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(cls.from_template_and_variables(template, **variables))
+        else:
+            return loop.run_until_complete(cls.from_template_and_variables(template, **variables))
+
+
+class DefaultModel(BaseModel):
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+        }
+
+    def json(self, **kwargs):
+        # Usa a função de serialização personalizada
+        return super().model_dump_json(**kwargs, encoder=self.custom_encoder)
+
+    @staticmethod
+    def custom_encoder(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        msg = f"Object of type {obj.__class__.__name__} is not JSON serializable"
+        raise TypeError(msg)
+
+
+class MessageResponse(DefaultModel):
+    id: str | UUID | None = Field(default=None)
+    flow_id: UUID | None = Field(default=None)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    sender: str
+    sender_name: str
+    session_id: str
+    text: str
+    files: list[str] = []
+
+    @field_validator("files", mode="before")
+    @classmethod
+    def validate_files(cls, v):
+        if isinstance(v, str):
+            v = json.loads(v)
+        return v
+
+    @field_serializer("timestamp")
+    @classmethod
+    def serialize_timestamp(cls, v):
+        v = v.replace(microsecond=0)
+        return v.strftime("%Y-%m-%d %H:%M:%S")
+
+    @field_serializer("files")
+    @classmethod
+    def serialize_files(cls, v):
+        if isinstance(v, list):
+            return json.dumps(v)
+        return v
+
+    @classmethod
+    def from_message(cls, message: Message, flow_id: str | None = None):
+        # first check if the record has all the required fields
+        if message.text is None or not message.sender or not message.sender_name:
+            msg = "The message does not have the required fields (text, sender, sender_name)."
+            raise ValueError(msg)
+        return cls(
+            sender=message.sender,
+            sender_name=message.sender_name,
+            text=message.text,
+            session_id=message.session_id,
+            files=message.files or [],
+            timestamp=message.timestamp,
+            flow_id=flow_id,
+        )

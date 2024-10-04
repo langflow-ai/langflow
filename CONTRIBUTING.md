@@ -1,37 +1,17 @@
 # Contributing to Langflow
 
-Hello there! We appreciate your interest in contributing to Langflow.
+This guide is intended to help you get started contributing to Langflow.
 As an open-source project in a rapidly developing field, we are extremely open
 to contributions, whether it be in the form of a new feature, improved infra, or better documentation.
 
-To contribute to this project, please follow a ["fork and pull request"](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
-Please do not try to push directly to this repo unless you are a maintainer.
+To contribute to this project, please follow the [fork and pull request](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
 
-## Linear History
+## Reporting bugs or suggesting improvements
 
-We strive to maintain a linear history in our git repository. This means that we do not accept merge commits in pull requests. To achieve this, we ask that you rebase your branch on top of the `dev` branch before opening a pull request. This can be done by running the following commands:
-
-```bash
-git checkout dev
-git pull
-git checkout <your-branch>
-git rebase dev
-# Fix any conflicts that arise
-git push --force-with-lease
-```
-
-The branch structure is as follows:
-
-- `main`: The stable version of Langflow
-- `dev`: The development version of Langflow. This branch is used to test new features before they are merged into `main` and, as such, may be unstable.
-
-## 🗺️Contributing Guidelines
-
-## 🚩GitHub Issues
-
-Our [issues](https://github.com/langflow-ai/langflow/issues) page is kept up to date
+Our [GitHub issues](https://github.com/langflow-ai/langflow/issues) page is kept up to date
 with bugs, improvements, and feature requests. There is a taxonomy of labels to help
-with sorting and discovery of issues of interest.
+with sorting and discovery of issues of interest. [See this page](https://github.com/langflow-ai/langflow/labels) for an overview of
+the system we use to tag our issues and pull requests.
 
 If you're looking for help with your code, consider posting a question on the
 [GitHub Discussions board](https://github.com/langflow-ai/langflow/discussions). Please
@@ -51,16 +31,23 @@ so that more people can benefit from it.
   [collapses the content](https://developer.mozilla.org/en/docs/Web/HTML/Element/details)
   so it only becomes visible on click, making the issue easier to read and follow.
 
-## Issue labels
+## Contributing code and documentation
 
-[See this page](https://github.com/langflow-ai/langflow/labels) for an overview of
-the system we use to tag our issues and pull requests.
+You can develop Langflow locally via uv + NodeJS.
 
-## Local development
+### Clone the Langflow Repository
 
-You can develop Langflow using docker compose, or locally.
+Navigate to the [Langflow GitHub repository](https://github.com/langflow-ai/langflow) and press "Fork" in the upper right-hand corner.
 
-We provide a .vscode/launch.json file for debugging the backend in VSCode, which is a lot faster than using docker compose.
+Add the new remote to your local repository on your local machine:
+
+```bash
+git remote add fork https://github.com/<your username>/langflow.git
+```
+
+We also provide a .vscode/launch.json file for debugging the backend in VSCode, which is a lot faster than using docker compose.
+
+### Prepare the environment
 
 Setting up hooks:
 
@@ -68,17 +55,17 @@ Setting up hooks:
 make init
 ```
 
-This will install the pre-commit hooks, which will run `make format` on every commit.
+This will set up the development environment by installing backend and frontend dependencies, building the frontend static files, and initializing the project. It runs `make install_backend`, `make install_frontend`, `make build_frontend`, and finally `uv run langflow run` to start the application.
 
-It is advised to run `make lint` before pushing to the repository.
+It is advised to run `make lint`, `make format`, and `make unit_tests` before pushing to the repository.
 
-## Run locally
+### Run locally (Poetry and Node.js)
 
 Langflow can run locally by cloning the repository and installing the dependencies. We recommend using a virtual environment to isolate the dependencies from your system.
 
 Before you start, make sure you have the following installed:
 
-- Poetry (>=1.4)
+- uv (>=0.4)
 - Node.js
 
 Then, in the root folder, install the dependencies and start the development server for the backend:
@@ -93,17 +80,7 @@ And the frontend:
 make frontend
 ```
 
-## Docker compose
-
-The following snippet will run the backend and frontend in separate containers. The frontend will be available at `localhost:3000` and the backend at `localhost:7860`.
-
-```bash
-docker compose up --build
-# or
-make dev build=1
-```
-
-## Documentation
+### Run documentation
 
 The documentation is built using [Docusaurus](https://docusaurus.io/). To run the documentation locally, run the following commands:
 
@@ -114,4 +91,12 @@ npm run start
 ```
 
 The documentation will be available at `localhost:3000` and all the files are located in the `docs/docs` folder.
-Once you are done with your changes, you can create a Pull Request to the `main` branch.
+
+## Opening a pull request
+
+Once you wrote and manually tested your change, you can start sending the patch to the main repository.
+
+- Open a new GitHub pull request with the patch against the `main` branch.
+- Ensure the PR title follows semantic commits conventions.
+  - For example, `feat: add new feature`, `fix: correct issue with X`.
+- Ensure the PR description clearly describes the problem and solution. Include the relevant issue number if applicable.

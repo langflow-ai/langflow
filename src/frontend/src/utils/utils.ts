@@ -1,15 +1,21 @@
+import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
-import { MESSAGES_TABLE_ORDER, MODAL_CLASSES } from "../constants/constants";
+import {
+  DRAG_EVENTS_CUSTOM_TYPESS,
+  MESSAGES_TABLE_ORDER,
+  MODAL_CLASSES,
+  SHORTCUT_KEYS,
+} from "../constants/constants";
 import { APIDataType, InputFieldType, VertexDataTypeAPI } from "../types/api";
 import {
   groupedObjType,
   nodeGroupedObjType,
   tweakType,
 } from "../types/components";
-import { NodeType } from "../types/flow";
+import { NodeDataType, NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import { isErrorLog } from "../types/utils/typeCheckingUtils";
 
@@ -357,7 +363,7 @@ export function extractColumnsFromRows(
   rows: object[],
   mode: "intersection" | "union",
   excludeColumns?: Array<string>,
-): (ColDef<any> | ColGroupDef<any>)[] {
+): ColDef<any>[] {
   let columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
   if (rows.length === 0) {
     return [];
@@ -470,4 +476,157 @@ export function isEndpointNameValid(name: string, maxLength: number): boolean {
     // empty is also valid
     name.length === 0
   );
+}
+
+export function brokenEdgeMessage({
+  source,
+  target,
+}: {
+  source: {
+    nodeDisplayName: string;
+    outputDisplayName?: string;
+  };
+  target: {
+    displayName: string;
+    field: string;
+  };
+}) {
+  return `${source.nodeDisplayName}${source.outputDisplayName ? " | " + source.outputDisplayName : ""} -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
+}
+export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
+  if (!columns) return [];
+  const basic_types = new Set(["date", "number"]);
+  const colDefs = columns.map((col, index) => {
+    let newCol: ColDef = {
+      headerName: col.display_name,
+      field: col.name,
+      sortable: col.sortable,
+      filter: col.filterable,
+    };
+    if (!col.formatter) {
+      col.formatter = FormatterType.text;
+    }
+    if (basic_types.has(col.formatter)) {
+      newCol.cellDataType = col.formatter;
+    } else {
+      newCol.cellRendererParams = {
+        formatter: col.formatter,
+      };
+      newCol.cellRenderer = TableAutoCellRender;
+    }
+    return newCol;
+  });
+
+  return colDefs;
+}
+
+export function generateBackendColumnsFromValue(rows: Object[]): ColumnField[] {
+  const columns = extractColumnsFromRows(rows, "union");
+  return columns.map((column) => {
+    const newColumn: ColumnField = {
+      name: column.field ?? "",
+      display_name: column.headerName ?? "",
+      sortable: true,
+      filterable: true,
+    };
+    if (rows[0] && rows[0][column.field ?? ""]) {
+      const value = rows[0][column.field ?? ""] as any;
+      if (typeof value === "string") {
+        if (isTimeStampString(value)) {
+          newColumn.formatter = FormatterType.date;
+        } else {
+          newColumn.formatter = FormatterType.text;
+        }
+      } else if (typeof value === "object" && value !== null) {
+        // Check if the object is a Date object
+        if (
+          Object.prototype.toString.call(value) === "[object Date]" ||
+          value instanceof Date
+        ) {
+          newColumn.formatter = FormatterType.date;
+        } else {
+          newColumn.formatter = FormatterType.json;
+        }
+      }
+    }
+    return newColumn;
+  });
+}
+
+/**
+ * Tries to parse a JSON string and returns the parsed object.
+ * If parsing fails, returns undefined.
+ *
+ * @param json - The JSON string to parse.
+ * @returns The parsed JSON object, or undefined if parsing fails.
+ */
+export function tryParseJson(json: string) {
+  try {
+    const parsedJson = JSON.parse(json);
+    return parsedJson;
+  } catch (error) {
+    return;
+  }
+}
+
+export function openInNewTab(url) {
+  window.open(url, "_blank", "noreferrer");
+}
+
+export function getNodeLength(data: NodeDataType) {
+  return Object.keys(data.node!.template).filter(
+    (templateField) =>
+      templateField.charAt(0) !== "_" &&
+      data.node?.template[templateField]?.show &&
+      (data.node.template[templateField]?.type === "str" ||
+        data.node.template[templateField]?.type === "bool" ||
+        data.node.template[templateField]?.type === "float" ||
+        data.node.template[templateField]?.type === "code" ||
+        data.node.template[templateField]?.type === "prompt" ||
+        data.node.template[templateField]?.type === "file" ||
+        data.node.template[templateField]?.type === "Any" ||
+        data.node.template[templateField]?.type === "int" ||
+        data.node.template[templateField]?.type === "dict" ||
+        data.node.template[templateField]?.type === "NestedDict"),
+  ).length;
+}
+
+export function sortShortcuts(a: string, b: string) {
+  const order = SHORTCUT_KEYS;
+  const aTrimmed = a.trim().toLowerCase();
+  const bTrimmed = b.trim().toLowerCase();
+  const aIndex = order.indexOf(aTrimmed);
+  const bIndex = order.indexOf(bTrimmed);
+  if (aIndex === -1 && bIndex === -1) {
+    return aTrimmed.localeCompare(bTrimmed);
+  }
+  if (aIndex === -1) {
+    return 1;
+  }
+  if (bIndex === -1) {
+    return -1;
+  }
+  return aIndex - bIndex;
+}
+export function addPlusSignes(array: string[]): string[] {
+  const exceptions = SHORTCUT_KEYS;
+  // add + sign to the shortcuts beetwen characters that are not in the exceptions
+  return array.map((key, index) => {
+    if (index === 0) return key;
+    if (
+      exceptions.includes(key.trim().toLocaleLowerCase()) ||
+      exceptions.includes(array[index - 1].trim().toLocaleLowerCase())
+    )
+      return key;
+
+    return "+" + key;
+  });
+}
+
+export function isSupportedNodeTypes(type: string) {
+  return Object.keys(DRAG_EVENTS_CUSTOM_TYPESS).some((key) => key === type);
+}
+
+export function getNodeRenderType(MIMEtype: string) {
+  return DRAG_EVENTS_CUSTOM_TYPESS[MIMEtype];
 }

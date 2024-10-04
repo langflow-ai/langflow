@@ -1,25 +1,32 @@
+from pathlib import Path
+
+import yaml
 from langchain.agents import AgentExecutor
 from langchain_community.agent_toolkits import create_json_agent
 from langchain_community.agent_toolkits.json.toolkit import JsonToolkit
+from langchain_community.tools.json.tool import JsonSpec
 
-from langflow.custom import CustomComponent
-from langflow.field_typing import LanguageModel
+from langflow.base.agents.agent import LCAgentComponent
+from langflow.inputs import FileInput, HandleInput
 
 
-class JsonAgentComponent(CustomComponent):
+class JsonAgentComponent(LCAgentComponent):
     display_name = "JsonAgent"
     description = "Construct a json agent from an LLM and tools."
     name = "JsonAgent"
 
-    def build_config(self):
-        return {
-            "llm": {"display_name": "LLM"},
-            "toolkit": {"display_name": "Toolkit"},
-        }
+    inputs = LCAgentComponent._base_inputs + [
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        FileInput(name="path", display_name="File Path", file_types=["json", "yaml", "yml"], required=True),
+    ]
 
-    def build(
-        self,
-        llm: LanguageModel,
-        toolkit: JsonToolkit,
-    ) -> AgentExecutor:
-        return create_json_agent(llm=llm, toolkit=toolkit)
+    def build_agent(self) -> AgentExecutor:
+        if self.path.endswith("yaml") or self.path.endswith("yml"):
+            with open(self.path) as file:
+                yaml_dict = yaml.load(file, Loader=yaml.FullLoader)
+            spec = JsonSpec(dict_=yaml_dict)
+        else:
+            spec = JsonSpec.from_file(Path(self.path))
+        toolkit = JsonToolkit(spec=spec)
+
+        return create_json_agent(llm=self.llm, toolkit=toolkit, **self.get_agent_kwargs())

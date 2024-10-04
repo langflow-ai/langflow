@@ -1,18 +1,16 @@
-import { useContext } from "react";
-import { Navigate } from "react-router-dom";
-import { AuthContext } from "../../contexts/authContext";
+import { CustomNavigate } from "@/customization/components/custom-navigate";
+import useAuthStore from "@/stores/authStore";
 
 export const ProtectedLoginRoute = ({ children }) => {
-  const { isAuthenticated, autoLogin } = useContext(AuthContext);
+  const autoLogin = useAuthStore((state) => state.autoLogin);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   if (autoLogin === true) {
-    window.location.replace("/");
-    return <Navigate to="/" replace />;
+    return <CustomNavigate to="/" replace />;
   }
 
   if (isAuthenticated) {
-    window.location.replace("/");
-    return <Navigate to="/" replace />;
+    return <CustomNavigate to="/" replace />;
   }
 
   return children;

@@ -1,13 +1,16 @@
 import json
 import warnings
 from abc import abstractmethod
-from typing import Optional, Union
 
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.output_parsers import BaseOutputParser
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.custom import Component
 from langflow.field_typing import LanguageModel
+from langflow.inputs import MessageInput, MessageTextInput
+from langflow.inputs.inputs import BoolInput, InputTypes
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
 
@@ -16,6 +19,20 @@ class LCModelComponent(Component):
     display_name: str = "Model Name"
     description: str = "Model Description"
     trace_type = "llm"
+
+    # Optional output parser to pass to the runnable. Subclasses may allow the user to input an `output_parser`
+    output_parser: BaseOutputParser | None = None
+
+    _base_inputs: list[InputTypes] = [
+        MessageInput(name="input_value", display_name="Input"),
+        MessageTextInput(
+            name="system_message",
+            display_name="System Message",
+            info="System message to pass to the model.",
+            advanced=True,
+        ),
+        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
+    ]
 
     outputs = [
         Output(display_name="Text", name="text_output", method="text_response"),
@@ -31,9 +48,11 @@ class LCModelComponent(Component):
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
-                raise ValueError(f"Output with name '{method_name}' must be defined.")
-            elif not hasattr(self, method_name):
-                raise ValueError(f"Method '{method_name}' must be defined.")
+                msg = f"Output with name '{method_name}' must be defined."
+                raise ValueError(msg)
+            if not hasattr(self, method_name):
+                msg = f"Method '{method_name}' must be defined."
+                raise ValueError(msg)
 
     def text_response(self) -> Message:
         input_value = self.input_value
@@ -124,43 +143,55 @@ class LCModelComponent(Component):
         runnable: LanguageModel,
         stream: bool,
         input_value: str | Message,
-        system_message: Optional[str] = None,
+        system_message: str | None = None,
     ):
-        messages: list[Union[BaseMessage]] = []
+        messages: list[BaseMessage] = []
         if not input_value and not system_message:
-            raise ValueError("The message you want to send to the model is empty.")
-        if system_message:
-            messages.append(SystemMessage(content=system_message))
+            msg = "The message you want to send to the model is empty."
+            raise ValueError(msg)
+        system_message_added = False
         if input_value:
             if isinstance(input_value, Message):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     if "prompt" in input_value:
                         prompt = input_value.load_lc_prompt()
+                        if system_message:
+                            prompt.messages = [SystemMessage(content=system_message)] + prompt.messages
+                            system_message_added = True
                         runnable = prompt | runnable
                     else:
                         messages.append(input_value.to_lc_message())
             else:
                 messages.append(HumanMessage(content=input_value))
-        inputs: Union[list, dict] = messages or {}
+
+        if system_message and not system_message_added:
+            messages.insert(0, SystemMessage(content=system_message))
+        inputs: list | dict = messages or {}
         try:
+            if self.output_parser is not None:
+                runnable = runnable | self.output_parser
+
             runnable = runnable.with_config(  # type: ignore
-                {"run_name": self.display_name, "project_name": self.tracing_service.project_name}  # type: ignore
+                {
+                    "run_name": self.display_name,
+                    "project_name": self.get_project_name(),
+                    "callbacks": self.get_langchain_callbacks(),
+                }
             )
             if stream:
                 return runnable.stream(inputs)  # type: ignore
+            message = runnable.invoke(inputs)  # type: ignore
+            result = message.content if hasattr(message, "content") else message
+            if isinstance(message, AIMessage):
+                status_message = self.build_status_message(message)
+                self.status = status_message
+            elif isinstance(result, dict):
+                result = json.dumps(message, indent=4)
+                self.status = result
             else:
-                message = runnable.invoke(inputs)  # type: ignore
-                result = message.content if hasattr(message, "content") else message
-                if isinstance(message, AIMessage):
-                    status_message = self.build_status_message(message)
-                    self.status = status_message
-                elif isinstance(result, dict):
-                    result = json.dumps(message, indent=4)
-                    self.status = result
-                else:
-                    self.status = result
-                return result
+                self.status = result
+            return result
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e

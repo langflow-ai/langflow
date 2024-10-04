@@ -1,12 +1,11 @@
-from typing import List
-
 from loguru import logger
 
 from langflow.graph.schema import ResultData, RunOutputs
 from langflow.schema import Data
+from langflow.schema.message import Message
 
 
-def build_data_from_run_outputs(run_outputs: RunOutputs) -> List[Data]:
+def build_data_from_run_outputs(run_outputs: RunOutputs) -> list[Data]:
     """
     Build a list of data from the given RunOutputs.
 
@@ -26,7 +25,7 @@ def build_data_from_run_outputs(run_outputs: RunOutputs) -> List[Data]:
     return data
 
 
-def build_data_from_result_data(result_data: ResultData, get_final_results_only: bool = True) -> List[Data]:
+def build_data_from_result_data(result_data: ResultData, get_final_results_only: bool = True) -> list[Data]:
     """
     Build a list of data from the given ResultData.
 
@@ -65,18 +64,18 @@ def build_data_from_result_data(result_data: ResultData, get_final_results_only:
         else:
             return []
 
-    for message in messages:  # type: ignore
-        message_dict = message if isinstance(message, dict) else message.model_dump()
-        if get_final_results_only:
-            result_data_dict = result_data.model_dump()
-            results = result_data_dict.get("results", {})
-            inner_result = results.get("result", {})
-        record = Data(data={"result": inner_result, "message": message_dict}, text_key="result")
-        data.append(record)
+    if isinstance(result_data.results, dict):
+        for name, result in result_data.results.items():
+            dataobj: Data | Message | None = None
+            dataobj = result if isinstance(result, Message) else Data(data=result, text_key=name)
+
+            data.append(dataobj)
+    else:
+        data.append(Data(data=result_data.results))
     return data
 
 
-def format_flow_output_data(data: List[Data]) -> str:
+def format_flow_output_data(data: list[Data]) -> str:
     """
     Format the flow output data into a string.
 
@@ -88,5 +87,5 @@ def format_flow_output_data(data: List[Data]) -> str:
 
     """
     result = "Flow run output:\n"
-    results = "\n".join([value.result for value in data if value.data["message"]])
+    results = "\n".join([value.get_text() if hasattr(value, "get_text") else str(value) for value in data])
     return result + results

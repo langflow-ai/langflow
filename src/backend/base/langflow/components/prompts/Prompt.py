@@ -1,5 +1,6 @@
 from langflow.base.prompts.api_utils import process_prompt_template
 from langflow.custom import Component
+from langflow.inputs.inputs import DefaultPromptField
 from langflow.io import Output, PromptInput
 from langflow.schema.message import Message
 from langflow.template.utils import update_template_values
@@ -27,19 +28,35 @@ class PromptComponent(Component):
         self.status = prompt.text
         return prompt
 
-    def post_code_processing(self, new_build_config: dict, current_build_config: dict):
+    def _update_template(self, frontend_node: dict):
+        prompt_template = frontend_node["template"]["template"]["value"]
+        custom_fields = frontend_node["custom_fields"]
+        frontend_node_template = frontend_node["template"]
+        _ = process_prompt_template(
+            template=prompt_template,
+            name="template",
+            custom_fields=custom_fields,
+            frontend_node_template=frontend_node_template,
+        )
+        return frontend_node
+
+    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """
         This function is called after the code validation is done.
         """
-        frontend_node = super().post_code_processing(new_build_config, current_build_config)
+        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
         template = frontend_node["template"]["template"]["value"]
+        # Kept it duplicated for backwards compatibility
         _ = process_prompt_template(
             template=template,
             name="template",
             custom_fields=frontend_node["custom_fields"],
             frontend_node_template=frontend_node["template"],
         )
-        # Now that template is updated, we need to grab any values that were set in the current_build_config
+        # Now that template is updated, we need to grab any values that were set in the current_frontend_node
         # and update the frontend_node with those values
-        update_template_values(frontend_template=frontend_node, raw_template=current_build_config["template"])
+        update_template_values(new_template=frontend_node, previous_template=current_frontend_node["template"])
         return frontend_node
+
+    def _get_fallback_input(self, **kwargs):
+        return DefaultPromptField(**kwargs)

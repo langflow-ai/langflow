@@ -1,7 +1,6 @@
-from typing import Optional
-
 from langflow.custom import CustomComponent
 from langflow.schema import Data
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
 class BaseMemoryComponent(CustomComponent):
@@ -13,7 +12,7 @@ class BaseMemoryComponent(CustomComponent):
     def build_config(self):
         return {
             "sender": {
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, "Machine and User"],
                 "display_name": "Sender Type",
             },
             "sender_name": {"display_name": "Sender Name", "advanced": True},
@@ -35,7 +34,8 @@ class BaseMemoryComponent(CustomComponent):
             "data_template": {
                 "display_name": "Data Template",
                 "multiline": True,
-                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "info": "Template to convert Data to Text. "
+                "If left empty, it will be dynamically set to the Data's text key.",
                 "advanced": True,
             },
         }
@@ -44,6 +44,6 @@ class BaseMemoryComponent(CustomComponent):
         raise NotImplementedError
 
     def add_message(
-        self, sender: str, sender_name: str, text: str, session_id: str, metadata: Optional[dict] = None, **kwargs
+        self, sender: str, sender_name: str, text: str, session_id: str, metadata: dict | None = None, **kwargs
     ):
         raise NotImplementedError

@@ -5,5 +5,6 @@ if [ ! -f .env ]; then
   echo "Creating .env file"
   touch .env
 else
-  echo ".env file already exists"
+  # do nothing and do not log
+  true
 fi

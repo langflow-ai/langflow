@@ -1,10 +1,10 @@
 from langchain_cohere import ChatCohere
 from pydantic.v1 import SecretStr
 
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, FloatInput, MessageInput, SecretStrInput, StrInput
+from langflow.inputs.inputs import HandleInput
+from langflow.io import FloatInput, SecretStrInput
 
 
 class CohereComponent(LCModelComponent):
@@ -14,7 +14,7 @@ class CohereComponent(LCModelComponent):
     icon = "Cohere"
     name = "CohereModel"
 
-    inputs = [
+    inputs = LCModelComponent._base_inputs + [
         SecretStrInput(
             name="cohere_api_key",
             display_name="Cohere API Key",
@@ -23,13 +23,12 @@ class CohereComponent(LCModelComponent):
             value="COHERE_API_KEY",
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.75),
-        MessageInput(name="input_value", display_name="Input"),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
             advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 
@@ -37,14 +36,9 @@ class CohereComponent(LCModelComponent):
         cohere_api_key = self.cohere_api_key
         temperature = self.temperature
 
-        if cohere_api_key:
-            api_key = SecretStr(cohere_api_key)
-        else:
-            api_key = None
+        api_key = SecretStr(cohere_api_key) if cohere_api_key else None
 
-        output = ChatCohere(
+        return ChatCohere(
             temperature=temperature or 0.75,
             cohere_api_key=api_key,
         )
-
-        return output  # type: ignore

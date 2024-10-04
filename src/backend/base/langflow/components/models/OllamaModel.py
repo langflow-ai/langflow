@@ -1,12 +1,13 @@
 from typing import Any
+from urllib.parse import urljoin
 
 import httpx
 from langchain_community.chat_models import ChatOllama
 
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageInput, StrInput
+from langflow.inputs.inputs import HandleInput
+from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput
 
 
 class ChatOllamaComponent(LCModelComponent):
@@ -34,7 +35,7 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
 
-        if field_name == "model":
+        if field_name == "model_name":
             base_url_dict = build_config.get("base_url", {})
             base_url_load_from_db = base_url_dict.get("load_from_db", False)
             base_url_value = base_url_dict.get("value")
@@ -42,8 +43,7 @@ class ChatOllamaComponent(LCModelComponent):
                 base_url_value = self.variables(base_url_value)
             elif not base_url_value:
                 base_url_value = "http://localhost:11434"
-            build_config["model"]["options"] = self.get_model(base_url_value + "/api/tags")
-
+            build_config["model_name"]["options"] = self.get_model(base_url_value)
         if field_name == "keep_alive_flag":
             if field_value == "Keep":
                 build_config["keep_alive"]["value"] = "-1"
@@ -56,19 +56,20 @@ class ChatOllamaComponent(LCModelComponent):
 
         return build_config
 
-    def get_model(self, url: str) -> list[str]:
+    def get_model(self, base_url_value: str) -> list[str]:
         try:
+            url = urljoin(base_url_value, "/api/tags")
             with httpx.Client() as client:
                 response = client.get(url)
                 response.raise_for_status()
                 data = response.json()
 
-                model_names = [model["name"] for model in data.get("models", [])]
-                return model_names
+                return [model["name"] for model in data.get("models", [])]
         except Exception as e:
-            raise ValueError("Could not retrieve models. Please, make sure Ollama is running.") from e
+            msg = "Could not retrieve models. Please, make sure Ollama is running."
+            raise ValueError(msg) from e
 
-    inputs = [
+    inputs = LCModelComponent._base_inputs + [
         StrInput(
             name="base_url",
             display_name="Base URL",
@@ -76,10 +77,10 @@ class ChatOllamaComponent(LCModelComponent):
             value="http://localhost:11434",
         ),
         DropdownInput(
-            name="model",
+            name="model_name",
             display_name="Model Name",
-            value="llama2",
-            info="Refer to https://ollama.ai/library for more models.",
+            value="llama3.1",
+            info="Refer to https://ollama.com/library for more models.",
             refresh_button=True,
         ),
         FloatInput(
@@ -107,6 +108,7 @@ class ChatOllamaComponent(LCModelComponent):
             info="Enable/disable Mirostat sampling for controlling perplexity.",
             value="Disabled",
             advanced=True,
+            real_time_refresh=True,
         ),
         FloatInput(
             name="mirostat_eta",
@@ -203,20 +205,12 @@ class ChatOllamaComponent(LCModelComponent):
             info="Template to use for generating text.",
             advanced=True,
         ),
-        MessageInput(
-            name="input_value",
-            display_name="Input",
-        ),
-        BoolInput(
-            name="stream",
-            display_name="Stream",
-            info=STREAM_INFO_TEXT,
-        ),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
             advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 
@@ -238,7 +232,7 @@ class ChatOllamaComponent(LCModelComponent):
         # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": self.base_url,
-            "model": self.model,
+            "model": self.model_name,
             "mirostat": mirostat_value,
             "format": self.format,
             "metadata": self.metadata,
@@ -267,6 +261,7 @@ class ChatOllamaComponent(LCModelComponent):
         try:
             output = ChatOllama(**llm_params)  # type: ignore
         except Exception as e:
-            raise ValueError("Could not initialize Ollama LLM.") from e
+            msg = "Could not initialize Ollama LLM."
+            raise ValueError(msg) from e
 
         return output  # type: ignore

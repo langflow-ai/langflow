@@ -1,15 +1,15 @@
+import inspect
 import platform
 import socket
 import sys
 import time
 import warnings
 from pathlib import Path
-from typing import Any, Callable, Optional
 
 import click
 import httpx
 import typer
-from dotenv import dotenv_values, load_dotenv
+from dotenv import load_dotenv
 from multiprocess import cpu_count  # type: ignore
 from multiprocess.context import Process  # type: ignore
 from packaging import version as pkg_version
@@ -20,14 +20,17 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
-from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
+from langflow.services.database.models.folder.utils import (
+    create_default_folder_if_it_doesnt_exist,
+)
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
-from langflow.utils.logger import configure, logger
-from langflow.utils.util import update_settings
+from langflow.utils.version import fetch_latest_version, get_version_info
+from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
 console = Console()
 
@@ -69,56 +72,80 @@ def set_var_for_macos_issue():
         import os
 
         os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
-        # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa
+        # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa: E501
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
 @app.command()
 def run(
-    host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"),
-    workers: int = typer.Option(1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"),
-    timeout: int = typer.Option(300, help="Worker timeout in seconds.", envvar="LANGFLOW_WORKER_TIMEOUT"),
-    port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
-    components_path: Optional[Path] = typer.Option(
+    host: str | None = typer.Option(None, help="Host to bind the server to.", show_default=False),
+    workers: int | None = typer.Option(None, help="Number of worker processes.", show_default=False),
+    worker_timeout: int | None = typer.Option(None, help="Worker timeout in seconds.", show_default=False),
+    port: int | None = typer.Option(None, help="Port to listen on.", show_default=False),
+    components_path: Path | None = typer.Option(
         Path(__file__).parent / "components",
         help="Path to the directory containing custom components.",
-        envvar="LANGFLOW_COMPONENTS_PATH",
+        show_default=False,
     ),
     # .env file param
-    env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
-    log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
-    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"),
-    cache: Optional[str] = typer.Option(
-        envvar="LANGFLOW_LANGCHAIN_CACHE",
-        help="Type of cache to use. (InMemoryCache, SQLiteCache)",
-        default=None,
+    env_file: Path | None = typer.Option(
+        None,
+        help="Path to the .env file containing environment variables.",
+        show_default=False,
     ),
-    dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
-    path: str = typer.Option(
+    log_level: str | None = typer.Option(None, help="Logging level.", show_default=False),
+    log_file: Path | None = typer.Option(None, help="Path to the log file.", show_default=False),
+    cache: str | None = typer.Option(
+        None,
+        help="Type of cache to use. (InMemoryCache, SQLiteCache)",
+        show_default=False,
+    ),
+    dev: bool | None = typer.Option(None, help="Run in development mode (may contain bugs)", show_default=False),
+    frontend_path: str | None = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
-        envvar="LANGFLOW_FRONTEND_PATH",
+        show_default=False,
     ),
-    open_browser: bool = typer.Option(
-        True,
+    open_browser: bool | None = typer.Option(
+        None,
         help="Open the browser after starting the server.",
-        envvar="LANGFLOW_OPEN_BROWSER",
+        show_default=False,
     ),
-    remove_api_keys: bool = typer.Option(
-        False,
+    remove_api_keys: bool | None = typer.Option(
+        None,
         help="Remove API keys from the projects saved in the database.",
-        envvar="LANGFLOW_REMOVE_API_KEYS",
+        show_default=False,
     ),
-    backend_only: bool = typer.Option(
-        False,
+    backend_only: bool | None = typer.Option(
+        None,
         help="Run only the backend server without the frontend.",
-        envvar="LANGFLOW_BACKEND_ONLY",
+        show_default=False,
     ),
-    store: bool = typer.Option(
-        True,
+    store: bool | None = typer.Option(
+        None,
         help="Enables the store features.",
-        envvar="LANGFLOW_STORE",
+        show_default=False,
+    ),
+    auto_saving: bool | None = typer.Option(
+        None,
+        help="Defines if the auto save is enabled.",
+        show_default=False,
+    ),
+    auto_saving_interval: int | None = typer.Option(
+        None,
+        help="Defines the debounce time for the auto save.",
+        show_default=False,
+    ),
+    health_check_max_retries: bool | None = typer.Option(
+        None,
+        help="Defines the number of retries for the health check.",
+        show_default=False,
+    ),
+    max_file_size_upload: int | None = typer.Option(
+        None,
+        help="Defines the maximum file size for the upload in MB.",
+        show_default=False,
     ),
 ):
     """
@@ -127,56 +154,47 @@ def run(
 
     configure(log_level=log_level, log_file=log_file)
     set_var_for_macos_issue()
-    # override env variables with .env file
 
     if env_file:
         load_dotenv(env_file, override=True)
-        env_vars = dotenv_values(env_file)
+        logger.debug(f"Loading config from file: '{env_file}'")
 
-        # Define a mapping of environment variables to their corresponding variables and types
-        env_var_mapping: dict[str, tuple[str, type | Callable[[Any], bool]]] = {
-            "LANGFLOW_HOST": ("host", str),
-            "LANGFLOW_PORT": ("port", int),
-            "LANGFLOW_WORKERS": ("workers", int),
-            "LANGFLOW_WORKER_TIMEOUT": ("timeout", int),
-            "LANGFLOW_COMPONENTS_PATH": ("components_path", Path),
-            "LANGFLOW_LOG_LEVEL": ("log_level", str),
-            "LANGFLOW_LOG_FILE": ("log_file", Path),
-            "LANGFLOW_LANGCHAIN_CACHE": ("cache", str),
-            "LANGFLOW_FRONTEND_PATH": ("path", str),
-            "LANGFLOW_OPEN_BROWSER": ("open_browser", lambda x: x.lower() == "true"),
-            "LANGFLOW_REMOVE_API_KEYS": ("remove_api_keys", lambda x: x.lower() == "true"),
-            "LANGFLOW_BACKEND_ONLY": ("backend_only", lambda x: x.lower() == "true"),
-            "LANGFLOW_STORE": ("store", lambda x: x.lower() == "true"),
-        }
-
-        # Update variables based on environment variables
-        for env_var, (var_name, var_type) in env_var_mapping.items():
-            if env_var in env_vars:
-                locals()[var_name] = var_type(env_vars[env_var])
-
-    update_settings(
-        dev=dev,
-        remove_api_keys=remove_api_keys,
-        cache=cache,
-        components_path=components_path,
-        store=store,
-    )
-    # create path object if path is provided
-    static_files_dir: Optional[Path] = Path(path) if path else None
     settings_service = get_settings_service()
-    settings_service.set("backend_only", backend_only)
+
+    frame = inspect.currentframe()
+    valid_args: list = []
+    values: dict = {}
+    if frame is not None:
+        arguments, _, _, values = inspect.getargvalues(frame)
+        valid_args = [arg for arg in arguments if values[arg] is not None]
+
+    for arg in valid_args:
+        if arg == "components_path":
+            settings_service.settings.update_settings(components_path=components_path)
+        elif hasattr(settings_service.settings, arg):
+            settings_service.set(arg, values[arg])
+        logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
+
+    host = settings_service.settings.host
+    port = settings_service.settings.port
+    workers = settings_service.settings.workers
+    worker_timeout = settings_service.settings.worker_timeout
+    log_level = settings_service.settings.log_level
+    frontend_path = settings_service.settings.frontend_path
+    backend_only = settings_service.settings.backend_only
+
+    # create path object if frontend_path is provided
+    static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
+
     app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
 
-    settings_service.set("worker_timeout", timeout)
-
     options = {
         "bind": f"{host}:{port}",
         "workers": get_number_of_workers(workers),
-        "timeout": timeout,
+        "timeout": worker_timeout,
     }
 
     # Define an env variable to know if we are just testing the server
@@ -232,7 +250,7 @@ def run_on_windows(host, port, log_level, options, app):
     """
     print_banner(host, port)
     run_langflow(host, port, log_level, options, app)
-    return None
+    return
 
 
 def is_port_in_use(port, host="localhost"):
@@ -265,13 +283,6 @@ def get_free_port(port):
     return port
 
 
-def version_is_prerelease(version: str):
-    """
-    Check if a version is a pre-release version.
-    """
-    return "a" in version or "b" in version or "rc" in version
-
-
 def get_letter_from_version(version: str):
     """
     Get the letter from a pre-release version.
@@ -285,63 +296,10 @@ def get_letter_from_version(version: str):
     return None
 
 
-def build_new_version_notice(current_version: str, package_name: str):
-    """
-    Build a new version notice.
-    """
-    # The idea here is that we want to show a notice to the user
-    # when a new version of Langflow is available.
-    # The key is that if the version the user has is a pre-release
-    # e.g 0.0.0a1, then we find the latest version that is pre-release
-    # otherwise we find the latest stable version.
-    # we will show the notice either way, but only if the version
-    # the user has is not the latest version.
-    if version_is_prerelease(current_version):
-        # curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1
-        # this command will give us the latest pre-release version
-        package_info = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()
-        # 4.0.0a1 or 4.0.0b1 or 4.0.0rc1
-        # find which type of pre-release version we have
-        # could be a1, b1, rc1
-        # we want the a, b, or rc and the number
-        suffix_letter = get_letter_from_version(current_version)
-        number_version = current_version.split(suffix_letter)[0]
-        latest_version = sorted(
-            package_info["releases"].keys(),
-            key=lambda x: x.split(suffix_letter)[-1] and number_version in x,
-        )[-1]
-        if version_is_prerelease(latest_version) and latest_version != current_version:
-            return (
-                True,
-                f"A new pre-release version of {package_name} is available: {latest_version}",
-            )
-    else:
-        latest_version = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()["info"]["version"]
-        if not version_is_prerelease(latest_version):
-            return (
-                False,
-                f"A new version of {package_name} is available: {latest_version}",
-            )
-    return False, ""
-
-
-def is_prerelease(version: str) -> bool:
-    return "a" in version or "b" in version or "rc" in version
-
-
-def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optional[str]:
-    response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
-    versions = response.json()["releases"].keys()
-    valid_versions = [v for v in versions if include_prerelease or not is_prerelease(v)]
-    if not valid_versions:
-        return None  # Handle case where no valid versions are found
-    return max(valid_versions, key=lambda v: pkg_version.parse(v))
-
-
 def build_version_notice(current_version: str, package_name: str) -> str:
-    latest_version = fetch_latest_version(package_name, is_prerelease(current_version))
+    latest_version = fetch_latest_version(package_name, langflow_is_pre_release(current_version))
     if latest_version and pkg_version.parse(current_version) < pkg_version.parse(latest_version):
-        release_type = "pre-release" if is_prerelease(latest_version) else "version"
+        release_type = "pre-release" if langflow_is_pre_release(latest_version) else "version"
         return f"A new {release_type} of {package_name} is available: {latest_version}"
     return ""
 
@@ -353,8 +311,7 @@ def generate_pip_command(package_names, is_pre_release):
     base_command = "pip install"
     if is_pre_release:
         return f"{base_command} {' '.join(package_names)} -U --pre"
-    else:
-        return f"{base_command} {' '.join(package_names)} -U"
+    return f"{base_command} {' '.join(package_names)} -U"
 
 
 def stylize_text(text: str, to_style: str, is_prerelease: bool) -> str:
@@ -370,35 +327,17 @@ def print_banner(host: str, port: int):
     is_pre_release = False  # Track if any package is a pre-release
     package_name = ""
 
-    try:
-        from langflow.version import __version__ as langflow_version  # type: ignore
+    # Use langflow.utils.version to get the version info
+    version_info = get_version_info()
+    langflow_version = version_info["version"]
+    package_name = version_info["package"]
+    is_pre_release |= langflow_is_pre_release(langflow_version)  # Update pre-release status
 
-        is_pre_release |= is_prerelease(langflow_version)  # Update pre-release status
-        notice = build_version_notice(langflow_version, "langflow")
-        notice = stylize_text(notice, "langflow", is_pre_release)
-        if notice:
-            notices.append(notice)
-        package_names.append("langflow")
-        package_name = "Langflow"
-    except ImportError:
-        langflow_version = None
-
-    # Attempt to handle langflow-base similarly
-    if langflow_version is None:  # This means langflow.version was not imported
-        try:
-            from importlib import metadata
-
-            langflow_base_version = metadata.version("langflow-base")
-            is_pre_release |= is_prerelease(langflow_base_version)  # Update pre-release status
-            notice = build_version_notice(langflow_base_version, "langflow-base")
-            notice = stylize_text(notice, "langflow-base", is_pre_release)
-            if notice:
-                notices.append(notice)
-            package_names.append("langflow-base")
-            package_name = "Langflow Base"
-        except ImportError as e:
-            logger.exception(e)
-            raise e
+    notice = build_version_notice(langflow_version, package_name)
+    notice = stylize_text(notice, package_name, is_pre_release)
+    if notice:
+        notices.append(notice)
+    package_names.append(package_name)
 
     # Generate pip command based on the collected data
     pip_command = generate_pip_command(package_names, is_pre_release)
@@ -411,8 +350,14 @@ def print_banner(host: str, port: int):
     styled_package_name = stylize_text(package_name, package_name, any("pre-release" in notice for notice in notices))
 
     title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
-    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
-    telemetry_text = "We collect anonymous usage data to improve Langflow.\nYou can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
+    info_text = (
+        "Collaborate, and contribute at our "
+        "[bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
+    )
+    telemetry_text = (
+        "We collect anonymous usage data to improve Langflow.\n"
+        "You can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
+    )
     access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
 
     panel_content = "\n\n".join([title, *styled_notices, info_text, telemetry_text, access_link])
@@ -472,7 +417,8 @@ def superuser(
             if result:
                 typer.echo("Default folder created successfully.")
             else:
-                raise RuntimeError("Could not create default folder.")
+                msg = "Could not create default folder."
+                raise RuntimeError(msg)
             typer.echo("Superuser created successfully.")
 
         else:
@@ -486,7 +432,8 @@ def copy_db():
     """
     Copy the database files to the current directory.
 
-    This function copies the 'langflow.db' and 'langflow-pre.db' files from the cache directory to the current directory.
+    This function copies the 'langflow.db' and 'langflow-pre.db' files from the cache directory to the current
+    directory.
     If the files exist in the cache directory, they will be copied to the same directory as this script (__main__.py).
 
     Returns:
@@ -525,11 +472,10 @@ def migration(
     """
     Run or test migrations.
     """
-    if fix:
-        if not typer.confirm(
-            "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
-        ):
-            raise typer.Abort()
+    if fix and not typer.confirm(
+        "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
+    ):
+        raise typer.Abort
 
     initialize_services(fix_migration=fix)
     db_service = get_db_service()
@@ -541,7 +487,7 @@ def migration(
 
 @app.command()
 def api_key(
-    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    log_level: str = typer.Option("error", help="Logging level."),
 ):
     """
     Creates an API key for the default superuser if AUTO_LOGIN is enabled.
@@ -567,7 +513,10 @@ def api_key(
             typer.echo("Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled.")
             return
         from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
-        from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
+        from langflow.services.database.models.api_key.crud import (
+            create_api_key,
+            delete_api_key,
+        )
 
         api_key = session.exec(select(ApiKey).where(ApiKey.user_id == superuser.id)).first()
         if api_key:

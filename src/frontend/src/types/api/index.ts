@@ -15,6 +15,11 @@ export type APITemplateType = {
   [key: string]: InputFieldType;
 };
 
+export type APICodeValidateType = {
+  imports: { errors: Array<string> };
+  function: { errors: Array<string> };
+};
+
 export type CustomFieldsType = {
   [key: string]: Array<string>;
 };
@@ -43,6 +48,7 @@ export type APIClassType = {
   official?: boolean;
   outputs?: Array<OutputFieldType>;
   frozen?: boolean;
+  lf_version?: string;
   flow?: FlowType;
   field_order?: string[];
   [key: string]:
@@ -64,6 +70,7 @@ export type InputFieldType = {
   list: boolean;
   show: boolean;
   readonly: boolean;
+  password?: boolean;
   multiline?: boolean;
   value?: any;
   dynamic?: boolean;
@@ -74,7 +81,11 @@ export type InputFieldType = {
   real_time_refresh?: boolean;
   refresh_button?: boolean;
   refresh_button_text?: string;
+  combobox?: boolean;
+  info?: string;
   [key: string]: any;
+  icon?: string;
+  text?: string;
 };
 
 export type OutputFieldProxyType = {
@@ -201,12 +212,18 @@ export type OutputLogType = {
   message: any | ErrorLogType;
   type: string;
 };
+export type LogsLogType = {
+  name: string;
+  message: any | ErrorLogType;
+  type: string;
+};
 
 // data is the object received by the API
 // it has results, artifacts, timedelta, duration
 export type VertexDataTypeAPI = {
   results: { [key: string]: string };
   outputs: { [key: string]: OutputLogType };
+  logs: { [key: string]: LogsLogType };
   messages: ChatOutputType[] | ChatInputType[];
   inactive?: boolean;
   timedelta?: number;
@@ -233,7 +250,6 @@ export type ResponseErrorDetailAPI = {
 };
 export type useQueryFunctionType<T = undefined, R = any> = T extends undefined
   ? (
-      params?: T,
       options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
     ) => UseQueryResult<R>
   : (
@@ -253,6 +269,22 @@ export type MutationFunctionType = (
   options?: Omit<UseMutationOptions<any, any>, "mutationFn" | "mutationKey">,
 ) => UseMutationResult<any, any, any, any>;
 
-export type useMutationFunctionType<Variables, Data = any, Error = any> = (
-  options?: Omit<UseMutationOptions<Data, Error>, "mutationFn" | "mutationKey">,
-) => UseMutationResult<Data, Error, Variables>;
+export type useMutationFunctionType<
+  Params,
+  Variables = any,
+  Data = any,
+  Error = any,
+> = Params extends undefined
+  ? (
+      options?: Omit<
+        UseMutationOptions<Data, Error>,
+        "mutationFn" | "mutationKey"
+      >,
+    ) => UseMutationResult<Data, Error, Variables>
+  : (
+      params: Params,
+      options?: Omit<
+        UseMutationOptions<Data, Error>,
+        "mutationFn" | "mutationKey"
+      >,
+    ) => UseMutationResult<Data, Error, Variables>;

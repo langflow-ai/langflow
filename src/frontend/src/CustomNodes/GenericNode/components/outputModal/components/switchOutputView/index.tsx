@@ -1,3 +1,6 @@
+import { MAX_TEXT_LENGTH } from "@/constants/constants";
+import { LogsLogType, OutputLogType } from "@/types/api";
+import { useMemo } from "react";
 import DataOutputComponent from "../../../../../../components/dataOutputComponent";
 import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 import {
@@ -13,48 +16,82 @@ import ErrorOutput from "./components";
 interface SwitchOutputViewProps {
   nodeId: string;
   outputName: string;
+  type: "Outputs" | "Logs";
 }
+
 const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   nodeId,
   outputName,
+  type,
 }) => {
   const flowPool = useFlowStore((state) => state.flowPool);
   const flowPoolNode = (flowPool[nodeId] ?? [])[
     (flowPool[nodeId]?.length ?? 1) - 1
   ];
-  let results = flowPoolNode?.data?.outputs[outputName] ?? "";
-  if (Array.isArray(results)) {
-    return;
-  }
+  let results: OutputLogType | LogsLogType =
+    (type === "Outputs"
+      ? flowPoolNode?.data?.outputs[outputName]
+      : flowPoolNode?.data?.logs[outputName]) ?? {};
   const resultType = results?.type;
-  let resultMessage = results?.message;
+  let resultMessage = results?.message ?? {};
   const RECORD_TYPES = ["data", "object", "array", "message"];
   if (resultMessage?.raw) {
     resultMessage = resultMessage.raw;
   }
-  return (
+
+  const resultMessageMemoized = useMemo(() => {
+    if (
+      typeof resultMessage === "string" &&
+      resultMessage.length > MAX_TEXT_LENGTH
+    ) {
+      resultMessage = `${resultMessage.substring(0, MAX_TEXT_LENGTH)}...`;
+    }
+
+    if (Array.isArray(resultMessage)) {
+      resultMessage = resultMessage.map((item) => {
+        if (item && typeof item.data === "object") {
+          const truncatedData = Object.fromEntries(
+            Object.entries(item.data).map(([key, value]) => {
+              if (typeof value === "string" && value.length > MAX_TEXT_LENGTH) {
+                return [key, `${value.substring(0, MAX_TEXT_LENGTH)}...`];
+              }
+              return [key, value];
+            }),
+          );
+          return { ...item, data: truncatedData };
+        }
+        return item;
+      });
+    }
+
+    return resultMessage;
+  }, [resultMessage]);
+
+  return type === "Outputs" ? (
     <>
       <Case condition={!resultType || resultType === "unknown"}>
         <div>NO OUTPUT</div>
       </Case>
       <Case condition={resultType === "error" || resultType === "ValueError"}>
         <ErrorOutput
-          value={`${resultMessage.errorMessage}\n\n${resultMessage.stackTrace}`}
+          value={`${resultMessageMemoized.errorMessage}\n\n${resultMessageMemoized.stackTrace}`}
         ></ErrorOutput>
       </Case>
 
       <Case condition={resultType === "text"}>
-        <TextOutputView left={false} value={resultMessage} />
+        <TextOutputView left={false} value={resultMessageMemoized} />
       </Case>
 
       <Case condition={RECORD_TYPES.includes(resultType)}>
         <DataOutputComponent
           rows={
-            Array.isArray(resultMessage)
-              ? (resultMessage as Array<any>).every((item) => item.data)
-                ? (resultMessage as Array<any>).map((item) => item.data)
-                : resultMessage
-              : [resultMessage]
+            Array.isArray(resultMessageMemoized)
+              ? (resultMessageMemoized as Array<any>).every((item) => item.data)
+                ? (resultMessageMemoized as Array<any>).map((item) => item.data)
+                : resultMessageMemoized
+              : Object.keys(resultMessageMemoized).length > 0
+                ? [resultMessageMemoized]
+                : []
           }
           pagination={true}
           columnMode="union"
@@ -78,6 +115,20 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
         </div>
       </Case>
     </>
+  ) : (
+    <DataOutputComponent
+      rows={
+        Array.isArray(results)
+          ? (results as Array<any>).every((item) => item.data)
+            ? (results as Array<any>).map((item) => item.data)
+            : results
+          : Object.keys(results).length > 0
+            ? [results]
+            : []
+      }
+      pagination={true}
+      columnMode="union"
+    />
   );
 };
 

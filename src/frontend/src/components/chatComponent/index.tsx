@@ -1,11 +1,12 @@
+import { ENABLE_API } from "@/customization/feature-flags";
+import { track } from "@/customization/utils/analytics";
 import { Transition } from "@headlessui/react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IOModal from "../../modals/IOModal";
 import ApiModal from "../../modals/apiModal";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
@@ -46,9 +47,13 @@ export default function FlowToolbar(): JSX.Element {
   const hasStore = useStoreStore((state) => state.hasStore);
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
 
-  const prevNodesRef = useRef<any[] | undefined>();
+  useEffect(() => {
+    if (open) {
+      track("Playground Button Clicked");
+    }
+  }, [open]);
 
   const ModalMemo = useMemo(
     () => (
@@ -113,7 +118,10 @@ export default function FlowToolbar(): JSX.Element {
             <div className="flex h-full w-full gap-1 rounded-sm transition-all">
               {hasIO ? (
                 <IOModal open={open} setOpen={setOpen} disable={!hasIO}>
-                  <div className="relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover">
+                  <div
+                    data-testid="playground-btn-flow-io"
+                    className="relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
+                  >
                     <ForwardedIconComponent
                       name="BotMessageSquareIcon"
                       className={"h-5 w-5 transition-all"}
@@ -124,6 +132,7 @@ export default function FlowToolbar(): JSX.Element {
               ) : (
                 <div
                   className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
+                  data-testid="playground-btn-flow"
                 >
                   <ForwardedIconComponent
                     name="BotMessageSquareIcon"
@@ -136,30 +145,34 @@ export default function FlowToolbar(): JSX.Element {
             <div>
               <Separator orientation="vertical" />
             </div>
-            <div className="flex cursor-pointer items-center gap-2">
-              {currentFlow && currentFlow.data && (
-                <ApiModal
-                  flow={currentFlow}
-                  open={openCodeModal}
-                  setOpen={setOpenCodeModal}
-                >
-                  <div
-                    className={classNames(
-                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
-                    )}
-                  >
-                    <ForwardedIconComponent
-                      name="Code2"
-                      className={"h-5 w-5"}
-                    />
-                    API
-                  </div>
-                </ApiModal>
-              )}
-            </div>
-            <div>
-              <Separator orientation="vertical" />
-            </div>
+            {ENABLE_API && (
+              <>
+                <div className="flex cursor-pointer items-center gap-2">
+                  {currentFlow && currentFlow.data && (
+                    <ApiModal
+                      flow={currentFlow}
+                      open={openCodeModal}
+                      setOpen={setOpenCodeModal}
+                    >
+                      <div
+                        className={classNames(
+                          "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
+                        )}
+                      >
+                        <ForwardedIconComponent
+                          name="Code2"
+                          className={"h-5 w-5"}
+                        />
+                        API
+                      </div>
+                    </ApiModal>
+                  )}
+                </div>
+                <div>
+                  <Separator orientation="vertical" />
+                </div>
+              </>
+            )}
             <div className="flex items-center gap-2">
               <div
                 className={`side-bar-button ${

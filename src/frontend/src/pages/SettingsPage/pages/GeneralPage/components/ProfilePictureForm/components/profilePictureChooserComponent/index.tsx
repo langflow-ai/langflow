@@ -1,3 +1,4 @@
+import { ProfilePicturesQueryResponse } from "@/controllers/API/queries/files";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../../../../../../components/ui/button";
 import Loading from "../../../../../../../../components/ui/loading";
@@ -7,7 +8,7 @@ import { cn } from "../../../../../../../../utils/utils";
 import usePreloadImages from "./hooks/use-preload-images";
 
 type ProfilePictureChooserComponentProps = {
-  profilePictures: { [key: string]: string[] };
+  profilePictures?: ProfilePicturesQueryResponse;
   loading: boolean;
   value: string;
   onChange: (value: string) => void;
@@ -29,22 +30,23 @@ export default function ProfilePictureChooserComponent({
     }
   }, [ref, value]);
 
-  usePreloadImages(profilePictures, setImagesLoaded);
+  usePreloadImages(setImagesLoaded, loading, profilePictures);
 
   return (
     <div className="flex flex-col justify-center gap-2">
       {loading || !imagesLoaded ? (
         <Loading />
       ) : (
-        Object.keys(profilePictures).map((folder, idx) => (
-          <div className="flex flex-col gap-2">
+        Object.keys(profilePictures!).map((folder, index) => (
+          <div className="flex flex-col gap-2" key={index}>
             <div className="edit-flow-arrangement">
               <span className="font-normal">{folder}</span>
             </div>
             <div className="block overflow-hidden">
               <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-muted px-1 custom-scroll">
-                {profilePictures[folder].map((path, idx) => (
+                {profilePictures![folder].map((path, idx) => (
                   <Button
+                    key={idx}
                     ref={value === folder + "/" + path ? ref : undefined}
                     unstyled
                     onClick={() => onChange(folder + "/" + path)}

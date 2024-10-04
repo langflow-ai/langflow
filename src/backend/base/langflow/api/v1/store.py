@@ -1,4 +1,4 @@
-from typing import Annotated, List, Optional, Union
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -29,8 +29,7 @@ def get_user_store_api_key(
     if not user.store_api_key:
         raise HTTPException(status_code=400, detail="You must have a store API key set.")
     try:
-        decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
-        return decrypted
+        return auth_utils.decrypt_api_key(user.store_api_key, settings_service)
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to decrypt API key. Please set a new one.") from e
 
@@ -42,8 +41,7 @@ def get_optional_user_store_api_key(
     if not user.store_api_key:
         return None
     try:
-        decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
-        return decrypted
+        return auth_utils.decrypt_api_key(user.store_api_key, settings_service)
     except Exception as e:
         logger.error(f"Failed to decrypt API key: {e}")
         return user.store_api_key
@@ -60,7 +58,7 @@ def check_if_store_is_enabled(
 
 @router.get("/check/api_key")
 async def check_if_store_has_api_key(
-    api_key: Optional[str] = Depends(get_optional_user_store_api_key),
+    api_key: str | None = Depends(get_optional_user_store_api_key),
     store_service: StoreService = Depends(get_store_service),
 ):
     if api_key is None:
@@ -69,7 +67,7 @@ async def check_if_store_has_api_key(
     try:
         is_valid = await store_service.check_api_key(api_key)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     return {"has_api_key": api_key is not None, "is_valid": is_valid}
 
@@ -82,10 +80,9 @@ async def share_component(
 ):
     try:
         await check_langflow_version(component)
-        result = await store_service.upload(store_api_key, component)
-        return result
+        return await store_service.upload(store_api_key, component)
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.patch("/components/{component_id}", response_model=CreateComponentResponse, status_code=201)
@@ -97,27 +94,26 @@ async def update_shared_component(
 ):
     try:
         await check_langflow_version(component)
-        result = await store_service.update(store_api_key, component_id, component)
-        return result
+        return await store_service.update(store_api_key, component_id, component)
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/components/", response_model=ListComponentResponseModel)
 async def get_components(
-    component_id: Annotated[Optional[str], Query()] = None,
-    search: Annotated[Optional[str], Query()] = None,
-    private: Annotated[Optional[bool], Query()] = None,
-    is_component: Annotated[Optional[bool], Query()] = None,
-    tags: Annotated[Optional[list[str]], Query()] = None,
-    sort: Annotated[Union[list[str], None], Query()] = None,
+    component_id: Annotated[str | None, Query()] = None,
+    search: Annotated[str | None, Query()] = None,
+    private: Annotated[bool | None, Query()] = None,
+    is_component: Annotated[bool | None, Query()] = None,
+    tags: Annotated[list[str] | None, Query()] = None,
+    sort: Annotated[list[str] | None, Query()] = None,
     liked: Annotated[bool, Query()] = False,
     filter_by_user: Annotated[bool, Query()] = False,
-    fields: Annotated[Optional[list[str]], Query()] = None,
+    fields: Annotated[list[str] | None, Query()] = None,
     page: int = 1,
     limit: int = 10,
     store_service: StoreService = Depends(get_store_service),
-    store_api_key: Optional[str] = Depends(get_optional_user_store_api_key),
+    store_api_key: str | None = Depends(get_optional_user_store_api_key),
 ):
     try:
         return await store_service.get_list_component_response_model(
@@ -159,7 +155,7 @@ async def download_component(
     return component
 
 
-@router.get("/tags", response_model=List[TagResponse])
+@router.get("/tags", response_model=list[TagResponse])
 async def get_tags(
     store_service: StoreService = Depends(get_store_service),
 ):
@@ -168,10 +164,10 @@ async def get_tags(
     except CustomException as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.get("/users/likes", response_model=List[UsersLikesResponse])
+@router.get("/users/likes", response_model=list[UsersLikesResponse])
 async def get_list_of_components_liked_by_user(
     store_service: StoreService = Depends(get_store_service),
     store_api_key: str = Depends(get_user_store_api_key),
@@ -181,7 +177,7 @@ async def get_list_of_components_liked_by_user(
     except CustomException as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/users/likes/{component_id}", response_model=UsersLikesResponse)
@@ -198,4 +194,4 @@ async def like_component(
     except CustomException as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
