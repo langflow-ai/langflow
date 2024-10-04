@@ -394,8 +394,8 @@ lock_langflow:
 
 lock: ## lock dependencies
 	@echo 'Locking dependencies'
-	cd src/backend/base && uv lock --no-update
-	uv lock --no-update
+	cd src/backend/base && uv lock
+	uv lock
 
 update: ## update dependencies
 	@echo 'Updating dependencies'
