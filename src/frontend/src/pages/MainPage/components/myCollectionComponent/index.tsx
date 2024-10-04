@@ -2,8 +2,8 @@ import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-fol
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation, useParams } from "react-router-dom";
 import ComponentsComponent from "../componentsComponent";
 import HeaderTabsSearchComponent from "./components/headerTabsSearchComponent";
 
@@ -13,11 +13,16 @@ type MyCollectionComponentProps = {
 
 const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
   const { folderId } = useParams();
+  const location = useLocation();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [filter, setFilter] = useState<string>("All");
+  const [filter, setFilter] = useState<string>(() => {
+    if (location.pathname.includes("components")) return "Components";
+    if (location.pathname.includes("flows")) return "Flows";
+    return "All";
+  });
   const [search, setSearch] = useState<string>("");
 
   const { data: folderData, isFetching } = useGetFolderQuery({
@@ -46,9 +51,15 @@ const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
     setPageSize(newPageSize);
   };
 
-  const onSearch = (search: string) => {
-    setSearch(search);
-  };
+  const onChangeTab = useCallback((newFilter: string) => {
+    setFilter(newFilter);
+    setPageIndex(1);
+  }, []);
+
+  const onSearch = useCallback((newSearch: string) => {
+    setSearch(newSearch);
+    setPageIndex(1);
+  }, []);
 
   const data = {
     flows: folderData?.flows?.items ?? [],
@@ -68,12 +79,13 @@ const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
     <>
       <HeaderTabsSearchComponent
         loading={isFetching || isLoadingFolders || isDeleting || isAddingFlow}
-        onChangeTab={setFilter}
+        onChangeTab={onChangeTab}
         onSearch={onSearch}
+        activeTab={filter}
       />
       <div className="mt-5 flex h-full flex-col">
         <ComponentsComponent
-          key={type}
+          key={`${type}-${filter}-${search}`}
           type={type}
           currentFolder={data.flows}
           pagination={data.pagination}
@@ -87,4 +99,5 @@ const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
     </>
   );
 };
+
 export default MyCollectionComponent;
