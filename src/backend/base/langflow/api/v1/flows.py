@@ -449,5 +449,4 @@ def read_basic_examples(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-# At the end of the file, add:
 add_pagination(router)
