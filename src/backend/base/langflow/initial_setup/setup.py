@@ -459,6 +459,11 @@ def get_project_data(project):
         updated_at_datetime = datetime.fromisoformat(project_updated_at)
     project_data = project.get("data")
     project_icon = project.get("icon")
+    project_icon = (
+        demojize(project_icon)
+        if project_icon and purely_emoji(project_icon)
+        else project_icon
+    )
     project_icon_bg_color = project.get("icon_bg_color")
     project_gradient = project.get("gradient")
     project_tags = project.get("tags")
