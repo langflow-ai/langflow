@@ -68,6 +68,6 @@ class CurrentDateComponent(Component):
             self.status = result
             return Message(text=result)
         except Exception as e:
-            error_message = f"Error: {str(e)}"
+            error_message = f"Error: {e}"
             self.status = error_message
             return Message(text=error_message)

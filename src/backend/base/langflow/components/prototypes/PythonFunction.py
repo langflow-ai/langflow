@@ -55,7 +55,7 @@ class PythonFunctionComponent(Component):
             func = get_function(function_code)
             return func()
         except Exception as e:
-            return f"Error executing function: {str(e)}"
+            return f"Error executing function: {e}"
 
     def execute_function_data(self) -> list[Data]:
         results = self.execute_function()

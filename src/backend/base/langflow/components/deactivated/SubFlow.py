@@ -1,16 +1,18 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
 from langflow.base.flow_processing.utils import build_data_from_result_data
 from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
+
+if TYPE_CHECKING:
+    from langflow.graph.schema import RunOutputs
 
 
 class SubFlowComponent(CustomComponent):
@@ -39,7 +41,7 @@ class SubFlowComponent(CustomComponent):
             build_config["flow_name"]["options"] = self.get_flow_names()
         # Clean up the build config
         for key in list(build_config.keys()):
-            if key not in self.field_order + ["code", "_type", "get_final_results_only"]:
+            if key not in [*self.field_order, "code", "_type", "get_final_results_only"]:
                 del build_config[key]
         if field_value is not None and field_name == "flow_name":
             try:
@@ -53,7 +55,7 @@ class SubFlowComponent(CustomComponent):
                 # Add inputs to the build config
                 build_config = self.add_inputs_to_build_config(inputs, build_config)
             except Exception as e:
-                logger.error(f"Error getting flow {field_value}: {str(e)}")
+                logger.error(f"Error getting flow {field_value}: {e}")
 
         return build_config
 

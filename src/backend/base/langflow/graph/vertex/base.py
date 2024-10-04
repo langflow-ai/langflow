@@ -13,11 +13,9 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 from loguru import logger
 
-from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
-from langflow.graph.vertex.schema import NodeData
 from langflow.interface import initialize
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
@@ -25,15 +23,17 @@ from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
 from langflow.services.deps import get_storage_service
-from langflow.services.tracing.schema import Log
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async, unescape_string
 
 if TYPE_CHECKING:
     from langflow.custom import Component
+    from langflow.events.event_manager import EventManager
     from langflow.graph.edge.base import CycleEdge, Edge
     from langflow.graph.graph.base import Graph
+    from langflow.graph.vertex.schema import NodeData
+    from langflow.services.tracing.schema import Log
 
 
 class VertexStates(str, Enum):
@@ -682,7 +682,7 @@ class Vertex:
                     logger.exception(e)
                     msg = (
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
-                        f"Error building Component {self.display_name}: \n\n{str(e)}"
+                        f"Error building Component {self.display_name}: \n\n{e}"
                     )
                     raise ValueError(msg) from e
 

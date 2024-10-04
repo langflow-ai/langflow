@@ -14,7 +14,8 @@ class OpenAIToolsAgentComponent(LCToolsAgentComponent):
     beta = True
     name = "OpenAIToolsAgent"
 
-    inputs = LCToolsAgentComponent._base_inputs + [
+    inputs = [
+        *LCToolsAgentComponent._base_inputs,
         HandleInput(
             name="llm",
             display_name="Language Model",

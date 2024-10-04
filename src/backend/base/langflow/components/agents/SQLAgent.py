@@ -12,7 +12,8 @@ class SQLAgentComponent(LCAgentComponent):
     description = "Construct an SQL agent from an LLM and tools."
     name = "SQLAgent"
 
-    inputs = LCAgentComponent._base_inputs + [
+    inputs = [
+        *LCAgentComponent._base_inputs,
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         MessageTextInput(name="database_uri", display_name="Database URI", required=True),
         HandleInput(

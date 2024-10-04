@@ -204,7 +204,7 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
                 search_type = self._map_search_type()
                 search_args = self._build_search_args()
 
-                logger.debug(f"Search args: {str(search_args)}")
+                logger.debug(f"Search args: {search_args}")
 
                 docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
             except KeyError as e:

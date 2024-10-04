@@ -135,7 +135,7 @@ class AssemblyAILeMUR(Component):
             self.status = result
             return result
         except Exception as e:
-            error = f"An Error happened: {str(e)}"
+            error = f"An Error happened: {e}"
             self.status = error
             return Data(data={"error": error})
 

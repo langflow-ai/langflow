@@ -12,7 +12,8 @@ class AnthropicModelComponent(LCModelComponent):
     icon = "Anthropic"
     name = "AnthropicModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -32,11 +33,7 @@ class AnthropicModelComponent(LCModelComponent):
             info="https://python.langchain.com/docs/integrations/chat/anthropic",
             value="claude-3-5-sonnet-20240620",
         ),
-        SecretStrInput(
-            name="anthropic_api_key",
-            display_name="Anthropic API Key",
-            info="Your Anthropic API key.",
-        ),
+        SecretStrInput(name="anthropic_api_key", display_name="Anthropic API Key", info="Your Anthropic API key."),
         FloatInput(name="temperature", display_name="Temperature", value=0.1),
         MessageTextInput(
             name="anthropic_api_url",
@@ -45,10 +42,7 @@ class AnthropicModelComponent(LCModelComponent):
             info="Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
         ),
         MessageTextInput(
-            name="prefill",
-            display_name="Prefill",
-            info="Prefill text to guide the model's response.",
-            advanced=True,
+            name="prefill", display_name="Prefill", info="Prefill text to guide the model's response.", advanced=True
         ),
         HandleInput(
             name="output_parser",
