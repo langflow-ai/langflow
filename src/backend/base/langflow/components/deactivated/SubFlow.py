@@ -41,7 +41,7 @@ class SubFlowComponent(CustomComponent):
             build_config["flow_name"]["options"] = self.get_flow_names()
         # Clean up the build config
         for key in list(build_config.keys()):
-            if key not in self.field_order + ["code", "_type", "get_final_results_only"]:
+            if key not in [*self.field_order, "code", "_type", "get_final_results_only"]:
                 del build_config[key]
         if field_value is not None and field_name == "flow_name":
             try:
@@ -55,7 +55,7 @@ class SubFlowComponent(CustomComponent):
                 # Add inputs to the build config
                 build_config = self.add_inputs_to_build_config(inputs, build_config)
             except Exception as e:
-                logger.error(f"Error getting flow {field_value}: {str(e)}")
+                logger.error(f"Error getting flow {field_value}: {e}")
 
         return build_config
 

@@ -452,7 +452,7 @@ class Graph:
                 # and run self.build_adjacency_maps(edges) to get the new predecessor map
                 # that is not complete but we can use to update the run_predecessors
                 edges_set = set()
-                for _vertex in [vertex] + successors:
+                for _vertex in [vertex, *successors]:
                     edges_set.update(_vertex.edges)
                     if _vertex.state == VertexStates.INACTIVE:
                         _vertex.set_state("ACTIVE")
@@ -1013,7 +1013,7 @@ class Graph:
         Creates a graph from a payload.
 
         Args:
-            payload (Dict): The payload to create the graph from.˜`
+            payload (Dict): The payload to create the graph from.`
 
         Returns:
             Graph: The created graph.
@@ -1617,7 +1617,7 @@ class Graph:
                 successors_result.append([successor])
 
         if not flat and successors_result:
-            return [successors] + successors_result
+            return [successors, *successors_result]
 
         return successors_result
 
@@ -1893,7 +1893,7 @@ class Graph:
         if not chat_inputs_first:
             return vertices_layers
 
-        return [chat_inputs_first] + vertices_layers
+        return [chat_inputs_first, *vertices_layers]
 
     def sort_layer_by_dependency(self, vertices_layers: list[list[str]]) -> list[list[str]]:
         """Sorts the vertices in each layer by dependency, ensuring no vertex depends on a subsequent vertex."""

@@ -102,7 +102,7 @@ class LCAgentComponent(Component):
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
         result = agent.invoke(
-            input_dict, config={"callbacks": [AgentAsyncHandler(self.log)] + self.get_langchain_callbacks()}
+            input_dict, config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]}
         )
         self.status = result
         if "output" not in result:
@@ -113,13 +113,9 @@ class LCAgentComponent(Component):
 
 
 class LCToolsAgentComponent(LCAgentComponent):
-    _base_inputs = LCAgentComponent._base_inputs + [
-        HandleInput(
-            name="tools",
-            display_name="Tools",
-            input_types=["Tool", "BaseTool"],
-            is_list=True,
-        ),
+    _base_inputs = [
+        *LCAgentComponent._base_inputs,
+        HandleInput(name="tools", display_name="Tools", input_types=["Tool", "BaseTool"], is_list=True),
     ]
 
     def build_agent(self) -> AgentExecutor:
@@ -149,7 +145,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
         result = runnable.invoke(
-            input_dict, config={"callbacks": [AgentAsyncHandler(self.log)] + self.get_langchain_callbacks()}
+            input_dict, config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]}
         )
         self.status = result
         if "output" not in result:

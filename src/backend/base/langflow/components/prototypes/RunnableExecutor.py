@@ -68,14 +68,14 @@ class RunnableExecComponent(Component):
             result_value = result.get(output_key)
         elif len(result) == 2 and input_key in result:
             # get the other key from the result dict
-            other_key = [k for k in result if k != input_key][0]
+            other_key = next(k for k in result if k != input_key)
             if other_key == output_key:
                 result_value = result.get(output_key)
             else:
                 status += f"Warning: The output key is not '{output_key}'. The output key is '{other_key}'."
                 result_value = result.get(other_key)
         elif len(result) == 1:
-            result_value = list(result.values())[0]
+            result_value = next(iter(result.values()))
         elif any(k in result for k in possible_output_keys):
             for key in possible_output_keys:
                 if key in result:

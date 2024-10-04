@@ -130,9 +130,9 @@ class SequentialTaskAgentComponent(Component):
 
         # If there's a previous task, create a list of tasks
         if self.previous_task:
-            tasks = self.previous_task + [task] if isinstance(self.previous_task, list) else [self.previous_task, task]
+            tasks = [*self.previous_task, task] if isinstance(self.previous_task, list) else [self.previous_task, task]
         else:
             tasks = [task]
 
-        self.status = f"Agent: {repr(agent)}\nTask: {repr(task)}"
+        self.status = f"Agent: {agent!r}\nTask: {task!r}"
         return tasks

@@ -190,6 +190,7 @@ select = [
     "Q",
     "RET",
     "RSE",
+    "RUF",
     "SIM",
     "SLOT",
     "T10",
@@ -202,6 +203,8 @@ select = [
 ignore = [
     "COM812", # Messes with the formatter
     "ISC001", # Messes with the formatter
+    "RUF006", # TODO (Store a reference to the return value of `asyncio.create_task`)
+    "RUF012", # TODO (Mutable class attributes should be annotated with `typing.ClassVar`)
 ]
 
 [tool.ruff.lint.per-file-ignores]

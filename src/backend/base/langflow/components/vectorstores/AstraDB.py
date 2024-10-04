@@ -427,7 +427,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         try:
             vector_store = AstraDBVectorStore(**vector_store_kwargs)
         except Exception as e:
-            msg = f"Error initializing AstraDBVectorStore: {str(e)}"
+            msg = f"Error initializing AstraDBVectorStore: {e}"
             raise ValueError(msg) from e
 
         self._add_documents_to_vector_store(vector_store)
@@ -448,7 +448,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             try:
                 vector_store.add_documents(documents)
             except Exception as e:
-                msg = f"Error adding documents to AstraDBVectorStore: {str(e)}"
+                msg = f"Error adding documents to AstraDBVectorStore: {e}"
                 raise ValueError(msg) from e
         else:
             logger.debug("No documents to add to the Vector Store.")
@@ -487,7 +487,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
                 docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
             except Exception as e:
-                msg = f"Error performing search in AstraDBVectorStore: {str(e)}"
+                msg = f"Error performing search in AstraDBVectorStore: {e}"
                 raise ValueError(msg) from e
 
             logger.debug(f"Retrieved documents: {len(docs)}")

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from collections.abc import AsyncIterator, Iterator
@@ -119,7 +121,7 @@ class Message(Data):
         return AIMessage(content=text)  # type: ignore
 
     @classmethod
-    def from_lc_message(cls, lc_message: BaseMessage) -> "Message":
+    def from_lc_message(cls, lc_message: BaseMessage) -> Message:
         if lc_message.type == "human":
             sender = MESSAGE_SENDER_USER
             sender_name = MESSAGE_SENDER_NAME_USER
@@ -136,7 +138,7 @@ class Message(Data):
         return cls(text=lc_message.content, sender=sender, sender_name=sender_name)
 
     @classmethod
-    def from_data(cls, data: "Data") -> "Message":
+    def from_data(cls, data: Data) -> Message:
         """
         Converts a BaseMessage to a Data.
 
@@ -231,7 +233,7 @@ class Message(Data):
                 content_dicts = await value.get_file_content_dicts()
                 contents.extend(content_dicts)
         if contents:
-            message = HumanMessage(content=[{"type": "text", "text": text}] + contents)
+            message = HumanMessage(content=[{"type": "text", "text": text}, *contents])
 
         prompt_template = ChatPromptTemplate.from_messages([message])  # type: ignore
 

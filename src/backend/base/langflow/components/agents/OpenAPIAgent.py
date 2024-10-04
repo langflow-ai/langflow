@@ -16,7 +16,8 @@ class OpenAPIAgentComponent(LCAgentComponent):
     description = "Agent to interact with OpenAPI API."
     name = "OpenAPIAgent"
 
-    inputs = LCAgentComponent._base_inputs + [
+    inputs = [
+        *LCAgentComponent._base_inputs,
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         FileInput(name="path", display_name="File Path", file_types=["json", "yaml", "yml"], required=True),
         BoolInput(name="allow_dangerous_requests", display_name="Allow Dangerous Requests", value=False, required=True),
