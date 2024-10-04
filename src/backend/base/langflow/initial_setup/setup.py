@@ -531,7 +531,7 @@ def load_flows_from_directory():
 
                 existing = find_existing_flow(session, flow_id, flow_endpoint_name)
                 if existing:
-                    print(f"Found existing flow: {existing.name}")
+                    logger.debug(f"Found existing flow: {existing.name}")
                     logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
                     for key, value in flow.items():
                         if hasattr(existing, key):
