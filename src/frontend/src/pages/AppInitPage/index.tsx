@@ -24,8 +24,9 @@ export function AppInitPage() {
   useGetVersionQuery({ enabled: isFetched });
   useGetConfig({ enabled: isFetched });
   useGetGlobalVariables({ enabled: isFetched });
-  useGetBasicExamplesQuery();
-  useGetTagsQuery();
+  useGetBasicExamplesQuery({ enabled: isFetched });
+  useGetTagsQuery({ enabled: isFetched });
+
   const { refetch: refetchFolders } = useGetFoldersQuery();
   useEffect(() => {
     if (isFetched) {
