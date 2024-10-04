@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from sqlalchemy import Text
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
@@ -16,7 +17,7 @@ class VertexBuildBase(SQLModel):
     id: str = Field(nullable=False)
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     artifacts: dict | None = Field(default=None, sa_column=Column(JSON))
-    params: str | None = Field(nullable=True)
+    params: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     valid: bool = Field(nullable=False)
     flow_id: UUID = Field(foreign_key="flow.id")
 
