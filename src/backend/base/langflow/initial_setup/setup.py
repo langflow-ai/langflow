@@ -570,7 +570,7 @@ def find_existing_flow(session, flow_id, flow_endpoint_name):
             return existing
     stmt = select(Flow).where(Flow.id == flow_id)
     if existing := session.exec(stmt).first():
-        print(f"Found existing flow by id: {flow_id}")
+        logger.debug(f"Found existing flow by id: {flow_id}")
         return existing
     return None
 
