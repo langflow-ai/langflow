@@ -37,6 +37,8 @@ export interface TemplateCardComponentProps {
     name: string;
     description: string;
     icon?: string;
+    id: string;
+    gradient?: string;
   };
   onClick: () => void;
 }
