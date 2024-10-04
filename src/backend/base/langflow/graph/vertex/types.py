@@ -14,8 +14,6 @@ from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, Interface
 from langflow.graph.utils import UnbuiltObject, log_transaction, log_vertex_build, rewrite_file_path, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.exceptions import NoComponentInstance
-from langflow.graph.vertex.schema import NodeData
-from langflow.inputs.inputs import InputTypes
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.message import Message
@@ -26,6 +24,8 @@ from langflow.utils.util import unescape_string
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import CycleEdge
+    from langflow.graph.vertex.schema import NodeData
+    from langflow.inputs.inputs import InputTypes
 
 
 class CustomComponentVertex(Vertex):

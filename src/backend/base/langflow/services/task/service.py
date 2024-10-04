@@ -7,11 +7,11 @@ from loguru import logger
 
 from langflow.services.base import Service
 from langflow.services.task.backends.anyio import AnyIOBackend
-from langflow.services.task.backends.base import TaskBackend
 from langflow.services.task.utils import get_celery_worker_status
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
+    from langflow.services.task.backends.base import TaskBackend
 
 
 def check_celery_availability():
