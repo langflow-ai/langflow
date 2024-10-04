@@ -345,9 +345,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
         track("Component Connection Deleted");
       }
       if (lastSelection.nodes?.length) {
-        lastSelection.nodes.forEach(n => {
+        lastSelection.nodes.forEach((n) => {
           track("Component Deleted", { componentType: n.data.type });
-        }) 
+        });
       }
       deleteNode(lastSelection.nodes.map((node) => node.id));
       deleteEdge(lastSelection.edges.map((edge) => edge.id));

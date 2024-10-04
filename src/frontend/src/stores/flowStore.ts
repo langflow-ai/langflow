@@ -274,23 +274,24 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       deletedNode: Node | null;
     }>(
       (acc, node) => {
-        const isMatch = typeof nodeId === "string" 
-          ? node.id === nodeId 
-          : nodeId.includes(node.id);
-  
+        const isMatch =
+          typeof nodeId === "string"
+            ? node.id === nodeId
+            : nodeId.includes(node.id);
+
         if (isMatch) {
           acc.deletedNode = node;
         } else {
           acc.filteredNodes.push(node);
         }
-  
+
         return acc;
       },
-      { filteredNodes: [], deletedNode: null }
+      { filteredNodes: [], deletedNode: null },
     );
-  
+
     get().setNodes(filteredNodes);
-  
+
     if (deletedNode) {
       track("Component Deleted", { componentType: deletedNode.data.type });
     }
