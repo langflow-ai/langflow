@@ -67,7 +67,7 @@ class NotionPageCreator(LCToolComponent):
         try:
             properties = json.loads(properties_json)
         except json.JSONDecodeError as e:
-            return f"Invalid properties format. Please provide a valid JSON string. Error: {str(e)}"
+            return f"Invalid properties format. Please provide a valid JSON string. Error: {e}"
 
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
@@ -85,7 +85,7 @@ class NotionPageCreator(LCToolComponent):
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            error_message = f"Failed to create Notion page. Error: {str(e)}"
+            error_message = f"Failed to create Notion page. Error: {e}"
             if hasattr(e, "response") and e.response is not None:
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message

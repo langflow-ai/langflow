@@ -14,7 +14,8 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
     beta = True
     name = "ToolCallingAgent"
 
-    inputs = LCToolsAgentComponent._base_inputs + [
+    inputs = [
+        *LCToolsAgentComponent._base_inputs,
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         MultilineInput(
             name="system_prompt",

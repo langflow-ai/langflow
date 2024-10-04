@@ -86,6 +86,6 @@ class AssemblyAIListTranscripts(Component):
             self.status = transcripts
             return transcripts
         except Exception as e:
-            error_data = Data(data={"error": f"An error occurred: {str(e)}"})
+            error_data = Data(data={"error": f"An error occurred: {e}"})
             self.status = [error_data]
             return [error_data]

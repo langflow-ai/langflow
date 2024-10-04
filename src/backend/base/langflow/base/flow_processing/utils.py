@@ -56,7 +56,7 @@ def build_data_from_result_data(result_data: ResultData, get_final_results_only:
                     data.append(artifact)
                 else:
                     # Warn about unknown output type
-                    logger.warning(f"Unable to build record output from unknown ResultData.artifact: {str(artifact)}")
+                    logger.warning(f"Unable to build record output from unknown ResultData.artifact: {artifact}")
         # Chat or text output
         elif result_data.results:
             data.append(Data(data={"result": result_data.results}, text_key="result"))

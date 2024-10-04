@@ -69,7 +69,7 @@ class CalculatorToolComponent(LCToolComponent):
             return [Data(data={"result": formatted_result})]
 
         except (SyntaxError, TypeError, KeyError) as e:
-            error_message = f"Invalid expression: {str(e)}"
+            error_message = f"Invalid expression: {e}"
             self.status = error_message
             return [Data(data={"error": error_message})]
         except ZeroDivisionError:
@@ -77,6 +77,6 @@ class CalculatorToolComponent(LCToolComponent):
             self.status = error_message
             return [Data(data={"error": error_message})]
         except Exception as e:
-            error_message = f"Error: {str(e)}"
+            error_message = f"Error: {e}"
             self.status = error_message
             return [Data(data={"error": error_message})]
