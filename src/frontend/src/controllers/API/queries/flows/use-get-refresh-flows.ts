@@ -1,3 +1,4 @@
+import buildQueryStringUrl from "@/controllers/utils/create-query-param-string";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -23,17 +24,7 @@ interface GetFlowsParams {
 }
 
 const addQueryParams = (url: string, params: GetFlowsParams): string => {
-  const queryParams = new URLSearchParams();
-  if (params.components_only) queryParams.append("components_only", "true");
-  if (params.get_all) queryParams.append("get_all", "true");
-  if (params.header_flows) queryParams.append("header_flows", "true");
-  if (params.folder_id) queryParams.append("folder_id", params.folder_id);
-  if (params.remove_example_flows)
-    queryParams.append("remove_example_flows", "true");
-  if (params.page) queryParams.append("page", params.page.toString());
-  if (params.size) queryParams.append("size", params.size.toString());
-  const queryString = queryParams.toString();
-  return queryString ? `${url}?${queryString}` : url;
+  return buildQueryStringUrl(url, params);
 };
 
 export const useGetRefreshFlows: useMutationFunctionType<
