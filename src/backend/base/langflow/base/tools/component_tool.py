@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from langchain_core.tools import BaseTool
 from langchain_core.tools.structured import StructuredTool
 from loguru import logger
 
@@ -12,6 +10,10 @@ from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.io.schema import create_input_schema
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from langchain_core.tools import BaseTool
+
     from langflow.custom.custom_component.component import Component
     from langflow.inputs.inputs import InputTypes
     from langflow.io import Output

@@ -1,10 +1,13 @@
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from celery.result import AsyncResult  # type: ignore
 
 from langflow.services.task.backends.base import TaskBackend
 from langflow.worker import celery_app
+
+if TYPE_CHECKING:
+    from celery import Task
 
 
 class CeleryBackend(TaskBackend):
@@ -15,7 +18,6 @@ class CeleryBackend(TaskBackend):
 
     def launch_task(self, task_func: Callable[..., Any], *args: Any, **kwargs: Any) -> tuple[str, AsyncResult]:
         # I need to type the delay method to make it easier
-        from celery import Task  # type: ignore
 
         if not hasattr(task_func, "delay"):
             msg = f"Task function {task_func} does not have a delay method"

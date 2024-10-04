@@ -1,6 +1,6 @@
 import json
 import traceback
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from langchain_community.vectorstores import OpenSearchVectorSearch
 from loguru import logger
@@ -18,9 +18,6 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import Data
-
-if TYPE_CHECKING:
-    from langchain_community.vectorstores import OpenSearchVectorSearch
 
 
 class OpenSearchVectorStoreComponent(LCVectorStoreComponent):

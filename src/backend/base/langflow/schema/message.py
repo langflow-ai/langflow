@@ -2,13 +2,12 @@ import asyncio
 import json
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
@@ -23,6 +22,9 @@ from langflow.utils.constants import (
     MESSAGE_SENDER_NAME_USER,
     MESSAGE_SENDER_USER,
 )
+
+if TYPE_CHECKING:
+    from langchain_core.prompt_values import ImagePromptValue
 
 
 def _timestamp_to_str(timestamp: datetime | str) -> str:

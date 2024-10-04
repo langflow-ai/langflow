@@ -1,17 +1,13 @@
 from copy import deepcopy
-from typing import TYPE_CHECKING
 
 from chromadb.config import Settings
-from langchain_chroma.vectorstores import Chroma
+from langchain_chroma import Chroma
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.io import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, MultilineInput, StrInput
 from langflow.schema import Data
-
-if TYPE_CHECKING:
-    from langchain_chroma import Chroma
 
 
 class ChromaVectorStoreComponent(LCVectorStoreComponent):
