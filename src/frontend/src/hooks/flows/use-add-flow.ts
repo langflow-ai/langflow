@@ -1,3 +1,4 @@
+import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -35,6 +36,7 @@ const useAddFlow = () => {
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const { mutate: postAddFlow } = usePostAddFlow();
+  const { mutate: refreshFlows } = useGetRefreshFlows();
 
   const addFlow = async (params?: {
     flow?: FlowType;
@@ -85,21 +87,23 @@ const useAddFlow = () => {
             }),
           }));
 
-          if (params?.new_blank) {
-            setFlowToCanvas(createdFlow);
-          }
+          refreshFlows({
+            get_all: true,
+            header_flows: true,
+          });
 
+          setFlowToCanvas(createdFlow);
           resolve(createdFlow.id);
         },
         onError: (error) => {
           if (error.response?.data?.detail) {
             useAlertStore.getState().setErrorData({
-              title: "Could not load flows from database",
+              title: "Could not create flow",
               list: [error.response?.data?.detail],
             });
           } else {
             useAlertStore.getState().setErrorData({
-              title: "Could not load flows from database",
+              title: "Could not create flow",
               list: [
                 error.message ??
                   "An unexpected error occurred, please try again",
