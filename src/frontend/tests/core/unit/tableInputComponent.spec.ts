@@ -29,7 +29,7 @@ test("user must be able to interact with table input component", async ({
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Meta";
+  let control = "Control";
 
   if (userAgentInfo.os.name.includes("Mac")) {
     control = "Meta";
