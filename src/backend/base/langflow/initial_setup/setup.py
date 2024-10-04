@@ -15,14 +15,25 @@ from emoji import demojize, purely_emoji  # type: ignore
 from loguru import logger
 from sqlmodel import select
 
-from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
+from langflow.base.constants import (
+    FIELD_FORMAT_ATTRIBUTES,
+    NODE_FORMAT_ATTRIBUTES,
+    ORJSON_OPTIONS,
+)
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
-from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
+from langflow.services.database.models.folder.utils import (
+    create_default_folder_if_it_doesnt_exist,
+)
 from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
+from langflow.services.deps import (
+    get_settings_service,
+    get_storage_service,
+    get_variable_service,
+    session_scope,
+)
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from langflow.utils.util import escape_json_dump
 
@@ -34,7 +45,9 @@ STARTER_FOLDER_DESCRIPTION = "Starter projects to help you get started in Langfl
 # can use them as a starting point for their own projects.
 
 
-def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
+def update_projects_components_with_latest_component_versions(
+    project_data, all_types_dict
+):
     # project data has a nodes key, which is a list of nodes
     # we want to run through each node and see if it exists in the all_types_dict
     # if so, we go into  the template key and also get the template from all_types_dict
@@ -80,7 +93,9 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                             node_data["template"][key]["value"] = value["value"]
                     for key in node_data["template"]:
                         if key not in latest_template:
-                            node_data["template"][key]["input_types"] = DEFAULT_PROMPT_INTUT_TYPES
+                            node_data["template"][key][
+                                "input_types"
+                            ] = DEFAULT_PROMPT_INTUT_TYPES
                 node_changes_log[node_data["display_name"]].append(
                     {
                         "attr": "_type",
@@ -115,12 +130,15 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                             attr in field_dict
                             and attr in node_data["template"].get(field_name)
                             # Check if it needs to be updated
-                            and field_dict[attr] != node_data["template"][field_name][attr]
+                            and field_dict[attr]
+                            != node_data["template"][field_name][attr]
                         ):
                             node_changes_log[node_data["display_name"]].append(
                                 {
                                     "attr": f"{field_name}.{attr}",
-                                    "old_value": node_data["template"][field_name][attr],
+                                    "old_value": node_data["template"][field_name][
+                                        attr
+                                    ],
                                     "new_value": field_dict[attr],
                                 }
                             )
@@ -150,29 +168,45 @@ def update_new_output(data):
             new_source_handle = scape_json_parse(edge["sourceHandle"])
             new_target_handle = scape_json_parse(edge["targetHandle"])
             _id = new_source_handle["id"]
-            source_node_index = next((index for (index, d) in enumerate(nodes) if d["id"] == _id), -1)
+            source_node_index = next(
+                (index for (index, d) in enumerate(nodes) if d["id"] == _id), -1
+            )
             source_node = nodes[source_node_index] if source_node_index != -1 else None
 
             if "baseClasses" in new_source_handle:
                 if "output_types" not in new_source_handle:
-                    if source_node and "node" in source_node["data"] and "output_types" in source_node["data"]["node"]:
-                        new_source_handle["output_types"] = source_node["data"]["node"]["output_types"]
+                    if (
+                        source_node
+                        and "node" in source_node["data"]
+                        and "output_types" in source_node["data"]["node"]
+                    ):
+                        new_source_handle["output_types"] = source_node["data"]["node"][
+                            "output_types"
+                        ]
                     else:
-                        new_source_handle["output_types"] = new_source_handle["baseClasses"]
+                        new_source_handle["output_types"] = new_source_handle[
+                            "baseClasses"
+                        ]
                 del new_source_handle["baseClasses"]
 
             if "inputTypes" in new_target_handle and new_target_handle["inputTypes"]:
                 intersection = [
-                    type_ for type_ in new_source_handle["output_types"] if type_ in new_target_handle["inputTypes"]
+                    type_
+                    for type_ in new_source_handle["output_types"]
+                    if type_ in new_target_handle["inputTypes"]
                 ]
             else:
                 intersection = [
-                    type_ for type_ in new_source_handle["output_types"] if type_ == new_target_handle["type"]
+                    type_
+                    for type_ in new_source_handle["output_types"]
+                    if type_ == new_target_handle["type"]
                 ]
 
             selected = intersection[0] if intersection else None
             if "name" not in new_source_handle:
-                new_source_handle["name"] = " | ".join(new_source_handle["output_types"])
+                new_source_handle["name"] = " | ".join(
+                    new_source_handle["output_types"]
+                )
             new_source_handle["output_types"] = [selected] if selected else []
 
             if source_node and not source_node["data"]["node"].get("outputs"):
@@ -181,7 +215,10 @@ def update_new_output(data):
                 types = source_node["data"]["node"].get(
                     "output_types", source_node["data"]["node"].get("base_classes", [])
                 )
-                if not any(output.get("selected") == selected for output in source_node["data"]["node"]["outputs"]):
+                if not any(
+                    output.get("selected") == selected
+                    for output in source_node["data"]["node"]["outputs"]
+                ):
                     source_node["data"]["node"]["outputs"].append(
                         {
                             "types": types,
@@ -212,7 +249,10 @@ def update_new_output(data):
                     if node["id"] != edge["source"] or output.get("method") is None:
                         continue
                     source_handle = scape_json_parse(edge["sourceHandle"])
-                    if source_handle["output_types"] == output.get("types") and source_handle["name"] != output["name"]:
+                    if (
+                        source_handle["output_types"] == output.get("types")
+                        and source_handle["name"] != output["name"]
+                    ):
                         source_handle["name"] = output["name"]
                         if isinstance(source_handle, str):
                             source_handle = scape_json_parse(source_handle)
@@ -235,16 +275,30 @@ def update_edges_with_latest_component_versions(project_data):
         target_handle = scape_json_parse(target_handle)
         # Now find the source and target nodes in the nodes list
         source_node = next(
-            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("source")), None
+            (
+                node
+                for node in project_data.get("nodes", [])
+                if node.get("id") == edge.get("source")
+            ),
+            None,
         )
         target_node = next(
-            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("target")), None
+            (
+                node
+                for node in project_data.get("nodes", [])
+                if node.get("id") == edge.get("target")
+            ),
+            None,
         )
         if source_node and target_node:
             source_node_data = source_node.get("data").get("node")
             target_node_data = target_node.get("data").get("node")
             output_data = next(
-                (output for output in source_node_data.get("outputs", []) if output["name"] == source_handle["name"]),
+                (
+                    output
+                    for output in source_node_data.get("outputs", [])
+                    if output["name"] == source_handle["name"]
+                ),
                 None,
             )
             if not output_data:
@@ -279,27 +333,35 @@ def update_edges_with_latest_component_versions(project_data):
                 source_handle["output_types"] = new_output_types
 
             field_name = target_handle.get("fieldName")
-            if field_name in target_node_data.get("template") and target_handle["inputTypes"] != target_node_data.get(
-                "template"
-            ).get(field_name).get("input_types"):
+            if field_name in target_node_data.get("template") and target_handle[
+                "inputTypes"
+            ] != target_node_data.get("template").get(field_name).get("input_types"):
                 edge_changes_log[target_node_data["display_name"]].append(
                     {
                         "attr": "inputTypes",
                         "old_value": target_handle["inputTypes"],
-                        "new_value": target_node_data.get("template").get(field_name).get("input_types"),
+                        "new_value": target_node_data.get("template")
+                        .get(field_name)
+                        .get("input_types"),
                     }
                 )
-                target_handle["inputTypes"] = target_node_data.get("template").get(field_name).get("input_types")
+                target_handle["inputTypes"] = (
+                    target_node_data.get("template").get(field_name).get("input_types")
+                )
             escaped_source_handle = escape_json_dump(source_handle)
             escaped_target_handle = escape_json_dump(target_handle)
             try:
-                old_escape_source_handle = escape_json_dump(json.loads(edge["sourceHandle"]))
+                old_escape_source_handle = escape_json_dump(
+                    json.loads(edge["sourceHandle"])
+                )
 
             except json.JSONDecodeError:
                 old_escape_source_handle = edge["sourceHandle"]
 
             try:
-                old_escape_target_handle = escape_json_dump(json.loads(edge["targetHandle"]))
+                old_escape_target_handle = escape_json_dump(
+                    json.loads(edge["targetHandle"])
+                )
             except json.JSONDecodeError:
                 old_escape_target_handle = edge["targetHandle"]
             if old_escape_source_handle != escaped_source_handle:
@@ -337,7 +399,9 @@ def log_node_changes(node_changes_log):
     for node_name, changes in node_changes_log.items():
         message = f"\nNode: {node_name} was updated with the following changes:"
         for change in changes:
-            message += f"\n- {change['attr']}: {change['old_value']} -> {change['new_value']}"
+            message += (
+                f"\n- {change['attr']}: {change['old_value']} -> {change['new_value']}"
+            )
         formatted_messages.append(message)
     if formatted_messages:
         logger.debug("\n".join(formatted_messages))
@@ -395,7 +459,6 @@ def get_project_data(project):
         updated_at_datetime = datetime.fromisoformat(project_updated_at)
     project_data = project.get("data")
     project_icon = project.get("icon")
-    project_icon = demojize(project_icon) if project_icon and purely_emoji(project_icon) else ""
     project_icon_bg_color = project.get("icon_bg_color")
     project_gradient = project.get("gradient")
     project_tags = project.get("tags")
@@ -487,13 +550,17 @@ def folder_exists(session, folder_name):
 
 def create_starter_folder(session):
     if not folder_exists(session, STARTER_FOLDER_NAME):
-        new_folder = FolderCreate(name=STARTER_FOLDER_NAME, description=STARTER_FOLDER_DESCRIPTION)
+        new_folder = FolderCreate(
+            name=STARTER_FOLDER_NAME, description=STARTER_FOLDER_DESCRIPTION
+        )
         db_folder = Folder.model_validate(new_folder, from_attributes=True)
         session.add(db_folder)
         session.commit()
         session.refresh(db_folder)
         return db_folder
-    return session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+    return session.exec(
+        select(Folder).where(Folder.name == STARTER_FOLDER_NAME)
+    ).first()
 
 
 def _is_valid_uuid(val):
@@ -514,8 +581,14 @@ def load_flows_from_directory():
         return
 
     with session_scope() as session:
-        user_id = get_user_by_username(session, settings_service.auth_settings.SUPERUSER).id
-        files = [f for f in os.listdir(flows_path) if os.path.isfile(os.path.join(flows_path, f))]
+        user_id = get_user_by_username(
+            session, settings_service.auth_settings.SUPERUSER
+        ).id
+        files = [
+            f
+            for f in os.listdir(flows_path)
+            if os.path.isfile(os.path.join(flows_path, f))
+        ]
         for filename in files:
             if not filename.endswith(".json"):
                 continue
@@ -530,7 +603,9 @@ def load_flows_from_directory():
 
                 existing = find_existing_flow(session, flow_id, flow_endpoint_name)
                 if existing:
-                    logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
+                    logger.info(
+                        f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}"
+                    )
                     for key, value in flow.items():
                         if hasattr(existing, key):
                             # flow dict from json and db representation are not 100% the same
@@ -539,7 +614,9 @@ def load_flows_from_directory():
                     existing.user_id = user_id
                     session.add(existing)
                 else:
-                    logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
+                    logger.info(
+                        f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}"
+                    )
                     flow["user_id"] = user_id
                     flow = Flow.model_validate(flow, from_attributes=True)
                     flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
@@ -580,10 +657,14 @@ async def create_or_update_starter_projects(get_all_components_coro: Awaitable[d
                 project_gradient,
                 project_tags,
             ) = get_project_data(project)
-            updated_project_data = update_projects_components_with_latest_component_versions(
-                project_data.copy(), all_types_dict
+            updated_project_data = (
+                update_projects_components_with_latest_component_versions(
+                    project_data.copy(), all_types_dict
+                )
             )
-            updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
+            updated_project_data = update_edges_with_latest_component_versions(
+                updated_project_data
+            )
             try:
                 Graph.from_payload(updated_project_data)
             except Exception as e:
@@ -594,7 +675,9 @@ async def create_or_update_starter_projects(get_all_components_coro: Awaitable[d
 
                 update_project_file(project_path, project, updated_project_data)
             if project_name and project_data:
-                for existing_project in get_all_flows_similar_to_project(session, new_folder.id):
+                for existing_project in get_all_flows_similar_to_project(
+                    session, new_folder.id
+                ):
                     session.delete(existing_project)
 
                 create_new_project(
