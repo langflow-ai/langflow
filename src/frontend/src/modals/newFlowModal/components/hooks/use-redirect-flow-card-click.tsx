@@ -7,12 +7,10 @@ import { updateIds } from "../../../../utils/reactflowUtils";
 
 export function useFlowCardClick() {
   const navigate = useNavigate();
-  const { setFlowToCanvas } = useFlowsManagerStore();
   const addFlow = useAddFlow();
 
   const handleFlowCardClick = async (flow: FlowType, folderIdUrl: string) => {
     try {
-      await setFlowToCanvas(flow);
       updateIds(flow.data!);
       const id = await addFlow({ flow });
       navigate(`/flow/${id}/folder/${folderIdUrl}`);
