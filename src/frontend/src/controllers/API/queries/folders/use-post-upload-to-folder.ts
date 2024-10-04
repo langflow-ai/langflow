@@ -26,8 +26,10 @@ export const usePostUploadFlowToFolder: useMutationFunctionType<
 
   const mutation = mutate(["usePostUploadFlowToFolder"], uploadFlowToFolderFn, {
     ...options,
-    onSettled: () => {
-      queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
+    onSettled: (res) => {
+      queryClient.refetchQueries({
+        queryKey: ["useGetFolders", res.folder_id],
+      });
     },
   });
 
