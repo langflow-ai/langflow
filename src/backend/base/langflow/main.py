@@ -82,22 +82,18 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         return response
 
 
-shutdown_event = asyncio.Event()
-
-
-async def cleanup_db():
-    print("Cleaning up database...")
+async def cleanup_services():
+    rprint("[bold red]Shutting down Langflow...[/bold red]")
     try:
-        db_service = get_db_service()
-        await db_service.teardown()
-        print("Database cleaned up successfully")
+        await teardown_services()
+        print("Teardown services completed.")
     except Exception as e:
-        print(f"Error cleaning up database: {e}")
+        print(f"Error cleaning up services: {e}")
 
 
 def signal_handlers(sig, frame):
     print(f"Received signal: {sig}. Performing cleanup...")
-    asyncio.run(cleanup_db())
+    asyncio.run(cleanup_services())
 
     print("Cleaning up done. Exiting...")
     sys.exit(0)
