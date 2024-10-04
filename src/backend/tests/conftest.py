@@ -60,6 +60,7 @@ def pytest_configure(config):
     pytest.VECTOR_STORE_PATH = data_path / "Vector_store.json"
     pytest.SIMPLE_API_TEST = data_path / "SimpleAPITest.json"
     pytest.MEMORY_CHATBOT_NO_LLM = data_path / "MemoryChatbotNoLLM.json"
+    pytest.ENV_VARIABLE_TEST = data_path / "env_variable_test.json"
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
     retun "Hello World"
