@@ -563,7 +563,7 @@ def load_flows_from_directory():
 
 def find_existing_flow(session, flow_id, flow_endpoint_name):
     if flow_endpoint_name:
-        print(f"flow_endpoint_name: {flow_endpoint_name}")
+        logger.debug(f"flow_endpoint_name: {flow_endpoint_name}")
         stmt = select(Flow).where(Flow.endpoint_name == flow_endpoint_name)
         if existing := session.exec(stmt).first():
             print(f"Found existing flow by endpoint name: {existing.name}")
