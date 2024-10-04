@@ -155,6 +155,6 @@ Note: Check 'Advanced' for all options.
             self.status = error_message
             return [Data(data={"error": error_message})]
         except Exception as e:
-            error_message = f"Unexpected error: {str(e)}"
+            error_message = f"Unexpected error: {e}"
             self.status = error_message
             return [Data(data={"error": error_message})]

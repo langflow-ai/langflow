@@ -14,7 +14,8 @@ class QianfanChatEndpointComponent(LCModelComponent):
     icon = "BaiduQianfan"
     name = "BaiduQianfanChatModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         DropdownInput(
             name="model",
             display_name="Model Name",
@@ -64,9 +65,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
             advanced=True,
         ),
         MessageTextInput(
-            name="endpoint",
-            display_name="Endpoint",
-            info="Endpoint of the Qianfan LLM, required if custom model used.",
+            name="endpoint", display_name="Endpoint", info="Endpoint of the Qianfan LLM, required if custom model used."
         ),
         HandleInput(
             name="output_parser",

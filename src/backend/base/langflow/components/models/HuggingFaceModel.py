@@ -17,12 +17,9 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     icon = "HuggingFace"
     name = "HuggingFaceModel"
 
-    inputs = LCModelComponent._base_inputs + [
-        StrInput(
-            name="model_id",
-            display_name="Model ID",
-            value="openai-community/gpt2",
-        ),
+    inputs = [
+        *LCModelComponent._base_inputs,
+        StrInput(name="model_id", display_name="Model ID", value="openai-community/gpt2"),
         StrInput(
             name="inference_endpoint",
             display_name="Inference Endpoint",

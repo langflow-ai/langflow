@@ -14,12 +14,9 @@ class GroqModel(LCModelComponent):
     icon = "Groq"
     name = "GroqModel"
 
-    inputs = LCModelComponent._base_inputs + [
-        SecretStrInput(
-            name="groq_api_key",
-            display_name="Groq API Key",
-            info="API key for the Groq API.",
-        ),
+    inputs = [
+        *LCModelComponent._base_inputs,
+        SecretStrInput(name="groq_api_key", display_name="Groq API Key", info="API key for the Groq API."),
         MessageTextInput(
             name="groq_api_base",
             display_name="Groq API Base",
@@ -75,7 +72,7 @@ class GroqModel(LCModelComponent):
             model_list = response.json()
             return [model["id"] for model in model_list.get("data", [])]
         except requests.RequestException as e:
-            self.status = f"Error fetching models: {str(e)}"
+            self.status = f"Error fetching models: {e}"
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):

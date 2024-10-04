@@ -12,7 +12,8 @@ class NVIDIAModelComponent(LCModelComponent):
     description = "Generates text using NVIDIA LLMs."
     icon = "NVIDIA"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",

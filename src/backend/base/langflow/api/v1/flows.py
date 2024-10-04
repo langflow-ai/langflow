@@ -196,7 +196,7 @@ def read_flow(
         # so write an OR
         stmt = stmt.where(
             (Flow.user_id == current_user.id) | (Flow.user_id == None)  # noqa
-        )  # noqa
+        )
     if user_flow := session.exec(stmt).first():
         return user_flow
     raise HTTPException(status_code=404, detail="Flow not found")

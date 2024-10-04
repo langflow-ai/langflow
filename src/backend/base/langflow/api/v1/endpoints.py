@@ -382,9 +382,9 @@ async def experimental_run_flow(
     flow_id: UUID,
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
-    tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,  # noqa: F821
-    stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
-    session_id: Annotated[None | str, Body(embed=True)] = None,  # noqa: F821
+    tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,
+    stream: Annotated[bool, Body(embed=True)] = False,
+    session_id: Annotated[None | str, Body(embed=True)] = None,
     api_key_user: UserRead = Depends(api_key_security),
     session_service: SessionService = Depends(get_session_service),
 ):
@@ -509,11 +509,11 @@ async def process(
     flow_id: str,
     inputs: list[dict] | dict | None = None,
     tweaks: dict | None = None,
-    clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
-    session_id: Annotated[None | str, Body(embed=True)] = None,  # noqa: F821
+    clear_cache: Annotated[bool, Body(embed=True)] = False,
+    session_id: Annotated[None | str, Body(embed=True)] = None,
     task_service: TaskService = Depends(get_task_service),
     api_key_user: UserRead = Depends(api_key_security),
-    sync: Annotated[bool, Body(embed=True)] = True,  # noqa: F821
+    sync: Annotated[bool, Body(embed=True)] = True,
     session_service: SessionService = Depends(get_session_service),
 ):
     """

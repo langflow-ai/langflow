@@ -96,6 +96,6 @@ class YfinanceToolComponent(LCToolComponent):
             return data_list
 
         except Exception as e:
-            error_message = f"Error retrieving data: {str(e)}"
+            error_message = f"Error retrieving data: {e}"
             self.status = error_message
             return [Data(data={"error": error_message})]

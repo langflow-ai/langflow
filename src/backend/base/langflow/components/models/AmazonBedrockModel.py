@@ -11,7 +11,8 @@ class AmazonBedrockComponent(LCModelComponent):
     icon = "Amazon"
     name = "AmazonBedrockModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         DropdownInput(
             name="model_id",
             display_name="Model ID",

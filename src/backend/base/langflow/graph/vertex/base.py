@@ -682,7 +682,7 @@ class Vertex:
                     logger.exception(e)
                     msg = (
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
-                        f"Error building Component {self.display_name}: \n\n{str(e)}"
+                        f"Error building Component {self.display_name}: \n\n{e}"
                     )
                     raise ValueError(msg) from e
 

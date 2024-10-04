@@ -13,7 +13,8 @@ class XMLAgentComponent(LCToolsAgentComponent):
     icon = "LangChain"
     beta = True
     name = "XMLAgent"
-    inputs = LCToolsAgentComponent._base_inputs + [
+    inputs = [
+        *LCToolsAgentComponent._base_inputs,
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         DataInput(name="chat_history", display_name="Chat History", is_list=True, advanced=True),
         MultilineInput(

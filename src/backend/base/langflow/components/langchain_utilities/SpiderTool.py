@@ -113,7 +113,7 @@ class SpiderTool(Component):
                 msg = f"Invalid mode: {self.mode}. Must be 'scrape' or 'crawl'."
                 raise ValueError(msg)
         except Exception as e:
-            msg = f"Error: {str(e)}"
+            msg = f"Error: {e}"
             raise Exception(msg) from e
 
         records = []

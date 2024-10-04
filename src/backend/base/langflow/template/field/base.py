@@ -1,6 +1,6 @@
 from collections.abc import Callable  # noqa: I001
 from enum import Enum
-from typing import Any  # noqa
+from typing import Any
 from typing import GenericAlias  # type: ignore
 from typing import _GenericAlias  # type: ignore
 from typing import _UnionGenericAlias  # type: ignore

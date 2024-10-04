@@ -181,5 +181,5 @@ class AssemblyAITranscriptionJobCreator(Component):
             self.status = result
             return result
         except Exception as e:
-            self.status = f"An error occurred: {str(e)}"
-            return Data(data={"error": f"An error occurred: {str(e)}"})
+            self.status = f"An error occurred: {e}"
+            return Data(data={"error": f"An error occurred: {e}"})

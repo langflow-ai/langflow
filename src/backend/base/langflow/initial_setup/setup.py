@@ -161,7 +161,7 @@ def update_new_output(data):
                         new_source_handle["output_types"] = new_source_handle["baseClasses"]
                 del new_source_handle["baseClasses"]
 
-            if "inputTypes" in new_target_handle and new_target_handle["inputTypes"]:
+            if new_target_handle.get("inputTypes"):
                 intersection = [
                     type_ for type_ in new_source_handle["output_types"] if type_ in new_target_handle["inputTypes"]
                 ]

@@ -105,7 +105,7 @@ class NotionListPages(LCToolComponent):
             try:
                 query_payload = json.loads(query_json)
             except json.JSONDecodeError as e:
-                return f"Invalid JSON format for query: {str(e)}"
+                return f"Invalid JSON format for query: {e}"
 
         try:
             response = requests.post(url, headers=headers, json=query_payload)
@@ -113,8 +113,8 @@ class NotionListPages(LCToolComponent):
             results = response.json()
             return results["results"]
         except requests.exceptions.RequestException as e:
-            return f"Error querying Notion database: {str(e)}"
+            return f"Error querying Notion database: {e}"
         except KeyError:
             return "Unexpected response format from Notion API"
         except Exception as e:
-            return f"An unexpected error occurred: {str(e)}"
+            return f"An unexpected error occurred: {e}"

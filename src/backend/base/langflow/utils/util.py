@@ -155,7 +155,7 @@ def get_base_classes(cls):
         result = [cls.__name__]
     if not result:
         result = [cls.__name__]
-    return list(set(result + [cls.__name__]))
+    return list({*result, cls.__name__})
 
 
 def get_default_factory(module: str, function: str):

@@ -15,7 +15,8 @@ class JsonAgentComponent(LCAgentComponent):
     description = "Construct a json agent from an LLM and tools."
     name = "JsonAgent"
 
-    inputs = LCAgentComponent._base_inputs + [
+    inputs = [
+        *LCAgentComponent._base_inputs,
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         FileInput(name="path", display_name="File Path", file_types=["json", "yaml", "yml"], required=True),
     ]

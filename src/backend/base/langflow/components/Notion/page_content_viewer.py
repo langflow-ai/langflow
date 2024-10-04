@@ -59,12 +59,12 @@ class NotionPageContent(LCToolComponent):
             blocks_data = blocks_response.json()
             return self.parse_blocks(blocks_data.get("results", []))
         except requests.exceptions.RequestException as e:
-            error_message = f"Error: Failed to retrieve Notion page content. {str(e)}"
+            error_message = f"Error: Failed to retrieve Notion page content. {e}"
             if hasattr(e, "response") and e.response is not None:
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message
         except Exception as e:
-            return f"Error: An unexpected error occurred while retrieving Notion page content. {str(e)}"
+            return f"Error: An unexpected error occurred while retrieving Notion page content. {e}"
 
     def parse_blocks(self, blocks: list) -> str:
         content = ""
