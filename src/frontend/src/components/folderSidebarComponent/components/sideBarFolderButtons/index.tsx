@@ -19,9 +19,7 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { handleKeyDown } from "../../../../utils/reactflowUtils";
 import { cn } from "../../../../utils/utils";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../genericIconComponent";
+import IconComponent from "../../../genericIconComponent";
 import { Button, buttonVariants } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import useFileDrop from "../../hooks/use-on-file-drop";
@@ -401,7 +399,7 @@ const SideBarFoldersButtonsComponent = ({
                     {index > 0 && (
                       <Button
                         data-testid="btn-delete-folder"
-                        className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                        className="hidden p-0 hover:bg-primary group-hover:block"
                         onClick={(e) => {
                           handleDeleteFolder!(item);
                           e.stopPropagation();
@@ -418,7 +416,7 @@ const SideBarFoldersButtonsComponent = ({
                       </Button>
                     )}
                     <Button
-                      className="hidden px-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                      className="hidden px-0 hover:bg-primary group-hover:block"
                       onClick={(e) => {
                         handleDownloadFolder(item.id!);
                         e.stopPropagation();
@@ -431,7 +429,7 @@ const SideBarFoldersButtonsComponent = ({
                     >
                       <IconComponent
                         name={"Download"}
-                        className="w-4 stroke-[1.5] text-white"
+                        className="w-4 stroke-[1.5] text-primary"
                       />
                     </Button>
                   </div>
