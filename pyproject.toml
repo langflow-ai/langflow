@@ -31,7 +31,7 @@ maintainers = [
 
 # Define your main dependencies here
 dependencies = [
-    "langflow-base==0.0.96",
+    "langflow-base>=0.0.96",
     "beautifulsoup4>=4.12.2",
     "google-search-results>=2.4.1",
     "google-api-python-client>=2.130.0",
@@ -53,13 +53,13 @@ dependencies = [
     "fastavro>=1.8.0",
     "redis>=5.0.1",
     "metaphor-python>=0.1.11",
-    'pywin32>=306; sys_platform == "win32"',
+    'pywin32>=306; sys_platform >= "win32"',
     "langfuse>=2.33.0",
     "metal-sdk>=2.5.0",
     "markupsafe>=2.1.3",
     "boto3~=1.34.162",
     "numexpr>=2.8.6",
-    "qianfan==0.3.5",
+    "qianfan>=0.3.5",
     "pgvector>=0.2.3",
     "pyautogen>=0.2.0",
     "langchain-google-genai>=1.0.8",
@@ -71,13 +71,13 @@ dependencies = [
     "litellm>=1.44.0",
     "chromadb>=0.4",
     "langchain-anthropic>=0.1.23",
-    "langchain-astradb>=0.3.5",
-    "langchain-openai==0.1.22",
+    "langchain-astradb>=0.5.0",
+    "langchain-openai>=0.1.22",
     "zep-python>=2.0.0",
     "langchain-google-vertexai>=1.0.10",
     "langchain-groq>=0.1.9",
     "langchain-pinecone>=0.1.3",
-    "langchain-mistralai==0.1.12",
+    "langchain-mistralai>=0.1.12",
     "youtube-transcript-api>=0.6.2",
     "markdown>=3.7",
     "langchain-chroma>=0.1.1",
@@ -89,21 +89,21 @@ dependencies = [
     "kubernetes>=30.1.0",
     "firecrawl-py>=0.0.16",
     "json-repair>=0.25.2",
-    "langchain-nvidia-ai-endpoints==0.1.6",
+    "langchain-nvidia-ai-endpoints>=0.1.6",
     "langchain-google-calendar-tools>=0.0.1",
     "langchain-milvus>=0.1.1",
     "langwatch>=0.1.16",
     "langsmith>=0.1.86",
     "yfinance>=0.2.40",
-    "langchain-google-community==1.0.7",
+    "langchain-google-community>=1.0.7",
     "wolframalpha>=5.1.3",
     "astra-assistants>=2.1.2",
-    "composio-langchain==0.5.9",
+    "composio-langchain>=0.5.9",
     "spider-client>=0.0.27",
     "nltk>=3.9.1",
     "lark>=1.2.2",
     "jq>=1.8.0",
-    "pydantic-settings==2.4.0",
+    "pydantic-settings>=2.4.0",
     "ragstack-ai-knowledge-store>=0.2.1",
     "duckduckgo-search>=6.2.11",
     "langchain-elasticsearch>=0.2.0",
@@ -130,7 +130,7 @@ local = [
     "ctransformers>=0.2.10"
 ]
 clickhouse-connect = [
-    "clickhouse-connect==0.7.19"
+    "clickhouse-connect>=0.7.19"
 ]
 
 [project.scripts]
