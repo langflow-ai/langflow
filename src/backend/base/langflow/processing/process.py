@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING, Any, cast
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
@@ -14,6 +12,8 @@ from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
+    from langflow.graph.graph.base import Graph
+    from langflow.graph.schema import RunOutputs
 
 
 class Result(BaseModel):
@@ -62,6 +62,7 @@ def run_graph(
     input_value: str,
     input_type: str,
     output_type: str,
+    session_id: str | None = None,
     fallback_to_env_vars: bool = False,
     output_component: str | None = None,
 ) -> list[RunOutputs]:
@@ -73,6 +74,7 @@ def run_graph(
         input_value (str): The input value to be passed to the graph.
         input_type (str): The type of the input value.
         output_type (str): The type of the desired output.
+        session_id (str | None, optional): The session ID to be used for the flow. Defaults to None.
         output_component (Optional[str], optional): The specific output component to retrieve. Defaults to None.
 
     Returns:
@@ -105,7 +107,7 @@ def run_graph(
         types,
         outputs or [],
         stream=False,
-        session_id="",
+        session_id=session_id,
         fallback_to_env_vars=fallback_to_env_vars,
     )
 

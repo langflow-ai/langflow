@@ -5,20 +5,21 @@ import os
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
 
 from loguru import logger
 
 from langflow.services.base import Service
-from langflow.services.tracing.base import BaseTracer
-from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from langchain.callbacks.base import BaseCallbackHandler
 
     from langflow.custom.custom_component.component import Component
     from langflow.graph.vertex.base import Vertex
     from langflow.services.settings.service import SettingsService
+    from langflow.services.tracing.base import BaseTracer
+    from langflow.services.tracing.schema import Log
 
 
 def _get_langsmith_tracer():

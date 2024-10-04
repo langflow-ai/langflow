@@ -1,6 +1,7 @@
 import { AIMLIcon } from "@/icons/AIML";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import Perplexity from "@/icons/Perplexity/Perplexity";
+import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
@@ -636,6 +637,7 @@ export const nodeIconsLucide: iconsType = {
   OptionIcon: OptionIcon,
   Option: OptionIcon,
   Perplexity,
+  TavilyIcon,
   DuckDuckGo: DuckDuckGoIcon,
   OpenSearch,
 };
