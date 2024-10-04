@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Generator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
@@ -9,6 +8,8 @@ from loguru import logger
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from sqlmodel import Session
 
     from langflow.services.cache.service import CacheService

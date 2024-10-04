@@ -1,16 +1,18 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
 from langflow.base.flow_processing.utils import build_data_from_result_data
 from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
+
+if TYPE_CHECKING:
+    from langflow.graph.schema import RunOutputs
 
 
 class SubFlowComponent(CustomComponent):

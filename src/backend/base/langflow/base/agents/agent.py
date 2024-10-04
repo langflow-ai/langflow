@@ -1,9 +1,8 @@
 from abc import abstractmethod
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
-from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
 from langflow.base.agents.callback import AgentAsyncHandler
@@ -16,6 +15,9 @@ from langflow.schema import Data
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
+
+if TYPE_CHECKING:
+    from langchain_core.messages import BaseMessage
 
 
 class LCAgentComponent(Component):
