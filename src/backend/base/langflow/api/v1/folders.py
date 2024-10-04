@@ -117,14 +117,14 @@ def read_folder(
         stmt = (
             select(Flow)
             .where(Flow.folder_id == folder_id, Flow.user_id == current_user.id)
-            .order_by(Flow.updated_at.desc())  # type: ignore # noqa: E501
+            .order_by(Flow.updated_at.desc())  # type: ignore
         )
         if is_component:
             stmt = stmt.where(Flow.is_component == True)  # type: ignore # noqa: E712
         if is_flow:
             stmt = stmt.where(Flow.is_component == False)  # type: ignore # noqa: E712
         if search:
-            stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore # noqa: E712
+            stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore
         paginated_flows = paginate(session, stmt, params=params)
 
         return FolderWithPaginatedFlows(folder=FolderRead.model_validate(folder), flows=paginated_flows)

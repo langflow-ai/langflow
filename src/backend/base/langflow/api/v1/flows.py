@@ -191,7 +191,7 @@ def read_flows(
                 return [
                     {"id": flow.id, "name": flow.name, "folder_id": flow.folder_id, "is_component": flow.is_component}
                     for flow in flows
-                ]  # type: ignore # noqa: E501
+                ]  # type: ignore
             return flows
         return paginate(session, stmt, params=params)
 
