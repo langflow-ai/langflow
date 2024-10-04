@@ -69,7 +69,8 @@ class ChatOllamaComponent(LCModelComponent):
             msg = "Could not retrieve models. Please, make sure Ollama is running."
             raise ValueError(msg) from e
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         StrInput(
             name="base_url",
             display_name="Base URL",
@@ -90,17 +91,9 @@ class ChatOllamaComponent(LCModelComponent):
             info="Controls the creativity of model responses.",
         ),
         StrInput(
-            name="format",
-            display_name="Format",
-            info="Specify the format of the output (e.g., json).",
-            advanced=True,
+            name="format", display_name="Format", info="Specify the format of the output (e.g., json).", advanced=True
         ),
-        DictInput(
-            name="metadata",
-            display_name="Metadata",
-            info="Metadata to add to the run trace.",
-            advanced=True,
-        ),
+        DictInput(name="metadata", display_name="Metadata", info="Metadata to add to the run trace.", advanced=True),
         DropdownInput(
             name="mirostat",
             display_name="Mirostat",
@@ -152,35 +145,13 @@ class ChatOllamaComponent(LCModelComponent):
             info="Penalty for repetitions in generated text. (Default: 1.1)",
             advanced=True,
         ),
-        FloatInput(
-            name="tfs_z",
-            display_name="TFS Z",
-            info="Tail free sampling value. (Default: 1)",
-            advanced=True,
-        ),
+        FloatInput(name="tfs_z", display_name="TFS Z", info="Tail free sampling value. (Default: 1)", advanced=True),
+        IntInput(name="timeout", display_name="Timeout", info="Timeout for the request stream.", advanced=True),
         IntInput(
-            name="timeout",
-            display_name="Timeout",
-            info="Timeout for the request stream.",
-            advanced=True,
+            name="top_k", display_name="Top K", info="Limits token selection to top K. (Default: 40)", advanced=True
         ),
-        IntInput(
-            name="top_k",
-            display_name="Top K",
-            info="Limits token selection to top K. (Default: 40)",
-            advanced=True,
-        ),
-        FloatInput(
-            name="top_p",
-            display_name="Top P",
-            info="Works together with top-k. (Default: 0.9)",
-            advanced=True,
-        ),
-        BoolInput(
-            name="verbose",
-            display_name="Verbose",
-            info="Whether to print out response text.",
-        ),
+        FloatInput(name="top_p", display_name="Top P", info="Works together with top-k. (Default: 0.9)", advanced=True),
+        BoolInput(name="verbose", display_name="Verbose", info="Whether to print out response text."),
         StrInput(
             name="tags",
             display_name="Tags",
@@ -193,18 +164,8 @@ class ChatOllamaComponent(LCModelComponent):
             info="Comma-separated list of tokens to signal the model to stop generating text.",
             advanced=True,
         ),
-        StrInput(
-            name="system",
-            display_name="System",
-            info="System to use for generating text.",
-            advanced=True,
-        ),
-        StrInput(
-            name="template",
-            display_name="Template",
-            info="Template to use for generating text.",
-            advanced=True,
-        ),
+        StrInput(name="system", display_name="System", info="System to use for generating text.", advanced=True),
+        StrInput(name="template", display_name="Template", info="Template to use for generating text.", advanced=True),
         HandleInput(
             name="output_parser",
             display_name="Output Parser",

@@ -78,7 +78,7 @@ class JSONCleaner(Component):
             self.status = result
             return Message(text=result)
         except Exception as e:
-            msg = f"Error cleaning JSON string: {str(e)}"
+            msg = f"Error cleaning JSON string: {e}"
             raise ValueError(msg) from e
 
     def _remove_control_characters(self, s: str) -> str:
@@ -95,5 +95,5 @@ class JSONCleaner(Component):
             json.loads(s)
             return s
         except json.JSONDecodeError as e:
-            msg = f"Invalid JSON string: {str(e)}"
+            msg = f"Invalid JSON string: {e}"
             raise ValueError(msg) from e

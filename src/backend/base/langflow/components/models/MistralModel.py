@@ -13,7 +13,8 @@ class MistralAIModelComponent(LCModelComponent):
     icon = "MistralAI"
     name = "MistralModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -38,10 +39,8 @@ class MistralAIModelComponent(LCModelComponent):
             name="mistral_api_base",
             display_name="Mistral API Base",
             advanced=True,
-            info=(
-                "The base URL of the Mistral API. Defaults to https://api.mistral.ai/v1. "
-                "You can change this to use other APIs like JinaChat, LocalAI and Prem."
-            ),
+            info="The base URL of the Mistral API. Defaults to https://api.mistral.ai/v1. "
+            "You can change this to use other APIs like JinaChat, LocalAI and Prem.",
         ),
         SecretStrInput(
             name="api_key",

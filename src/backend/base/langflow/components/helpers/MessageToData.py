@@ -35,6 +35,6 @@ class MessageToDataComponent(Component):
             self.status = "Successfully converted Message to Data"
             return data
         except Exception as e:
-            error_message = f"Error converting Message to Data: {str(e)}"
+            error_message = f"Error converting Message to Data: {e}"
             self.status = error_message
             return Data(data={"error": error_message})

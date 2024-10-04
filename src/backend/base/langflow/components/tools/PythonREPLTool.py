@@ -74,7 +74,7 @@ class PythonREPLToolComponent(LCToolComponent):
             try:
                 return python_repl.run(code)
             except Exception as e:
-                return f"Error: {str(e)}"
+                return f"Error: {e}"
 
         tool = StructuredTool.from_function(
             name=self.name,
