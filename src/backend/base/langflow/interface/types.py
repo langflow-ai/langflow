@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 from typing import TYPE_CHECKING
 
@@ -9,6 +8,8 @@ from loguru import logger
 from langflow.custom.utils import abuild_custom_components, build_custom_components
 
 if TYPE_CHECKING:
+    import asyncio
+
     from langflow.services.cache.base import CacheService
     from langflow.services.settings.service import SettingsService
 
