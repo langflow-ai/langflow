@@ -1,14 +1,16 @@
 import copy
 import json
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts.image import ImagePromptTemplate
 from pydantic import BaseModel, model_serializer, model_validator
 
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+
+if TYPE_CHECKING:
+    from langchain_core.prompt_values import ImagePromptValue
 
 
 class Data(BaseModel):

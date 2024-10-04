@@ -6,18 +6,18 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException
 from loguru import logger
 from sqlalchemy import delete
-from sqlmodel import Session
 
 from langflow.graph.graph.base import Graph
-from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.store.schema import StoreComponentCreate
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.flow.model import Flow
+    from sqlmodel import Session
+
+    from langflow.services.chat.service import ChatService
+    from langflow.services.store.schema import StoreComponentCreate
 
 
 API_WORDS = ["api", "key", "token"]

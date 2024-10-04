@@ -10,13 +10,13 @@ from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
-from langflow.events.event_manager import EventManager
 from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.services.deps import get_tracing_service
 
 if TYPE_CHECKING:
     from langflow.custom import Component, CustomComponent
+    from langflow.events.event_manager import EventManager
     from langflow.graph.vertex.base import Vertex
 
 

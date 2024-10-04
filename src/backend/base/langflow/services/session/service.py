@@ -1,8 +1,11 @@
 from collections.abc import Coroutine
+from typing import TYPE_CHECKING
 
 from langflow.services.base import Service
-from langflow.services.cache.base import CacheService
 from langflow.services.session.utils import compute_dict_hash, session_id_generator
+
+if TYPE_CHECKING:
+    from langflow.services.cache.base import CacheService
 
 
 class SessionService(Service):

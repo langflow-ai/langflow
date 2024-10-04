@@ -1,18 +1,23 @@
 from __future__ import annotations
 
 import os
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from loguru import logger
-from sqlmodel import Session
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate
-from langflow.services.settings.service import SettingsService
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.kubernetes_secrets import KubernetesSecretManager, encode_user_id
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlmodel import Session
+
+    from langflow.services.settings.service import SettingsService
 
 
 class KubernetesSecretService(VariableService, Service):

@@ -77,7 +77,7 @@ def import_all_services_into_a_dict():
             for name, obj in inspect.getmembers(module, inspect.isclass):
                 if issubclass(obj, Service) and obj is not Service:
                     services[name] = obj
-                    break
+                    # break
         except Exception as exc:
             logger.exception(exc)
             msg = "Could not initialize services. Please check your settings."

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -8,6 +7,8 @@ from loguru import logger
 from langflow.services.deps import get_settings_service, get_state_service
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from langflow.services.state.service import StateService
 
 

@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING, Any, cast
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
@@ -14,6 +12,8 @@ from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
+    from langflow.graph.graph.base import Graph
+    from langflow.graph.schema import RunOutputs
 
 
 class Result(BaseModel):

@@ -26,8 +26,6 @@ from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
-    from sqlalchemy.engine import Engine
-
     from langflow.services.settings.service import SettingsService
 
 

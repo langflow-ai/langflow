@@ -1,7 +1,8 @@
-import contextlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    import contextlib
+
     with contextlib.suppress(ImportError):
         from celery import Celery  # type: ignore
 

@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import ast
 import inspect
-from collections.abc import Callable
 from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
-from uuid import UUID
 
 import nanoid  # type: ignore
 import yaml
@@ -14,13 +12,11 @@ from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.custom.tree_visitor import RequiredInputsVisitor
-from langflow.events.event_manager import EventManager
-from langflow.field_typing import Tool
+from langflow.field_typing import Tool  # noqa: TCH001 Needed by add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
-from langflow.schema.log import LoggableType
 from langflow.schema.message import Message
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.tracing.schema import Log
@@ -32,9 +28,14 @@ from langflow.utils.util import find_closest_match
 from .custom_component import CustomComponent
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from uuid import UUID
+
+    from langflow.events.event_manager import EventManager
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
+    from langflow.schema.log import LoggableType
 
 
 _ComponentToolkit = None

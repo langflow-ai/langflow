@@ -14,13 +14,13 @@ from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema import Data
-from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 
 if TYPE_CHECKING:
     from langflow.services.database.models import TransactionTable
     from langflow.services.database.models.folder import Folder
     from langflow.services.database.models.message import MessageTable
     from langflow.services.database.models.user import User
+    from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 
 
 class FlowBase(SQLModel):

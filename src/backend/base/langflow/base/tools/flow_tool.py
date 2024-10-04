@@ -1,17 +1,20 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, ToolException
 from loguru import logger
-from pydantic.v1 import BaseModel
 
 from langflow.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
-from langflow.graph.graph.base import Graph
-from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import build_schema_from_inputs, get_arg_names, get_flow_inputs, run_flow
 from langflow.utils.async_helpers import run_until_complete
+
+if TYPE_CHECKING:
+    from langchain_core.runnables import RunnableConfig
+    from pydantic.v1 import BaseModel
+
+    from langflow.graph.graph.base import Graph
+    from langflow.graph.vertex.base import Vertex
 
 
 class FlowTool(BaseTool):

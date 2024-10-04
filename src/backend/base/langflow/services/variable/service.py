@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from fastapi import Depends
 from loguru import logger
@@ -18,6 +16,9 @@ from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from uuid import UUID
+
     from langflow.services.settings.service import SettingsService
 
 

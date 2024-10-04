@@ -3,21 +3,22 @@ from __future__ import annotations
 import os
 import traceback
 import types
-from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
 
 from loguru import logger
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
-from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from uuid import UUID
+
     from langchain.callbacks.base import BaseCallbackHandler
 
     from langflow.graph.vertex.base import Vertex
+    from langflow.services.tracing.schema import Log
 
 
 class LangSmithTracer(BaseTracer):

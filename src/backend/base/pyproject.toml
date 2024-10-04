@@ -156,6 +156,11 @@ flake8-bugbear.extend-immutable-calls = [
     "fastapi.Query",
     "typer.Option",
 ]
+flake8-type-checking.runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "typing.TypedDict", # Needed by fastapi
+    "typing_extensions.TypedDict", # Needed by fastapi
+]
 select = [
     "A",
     "ASYNC",
@@ -188,6 +193,7 @@ select = [
     "SIM",
     "SLOT",
     "T10",
+    "TCH",
     "TID",
     "UP",
     "W",
@@ -196,6 +202,11 @@ select = [
 ignore = [
     "COM812", # Messes with the formatter
     "ISC001", # Messes with the formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"langflow/api/v1/*" = [
+    "TCH", # FastAPI needs to evaluate types at runtime
 ]
 
 [tool.uv]
