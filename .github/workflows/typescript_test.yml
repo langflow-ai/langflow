@@ -26,7 +26,6 @@ on:
         default: "tests"
 
 env:
-  POETRY_VERSION: "1.8.3"
   NODE_VERSION: "21"
   PYTHON_VERSION: "3.12"
   # Define the directory where Playwright browsers will be installed.
