@@ -1,6 +1,7 @@
 import logging
-from langchain_core.documents import Document
+
 from langchain_community.document_loaders.base import BaseLoader
+from langchain_core.documents import Document
 
 from langflow.helpers.YuQueTool import get_doc_detail_by_code, get_knowledge_detail
 

@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any
 
 from langchain_core.documents import Document
 
@@ -10,7 +10,7 @@ class YuQueDocLoader(CustomComponent):
     display_name: str = "YuQueDocLoader"
     description: str = "Load from yuQue（https://www.yuque.com） URL"
 
-    def build_config(self) -> Dict[str, Any]:
+    def build_config(self) -> dict[str, Any]:
         return {
             "doc_type": {
                 "display_name": "Document Type",

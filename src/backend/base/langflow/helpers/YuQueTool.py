@@ -1,5 +1,3 @@
-from typing import List, Dict
-
 import requests
 
 
@@ -13,7 +11,7 @@ class YuQueCatalog:
 base_url = "https://www.yuque.com"
 
 
-def get_doc_catalog(team: str, knowledge: str, doc_headers: Dict) -> List[YuQueCatalog]:
+def get_doc_catalog(team: str, knowledge: str, doc_headers: dict) -> list[YuQueCatalog]:
     """Get the directory of Yuque knowledge base"""
     url = f"{base_url}/api/v2/repos/{team}/{knowledge}/docs"
     response = requests.get(url, headers=doc_headers)
@@ -27,7 +25,7 @@ def get_doc_catalog(team: str, knowledge: str, doc_headers: Dict) -> List[YuQueC
     return catalog_list
 
 
-def get_doc_detail(book_id: int, id: int, doc_headers: Dict):
+def get_doc_detail(book_id: int, id: int, doc_headers: dict):
     """Get details of Yuque knowledge documents"""
     url = f"{base_url}/api/v2/repos/{book_id}/docs/{id}"
     response = requests.get(url, headers=doc_headers)
