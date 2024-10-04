@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Any, Union, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 from pydantic import BaseModel
@@ -20,19 +22,16 @@ class Result(BaseModel):
 
 
 async def run_graph_internal(
-    graph: "Graph",
+    graph: Graph,
     flow_id: str,
     stream: bool = False,
     session_id: str | None = None,
-    inputs: list["InputValueRequest"] | None = None,
+    inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
 ) -> tuple[list[RunOutputs], str]:
     """Run the graph and generate the result"""
     inputs = inputs or []
-    if session_id is None:
-        session_id_str = flow_id
-    else:
-        session_id_str = session_id
+    session_id_str = flow_id if session_id is None else session_id
     components = []
     inputs_list = []
     types = []
@@ -59,10 +58,11 @@ async def run_graph_internal(
 
 
 def run_graph(
-    graph: "Graph",
+    graph: Graph,
     input_value: str,
     input_type: str,
     output_type: str,
+    session_id: str | None = None,
     fallback_to_env_vars: bool = False,
     output_component: str | None = None,
 ) -> list[RunOutputs]:
@@ -74,6 +74,7 @@ def run_graph(
         input_value (str): The input value to be passed to the graph.
         input_type (str): The type of the input value.
         output_type (str): The type of the desired output.
+        session_id (str | None, optional): The session ID to be used for the flow. Defaults to None.
         output_component (Optional[str], optional): The specific output component to retrieve. Defaults to None.
 
     Returns:
@@ -100,28 +101,29 @@ def run_graph(
         components.append(input_value_request.components or [])
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
         types.append(input_value_request.type)
-    run_outputs = graph.run(
+    return graph.run(
         inputs_list,
         components,
         types,
         outputs or [],
         stream=False,
-        session_id="",
+        session_id=session_id,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    return run_outputs
 
 
 def validate_input(
-    graph_data: dict[str, Any], tweaks: Union["Tweaks", dict[str, str | dict[str, Any]]]
+    graph_data: dict[str, Any], tweaks: Tweaks | dict[str, str | dict[str, Any]]
 ) -> list[dict[str, Any]]:
     if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
-        raise ValueError("graph_data and tweaks should be dictionaries")
+        msg = "graph_data and tweaks should be dictionaries"
+        raise ValueError(msg)
 
     nodes = graph_data.get("data", {}).get("nodes") or graph_data.get("nodes")
 
     if not isinstance(nodes, list):
-        raise ValueError("graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key")
+        msg = "graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key"
+        raise ValueError(msg)
 
     return nodes
 
@@ -153,7 +155,7 @@ def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: dict[str, Any]) -> None:
 
 
 def process_tweaks(
-    graph_data: dict[str, Any], tweaks: Union["Tweaks", dict[str, dict[str, Any]]], stream: bool = False
+    graph_data: dict[str, Any], tweaks: Tweaks | dict[str, dict[str, Any]], stream: bool = False
 ) -> dict[str, Any]:
     """
     This function is used to tweak the graph data using the node id and the tweaks dict.
@@ -162,15 +164,12 @@ def process_tweaks(
                        'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.
     :param tweaks: The dictionary containing the tweaks. The keys can be the node id or the name of the tweak.
                    The values can be a dictionary containing the tweaks for the node or the value of the tweak.
-    :param stream: A boolean flag indicating whether streaming should be deactivated across all components or not. Default is False.
+    :param stream: A boolean flag indicating whether streaming should be deactivated across all components or not.
+                   Default is False.
     :return: The modified graph_data dictionary.
     :raises ValueError: If the input is not in the expected format.
     """
-    tweaks_dict = {}
-    if not isinstance(tweaks, dict):
-        tweaks_dict = cast(dict[str, Any], tweaks.model_dump())
-    else:
-        tweaks_dict = tweaks
+    tweaks_dict = cast(dict[str, Any], tweaks.model_dump()) if not isinstance(tweaks, dict) else tweaks
     if "stream" not in tweaks_dict:
         tweaks_dict |= {"stream": stream}
     nodes = validate_input(graph_data, cast(dict[str, str | dict[str, Any]], tweaks_dict))
@@ -180,9 +179,7 @@ def process_tweaks(
     all_nodes_tweaks = {}
     for key, value in tweaks_dict.items():
         if isinstance(value, dict):
-            if node := nodes_map.get(key):
-                apply_tweaks(node, value)
-            elif node := nodes_display_name_map.get(key):
+            if (node := nodes_map.get(key)) or (node := nodes_display_name_map.get(key)):
                 apply_tweaks(node, value)
         else:
             all_nodes_tweaks[key] = value

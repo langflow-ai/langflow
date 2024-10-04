@@ -56,7 +56,7 @@ class SizedLogBuffer:
         return len(self.buffer)
 
     def get_after_timestamp(self, timestamp: int, lines: int = 5) -> dict[int, str]:
-        rc = dict()
+        rc = {}
 
         self._rsemaphore.acquire()
         try:
@@ -77,22 +77,18 @@ class SizedLogBuffer:
         try:
             with self._wlock:
                 as_list = list(self.buffer)
-            i = 0
             max_index = -1
-            for ts, msg in as_list:
+            for i, (ts, _) in enumerate(as_list):
                 if ts >= timestamp:
                     max_index = i
                     break
-                i += 1
             if max_index == -1:
                 return self.get_last_n(lines)
             rc = {}
-            i = 0
             start_from = max(max_index - lines, 0)
-            for ts, msg in as_list:
+            for i, (ts, msg) in enumerate(as_list):
                 if start_from <= i < max_index:
                     rc[ts] = msg
-                i += 1
             return rc
         finally:
             self._rsemaphore.release()

@@ -110,9 +110,11 @@ class SpiderTool(Component):
             elif self.mode == "crawl":
                 result = app.crawl_url(self.url, parameters)
             else:
-                raise ValueError(f"Invalid mode: {self.mode}. Must be 'scrape' or 'crawl'.")
+                msg = f"Invalid mode: {self.mode}. Must be 'scrape' or 'crawl'."
+                raise ValueError(msg)
         except Exception as e:
-            raise Exception(f"Error: {str(e)}")
+            msg = f"Error: {str(e)}"
+            raise Exception(msg) from e
 
         records = []
 

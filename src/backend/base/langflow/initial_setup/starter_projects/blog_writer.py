@@ -28,7 +28,8 @@ Blog:
 
     text_input = TextInputComponent(_display_name="Instructions")
     text_input.set(
-        input_value="Use the references above for style to write a new blog/tutorial about Langflow and AI. Suggest non-covered topics."
+        input_value="Use the references above for style to write a new blog/tutorial about Langflow and AI. "
+        "Suggest non-covered topics."
     )
 
     prompt_component = PromptComponent()
@@ -44,5 +45,4 @@ Blog:
     chat_output = ChatOutput()
     chat_output.set(input_value=openai_component.text_response)
 
-    graph = Graph(start=text_input, end=chat_output)
-    return graph
+    return Graph(start=text_input, end=chat_output)

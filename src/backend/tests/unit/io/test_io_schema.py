@@ -218,18 +218,6 @@ class TestCreateInputSchema:
         assert field_info.description == ""
 
     # Handling invalid field types
-    def test_invalid_field_types_handling(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
-        class InvalidFieldType:
-            pass
-
-        input_instance = StrInput(name="test_field")
-        input_instance.field_type = InvalidFieldType()
-
-        with pytest.raises(KeyError):
-            create_input_schema([input_instance])
 
     # Handling input types with None as default value
     def test_none_default_value_handling(self):

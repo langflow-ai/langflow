@@ -22,7 +22,7 @@ from langflow.schema import Data
 class AstraVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB"
     description: str = "Implementation of Vector Store using Astra DB with search capabilities"
-    documentation: str = "https://python.langchain.com/docs/integrations/vectorstores/astradb"
+    documentation: str = "https://docs.langflow.org/starter-projects-vector-store-rag"
     name = "AstraDB"
     icon: str = "AstraDB"
 
@@ -71,7 +71,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         ),
         SecretStrInput(
             name="api_endpoint",
-            display_name="API Endpoint",
+            display_name="Database" if os.getenv("ASTRA_ENHANCED", "false").lower() == "true" else "API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
             required=True,
@@ -192,7 +192,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="search_score_threshold",
             display_name="Search Score Threshold",
-            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            info="Minimum similarity score threshold for search results. "
+            "(when using 'Similarity with score threshold')",
             value=0,
             advanced=True,
         ),
@@ -212,11 +213,13 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             items = list(build_config.items())
 
             # Find the index of the key to insert after
-            for i, (key, value) in enumerate(items):
+            idx = len(items)
+            for i, (key, _value) in enumerate(items):
                 if key == field_name:
+                    idx = i + 1
                     break
 
-            items.insert(i + 1, (new_field_name, new_parameter))
+            items.insert(idx, (new_field_name, new_parameter))
 
             # Clear the original dictionary and update with the modified items
             build_config.clear()
@@ -278,8 +281,10 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             new_parameter_0 = DropdownInput(
                 name="z_00_model_name",
                 display_name="Model Name",
-                info=f"The embedding model to use for the selected provider. Each provider has a different set of models "
-                f"available (full list at https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n{', '.join(model_options)}",
+                info="The embedding model to use for the selected provider. Each provider has a different set of "
+                "models available (full list at "
+                "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n"
+                f"{', '.join(model_options)}",
                 options=model_options,
                 required=True,
             ).to_dict()
@@ -293,13 +298,17 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             new_parameter_2 = MessageTextInput(
                 name="z_02_api_key_name",
                 display_name="API Key name",
-                info="The name of the embeddings provider API key stored on Astra. If set, it will override the 'ProviderKey' in the authentication parameters.",
+                info="The name of the embeddings provider API key stored on Astra. "
+                "If set, it will override the 'ProviderKey' in the authentication parameters.",
             ).to_dict()
 
             new_parameter_3 = SecretStrInput(
                 name="z_03_provider_api_key",
                 display_name="Provider API Key",
-                info="An alternative to the Astra Authentication that passes an API key for the provider with each request to Astra DB. This may be used when Vectorize is configured for the collection, but no corresponding provider secret is stored within Astra's key management system.",
+                info="An alternative to the Astra Authentication that passes an API key for the provider "
+                "with each request to Astra DB. "
+                "This may be used when Vectorize is configured for the collection, "
+                "but no corresponding provider secret is stored within Astra's key management system.",
             ).to_dict()
 
             new_parameter_4 = DictInput(
@@ -359,19 +368,21 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         try:
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode
-        except ImportError:
-            raise ImportError(
+        except ImportError as e:
+            msg = (
                 "Could not import langchain Astra DB integration package. "
                 "Please install it with `pip install langchain-astradb`."
             )
+            raise ImportError(msg) from e
 
         try:
             if not self.setup_mode:
                 self.setup_mode = self._inputs["setup_mode"].options[0]
 
             setup_mode_value = SetupMode[self.setup_mode.upper()]
-        except KeyError:
-            raise ValueError(f"Invalid setup mode: {self.setup_mode}")
+        except KeyError as e:
+            msg = f"Invalid setup mode: {self.setup_mode}"
+            raise ValueError(msg) from e
 
         if self.embedding:
             embedding_dict = {"embedding": self.embedding}
@@ -416,7 +427,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         try:
             vector_store = AstraDBVectorStore(**vector_store_kwargs)
         except Exception as e:
-            raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
+            msg = f"Error initializing AstraDBVectorStore: {str(e)}"
+            raise ValueError(msg) from e
 
         self._add_documents_to_vector_store(vector_store)
 
@@ -428,24 +440,25 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
-                raise ValueError("Vector Store Inputs must be Data objects.")
+                msg = "Vector Store Inputs must be Data objects."
+                raise ValueError(msg)
 
         if documents:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
             except Exception as e:
-                raise ValueError(f"Error adding documents to AstraDBVectorStore: {str(e)}") from e
+                msg = f"Error adding documents to AstraDBVectorStore: {str(e)}"
+                raise ValueError(msg) from e
         else:
             logger.debug("No documents to add to the Vector Store.")
 
     def _map_search_type(self):
         if self.search_type == "Similarity with score threshold":
             return "similarity_score_threshold"
-        elif self.search_type == "MMR (Max Marginal Relevance)":
+        if self.search_type == "MMR (Max Marginal Relevance)":
             return "mmr"
-        else:
-            return "similarity"
+        return "similarity"
 
     def _build_search_args(self):
         args = {
@@ -474,7 +487,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
                 docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
             except Exception as e:
-                raise ValueError(f"Error performing search in AstraDBVectorStore: {str(e)}") from e
+                msg = f"Error performing search in AstraDBVectorStore: {str(e)}"
+                raise ValueError(msg) from e
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 
@@ -482,9 +496,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             logger.debug(f"Converted documents to data: {len(data)}")
             self.status = data
             return data
-        else:
-            logger.debug("No search input provided. Skipping search.")
-            return []
+        logger.debug("No search input provided. Skipping search.")
+        return []
 
     def get_retriever_kwargs(self):
         search_args = self._build_search_args()

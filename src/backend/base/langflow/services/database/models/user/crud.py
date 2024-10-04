@@ -14,8 +14,8 @@ def get_user_by_username(db: Session, username: str) -> User | None:
     return db.exec(select(User).where(User.username == username)).first()
 
 
-def get_user_by_id(db: Session, id: UUID) -> User | None:
-    return db.exec(select(User).where(User.id == id)).first()
+def get_user_by_id(db: Session, user_id: UUID) -> User | None:
+    return db.exec(select(User).where(User.id == user_id)).first()
 
 
 def update_user(user_db: User | None, user: UserUpdate, db: Session = Depends(get_session)) -> User:

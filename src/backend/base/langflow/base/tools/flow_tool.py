@@ -1,8 +1,10 @@
-import warnings
+from __future__ import annotations
+
 from typing import Any
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, ToolException
+from loguru import logger
 from pydantic.v1 import BaseModel
 
 from langflow.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
@@ -18,7 +20,7 @@ class FlowTool(BaseTool):
     graph: Graph | None = None
     flow_id: str | None = None
     user_id: str | None = None
-    inputs: list["Vertex"] = []
+    inputs: list[Vertex] = []
     get_final_results_only: bool = True
 
     @property
@@ -30,10 +32,10 @@ class FlowTool(BaseTool):
         """The tool's input schema."""
         if self.args_schema is not None:
             return self.args_schema
-        elif self.graph is not None:
+        if self.graph is not None:
             return build_schema_from_inputs(self.name, get_flow_inputs(self.graph))
-        else:
-            raise ToolException("No input schema available.")
+        msg = "No input schema available."
+        raise ToolException(msg)
 
     def _run(
         self,
@@ -43,11 +45,10 @@ class FlowTool(BaseTool):
         """Use the tool."""
         args_names = get_arg_names(self.inputs)
         if len(args_names) == len(args):
-            kwargs = {arg["arg_name"]: arg_value for arg, arg_value in zip(args_names, args)}
+            kwargs = {arg["arg_name"]: arg_value for arg, arg_value in zip(args_names, args, strict=True)}
         elif len(args_names) != len(args) and len(args) != 0:
-            raise ToolException(
-                "Number of arguments does not match the number of inputs. Pass keyword arguments instead."
-            )
+            msg = "Number of arguments does not match the number of inputs. Pass keyword arguments instead."
+            raise ToolException(msg)
         tweaks = {arg["component_name"]: kwargs[arg["arg_name"]] for arg in args_names}
 
         run_outputs = run_until_complete(
@@ -72,24 +73,23 @@ class FlowTool(BaseTool):
         """Validate the inputs."""
 
         if len(args) > 0 and len(args) != len(args_names):
-            raise ToolException(
-                "Number of positional arguments does not match the number of inputs. Pass keyword arguments instead."
-            )
+            msg = "Number of positional arguments does not match the number of inputs. Pass keyword arguments instead."
+            raise ToolException(msg)
 
         if len(args) == len(args_names):
-            kwargs = {arg_name["arg_name"]: arg_value for arg_name, arg_value in zip(args_names, args)}
+            kwargs = {arg_name["arg_name"]: arg_value for arg_name, arg_value in zip(args_names, args, strict=True)}
 
         missing_args = [arg["arg_name"] for arg in args_names if arg["arg_name"] not in kwargs]
         if missing_args:
-            raise ToolException(f"Missing required arguments: {', '.join(missing_args)}")
+            msg = f"Missing required arguments: {', '.join(missing_args)}"
+            raise ToolException(msg)
 
         return kwargs
 
     def build_tweaks_dict(self, args, kwargs):
         args_names = get_arg_names(self.inputs)
         kwargs = self.validate_inputs(args_names=args_names, args=args, kwargs=kwargs)
-        tweaks = {arg["component_name"]: kwargs[arg["arg_name"]] for arg in args_names}
-        return tweaks
+        return {arg["component_name"]: kwargs[arg["arg_name"]] for arg in args_names}
 
     async def _arun(
         self,
@@ -101,7 +101,7 @@ class FlowTool(BaseTool):
         try:
             run_id = self.graph.run_id if self.graph else None
         except Exception as e:
-            warnings.warn(f"Failed to set run_id: {e}")
+            logger.warning(f"Failed to set run_id: {e}")
             run_id = None
         run_outputs = await run_flow(
             tweaks={key: {"input_value": value} for key, value in tweaks.items()},

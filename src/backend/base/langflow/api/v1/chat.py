@@ -134,7 +134,7 @@ async def retrieve_vertices_order(
             ),
         )
         if "stream or streaming set to True" in str(exc):
-            raise HTTPException(status_code=400, detail=str(exc))
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         logger.error(f"Error checking build status: {exc}")
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -163,7 +163,7 @@ async def build_flow(
             if not data:
                 graph = await build_graph_from_db_no_cache(flow_id=flow_id_str, session=session)
             else:
-                graph = await build_graph_from_data(flow_id_str, data.model_dump())
+                graph = await build_graph_from_data(flow_id_str, data.model_dump(), user_id=str(current_user.id))
             graph.validate_stream()
             if stop_component_id or start_component_id:
                 try:
@@ -202,7 +202,7 @@ async def build_flow(
                 ),
             )
             if "stream or streaming set to True" in str(exc):
-                raise HTTPException(status_code=400, detail=str(exc))
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
             logger.error(f"Error checking build status: {exc}")
             logger.exception(exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -340,23 +340,21 @@ async def build_flow(
             vertex_build_response_json = vertex_build_response.model_dump_json()
             build_data = json.loads(vertex_build_response_json)
         except Exception as exc:
-            raise ValueError(f"Error serializing vertex build response: {exc}") from exc
+            msg = f"Error serializing vertex build response: {exc}"
+            raise ValueError(msg) from exc
         event_manager.on_end_vertex(data={"build_data": build_data})
         await client_consumed_queue.get()
-        if vertex_build_response.valid:
-            if vertex_build_response.next_vertices_ids:
-                tasks = []
-                for next_vertex_id in vertex_build_response.next_vertices_ids:
-                    task = asyncio.create_task(
-                        build_vertices(next_vertex_id, graph, client_consumed_queue, event_manager)
-                    )
-                    tasks.append(task)
-                try:
-                    await asyncio.gather(*tasks)
-                except asyncio.CancelledError:
-                    for task in tasks:
-                        task.cancel()
-                    return
+        if vertex_build_response.valid and vertex_build_response.next_vertices_ids:
+            tasks = []
+            for next_vertex_id in vertex_build_response.next_vertices_ids:
+                task = asyncio.create_task(build_vertices(next_vertex_id, graph, client_consumed_queue, event_manager))
+                tasks.append(task)
+            try:
+                await asyncio.gather(*tasks)
+            except asyncio.CancelledError:
+                for task in tasks:
+                    task.cancel()
+                return
 
     async def event_generator(event_manager: EventManager, client_consumed_queue: asyncio.Queue) -> None:
         if not data:
@@ -411,7 +409,9 @@ async def build_flow(
             get_time_yield = time.time()
             client_consumed_queue.put_nowait(event_id)
             logger.debug(
-                f"consumed event {str(event_id)} (time in queue, {get_time - put_time:.4f}, client {get_time_yield - get_time:.4f})"
+                f"consumed event {str(event_id)} "
+                f"(time in queue, {get_time - put_time:.4f}, "
+                f"client {get_time_yield - get_time:.4f})"
             )
 
     asyncio_queue: asyncio.Queue = asyncio.Queue()
@@ -650,13 +650,15 @@ async def build_vertex_stream(
                 cache = await chat_service.get_cache(flow_id_str)
                 if not cache:
                     # If there's no cache
-                    raise ValueError(f"No cache found for {flow_id_str}.")
+                    msg = f"No cache found for {flow_id_str}."
+                    raise ValueError(msg)
                 else:
                     graph = cache.get("result")
 
                 vertex: InterfaceVertex = graph.get_vertex(vertex_id)
                 if not hasattr(vertex, "stream"):
-                    raise ValueError(f"Vertex {vertex_id} does not support streaming")
+                    msg = f"Vertex {vertex_id} does not support streaming"
+                    raise ValueError(msg)
                 if isinstance(vertex._built_result, str) and vertex._built_result:
                     stream_data = StreamData(
                         event="message",
@@ -689,7 +691,8 @@ async def build_vertex_stream(
                     )
                     yield str(stream_data)
                 else:
-                    raise ValueError(f"No result found for vertex {vertex_id}")
+                    msg = f"No result found for vertex {vertex_id}"
+                    raise ValueError(msg)
 
             except Exception as exc:
                 logger.exception(f"Error building Component: {exc}")

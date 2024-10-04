@@ -46,16 +46,14 @@ class BaseCrewComponent(Component):
         return self.tasks, self.agents
 
     def build_crew(self) -> Crew:
-        raise NotImplementedError("build_crew must be implemented in subclasses")
+        msg = "build_crew must be implemented in subclasses"
+        raise NotImplementedError(msg)
 
     def get_task_callback(
         self,
     ) -> Callable:
         def task_callback(task_output: TaskOutput):
-            if self._vertex:
-                vertex_id = self._vertex.id
-            else:
-                vertex_id = self.display_name or self.__class__.__name__
+            vertex_id = self._vertex.id if self._vertex else self.display_name or self.__class__.__name__
             self.log(task_output.model_dump(), name=f"Task (Agent: {task_output.agent}) - {vertex_id}")
 
         return task_callback

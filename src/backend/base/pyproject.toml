@@ -123,7 +123,7 @@ pytest-split = "^0.9.0"
 devtools = "^0.12.2"
 pytest-flakefinder = "^1.1.0"
 types-markdown = "^3.7.0.20240822"
-
+assemblyai = "^0.33.0"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -133,6 +133,8 @@ console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]
 log_cli = true
 markers = ["async_test"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
@@ -148,7 +150,58 @@ exclude = ["langflow/alembic"]
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I", "UP"]
+flake8-bugbear.extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Query",
+    "typer.Option",
+]
+select = [
+    "A",
+    "ASYNC",
+    "B",
+    "C4",
+    "COM",
+    "DJ",
+    "DTZ",
+    "E",
+    "EM",
+    "F",
+    "FA",
+    "FLY",
+    "FURB",
+    "G",
+    "I",
+    "ICN",
+    "INT",
+    "INP",
+    "ISC",
+    "LOG",
+    "NPY",
+    "PD",
+    "PIE",
+    "PT",
+    "PYI",
+    "Q",
+    "RET",
+    "RSE",
+    "SIM",
+    "SLOT",
+    "T10",
+    "TID",
+    "UP",
+    "W",
+    "YTT"
+]
+ignore = [
+    "COM812", # Messes with the formatter
+    "ISC001", # Messes with the formatter
+]
+
+[tool.uv]
+dev-dependencies = [
+    "asgi-lifespan>=2.1.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -217,7 +270,8 @@ dependencies = [
     "crewai>=0.36.0",
     "spider-client>=0.0.27",
     "diskcache>=5.6.3",
-    "clickhouse-connect==0.7.19"
+    "clickhouse-connect==0.7.19",
+    "assemblyai>=0.33.0"
 ]
 
 # Optional dependencies for uv

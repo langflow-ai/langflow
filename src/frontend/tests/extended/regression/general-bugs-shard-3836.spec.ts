@@ -90,7 +90,7 @@ test("user must be able to send an image on chat using advanced tool on ChatInpu
     timeout: 15000,
   });
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page.waitForTimeout(500);
 

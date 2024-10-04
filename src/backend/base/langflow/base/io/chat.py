@@ -22,14 +22,19 @@ class ChatComponent(Component):
             flow_id=self.graph.flow_id,
         )
         if len(messages) > 1:
-            raise ValueError("Only one message can be stored at a time.")
+            msg = "Only one message can be stored at a time."
+            raise ValueError(msg)
         stored_message = messages[0]
-        if hasattr(self, "_event_manager") and self._event_manager and stored_message.id:
-            if not isinstance(message.text, str):
-                complete_message = self._stream_message(message, stored_message.id)
-                message_table = update_message(message_id=stored_message.id, message=dict(text=complete_message))
-                stored_message = Message(**message_table.model_dump())
-                self.vertex._added_message = stored_message
+        if (
+            hasattr(self, "_event_manager")
+            and self._event_manager
+            and stored_message.id
+            and not isinstance(message.text, str)
+        ):
+            complete_message = self._stream_message(message, stored_message.id)
+            message_table = update_message(message_id=stored_message.id, message={"text": complete_message})
+            stored_message = Message(**message_table.model_dump())
+            self.vertex._added_message = stored_message
         self.status = stored_message
         return stored_message
 
@@ -55,7 +60,8 @@ class ChatComponent(Component):
     def _stream_message(self, message: Message, message_id: str) -> str:
         iterator = message.text
         if not isinstance(iterator, AsyncIterator | Iterator):
-            raise ValueError("The message must be an iterator or an async iterator.")
+            msg = "The message must be an iterator or an async iterator."
+            raise ValueError(msg)
 
         if isinstance(iterator, AsyncIterator):
             return run_until_complete(self._handle_async_iterator(iterator, message, message_id))
@@ -75,8 +81,6 @@ class ChatComponent(Component):
         session_id: str | None = None,
         return_message: bool | None = False,
     ) -> Message:
-        message: Message | None = None
-
         if isinstance(input_value, Data):
             # Update the data of the record
             message = Message.from_data(input_value)
@@ -84,10 +88,7 @@ class ChatComponent(Component):
             message = Message(
                 text=input_value, sender=sender, sender_name=sender_name, files=files, session_id=session_id
             )
-        if not return_message:
-            message_text = message.text
-        else:
-            message_text = message  # type: ignore
+        message_text = message.text if not return_message else message
 
         self.status = message_text
         if session_id and isinstance(message, Message) and isinstance(message.text, str):
