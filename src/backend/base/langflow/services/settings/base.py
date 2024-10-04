@@ -146,6 +146,20 @@ class Settings(BaseSettings):
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
     # Config
+    host: str = "127.0.0.1"
+    """The host on which Langflow will run."""
+    port: int = 7860
+    """The port on which Langflow will run."""
+    workers: int = 1
+    """The number of workers to run."""
+    log_level: str = "critical"
+    """The log level for Langflow."""
+    log_file: str | None = "logs/langflow.log"
+    """The path to log file for Langflow."""
+    frontend_path: str | None = None
+    """The path to the frontend directory containing build files. This is for development purposes only.."""
+    open_browser: bool = False
+    """If set to True, Langflow will open the browser on startup."""
     auto_saving: bool = True
     """If set to True, Langflow will auto save flows."""
     auto_saving_interval: int = 1000

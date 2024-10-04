@@ -163,7 +163,7 @@ async def build_flow(
             if not data:
                 graph = await build_graph_from_db_no_cache(flow_id=flow_id_str, session=session)
             else:
-                graph = await build_graph_from_data(flow_id_str, data.model_dump())
+                graph = await build_graph_from_data(flow_id_str, data.model_dump(), user_id=str(current_user.id))
             graph.validate_stream()
             if stop_component_id or start_component_id:
                 try:
