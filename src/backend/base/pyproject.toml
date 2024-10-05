@@ -101,7 +101,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langflow-base"
-version = "0.0.96"
+version = "0.0.97"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 license = "MIT"
