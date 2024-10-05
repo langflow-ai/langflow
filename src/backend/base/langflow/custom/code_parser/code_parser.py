@@ -340,8 +340,8 @@ class CodeParser:
                 for import_node in import_nodes:
                     self.parse_imports(import_node)
                 nodes.append(class_node)
-            except Exception as exc:
-                logger.error(f"Error finding base class node: {exc}")
+            except Exception:
+                logger.exception("Error finding base class node")
         nodes.insert(0, node)
         class_details = ClassCodeDetails(
             name=node.name,

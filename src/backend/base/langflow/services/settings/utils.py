@@ -35,7 +35,7 @@ def write_secret_to_file(path: Path, value: str) -> None:
     try:
         set_secure_permissions(path)
     except Exception:
-        logger.error("Failed to set secure permissions on secret key")
+        logger.exception("Failed to set secure permissions on secret key")
 
 
 def read_secret_from_file(path: Path) -> str:

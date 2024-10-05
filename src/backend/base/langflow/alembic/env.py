@@ -72,8 +72,8 @@ def run_migrations_online() -> None:
         initialize_settings_service()
         service_manager.register_factory(DatabaseServiceFactory())
         connectable = get_db_service().engine
-    except Exception as e:
-        logger.error(f"Error getting database engine: {e}")
+    except Exception:
+        logger.exception("Error getting database engine")
         url = os.getenv("LANGFLOW_DATABASE_URL")
         url = url or config.get_main_option("sqlalchemy.url")
         if url:

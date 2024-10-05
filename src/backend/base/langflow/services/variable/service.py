@@ -62,8 +62,8 @@ class DatabaseVariableService(VariableService, Service):
                                 _type=CREDENTIAL_TYPE,
                                 session=session,
                             )
-                        except Exception as e:
-                            logger.error(f"Error creating {var} variable: {e}")
+                        except Exception:
+                            logger.exception(f"Error creating {var} variable")
 
         else:
             logger.info("Skipping environment variable storage.")

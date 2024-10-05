@@ -87,13 +87,13 @@ class APIRequestComponent(Component):
                 try:
                     json_data = json.loads(parsed.data)
                     build_config["body"]["value"] = json_data
-                except json.JSONDecodeError as e:
-                    logger.error(f"Error decoding JSON data: {e}")
+                except json.JSONDecodeError:
+                    logger.exception("Error decoding JSON data")
             else:
                 build_config["body"]["value"] = {}
         except Exception as exc:
-            logger.error(f"Error parsing curl: {exc}")
             msg = f"Error parsing curl: {exc}"
+            logger.exception(msg)
             raise ValueError(msg) from exc
         return build_config
 
@@ -120,9 +120,9 @@ class APIRequestComponent(Component):
             try:
                 body = json.loads(body)
             except Exception as e:
-                logger.error(f"Error decoding JSON data: {e}")
-                body = None
                 msg = f"Error decoding JSON data: {e}"
+                logger.exception(msg)
+                body = None
                 raise ValueError(msg) from e
 
         data = body if body else None

@@ -111,8 +111,8 @@ def run_flow_from_json(
         import nest_asyncio  # type: ignore
 
         nest_asyncio.apply()
-    except Exception as e:
-        logger.warning(f"Could not apply nest_asyncio: {e}")
+    except Exception:
+        logger.opt(exception=True).warning("Could not apply nest_asyncio")
     if tweaks is None:
         tweaks = {}
     tweaks["stream"] = False

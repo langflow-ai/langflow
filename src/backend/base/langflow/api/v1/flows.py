@@ -170,7 +170,7 @@ def read_flows(
                     if example_flow.id not in flow_ids:
                         flows.append(example_flow)  # type: ignore
             except Exception as e:
-                logger.error(e)
+                logger.exception(e)
 
         if remove_example_flows:
             flows = [flow for flow in flows if flow.folder_id != folder.id]

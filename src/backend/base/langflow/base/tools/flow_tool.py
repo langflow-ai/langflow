@@ -103,8 +103,8 @@ class FlowTool(BaseTool):
         tweaks = self.build_tweaks_dict(args, kwargs)
         try:
             run_id = self.graph.run_id if self.graph else None
-        except Exception as e:
-            logger.warning(f"Failed to set run_id: {e}")
+        except Exception:
+            logger.opt(exception=True).warning("Failed to set run_id")
             run_id = None
         run_outputs = await run_flow(
             tweaks={key: {"input_value": value} for key, value in tweaks.items()},

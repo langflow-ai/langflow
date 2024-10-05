@@ -85,8 +85,8 @@ class ComposioAPIComponent(LCToolComponent):
             if auth_schemes[0].auth_mode == "API_KEY":
                 return self._process_api_key_auth(entity, app)
             return self._initiate_default_connection(entity, app)
-        except Exception as exc:
-            logger.error(f"Authorization error: {exc}")
+        except Exception:
+            logger.exception("Authorization error")
             return "Error"
 
     def _process_api_key_auth(self, entity: Any, app: str) -> str:

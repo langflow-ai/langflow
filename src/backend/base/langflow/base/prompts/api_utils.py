@@ -133,9 +133,9 @@ def validate_prompt(prompt_template: str, silent_errors: bool = False) -> list[s
     try:
         PromptTemplate(template=prompt_template, input_variables=input_variables)
     except Exception as exc:
-        logger.error(f"Invalid prompt: {exc}")
+        msg = f"Invalid prompt: {exc}"
+        logger.exception(msg)
         if not silent_errors:
-            msg = f"Invalid prompt: {exc}"
             raise ValueError(msg) from exc
 
     return input_variables

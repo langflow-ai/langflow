@@ -60,8 +60,8 @@ async def try_running_celery_task(vertex, user_id):
 
         task = build_vertex.delay(vertex)
         vertex.task_id = task.id
-    except Exception as exc:
-        logger.debug(f"Error running task in celery: {exc}")
+    except Exception:
+        logger.opt(exception=True).debug("Error running task in celery")
         vertex.task_id = None
         await vertex.build(user_id=user_id)
     return vertex
@@ -135,8 +135,7 @@ async def retrieve_vertices_order(
         )
         if "stream or streaming set to True" in str(exc):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        logger.error(f"Error checking build status: {exc}")
-        logger.exception(exc)
+        logger.exception("Error checking build status")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
@@ -169,7 +168,7 @@ async def build_flow(
                 try:
                     first_layer = graph.sort_vertices(stop_component_id, start_component_id)
                 except Exception as exc:
-                    logger.error(exc)
+                    logger.exception(exc)
                     first_layer = graph.sort_vertices()
             else:
                 first_layer = graph.sort_vertices()
@@ -203,8 +202,7 @@ async def build_flow(
             )
             if "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
-            logger.error(f"Error checking build status: {exc}")
-            logger.exception(exc)
+            logger.exception("Error checking build status")
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     async def _build_vertex(vertex_id: str, graph: Graph, event_manager: EventManager) -> VertexBuildResponse:
@@ -241,7 +239,7 @@ async def build_flow(
                     tb = exc.formatted_traceback
                 else:
                     tb = traceback.format_exc()
-                    logger.exception(f"Error building Component: {exc}")
+                    logger.exception("Error building Component")
                     params = format_exception_message(exc)
                 message = {"errorMessage": params, "stackTrace": tb}
                 valid = False
@@ -315,8 +313,7 @@ async def build_flow(
                     componentErrorMessage=str(exc),
                 ),
             )
-            logger.error(f"Error building Component: \n\n{exc}")
-            logger.exception(exc)
+            logger.exception("Error building Component")
             message = parse_exception(exc)
             raise HTTPException(status_code=500, detail=message) from exc
 
@@ -524,7 +521,7 @@ async def build_vertex(
                 tb = exc.formatted_traceback
             else:
                 tb = traceback.format_exc()
-                logger.exception(f"Error building Component: {exc}")
+                logger.exception("Error building Component")
                 params = format_exception_message(exc)
             message = {"errorMessage": params, "stackTrace": tb}
             valid = False
@@ -602,8 +599,7 @@ async def build_vertex(
                 componentErrorMessage=str(exc),
             ),
         )
-        logger.error(f"Error building Component: \n\n{exc}")
-        logger.exception(exc)
+        logger.exception("Error building Component")
         message = parse_exception(exc)
         raise HTTPException(status_code=500, detail=message) from exc
 
@@ -695,7 +691,7 @@ async def build_vertex_stream(
                     raise ValueError(msg)
 
             except Exception as exc:
-                logger.exception(f"Error building Component: {exc}")
+                logger.exception("Error building Component")
                 exc_message = parse_exception(exc)
                 if exc_message == "The message must be an iterator or an async iterator.":
                     exc_message = "This stream has already been closed."

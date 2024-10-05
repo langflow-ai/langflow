@@ -380,8 +380,8 @@ def copy_profile_pictures():
         shutil.copytree(origin, target, dirs_exist_ok=True)
         logger.debug(f"Folder copied from '{origin}' to '{target}'")
 
-    except Exception as e:
-        logger.error(f"Error copying the folder: {e}")
+    except Exception:
+        logger.exception("Error copying the folder")
 
 
 def get_project_data(project):
@@ -552,9 +552,9 @@ def find_existing_flow(session, flow_id, flow_endpoint_name):
 async def create_or_update_starter_projects(get_all_components_coro: Awaitable[dict]):
     try:
         all_types_dict = await get_all_components_coro
-    except Exception as e:
-        logger.exception(f"Error loading components: {e}")
-        raise e
+    except Exception:
+        logger.exception("Error loading components")
+        raise
     with session_scope() as session:
         new_folder = create_starter_folder(session)
         starter_projects = load_starter_projects()
@@ -577,7 +577,7 @@ async def create_or_update_starter_projects(get_all_components_coro: Awaitable[d
             try:
                 Graph.from_payload(updated_project_data)
             except Exception as e:
-                logger.error(e)
+                logger.exception(e)
             if updated_project_data != project_data:
                 project_data = updated_project_data
                 # We also need to update the project data in the file

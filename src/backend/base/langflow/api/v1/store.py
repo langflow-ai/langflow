@@ -42,8 +42,8 @@ def get_optional_user_store_api_key(
         return None
     try:
         return auth_utils.decrypt_api_key(user.store_api_key, settings_service)
-    except Exception as e:
-        logger.error(f"Failed to decrypt API key: {e}")
+    except Exception:
+        logger.exception("Failed to decrypt API key")
         return user.store_api_key
 
 

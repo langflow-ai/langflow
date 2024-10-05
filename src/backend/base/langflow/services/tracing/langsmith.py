@@ -41,8 +41,8 @@ class LangSmithTracer(BaseTracer):
             )
             self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
             self._children: dict[str, RunTree] = {}
-        except Exception as e:
-            logger.debug(f"Error setting up LangSmith tracer: {e}")
+        except Exception:
+            logger.opt(exception=True).debug("Error setting up LangSmith tracer")
             self._ready = False
 
     @property
@@ -57,7 +57,7 @@ class LangSmithTracer(BaseTracer):
 
             self._client = Client()
         except ImportError:
-            logger.error("Could not import langsmith. Please install it with `pip install langsmith`.")
+            logger.exception("Could not import langsmith. Please install it with `pip install langsmith`.")
             return False
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         return True

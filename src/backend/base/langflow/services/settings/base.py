@@ -272,7 +272,7 @@ class Settings(BaseSettings):
                             copy2("./{db_file_name}", new_path)
                             logger.debug(f"Copied existing database to {new_path}")
                         except Exception:
-                            logger.error("Failed to copy database, using default path")
+                            logger.exception("Failed to copy database, using default path")
                             new_path = "./{db_file_name}"
                     else:
                         final_path = new_path

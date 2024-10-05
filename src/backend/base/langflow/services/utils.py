@@ -171,6 +171,6 @@ def initialize_services(fix_migration: bool = False, socketio_server=None):
     try:
         get_db_service().migrate_flows_if_auto_login()
     except Exception as exc:
-        logger.error(f"Error migrating flows: {exc}")
         msg = "Error migrating flows"
+        logger.exception(msg)
         raise RuntimeError(msg) from exc

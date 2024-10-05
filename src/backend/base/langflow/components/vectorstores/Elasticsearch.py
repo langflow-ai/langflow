@@ -198,11 +198,11 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
                     msg = f"Invalid search type: {self.search_type}"
                     raise ValueError(msg)
             except Exception as e:
-                logger.error(f"Search query failed: {e}")
                 msg = (
                     "Error occurred while querying the Elasticsearch VectorStore,"
                     " there is no Data into the VectorStore."
                 )
+                logger.exception(msg)
                 raise ValueError(msg) from e
             return [
                 {"page_content": doc.page_content, "metadata": doc.metadata, "score": score} for doc, score in results

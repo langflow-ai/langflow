@@ -1,5 +1,4 @@
 import json
-import traceback
 from typing import Any
 
 from langchain_community.vectorstores import OpenSearchVectorSearch
@@ -125,7 +124,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             from langchain_community.vectorstores import OpenSearchVectorSearch
         except ImportError as e:
             error_message = f"Failed to import required modules: {e}"
-            logger.error(error_message)
+            logger.exception(error_message)
             raise ImportError(error_message) from e
 
         try:
@@ -141,7 +140,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             )
         except Exception as e:
             error_message = f"Failed to create OpenSearchVectorSearch instance: {e}"
-            logger.error(error_message)
+            logger.exception(error_message)
             raise RuntimeError(error_message) from e
 
         if self.ingest_data:
@@ -168,8 +167,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 vector_store.add_documents(documents)
             except Exception as e:
                 error_message = f"Error adding documents to Vector Store: {e}"
-                logger.error(error_message)
-                logger.error(f"Traceback: {traceback.format_exc()}")
+                logger.exception(error_message)
                 raise RuntimeError(error_message) from e
         else:
             logger.debug("No documents to add to the Vector Store.")
@@ -188,7 +186,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                     hybrid_query = json.loads(self.hybrid_search_query)
                 except json.JSONDecodeError as e:
                     error_message = f"Invalid hybrid search query JSON: {e}"
-                    logger.error(error_message)
+                    logger.exception(error_message)
                     raise ValueError(error_message) from e
 
                 results = vector_store.client.search(index=self.index_name, body=hybrid_query)
@@ -232,13 +230,12 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 return [{"page_content": doc.page_content, "metadata": doc.metadata} for doc in results]
 
             error_message = f"Invalid search type:: {self.search_type}"
-            logger.error(error_message)
+            logger.exception(error_message)
             raise ValueError(error_message)
 
         except Exception as e:
             error_message = f"Error during search: {e}"
-            logger.error(error_message)
-            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.exception(error_message)
             raise RuntimeError(error_message) from e
 
     def search_documents(self) -> list[Data]:
@@ -260,6 +257,5 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             return retrieved_data
         except Exception as e:
             error_message = f"Error during document search: {e}"
-            logger.error(error_message)
-            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.exception(error_message)
             raise RuntimeError(error_message) from e

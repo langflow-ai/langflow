@@ -57,11 +57,11 @@ class LangFuseTracer(BaseTracer):
             self._callback = LangchainCallbackHandler(**config)
 
         except ImportError:
-            logger.error("Could not import langfuse. Please install it with `pip install langfuse`.")
+            logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
             return False
 
-        except Exception as e:
-            logger.debug(f"Error setting up LangSmith tracer: {e}")
+        except Exception:
+            logger.opt(exception=True).debug("Error setting up LangSmith tracer")
             return False
 
         return True

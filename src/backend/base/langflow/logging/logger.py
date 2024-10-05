@@ -195,8 +195,8 @@ def configure(
                 rotation="10 MB",  # Log rotation based on file size
                 serialize=True,
             )
-        except Exception as exc:
-            logger.error(f"Error setting up log file: {exc}")
+        except Exception:
+            logger.exception("Error setting up log file")
 
     if log_buffer.enabled():
         logger.add(sink=log_buffer.write, format="{time} {level} {message}", serialize=True)

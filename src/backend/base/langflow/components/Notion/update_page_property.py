@@ -77,7 +77,7 @@ class NotionPageUpdate(LCToolComponent):
                 parsed_properties = json.loads(properties)
             except json.JSONDecodeError as e:
                 error_message = f"Invalid JSON format for properties: {e}"
-                logger.error(error_message)
+                logger.exception(error_message)
                 return error_message
 
         else:
@@ -98,15 +98,15 @@ class NotionPageUpdate(LCToolComponent):
             if e.response is not None:
                 error_message += f"\nStatus code: {e.response.status_code}"
                 error_message += f"\nResponse body: {e.response.text}"
-            logger.error(error_message)
+            logger.exception(error_message)
             return error_message
         except requests.exceptions.RequestException as e:
             error_message = f"An error occurred while making the request: {e}"
-            logger.error(error_message)
+            logger.exception(error_message)
             return error_message
         except Exception as e:
             error_message = f"An unexpected error occurred: {e}"
-            logger.error(error_message)
+            logger.exception(error_message)
             return error_message
 
     def __call__(self, *args, **kwargs):

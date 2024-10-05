@@ -94,8 +94,8 @@ def setup_llm_caching():
         set_langchain_cache(settings_service.settings)
     except ImportError:
         logger.warning(f"Could not import {settings_service.settings.cache_type}. ")
-    except Exception as exc:
-        logger.warning(f"Could not setup LLM caching. Error: {exc}")
+    except Exception:
+        logger.opt(exception=True).warning("Could not setup LLM caching.")
 
 
 def set_langchain_cache(settings):

@@ -80,7 +80,7 @@ class LangfusePlugin(CallbackPlugin):
                 if trace:
                     return trace.getNewHandler()
 
-        except Exception as exc:
-            logger.error(f"Error initializing langfuse callback: {exc}")
+        except Exception:
+            logger.exception("Error initializing langfuse callback")
 
         return None
