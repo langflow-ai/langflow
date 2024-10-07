@@ -70,9 +70,7 @@ class SearXNGToolComponent(LCToolComponent):
             for selected_category in build_config["categories"]["value"]:
                 if selected_category not in build_config["categories"]["options"]:
                     build_config["categories"]["value"].remove(selected_category)
-            languages = []
-            for language in data["locales"]:
-                languages.append(language)
+            languages = list(data["locales"])
             build_config["language"]["options"] = languages.copy()
         except Exception as e:
             self.status = f"Failed to extract names: {e}"
@@ -107,11 +105,8 @@ class SearXNGToolComponent(LCToolComponent):
                         },
                     ).json()
 
-                    results = []
                     num_results = min(SearxSearch._max_results, len(response["results"]))
-                    for i in range(num_results):
-                        results.append(response["results"][i])
-                    return results
+                    return [response["results"][i] for i in range(num_results)]
                 except Exception as e:
                     return [f"Failed to search: {e}"]
 

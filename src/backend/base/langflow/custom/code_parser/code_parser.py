@@ -389,8 +389,7 @@ class CodeParser:
         bases = []
         for base in dunder_class.__bases__:
             bases.append(base)
-            for bases_base in base.__bases__:
-                bases.append(bases_base)
+            bases.extend(base.__bases__)
         return bases
 
     def parse_code(self) -> dict[str, Any]:

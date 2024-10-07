@@ -228,11 +228,7 @@ def get_flow_inputs(graph: Graph) -> list[Vertex]:
     Returns:
         List[Data]: A list of input data, where each record contains the ID, name, and description of the input vertex.
     """
-    inputs = []
-    for vertex in graph.vertices:
-        if vertex.is_input:
-            inputs.append(vertex)
-    return inputs
+    return [vertex for vertex in graph.vertices if vertex.is_input]
 
 
 def build_schema_from_inputs(name: str, inputs: list[Vertex]) -> type[BaseModel]:

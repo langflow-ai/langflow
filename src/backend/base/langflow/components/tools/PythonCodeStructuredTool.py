@@ -292,13 +292,12 @@ class PythonCodeStructuredTool(LCToolComponent):
         return classes, functions
 
     def _find_imports(self, code: str) -> dotdict:
-        imports = []
+        imports: list[str] = []
         from_imports = []
         parsed_code = ast.parse(code)
         for node in parsed_code.body:
             if isinstance(node, ast.Import):
-                for alias in node.names:
-                    imports.append(alias.name)
+                imports.extend(alias.name for alias in node.names)
             elif isinstance(node, ast.ImportFrom):
                 from_imports.append(node)
         return dotdict({"imports": imports, "from_imports": from_imports})

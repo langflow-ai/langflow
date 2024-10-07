@@ -51,9 +51,7 @@ class LangChainHubPromptComponent(Component):
             template_messages = [HumanMessagePromptTemplate(prompt=template)]
 
         # Extract the messages from the prompt data
-        prompt_template = []
-        for message_data in template_messages:
-            prompt_template.append(message_data.prompt)
+        prompt_template = [message_data.prompt for message_data in template_messages]
 
         # Regular expression to find all instances of {<string>}
         pattern = r"\{(.*?)\}"
@@ -77,7 +75,7 @@ class LangChainHubPromptComponent(Component):
         build_config["langchain_hub_prompt"]["info"] = full_template
 
         # Remove old parameter inputs if any
-        for key, _ in build_config.copy().items():
+        for key in build_config.copy():
             if key.startswith("param_"):
                 del build_config[key]
 

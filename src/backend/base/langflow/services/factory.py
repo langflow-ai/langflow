@@ -74,10 +74,13 @@ def import_all_services_into_a_dict():
             service_name = ServiceType(service_type).value.replace("_service", "")
             module_name = f"langflow.services.{service_name}.service"
             module = importlib.import_module(module_name)
-            for name, obj in inspect.getmembers(module, inspect.isclass):
-                if issubclass(obj, Service) and obj is not Service:
-                    services[name] = obj
-                    # break
+            services.update(
+                {
+                    name: obj
+                    for name, obj in inspect.getmembers(module, inspect.isclass)
+                    if issubclass(obj, Service) and obj is not Service
+                }
+            )
         except Exception as exc:
             logger.exception(exc)
             msg = "Could not initialize services. Please check your settings."

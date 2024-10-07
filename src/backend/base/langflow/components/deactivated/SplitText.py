@@ -45,18 +45,12 @@ class SplitTextComponent(Component):
     ]
 
     def _docs_to_data(self, docs):
-        data = []
-        for doc in docs:
-            data.append(Data(text=doc.page_content, data=doc.metadata))
-        return data
+        return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
 
     def split_text(self) -> list[Data]:
         separator = unescape_string(self.separator)
 
-        documents = []
-        for _input in self.data_inputs:
-            if isinstance(_input, Data):
-                documents.append(_input.to_lc_document())
+        documents = [_input.to_lc_document() for _input in self.data_inputs if isinstance(_input, Data)]
 
         splitter = CharacterTextSplitter(
             chunk_overlap=self.chunk_overlap,

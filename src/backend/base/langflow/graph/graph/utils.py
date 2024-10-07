@@ -118,7 +118,7 @@ def update_template(template, g_nodes):
     Returns:
         None
     """
-    for _, value in template.items():
+    for value in template.values():
         if not value.get("proxy"):
             continue
         proxy_dict = value["proxy"]

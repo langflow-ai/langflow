@@ -69,10 +69,8 @@ class CSVToDataComponent(Component):
                 msg = "No CSV data provided."
                 raise ValueError(msg)
 
-            result = []
             csv_reader = csv.DictReader(io.StringIO(csv_data))
-            for row in csv_reader:
-                result.append(Data(data=row))
+            result = [Data(data=row) for row in csv_reader]
 
             if not result:
                 self.status = "The CSV data is empty."
