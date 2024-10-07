@@ -23,6 +23,7 @@ class MergeDataComponent(Component):
             name="data_inputs",
             display_name="Data Inputs",
             is_list=True,
+            info="A list of Data inputs objects to be merged.",
         ),
     ]
 
@@ -31,7 +32,6 @@ class MergeDataComponent(Component):
             display_name="Merged Data",
             name="merged_data",
             method="merge_data",
-            info="A list of merged Data objects with consistent keys across all entries.",
         ),
     ]
 
