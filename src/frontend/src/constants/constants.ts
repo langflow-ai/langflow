@@ -857,7 +857,8 @@ export const DEFAULT_TABLE_ALERT_TITLE = "No Data Available";
 
 export const NO_COLUMN_DEFINITION_ALERT_TITLE = "No Column Definitions";
 
-export const NO_COLUMN_DEFINITION_ALERT_DESCRIPTION = "There are no column definitions available for this table.";
+export const NO_COLUMN_DEFINITION_ALERT_DESCRIPTION =
+  "There are no column definitions available for this table.";
 
 export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];
 
