@@ -80,6 +80,12 @@ jobs:
       - name: Test CLI
         if: steps.check-version.outputs.skipped == 'false'
         run: |
+          echo "Testing CLI"
+          echo $(ls)
+          echo $(dist)
+          echo $(src/backend/base/dist)
+          mkdir src/backend/base/dist
+          mv dist/*.whl src/backend/base/dist
           uv pip install src/backend/base/dist/*.whl
           uv run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
