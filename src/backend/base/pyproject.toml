@@ -186,6 +186,7 @@ select = [
     "PD",
     "PIE",
     "PT",
+    "PTH",
     "PYI",
     "Q",
     "RET",
