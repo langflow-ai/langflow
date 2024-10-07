@@ -281,10 +281,23 @@ export type IntComponentType = {
 export type FloatComponentType = {
   value: string;
   disabled?: boolean;
-  onChange: (value: string, dbValue?: boolean, skipSnapshot?: boolean) => void;
+  onChange: (
+    value: string | number,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => void;
   rangeSpec: RangeSpecType;
   editNode?: boolean;
   id?: string;
+  minLabel?: string;
+  maxLabel?: string;
+  minLabelIcon?: string;
+  maxLabelIcon?: string;
+  sliderButtons?: boolean;
+  sliderButtonsOptions?: {
+    label: string;
+    value: number;
+  }[];
 };
 
 export type FilePreviewType = {
