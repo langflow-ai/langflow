@@ -23,7 +23,7 @@ export default function KeypairListComponent({
 >): JSX.Element {
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
-      handleOnNewValue({ value: [{ "": "" }] },{ skipSnapshot: true });
+      handleOnNewValue({ value: [{ "": "" }] }, { skipSnapshot: true });
     }
   }, [disabled]);
 

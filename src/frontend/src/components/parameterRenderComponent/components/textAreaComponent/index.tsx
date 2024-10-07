@@ -58,7 +58,9 @@ export default function TextAreaComponent({
             name="ExternalLink"
             className={classNames(
               "icons-parameters-comp shrink-0",
-              disabled ? "text-ring cursor-not-allowed" : "hover:text-accent-foreground",
+              disabled
+                ? "cursor-not-allowed text-ring"
+                : "hover:text-accent-foreground",
             )}
           />
         </Button>

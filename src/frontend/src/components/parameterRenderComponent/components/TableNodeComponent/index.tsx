@@ -110,10 +110,14 @@ export default function TableNodeComponent({
       editableCell: isCustomEdit ? false : true,
     };
   });
-  console.log(disabled)
+  console.log(disabled);
 
   return (
-    <div className={"flex w-full items-center" + (disabled?" cursor-not-allowed":"")}>
+    <div
+      className={
+        "flex w-full items-center" + (disabled ? " cursor-not-allowed" : "")
+      }
+    >
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
         <TableModal
           dataTypeDefinitions={dataTypeDefinitions}
@@ -140,7 +144,10 @@ export default function TableNodeComponent({
             disabled={disabled}
             variant="primary"
             size={editNode ? "xs" : "default"}
-            className={"w-full " + (disabled ? "pointer-events-none cursor-not-allowed" : "")}
+            className={
+              "w-full " +
+              (disabled ? "pointer-events-none cursor-not-allowed" : "")
+            }
           >
             <ForwardedIconComponent name="Table" className="mt-px h-4 w-4" />
             <span className="font-normal">Open Table</span>

@@ -20,7 +20,7 @@ export default function CodeAreaComponent({
   useEffect(() => {
     if (disabled && componentValue !== "") {
       setComponentValue("");
-      handleOnNewValue({ value: "" },{ skipSnapshot: true });
+      handleOnNewValue({ value: "" }, { skipSnapshot: true });
     }
   }, [disabled]);
 
