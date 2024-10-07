@@ -8,13 +8,13 @@ if TYPE_CHECKING:
 
 
 async def consume_tasks(should_stop: bool):
-    task_orchestration_service: "TaskOrchestrationService" = get_task_orchestration_service()
+    task_orchestration_service: TaskOrchestrationService = get_task_orchestration_service()
     while not should_stop:
         notifications = task_orchestration_service.get_notifications()
         for notification in notifications:
             if notification.event_type == "task_created":
                 task = task_orchestration_service.get_task(notification.task_id)
-                task_orchestration_service.consume_task(task.id)
+                task_orchestration_service.scheduler.add_job(task_orchestration_service.consume_task, args=[task.id])
         await asyncio.sleep(1)
 
 
@@ -22,11 +22,14 @@ class TaskConsumer:
     def __init__(self):
         self.should_stop = False
         self.task = None
+        self.task_orchestration_service = get_task_orchestration_service()
 
     async def start(self):
+        await self.task_orchestration_service.start()
         self.task = asyncio.create_task(self.run())
 
     async def stop(self):
+        await self.task_orchestration_service.stop()
         self.should_stop = True
         if self.task:
             await self.task

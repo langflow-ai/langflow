@@ -1,13 +1,15 @@
 # langflow/orchestrator/task_orchestrator.py
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from diskcache import Cache, Deque
 from loguru import logger
 from pydantic import BaseModel, field_validator
 from sqlmodel import select
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from langflow.services.base import Service
 from langflow.services.database.models.subscription.model import Subscription
@@ -48,6 +50,12 @@ class TaskOrchestrationService(Service):
         self.notification_queue = Deque(directory=f"{cache_dir}/notifications")
         self.db: DatabaseService = db_service
 
+        jobstores = {"default": SQLAlchemyJobStore(url=self.db.database_url)}
+
+        # Initialize job scheduler
+        self.scheduler = AsyncIOScheduler(jobstores=jobstores)
+        self.scheduler.start()
+
     def create_task(self, task_create: TaskCreate) -> TaskRead:
         task = Task.model_validate(task_create, from_attributes=True)
         with self.db.with_session() as session:
@@ -82,7 +90,7 @@ class TaskOrchestrationService(Service):
                 raise ValueError(f"Task with id {task_id} not found")
         return TaskRead.model_validate(task, from_attributes=True)
 
-    def get_tasks_for_flow(self, flow_id: str) -> List[TaskRead]:
+    def get_tasks_for_flow(self, flow_id: str) -> list[TaskRead]:
         with self.db.with_session() as session:
             tasks = session.exec(select(Task).where(Task.flow_id == flow_id)).all()
         return [TaskRead.model_validate(task, from_attributes=True) for task in tasks]
@@ -125,14 +133,14 @@ class TaskOrchestrationService(Service):
         )
         self.notification_queue.append(notification.model_dump())
 
-    def get_notifications(self) -> List[TaskNotification]:
+    def get_notifications(self) -> list[TaskNotification]:
         notifications = []
         while self.notification_queue:
             notifications.append(TaskNotification(**self.notification_queue.popleft()))
         return notifications
 
     def subscribe_flow(
-        self, flow_id: str, event_type: str, category: Optional[str] = None, state: Optional[str] = None
+        self, flow_id: str, event_type: str, category: str | None = None, state: str | None = None
     ) -> None:
         subscription = Subscription(flow_id=flow_id, event_type=event_type, category=category, state=state)
         with self.db.with_session() as session:
@@ -140,7 +148,7 @@ class TaskOrchestrationService(Service):
             session.commit()
 
     def unsubscribe_flow(
-        self, flow_id: str, event_type: str, category: Optional[str] = None, state: Optional[str] = None
+        self, flow_id: str, event_type: str, category: str | None = None, state: str | None = None
     ) -> None:
         with self.db.with_session() as session:
             query = session.exec(
@@ -153,7 +161,16 @@ class TaskOrchestrationService(Service):
             query.delete()
             session.commit()
 
-    def consume_task(self, task_id: str | UUID) -> None:
+    def _schedule_task(self, task: TaskRead) -> None:
+        if task.cron_expression:
+            trigger = CronTrigger.from_crontab(task.cron_expression)
+            self.scheduler.add_job(
+                self.consume_task, trigger=trigger, args=[task.id], id=str(task.id), replace_existing=True
+            )
+        else:
+            self.scheduler.add_job(self.consume_task, args=[task.id], id=str(task.id), replace_existing=True)
+
+    async def consume_task(self, task_id: str | UUID) -> None:
         task = self.get_task(str(task_id))
         if task.status != "pending":
             raise ValueError(f"Task {task_id} is not in pending status")
@@ -172,7 +189,7 @@ class TaskOrchestrationService(Service):
             # If an error occurs, update task status to "failed"
             self.update_task(task_id, TaskUpdate(status="failed", state=task.state, result={"error": str(e)}))
 
-    def _process_task(self, task: TaskRead) -> Dict:
+    def _process_task(self, task: TaskRead) -> dict:
         # Implement task processing logic based on task category
         # This is a placeholder implementation
         logger.info(f"Processing task {task.id}")
