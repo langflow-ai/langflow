@@ -15,7 +15,7 @@ def get_vertex_builds_by_flow_id(db: Session, flow_id: UUID, limit: int | None =
     )
 
     builds = db.exec(stmt)
-    return [t for t in builds]
+    return list(builds)
 
 
 def log_vertex_build(db: Session, vertex_build: VertexBuildBase) -> VertexBuildTable:

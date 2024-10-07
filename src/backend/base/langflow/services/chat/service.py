@@ -32,8 +32,7 @@ class ChatService(Service):
         """
         if isinstance(self.cache_service, AsyncBaseCacheService):
             return self._async_cache_locks[key]
-        else:
-            return self._sync_cache_locks[key]
+        return self._sync_cache_locks[key]
 
     async def _perform_cache_operation(
         self, operation: str, key: str, data: Any = None, lock: asyncio.Lock | None = None
@@ -44,7 +43,8 @@ class ChatService(Service):
         Args:
             operation (str): The type of cache operation to perform. Possible values are "upsert", "get", or "delete".
             key (str): The key associated with the cache operation.
-            data (Any, optional): The data to be stored in the cache. Only applicable for "upsert" operation. Defaults to None.
+            data (Any, optional): The data to be stored in the cache. Only applicable for "upsert" operation.
+                Defaults to None.
             lock (Optional[asyncio.Lock], optional): The lock to be used for the cache operation. Defaults to None.
 
         Returns:
@@ -58,17 +58,22 @@ class ChatService(Service):
         if isinstance(self.cache_service, AsyncBaseCacheService):
             if operation == "upsert":
                 await self.cache_service.upsert(str(key), data, lock=lock)
-            elif operation == "get":
+                return None
+            if operation == "get":
                 return await self.cache_service.get(key, lock=lock)
-            elif operation == "delete":
+            if operation == "delete":
                 await self.cache_service.delete(key, lock=lock)
-        else:
-            if operation == "upsert":
-                self.cache_service.upsert(str(key), data, lock=lock)
-            elif operation == "get":
-                return self.cache_service.get(key, lock=lock)
-            elif operation == "delete":
-                self.cache_service.delete(key, lock=lock)
+                return None
+            return None
+        if operation == "upsert":
+            self.cache_service.upsert(str(key), data, lock=lock)
+            return None
+        if operation == "get":
+            return self.cache_service.get(key, lock=lock)
+        if operation == "delete":
+            self.cache_service.delete(key, lock=lock)
+            return None
+        return None
 
     async def set_cache(self, key: str, data: Any, lock: asyncio.Lock | None = None) -> bool:
         """

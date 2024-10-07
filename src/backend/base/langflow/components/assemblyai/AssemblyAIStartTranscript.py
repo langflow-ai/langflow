@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import assemblyai as aai
 from loguru import logger
@@ -81,19 +81,24 @@ class AssemblyAITranscriptionJobCreator(Component):
             ],
             value="best",
             info="The speech model to use for the transcription",
+            advanced=True,
         ),
         BoolInput(
             name="language_detection",
             display_name="Automatic Language Detection",
             info="Enable automatic language detection",
+            advanced=True,
         ),
         MessageTextInput(
             name="language_code",
             display_name="Language",
-            info="""
-            The language of the audio file. Can be set manually if automatic language detection is disabled. 
-            See https://www.assemblyai.com/docs/getting-started/supported-languages for a list of supported language codes.
-            """,
+            info=(
+                """
+            The language of the audio file. Can be set manually if automatic language detection is disabled.
+            See https://www.assemblyai.com/docs/getting-started/supported-languages """
+                "for a list of supported language codes."
+            ),
+            advanced=True,
         ),
         BoolInput(
             name="speaker_labels",
@@ -156,7 +161,7 @@ class AssemblyAITranscriptionJobCreator(Component):
                 logger.warning("Both an audio file an audio URL were specified. The audio URL was ignored.")
 
             # Check if the file exists
-            if not os.path.exists(self.audio_file):
+            if not Path(self.audio_file).exists():
                 self.status = "Error: Audio file not found"
                 return Data(data={"error": "Error: Audio file not found"})
             audio = self.audio_file
@@ -172,10 +177,9 @@ class AssemblyAITranscriptionJobCreator(Component):
             if transcript.error:
                 self.status = transcript.error
                 return Data(data={"error": transcript.error})
-            else:
-                result = Data(data={"transcript_id": transcript.id})
-                self.status = result
-                return result
+            result = Data(data={"transcript_id": transcript.id})
+            self.status = result
+            return result
         except Exception as e:
-            self.status = f"An error occurred: {str(e)}"
-            return Data(data={"error": f"An error occurred: {str(e)}"})
+            self.status = f"An error occurred: {e}"
+            return Data(data={"error": f"An error occurred: {e}"})

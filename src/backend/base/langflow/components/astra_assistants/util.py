@@ -10,7 +10,6 @@ import requests
 from astra_assistants import OpenAI, patch
 from astra_assistants.tools.tool_interface import ToolInterface
 
-
 client_lock = threading.Lock()
 client = None
 

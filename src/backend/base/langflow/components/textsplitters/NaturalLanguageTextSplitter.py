@@ -42,7 +42,8 @@ class NaturalLanguageTextSplitterComponent(LCTextSplitterComponent):
         MessageTextInput(
             name="language",
             display_name="Language",
-            info='The language of the text. Default is "English". Supports multiple languages for better text boundary recognition.',
+            info='The language of the text. Default is "English". '
+            "Supports multiple languages for better text boundary recognition.",
         ),
     ]
 
@@ -50,10 +51,7 @@ class NaturalLanguageTextSplitterComponent(LCTextSplitterComponent):
         return self.data_input
 
     def build_text_splitter(self) -> TextSplitter:
-        if self.separator:
-            separator = unescape_string(self.separator)
-        else:
-            separator = "\n\n"
+        separator = unescape_string(self.separator) if self.separator else "\n\n"
         return NLTKTextSplitter(
             language=self.language.lower() if self.language else "english",
             separator=separator,

@@ -48,9 +48,8 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
             from couchbase.cluster import Cluster  # type: ignore
             from couchbase.options import ClusterOptions  # type: ignore
         except ImportError as e:
-            raise ImportError(
-                "Failed to import Couchbase dependencies. Install it using `pip install langflow[couchbase] --pre`"
-            ) from e
+            msg = "Failed to import Couchbase dependencies. Install it using `pip install langflow[couchbase] --pre`"
+            raise ImportError(msg) from e
 
         try:
             auth = PasswordAuthenticator(self.couchbase_username, self.couchbase_password)
@@ -59,7 +58,8 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
 
             cluster.wait_until_ready(timedelta(seconds=5))
         except Exception as e:
-            raise ValueError(f"Failed to connect to Couchbase: {e}")
+            msg = f"Failed to connect to Couchbase: {e}"
+            raise ValueError(msg) from e
 
         documents = []
         for _input in self.ingest_data or []:
@@ -103,5 +103,4 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

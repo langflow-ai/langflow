@@ -36,14 +36,16 @@ class ChatOutputResponse(BaseModel):
 
         for file in files:
             if not isinstance(file, dict):
-                raise ValueError("Files must be a list of dictionaries.")
+                msg = "Files must be a list of dictionaries."
+                raise ValueError(msg)
 
             if not all(key in file for key in ["path", "name", "type"]):
                 # If any of the keys are missing, we should extract the
                 # values from the file path
                 path = file.get("path")
                 if not path:
-                    raise ValueError("File path is required.")
+                    msg = "File path is required."
+                    raise ValueError(msg)
 
                 name = file.get("name")
                 if not name:
@@ -62,7 +64,8 @@ class ChatOutputResponse(BaseModel):
                                 _type = file_type
                                 break
                     if not _type:
-                        raise ValueError("File type is required.")
+                        msg = "File type is required."
+                        raise ValueError(msg)
                 file["type"] = _type
 
         return files

@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
@@ -10,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class LangfuseInstance:
-    _instance: Optional["Langfuse"] = None
+    _instance: Langfuse | None = None
 
     @classmethod
     def get(cls):
@@ -78,7 +80,7 @@ class LangfusePlugin(CallbackPlugin):
                 if trace:
                     return trace.getNewHandler()
 
-        except Exception as exc:
-            logger.error(f"Error initializing langfuse callback: {exc}")
+        except Exception:
+            logger.exception("Error initializing langfuse callback")
 
         return None

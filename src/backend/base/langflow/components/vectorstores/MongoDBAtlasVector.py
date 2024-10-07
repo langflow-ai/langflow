@@ -38,14 +38,16 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> MongoDBAtlasVectorSearch:
         try:
             from pymongo import MongoClient
-        except ImportError:
-            raise ImportError("Please install pymongo to use MongoDB Atlas Vector Store")
+        except ImportError as e:
+            msg = "Please install pymongo to use MongoDB Atlas Vector Store"
+            raise ImportError(msg) from e
 
         try:
             mongo_client: MongoClient = MongoClient(self.mongodb_atlas_cluster_uri)
             collection = mongo_client[self.db_name][self.collection_name]
         except Exception as e:
-            raise ValueError(f"Failed to connect to MongoDB Atlas: {e}")
+            msg = f"Failed to connect to MongoDB Atlas: {e}"
+            raise ValueError(msg) from e
 
         documents = []
         for _input in self.ingest_data or []:
@@ -91,5 +93,4 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

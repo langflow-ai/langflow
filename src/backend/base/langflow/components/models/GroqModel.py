@@ -4,6 +4,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
+from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 
 
@@ -13,12 +14,9 @@ class GroqModel(LCModelComponent):
     icon = "Groq"
     name = "GroqModel"
 
-    inputs = LCModelComponent._base_inputs + [
-        SecretStrInput(
-            name="groq_api_key",
-            display_name="Groq API Key",
-            info="API key for the Groq API.",
-        ),
+    inputs = [
+        *LCModelComponent._base_inputs,
+        SecretStrInput(name="groq_api_key", display_name="Groq API Key", info="API key for the Groq API."),
         MessageTextInput(
             name="groq_api_base",
             display_name="Groq API Base",
@@ -41,7 +39,8 @@ class GroqModel(LCModelComponent):
         IntInput(
             name="n",
             display_name="N",
-            info="Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.",
+            info="Number of chat completions to generate for each prompt. "
+            "Note that the API may not return the full n completions if duplicates are generated.",
             advanced=True,
         ),
         DropdownInput(
@@ -50,6 +49,13 @@ class GroqModel(LCModelComponent):
             info="The name of the model to use.",
             options=[],
             refresh_button=True,
+        ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 
@@ -66,7 +72,7 @@ class GroqModel(LCModelComponent):
             model_list = response.json()
             return [model["id"] for model in model_list.get("data", [])]
         except requests.RequestException as e:
-            self.status = f"Error fetching models: {str(e)}"
+            self.status = f"Error fetching models: {e}"
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
@@ -84,7 +90,7 @@ class GroqModel(LCModelComponent):
         n = self.n
         stream = self.stream
 
-        output = ChatGroq(  # type: ignore
+        return ChatGroq(  # type: ignore
             model=model_name,
             max_tokens=max_tokens or None,
             temperature=temperature,
@@ -93,5 +99,3 @@ class GroqModel(LCModelComponent):
             api_key=SecretStr(groq_api_key),
             streaming=stream,
         )
-
-        return output  # type: ignore

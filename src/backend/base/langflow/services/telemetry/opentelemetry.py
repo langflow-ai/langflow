@@ -12,7 +12,7 @@ from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDow
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.resources import Resource
 
-# a default OpenTelelmetry meter name
+# a default OpenTelemetry meter name
 langflow_meter_name = "langflow"
 
 """
@@ -64,28 +64,30 @@ class Metric:
         self,
         name: str,
         description: str,
-        type: MetricType,
+        metric_type: MetricType,
         labels: dict[str, bool],
         unit: str = "",
     ):
         self.name = name
         self.description = description
-        self.type = type
+        self.type = metric_type
         self.unit = unit
         self.labels = labels
         self.mandatory_labels = [label for label, required in labels.items() if required]
-        self.allowed_labels = [label for label in labels.keys()]
+        self.allowed_labels = list(labels.keys())
 
     def validate_labels(self, labels: Mapping[str, str]):
         """
         Validate if the labels provided are valid
         """
         if labels is None or len(labels) == 0:
-            raise ValueError("Labels must be provided for the metric")
+            msg = "Labels must be provided for the metric"
+            raise ValueError(msg)
 
         missing_labels = set(self.mandatory_labels) - set(labels.keys())
         if missing_labels:
-            raise ValueError(f"Missing required labels: {missing_labels}")
+            msg = f"Missing required labels: {missing_labels}"
+            raise ValueError(msg)
 
     def __repr__(self):
         return f"Metric(name='{self.name}', description='{self.description}', type={self.type}, unit='{self.unit}')"
@@ -109,13 +111,14 @@ class ThreadSafeSingletonMetaUsingWeakref(type):
 
 
 class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
-    _metrics_registry: dict[str, Metric] = dict()
+    _metrics_registry: dict[str, Metric] = {}
 
     def _add_metric(self, name: str, description: str, unit: str, metric_type: MetricType, labels: dict[str, bool]):
-        metric = Metric(name=name, description=description, type=metric_type, unit=unit, labels=labels)
+        metric = Metric(name=name, description=description, metric_type=metric_type, unit=unit, labels=labels)
         self._metrics_registry[name] = metric
         if labels is None or len(labels) == 0:
-            raise ValueError("Labels must be provided for the metric upon registration")
+            msg = "Labels must be provided for the metric upon registration"
+            raise ValueError(msg)
 
     def _register_metric(self):
         """
@@ -156,7 +159,8 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
 
         for name, metric in self._metrics_registry.items():
             if name != metric.name:
-                raise ValueError(f"Key '{name}' does not match metric name '{metric.name}'")
+                msg = f"Key '{name}' does not match metric name '{metric.name}'"
+                raise ValueError(msg)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
 
@@ -169,31 +173,32 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
                 unit=metric.unit,
                 description=metric.description,
             )
-        elif metric.type == MetricType.OBSERVABLE_GAUGE:
+        if metric.type == MetricType.OBSERVABLE_GAUGE:
             return ObservableGaugeWrapper(
                 name=metric.name,
                 description=metric.description,
                 unit=metric.unit,
             )
-        elif metric.type == MetricType.UP_DOWN_COUNTER:
+        if metric.type == MetricType.UP_DOWN_COUNTER:
             return self.meter.create_up_down_counter(
                 name=metric.name,
                 unit=metric.unit,
                 description=metric.description,
             )
-        elif metric.type == MetricType.HISTOGRAM:
+        if metric.type == MetricType.HISTOGRAM:
             return self.meter.create_histogram(
                 name=metric.name,
                 unit=metric.unit,
                 description=metric.description,
             )
-        else:
-            raise ValueError(f"Unknown metric type: {metric.type}")
+        msg = f"Unknown metric type: {metric.type}"
+        raise ValueError(msg)
 
     def validate_labels(self, metric_name: str, labels: Mapping[str, str]):
         reg = self._metrics_registry.get(metric_name)
         if reg is None:
-            raise ValueError(f"Metric '{metric_name}' is not registered")
+            msg = f"Metric '{metric_name}' is not registered"
+            raise ValueError(msg)
         reg.validate_labels(labels)
 
     def increment_counter(self, metric_name: str, labels: Mapping[str, str], value: float = 1.0):
@@ -202,7 +207,8 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         if isinstance(counter, Counter):
             counter.add(value, labels)
         else:
-            raise ValueError(f"Metric '{metric_name}' is not a counter")
+            msg = f"Metric '{metric_name}' is not a counter"
+            raise ValueError(msg)
 
     def up_down_counter(self, metric_name: str, value: float, labels: Mapping[str, str]):
         self.validate_labels(metric_name, labels)
@@ -210,7 +216,8 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         if isinstance(up_down_counter, UpDownCounter):
             up_down_counter.add(value, labels)
         else:
-            raise ValueError(f"Metric '{metric_name}' is not an up down counter")
+            msg = f"Metric '{metric_name}' is not an up down counter"
+            raise ValueError(msg)
 
     def update_gauge(self, metric_name: str, value: float, labels: Mapping[str, str]):
         self.validate_labels(metric_name, labels)
@@ -218,7 +225,8 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         if isinstance(gauge, ObservableGaugeWrapper):
             gauge.set_value(value, labels)
         else:
-            raise ValueError(f"Metric '{metric_name}' is not a gauge")
+            msg = f"Metric '{metric_name}' is not a gauge"
+            raise ValueError(msg)
 
     def observe_histogram(self, metric_name: str, value: float, labels: Mapping[str, str]):
         self.validate_labels(metric_name, labels)
@@ -226,4 +234,5 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         if isinstance(histogram, Histogram):
             histogram.record(value, labels)
         else:
-            raise ValueError(f"Metric '{metric_name}' is not a histogram")
+            msg = f"Metric '{metric_name}' is not a histogram"
+            raise ValueError(msg)

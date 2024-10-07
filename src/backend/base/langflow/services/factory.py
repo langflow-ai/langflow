@@ -54,8 +54,9 @@ def infer_service_types(factory_class: type[ServiceFactory], available_services=
             # Attempt to find a matching enum value
             service_type = ServiceType[type_name]
             service_types.append(service_type)
-        except KeyError:
-            raise ValueError(f"No matching ServiceType for parameter type: {param_type.__name__}")
+        except KeyError as e:
+            msg = f"No matching ServiceType for parameter type: {param_type.__name__}"
+            raise ValueError(msg) from e
     return service_types
 
 
@@ -76,8 +77,9 @@ def import_all_services_into_a_dict():
             for name, obj in inspect.getmembers(module, inspect.isclass):
                 if issubclass(obj, Service) and obj is not Service:
                     services[name] = obj
-                    break
+                    # break
         except Exception as exc:
             logger.exception(exc)
-            raise RuntimeError("Could not initialize services. Please check your settings.") from exc
+            msg = "Could not initialize services. Please check your settings."
+            raise RuntimeError(msg) from exc
     return services

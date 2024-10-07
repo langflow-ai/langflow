@@ -1,6 +1,8 @@
 import copy
 from collections import defaultdict, deque
 
+import networkx as nx
+
 PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
 
 
@@ -173,7 +175,8 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node):
     new_edge["target"] = proxy_id
     _type = target_handle.get("type")
     if _type is None:
-        raise KeyError("The 'type' key must be present in target_handle.")
+        msg = "The 'type' key must be present in target_handle."
+        raise KeyError(msg)
 
     field = target_handle["proxy"]["field"]
     new_target_handle = {
@@ -246,17 +249,49 @@ def get_successors(graph: dict[str, dict[str, list[str]]], vertex_id: str) -> li
         if current_id in visited:
             continue
         visited.add(current_id)
-        successors_result.append(current_id)
+        if current_id != vertex_id:
+            successors_result.append(current_id)
         stack.extend(graph[current_id]["successors"])
     return successors_result
 
 
-def sort_up_to_vertex(graph: dict[str, dict[str, list[str]]], vertex_id: str, is_start: bool = False) -> list[str]:
+def get_root_of_group_node(
+    graph: dict[str, dict[str, list[str]]], vertex_id: str, parent_node_map: dict[str, str | None]
+) -> str:
+    """Returns the root of a group node."""
+    if vertex_id in parent_node_map.values():
+        # Get all vertices with vertex_id as their parent node
+        child_vertices = [v_id for v_id, parent_id in parent_node_map.items() if parent_id == vertex_id]
+
+        # Now go through successors of the child vertices
+        # and get the one that none of its successors is in child_vertices
+        for child_id in child_vertices:
+            successors = get_successors(graph, child_id)
+            if not any(successor in child_vertices for successor in successors):
+                return child_id
+
+    msg = f"Vertex {vertex_id} is not a top level vertex or no root vertex found"
+    raise ValueError(msg)
+
+
+def sort_up_to_vertex(
+    graph: dict[str, dict[str, list[str]]],
+    vertex_id: str,
+    parent_node_map: dict[str, str | None] | None = None,
+    is_start: bool = False,
+) -> list[str]:
     """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
     try:
         stop_or_start_vertex = graph[vertex_id]
-    except KeyError:
-        raise ValueError(f"Vertex {vertex_id} not found into graph")
+    except KeyError as e:
+        if parent_node_map is None:
+            msg = "Parent node map is required to find the root of a group node"
+            raise ValueError(msg) from e
+        vertex_id = get_root_of_group_node(graph=graph, vertex_id=vertex_id, parent_node_map=parent_node_map)
+        if vertex_id not in graph:
+            msg = f"Vertex {vertex_id} not found into graph"
+            raise ValueError(msg) from e
+        stop_or_start_vertex = graph[vertex_id]
 
     visited, excluded = set(), set()
     stack = [vertex_id]
@@ -321,12 +356,7 @@ def has_cycle(vertex_ids: list[str], edges: list[tuple[str, str]]) -> bool:
     visited: set[str] = set()
     rec_stack: set[str] = set()
 
-    for vertex in vertex_ids:
-        if vertex not in visited:
-            if dfs(vertex, visited, rec_stack):
-                return True
-
-    return False
+    return any(vertex not in visited and dfs(vertex, visited, rec_stack) for vertex in vertex_ids)
 
 
 def find_cycle_edge(entry_point: str, edges: list[tuple[str, str]]) -> tuple[str, str]:
@@ -409,3 +439,16 @@ def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) 
     if max_iterations is None:
         return True
     return max(yielded_counts.values(), default=0) <= max_iterations
+
+
+def find_cycle_vertices(edges):
+    # Create a directed graph from the edges
+    graph = nx.DiGraph(edges)
+
+    # Find all simple cycles in the graph
+    cycles = list(nx.simple_cycles(graph))
+
+    # Flatten the list of cycles and remove duplicates
+    cycle_vertices = {vertex for cycle in cycles for vertex in cycle}
+
+    return sorted(cycle_vertices)

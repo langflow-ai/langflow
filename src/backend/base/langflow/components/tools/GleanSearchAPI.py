@@ -9,7 +9,7 @@ from pydantic.v1 import Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.inputs import IntInput, NestedDictInput, SecretStrInput, StrInput
+from langflow.inputs import IntInput, MultilineInput, NestedDictInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -25,7 +25,7 @@ class GleanSearchAPIComponent(LCToolComponent):
             required=True,
         ),
         SecretStrInput(name="glean_access_token", display_name="Glean Access Token", required=True),
-        StrInput(name="query", display_name="Query", required=True),
+        MultilineInput(name="query", display_name="Query", required=True),
         IntInput(name="page_size", display_name="Page Size", value=10),
         NestedDictInput(name="request_options", display_name="Request Options", required=False),
     ]
@@ -67,7 +67,8 @@ class GleanSearchAPIComponent(LCToolComponent):
             results = self._search_api_results(query, **kwargs)
 
             if len(results) == 0:
-                raise AssertionError("No good Glean Search Result was found")
+                msg = "No good Glean Search Result was found"
+                raise AssertionError(msg)
 
             return results
 

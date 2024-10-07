@@ -1,4 +1,5 @@
 import json
+from collections.abc import Sequence
 from typing import Any
 
 import requests
@@ -74,7 +75,7 @@ class SearXNGToolComponent(LCToolComponent):
                 languages.append(language)
             build_config["language"]["options"] = languages.copy()
         except Exception as e:
-            self.status = f"Failed to extract names: {str(e)}"
+            self.status = f"Failed to extract names: {e}"
             build_config["categories"]["options"] = ["Failed to parse", str(e)]
         return build_config
 
@@ -87,9 +88,10 @@ class SearXNGToolComponent(LCToolComponent):
             _max_results: int = 10
 
             @staticmethod
-            def search(query: str, categories: list[str] = []) -> list:
+            def search(query: str, categories: Sequence[str] = ()) -> list:
                 if not SearxSearch._categories and not categories:
-                    raise ValueError("No categories provided.")
+                    msg = "No categories provided."
+                    raise ValueError(msg)
                 all_categories = SearxSearch._categories + list(set(categories) - set(SearxSearch._categories))
                 try:
                     url = f"{SearxSearch._url}/"
@@ -111,7 +113,7 @@ class SearXNGToolComponent(LCToolComponent):
                         results.append(response["results"][i])
                     return results
                 except Exception as e:
-                    return [f"Failed to search: {str(e)}"]
+                    return [f"Failed to search: {e}"]
 
         SearxSearch._url = self.url
         SearxSearch._categories = self.categories.copy()
@@ -131,11 +133,10 @@ class SearXNGToolComponent(LCToolComponent):
 
         SearxSearchSchema = create_model("SearxSearchSchema", **schema_fields)  # type: ignore
 
-        tool = StructuredTool.from_function(
+        return StructuredTool.from_function(
             func=_local["SearxSearch"].search,
             args_schema=SearxSearchSchema,
             name="searxng_search_tool",
             description="A tool that searches for tools using SearXNG.\nThe available categories are: "
             + ", ".join(self.categories),
         )
-        return tool

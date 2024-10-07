@@ -21,7 +21,6 @@ class TextInputComponent(TextComponent):
     ]
 
     def text_response(self) -> Message:
-        message = Message(
+        return Message(
             text=self.input_value,
         )
-        return message

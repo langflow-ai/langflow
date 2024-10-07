@@ -43,7 +43,8 @@ class MistralAIEmbeddingsComponent(LCModelComponent):
 
     def build_embeddings(self) -> Embeddings:
         if not self.mistral_api_key:
-            raise ValueError("Mistral API Key is required")
+            msg = "Mistral API Key is required"
+            raise ValueError(msg)
 
         api_key = SecretStr(self.mistral_api_key)
 

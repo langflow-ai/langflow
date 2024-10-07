@@ -3,6 +3,7 @@ from typing import Any
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.inputs.inputs import HandleInput
 from langflow.schema.dotdict import dotdict
 
 
@@ -11,7 +12,8 @@ class NVIDIAModelComponent(LCModelComponent):
     description = "Generates text using NVIDIA LLMs."
     icon = "NVIDIA"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -47,6 +49,13 @@ class NVIDIAModelComponent(LCModelComponent):
             advanced=True,
             value=1,
         ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
+        ),
     ]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -57,20 +66,22 @@ class NVIDIAModelComponent(LCModelComponent):
                 build_config["model_name"]["options"] = ids
                 build_config["model_name"]["value"] = ids[0]
             except Exception as e:
-                raise ValueError(f"Error getting model names: {e}")
+                msg = f"Error getting model names: {e}"
+                raise ValueError(msg) from e
         return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
-        except ImportError:
-            raise ImportError("Please install langchain-nvidia-ai-endpoints to use the NVIDIA model.")
+        except ImportError as e:
+            msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
+            raise ImportError(msg) from e
         nvidia_api_key = self.nvidia_api_key
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         seed = self.seed
-        output = ChatNVIDIA(
+        return ChatNVIDIA(
             max_tokens=max_tokens or None,
             model=model_name,
             base_url=self.base_url,
@@ -78,4 +89,3 @@ class NVIDIAModelComponent(LCModelComponent):
             temperature=temperature or 0.1,
             seed=seed,
         )
-        return output  # type: ignore

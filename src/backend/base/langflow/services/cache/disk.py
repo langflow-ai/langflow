@@ -36,9 +36,8 @@ class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type: ig
             if time.time() - item["time"] < self.expiration_time:
                 await asyncio.to_thread(self.cache.touch, key)  # Refresh the expiry time
                 return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
-            else:
-                logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
-                await self._delete(key)  # Log before deleting the expired item
+            logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
+            await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS
 
     async def set(self, key, value, lock: asyncio.Lock | None = None):

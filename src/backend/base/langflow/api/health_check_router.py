@@ -16,7 +16,8 @@ class HealthResponse(BaseModel):
     chat: str = "error check the server logs"
     db: str = "error check the server logs"
     """
-    Do not send exceptions and detailed error messages to the client because it might contain credentials and other sensitive server information.
+    Do not send exceptions and detailed error messages to the client because it might contain credentials and other
+    sensitive server information.
     """
 
     def has_error(self) -> bool:
@@ -59,6 +60,5 @@ async def health_check(
 
     if response.has_error():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response.model_dump())
-    else:
-        response.status = "ok"
-        return response
+    response.status = "ok"
+    return response

@@ -3,8 +3,8 @@ import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
-import { useIsFetching } from "@tanstack/react-query";
-import { useState } from "react";
+import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import DropdownButton from "../../../../components/dropdownButtonComponent";
 import PageLayout from "../../../../components/pageLayout";
@@ -28,6 +28,13 @@ export default function HomePage(): JSX.Element {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
+  const queryClient = useQueryClient();
+
+  // cleanup the query cache when the component unmounts
+  // prevent unnecessary queries on flow update
+  useEffect(() => {
+    return () => queryClient.removeQueries({ queryKey: ["useGetFolder"] });
+  }, []);
 
   const dropdownOptions = useDropdownOptions({
     navigate,

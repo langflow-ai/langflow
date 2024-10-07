@@ -58,7 +58,8 @@ def messages_to_text(template: str, messages: Message | list[Message]) -> str:
     for message in messages:
         # If it is not a message, create one with the key "text"
         if not isinstance(message, Message):
-            raise ValueError("All elements in the list must be of type Message.")
+            msg = "All elements in the list must be of type Message."
+            raise ValueError(msg)
         _messages.append(message)
 
     formated_messages = [template.format(data=message.model_dump(), **message.model_dump()) for message in _messages]

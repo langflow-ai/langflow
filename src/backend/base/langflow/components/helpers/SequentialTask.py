@@ -68,5 +68,5 @@ class SequentialTaskComponent(Component):
             if isinstance(self.task, list) and all(isinstance(task, SequentialTask) for task in self.task):
                 tasks = self.task + tasks
             elif isinstance(self.task, SequentialTask):
-                tasks = [self.task] + tasks
+                tasks = [self.task, *tasks]
         return tasks

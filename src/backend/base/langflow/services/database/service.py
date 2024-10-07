@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import time
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -14,7 +16,7 @@ from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, SQLModel, create_engine, select, text
 
 from langflow.services.base import Service
-from langflow.services.database import models  # noqa
+from langflow.services.database import models
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import (
     Result,
@@ -24,18 +26,17 @@ from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
-    from sqlalchemy.engine import Engine
-
     from langflow.services.settings.service import SettingsService
 
 
 class DatabaseService(Service):
     name = "database_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         if settings_service.settings.database_url is None:
-            raise ValueError("No database URL provided")
+            msg = "No database URL provided"
+            raise ValueError(msg)
         self.database_url: str = settings_service.settings.database_url
         # This file is in langflow.services.database.manager.py
         # the ini is in langflow
@@ -44,7 +45,7 @@ class DatabaseService(Service):
         self.alembic_cfg_path = langflow_dir / "alembic.ini"
         self.engine = self._create_engine()
 
-    def _create_engine(self) -> "Engine":
+    def _create_engine(self) -> Engine:
         """Create the engine for the database."""
         if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
             "sqlite"
@@ -71,10 +72,12 @@ class DatabaseService(Service):
                 # https://stackoverflow.com/questions/62688256/sqlalchemy-exc-nosuchmoduleerror-cant-load-plugin-sqlalchemy-dialectspostgre
                 self.database_url = self.database_url.replace("postgres://", "postgresql://")
                 logger.warning(
-                    "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. To avoid this warning, update the database URL."
+                    "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. "
+                    "To avoid this warning, update the database URL."
                 )
                 return self._create_engine()
-            raise RuntimeError("Error creating database engine") from exc
+            msg = "Error creating database engine"
+            raise RuntimeError(msg) from exc
 
     def on_connection(self, dbapi_connection, connection_record):
         from sqlite3 import Connection as sqliteConnection
@@ -84,15 +87,15 @@ class DatabaseService(Service):
             pragmas_list = []
             for key, val in pragmas.items() or {}:
                 pragmas_list.append(f"PRAGMA {key} = {val}")
-            logger.info(f"sqlite connection, setting pragmas: {str(pragmas_list)}")
+            logger.info(f"sqlite connection, setting pragmas: {pragmas_list}")
             if pragmas_list:
                 cursor = dbapi_connection.cursor()
                 try:
                     for pragma in pragmas_list:
                         try:
                             cursor.execute(pragma)
-                        except OperationalError as oe:
-                            logger.error(f"Failed to set PRAGMA {pragma}: ", {oe})
+                        except OperationalError:
+                            logger.exception(f"Failed to set PRAGMA {pragma}")
                 finally:
                     cursor.close()
 
@@ -115,7 +118,8 @@ class DatabaseService(Service):
                     user = get_user_by_username(session, username)
                     if not user:
                         logger.error("Default superuser not found")
-                        raise RuntimeError("Default superuser not found")
+                        msg = "Default superuser not found"
+                        raise RuntimeError(msg)
                     for flow in flows:
                         flow.user_id = user.id
                     session.commit()
@@ -171,7 +175,7 @@ class DatabaseService(Service):
         # which is a buffer
         # I don't want to output anything
         # subprocess.DEVNULL is an int
-        with open(self.script_location / "alembic.log", "w") as buffer:
+        with (self.script_location / "alembic.log").open("w") as buffer:
             alembic_cfg = Config(stdout=buffer)
             # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
@@ -191,15 +195,16 @@ class DatabaseService(Service):
                 try:
                     self.init_alembic(alembic_cfg)
                 except Exception as exc:
-                    logger.error(f"Error initializing alembic: {exc}")
-                    raise RuntimeError("Error initializing alembic") from exc
+                    msg = "Error initializing alembic"
+                    logger.exception(msg)
+                    raise RuntimeError(msg) from exc
             else:
                 logger.info("Alembic already initialized")
 
             logger.info(f"Running DB migrations in {self.script_location}")
 
             try:
-                buffer.write(f"{datetime.now().isoformat()}: Checking migrations\n")
+                buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")
                 command.check(alembic_cfg)
             except Exception as exc:
                 if isinstance(exc, util.exc.CommandError | util.exc.AutogenerateDiffsDetected):
@@ -207,12 +212,13 @@ class DatabaseService(Service):
                     time.sleep(3)
 
             try:
-                buffer.write(f"{datetime.now().isoformat()}: Checking migrations\n")
+                buffer.write(f"{datetime.now(tz=timezone.utc).astimezone()}: Checking migrations\n")
                 command.check(alembic_cfg)
             except util.exc.AutogenerateDiffsDetected as exc:
-                logger.error(f"AutogenerateDiffsDetected: {exc}")
+                logger.exception("AutogenerateDiffsDetected")
                 if not fix:
-                    raise RuntimeError(f"There's a mismatch between the models and the database.\n{exc}")
+                    msg = f"There's a mismatch between the models and the database.\n{exc}"
+                    raise RuntimeError(msg) from exc
 
             if fix:
                 self.try_downgrade_upgrade_until_success(alembic_cfg)
@@ -224,9 +230,9 @@ class DatabaseService(Service):
             try:
                 command.check(alembic_cfg)
                 break
-            except util.exc.AutogenerateDiffsDetected as exc:
+            except util.exc.AutogenerateDiffsDetected:
                 # downgrade to base and upgrade again
-                logger.warning(f"AutogenerateDiffsDetected: {exc}")
+                logger.opt(exception=True).warning("AutogenerateDiffsDetected")
                 command.downgrade(alembic_cfg, f"-{i}")
                 # wait for the database to be ready
                 time.sleep(3)
@@ -252,7 +258,7 @@ class DatabaseService(Service):
             available_columns = [col["name"] for col in inspector.get_columns(table_name)]
             results.append(Result(name=table_name, type="table", success=True))
         except sa.exc.NoSuchTableError:
-            logger.error(f"Missing table: {table_name}")
+            logger.exception(f"Missing table: {table_name}")
             results.append(Result(name=table_name, type="table", success=False))
 
         for column in expected_columns:
@@ -282,8 +288,9 @@ class DatabaseService(Service):
             except OperationalError as oe:
                 logger.warning(f"Table {table} already exists, skipping. Exception: {oe}")
             except Exception as exc:
-                logger.error(f"Error creating table {table}: {exc}")
-                raise RuntimeError(f"Error creating table {table}") from exc
+                msg = f"Error creating table {table}"
+                logger.exception(msg)
+                raise RuntimeError(msg) from exc
 
         # Now check if the required tables exist, if not, something went wrong.
         inspector = inspect(self.engine)
@@ -292,7 +299,8 @@ class DatabaseService(Service):
             if table not in table_names:
                 logger.error("Something went wrong creating the database and tables.")
                 logger.error("Please check your database settings.")
-                raise RuntimeError("Something went wrong creating the database and tables.")
+                msg = "Something went wrong creating the database and tables."
+                raise RuntimeError(msg)
 
         logger.debug("Database and tables created successfully")
 
@@ -305,7 +313,7 @@ class DatabaseService(Service):
             with self.with_session() as session:
                 teardown_superuser(settings_service, session)
 
-        except Exception as exc:
-            logger.error(f"Error tearing down database: {exc}")
+        except Exception:
+            logger.exception("Error tearing down database")
 
         self.engine.dispose()

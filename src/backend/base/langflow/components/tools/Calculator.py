@@ -52,12 +52,11 @@ class CalculatorToolComponent(LCToolComponent):
             def eval_expr(node):
                 if isinstance(node, ast.Num):
                     return node.n
-                elif isinstance(node, ast.BinOp):
+                if isinstance(node, ast.BinOp):
                     return operators[type(node.op)](eval_expr(node.left), eval_expr(node.right))
-                elif isinstance(node, ast.UnaryOp):
+                if isinstance(node, ast.UnaryOp):
                     return operators[type(node.op)](eval_expr(node.operand))
-                else:
-                    raise TypeError(node)
+                raise TypeError(node)
 
             # Parse the expression and evaluate it
             tree = ast.parse(expression, mode="eval")
@@ -70,7 +69,7 @@ class CalculatorToolComponent(LCToolComponent):
             return [Data(data={"result": formatted_result})]
 
         except (SyntaxError, TypeError, KeyError) as e:
-            error_message = f"Invalid expression: {str(e)}"
+            error_message = f"Invalid expression: {e}"
             self.status = error_message
             return [Data(data={"error": error_message})]
         except ZeroDivisionError:
@@ -78,6 +77,6 @@ class CalculatorToolComponent(LCToolComponent):
             self.status = error_message
             return [Data(data={"error": error_message})]
         except Exception as e:
-            error_message = f"Error: {str(e)}"
+            error_message = f"Error: {e}"
             self.status = error_message
             return [Data(data={"error": error_message})]

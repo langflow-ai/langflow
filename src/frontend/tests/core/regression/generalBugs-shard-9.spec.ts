@@ -106,6 +106,7 @@ User: {user_input}
 AI:
   `;
 
+  await page.getByTestId("title-Prompt").last().click();
   await page
     .getByTestId("promptarea_prompt_template-ExternalLink")
     .nth(0)
@@ -133,7 +134,7 @@ AI:
 
   await page.waitForTimeout(1000);
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page.waitForSelector('[data-testid="icon-LucideSend"]', {
     timeout: 100000,

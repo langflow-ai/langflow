@@ -1,20 +1,27 @@
+from __future__ import annotations
+
 import os
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from loguru import logger
-from sqlmodel import Session
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate
-from langflow.services.settings.service import SettingsService
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.kubernetes_secrets import KubernetesSecretManager, encode_user_id
 
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlmodel import Session
+
+    from langflow.services.settings.service import SettingsService
+
 
 class KubernetesSecretService(VariableService, Service):
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         # TODO: settings_service to set kubernetes namespace
         self.kubernetes_secrets = KubernetesSecretManager()
@@ -40,8 +47,8 @@ class KubernetesSecretService(VariableService, Service):
                     name=secret_name,
                     data=variables,
                 )
-            except Exception as e:
-                logger.error(f"Error creating {var} variable: {e}")
+            except Exception:
+                logger.exception(f"Error creating {var} variable")
 
         else:
             logger.info("Skipping environment variable storage.")
@@ -55,16 +62,16 @@ class KubernetesSecretService(VariableService, Service):
     ) -> tuple[str, str]:
         variables = self.kubernetes_secrets.get_secret(name=secret_name)
         if not variables:
-            raise ValueError(f"user_id {user_id} variable not found.")
+            msg = f"user_id {user_id} variable not found."
+            raise ValueError(msg)
 
         if name in variables:
             return name, variables[name]
-        else:
-            credential_name = CREDENTIAL_TYPE + "_" + name
-            if credential_name in variables:
-                return credential_name, variables[credential_name]
-            else:
-                raise ValueError(f"user_id {user_id} variable name {name} not found.")
+        credential_name = CREDENTIAL_TYPE + "_" + name
+        if credential_name in variables:
+            return credential_name, variables[credential_name]
+        msg = f"user_id {user_id} variable name {name} not found."
+        raise ValueError(msg)
 
     def get_variable(
         self,
@@ -76,10 +83,11 @@ class KubernetesSecretService(VariableService, Service):
         secret_name = encode_user_id(user_id)
         key, value = self.resolve_variable(secret_name, user_id, name)
         if key.startswith(CREDENTIAL_TYPE + "_") and field == "session_id":  # type: ignore
-            raise TypeError(
+            msg = (
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
                 "because its purpose is to prevent the exposure of values."
             )
+            raise TypeError(msg)
         return value
 
     def list_variables(
@@ -92,7 +100,7 @@ class KubernetesSecretService(VariableService, Service):
             return []
 
         names = []
-        for key in variables.keys():
+        for key in variables:
             if key.startswith(CREDENTIAL_TYPE + "_"):
                 names.append(key[len(CREDENTIAL_TYPE) + 1 :])
             else:
@@ -144,5 +152,4 @@ class KubernetesSecretService(VariableService, Service):
             value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
             default_fields=default_fields,
         )
-        variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
-        return variable
+        return Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})

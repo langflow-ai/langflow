@@ -12,7 +12,8 @@ class HierarchicalCrewComponent(BaseCrewComponent):
     documentation: str = "https://docs.crewai.com/how-to/Hierarchical/"
     icon = "CrewAI"
 
-    inputs = BaseCrewComponent._base_inputs + [
+    inputs = [
+        *BaseCrewComponent._base_inputs,
         HandleInput(name="agents", display_name="Agents", input_types=["Agent"], is_list=True),
         HandleInput(name="tasks", display_name="Tasks", input_types=["HierarchicalTask"], is_list=True),
         HandleInput(name="manager_llm", display_name="Manager LLM", input_types=["LanguageModel"], required=False),
@@ -21,7 +22,7 @@ class HierarchicalCrewComponent(BaseCrewComponent):
 
     def build_crew(self) -> Crew:
         tasks, agents = self.get_tasks_and_agents()
-        crew = Crew(
+        return Crew(
             agents=agents,
             tasks=tasks,
             process=Process.hierarchical,
@@ -36,4 +37,3 @@ class HierarchicalCrewComponent(BaseCrewComponent):
             step_callback=self.get_step_callback(),
             task_callback=self.get_task_callback(),
         )
-        return crew

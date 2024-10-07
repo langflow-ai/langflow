@@ -1,20 +1,24 @@
+from __future__ import annotations
+
 import os
 import traceback
 import types
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Optional
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
-from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from uuid import UUID
+
     from langchain.callbacks.base import BaseCallbackHandler
 
     from langflow.graph.vertex.base import Vertex
+    from langflow.services.tracing.schema import Log
 
 
 class LangSmithTracer(BaseTracer):
@@ -37,8 +41,8 @@ class LangSmithTracer(BaseTracer):
             )
             self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
             self._children: dict[str, RunTree] = {}
-        except Exception as e:
-            logger.debug(f"Error setting up LangSmith tracer: {e}")
+        except Exception:
+            logger.opt(exception=True).debug("Error setting up LangSmith tracer")
             self._ready = False
 
     @property
@@ -53,7 +57,7 @@ class LangSmithTracer(BaseTracer):
 
             self._client = Client()
         except ImportError:
-            logger.error("Could not import langsmith. Please install it with `pip install langsmith`.")
+            logger.exception("Could not import langsmith. Please install it with `pip install langsmith`.")
             return False
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         return True
@@ -65,7 +69,7 @@ class LangSmithTracer(BaseTracer):
         trace_type: str,
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
-        vertex: Optional["Vertex"] = None,
+        vertex: Vertex | None = None,
     ):
         if not self._ready:
             return
@@ -117,7 +121,7 @@ class LangSmithTracer(BaseTracer):
         trace_name: str,
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
-        logs: list[Log | dict] = [],
+        logs: Sequence[Log | dict] = (),
     ):
         if not self._ready:
             return
@@ -161,5 +165,5 @@ class LangSmithTracer(BaseTracer):
         self._run_tree.post()
         self._run_link = self._run_tree.get_url()
 
-    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
+    def get_langchain_callback(self) -> BaseCallbackHandler | None:
         return None

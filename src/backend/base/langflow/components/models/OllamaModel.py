@@ -6,6 +6,7 @@ from langchain_community.chat_models import ChatOllama
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
+from langflow.inputs.inputs import HandleInput
 from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput
 
 
@@ -63,12 +64,13 @@ class ChatOllamaComponent(LCModelComponent):
                 response.raise_for_status()
                 data = response.json()
 
-                model_names = [model["name"] for model in data.get("models", [])]
-                return model_names
+                return [model["name"] for model in data.get("models", [])]
         except Exception as e:
-            raise ValueError("Could not retrieve models. Please, make sure Ollama is running.") from e
+            msg = "Could not retrieve models. Please, make sure Ollama is running."
+            raise ValueError(msg) from e
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         StrInput(
             name="base_url",
             display_name="Base URL",
@@ -89,17 +91,9 @@ class ChatOllamaComponent(LCModelComponent):
             info="Controls the creativity of model responses.",
         ),
         StrInput(
-            name="format",
-            display_name="Format",
-            info="Specify the format of the output (e.g., json).",
-            advanced=True,
+            name="format", display_name="Format", info="Specify the format of the output (e.g., json).", advanced=True
         ),
-        DictInput(
-            name="metadata",
-            display_name="Metadata",
-            info="Metadata to add to the run trace.",
-            advanced=True,
-        ),
+        DictInput(name="metadata", display_name="Metadata", info="Metadata to add to the run trace.", advanced=True),
         DropdownInput(
             name="mirostat",
             display_name="Mirostat",
@@ -151,35 +145,13 @@ class ChatOllamaComponent(LCModelComponent):
             info="Penalty for repetitions in generated text. (Default: 1.1)",
             advanced=True,
         ),
-        FloatInput(
-            name="tfs_z",
-            display_name="TFS Z",
-            info="Tail free sampling value. (Default: 1)",
-            advanced=True,
-        ),
+        FloatInput(name="tfs_z", display_name="TFS Z", info="Tail free sampling value. (Default: 1)", advanced=True),
+        IntInput(name="timeout", display_name="Timeout", info="Timeout for the request stream.", advanced=True),
         IntInput(
-            name="timeout",
-            display_name="Timeout",
-            info="Timeout for the request stream.",
-            advanced=True,
+            name="top_k", display_name="Top K", info="Limits token selection to top K. (Default: 40)", advanced=True
         ),
-        IntInput(
-            name="top_k",
-            display_name="Top K",
-            info="Limits token selection to top K. (Default: 40)",
-            advanced=True,
-        ),
-        FloatInput(
-            name="top_p",
-            display_name="Top P",
-            info="Works together with top-k. (Default: 0.9)",
-            advanced=True,
-        ),
-        BoolInput(
-            name="verbose",
-            display_name="Verbose",
-            info="Whether to print out response text.",
-        ),
+        FloatInput(name="top_p", display_name="Top P", info="Works together with top-k. (Default: 0.9)", advanced=True),
+        BoolInput(name="verbose", display_name="Verbose", info="Whether to print out response text."),
         StrInput(
             name="tags",
             display_name="Tags",
@@ -192,17 +164,14 @@ class ChatOllamaComponent(LCModelComponent):
             info="Comma-separated list of tokens to signal the model to stop generating text.",
             advanced=True,
         ),
-        StrInput(
-            name="system",
-            display_name="System",
-            info="System to use for generating text.",
+        StrInput(name="system", display_name="System", info="System to use for generating text.", advanced=True),
+        StrInput(name="template", display_name="Template", info="Template to use for generating text.", advanced=True),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
             advanced=True,
-        ),
-        StrInput(
-            name="template",
-            display_name="Template",
-            info="Template to use for generating text.",
-            advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 
@@ -253,6 +222,7 @@ class ChatOllamaComponent(LCModelComponent):
         try:
             output = ChatOllama(**llm_params)  # type: ignore
         except Exception as e:
-            raise ValueError("Could not initialize Ollama LLM.") from e
+            msg = "Could not initialize Ollama LLM."
+            raise ValueError(msg) from e
 
         return output  # type: ignore

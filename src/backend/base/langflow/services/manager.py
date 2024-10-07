@@ -34,9 +34,8 @@ class ServiceManager:
         for factory in self.get_factories():
             try:
                 self.register_factory(factory)
-            except Exception as exc:
-                logger.exception(exc)
-                logger.error(f"Error initializing {factory}: {exc}")
+            except Exception:
+                logger.exception(f"Error initializing {factory}")
 
     def register_factory(
         self,
@@ -88,7 +87,8 @@ class ServiceManager:
         Validate whether the service can be created.
         """
         if service_name not in self.factories and default is None:
-            raise NoFactoryRegisteredError(f"No factory registered for the service class '{service_name.name}'")
+            msg = f"No factory registered for the service class '{service_name.name}'"
+            raise NoFactoryRegisteredError(msg)
 
     def update(self, service_name: ServiceType):
         """
@@ -131,16 +131,15 @@ class ServiceManager:
                 module = importlib.import_module(module_name)
 
                 # Find all classes in the module that are subclasses of ServiceFactory
-                for name, obj in inspect.getmembers(module, inspect.isclass):
+                for _, obj in inspect.getmembers(module, inspect.isclass):
                     if issubclass(obj, ServiceFactory) and obj is not ServiceFactory:
                         factories.append(obj())
                         break
 
             except Exception as exc:
                 logger.exception(exc)
-                raise RuntimeError(
-                    f"Could not initialize services. Please check your settings. Error in {name}."
-                ) from exc
+                msg = f"Could not initialize services. Please check your settings. Error in {name}."
+                raise RuntimeError(msg) from exc
 
         return factories
 
