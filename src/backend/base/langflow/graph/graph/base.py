@@ -121,8 +121,8 @@ class Graph:
         self._snapshots: list[dict[str, Any]] = []
         try:
             self.tracing_service: TracingService | None = get_tracing_service()
-        except Exception as exc:
-            logger.error(f"Error getting tracing service: {exc}")
+        except Exception:
+            logger.exception("Error getting tracing service")
             self.tracing_service = None
         if start is not None and end is not None:
             self._set_start_and_end(start, end)
@@ -452,7 +452,7 @@ class Graph:
                 # and run self.build_adjacency_maps(edges) to get the new predecessor map
                 # that is not complete but we can use to update the run_predecessors
                 edges_set = set()
-                for _vertex in [vertex] + successors:
+                for _vertex in [vertex, *successors]:
                     edges_set.update(_vertex.edges)
                     if _vertex.state == VertexStates.INACTIVE:
                         _vertex.set_state("ACTIVE")
@@ -1013,7 +1013,7 @@ class Graph:
         Creates a graph from a payload.
 
         Args:
-            payload (Dict): The payload to create the graph from.˜`
+            payload (Dict): The payload to create the graph from.`
 
         Returns:
             Graph: The created graph.
@@ -1407,8 +1407,8 @@ class Graph:
             )
         except Exception as exc:
             if not isinstance(exc, ComponentBuildException):
-                logger.exception(f"Error building Component: \n\n{exc}")
-            raise exc
+                logger.exception("Error building Component")
+            raise
 
     def get_vertex_edges(
         self,
@@ -1473,9 +1473,9 @@ class Graph:
             logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks, {current_batch}")
             try:
                 next_runnable_vertices = await self._execute_tasks(tasks, lock=lock)
-            except Exception as e:
-                logger.error(f"Error executing tasks in layer {layer_index}: {e}")
-                raise e
+            except Exception:
+                logger.exception(f"Error executing tasks in layer {layer_index}")
+                raise
             if not next_runnable_vertices:
                 break
             to_process.extend(next_runnable_vertices)
@@ -1617,7 +1617,7 @@ class Graph:
                 successors_result.append([successor])
 
         if not flat and successors_result:
-            return [successors] + successors_result
+            return [successors, *successors_result]
 
         return successors_result
 
@@ -1748,7 +1748,7 @@ class Graph:
             try:
                 first_layer = self.sort_vertices(stop_component_id, start_component_id)
             except Exception as exc:
-                logger.error(exc)
+                logger.exception(exc)
                 first_layer = self.sort_vertices()
         else:
             first_layer = self.sort_vertices()
@@ -1893,7 +1893,7 @@ class Graph:
         if not chat_inputs_first:
             return vertices_layers
 
-        return [chat_inputs_first] + vertices_layers
+        return [chat_inputs_first, *vertices_layers]
 
     def sort_layer_by_dependency(self, vertices_layers: list[list[str]]) -> list[list[str]]:
         """Sorts the vertices in each layer by dependency, ensuring no vertex depends on a subsequent vertex."""

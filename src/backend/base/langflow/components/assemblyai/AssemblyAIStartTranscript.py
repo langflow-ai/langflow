@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import assemblyai as aai
 from loguru import logger
@@ -161,7 +161,7 @@ class AssemblyAITranscriptionJobCreator(Component):
                 logger.warning("Both an audio file an audio URL were specified. The audio URL was ignored.")
 
             # Check if the file exists
-            if not os.path.exists(self.audio_file):
+            if not Path(self.audio_file).exists():
                 self.status = "Error: Audio file not found"
                 return Data(data={"error": "Error: Audio file not found"})
             audio = self.audio_file
@@ -181,5 +181,5 @@ class AssemblyAITranscriptionJobCreator(Component):
             self.status = result
             return result
         except Exception as e:
-            self.status = f"An error occurred: {str(e)}"
-            return Data(data={"error": f"An error occurred: {str(e)}"})
+            self.status = f"An error occurred: {e}"
+            return Data(data={"error": f"An error occurred: {e}"})

@@ -35,15 +35,15 @@ class LocalStorageService(StorageService):
         file_path = folder_path / file_name
 
         def write_file(file_path: Path, data: bytes) -> None:
-            with open(file_path, "wb") as f:
+            with Path(file_path).open("wb") as f:
                 f.write(data)
 
         try:
             await asyncio.get_event_loop().run_in_executor(None, write_file, file_path, data)
             logger.info(f"File {file_name} saved successfully in flow {flow_id}.")
-        except Exception as e:
-            logger.error(f"Error saving file {file_name} in flow {flow_id}: {e}")
-            raise e
+        except Exception:
+            logger.exception(f"Error saving file {file_name} in flow {flow_id}")
+            raise
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """
@@ -61,7 +61,7 @@ class LocalStorageService(StorageService):
             raise FileNotFoundError(msg)
 
         def read_file(file_path: Path) -> bytes:
-            with open(file_path, "rb") as f:
+            with Path(file_path).open("rb") as f:
                 return f.read()
 
         content = await asyncio.get_event_loop().run_in_executor(None, read_file, file_path)

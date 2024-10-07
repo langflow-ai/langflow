@@ -120,7 +120,7 @@ class PythonCodeStructuredTool(LCToolComponent):
             build_config["_classes"]["value"] = json.dumps(classes)
             build_config["tool_function"]["options"] = names
         except Exception as e:
-            self.status = f"Failed to extract names: {str(e)}"
+            self.status = f"Failed to extract names: {e}"
             build_config["tool_function"]["options"] = ["Failed to parse", str(e)]
         return build_config
 

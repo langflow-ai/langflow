@@ -170,7 +170,7 @@ def read_flows(
                     if example_flow.id not in flow_ids:
                         flows.append(example_flow)  # type: ignore
             except Exception as e:
-                logger.error(e)
+                logger.exception(e)
 
         if remove_example_flows:
             flows = [flow for flow in flows if flow.folder_id != folder.id]
@@ -196,7 +196,7 @@ def read_flow(
         # so write an OR
         stmt = stmt.where(
             (Flow.user_id == current_user.id) | (Flow.user_id == None)  # noqa
-        )  # noqa
+        )
     if user_flow := session.exec(stmt).first():
         return user_flow
     raise HTTPException(status_code=404, detail="Flow not found")

@@ -72,8 +72,8 @@ class AnyIOBackend(TaskBackend):
                 self.tasks[task_id] = task_result
                 logger.info(f"Task {task_id} started.")
                 return task_id, task_result
-            except Exception as e:
-                logger.error(f"An error occurred while launching the task: {e}")
+            except Exception:
+                logger.exception("An error occurred while launching the task")
                 return None, None
 
     def get_task(self, task_id: str) -> Any:

@@ -41,7 +41,7 @@ def update_template_field(new_template, key, previous_value_dict):
             template_field["load_from_db"] = previous_value_dict.get("load_from_db", False)
         template_field["value"] = previous_value_dict["value"]
 
-    if "file_path" in previous_value_dict and previous_value_dict["file_path"]:
+    if previous_value_dict.get("file_path"):
         file_path_value = get_file_path_value(previous_value_dict["file_path"])
         if not file_path_value:
             # If the file does not exist, remove the value from the template_field["value"]

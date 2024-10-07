@@ -54,7 +54,7 @@ class AssemblyAIGetSubtitles(Component):
             transcript_id = self.transcription_result.data["id"]
             transcript = aai.Transcript.get_by_id(transcript_id)
         except Exception as e:
-            error = f"Getting transcription failed: {str(e)}"
+            error = f"Getting transcription failed: {e}"
             self.status = error
             return Data(data={"error": error})
 

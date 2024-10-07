@@ -157,7 +157,10 @@ class LCModelComponent(Component):
                     if "prompt" in input_value:
                         prompt = input_value.load_lc_prompt()
                         if system_message:
-                            prompt.messages = [SystemMessage(content=system_message)] + prompt.messages
+                            prompt.messages = [
+                                SystemMessage(content=system_message),
+                                *prompt.messages,  # type: ignore[has-type]
+                            ]
                             system_message_added = True
                         runnable = prompt | runnable
                     else:
