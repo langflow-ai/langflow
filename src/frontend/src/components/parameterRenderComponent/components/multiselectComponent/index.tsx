@@ -77,7 +77,9 @@ export default function MultiselectComponent({
   }, [options]);
 
   useEffect(() => {
-    setCustomValues(treatedValue.filter((v) => !defaultOptions.includes(v)) ?? []);
+    setCustomValues(
+      treatedValue.filter((v) => !defaultOptions.includes(v)) ?? [],
+    );
     setOptions([
       ...treatedValue.filter((v) => !defaultOptions.includes(v) && v),
       ...defaultOptions,
@@ -94,7 +96,9 @@ export default function MultiselectComponent({
 
   const handleOptionSelect = (currentValue) => {
     if (treatedValue.includes(currentValue)) {
-      handleOnNewValue({ value: treatedValue.filter((v) => v !== currentValue) });
+      handleOnNewValue({
+        value: treatedValue.filter((v) => v !== currentValue),
+      });
     } else {
       handleOnNewValue({ value: [...treatedValue, currentValue] });
     }
@@ -118,7 +122,8 @@ export default function MultiselectComponent({
         )}
       >
         <span className="truncate" data-testid={`value-dropdown-${id}`}>
-          {treatedValue.length > 0 && options.find((option) => treatedValue.includes(option))
+          {treatedValue.length > 0 &&
+          options.find((option) => treatedValue.includes(option))
             ? treatedValue.join(", ")
             : "Choose an option..."}
         </span>
