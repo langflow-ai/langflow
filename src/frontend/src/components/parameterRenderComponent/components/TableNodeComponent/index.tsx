@@ -110,7 +110,6 @@ export default function TableNodeComponent({
       editableCell: isCustomEdit ? false : true,
     };
   });
-  console.log(disabled);
 
   return (
     <div
