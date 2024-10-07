@@ -39,12 +39,6 @@ class StructuredOutputComponent(Component):
                     "description": "Specify the name of the output field.",
                 },
                 {
-                    "name": "default",
-                    "display_name": "Default",
-                    "type": "str",
-                    "description": "Provide a default value for the output field.",
-                },
-                {
                     "name": "description",
                     "display_name": "Description",
                     "type": "str",
@@ -85,7 +79,7 @@ class StructuredOutputComponent(Component):
         if self.multiple:
             output_model = create_model(
                 self.schema_name,
-                objects=(list[_output_model], Field(default=[], description=f"A list of {self.schema_name}.")),  # type: ignore
+                objects=(list[_output_model], Field(description=f"A list of {self.schema_name}.")),  # type: ignore
             )
         else:
             output_model = _output_model
