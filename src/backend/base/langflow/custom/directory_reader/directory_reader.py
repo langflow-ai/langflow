@@ -215,9 +215,8 @@ class DirectoryReader:
         """
         try:
             file_content = self.read_file_content(file_path)
-        except Exception as exc:
-            logger.exception(exc)
-            logger.error(f"Error while reading file {file_path}: {exc}")
+        except Exception:
+            logger.exception(f"Error while reading file {file_path}")
             return False, f"Could not read {file_path}"
 
         if file_content is None:
@@ -292,9 +291,8 @@ class DirectoryReader:
     async def process_file_async(self, file_path):
         try:
             file_content = self.read_file_content(file_path)
-        except Exception as exc:
-            logger.exception(exc)
-            logger.error(f"Error while reading file {file_path}: {exc}")
+        except Exception:
+            logger.exception(f"Error while reading file {file_path}")
             return False, f"Could not read {file_path}"
 
         if file_content is None:
@@ -346,8 +344,8 @@ class DirectoryReader:
             if validation_result:
                 try:
                     output_types = await self.get_output_types_from_code_async(result_content)
-                except Exception as exc:
-                    logger.error(f"Error while getting output types from code: {exc}")
+                except Exception:
+                    logger.exception("Error while getting output types from code")
                     output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]

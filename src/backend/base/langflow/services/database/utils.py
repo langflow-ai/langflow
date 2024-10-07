@@ -23,14 +23,14 @@ def initialize_database(fix_migration: bool = False):
         # if the exception involves tables already existing
         # we can ignore it
         if "already exists" not in str(exc):
-            logger.error(f"Error creating DB and tables: {exc}")
             msg = "Error creating DB and tables"
+            logger.exception(msg)
             raise RuntimeError(msg) from exc
     try:
         database_service.check_schema_health()
     except Exception as exc:
-        logger.error(f"Error checking schema health: {exc}")
         msg = "Error checking schema health"
+        logger.exception(msg)
         raise RuntimeError(msg) from exc
     try:
         database_service.run_migrations(fix=fix_migration)
@@ -52,8 +52,8 @@ def initialize_database(fix_migration: bool = False):
         # if the exception involves tables already existing
         # we can ignore it
         if "already exists" not in str(exc):
-            logger.error(exc)
-        raise exc
+            logger.exception(exc)
+        raise
     logger.debug("Database initialized")
 
 
@@ -62,8 +62,8 @@ def session_getter(db_service: DatabaseService):
     try:
         session = Session(db_service.engine)
         yield session
-    except Exception as e:
-        logger.error("Session rollback because of exception:", e)
+    except Exception:
+        logger.exception("Session rollback because of exception")
         session.rollback()
         raise
     finally:

@@ -258,7 +258,7 @@ def run_build_inputs(
         return custom_component.build_inputs(user_id=user_id)
         # add_extra_fields(frontend_node, field_config, field_config.values())
     except Exception as exc:
-        logger.error(f"Error running build inputs: {exc}")
+        logger.exception("Error running build inputs")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
@@ -273,7 +273,7 @@ def get_component_instance(custom_component: CustomComponent, user_id: str | UUI
             msg = "Invalid code type"
             raise ValueError(msg)
     except Exception as exc:
-        logger.error(f"Error while evaluating custom component code: {exc}")
+        logger.exception("Error while evaluating custom component code")
         raise HTTPException(
             status_code=400,
             detail={
@@ -285,7 +285,7 @@ def get_component_instance(custom_component: CustomComponent, user_id: str | UUI
     try:
         return custom_class(_user_id=user_id, _code=custom_component._code)
     except Exception as exc:
-        logger.error(f"Error while instantiating custom component: {exc}")
+        logger.exception("Error while instantiating custom component")
         if hasattr(exc, "detail") and "traceback" in exc.detail:
             logger.error(exc.detail["traceback"])
 
@@ -308,7 +308,7 @@ def run_build_config(
             msg = "Invalid code type"
             raise ValueError(msg)
     except Exception as exc:
-        logger.error(f"Error while evaluating custom component code: {exc}")
+        logger.exception("Error while evaluating custom component code")
         raise HTTPException(
             status_code=400,
             detail={
@@ -333,7 +333,7 @@ def run_build_config(
         return build_config, custom_instance
 
     except Exception as exc:
-        logger.error(f"Error while building field config: {exc}")
+        logger.exception("Error while building field config")
         if hasattr(exc, "detail") and "traceback" in exc.detail:
             logger.error(exc.detail["traceback"])
 
@@ -521,8 +521,8 @@ def update_field_dict(
             )
             build_config = dd_build_config
         except Exception as exc:
-            logger.error(f"Error while running update_build_config: {exc}")
             msg = f"Error while running update_build_config: {exc}"
+            logger.exception(msg)
             raise UpdateBuildConfigError(msg) from exc
 
     return build_config

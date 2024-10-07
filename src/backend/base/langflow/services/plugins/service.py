@@ -40,8 +40,8 @@ class PluginService(Service):
                             and attr not in [CallbackPlugin, BasePlugin]
                         ):
                             self.register_plugin(plugin_name, attr())
-                except Exception as exc:
-                    logger.error(f"Error loading plugin {plugin_name}: {exc}")
+                except Exception:
+                    logger.exception(f"Error loading plugin {plugin_name}")
 
     def register_plugin(self, plugin_name, plugin_instance):
         self.plugins[plugin_name] = plugin_instance

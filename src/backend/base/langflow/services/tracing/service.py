@@ -63,8 +63,8 @@ class TracingService(Service):
             log_func, args = await self.logs_queue.get()
             try:
                 await log_func(*args)
-            except Exception as e:
-                logger.error(f"Error processing log: {e}")
+            except Exception:
+                logger.exception("Error processing log")
             finally:
                 self.logs_queue.task_done()
 
@@ -74,14 +74,14 @@ class TracingService(Service):
         try:
             self.running = True
             self.worker_task = asyncio.create_task(self.log_worker())
-        except Exception as e:
-            logger.error(f"Error starting tracing service: {e}")
+        except Exception:
+            logger.exception("Error starting tracing service")
 
     async def flush(self):
         try:
             await self.logs_queue.join()
-        except Exception as e:
-            logger.error(f"Error flushing logs: {e}")
+        except Exception:
+            logger.exception("Error flushing logs")
 
     async def stop(self):
         try:
@@ -94,8 +94,8 @@ class TracingService(Service):
                 self.worker_task.cancel()
                 self.worker_task = None
 
-        except Exception as e:
-            logger.error(f"Error stopping tracing service: {e}")
+        except Exception:
+            logger.exception("Error stopping tracing service")
 
     def _reset_io(self):
         self.inputs = defaultdict(dict)
@@ -109,8 +109,8 @@ class TracingService(Service):
             self._initialize_langsmith_tracer()
             self._initialize_langwatch_tracer()
             self._initialize_langfuse_tracer()
-        except Exception as e:
-            logger.debug(f"Error initializing tracers: {e}")
+        except Exception:
+            logger.opt(exception=True).debug("Error initializing tracers")
 
     def _initialize_langsmith_tracer(self):
         project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
@@ -168,8 +168,8 @@ class TracingService(Service):
                 continue
             try:
                 tracer.add_trace(trace_id, trace_name, trace_type, inputs, metadata, vertex)
-            except Exception as e:
-                logger.error(f"Error starting trace {trace_name}: {e}")
+            except Exception:
+                logger.exception(f"Error starting trace {trace_name}")
 
     def _end_traces(self, trace_id: str, trace_name: str, error: Exception | None = None):
         for tracer in self._tracers.values():
@@ -183,8 +183,8 @@ class TracingService(Service):
                     error=error,
                     logs=self._logs[trace_name],
                 )
-            except Exception as e:
-                logger.error(f"Error ending trace {trace_name}: {e}")
+            except Exception:
+                logger.exception(f"Error ending trace {trace_name}")
 
     def _end_all_traces(self, outputs: dict, error: Exception | None = None):
         for tracer in self._tracers.values():
@@ -192,8 +192,8 @@ class TracingService(Service):
                 continue
             try:
                 tracer.end(self.inputs, outputs=self.outputs, error=error, metadata=outputs)
-            except Exception as e:
-                logger.error(f"Error ending all traces: {e}")
+            except Exception:
+                logger.exception("Error ending all traces")
 
     async def end(self, outputs: dict, error: Exception | None = None):
         self._end_all_traces(outputs, error)

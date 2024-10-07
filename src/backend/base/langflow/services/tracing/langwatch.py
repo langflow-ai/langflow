@@ -46,8 +46,8 @@ class LangWatchTracer(BaseTracer):
                 name=name_without_id,
                 type="workflow",
             )
-        except Exception as e:
-            logger.debug(f"Error setting up LangWatch tracer: {e}")
+        except Exception:
+            logger.opt(exception=True).debug("Error setting up LangWatch tracer")
             self._ready = False
 
     @property
@@ -60,7 +60,7 @@ class LangWatchTracer(BaseTracer):
 
             self._client = langwatch
         except ImportError:
-            logger.error("Could not import langwatch. Please install it with `pip install langwatch`.")
+            logger.exception("Could not import langwatch. Please install it with `pip install langwatch`.")
             return False
         return True
 

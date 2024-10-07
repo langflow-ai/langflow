@@ -28,10 +28,10 @@ class S3StorageService(StorageService):
             self.s3_client.put_object(Bucket=self.bucket, Key=f"{folder}/{file_name}", Body=data)
             logger.info(f"File {file_name} saved successfully in folder {folder}.")
         except NoCredentialsError:
-            logger.error("Credentials not available for AWS S3.")
+            logger.exception("Credentials not available for AWS S3.")
             raise
-        except ClientError as e:
-            logger.error(f"Error saving file {file_name} in folder {folder}: {e}")
+        except ClientError:
+            logger.exception(f"Error saving file {file_name} in folder {folder}")
             raise
 
     async def get_file(self, folder: str, file_name: str):
@@ -47,8 +47,8 @@ class S3StorageService(StorageService):
             response = self.s3_client.get_object(Bucket=self.bucket, Key=f"{folder}/{file_name}")
             logger.info(f"File {file_name} retrieved successfully from folder {folder}.")
             return response["Body"].read()
-        except ClientError as e:
-            logger.error(f"Error retrieving file {file_name} from folder {folder}: {e}")
+        except ClientError:
+            logger.exception(f"Error retrieving file {file_name} from folder {folder}")
             raise
 
     async def list_files(self, folder: str):
@@ -64,8 +64,8 @@ class S3StorageService(StorageService):
             files = [item["Key"] for item in response.get("Contents", []) if "/" not in item["Key"][len(folder) :]]
             logger.info(f"{len(files)} files listed in folder {folder}.")
             return files
-        except ClientError as e:
-            logger.error(f"Error listing files in folder {folder}: {e}")
+        except ClientError:
+            logger.exception(f"Error listing files in folder {folder}")
             raise
 
     async def delete_file(self, folder: str, file_name: str):
@@ -79,8 +79,8 @@ class S3StorageService(StorageService):
         try:
             self.s3_client.delete_object(Bucket=self.bucket, Key=f"{folder}/{file_name}")
             logger.info(f"File {file_name} deleted successfully from folder {folder}.")
-        except ClientError as e:
-            logger.error(f"Error deleting file {file_name} from folder {folder}: {e}")
+        except ClientError:
+            logger.exception(f"Error deleting file {file_name} from folder {folder}")
             raise
 
     async def teardown(self):
