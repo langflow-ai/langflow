@@ -1,6 +1,5 @@
 import copy
 import json
-import os
 import shutil
 import time
 from collections import defaultdict
@@ -352,7 +351,7 @@ def load_starter_projects(retries=3, delay=1) -> list[tuple[Path, dict]]:
     for file in folder.glob("*.json"):
         attempt = 0
         while attempt < retries:
-            with open(file, encoding="utf-8") as f:
+            with file.open(encoding="utf-8") as f:
                 try:
                     project = orjson.loads(f.read())
                     starter_projects.append((file, project))
@@ -372,12 +371,12 @@ def copy_profile_pictures():
     origin = Path(__file__).parent / "profile_pictures"
     target = Path(config_dir) / "profile_pictures"
 
-    if not os.path.exists(origin):
+    if not origin.exists():
         msg = f"The source folder '{origin}' does not exist."
         raise ValueError(msg)
 
-    if not os.path.exists(target):
-        os.makedirs(target)
+    if not target.exists():
+        target.mkdir(parents=True)
 
     try:
         shutil.copytree(origin, target, dirs_exist_ok=True)
@@ -411,9 +410,9 @@ def get_project_data(project):
     )
 
 
-def update_project_file(project_path, project, updated_project_data):
+def update_project_file(project_path: Path, project: dict, updated_project_data):
     project["data"] = updated_project_data
-    with open(project_path, "w", encoding="utf-8") as f:
+    with project_path.open("w", encoding="utf-8") as f:
         f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
     logger.info(f"Updated starter project {project['name']} file")
 
@@ -516,14 +515,15 @@ def load_flows_from_directory():
 
     with session_scope() as session:
         user_id = get_user_by_username(session, settings_service.auth_settings.SUPERUSER).id
-        files = [f for f in os.listdir(flows_path) if os.path.isfile(os.path.join(flows_path, f))]
-        for filename in files:
-            if not filename.endswith(".json"):
+        _flows_path = Path(flows_path)
+        files = [f for f in _flows_path.iterdir() if f.is_file()]
+        for f in files:
+            if f.suffix != ".json":
                 continue
-            logger.info(f"Loading flow from file: {filename}")
-            with open(os.path.join(flows_path, filename), encoding="utf-8") as file:
+            logger.info(f"Loading flow from file: {f.name}")
+            with f.open(encoding="utf-8") as file:
                 flow = orjson.loads(file.read())
-                no_json_name = filename.replace(".json", "")
+                no_json_name = f.stem
                 flow_endpoint_name = flow.get("endpoint_name")
                 if _is_valid_uuid(no_json_name):
                     flow["id"] = no_json_name

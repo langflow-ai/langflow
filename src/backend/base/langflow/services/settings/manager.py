@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
 import yaml
 from loguru import logger
@@ -23,11 +23,12 @@ class SettingsService(Service):
         # Check if a string is a valid path or a file name
         if "/" not in file_path:
             # Get current path
-            current_path = os.path.dirname(os.path.abspath(__file__))
+            current_path = Path(__file__).resolve().parent
+            _file_path = Path(current_path) / file_path
+        else:
+            _file_path = Path(file_path)
 
-            file_path = os.path.join(current_path, file_path)
-
-        with open(file_path) as f:
+        with _file_path.open() as f:
             settings_dict = yaml.safe_load(f)
             settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 
