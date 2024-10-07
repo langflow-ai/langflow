@@ -15,7 +15,10 @@ class Column(BaseModel):
     name: str
     sortable: bool = Field(default=True)
     filterable: bool = Field(default=True)
+    type: str | None = None
     formatter: FormatterType | str | None = None
+    description: str | None = None
+    default: str | None = None
 
     @field_validator("formatter")
     def validate_formatter(cls, value):
