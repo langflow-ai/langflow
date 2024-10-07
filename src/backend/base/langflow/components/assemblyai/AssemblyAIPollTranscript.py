@@ -1,6 +1,7 @@
 import assemblyai as aai
 
 from langflow.custom import Component
+from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import DataInput, FloatInput, Output, SecretStrInput
 from langflow.schema import Data
 
@@ -28,6 +29,7 @@ class AssemblyAITranscriptionJobPoller(Component):
             value=3.0,
             info="The polling interval in seconds",
             advanced=True,
+            range_spec=RangeSpec(min=3, max=30),
         ),
     ]
 
