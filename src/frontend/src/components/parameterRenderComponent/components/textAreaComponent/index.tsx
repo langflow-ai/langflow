@@ -51,14 +51,14 @@ export default function TextAreaComponent({
       password={password}
     >
       <div className={classNames("flex items-center")}>
-        <Button unstyled>
+        <Button unstyled disabled={disabled}>
           <IconComponent
             strokeWidth={1.5}
             id={id}
             name="ExternalLink"
             className={classNames(
               "icons-parameters-comp shrink-0",
-              disabled ? "text-ring" : "hover:text-accent-foreground",
+              disabled ? "text-ring cursor-not-allowed" : "hover:text-accent-foreground",
             )}
           />
         </Button>
