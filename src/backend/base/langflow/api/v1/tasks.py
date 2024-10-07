@@ -1,4 +1,3 @@
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -30,7 +29,7 @@ async def create_task(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=List[TaskRead])
+@router.get("/", response_model=list[TaskRead])
 async def read_tasks(
     skip: int = 0,
     limit: int = 100,
