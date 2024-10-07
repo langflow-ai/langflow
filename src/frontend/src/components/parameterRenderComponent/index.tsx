@@ -1,6 +1,7 @@
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
+import { Slider } from "@radix-ui/react-slider";
 import { useMemo } from "react";
 import TableNodeComponent from "../TableNodeComponent";
 import CodeAreaComponent from "../codeAreaComponent";
@@ -11,6 +12,7 @@ import IntComponent from "../intComponent";
 import KeypairListComponent from "../keypairListComponent";
 import LinkComponent from "../linkComponent";
 import PromptAreaComponent from "../promptComponent";
+import SliderComponent from "../sliderComponent";
 import ToggleShadComponent from "../toggleShadComponent";
 import { RefreshParameterComponent } from "./component/refreshParameterComponent";
 import { StrRenderComponent } from "./component/strRenderComponent";
@@ -100,6 +102,17 @@ export function ParameterRenderComponent({
             value={templateData}
             onChange={onChange}
             id={`link_${id}`}
+          />
+        ) : templateData.type === "slider" ? (
+          <SliderComponent
+            value={templateValue}
+            onChange={onChange}
+            rangeSpec={templateData.range_spec}
+            minLabel={templateData?.min_label}
+            maxLabel={templateData?.max_label}
+            minLabelIcon={templateData?.min_label_icon}
+            maxLabelIcon={templateData?.max_label_icon}
+            id={`slider_${id}`}
           />
         ) : templateData.type === "float" ? (
           <FloatComponent
