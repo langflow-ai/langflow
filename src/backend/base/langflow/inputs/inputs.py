@@ -36,7 +36,7 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
     def validate_value(cls, v: Any, _info):
         # Check if value is a list of dicts
         if isinstance(v, DataFrame):
-            return v
+            v = v.to_dict(orient="records")
         if not isinstance(v, list):
             msg = f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list."
             raise ValueError(msg)  # noqa: TRY004
