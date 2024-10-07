@@ -1,6 +1,5 @@
 from typing import cast
 
-from pandas import DataFrame
 from pydantic import BaseModel, Field, create_model
 
 from langflow.base.models.chat_result import get_chat_result
@@ -82,8 +81,7 @@ class StructuredOutputComponent(Component):
         if not hasattr(self.llm, "with_structured_output"):
             msg = "Language model does not support structured output."
             raise ValueError(msg)
-        output_schema = cast(DataFrame, self.output_schema).to_dict(orient="records")
-        _output_model = build_model_from_schema(output_schema)
+        _output_model = build_model_from_schema(self.output_schema)
         if self.multiple:
             output_model = create_model(
                 self.schema_name,
