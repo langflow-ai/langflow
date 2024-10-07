@@ -74,7 +74,11 @@ class StructuredOutputComponent(Component):
     def build_structured_output(self) -> Data:
         if not hasattr(self.llm, "with_structured_output"):
             msg = "Language model does not support structured output."
+            raise TypeError(msg)
+        if not self.output_schema:
+            msg = "Output schema cannot be empty"
             raise ValueError(msg)
+
         _output_model = build_model_from_schema(self.output_schema)
         if self.multiple:
             output_model = create_model(
