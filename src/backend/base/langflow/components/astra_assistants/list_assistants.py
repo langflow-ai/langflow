@@ -9,17 +9,16 @@ from langflow.template.field.base import Output
 class AssistantsListAssistants(Component):
     display_name = "List Assistants"
     description = "Returns a list of assistant id's"
+    client = patch(OpenAI())
 
     outputs = [
         Output(display_name="Assistants", name="assistants", method="process_inputs"),
     ]
 
     def process_inputs(self) -> Message:
-        patch(OpenAI())
-        assistants = self.client.beta.assistants.list()
+        assistants = self.client.beta.assistants.list().data
         id_list = [assistant.id for assistant in assistants]
-        message = Message(
+        return Message(
             # get text from list
             text="\n".join(id_list)
         )
-        return message

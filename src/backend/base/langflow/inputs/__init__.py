@@ -1,5 +1,6 @@
 from .inputs import (
     BoolInput,
+    CodeInput,
     DataInput,
     DefaultPromptField,
     DictInput,
@@ -9,6 +10,7 @@ from .inputs import (
     HandleInput,
     Input,
     IntInput,
+    LinkInput,
     MessageInput,
     MessageTextInput,
     MultilineInput,
@@ -36,10 +38,12 @@ __all__ = [
     "MultilineSecretInput",
     "NestedDictInput",
     "PromptInput",
+    "CodeInput",
     "SecretStrInput",
     "StrInput",
     "MessageTextInput",
     "TableInput",
     "Input",
     "DefaultPromptField",
+    "LinkInput",
 ]

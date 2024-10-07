@@ -1,13 +1,13 @@
 import operator
 from functools import reduce
 
-from langflow.field_typing.range_spec import RangeSpec
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
+from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import (
     BoolInput,
     DictInput,
@@ -17,6 +17,7 @@ from langflow.inputs import (
     SecretStrInput,
     StrInput,
 )
+from langflow.inputs.inputs import HandleInput
 
 
 class OpenAIModelComponent(LCModelComponent):
@@ -25,7 +26,8 @@ class OpenAIModelComponent(LCModelComponent):
     icon = "OpenAI"
     name = "OpenAIModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -45,7 +47,9 @@ class OpenAIModelComponent(LCModelComponent):
             is_list=True,
             display_name="Schema",
             advanced=True,
-            info="The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
+            info="The schema for the Output of the model. "
+            "You must pass the word JSON in the prompt. "
+            "If left blank, JSON mode will be disabled.",
         ),
         DropdownInput(
             name="model_name",
@@ -58,7 +62,9 @@ class OpenAIModelComponent(LCModelComponent):
             name="openai_api_base",
             display_name="OpenAI API Base",
             advanced=True,
-            info="The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+            info="The base URL of the OpenAI API. "
+            "Defaults to https://api.openai.com/v1. "
+            "You can change this to use other APIs like JinaChat, LocalAI and Prem.",
         ),
         SecretStrInput(
             name="api_key",
@@ -75,6 +81,13 @@ class OpenAIModelComponent(LCModelComponent):
             advanced=True,
             value=1,
         ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -90,10 +103,7 @@ class OpenAIModelComponent(LCModelComponent):
         json_mode = bool(output_schema_dict) or self.json_mode
         seed = self.seed
 
-        if openai_api_key:
-            api_key = SecretStr(openai_api_key)
-        else:
-            api_key = None
+        api_key = SecretStr(openai_api_key) if openai_api_key else None
         output = ChatOpenAI(
             max_tokens=max_tokens or None,
             model_kwargs=model_kwargs,
@@ -125,9 +135,9 @@ class OpenAIModelComponent(LCModelComponent):
         try:
             from openai import BadRequestError
         except ImportError:
-            return
+            return None
         if isinstance(e, BadRequestError):
             message = e.body.get("message")  # type: ignore
             if message:
                 return message
-        return
+        return None

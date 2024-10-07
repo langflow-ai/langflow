@@ -7,14 +7,20 @@ import tempfile
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import contextmanager
+from collections.abc import AsyncGenerator
+from contextlib import contextmanager, suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import orjson
 import pytest
+from asgi_lifespan import LifespanManager
+from base.langflow.components.inputs.ChatInput import ChatInput
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
+from loguru import logger
+from pytest import LogCaptureFixture
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 from tests.api_keys import get_openai_api_key
@@ -86,6 +92,17 @@ def _delete_transactions_and_vertex_builds(session, user: User):
     for flow_id in flow_ids:
         delete_transactions_by_flow_id(session, flow_id)
         delete_vertex_builds_by_flow_id(session, flow_id)
+@pytest.fixture
+def caplog(caplog: LogCaptureFixture):
+    handler_id = logger.add(
+        caplog.handler,
+        format="{message}",
+        level=0,
+        filter=lambda record: record["level"].no >= caplog.handler.level,
+        enqueue=False,  # Set to 'True' if your test is spawning child processes.
+    )
+    yield caplog
+    logger.remove(handler_id)
 
 
 @pytest.fixture()
@@ -189,7 +206,7 @@ def basic_graph_data():
 
 @pytest.fixture
 def basic_graph():
-    return get_graph()
+    yield get_graph()
 
 
 @pytest.fixture
@@ -257,36 +274,37 @@ def json_memory_chatbot_no_llm():
 
 
 @pytest.fixture(name="client", autouse=True)
-def client_fixture(session: Session, monkeypatch, request, load_flows_dir):
+async def client_fixture(session: Session, monkeypatch, request, load_flows_dir):
     # Set the database url to a test database
     if "noclient" in request.keywords:
         yield
     else:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            db_path = Path(temp_dir) / f"{uuid.uuid4()}.db"
-            if "load_flows" in request.keywords:
-                shutil.copyfile(
-                    pytest.BASIC_EXAMPLE_PATH, os.path.join(load_flows_dir, "c54f9130-f2fa-4a3e-b22a-3856d946351b.json")
-                )
-                monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
-                monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
+        db_dir = tempfile.mkdtemp()
+        db_path = Path(db_dir) / "test.db"
+        monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+        monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+        if "load_flows" in request.keywords:
+            shutil.copyfile(
+                pytest.BASIC_EXAMPLE_PATH, os.path.join(load_flows_dir, "c54f9130-f2fa-4a3e-b22a-3856d946351b.json")
+            )
+            monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
+            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
 
-            from langflow.main import create_app
+        from langflow.main import create_app
 
-            app = create_app()
-
-            # app.dependency_overrides[get_session] = get_session_override
-            db_service = get_db_service()
-            db_service.database_url = f"sqlite:///{db_path}"
-            db_service.reload_engine()
-            try:
-                with TestClient(app) as client:
-                    yield client
-            finally:
-                db_service.engine.dispose()  # Ensure the database connection is closed
-                SQLModel.metadata.drop_all(db_service.engine)
-            # app.dependency_overrides.clear()
-            monkeypatch.undo()
+        app = create_app()
+        db_service = get_db_service()
+        db_service.database_url = f"sqlite:///{db_path}"
+        db_service.reload_engine()
+        # app.dependency_overrides[get_session] = get_session_override
+        async with LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager:
+            async with AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client:
+                yield client
+        # app.dependency_overrides.clear()
+        monkeypatch.undo()
+        # clear the temp db
+        with suppress(FileNotFoundError):
+            db_path.unlink()
 
 
 # create a fixture for session_getter above
@@ -306,12 +324,12 @@ def runner():
 
 
 @pytest.fixture
-def test_user(client):
+async def test_user(client):
     user_data = UserCreate(
         username="testuser",
         password="testpassword",
     )
-    response = client.post("/api/v1/users", json=user_data.model_dump())
+    response = await client.post("api/v1/users/", json=user_data.model_dump())
     assert response.status_code == 201
     user = response.json()
     yield user
@@ -345,9 +363,9 @@ def active_user(client):
 
 
 @pytest.fixture
-def logged_in_headers(client, active_user):
+async def logged_in_headers(client, active_user):
     login_data = {"username": active_user.username, "password": "testpassword"}
-    response = client.post("/api/v1/login", data=login_data)
+    response = await client.post("api/v1/login", data=login_data)
     assert response.status_code == 200
     tokens = response.json()
     a_token = tokens["access_token"]
@@ -385,70 +403,82 @@ def json_two_outputs():
 
 
 @pytest.fixture
-def added_flow_with_prompt_and_history(client, json_flow_with_prompt_and_history, logged_in_headers):
-    flow = orjson.loads(json_flow_with_prompt_and_history)
+async def added_flow_webhook_test(client, json_webhook_test, logged_in_headers):
+    flow = orjson.loads(json_webhook_test)
     data = flow["data"]
     flow = FlowCreate(name="Basic Chat", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
-    flow_data = response.json()
-    yield flow_data
-    # Clean up
-    client.delete(f"api/v1/flows/{flow_data['id']}", headers=logged_in_headers)
+    assert response.json()["name"] == flow.name
+    assert response.json()["data"] == flow.data
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture
-def added_flow_chat_input(client, json_chat_input, logged_in_headers):
+async def added_flow_chat_input(client, json_chat_input, logged_in_headers):
     flow = orjson.loads(json_chat_input)
     data = flow["data"]
     flow = FlowCreate(name="Chat Input", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
-    flow_data = response.json()
-    yield flow_data
-    # Clean up
-    client.delete(f"api/v1/flows/{flow_data['id']}", headers=logged_in_headers)
+    assert response.json()["name"] == flow.name
+    assert response.json()["data"] == flow.data
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture
-def added_flow_two_outputs(client, json_two_outputs, logged_in_headers):
+async def added_flow_two_outputs(client, json_two_outputs, logged_in_headers):
     flow = orjson.loads(json_two_outputs)
     data = flow["data"]
     flow = FlowCreate(name="Two Outputs", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
-    flow_data = response.json()
-    yield flow_data
-    # Clean up
-    client.delete(f"api/v1/flows/{flow_data['id']}", headers=logged_in_headers)
+    assert response.json()["name"] == flow.name
+    assert response.json()["data"] == flow.data
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture
-def added_vector_store(client, json_vector_store, logged_in_headers):
+async def added_vector_store(client, json_vector_store, logged_in_headers):
     vector_store = orjson.loads(json_vector_store)
     data = vector_store["data"]
     vector_store = FlowCreate(name="Vector Store", description="description", data=data)
-    response = client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
+    response = await client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
-    vector_store_data = response.json()
-    yield vector_store_data
-    # Clean up
-    client.delete(f"api/v1/flows/{vector_store_data['id']}", headers=logged_in_headers)
+    assert response.json()["name"] == vector_store.name
+    assert response.json()["data"] == vector_store.data
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture
-def added_webhook_test(client, json_webhook_test, logged_in_headers):
+async def added_webhook_test(client, json_webhook_test, logged_in_headers):
     webhook_test = orjson.loads(json_webhook_test)
     data = webhook_test["data"]
     webhook_test = FlowCreate(
         name="Webhook Test", description="description", data=data, endpoint_name=webhook_test["endpoint_name"]
     )
-    response = client.post("api/v1/flows/", json=webhook_test.model_dump(), headers=logged_in_headers)
+    response = await client.post("api/v1/flows/", json=webhook_test.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
-    webhook_test_data = response.json()
-    yield webhook_test_data
-    # Clean up
-    client.delete(f"api/v1/flows/{webhook_test_data['id']}", headers=logged_in_headers)
+    assert response.json()["name"] == webhook_test.name
+    assert response.json()["data"] == webhook_test.data
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
+
+
+@pytest.fixture
+async def flow_component(client: TestClient, logged_in_headers):
+    chat_input = ChatInput()
+    graph = Graph(start=chat_input, end=chat_input)
+    graph_dict = graph.dump(name="Chat Input Component")
+    flow = FlowCreate(**graph_dict)
+    response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture
@@ -475,18 +505,16 @@ def created_api_key(active_user):
 
 
 @pytest.fixture(name="simple_api_test")
-def get_simple_api_test(client, logged_in_headers, json_simple_api_test):
+async def get_simple_api_test(client, logged_in_headers, json_simple_api_test):
     # Once the client is created, we can get the starter project
     # Just create a new flow with the simple api test
     flow = orjson.loads(json_simple_api_test)
     data = flow["data"]
     flow = FlowCreate(name="Simple API Test", data=data, description="Simple API Test")
-    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
-    flow_data = response.json()
-    yield flow_data
-    # Clean up
-    client.delete(f"api/v1/flows/{flow_data['id']}", headers=logged_in_headers)
+    yield response.json()
+    client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture(name="starter_project")

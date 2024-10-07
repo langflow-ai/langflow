@@ -31,7 +31,7 @@ const EditNodeModal = ({
   }, [data.node]);
 
   return (
-    <BaseModal key={data.id} open={open} setOpen={setOpen}>
+    <BaseModal key={data.id} open={open} setOpen={setOpen} size="x-large">
       <BaseModal.Trigger>
         <></>
       </BaseModal.Trigger>

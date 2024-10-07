@@ -97,9 +97,15 @@ const config = {
         "status-gray": "var(--status-gray)",
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
-        "beta-background": "var(--beta-background)",
-        "beta-foreground": "var(--beta-foreground)",
-        "beta-foreground-soft": "var(--beta-foreground-soft)",
+        filter: {
+          foreground: "var(--filter-foreground)",
+          background: "var(--filter-background)",
+        },
+        beta: {
+          background: "var(--beta-background)",
+          foreground: "var(--beta-foreground)",
+          "foreground-soft": "var(--beta-foreground-soft)",
+        },
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
         ice: "var(--ice)",
@@ -248,6 +254,18 @@ const config = {
         ":focus-visible": {
           outline: "none  !important",
           outlineOffset: "0px !important",
+        },
+        ".note-node-markdown": {
+          lineHeight: "1",
+          "& ul li::marker": {
+            color: "black",
+          },
+          "& ol li::marker": {
+            color: "black",
+          },
+          "& h1, & h2, & h3, & h4, & h5, & h6, & p, & ul, & ol": {
+            marginBottom: "0.25rem",
+          },
         },
       });
     }),

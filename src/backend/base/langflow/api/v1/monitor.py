@@ -4,18 +4,18 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import delete
 from sqlmodel import Session, col, select
 
+from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
 from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
 from langflow.services.database.models.transactions.model import TransactionReadResponse
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.vertex_builds.crud import (
-    get_vertex_builds_by_flow_id,
     delete_vertex_builds_by_flow_id,
+    get_vertex_builds_by_flow_id,
 )
 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
 from langflow.services.deps import get_session
-from langflow.services.monitor.schema import MessageModelResponse
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
@@ -29,7 +29,7 @@ async def get_vertex_builds(
         vertex_builds = get_vertex_builds_by_flow_id(session, flow_id)
         return VertexBuildMapModel.from_list_of_dicts(vertex_builds)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/builds", status_code=204)
@@ -40,10 +40,10 @@ async def delete_vertex_builds(
     try:
         delete_vertex_builds_by_flow_id(session, flow_id)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/messages", response_model=list[MessageModelResponse])
+@router.get("/messages", response_model=list[MessageResponse])
 async def get_messages(
     flow_id: str | None = Query(None),
     session_id: str | None = Query(None),
@@ -66,9 +66,9 @@ async def get_messages(
             col = getattr(MessageTable, order_by).asc()
             stmt = stmt.order_by(col)
         messages = session.exec(stmt)
-        return [MessageModelResponse.model_validate(d, from_attributes=True) for d in messages]
+        return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/messages", status_code=204)
@@ -81,7 +81,7 @@ async def delete_messages(
         session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore
         session.commit()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.put("/messages/{message_id}", response_model=MessageRead)
@@ -104,7 +104,40 @@ async def update_message(
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.patch("/messages/session/{old_session_id}", response_model=list[MessageResponse])
+async def update_session_id(
+    old_session_id: str,
+    new_session_id: str = Query(..., description="The new session ID to update to"),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    try:
+        # Get all messages with the old session ID
+        stmt = select(MessageTable).where(MessageTable.session_id == old_session_id)
+        messages = session.exec(stmt).all()
+
+        if not messages:
+            raise HTTPException(status_code=404, detail="No messages found with the given session ID")
+
+        # Update all messages with the new session ID
+        for message in messages:
+            message.session_id = new_session_id
+
+        session.add_all(messages)
+
+        session.commit()
+        message_responses = []
+        for message in messages:
+            session.refresh(message)
+            message_responses.append(MessageResponse.model_validate(message, from_attributes=True))
+        return message_responses
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/messages/session/{session_id}", status_code=204)
@@ -121,7 +154,7 @@ async def delete_messages_session(
         session.commit()
         return {"message": "Messages deleted successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/transactions", response_model=list[TransactionReadResponse])
@@ -146,4 +179,4 @@ async def get_transactions(
             for t in transactions
         ]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

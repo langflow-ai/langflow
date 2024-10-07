@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from langflow.custom import CustomComponent
 from langflow.schema import Data
@@ -51,25 +50,18 @@ class FirecrawlCrawlApi(CustomComponent):
         api_key: str,
         url: str,
         timeout: int = 30000,
-        crawlerOptions: Optional[Data] = None,
-        pageOptions: Optional[Data] = None,
-        idempotency_key: Optional[str] = None,
+        crawlerOptions: Data | None = None,
+        pageOptions: Data | None = None,
+        idempotency_key: str | None = None,
     ) -> Data:
         try:
             from firecrawl.firecrawl import FirecrawlApp  # type: ignore
-        except ImportError:
-            raise ImportError(
-                "Could not import firecrawl integration package. " "Please install it with `pip install firecrawl-py`."
-            )
-        if crawlerOptions:
-            crawler_options_dict = crawlerOptions.__dict__["data"]["text"]
-        else:
-            crawler_options_dict = {}
+        except ImportError as e:
+            msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
+            raise ImportError(msg) from e
+        crawler_options_dict = crawlerOptions.__dict__["data"]["text"] if crawlerOptions else {}
 
-        if pageOptions:
-            page_options_dict = pageOptions.__dict__["data"]["text"]
-        else:
-            page_options_dict = {}
+        page_options_dict = pageOptions.__dict__["data"]["text"] if pageOptions else {}
 
         if not idempotency_key:
             idempotency_key = str(uuid.uuid4())
@@ -86,5 +78,4 @@ class FirecrawlCrawlApi(CustomComponent):
             idempotency_key,
         )
 
-        records = Data(data={"results": crawl_result})
-        return records
+        return Data(data={"results": crawl_result})

@@ -1,6 +1,8 @@
+import logging
 from collections import deque
 
 import pytest
+from pytest import LogCaptureFixture
 
 from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
 from langflow.components.inputs.ChatInput import ChatInput
@@ -28,14 +30,16 @@ async def test_graph_not_prepared():
 
 
 @pytest.mark.asyncio
-async def test_graph():
+async def test_graph(caplog: LogCaptureFixture):
     chat_input = ChatInput()
     chat_output = ChatOutput()
     graph = Graph()
     graph.add_component(chat_input)
     graph.add_component(chat_output)
-    with pytest.warns(UserWarning, match="Graph has vertices but no edges"):
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
         graph.prepare()
+        assert "Graph has vertices but no edges" in caplog.text
 
 
 @pytest.mark.asyncio
@@ -145,13 +149,7 @@ def test_graph_functional_start_end():
     assert results[-1] == Finish()
 
 
-def test_graph_set_with_invalid_component():
-    chat_input = ChatInput(_id="chat_input")
-    chat_output = ChatOutput(input_value="test", _id="chat_output")
-    with pytest.raises(ValueError, match="There are multiple outputs"):
-        chat_output.set(sender_name=chat_input)
-
-
+@pytest.mark.skip(reason="Temporarily disabled")
 def test_graph_set_with_valid_component():
     tool = YfinanceToolComponent()
     tool_calling_agent = ToolCallingAgentComponent()

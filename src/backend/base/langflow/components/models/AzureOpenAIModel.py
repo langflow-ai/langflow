@@ -1,7 +1,9 @@
 from langchain_openai import AzureChatOpenAI
+
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput
+from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput
 
 
@@ -25,7 +27,8 @@ class AzureChatOpenAIComponent(LCModelComponent):
         "2024-05-13",
     ]
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         MessageTextInput(
             name="azure_endpoint",
             display_name="Azure Endpoint",
@@ -46,6 +49,13 @@ class AzureChatOpenAIComponent(LCModelComponent):
             display_name="Max Tokens",
             advanced=True,
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+        ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
         ),
     ]
 
@@ -69,6 +79,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
                 streaming=stream,
             )
         except Exception as e:
-            raise ValueError(f"Could not connect to AzureOpenAI API: {str(e)}") from e
+            msg = f"Could not connect to AzureOpenAI API: {e}"
+            raise ValueError(msg) from e
 
         return output  # type: ignore

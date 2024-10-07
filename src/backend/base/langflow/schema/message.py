@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 import asyncio
+import json
+from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import Annotated, Any, AsyncIterator, Iterator, List, Optional
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
-from pydantic import BeforeValidator, ConfigDict, Field, field_serializer, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_serializer, field_validator
 
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
@@ -22,15 +25,19 @@ from langflow.utils.constants import (
     MESSAGE_SENDER_USER,
 )
 
+if TYPE_CHECKING:
+    from langchain_core.prompt_values import ImagePromptValue
+
 
 def _timestamp_to_str(timestamp: datetime | str) -> str:
     if isinstance(timestamp, str):
         # Just check if the string is a valid datetime
         try:
-            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
             return timestamp
-        except ValueError:
-            raise ValueError(f"Invalid timestamp: {timestamp}")
+        except ValueError as e:
+            msg = f"Invalid timestamp: {timestamp}"
+            raise ValueError(msg) from e
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -38,15 +45,15 @@ class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
     text_key: str = "text"
-    text: Optional[str | AsyncIterator | Iterator] = Field(default="")
-    sender: Optional[str] = None
-    sender_name: Optional[str] = None
-    files: Optional[list[str | Image]] = Field(default=[])
-    session_id: Optional[str] = Field(default="")
+    text: str | AsyncIterator | Iterator | None = Field(default="")
+    sender: str | None = None
+    sender_name: str | None = None
+    files: list[str | Image] | None = Field(default=[])
+    session_id: str | None = Field(default="")
     timestamp: Annotated[str, BeforeValidator(_timestamp_to_str)] = Field(
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     )
-    flow_id: Optional[str | UUID] = None
+    flow_id: str | UUID | None = None
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -71,7 +78,7 @@ class Message(Data):
         return value
 
     def model_post_init(self, __context: Any) -> None:
-        new_files: List[Any] = []
+        new_files: list[Any] = []
         for file in self.files or []:
             if is_image_file(file):
                 new_files.append(Image(path=file))
@@ -100,10 +107,7 @@ class Message(Data):
         # they are: "text", "sender"
         if self.text is None or not self.sender:
             logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
-        if not isinstance(self.text, str):
-            text = ""
-        else:
-            text = self.text
+        text = "" if not isinstance(self.text, str) else self.text
 
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
@@ -117,7 +121,7 @@ class Message(Data):
         return AIMessage(content=text)  # type: ignore
 
     @classmethod
-    def from_lc_message(cls, lc_message: BaseMessage) -> "Message":
+    def from_lc_message(cls, lc_message: BaseMessage) -> Message:
         if lc_message.type == "human":
             sender = MESSAGE_SENDER_USER
             sender_name = MESSAGE_SENDER_NAME_USER
@@ -134,7 +138,7 @@ class Message(Data):
         return cls(text=lc_message.content, sender=sender, sender_name=sender_name)
 
     @classmethod
-    def from_data(cls, data: "Data") -> "Message":
+    def from_data(cls, data: Data) -> Message:
         """
         Converts a BaseMessage to a Data.
 
@@ -157,9 +161,7 @@ class Message(Data):
 
     @field_serializer("text", mode="plain")
     def serialize_text(self, value):
-        if isinstance(value, AsyncIterator):
-            return ""
-        elif isinstance(value, Iterator):
+        if isinstance(value, AsyncIterator | Iterator):
             return ""
         return value
 
@@ -184,7 +186,8 @@ class Message(Data):
 
     def load_lc_prompt(self):
         if "prompt" not in self:
-            raise ValueError("Prompt is required.")
+            msg = "Prompt is required."
+            raise ValueError(msg)
         # self.prompt was passed through jsonable_encoder
         # so inner messages are not BaseMessage
         # we need to convert them to BaseMessage
@@ -201,8 +204,7 @@ class Message(Data):
                     messages.append(AIMessage(content=message.get("content")))
 
         self.prompt["kwargs"]["messages"] = messages
-        loaded_prompt = load(self.prompt)
-        return loaded_prompt
+        return load(self.prompt)
 
     @classmethod
     def from_lc_prompt(
@@ -231,9 +233,10 @@ class Message(Data):
                 content_dicts = await value.get_file_content_dicts()
                 contents.extend(content_dicts)
         if contents:
-            message = HumanMessage(content=[{"type": "text", "text": text}] + contents)
+            message = HumanMessage(content=[{"type": "text", "text": text}, *contents])
 
-        prompt_template = ChatPromptTemplate(messages=[message])  # type: ignore
+        prompt_template = ChatPromptTemplate.from_messages([message])  # type: ignore
+
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
         return instance
@@ -247,3 +250,70 @@ class Message(Data):
             return asyncio.run(cls.from_template_and_variables(template, **variables))
         else:
             return loop.run_until_complete(cls.from_template_and_variables(template, **variables))
+
+
+class DefaultModel(BaseModel):
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+        }
+
+    def json(self, **kwargs):
+        # Usa a função de serialização personalizada
+        return super().model_dump_json(**kwargs, encoder=self.custom_encoder)
+
+    @staticmethod
+    def custom_encoder(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        msg = f"Object of type {obj.__class__.__name__} is not JSON serializable"
+        raise TypeError(msg)
+
+
+class MessageResponse(DefaultModel):
+    id: str | UUID | None = Field(default=None)
+    flow_id: UUID | None = Field(default=None)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    sender: str
+    sender_name: str
+    session_id: str
+    text: str
+    files: list[str] = []
+
+    @field_validator("files", mode="before")
+    @classmethod
+    def validate_files(cls, v):
+        if isinstance(v, str):
+            v = json.loads(v)
+        return v
+
+    @field_serializer("timestamp")
+    @classmethod
+    def serialize_timestamp(cls, v):
+        v = v.replace(microsecond=0)
+        return v.strftime("%Y-%m-%d %H:%M:%S")
+
+    @field_serializer("files")
+    @classmethod
+    def serialize_files(cls, v):
+        if isinstance(v, list):
+            return json.dumps(v)
+        return v
+
+    @classmethod
+    def from_message(cls, message: Message, flow_id: str | None = None):
+        # first check if the record has all the required fields
+        if message.text is None or not message.sender or not message.sender_name:
+            msg = "The message does not have the required fields (text, sender, sender_name)."
+            raise ValueError(msg)
+        return cls(
+            sender=message.sender,
+            sender_name=message.sender_name,
+            text=message.text,
+            session_id=message.session_id,
+            files=message.files or [],
+            timestamp=message.timestamp,
+            flow_id=flow_id,
+        )

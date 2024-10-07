@@ -99,9 +99,9 @@ fi
 
 # Run Playwright tests
 if [ "$ui" = true ]; then
-    TEST_COMMAND="npx playwright test tests/end-to-end --ui --project=chromium"
+    TEST_COMMAND="npx playwright test tests/core --ui --project=chromium"
 else
-    TEST_COMMAND="npx playwright test tests/end-to-end --project=chromium"
+    TEST_COMMAND="npx playwright test tests/core --project=chromium"
 fi
 
 if ! PLAYWRIGHT_HTML_REPORT=playwright-report/e2e $TEST_COMMAND; then

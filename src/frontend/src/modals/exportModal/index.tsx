@@ -1,3 +1,4 @@
+import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
 import { ReactNode, forwardRef, useEffect, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
@@ -66,6 +67,7 @@ const ExportModal = forwardRef(
               description,
             );
           setOpen(false);
+          track("Flow Exported", { flowId: currentFlow!.id });
         }}
       >
         <BaseModal.Trigger asChild>{props.children}</BaseModal.Trigger>

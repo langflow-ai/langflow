@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 from langchain_community.vectorstores import Vectara
 from loguru import logger
@@ -58,8 +58,9 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
         """
         try:
             from langchain_community.vectorstores import Vectara
-        except ImportError:
-            raise ImportError("Could not import Vectara. Please install it with `pip install langchain-community`.")
+        except ImportError as e:
+            msg = "Could not import Vectara. Please install it with `pip install langchain-community`."
+            raise ImportError(msg) from e
 
         vectara = Vectara(
             vectara_customer_id=self.vectara_customer_id,
@@ -93,7 +94,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             logger.debug("No documents to add to Vectara.")
             self.status = "No valid documents to add to Vectara"
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
@@ -105,6 +106,5 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = f"Found {len(data)} results for the query: {self.search_query}"
             return data
-        else:
-            self.status = "No search query provided"
-            return []
+        self.status = "No search query provided"
+        return []

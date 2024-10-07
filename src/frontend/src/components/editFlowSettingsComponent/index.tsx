@@ -62,7 +62,9 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             <span className="edit-flow-span">Character limit reached</span>
           )}
           {isInvalidName && (
-            <span className="edit-flow-span">Invalid name</span>
+            <span className="edit-flow-span">
+              Name invalid or already exists
+            </span>
           )}
         </div>
         {setName ? (

@@ -1,12 +1,12 @@
-from typing import List
+from pathlib import Path
 
+from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores.redis import Redis
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.io import DataInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data
-from langchain.text_splitter import CharacterTextSplitter
 
 
 class RedisVectorStoreComponent(LCVectorStoreComponent):
@@ -55,12 +55,13 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
-        with open("docuemnts.txt", "w") as f:
+        with Path("docuemnts.txt").open("w") as f:
             f.write(str(documents))
 
         if not documents:
             if self.schema is None:
-                raise ValueError("If no documents are provided, a schema must be provided.")
+                msg = "If no documents are provided, a schema must be provided."
+                raise ValueError(msg)
             redis_vs = Redis.from_existing_index(
                 embedding=self.embedding,
                 index_name=self.redis_index_name,
@@ -79,7 +80,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
             )
         return redis_vs
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
@@ -91,5 +92,4 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

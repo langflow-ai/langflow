@@ -1,5 +1,5 @@
-from typing import Any, get_type_hints
 from collections.abc import Callable
+from typing import Any, get_type_hints
 
 from pydantic import ConfigDict, computed_field, create_model
 from pydantic.fields import FieldInfo
@@ -30,9 +30,11 @@ def __validate_method(method: Callable) -> None:
         >>> __validate_method(lambda x: x)  # This will raise a ValueError
     """
     if not hasattr(method, "__self__"):
-        raise ValueError(f"Method {method} does not have a __self__ attribute.")
+        msg = f"Method {method} does not have a __self__ attribute."
+        raise ValueError(msg)
     if not hasattr(method.__self__, "get_output_by_method"):
-        raise ValueError(f"Method's class {method.__self__} must have a get_output_by_method attribute.")
+        msg = f"Method's class {method.__self__} must have a get_output_by_method attribute."
+        raise ValueError(msg)
 
 
 def build_output_getter(method: Callable, validate: bool = True) -> Callable:
@@ -82,7 +84,8 @@ def build_output_getter(method: Callable, validate: bool = True) -> Callable:
     return_type = get_type_hints(method).get("return", None)
 
     if return_type is None:
-        raise ValueError(f"Method {method.__name__} has no return type annotation.")
+        msg = f"Method {method.__name__} has no return type annotation."
+        raise ValueError(msg)
     output_getter.__annotations__["return"] = return_type
     return output_getter
 
@@ -226,13 +229,13 @@ def create_state_model(model_name: str = "State", validate: bool = True, **kwarg
             # (<type>, Field(...))
             # typing.Annotated[<type>, Field(...)]
             if not isinstance(value[0], type):
-                raise ValueError(f"Invalid type for field {name}: {type(value[0])}")
+                msg = f"Invalid type for field {name}: {type(value[0])}"
+                raise ValueError(msg)
             fields[name] = (value[0], value[1])
         else:
-            raise ValueError(f"Invalid value type {type(value)} for field {name}")
+            msg = f"Invalid value type {type(value)} for field {name}"
+            raise ValueError(msg)
 
     # Create the model dynamically
     config_dict = ConfigDict(arbitrary_types_allowed=True, validate_assignment=True)
-    model = create_model(model_name, __config__=config_dict, **fields)
-
-    return model
+    return create_model(model_name, __config__=config_dict, **fields)

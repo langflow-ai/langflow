@@ -65,13 +65,6 @@ body {
   src: url("assets/text-security-disc.woff") format("woff");
 }
 
-.json-view {
-  height: 370px !important;
-  background-color: #2c2c2c !important;
-  border-radius: 10px !important;
-  padding: 10px !important;
-}
-
 .jv-indent {
   overflow-y: auto !important;
   max-height: 310px !important;
@@ -130,14 +123,6 @@ body {
   ); /* Medium indigo color with 20% opacity */
 }
 
-.json-view-playground .json-view {
-  background-color: #fff !important;
-}
-
-.json-view-flow .json-view {
-  background-color: #bbb !important;
-}
-
 /* This CSS is to not apply the border for the column having 'no-border' class */
 .no-border.ag-cell:focus {
   border: none !important;
@@ -160,12 +145,16 @@ body {
   transition-duration: 150ms;
 }
 
+.react-flow__edge.running .react-flow__edge-path {
+  stroke: var(--status-blue) !important;
+}
+
 .ag-react-container {
   width: 100%;
   height: 100%;
 }
 .react-flow__resize-control.handle {
-  width: 0.75rem!important;
+  width: 0.75rem !important;
   height: 0.75rem !important;
   background-color: white !important;
   border-color: var(--border) !important;

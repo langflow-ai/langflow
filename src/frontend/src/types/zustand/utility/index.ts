@@ -3,4 +3,8 @@ export type UtilityStoreType = {
   setSelectedItems: (itemId: any) => void;
   healthCheckTimeout: string | null;
   setHealthCheckTimeout: (timeout: string | null) => void;
+  playgroundScrollBehaves: ScrollBehavior;
+  setPlaygroundScrollBehaves: (behaves: ScrollBehavior) => void;
+  maxFileSizeUpload: number;
+  setMaxFileSizeUpload: (maxFileSizeUpload: number) => void;
 };

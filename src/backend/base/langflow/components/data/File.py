@@ -33,16 +33,19 @@ class FileComponent(Component):
 
     def load_file(self) -> Data:
         if not self.path:
-            raise ValueError("Please, upload a file to use this component.")
+            msg = "Please, upload a file to use this component."
+            raise ValueError(msg)
         resolved_path = self.resolve_path(self.path)
         silent_errors = self.silent_errors
 
         extension = Path(resolved_path).suffix[1:].lower()
 
         if extension == "doc":
-            raise ValueError("doc files are not supported. Please save as .docx")
+            msg = "doc files are not supported. Please save as .docx"
+            raise ValueError(msg)
         if extension not in TEXT_FILE_TYPES:
-            raise ValueError(f"Unsupported file type: {extension}")
+            msg = f"Unsupported file type: {extension}"
+            raise ValueError(msg)
 
         data = parse_text_file_to_data(resolved_path, silent_errors)
         self.status = data if data else "No data"

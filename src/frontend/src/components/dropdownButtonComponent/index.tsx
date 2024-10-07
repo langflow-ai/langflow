@@ -15,6 +15,7 @@ export default function DropdownButton({
   options,
   plusButton = false,
   dropdownOptions = true,
+  isFetchingFolders = false,
 }: dropdownButtonPropsType): JSX.Element {
   const [showOptions, setShowOptions] = useState<boolean>(false);
 
@@ -33,6 +34,7 @@ export default function DropdownButton({
               event.preventDefault();
               onFirstBtnClick();
             }}
+            disabled={isFetchingFolders}
           >
             {plusButton && (
               <IconComponent name="Plus" className="main-page-nav-button" />

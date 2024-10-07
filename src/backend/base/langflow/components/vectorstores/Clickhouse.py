@@ -1,19 +1,17 @@
-from typing import List
-
 from langchain_community.vectorstores import Clickhouse, ClickhouseSettings
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.inputs import BoolInput, FloatInput
 from langflow.io import (
+    DataInput,
+    DictInput,
+    DropdownInput,
     HandleInput,
     IntInput,
-    StrInput,
-    SecretStrInput,
-    DataInput,
-    DropdownInput,
     MultilineInput,
-    DictInput,
+    SecretStrInput,
+    StrInput,
 )
 from langflow.schema import Data
 
@@ -74,15 +72,18 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
         try:
             import clickhouse_connect  # type: ignore
         except ImportError as e:
-            raise ImportError(
-                "Failed to import Clickhouse dependencies. Install it using `pip install langflow[clickhouse-connect] --pre`"
-            ) from e
+            msg = (
+                "Failed to import Clickhouse dependencies. "
+                "Install it using `pip install langflow[clickhouse-connect] --pre`"
+            )
+            raise ImportError(msg) from e
 
         try:
             client = clickhouse_connect.get_client(host=self.host, username=self.username, password=self.password)
             client.command("SELECT 1")
         except Exception as e:
-            raise ValueError(f"Failed to connect to Clickhouse: {e}")
+            msg = f"Failed to connect to Clickhouse: {e}"
+            raise ValueError(msg) from e
 
         documents = []
         for _input in self.ingest_data or []:
@@ -117,7 +118,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
 
         return clickhouse_vs
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
@@ -130,5 +131,4 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

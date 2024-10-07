@@ -55,7 +55,37 @@ export default defineConfig({
         },
       },
     },
-
+    // {
+    //   name: "firefox",
+    //   use: {
+    //     ...devices["Desktop Firefox"],
+    //     launchOptions: {
+    //       // headless: false,
+    //       firefoxUserPrefs: {
+    //         "dom.events.asyncClipboard.readText": true,
+    //         "dom.events.testing.asyncClipboard": true,
+    //       },
+    //     },
+    //   },
+    // },
+    // {
+    //   name: "safari",
+    //   use: {
+    //     ...devices["Desktop Safari"],
+    //     launchOptions: {
+    //       // headless: false,
+    //     },
+    //   },
+    // },
+    // {
+    //   name: "arc",
+    //   use: {
+    //     ...devices["Desktop Arc"],
+    //     launchOptions: {
+    //       // headless: false,
+    //     },
+    //   },
+    // },
     // {
     //   name: "firefox",
     //   use: {
@@ -73,7 +103,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "poetry run uvicorn --factory langflow.main:create_app --host 127.0.0.1 --port 7860 --loop asyncio",
+        "uv run uvicorn --factory langflow.main:create_app --host 127.0.0.1 --port 7860 --loop asyncio",
       port: 7860,
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",

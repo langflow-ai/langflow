@@ -1,14 +1,16 @@
 import copy
 import json
-from typing import Optional, cast
+from typing import TYPE_CHECKING, cast
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts.image import ImagePromptTemplate
 from pydantic import BaseModel, model_serializer, model_validator
 
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+
+if TYPE_CHECKING:
+    from langchain_core.prompt_values import ImagePromptValue
 
 
 class Data(BaseModel):
@@ -21,13 +23,14 @@ class Data(BaseModel):
 
     text_key: str = "text"
     data: dict = {}
-    default_value: Optional[str] = ""
+    default_value: str | None = ""
 
     @model_validator(mode="before")
     @classmethod
     def validate_data(cls, values):
         if not isinstance(values, dict):
-            raise ValueError("Data must be a dictionary")
+            msg = "Data must be a dictionary"
+            raise ValueError(msg)
         if not values.get("data"):
             values["data"] = {}
         # Any other keyword should be added to the data dictionary
@@ -38,8 +41,7 @@ class Data(BaseModel):
 
     @model_serializer(mode="plain", when_used="json")
     def serialize_model(self):
-        data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
-        return data
+        return {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
 
     def get_text(self):
         """
@@ -130,7 +132,8 @@ class Data(BaseModel):
         # But first we check if all required keys are present in the data dictionary
         # they are: "text", "sender"
         if not all(key in self.data for key in ["text", "sender"]):
-            raise ValueError(f"Missing required keys ('text', 'sender') in Data: {self.data}")
+            msg = f"Missing required keys ('text', 'sender') in Data: {self.data}"
+            raise ValueError(msg)
         sender = self.data.get("sender", MESSAGE_SENDER_AI)
         text = self.data.get("text", "")
         files = self.data.get("files", [])
@@ -163,9 +166,10 @@ class Data(BaseModel):
             if key in {"data", "text_key"} or key.startswith("_"):
                 return super().__getattr__(key)
             return self.data[key]
-        except KeyError:
+        except KeyError as e:
             # Fallback to default behavior to raise AttributeError for undefined attributes
-            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{key}'")
+            msg = f"'{type(self).__name__}' object has no attribute '{key}'"
+            raise AttributeError(msg) from e
 
     def __setattr__(self, key, value):
         """

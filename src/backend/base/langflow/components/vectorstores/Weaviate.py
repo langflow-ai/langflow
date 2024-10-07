@@ -1,11 +1,9 @@
-from typing import List
-
-import weaviate  # type: ignore
+import weaviate
 from langchain_community.vectorstores import Weaviate
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.io import BoolInput, DataInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -19,7 +17,12 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
     inputs = [
         StrInput(name="url", display_name="Weaviate URL", value="http://localhost:8080", required=True),
         SecretStrInput(name="api_key", display_name="API Key", required=False),
-        StrInput(name="index_name", display_name="Index Name", required=True),
+        StrInput(
+            name="index_name",
+            display_name="Index Name",
+            required=True,
+            info="Requires capitalized index name.",
+        ),
         StrInput(name="text_key", display_name="Text Key", value="text", advanced=True),
         MultilineInput(name="search_query", display_name="Search Query"),
         DataInput(
@@ -46,6 +49,10 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
         else:
             client = weaviate.Client(url=self.url)
 
+        if self.index_name != self.index_name.capitalize():
+            msg = f"Weaviate requires the index name to be capitalized. Use: {self.index_name.capitalize()}"
+            raise ValueError(msg)
+
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
@@ -70,7 +77,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
             by_text=self.search_by_text,
         )
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
@@ -82,5 +89,4 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

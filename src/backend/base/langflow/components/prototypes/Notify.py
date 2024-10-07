@@ -1,5 +1,3 @@
-from typing import Optional
-
 from langflow.custom import CustomComponent
 from langflow.schema import Data
 
@@ -21,7 +19,7 @@ class NotifyComponent(CustomComponent):
             },
         }
 
-    def build(self, name: str, data: Optional[Data] = None, append: bool = False) -> Data:
+    def build(self, name: str, data: Data | None = None, append: bool = False) -> Data:
         if data and not isinstance(data, Data):
             if isinstance(data, str):
                 data = Data(text=data)

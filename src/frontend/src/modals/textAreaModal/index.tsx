@@ -33,6 +33,7 @@ export default function ComponentTextModal({
       onChangeOpenModal={(open) => {}}
       open={modalOpen}
       setOpen={setModalOpen}
+      size="x-large"
     >
       <BaseModal.Trigger disable={disabled} asChild>
         {children}

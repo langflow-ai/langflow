@@ -1,10 +1,8 @@
-from typing import List
-
 from langchain_community.vectorstores import PGVector
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.io import DataInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data
 from langflow.utils.connection_string_parser import transform_connection_string
 
@@ -63,7 +61,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
 
         return pgvector
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
@@ -75,5 +73,4 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

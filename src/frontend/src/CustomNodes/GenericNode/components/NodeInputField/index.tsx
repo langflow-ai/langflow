@@ -2,6 +2,7 @@ import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import {
   CustomParameterComponent,
+  CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
 import { useEffect, useRef } from "react";
@@ -81,6 +82,7 @@ export default function NodeInputField({
       setFilterEdge={setFilterEdge}
       showNode={showNode}
       testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+      nodeId={data.id}
     />
   );
 
@@ -94,69 +96,75 @@ export default function NodeInputField({
     <div
       ref={ref}
       className={
-        "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
+        "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
         ((name === "code" && type === "code") ||
         (name.includes("code") && proxy)
           ? " hidden"
           : "")
       }
     >
-      <>
-        <div className="flex w-full items-center truncate text-sm">
-          {proxy ? (
-            <ShadTooltip content={<span>{proxy.id}</span>}>
-              {
-                <span>
-                  {getCustomParameterTitle({ title, nodeId: data.id })}
-                </span>
-              }
-            </ShadTooltip>
-          ) : (
-            <div className="flex gap-2">
-              <span>
+      {displayHandle && Handle}
+      <div className="flex w-full flex-col gap-2">
+        <div className="flex w-full items-center justify-between text-sm">
+          <div className="flex w-full items-center truncate">
+            {proxy ? (
+              <ShadTooltip content={<span>{proxy.id}</span>}>
                 {
                   <span>
                     {getCustomParameterTitle({ title, nodeId: data.id })}
                   </span>
                 }
-              </span>
-            </div>
-          )}
-          <span className={(required ? "ml-2 " : "") + "text-status-red"}>
-            {required ? "*" : ""}
-          </span>
-          <div className="">
-            {info !== "" && (
-              <ShadTooltip content={<NodeInputInfo info={info} />}>
-                {/* put div to avoid bug that does not display tooltip */}
-                <div className="cursor-help">
-                  <IconComponent
-                    name="Info"
-                    className="relative bottom-px ml-1.5 h-3 w-4"
-                  />
-                </div>
               </ShadTooltip>
+            ) : (
+              <div className="flex gap-2">
+                <span>
+                  {
+                    <span>
+                      {getCustomParameterTitle({ title, nodeId: data.id })}
+                    </span>
+                  }
+                </span>
+              </div>
             )}
+            <span className={(required ? "ml-2 " : "") + "text-status-red"}>
+              {required ? "*" : ""}
+            </span>
+            <div className="">
+              {info !== "" && (
+                <ShadTooltip content={<NodeInputInfo info={info} />}>
+                  {/* put div to avoid bug that does not display tooltip */}
+                  <div className="cursor-help">
+                    <IconComponent
+                      name="Info"
+                      className="relative bottom-px ml-1.5 h-3 w-4"
+                    />
+                  </div>
+                </ShadTooltip>
+              )}
+            </div>
           </div>
+          <CustomParameterLabel
+            name={name}
+            nodeId={data.id}
+            templateValue={data.node?.template[name]}
+            nodeClass={data.node!}
+          />
         </div>
 
-        {displayHandle && Handle}
         {data.node?.template[name] !== undefined && (
-          <div className="mt-2 w-full">
-            <CustomParameterComponent
-              handleOnNewValue={handleOnNewValue}
-              name={name}
-              nodeId={data.id}
-              templateData={data.node?.template[name]!}
-              templateValue={data.node?.template[name].value ?? ""}
-              editNode={false}
-              handleNodeClass={handleNodeClass}
-              nodeClass={data.node!}
-              disabled={disabled}
-            />
-          </div>
+          <CustomParameterComponent
+            handleOnNewValue={handleOnNewValue}
+            name={name}
+            nodeId={data.id}
+            templateData={data.node?.template[name]!}
+            templateValue={data.node?.template[name].value ?? ""}
+            editNode={false}
+            handleNodeClass={handleNodeClass}
+            nodeClass={data.node!}
+            disabled={disabled}
+          />
         )}
-      </>
+      </div>
     </div>
   );
 }

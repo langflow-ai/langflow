@@ -1,7 +1,7 @@
 import asyncio
 import pickle
 import time
-from typing import Generic, Optional
+from typing import Generic
 
 from diskcache import Cache
 from loguru import logger
@@ -23,7 +23,7 @@ class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type: ig
         self.max_size = max_size
         self.expiration_time = expiration_time
 
-    async def get(self, key, lock: Optional[asyncio.Lock] = None):
+    async def get(self, key, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 return await self._get(key)
@@ -36,12 +36,11 @@ class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type: ig
             if time.time() - item["time"] < self.expiration_time:
                 await asyncio.to_thread(self.cache.touch, key)  # Refresh the expiry time
                 return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
-            else:
-                logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
-                await self._delete(key)  # Log before deleting the expired item
+            logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
+            await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS
 
-    async def set(self, key, value, lock: Optional[asyncio.Lock] = None):
+    async def set(self, key, value, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 await self._set(key, value)
@@ -51,10 +50,10 @@ class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type: ig
     async def _set(self, key, value):
         if self.max_size and len(self.cache) >= self.max_size:
             await asyncio.to_thread(self.cache.cull)
-        item = {"value": pickle.dumps(value) if not isinstance(value, (str, bytes)) else value, "time": time.time()}
+        item = {"value": pickle.dumps(value) if not isinstance(value, str | bytes) else value, "time": time.time()}
         await asyncio.to_thread(self.cache.set, key, item)
 
-    async def delete(self, key, lock: Optional[asyncio.Lock] = None):
+    async def delete(self, key, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 await self._delete(key)
@@ -64,7 +63,7 @@ class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type: ig
     async def _delete(self, key):
         await asyncio.to_thread(self.cache.delete, key)
 
-    async def clear(self, lock: Optional[asyncio.Lock] = None):
+    async def clear(self, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 await self._clear()
@@ -74,7 +73,7 @@ class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type: ig
     async def _clear(self):
         await asyncio.to_thread(self.cache.clear)
 
-    async def upsert(self, key, value, lock: Optional[asyncio.Lock] = None):
+    async def upsert(self, key, value, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
                 await self._upsert(key, value)

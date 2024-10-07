@@ -1,8 +1,8 @@
 from astra_assistants import patch  # type: ignore
-from langflow.custom import Component
 from openai import OpenAI
 
-from langflow.inputs import StrInput, MultilineInput
+from langflow.custom import Component
+from langflow.inputs import MultilineInput, StrInput
 from langflow.schema.message import Message
 from langflow.template import Output
 
@@ -10,6 +10,7 @@ from langflow.template import Output
 class AssistantsGetAssistantName(Component):
     display_name = "Get Assistant name"
     description = "Assistant by id"
+    client = patch(OpenAI())
 
     inputs = [
         StrInput(
@@ -29,9 +30,7 @@ class AssistantsGetAssistantName(Component):
     ]
 
     def process_inputs(self) -> Message:
-        patch(OpenAI())
         assistant = self.client.beta.assistants.retrieve(
             assistant_id=self.assistant_id,
         )
-        message = Message(text=assistant.name)
-        return message
+        return Message(text=assistant.name)

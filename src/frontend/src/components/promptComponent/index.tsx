@@ -1,6 +1,7 @@
 import PromptModal from "@/modals/promptModal";
 import { useEffect } from "react";
 import { PromptAreaComponentType } from "../../types/components";
+import { cn } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 
@@ -21,8 +22,38 @@ export default function PromptAreaComponent({
     }
   }, [disabled]);
 
+  const renderPromptText = () => (
+    <span
+      id={id}
+      data-testid={id}
+      className={cn(
+        editNode
+          ? "input-edit-node input-dialog"
+          : "primary-input text-muted-foreground",
+        disabled && !editNode && "input-disable text-ring",
+      )}
+    >
+      {value !== "" ? value : "Type your prompt here..."}
+    </span>
+  );
+
+  const renderExternalLinkIcon = () => {
+    if (editNode) return null;
+
+    return (
+      <IconComponent
+        id={id}
+        name="ExternalLink"
+        className={cn(
+          "icons-parameters-comp shrink-0",
+          disabled ? "text-ring" : "hover:text-accent-foreground",
+        )}
+      />
+    );
+  };
+
   return (
-    <div className={disabled ? "pointer-events-none w-full" : "w-full"}>
+    <div className={cn("w-full", disabled && "pointer-events-none")}>
       <PromptModal
         id={id}
         field_name={field_name}
@@ -34,28 +65,8 @@ export default function PromptAreaComponent({
       >
         <Button unstyled className="w-full">
           <div className="flex w-full items-center gap-3">
-            <span
-              id={id}
-              data-testid={id}
-              className={
-                editNode
-                  ? "input-edit-node input-dialog"
-                  : (disabled ? "input-disable text-ring " : "") +
-                    " primary-input text-muted-foreground"
-              }
-            >
-              {value !== "" ? value : "Type your prompt here..."}
-            </span>
-            {!editNode && (
-              <IconComponent
-                id={id}
-                name="ExternalLink"
-                className={
-                  "icons-parameters-comp shrink-0" +
-                  (disabled ? " text-ring" : " hover:text-accent-foreground")
-                }
-              />
-            )}
+            {renderPromptText()}
+            {renderExternalLinkIcon()}
           </div>
         </Button>
       </PromptModal>

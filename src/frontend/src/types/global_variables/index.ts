@@ -3,4 +3,5 @@ export type GlobalVariable = {
   type: string;
   default_fields: string[];
   name: string;
+  value?: string;
 };

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import os
@@ -7,7 +9,6 @@ from typing import TYPE_CHECKING
 
 import httpx
 from loguru import logger
-from pydantic import BaseModel
 
 from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
@@ -21,13 +22,15 @@ from langflow.services.telemetry.schema import (
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
+    from pydantic import BaseModel
+
     from langflow.services.settings.service import SettingsService
 
 
 class TelemetryService(Service):
     name = "telemetry_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         super().__init__()
         self.settings_service = settings_service
         self.base_url = settings_service.settings.telemetry_base_url
@@ -48,8 +51,8 @@ class TelemetryService(Service):
             func, payload, path = await self.telemetry_queue.get()
             try:
                 await func(payload, path)
-            except Exception as e:
-                logger.error(f"Error sending telemetry data: {e}")
+            except Exception:
+                logger.exception("Error sending telemetry data")
             finally:
                 self.telemetry_queue.task_done()
 
@@ -68,12 +71,12 @@ class TelemetryService(Service):
                 logger.error(f"Failed to send telemetry data: {response.status_code} {response.text}")
             else:
                 logger.debug("Telemetry data sent successfully.")
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error occurred: {e}")
-        except httpx.RequestError as e:
-            logger.error(f"Request error occurred: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error occurred: {e}")
+        except httpx.HTTPStatusError:
+            logger.exception("HTTP error occurred")
+        except httpx.RequestError:
+            logger.exception("Request error occurred")
+        except Exception:
+            logger.exception("Unexpected error occurred")
 
     async def log_package_run(self, payload: RunPayload):
         await self._queue_event((self.send_telemetry_data, payload, "run"))
@@ -117,16 +120,16 @@ class TelemetryService(Service):
             self._start_time = datetime.now(timezone.utc)
             self.worker_task = asyncio.create_task(self.telemetry_worker())
             asyncio.create_task(self.log_package_version())
-        except Exception as e:
-            logger.error(f"Error starting telemetry service: {e}")
+        except Exception:
+            logger.exception("Error starting telemetry service")
 
     async def flush(self):
         if self.do_not_track:
             return
         try:
             await self.telemetry_queue.join()
-        except Exception as e:
-            logger.error(f"Error flushing logs: {e}")
+        except Exception:
+            logger.exception("Error flushing logs")
 
     async def stop(self):
         if self.do_not_track or self._stopping:
@@ -141,8 +144,8 @@ class TelemetryService(Service):
                 with contextlib.suppress(asyncio.CancelledError):
                     await self.worker_task
             await self.client.aclose()
-        except Exception as e:
-            logger.error(f"Error stopping tracing service: {e}")
+        except Exception:
+            logger.exception("Error stopping tracing service")
 
     async def teardown(self):
         await self.stop()

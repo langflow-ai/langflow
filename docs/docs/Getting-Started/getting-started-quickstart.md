@@ -79,6 +79,6 @@ Well done! You've built your first prompt in Langflow. 🎉
 
 By dragging Langflow components to your workspace, you can create all sorts of interesting behaviors. Here are a couple of examples:
 
-- [Memory Chatbot](https://docs.langflow.org/starter-projects/memory-chatbot)
-- [Blog Writer](https://docs.langflow.org/starter-projects/blog-writer)
-- [Document QA](https://docs.langflow.org/starter-projects/document-qa)
+- [Memory Chatbot](/starter-projects-memory-chatbot)
+- [Blog Writer](/starter-projects-blog-writer)
+- [Document QA](/starter-projects-document-qa)

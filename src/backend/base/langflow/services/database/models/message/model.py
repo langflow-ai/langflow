@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
@@ -29,19 +29,26 @@ class MessageBase(SQLModel):
     def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
         # first check if the record has all the required fields
         if message.text is None or not message.sender or not message.sender_name:
-            raise ValueError("The message does not have the required fields (text, sender, sender_name).")
+            msg = "The message does not have the required fields (text, sender, sender_name)."
+            raise ValueError(msg)
+        if message.files:
+            image_paths = []
+            for file in message.files:
+                if hasattr(file, "path") and hasattr(file, "url") and file.path:
+                    session_id = message.session_id
+                    image_paths.append(f"{session_id}{file.path.split(session_id)[1]}")
+            if image_paths:
+                message.files = image_paths
+
         if isinstance(message.timestamp, str):
             timestamp = datetime.fromisoformat(message.timestamp)
         else:
             timestamp = message.timestamp
         if not flow_id and message.flow_id:
             flow_id = message.flow_id
-        if not isinstance(message.text, str):
-            # If the text is not a string, it means it could be
-            # async iterator so we simply add it as an empty string
-            message_text = ""
-        else:
-            message_text = message.text
+        # If the text is not a string, it means it could be
+        # async iterator so we simply add it as an empty string
+        message_text = "" if not isinstance(message.text, str) else message.text
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
@@ -56,9 +63,9 @@ class MessageBase(SQLModel):
 class MessageTable(MessageBase, table=True):  # type: ignore
     __tablename__ = "message"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    flow_id: Optional[UUID] = Field(default=None, foreign_key="flow.id")
+    flow_id: UUID | None = Field(default=None, foreign_key="flow.id")
     flow: "Flow" = Relationship(back_populates="messages")
-    files: List[str] = Field(sa_column=Column(JSON))
+    files: list[str] = Field(sa_column=Column(JSON))
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -76,7 +83,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore
 
 class MessageRead(MessageBase):
     id: UUID
-    flow_id: Optional[UUID] = Field()
+    flow_id: UUID | None = Field()
 
 
 class MessageCreate(MessageBase):
@@ -84,8 +91,8 @@ class MessageCreate(MessageBase):
 
 
 class MessageUpdate(SQLModel):
-    text: Optional[str] = None
-    sender: Optional[str] = None
-    sender_name: Optional[str] = None
-    session_id: Optional[str] = None
-    files: Optional[list[str]] = None
+    text: str | None = None
+    sender: str | None = None
+    sender_name: str | None = None
+    session_id: str | None = None
+    files: list[str] | None = None

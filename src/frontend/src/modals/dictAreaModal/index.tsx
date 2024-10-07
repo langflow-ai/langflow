@@ -27,11 +27,54 @@ export default function DictAreaModal({
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const isDark = useDarkStore((state) => state.dark);
-  const [myValue, setMyValue] = useState(value);
+  const [componentValue, setComponentValue] = useState(value);
 
   useEffect(() => {
-    setMyValue(value);
+    setComponentValue(value);
   }, [value, open]);
+
+  const handleSubmit = () => {
+    if (onChange) {
+      onChange(componentValue);
+      setOpen(false);
+    }
+  };
+
+  const handleJsonChange = (edit) => {
+    setComponentValue(edit.src);
+  };
+
+  const customizeCopy = (copy) => {
+    navigator.clipboard.writeText(JSON.stringify(copy));
+  };
+
+  const renderHeader = () => (
+    <BaseModal.Header description={onChange ? CODE_DICT_DIALOG_SUBTITLE : null}>
+      <span className="pr-2">
+        {onChange ? "Edit Dictionary" : "View Dictionary"}
+      </span>
+      <IconComponent
+        name="BookMarked"
+        className="h-6 w-6 pl-1 text-primary"
+        aria-hidden="true"
+      />
+    </BaseModal.Header>
+  );
+
+  const renderContent = () => (
+    <BaseModal.Content>
+      <div className="flex h-full w-full flex-col transition-all">
+        <JsonView
+          theme="vscode"
+          editable={!!onChange}
+          enableClipboard
+          onChange={handleJsonChange}
+          src={cloneDeep(componentValue)}
+          customizeCopy={customizeCopy}
+        />
+      </div>
+    </BaseModal.Content>
+  );
 
   return (
     <BaseModal
@@ -39,46 +82,13 @@ export default function DictAreaModal({
       open={open}
       disable={disabled}
       setOpen={setOpen}
-      onSubmit={
-        onChange
-          ? () => {
-              onChange(myValue);
-              setOpen(false);
-            }
-          : undefined
-      }
+      onSubmit={onChange ? handleSubmit : undefined}
     >
-      <BaseModal.Trigger className="h-full">{children}</BaseModal.Trigger>
-      <BaseModal.Header
-        description={onChange ? CODE_DICT_DIALOG_SUBTITLE : null}
-      >
-        <span className="pr-2">
-          {onChange ? "Edit Dictionary" : "View Dictionary"}
-        </span>
-        <IconComponent
-          name="BookMarked"
-          className="h-6 w-6 pl-1 text-primary"
-          aria-hidden="true"
-        />
-      </BaseModal.Header>
-      <BaseModal.Content>
-        <div className="flex h-full w-full flex-col transition-all">
-          <JsonView
-            theme="vscode"
-            dark={isDark}
-            className={!isDark ? "json-view-white" : "json-view-dark"}
-            editable={!!onChange}
-            enableClipboard
-            onChange={(edit) => {
-              setMyValue(edit.src);
-            }}
-            src={cloneDeep(myValue)}
-            customizeCopy={(copy) => {
-              navigator.clipboard.writeText(JSON.stringify(copy));
-            }}
-          />
-        </div>
-      </BaseModal.Content>
+      <BaseModal.Trigger className="h-full" asChild>
+        {children}
+      </BaseModal.Trigger>
+      {renderHeader()}
+      {renderContent()}
       <BaseModal.Footer submit={onChange ? { label: "Save" } : undefined} />
     </BaseModal>
   );

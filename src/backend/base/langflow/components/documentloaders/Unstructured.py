@@ -1,11 +1,9 @@
-from typing import List
+from langchain_unstructured import UnstructuredLoader
 
 from langflow.custom import Component
 from langflow.inputs import FileInput, SecretStrInput
-from langflow.template import Output
 from langflow.schema import Data
-
-from langchain_unstructured import UnstructuredLoader
+from langflow.template import Output
 
 
 class UnstructuredComponent(Component):
@@ -39,15 +37,13 @@ class UnstructuredComponent(Component):
     def build_unstructured(self) -> UnstructuredLoader:
         file_paths = [self.file]
 
-        loader = UnstructuredLoader(
+        return UnstructuredLoader(
             file_paths,
             api_key=self.api_key,
             partition_via_api=True,
         )
 
-        return loader
-
-    def load_documents(self) -> List[Data]:
+    def load_documents(self) -> list[Data]:
         unstructured = self.build_unstructured()
 
         documents = unstructured.load()

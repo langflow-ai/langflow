@@ -4,7 +4,7 @@ from langflow.inputs import BoolInput
 from langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output
 from langflow.memory import store_message
 from langflow.schema.message import Message
-from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, MESSAGE_SENDER_NAME_USER
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 
 
 class ChatInput(ChatComponent):

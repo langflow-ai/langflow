@@ -12,7 +12,7 @@ on:
         description: "Frontend Tests Folder"
         required: false
         type: string
-        default: "tests/end-to-end"
+        default: "tests/core"
   workflow_dispatch:
     inputs:
       branch:
@@ -34,7 +34,6 @@ on:
         default: "['3.10']"
   pull_request:
     types: [synchronize, labeled]
-
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -109,7 +108,14 @@ jobs:
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
-    needs: [test-backend,test-frontend,lint-backend,test-docs-build,set-ci-condition]
+    needs:
+      [
+        test-backend,
+        test-frontend,
+        lint-backend,
+        test-docs-build,
+        set-ci-condition,
+      ]
 
     if: always()
     runs-on: ubuntu-latest

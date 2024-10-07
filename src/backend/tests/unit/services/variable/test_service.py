@@ -1,11 +1,14 @@
-from langflow.services.database.models.variable.model import VariableUpdate
-import pytest
+from datetime import datetime
 from unittest.mock import patch
 from uuid import uuid4
-from datetime import datetime
-from sqlmodel import SQLModel, Session, create_engine
+
+import pytest
+from sqlmodel import Session, SQLModel, create_engine
+
+from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
-from langflow.services.variable.service import GENERIC_TYPE, CREDENTIAL_TYPE, DatabaseVariableService
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.service import DatabaseVariableService
 
 
 @pytest.fixture
@@ -152,11 +155,12 @@ def test_update_variable__ValueError(service, session):
 
 def test_update_variable_fields(service, session):
     user_id = uuid4()
+    new_name = new_value = "donkey"
     variable = service.create_variable(user_id, "old_name", "old_value", session=session)
     saved = variable.model_dump()
     variable = VariableUpdate(**saved)
-    variable.name = "new_name"
-    variable.value = "new_value"
+    variable.name = new_name
+    variable.value = new_value
     variable.default_fields = ["new_field"]
 
     result = service.update_variable_fields(
@@ -166,6 +170,8 @@ def test_update_variable_fields(service, session):
         session=session,
     )
 
+    assert result.name == new_name
+    assert result.value != new_value
     assert saved.get("id") == result.id
     assert saved.get("user_id") == result.user_id
     assert saved.get("name") != result.name

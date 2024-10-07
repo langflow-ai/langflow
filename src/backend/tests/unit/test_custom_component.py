@@ -1,5 +1,7 @@
 import ast
 import types
+from textwrap import dedent
+from uuid import uuid4
 
 import pytest
 from langchain_core.documents import Document
@@ -8,6 +10,8 @@ from langflow.custom import Component, CustomComponent
 from langflow.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
 from langflow.custom.custom_component.base_component import BaseComponent, ComponentCodeNullError
 from langflow.custom.utils import build_custom_component_template
+from langflow.services.database.models.flow import FlowCreate
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 
 @pytest.fixture
@@ -502,3 +506,33 @@ def test_build_config_field_value_keys(component):
 def test_custom_component_multiple_outputs(code_component_with_multiple_outputs):
     frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs)
     assert frontnd_node_dict["outputs"][0]["types"] == ["Text"]
+
+
+def test_feature_flags_add_toolkit_output(active_user, code_component_with_multiple_outputs):
+    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
+    len_outputs = len(frontnd_node_dict["outputs"])
+    FEATURE_FLAGS.add_toolkit_output = True
+    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
+    assert len(frontnd_node_dict["outputs"]) == len_outputs + 1
+
+
+def test_custom_component_subclass_from_lctoolcomponent():
+    # Import LCToolComponent and create a subclass
+    code = dedent("""
+    from langflow.base.langchain_utilities.model import LCToolComponent
+    from langchain_core.tools import Tool
+    class MyComponent(LCToolComponent):
+        name: str = "MyComponent"
+        description: str = "MyComponent"
+
+        def build_tool(self) -> Tool:
+            return Tool(name="MyTool", description="MyTool")
+
+        def run_model(self)-> Data:
+            return Data(data="Hello World")
+    """)
+    component = Component(_code=code)
+    frontend_node, _ = build_custom_component_template(component)
+    assert "outputs" in frontend_node
+    assert frontend_node["outputs"][0]["types"] != []
+    assert frontend_node["outputs"][1]["types"] != []

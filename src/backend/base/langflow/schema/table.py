@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -16,7 +15,7 @@ class Column(BaseModel):
     name: str
     sortable: bool = Field(default=True)
     filterable: bool = Field(default=True)
-    formatter: Optional[FormatterType | str] = None
+    formatter: FormatterType | str | None = None
 
     @field_validator("formatter")
     def validate_formatter(cls, value):
@@ -24,8 +23,9 @@ class Column(BaseModel):
             return FormatterType(value)
         if isinstance(value, FormatterType):
             return value
-        raise ValueError("Invalid formatter type")
+        msg = "Invalid formatter type"
+        raise ValueError(msg)
 
 
 class TableSchema(BaseModel):
-    columns: List[Column]
+    columns: list[Column]

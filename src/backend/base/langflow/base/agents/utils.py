@@ -1,4 +1,5 @@
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from langchain.agents import (
     create_json_chat_agent,
@@ -24,17 +25,17 @@ class AgentSpec(BaseModel):
             BaseLanguageModel,
             Sequence[BaseTool],
             BasePromptTemplate | ChatPromptTemplate,
-            Optional[Callable[[List[BaseTool]], str]],
-            Optional[Union[bool, List[str]]],
+            Callable[[list[BaseTool]], str] | None,
+            bool | list[str] | None,
         ],
         Any,
     ]
-    prompt: Optional[Any] = None
-    fields: List[str]
-    hub_repo: Optional[str] = None
+    prompt: Any | None = None
+    fields: list[str]
+    hub_repo: str | None = None
 
 
-def data_to_messages(data: List[Data]) -> List[BaseMessage]:
+def data_to_messages(data: list[Data]) -> list[BaseMessage]:
     """
     Convert a list of data to a list of messages.
 
@@ -51,9 +52,9 @@ def validate_and_create_xml_agent(
     llm: BaseLanguageModel,
     tools: Sequence[BaseTool],
     prompt: BasePromptTemplate,
-    tools_renderer: Callable[[List[BaseTool]], str] = render_text_description,
+    tools_renderer: Callable[[list[BaseTool]], str] = render_text_description,
     *,
-    stop_sequence: Union[bool, List[str]] = True,
+    stop_sequence: bool | list[str] = True,
 ):
     return create_xml_agent(
         llm=llm,
@@ -68,9 +69,9 @@ def validate_and_create_openai_tools_agent(
     llm: BaseLanguageModel,
     tools: Sequence[BaseTool],
     prompt: ChatPromptTemplate,
-    tools_renderer: Callable[[List[BaseTool]], str] = render_text_description,
+    tools_renderer: Callable[[list[BaseTool]], str] = render_text_description,
     *,
-    stop_sequence: Union[bool, List[str]] = True,
+    stop_sequence: bool | list[str] = True,
 ):
     return create_openai_tools_agent(
         llm=llm,
@@ -83,9 +84,9 @@ def validate_and_create_tool_calling_agent(
     llm: BaseLanguageModel,
     tools: Sequence[BaseTool],
     prompt: ChatPromptTemplate,
-    tools_renderer: Callable[[List[BaseTool]], str] = render_text_description,
+    tools_renderer: Callable[[list[BaseTool]], str] = render_text_description,
     *,
-    stop_sequence: Union[bool, List[str]] = True,
+    stop_sequence: bool | list[str] = True,
 ):
     return create_tool_calling_agent(
         llm=llm,
@@ -98,9 +99,9 @@ def validate_and_create_json_chat_agent(
     llm: BaseLanguageModel,
     tools: Sequence[BaseTool],
     prompt: ChatPromptTemplate,
-    tools_renderer: Callable[[List[BaseTool]], str] = render_text_description,
+    tools_renderer: Callable[[list[BaseTool]], str] = render_text_description,
     *,
-    stop_sequence: Union[bool, List[str]] = True,
+    stop_sequence: bool | list[str] = True,
 ):
     return create_json_chat_agent(
         llm=llm,
@@ -111,7 +112,7 @@ def validate_and_create_json_chat_agent(
     )
 
 
-AGENTS: Dict[str, AgentSpec] = {
+AGENTS: dict[str, AgentSpec] = {
     "Tool Calling Agent": AgentSpec(
         func=validate_and_create_tool_calling_agent,
         prompt=None,

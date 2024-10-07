@@ -1,12 +1,13 @@
 import json
-from typing import List
+
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+
 from langflow.custom import Component
-from langflow.inputs import MessageTextInput, DropdownInput
+from langflow.inputs import DropdownInput, MessageTextInput
 from langflow.io import SecretStrInput
-from langflow.template import Output
 from langflow.schema import Data
+from langflow.template import Output
 
 
 class GoogleDriveSearchComponent(Component):
@@ -95,18 +96,13 @@ class GoogleDriveSearchComponent(Component):
         """
         Generates the appropriate Google Drive URL for a file based on its MIME type.
         """
-        if mime_type == "application/vnd.google-apps.document":
-            return f"https://docs.google.com/document/d/{file_id}/edit"
-        elif mime_type == "application/vnd.google-apps.spreadsheet":
-            return f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
-        elif mime_type == "application/vnd.google-apps.presentation":
-            return f"https://docs.google.com/presentation/d/{file_id}/edit"
-        elif mime_type == "application/vnd.google-apps.drawing":
-            return f"https://docs.google.com/drawings/d/{file_id}/edit"
-        elif mime_type == "application/pdf":
-            return f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
-        else:
-            return f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
+        return {
+            "application/vnd.google-apps.document": f"https://docs.google.com/document/d/{file_id}/edit",
+            "application/vnd.google-apps.spreadsheet": f"https://docs.google.com/spreadsheets/d/{file_id}/edit",
+            "application/vnd.google-apps.presentation": f"https://docs.google.com/presentation/d/{file_id}/edit",
+            "application/vnd.google-apps.drawing": f"https://docs.google.com/drawings/d/{file_id}/edit",
+            "application/pdf": f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk",
+        }.get(mime_type, f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk")
 
     def search_files(self) -> dict:
         # Load the token information from the JSON string
@@ -144,13 +140,13 @@ class GoogleDriveSearchComponent(Component):
 
         return {"doc_urls": doc_urls, "doc_ids": doc_ids, "doc_titles_urls": doc_titles_urls, "doc_titles": doc_titles}
 
-    def search_doc_ids(self) -> List[str]:
+    def search_doc_ids(self) -> list[str]:
         return self.search_files()["doc_ids"]
 
-    def search_doc_urls(self) -> List[str]:
+    def search_doc_urls(self) -> list[str]:
         return self.search_files()["doc_urls"]
 
-    def search_doc_titles(self) -> List[str]:
+    def search_doc_titles(self) -> list[str]:
         return self.search_files()["doc_titles"]
 
     def search_data(self) -> Data:

@@ -23,21 +23,21 @@ jobs:
           - "3.11"
           - "3.10"
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the code at a specific ref
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || github.ref }}
-      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_caching"
+          persist-credentials: true
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
         with:
-          python-version: ${{ matrix.python-version }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-      - name: Install Python dependencies
-        run: |
-          poetry env use ${{ matrix.python-version }}
-          poetry install
+          ref: ${{ inputs.branch || github.ref }}
+      - name: Install the project
+        run: uv sync --dev
       - name: Run Mypy
         run: |
-          poetry run mypy --namespace-packages -p "langflow"
+          uv run mypy --namespace-packages -p "langflow"
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}
+      - name: Minimize uv cache
+        run: uv cache prune --ci
