@@ -4,11 +4,9 @@ import shutil
 
 # we need to import tmpdir
 import tempfile
-import uuid
 from collections.abc import AsyncGenerator
 from contextlib import contextmanager
-from collections.abc import AsyncGenerator
-from contextlib import contextmanager, suppress
+from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -92,6 +90,8 @@ def _delete_transactions_and_vertex_builds(session, user: User):
     for flow_id in flow_ids:
         delete_transactions_by_flow_id(session, flow_id)
         delete_vertex_builds_by_flow_id(session, flow_id)
+
+
 @pytest.fixture
 def caplog(caplog: LogCaptureFixture):
     handler_id = logger.add(

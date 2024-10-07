@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from collections.abc import Generator
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
