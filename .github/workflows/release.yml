@@ -148,7 +148,8 @@ jobs:
             echo version=$version >> $GITHUB_OUTPUT
           fi
       - name: Wait for PyPI Propagation
-        if: needs.release-base.outputs.skipped == 'false'
+        # if: needs.release-base.outputs.skipped == 'false'
+        if: false
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
 
       - name: Build project for distribution
