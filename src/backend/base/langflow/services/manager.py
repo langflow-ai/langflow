@@ -34,9 +34,8 @@ class ServiceManager:
         for factory in self.get_factories():
             try:
                 self.register_factory(factory)
-            except Exception as exc:
-                logger.exception(exc)
-                logger.error(f"Error initializing {factory}: {exc}")
+            except Exception:
+                logger.exception(f"Error initializing {factory}")
 
     def register_factory(
         self,
