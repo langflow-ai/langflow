@@ -22,48 +22,55 @@ class StructuredOutputComponent(Component):
             info="The language model to use to generate the structured output.",
             input_types=["LanguageModel"],
         ),
-        MessageTextInput(name="input_value", info="Input message"),
-        StrInput(name="schema_name", display_name="Schema Name", info="The name of the schema."),
+        MessageTextInput(name="input_value", display_name="Input message"),
+        StrInput(
+            name="schema_name",
+            display_name="Schema Name",
+            info="Provide a name for the output data schema.",
+        ),
         TableInput(
-            name="table",
-            info="Table input",
+            name="output_schema",
+            display_name="Output Schema",
+            info="Define the structure and data types for the model's output.",
             table_schema=[
                 {
                     "name": "name",
                     "display_name": "Name",
                     "type": "str",
-                    "description": "The name of the output",
+                    "description": "Specify the name of the output field.",
                 },
                 {
                     "name": "default",
                     "display_name": "Default",
                     "type": "str",
-                    "description": "The default value of the output",
+                    "description": "Provide a default value for the output field.",
                 },
                 {
                     "name": "description",
                     "display_name": "Description",
                     "type": "str",
-                    "description": "The description of the output",
+                    "description": "Describe the purpose of the output field.",
                 },
                 {
                     "name": "type",
                     "display_name": "Type",
                     "type": "str",
-                    "description": "The type of the output. One of: str, int, float, bool, list, dict.",
+                    "description": (
+                        "Indicate the data type of the output field " "(e.g., str, int, float, bool, list, dict)."
+                    ),
                 },
                 {
                     "name": "multiple",
                     "display_name": "Multiple",
                     "type": "bool",
-                    "description": "If True, the output is expected to be a list of the type specified.",
+                    "description": "Set to True if this output field should be a list of the specified type.",
                 },
             ],
         ),
         BoolInput(
             name="multiple",
             display_name="Generate Multiple",
-            info="If True, the output is expected to be a list of the type specified.",
+            info="Set to True if the model should generate a list of outputs instead of a single output.",
         ),
     ]
 
