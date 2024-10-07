@@ -2,6 +2,7 @@ import warnings
 from collections.abc import AsyncIterator, Iterator
 from typing import Any, get_args
 
+from pandas import DataFrame
 from pydantic import Field, field_validator
 
 from langflow.inputs.validators import CoalesceBool
@@ -34,6 +35,8 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
     @classmethod
     def validate_value(cls, v: Any, _info):
         # Check if value is a list of dicts
+        if isinstance(v, DataFrame):
+            return v
         if not isinstance(v, list):
             msg = f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list."
             raise ValueError(msg)  # noqa: TRY004
