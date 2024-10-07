@@ -15,7 +15,7 @@ export default function DictComponent({
 }: InputProps<object | object[] | string>): JSX.Element {
   useEffect(() => {
     if (disabled) {
-      handleOnNewValue({ value: {} });
+      handleOnNewValue({ value: {} },{ skipSnapshot: true });
     }
   }, [disabled]);
 
