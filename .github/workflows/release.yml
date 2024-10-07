@@ -77,7 +77,7 @@ jobs:
           fi
       - name: Build project for distribution
         if: steps.check-version.outputs.skipped == 'false'
-        run: make build base=true
+        run: make build base=true args="--wheel"
       - name: Test CLI
         if: steps.check-version.outputs.skipped == 'false'
         run: |
@@ -153,7 +153,7 @@ jobs:
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
 
       - name: Build project for distribution
-        run: make build main=true
+        run: make build main=true args="--no-sources --wheel"
       - name: Test CLI
         run: |
           uv pip install dist/*.whl
