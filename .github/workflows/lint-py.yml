@@ -30,8 +30,6 @@ jobs:
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ inputs.branch || github.ref }}
       - name: Install the project
         run: uv sync --dev
       - name: Run Mypy

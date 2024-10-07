@@ -64,8 +64,6 @@ jobs:
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ inputs.nightly_tag_main }}
       - name: Install the project
         run: uv sync --dev
 
@@ -91,8 +89,7 @@ jobs:
 
       - name: Test CLI
         run: |
-          # TODO: unsure why the whl is not built in src/backend/base
-          # uv pip install src/backend/base/dist/*.whl
+          # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist/
           uv pip install src/backend/base/dist/*.whl
@@ -141,8 +138,6 @@ jobs:
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ inputs.nightly_tag_main }}
       - name: Install the project
         run: uv sync --dev
 
@@ -220,3 +215,5 @@ jobs:
       release_type: main
       nightly_tag_main: ${{ inputs.nightly_tag_main }}
     secrets: inherit
+
+  

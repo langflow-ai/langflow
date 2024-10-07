@@ -103,9 +103,6 @@ jobs:
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }}
-
       - name: Install the project
         run: uv sync --dev
 
@@ -172,12 +169,10 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }}
 
       - name: Install the project
         run: |
@@ -288,9 +283,9 @@ jobs:
 
   restart-space:
     name: Restart HuggingFace Spaces
-    if: ${{ inputs.release_type == 'main' && inputs.nightly_build == 'false' }}
+    if: ${{ inputs.release_type == 'main' && needs.get-version.outputs.nightly-build == 'false' }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, get-version]
     strategy:
       matrix:
         python-version:
@@ -302,8 +297,6 @@ jobs:
           ref: ${{ inputs.nightly_tag_main || github.ref }}
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }}
 
       - name: Restart HuggingFace Spaces Build
         run: |

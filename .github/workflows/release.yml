@@ -35,8 +35,6 @@ on:
         type: boolean
         default: true
 
-env:
-  POETRY_VERSION: "1.8.2"
 
 jobs:
   ci:
@@ -59,15 +57,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup Environment
-        uses: ./.github/workflows/setup-uv.yml
-        with:
-          ref: ${{ github.ref }} 
+        uses: ./.github/actions/setup-uv
       - name: Install the project
         run: uv sync --dev
       - name: Check Version
         id: check-version
         run: |
-          version=$(cd src/backend/base && poetry version --short)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
@@ -79,12 +75,15 @@ jobs:
           fi
       - name: Build project for distribution
         if: steps.check-version.outputs.skipped == 'false'
-        run: make build base=true
+        run: make build base=true args="--wheel"
       - name: Test CLI
         if: steps.check-version.outputs.skipped == 'false'
         run: |
-          python -m pip install src/backend/base/dist/*.whl
-          python -m langflow run --host 127.0.0.1 --port 7860 &
+          # TODO: Unsure why the whl is not built in src/backend/base/dist
+          mkdir src/backend/base/dist
+          mv dist/*.whl src/backend/base/dist
+          uv pip install src/backend/base/dist/*.whl
+          uv run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
@@ -100,7 +99,7 @@ jobs:
           fi
       - name: Publish to PyPI
         env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           make publish base=true
       - name: Upload Artifact
@@ -121,9 +120,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup Environment
-        uses: ./.github/workflows/setup-uv.yml
-        with:
-          ref: ${{ github.ref }}
+        uses: ./.github/actions/setup-uv
       - name: Install the project
         run: uv sync --dev
 
@@ -155,11 +152,11 @@ jobs:
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
 
       - name: Build project for distribution
-        run: make build main=true
+        run: make build main=true args="--no-sources --wheel"
       - name: Test CLI
         run: |
-          python -m pip install dist/*.whl
-          python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          uv pip install dist/*.whl
+          uv run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
@@ -187,32 +184,22 @@ jobs:
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: inputs.build_docker_base == true
+    needs: release-base
     uses: ./.github/workflows/docker-build.yml
-    strategy:
-      matrix:
-        release_type:
-          - base
     with:
-      # version should be needs.release-base.outputs.version  if release_type is base
-      # version should be needs.release-main.outputs.version  if release_type is main
-      version: ""
-      release_type: ${{ matrix.release_type }}
+      version: ${{ needs.release-base.outputs.version }}
+      release_type: base
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: inputs.build_docker_main == true
+    needs: release-main
     uses: ./.github/workflows/docker-build.yml
-    strategy:
-      matrix:
-        release_type:
-          - main
     with:
-      # version should be needs.release-base.outputs.version  if release_type is base
-      # version should be needs.release-main.outputs.version  if release_type is main
-      version: ""
-      release_type: ${{ matrix.release_type }}
+      version: ${{ needs.release-main.outputs.version }}
+      release_type: main
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 

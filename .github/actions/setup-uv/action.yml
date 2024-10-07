@@ -1,10 +1,5 @@
 name: "Setup uv"
 description: "Checks out code, installs uv, and sets up Python environment"
-inputs:
-  ref:
-    description: "Reference to check out"
-    required: false
-    default: "github.ref"
 
 runs:
   using: "composite"

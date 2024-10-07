@@ -104,8 +104,6 @@ jobs:
 
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ inputs.ref || github.ref }}
       - name: Install the project
         run: uv sync --dev
 
