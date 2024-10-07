@@ -66,7 +66,7 @@ class RunnableExecComponent(Component):
 
         if output_key in result:
             result_value = result.get(output_key)
-        elif len(result) == 2 and input_key in result:
+        elif len(result) == 2 and input_key in result:  # noqa: PLR2004
             # get the other key from the result dict
             other_key = next(k for k in result if k != input_key)
             if other_key == output_key:

@@ -33,9 +33,7 @@ def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str
     _data = []
     for value in data:
         # If it is not a record, create one with the key "text"
-        if not isinstance(value, Data):
-            value = Data(text=value)
-        _data.append(value)
+        _data.append(Data(text=value) if not isinstance(value, Data) else value)
 
     formated_data = [template.format(data=value.data, **value.data) for value in _data]
     return sep.join(formated_data)

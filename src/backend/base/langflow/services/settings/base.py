@@ -269,20 +269,19 @@ class Settings(BaseSettings):
                     else:
                         logger.debug(f"Creating new database at {new_pre_path}")
                         final_path = new_pre_path
+                elif Path(new_path).exists():
+                    logger.debug(f"Database already exists at {new_path}, using it")
+                    final_path = new_path
+                elif Path("./{db_file_name}").exists():
+                    try:
+                        logger.debug("Copying existing database to new location")
+                        copy2("./{db_file_name}", new_path)
+                        logger.debug(f"Copied existing database to {new_path}")
+                    except Exception:
+                        logger.exception("Failed to copy database, using default path")
+                        new_path = "./{db_file_name}"
                 else:
-                    if Path(new_path).exists():
-                        logger.debug(f"Database already exists at {new_path}, using it")
-                        final_path = new_path
-                    elif Path("./{db_file_name}").exists():
-                        try:
-                            logger.debug("Copying existing database to new location")
-                            copy2("./{db_file_name}", new_path)
-                            logger.debug(f"Copied existing database to {new_path}")
-                        except Exception:
-                            logger.exception("Failed to copy database, using default path")
-                            new_path = "./{db_file_name}"
-                    else:
-                        final_path = new_path
+                    final_path = new_path
 
                 if final_path is None:
                     final_path = new_pre_path if is_pre_release else new_path
@@ -334,19 +333,17 @@ class Settings(BaseSettings):
             if isinstance(getattr(self, key), list):
                 # value might be a '[something]' string
                 with contextlib.suppress(json.decoder.JSONDecodeError):
-                    value = orjson.loads(str(value))
-                if isinstance(value, list):
-                    for item in value:
-                        if isinstance(item, Path):
-                            item = str(item)
-                        if item not in getattr(self, key):
-                            getattr(self, key).append(item)
+                    _value = orjson.loads(str(value))
+                if isinstance(_value, list):
+                    for item in _value:
+                        _item = str(item) if isinstance(item, Path) else item
+                        if _item not in getattr(self, key):
+                            getattr(self, key).append(_item)
                     logger.debug(f"Extended {key}")
                 else:
-                    if isinstance(value, Path):
-                        value = str(value)
-                    if value not in getattr(self, key):
-                        getattr(self, key).append(value)
+                    _value = str(_value) if isinstance(_value, Path) else _value
+                    if _value not in getattr(self, key):
+                        getattr(self, key).append(_value)
                         logger.debug(f"Appended {key}")
 
             else:
