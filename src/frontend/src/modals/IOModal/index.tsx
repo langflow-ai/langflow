@@ -30,6 +30,7 @@ import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
 import SessionView from "./components/SessionView";
 import ChatView from "./components/chatView";
+import SessionSelector from "./components/IOFieldView/components/sessionSelector";
 
 export default function IOModal({
   children,
@@ -415,106 +416,34 @@ export default function IOModal({
                     })}
                 </TabsContent>
                 <TabsContent value={"0"} className="api-modal-tabs-content">
-                  {sessions.map((session, index) => {
-                    return (
-                      <div
-                        key={index}
-                        className="file-component-accordion-div cursor-pointer"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setvisibleSessions((prev) =>
-                            prev.includes(session)
-                              ? prev.filter((item) => item !== session)
-                              : SessionInFlow
-                                ? [...prev, session]
-                                : [session],
-                          );
-                        }}
-                      >
-                        <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3.5 align-middle">
-                          <ShadTooltip styleClasses="z-50" content={session}>
-                            <div className="flex min-w-0">
-                              <Badge
-                                variant="gray"
-                                size="md"
-                                className="block truncate"
-                              >
-                                {session === currentFlowId
-                                  ? "Default Session"
-                                  : session}
-                              </Badge>
-                            </div>
-                          </ShadTooltip>
-                          <div className="flex shrink-0 items-center justify-center gap-2 align-middle">
-                            <Button unstyled size="icon">
-                              <ShadTooltip
-                                styleClasses="z-50"
-                                content={"Toggle Visibility"}
-                              >
-                                <div>
-                                  <IconComponent
-                                    name={
-                                      !visibleSessions.includes(session)
-                                        ? "EyeOff"
-                                        : "Eye"
-                                    }
-                                    className="h-4 w-4"
-                                  ></IconComponent>
-                                </div>
-                              </ShadTooltip>
-                            </Button>
-                            <Button
-                              unstyled
-                              size="icon"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setSelectedViewField({
-                                  id: session,
-                                  type: "Session",
-                                });
-                              }}
-                            >
-                              <ShadTooltip
-                                styleClasses="z-50"
-                                content={"Table View"}
-                              >
-                                <div>
-                                  <IconComponent
-                                    name="Table"
-                                    className="h-4 w-4"
-                                  ></IconComponent>
-                                </div>
-                              </ShadTooltip>
-                            </Button>
-                            <Button
-                              unstyled
-                              size="icon"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleDeleteSession(session);
-                                if (selectedViewField?.id === session)
-                                  setSelectedViewField(undefined);
-                              }}
-                            >
-                              <ShadTooltip
-                                styleClasses="z-50"
-                                content={"Delete"}
-                              >
-                                <div>
-                                  <IconComponent
-                                    name="Trash2"
-                                    className="h-4 w-4"
-                                  ></IconComponent>
-                                </div>
-                              </ShadTooltip>
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {sessions.map((session, index) => (
+                    <SessionSelector
+                      key={index}
+                      session={session}
+                      deleteSession={(session) => {
+                        handleDeleteSession(session);
+                        if(selectedViewField?.id === session){
+                          setSelectedViewField(undefined);
+                        }
+                      }}
+                      toggleVisibility={() => {
+                        setvisibleSessions((prev) =>
+                          prev.includes(session)
+                            ? prev.filter((item) => item !== session)
+                            : SessionInFlow
+                              ? [...prev, session]
+                              : [session]
+                        );
+                      }}
+                      isVisible={visibleSessions.includes(session)}
+                      inspectSession={(session) => {
+                        setSelectedViewField({
+                          id: session,
+                          type: "Session",
+                        });
+                      }}
+                    />
+                  ))}
                   {!sessions.length && (
                     <span className="text-sm text-muted-foreground">
                       No memories available.
@@ -560,31 +489,31 @@ export default function IOModal({
                     {inputs.some(
                       (input) => input.id === selectedViewField.id,
                     ) && (
-                      <IOFieldView
-                        type={InputOutput.INPUT}
-                        left={false}
-                        fieldType={selectedViewField.type!}
-                        fieldId={selectedViewField.id!}
-                      />
-                    )}
+                        <IOFieldView
+                          type={InputOutput.INPUT}
+                          left={false}
+                          fieldType={selectedViewField.type!}
+                          fieldId={selectedViewField.id!}
+                        />
+                      )}
                     {outputs.some(
                       (output) => output.id === selectedViewField.id,
                     ) && (
-                      <IOFieldView
-                        type={InputOutput.OUTPUT}
-                        left={false}
-                        fieldType={selectedViewField.type!}
-                        fieldId={selectedViewField.id!}
-                      />
-                    )}
+                        <IOFieldView
+                          type={InputOutput.OUTPUT}
+                          left={false}
+                          fieldType={selectedViewField.type!}
+                          fieldId={selectedViewField.id!}
+                        />
+                      )}
                     {sessions.some(
                       (session) => session === selectedViewField.id,
                     ) && (
-                      <SessionView
-                        session={selectedViewField.id}
-                        id={currentFlowId}
-                      />
-                    )}
+                        <SessionView
+                          session={selectedViewField.id}
+                          id={currentFlowId}
+                        />
+                      )}
                   </div>
                 </div>
               )}
