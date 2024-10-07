@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import field_serializer, field_validator
+from pydantic import field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -19,14 +19,11 @@ class TaskBase(SQLModel):
     assignee_id: UUID = Field(foreign_key="flow.id", index=True)
     category: str
     state: str
-    status: str = Field(default="pending")
+    status: str
     result: dict | None = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    @field_serializer("created_at", "updated_at")
-    def serialize_datetime(self, dt: datetime, _info):
-        return dt.replace(microsecond=0).isoformat()
+    cron_expression: str | None = Field(default=None)
 
     @field_validator("created_at", "updated_at", mode="before")
     def validate_datetime(cls, v):
@@ -49,8 +46,16 @@ class Task(TaskBase, table=True):  # type: ignore
     assignee: Flow = Relationship(sa_relationship_kwargs={"primaryjoin": "Task.assignee_id==Flow.id"})
 
 
-class TaskCreate(TaskBase):
-    pass
+class TaskCreate(SQLModel):
+    title: str
+    description: str
+    attachments: list[str] = Field(default_factory=list)
+    author_id: UUID
+    assignee_id: UUID
+    category: str
+    state: str
+    status: str = "pending"
+    cron_expression: str | None = None
 
 
 class TaskRead(TaskBase):
