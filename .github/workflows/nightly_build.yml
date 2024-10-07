@@ -30,8 +30,6 @@ jobs:
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ github.ref }}
       - name: Install the project
         run: uv sync --dev
 
