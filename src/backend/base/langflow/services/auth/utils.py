@@ -132,8 +132,7 @@ async def get_current_user_by_jwt(
                 headers={"WWW-Authenticate": "Bearer"},
             )
     except JWTError as e:
-        logger.error(f"JWT decoding error: {e}")
-        logger.exception(e)
+        logger.exception("JWT decoding error")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -318,7 +317,7 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
         return create_user_tokens(user_id, db)
 
     except JWTError as e:
-        logger.error(f"JWT decoding error: {e}")
+        logger.exception("JWT decoding error")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",

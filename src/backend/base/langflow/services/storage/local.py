@@ -41,9 +41,9 @@ class LocalStorageService(StorageService):
         try:
             await asyncio.get_event_loop().run_in_executor(None, write_file, file_path, data)
             logger.info(f"File {file_name} saved successfully in flow {flow_id}.")
-        except Exception as e:
-            logger.error(f"Error saving file {file_name} in flow {flow_id}: {e}")
-            raise e
+        except Exception:
+            logger.exception(f"Error saving file {file_name} in flow {flow_id}")
+            raise
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """

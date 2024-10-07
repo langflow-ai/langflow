@@ -54,8 +54,8 @@ class SubFlowComponent(CustomComponent):
                 inputs = get_flow_inputs(graph)
                 # Add inputs to the build config
                 build_config = self.add_inputs_to_build_config(inputs, build_config)
-            except Exception as e:
-                logger.error(f"Error getting flow {field_value}: {e}")
+            except Exception:
+                logger.exception(f"Error getting flow {field_value}")
 
         return build_config
 
