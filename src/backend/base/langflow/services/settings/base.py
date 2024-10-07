@@ -188,6 +188,13 @@ class Settings(BaseSettings):
         logger.debug(f"Setting user agent to {value}")
         return value
 
+    @field_validator("log_file", mode="before")
+    @classmethod
+    def set_log_file(cls, value):
+        if isinstance(value, Path):
+            value = str(value)
+        return value
+
     @field_validator("config_dir", mode="before")
     @classmethod
     def set_langflow_dir(cls, value):
