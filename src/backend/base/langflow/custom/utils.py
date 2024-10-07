@@ -64,9 +64,7 @@ def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list
     field_dict = {field.name: field for field in frontend_node.template.fields}
     reordered_fields = [field_dict[name] for name in field_order if name in field_dict]
     # Add any fields that are not in the field_order list
-    for field in frontend_node.template.fields:
-        if field.name not in field_order:
-            reordered_fields.append(field)
+    reordered_fields.extend(field for field in frontend_node.template.fields if field.name not in field_order)
     frontend_node.template.fields = reordered_fields
     frontend_node.field_order = field_order
 
