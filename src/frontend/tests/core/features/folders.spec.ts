@@ -111,7 +111,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
 
   await page.getByTestId("sidebar-nav-My Projects").click();
 
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
 
   expect(
     await page.locator("text=Getting Started:").last().isVisible(),
