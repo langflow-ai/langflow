@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
@@ -11,14 +11,15 @@ if TYPE_CHECKING:
 class SubscriptionBase(SQLModel):
     flow_id: UUID = Field(foreign_key="flow.id", index=True)
     event_type: str
-    category: Optional[str] = None
-    state: Optional[str] = None
+    category: str | None = None
+    state: str | None = None
 
     @field_validator("event_type")
     def validate_event_type(cls, v):
         valid_event_types = ["task_created", "task_updated", "task_completed", "task_failed"]
         if v not in valid_event_types:
-            raise ValueError(f"Invalid event_type. Must be one of: {', '.join(valid_event_types)}")
+            msg = f"Invalid event_type. Must be one of: {', '.join(valid_event_types)}"
+            raise ValueError(msg)
         return v
 
 

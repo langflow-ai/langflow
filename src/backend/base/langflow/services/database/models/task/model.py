@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import field_serializer, field_validator
@@ -20,7 +20,7 @@ class TaskBase(SQLModel):
     category: str
     state: str
     status: str = Field(default="pending")
-    result: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
+    result: dict | None = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -38,7 +38,8 @@ class TaskBase(SQLModel):
     def validate_status(cls, v):
         valid_statuses = ["pending", "processing", "completed", "failed"]
         if v not in valid_statuses:
-            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+            msg = f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+            raise ValueError(msg)
         return v
 
 
@@ -57,6 +58,6 @@ class TaskRead(TaskBase):
 
 
 class TaskUpdate(SQLModel):
-    status: Optional[str] = None
-    state: Optional[str] = None
-    result: Optional[Dict] = None
+    status: str | None = None
+    state: str | None = None
+    result: dict | None = None

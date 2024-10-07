@@ -1,3 +1,4 @@
+import contextlib
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -26,7 +27,7 @@ async def create_task(
         return task_read
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/", response_model=list[TaskRead])
@@ -35,8 +36,7 @@ async def read_tasks(
     limit: int = 100,
     session: Session = Depends(get_session),
 ):
-    tasks = session.exec(select(Task).offset(skip).limit(limit)).all()
-    return tasks
+    return session.exec(select(Task).offset(skip).limit(limit)).all()
 
 
 @router.get("/{task_id}", response_model=TaskRead)
@@ -70,10 +70,8 @@ async def update_task(
     session.refresh(task)
 
     # Attempt to re-orchestrate the task after update, but continue if it fails
-    try:
+    with contextlib.suppress(Exception):
         task_orchestration_service.orchestrate_task(task)
-    except Exception:
-        pass
 
     return task
 

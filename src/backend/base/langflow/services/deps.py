@@ -242,7 +242,7 @@ def get_store_service() -> StoreService:
     return get_service(ServiceType.STORE_SERVICE)  # type: ignore
 
 
-def get_task_orchestration_service() -> "TaskOrchestrationService":
+def get_task_orchestration_service() -> TaskOrchestrationService:
     """
     Retrieves the TaskOrchestrationService instance from the service manager.
 

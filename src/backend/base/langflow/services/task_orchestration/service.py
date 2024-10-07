@@ -4,12 +4,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from diskcache import Cache, Deque
 from loguru import logger
 from pydantic import BaseModel, field_validator
 from sqlmodel import select
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 from langflow.services.base import Service
 from langflow.services.database.models.subscription.model import Subscription
@@ -33,8 +34,9 @@ class TaskNotification(BaseModel):
     def validate_str(cls, value: str) -> str:
         try:
             return str(value)
-        except ValueError:
-            raise ValueError(f"Invalid UUID: {value}")
+        except ValueError as exc:
+            msg = f"Invalid UUID: {value}"
+            raise ValueError(msg) from exc
 
 
 class TaskOrchestrationService(Service):
@@ -54,7 +56,12 @@ class TaskOrchestrationService(Service):
 
         # Initialize job scheduler
         self.scheduler = AsyncIOScheduler(jobstores=jobstores)
+
+    async def start(self):
         self.scheduler.start()
+
+    async def stop(self):
+        self.scheduler.shutdown()
 
     def create_task(self, task_create: TaskCreate) -> TaskRead:
         task = Task.model_validate(task_create, from_attributes=True)
@@ -71,7 +78,8 @@ class TaskOrchestrationService(Service):
         with self.db.with_session() as session:
             task = session.exec(select(Task).where(Task.id == task_id)).first()
             if not task:
-                raise ValueError(f"Task with id {task_id} not found")
+                msg = f"Task with id {task_id} not found"
+                raise ValueError(msg)
 
             for key, value in task_update.model_dump(exclude_unset=True).items():
                 setattr(task, key, value)
@@ -87,7 +95,8 @@ class TaskOrchestrationService(Service):
         with self.db.with_session() as session:
             task = session.exec(select(Task).where(Task.id == task_id)).first()
             if not task:
-                raise ValueError(f"Task with id {task_id} not found")
+                msg = f"Task with id {task_id} not found"
+                raise ValueError(msg)
         return TaskRead.model_validate(task, from_attributes=True)
 
     def get_tasks_for_flow(self, flow_id: str) -> list[TaskRead]:
@@ -99,7 +108,8 @@ class TaskOrchestrationService(Service):
         with self.db.with_session() as session:
             task = session.exec(select(Task).where(Task.id == task_id)).first()
             if not task:
-                raise ValueError(f"Task with id {task_id} not found")
+                msg = f"Task with id {task_id} not found"
+                raise ValueError(msg)
             session.delete(task)
             session.commit()
 
@@ -173,7 +183,8 @@ class TaskOrchestrationService(Service):
     async def consume_task(self, task_id: str | UUID) -> None:
         task = self.get_task(str(task_id))
         if task.status != "pending":
-            raise ValueError(f"Task {task_id} is not in pending status")
+            msg = f"Task {task_id} is not in pending status"
+            raise ValueError(msg)
 
         # Update task status to "processing"
         self.update_task(task_id, TaskUpdate(status="processing", state=task.state))
