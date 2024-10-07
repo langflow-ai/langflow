@@ -64,8 +64,6 @@ jobs:
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ inputs.nightly_tag_main }}
       - name: Install the project
         run: uv sync --dev
 
@@ -141,8 +139,6 @@ jobs:
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ inputs.nightly_tag_main }}
       - name: Install the project
         run: uv sync --dev
 

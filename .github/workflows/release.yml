@@ -38,7 +38,8 @@ on:
 
 jobs:
   ci:
-    if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' }}
+    # if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' }}
+    if: false
     name: CI
     uses: ./.github/workflows/ci.yml
     with:
@@ -58,8 +59,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Environment
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ github.ref }} 
       - name: Install the project
         run: uv sync --dev
       - name: Check Version
@@ -97,12 +96,14 @@ jobs:
             echo "Server terminated successfully"
           fi
       - name: Publish to PyPI
+        if: false
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           make publish base=true
       - name: Upload Artifact
-        if: steps.check-version.outputs.skipped == 'false'
+        if: false
+        # if: steps.check-version.outputs.skipped == 'false'
         uses: actions/upload-artifact@v4
         with:
           name: dist-base
@@ -120,8 +121,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Environment
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ github.ref }}
       - name: Install the project
         run: uv sync --dev
 
@@ -172,11 +171,13 @@ jobs:
             echo "Server terminated successfully"
           fi
       - name: Publish to PyPI
+        if: false
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           make publish main=true
       - name: Upload Artifact
+        if: false
         uses: actions/upload-artifact@v4
         with:
           name: dist-main
@@ -198,10 +199,6 @@ jobs:
     if: inputs.build_docker_main == true
     needs: release-main
     uses: ./.github/workflows/docker-build.yml
-    strategy:
-      matrix:
-        release_type:
-          - main
     with:
       version: ${{ needs.release-main.outputs.version }}
       release_type: main
@@ -210,6 +207,7 @@ jobs:
 
   create_release:
     name: Create Release
+    if: false
     runs-on: ubuntu-latest
     needs: release-main
     steps:
