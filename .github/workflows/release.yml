@@ -24,6 +24,11 @@ on:
         required: true
         type: boolean
         default: false
+      build_docker_ep:
+        description: "Build Docker Image for Langflow with Entrypoint"
+        required: false
+        type: boolean
+        default: false
       pre_release:
         description: "Pre-release"
         required: false
@@ -201,6 +206,16 @@ jobs:
       version: ${{ needs.release-main.outputs.version }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
+    secrets: inherit
+
+  call_docker_build_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: inputs.build_docker_ep == true
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      version: needs.release-main.outputs.version
+      release_type: main-ep
+      pre_release: False
     secrets: inherit
 
   create_release:
