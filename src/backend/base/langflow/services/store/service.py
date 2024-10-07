@@ -161,8 +161,8 @@ class StoreService(Service):
             return response.json()
         except HTTPError as exc:
             raise exc
-        except Exception as exc:
-            logger.debug(f"Webhook failed: {exc}")
+        except Exception:
+            logger.opt(exception=True).debug("Webhook failed")
 
     def build_tags_filter(self, tags: list[str]):
         tags_filter: dict[str, Any] = {"tags": {"_and": []}}

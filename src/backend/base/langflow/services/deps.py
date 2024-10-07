@@ -192,8 +192,8 @@ def session_scope() -> Generator[Session, None, None]:
         try:
             yield session
             session.commit()
-        except Exception as e:
-            logger.exception("An error occurred during the session scope.", e)
+        except Exception:
+            logger.exception("An error occurred during the session scope.")
             session.rollback()
             raise
 

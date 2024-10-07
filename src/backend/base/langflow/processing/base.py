@@ -30,8 +30,8 @@ def get_langfuse_callback(trace_id):
         try:
             trace = langfuse.trace(name="langflow-" + trace_id, id=trace_id)
             return trace.getNewHandler()
-        except Exception as exc:
-            logger.error(f"Error initializing langfuse callback: {exc}")
+        except Exception:
+            logger.exception("Error initializing langfuse callback")
 
     return None
 

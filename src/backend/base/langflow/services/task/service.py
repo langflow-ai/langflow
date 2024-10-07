@@ -20,8 +20,8 @@ def check_celery_availability():
 
         status = get_celery_worker_status(celery_app)
         logger.debug(f"Celery status: {status}")
-    except Exception as exc:
-        logger.debug(f"Celery not available: {exc}")
+    except Exception:
+        logger.opt(exception=True).debug("Celery not available")
         status = {"availability": None}
     return status
 

@@ -168,8 +168,8 @@ async def simple_run_flow_task(
             api_key_user=api_key_user,
         )
 
-    except Exception as exc:
-        logger.exception(f"Error running flow {flow.id} task: {exc}")
+    except Exception:
+        logger.exception(f"Error running flow {flow.id} task")
 
 
 @router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)
@@ -280,7 +280,7 @@ async def simplified_run_flow(
         logger.exception(exc)
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
     except InvalidChatInputException as exc:
-        logger.error(exc)
+        logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception(exc)
@@ -293,7 +293,6 @@ async def simplified_run_flow(
                 runErrorMessage=str(exc),
             ),
         )
-        logger.exception(exc)
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
 
 
@@ -478,15 +477,15 @@ async def experimental_run_flow(
     except sa.exc.StatementError as exc:
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):
-            logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
+            logger.exception(f"Flow ID {flow_id_str} is not a valid UUID")
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         if f"Flow {flow_id_str} not found" in str(exc):
-            logger.error(f"Flow {flow_id_str} not found")
+            logger.exception(f"Flow {flow_id_str} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         if f"Session {session_id} not found" in str(exc):
-            logger.error(f"Session {session_id} not found")
+            logger.exception(f"Session {session_id} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
@@ -573,7 +572,7 @@ async def create_upload_file(
             file_path=file_path,
         )
     except Exception as exc:
-        logger.error(f"Error saving file: {exc}")
+        logger.exception("Error saving file")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
