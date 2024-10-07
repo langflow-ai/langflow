@@ -1,7 +1,6 @@
 from collections.abc import Callable
 
 from langflow.custom import Component
-from langflow.custom.utils import get_function
 from langflow.io import CodeInput, Output
 from langflow.schema import Data, dotdict
 from langflow.schema.message import Message
@@ -41,6 +40,7 @@ class PythonFunctionComponent(Component):
     ]
 
     def get_function_callable(self) -> Callable:
+        from langflow.custom.utils import get_function
         function_code = self.function_code
         self.status = function_code
         return get_function(function_code)
@@ -52,6 +52,7 @@ class PythonFunctionComponent(Component):
             return "No function code provided."
 
         try:
+            from langflow.custom.utils import get_function
             func = get_function(function_code)
             return func()
         except Exception as e:

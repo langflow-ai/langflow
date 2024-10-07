@@ -5,12 +5,12 @@ import os
 import pkgutil
 import threading
 
+import langflow.components.astra_assistants.tools as langflow_assistant_tools
 import astra_assistants.tools as astra_assistants_tools
 import requests
 from astra_assistants import OpenAI, patch
 from astra_assistants.tools.tool_interface import ToolInterface
 
-import langflow.components.astra_assistants.tools as langflow_assistant_tools
 
 client_lock = threading.Lock()
 client = None

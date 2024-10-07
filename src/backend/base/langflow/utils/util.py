@@ -152,6 +152,8 @@ def get_base_classes(cls):
                 if base_class not in result:
                     result.append(base_class)
     else:
+        if cls.__name__ is None:
+            logger.error(f"cls.__name__ is None for {cls}")
         result = [cls.__name__]
     if not result:
         result = [cls.__name__]

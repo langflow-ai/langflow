@@ -1,19 +1,26 @@
 import ast
 import contextlib
+import pkgutil
 import re
 import traceback
-from typing import Any
+from typing import Any, Dict
 from uuid import UUID
+import importlib
+import inspect
+from typing import List
 
+from astra_assistants.tools.tool_interface import ToolInterface
 from fastapi import HTTPException
 from loguru import logger
 from pydantic import BaseModel
 
+from langflow.components.astra_assistants.tools.util import tool_interface_to_component
 from langflow.custom import CustomComponent
 from langflow.custom.custom_component.component import Component
 from langflow.custom.directory_reader.utils import (
     abuild_custom_component_list_from_path,
     build_custom_component_list_from_path,
+    build_menu_items,
     merge_nested_dicts_with_renaming,
 )
 from langflow.custom.eval import eval_custom_component_code
@@ -418,15 +425,22 @@ def build_custom_component_template(
 
         return frontend_node.to_dict(keep_name=False), custom_instance
     except Exception as exc:
-        if isinstance(exc, HTTPException):
-            raise exc
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": (f"Error building Component: {str(exc)}"),
-                "traceback": traceback.format_exc(),
-            },
-        ) from exc
+        if custom_component.ERROR_CODE_NULL:
+            logger.error(f"Error building Component: {custom_component.template_config} \n {custom_component.ERROR_CODE_NULL}")
+        try:
+            logger.error(f"Error building Component: {custom_component.template_config['display_name']} \n {str(exc)}")
+        except Exception as e:
+            logger.error(f"Error getting display_name: {e}")
+        finally:
+            if isinstance(exc, HTTPException):
+                raise exc
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": (f"Error building Component: {str(exc)}"),
+                    "traceback": traceback.format_exc(),
+                },
+            ) from exc
 
 
 def create_component_template(component):
@@ -443,6 +457,7 @@ def create_component_template(component):
     return component_template, component_instance
 
 
+# TODO: add tool_packages?
 def build_custom_components(components_paths: list[str]):
     """Build custom components from the specified paths."""
     if not components_paths:
@@ -468,14 +483,16 @@ def build_custom_components(components_paths: list[str]):
     return custom_components_from_file
 
 
-async def abuild_custom_components(components_paths: list[str]):
-    """Build custom components from the specified paths."""
-    if not components_paths:
+async def abuild_custom_components(components_paths: List[str], tool_packages: List[object] = None):
+    """Build custom components from the specified paths and tool packages."""
+    if not components_paths and not tool_packages:
         return {}
 
     logger.info(f"Building custom components from {components_paths}")
     custom_components_from_file: dict = {}
     processed_paths = set()
+
+    # Process components from paths
     for path in components_paths:
         path_str = str(path)
         if path_str in processed_paths:
@@ -490,7 +507,151 @@ async def abuild_custom_components(components_paths: list[str]):
             )
         processed_paths.add(path_str)
 
+    # Process components from tool packages (which are now module objects)
+    if tool_packages:
+        tool_components = build_tool_components(tool_packages)  # Now correctly handling module objects
+        custom_components_from_file = merge_nested_dicts_with_renaming(
+            custom_components_from_file, tool_components
+        )
+
     return custom_components_from_file
+
+
+def build_tool_components(tool_packages: List[object]) -> Dict:
+    """Build components from classes extending ToolInterface in the specified modules."""
+    tool_components = {}
+    processed_modules = set()
+
+    # Iterate over the provided packages (which are module objects)
+    for package in tool_packages:
+        try:
+            logger.info(f"Processing package {package.__name__}")
+            # Recursively inspect the package and its submodules
+            for submodule in _iter_submodules(package, processed_modules):
+                _process_module(submodule, tool_components, processed_modules)
+        except Exception as e:
+            logger.error(f"Error processing package {package.__name__}: {e}")
+            trace = traceback.format_exc()
+            logger.error(trace)
+
+    components_list = []
+    category = 'converted_tools'
+
+    for name, cls in tool_components[category].items():
+        # Extract the tool class details for the imports
+        tool_cls = cls.tool_cls
+        tool_module = tool_cls.__module__
+        tool_class_name = tool_cls.__name__
+
+        # Generate the import statements
+        imports = (
+            "import inspect\n"
+            "import asyncio\n"
+            "from typing import Type, Dict, Any, Union\n"
+            "from pydantic import BaseModel, Field as PydanticField, Undefined as PydanticUndefined\n"
+            "from langflow.inputs import (\n"
+            "    StrInput, IntInput, FloatInput, BoolInput, DictInput, DataInput,\n"
+            "    DefaultPromptField, DropdownInput, MultiselectInput, FileInput,\n"
+            "    HandleInput, MultilineInput, MultilineSecretInput, NestedDictInput,\n"
+            "    PromptInput, CodeInput, SecretStrInput, MessageTextInput, MessageInput,\n"
+            "    TableInput, LinkInput\n"
+            ")\n"
+            "from langflow.outputs import Output\n"
+            "from langflow.component import Component\n"
+            f"from {tool_module} import {tool_class_name}\n"
+        )
+
+        # Define the component class name
+        component_class_name = f"{tool_cls.__name__}Component"
+
+        # Begin constructing the class definition
+        class_code = f"{imports}\n\nclass {component_class_name}(Component):\n"
+
+        # Iterate through the members of cls and generate attributes and methods
+        for member_name, member_value in inspect.getmembers(cls):
+            # Skip private members and properties
+            if not member_name.startswith('_') and not isinstance(member_value, property):
+                if not callable(member_value):
+                    # Add an attribute definition
+                    class_code += f"    {member_name} = {repr(member_value)}\n"
+                else:
+                    # Add a method definition
+                    class_code += f"\n    def {member_name}(self, *args, **kwargs):\n"
+                    if isinstance(member_value, type(lambda: None)):
+                        # Use the original code of the function if available
+                        func_code = inspect.getsource(member_value).splitlines()
+                        func_body = "\n".join([f"        {line}" for line in func_code[1:]])
+                        class_code += f"{func_body}\n"
+                    else:
+                        class_code += f"        return cls.{member_name}(*args, **kwargs)\n"
+
+        # Ensure the class has some content, otherwise add a `pass`
+        if class_code.strip().endswith(f"class {component_class_name}(Component):"):
+            class_code += "    pass\n"
+
+        component_info = {
+            "name": component_class_name,
+            # TODO: fix this? Looks like it's almost always [] sometimes [Data] or [str]
+            "output_types": [],
+            "file": "",
+            "code": class_code,
+            "error": "",
+        }
+        try:
+            component_tuple = (*build_component(component_info), component_info)
+            components_list.append(component_tuple)
+        except Exception as e:
+            logger.error(f"Error while building component {component_class_name}: {e}")
+            continue
+    components_dict = {
+        "name": category,
+        "components": components_list,
+    }
+    built_menu_items = build_menu_items(components_dict)
+    menu = { category: built_menu_items }
+    return menu
+
+def _process_module(module, tool_components, processed_modules):
+    """Process an individual module for ToolInterface subclasses."""
+    if module in processed_modules:
+        return
+    processed_modules.add(module)
+
+    logger.info(f"Inspecting module {module.__name__}")
+
+    # Inspect the members of the module
+    for name, obj in inspect.getmembers(module):
+        if inspect.ismodule(obj):
+            # Recursively inspect submodules
+            _process_module(obj, tool_components, processed_modules)
+        elif inspect.isclass(obj) and issubclass(obj, ToolInterface) and obj != ToolInterface:
+            logger.info(f"Found ToolInterface class: {obj.__name__}")
+
+            component = tool_interface_to_component(obj)
+            category = getattr(obj, 'category', 'converted_tools')
+
+            # Organize components by category
+            if category not in tool_components:
+                tool_components[category] = {}
+            tool_components[category][obj.__name__] = component
+
+def _iter_submodules(package, processed_modules=None):
+    """Recursively iterate over all submodules in a package."""
+    if processed_modules is None:
+        processed_modules = set()
+    if package in processed_modules:
+        return
+    yield package  # Start with the root package
+    processed_modules.add(package)
+    if hasattr(package, '__path__'):  # If the package has submodules
+        for _, submodule_name, is_pkg in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
+            try:
+                submodule = importlib.import_module(submodule_name)
+                if submodule not in processed_modules:
+                    yield submodule
+                    yield from _iter_submodules(submodule, processed_modules)
+            except Exception as e:
+                logger.error(f"Error importing submodule {submodule_name}: {e}")
 
 
 def update_field_dict(
