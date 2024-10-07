@@ -3,6 +3,7 @@ import json
 import os
 import re
 from io import BytesIO
+from pathlib import Path
 
 import yaml
 from langchain_core.language_models import BaseLanguageModel
@@ -14,12 +15,13 @@ from langflow.services.deps import get_settings_service
 
 
 def load_file_into_dict(file_path: str) -> dict:
-    if not os.path.exists(file_path):
+    _file_path = Path(file_path)
+    if not _file_path.exists():
         msg = f"File not found: {file_path}"
         raise FileNotFoundError(msg)
 
     # Files names are UUID, so we can't find the extension
-    with open(file_path) as file:
+    with _file_path.open() as file:
         try:
             data = json.load(file)
         except json.JSONDecodeError:
