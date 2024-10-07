@@ -12,8 +12,10 @@ from langflow.schema.data import Data
 
 class StructuredOutputComponent(Component):
     display_name = "Structured Output"
-    description = "A component for structured output."
-
+    description = (
+        "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information "
+        "or creating consistent outputs."
+    )
     inputs = [
         HandleInput(
             name="llm",
