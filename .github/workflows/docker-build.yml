@@ -191,6 +191,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and Push to Docker Hub
+        if: false
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -207,6 +208,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
       - name: Build and push to Github Container Registry
+        if: false
         uses: docker/build-push-action@v6
         with:
           context: .
