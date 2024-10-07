@@ -99,6 +99,6 @@ class StructuredOutputComponent(Component):
         if isinstance(output, BaseModel):
             output_dict = output.model_dump()
         else:
-            msg = "Output is not a BaseModel."
+            msg = f"Output should be a Pydantic BaseModel, got {type(output)} ({output})"
             raise ValueError(msg)
         return Data(data=output_dict)
