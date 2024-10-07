@@ -207,7 +207,7 @@ export default function ChatMessage({
                           />
                         ) : (
                           <Markdown
-                            remarkPlugins={[remarkGfm]}
+                            linkTarget="_blank"
                             rehypePlugins={[rehypeMathjax]}
                             className={cn(
                               "markdown prose flex flex-col word-break-break-word dark:prose-invert",
