@@ -2,6 +2,7 @@ import os
 
 import pytest
 
+from langflow.components.astra_assistants import AstraAssistantManager
 from langflow.components.inputs.ChatInput import ChatInput
 from langflow.components.models.OpenAIModel import OpenAIModelComponent
 from langflow.components.outputs.ChatOutput import ChatOutput
@@ -184,6 +185,80 @@ def test_updated_graph_with_prompts():
     openai_component_2.set(input_value=prompt_component_2.build_prompt, api_key=os.getenv("OPENAI_API_KEY"))
 
     prompt_component_1.set(hint=openai_component_2.text_response, last_try=router.false_response)
+
+    # chat output for the final OpenAI response
+    chat_output_1 = ChatOutput(_id="chat_output_1")
+    chat_output_1.set(input_value=router.true_response)
+
+    # Build the graph without concatenate
+    graph = Graph(chat_input, chat_output_1)
+
+    # Assertions for graph cyclicity and correctness
+    assert graph.is_cyclic is True, "Graph should contain cycles."
+
+    # Run and validate the execution of the graph
+    results = []
+    max_iterations = 20
+    snapshots = [graph.get_snapshot()]
+
+    for result in graph.start(max_iterations=max_iterations, config={"output": {"cache": False}}):
+        snapshots.append(graph.get_snapshot())
+        results.append(result)
+
+    assert len(snapshots) > 2, "Graph should have more than one snapshot"
+    # Extract the vertex IDs for analysis
+    results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
+    assert "chat_output_1" in results_ids, f"Expected outputs not in results: {results_ids}"
+
+    print(f"Execution completed with results: {results_ids}")
+
+
+@pytest.mark.api_key_required
+def test_react():
+    # system_prompt = "you're a very detailed ascii artist"
+    # user_message = "draw a cat eating ice cream"
+
+    system_prompt = "you're a helpful spelling assistant that always breaks down words into letters to avoid tokenization issues, i.e. puppies --> p | u | p | p | i | e | s"
+    user_message = "how many r's are in the word strawberry"
+
+    # Chat input initialization
+    chat_input = ChatInput(_id="chat_input").set(input_value=user_message)
+
+    router = ConditionalRouterComponent(_id="router")
+
+    # First prompt: Guessing game with hints
+    prompt_component_1 = PromptComponent(_id="prompt_component_1").set(
+        template="Original prompt: {original_prompt}\nNew instructions: {new_prompt}",
+        original_prompt=chat_input.message_response,
+        new_prompt=router.false_response,
+    )
+
+    # First Assistant Manager component (ThoughtGenerator)
+    assistant_component_1 = AstraAssistantManager(_id="assistant_component_1")
+    assistant_component_1.set(
+        instructions=system_prompt,
+        model_name="gpt-4o-mini",
+        tool="ReActThoughtTool",
+        user_message=prompt_component_1.build_prompt,
+    )
+
+    # Second Assistant Manager component (DeciderTool)
+    assistant_component_2 = AstraAssistantManager(_id="assistant_component_2")
+    assistant_component_2.set(
+        instructions="determine if you are done, do more iterations if at all unsure",
+        model_name="gpt-4o-mini",
+        tool="ReActDeciderTool",
+        input_thread_id=assistant_component_1.get_thread_id,
+        user_message=assistant_component_1.get_assistant_response,
+    )
+
+    # Conditional router based on agent response
+    router.set(
+        input_text=assistant_component_2.get_tool_output,
+        match_text=str(True),
+        operator="equals",
+        message=assistant_component_1.get_assistant_response,
+    )
 
     # chat output for the final OpenAI response
     chat_output_1 = ChatOutput(_id="chat_output_1")
