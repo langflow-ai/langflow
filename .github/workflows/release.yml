@@ -38,8 +38,7 @@ on:
 
 jobs:
   ci:
-    # if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' }}
-    if: false
+    if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' }}
     name: CI
     uses: ./.github/workflows/ci.yml
     with:
@@ -48,7 +47,7 @@ jobs:
 
   release-base:
     name: Release Langflow Base
-    # needs: [ci]
+    needs: [ci]
     if: inputs.release_package_base == true
     runs-on: ubuntu-latest
     outputs:
@@ -102,13 +101,11 @@ jobs:
             echo "Server terminated successfully"
           fi
       - name: Publish to PyPI
-        if: false
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           make publish base=true
       - name: Upload Artifact
-        if: false
         # if: steps.check-version.outputs.skipped == 'false'
         uses: actions/upload-artifact@v4
         with:
@@ -154,8 +151,7 @@ jobs:
             echo version=$version >> $GITHUB_OUTPUT
           fi
       - name: Wait for PyPI Propagation
-        # if: needs.release-base.outputs.skipped == 'false'
-        if: false
+        if: needs.release-base.outputs.skipped == 'false'
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
 
       - name: Build project for distribution
@@ -178,13 +174,11 @@ jobs:
             echo "Server terminated successfully"
           fi
       - name: Publish to PyPI
-        if: false
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           make publish main=true
       - name: Upload Artifact
-        if: false
         uses: actions/upload-artifact@v4
         with:
           name: dist-main
@@ -214,7 +208,6 @@ jobs:
 
   create_release:
     name: Create Release
-    if: false
     runs-on: ubuntu-latest
     needs: release-main
     steps:
