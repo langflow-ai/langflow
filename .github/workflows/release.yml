@@ -48,7 +48,7 @@ jobs:
 
   release-base:
     name: Release Langflow Base
-    needs: [ci]
+    # needs: [ci]
     if: inputs.release_package_base == true
     runs-on: ubuntu-latest
     outputs:
