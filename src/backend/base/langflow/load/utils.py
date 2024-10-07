@@ -1,9 +1,11 @@
+from pathlib import Path
+
 import httpx
 
 from langflow.services.database.models.flow.model import FlowBase
 
 
-def upload(file_path, host, flow_id):
+def upload(file_path: str, host: str, flow_id: str):
     """
     Upload a file to Langflow and return the file path.
 
@@ -20,7 +22,7 @@ def upload(file_path, host, flow_id):
     """
     try:
         url = f"{host}/api/v1/upload/{flow_id}"
-        with open(file_path, "rb") as file:
+        with Path(file_path).open("rb") as file:
             response = httpx.post(url, files={"file": file})
             if response.status_code == 200 or response.status_code == 201:
                 return response.json()

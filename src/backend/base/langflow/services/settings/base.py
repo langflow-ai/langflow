@@ -360,7 +360,7 @@ class Settings(BaseSettings):
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
-    with open(file_path, "w") as f:
+    with Path(file_path).open("w") as f:
         settings_dict = settings.model_dump()
         yaml.dump(settings_dict, f)
 
@@ -369,11 +369,12 @@ def load_settings_from_yaml(file_path: str) -> Settings:
     # Check if a string is a valid path or a file name
     if "/" not in file_path:
         # Get current path
-        current_path = os.path.dirname(os.path.abspath(__file__))
+        current_path = Path(__file__).resolve().parent
+        _file_path = Path(current_path) / file_path
+    else:
+        _file_path = Path(file_path)
 
-        file_path = os.path.join(current_path, file_path)
-
-    with open(file_path) as f:
+    with _file_path.open() as f:
         settings_dict = yaml.safe_load(f)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 

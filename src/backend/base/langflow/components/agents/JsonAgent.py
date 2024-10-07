@@ -22,12 +22,13 @@ class JsonAgentComponent(LCAgentComponent):
     ]
 
     def build_agent(self) -> AgentExecutor:
+        path = Path(self.path)
         if self.path.endswith("yaml") or self.path.endswith("yml"):
-            with open(self.path) as file:
+            with path.open() as file:
                 yaml_dict = yaml.load(file, Loader=yaml.FullLoader)
             spec = JsonSpec(dict_=yaml_dict)
         else:
-            spec = JsonSpec.from_file(Path(self.path))
+            spec = JsonSpec.from_file(path)
         toolkit = JsonToolkit(spec=spec)
 
         return create_json_agent(llm=self.llm, toolkit=toolkit, **self.get_agent_kwargs())

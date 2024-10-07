@@ -54,7 +54,7 @@ class JSONToDataComponent(Component):
                 if file_path.suffix.lower() != ".json":
                     msg = "The provided file must be a JSON file."
                     raise ValueError(msg)
-                with open(file_path, encoding="utf-8") as jsonfile:
+                with file_path.open(encoding="utf-8") as jsonfile:
                     json_data = jsonfile.read()
 
             elif self.json_path:
@@ -62,7 +62,7 @@ class JSONToDataComponent(Component):
                 if file_path.suffix.lower() != ".json":
                     msg = "The provided file must be a JSON file."
                     raise ValueError(msg)
-                with open(file_path, encoding="utf-8") as jsonfile:
+                with file_path.open(encoding="utf-8") as jsonfile:
                     json_data = jsonfile.read()
 
             elif self.json_string:

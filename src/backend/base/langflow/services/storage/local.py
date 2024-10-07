@@ -35,7 +35,7 @@ class LocalStorageService(StorageService):
         file_path = folder_path / file_name
 
         def write_file(file_path: Path, data: bytes) -> None:
-            with open(file_path, "wb") as f:
+            with Path(file_path).open("wb") as f:
                 f.write(data)
 
         try:
@@ -61,7 +61,7 @@ class LocalStorageService(StorageService):
             raise FileNotFoundError(msg)
 
         def read_file(file_path: Path) -> bytes:
-            with open(file_path, "rb") as f:
+            with Path(file_path).open("rb") as f:
                 return f.read()
 
         content = await asyncio.get_event_loop().run_in_executor(None, read_file, file_path)

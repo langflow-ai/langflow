@@ -51,7 +51,7 @@ class CSVToDataComponent(Component):
                 if file_path.suffix.lower() != ".csv":
                     msg = "The provided file must be a CSV file."
                     raise ValueError(msg)
-                with open(file_path, newline="", encoding="utf-8") as csvfile:
+                with file_path.open(newline="", encoding="utf-8") as csvfile:
                     csv_data = csvfile.read()
 
             elif self.csv_path:
@@ -59,7 +59,7 @@ class CSVToDataComponent(Component):
                 if file_path.suffix.lower() != ".csv":
                     msg = "The provided file must be a CSV file."
                     raise ValueError(msg)
-                with open(file_path, newline="", encoding="utf-8") as csvfile:
+                with file_path.open(newline="", encoding="utf-8") as csvfile:
                     csv_data = csvfile.read()
 
             elif self.csv_string:

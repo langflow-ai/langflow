@@ -64,7 +64,7 @@ class GitLoaderComponent(Component):
         This is necessary because when searches are performed using
         the content_filter, binary files need to be ignored.
         """
-        with open(file_path, "rb") as file:
+        with Path(file_path).open("rb") as file:
             return b"\x00" in file.read(1024)
 
     def build_gitloader(self) -> GitLoader:

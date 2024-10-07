@@ -94,7 +94,8 @@ def partition_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
 
 
 def read_text_file(file_path: str) -> str:
-    with open(file_path, "rb") as f:
+    _file_path = Path(file_path)
+    with _file_path.open("rb") as f:
         raw_data = f.read()
         result = chardet.detect(raw_data)
         encoding = result["encoding"]
@@ -102,7 +103,7 @@ def read_text_file(file_path: str) -> str:
         if encoding in ["Windows-1252", "Windows-1254", "MacRoman"]:
             encoding = "utf-8"
 
-    with open(file_path, encoding=encoding) as f:
+    with _file_path.open(encoding=encoding) as f:
         return f.read()
 
 
@@ -116,7 +117,7 @@ def read_docx_file(file_path: str) -> str:
 def parse_pdf_to_text(file_path: str) -> str:
     from pypdf import PdfReader  # type: ignore
 
-    with open(file_path, "rb") as f:
+    with Path(file_path).open("rb") as f:
         reader = PdfReader(f)
         return "\n\n".join([page.extract_text() for page in reader.pages])
 

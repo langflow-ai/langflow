@@ -1,7 +1,6 @@
 import base64
 import contextlib
 import hashlib
-import os
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -33,7 +32,7 @@ def create_cache_folder(func):
         cache_path = Path(CACHE_DIR) / PREFIX
 
         # Create the destination folder if it doesn't exist
-        os.makedirs(cache_path, exist_ok=True)
+        cache_path.mkdir(parents=True, exist_ok=True)
 
         return func(*args, **kwargs)
 
@@ -50,7 +49,7 @@ def clear_old_cache_files(max_cache_size: int = 3):
 
         for cache_file in cache_files_sorted_by_mtime[max_cache_size:]:
             with contextlib.suppress(OSError):
-                os.remove(cache_file)
+                cache_file.unlink()
 
 
 def filter_json(json_data):
@@ -102,13 +101,13 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
     decoded_bytes = base64.b64decode(data)
 
     # Create the full file path
-    file_path = os.path.join(cache_path, file_name)
+    file_path = cache_path / file_name
 
     # Save the binary content to the file
-    with open(file_path, "wb") as file:
+    with file_path.open("wb") as file:
         file.write(decoded_bytes)
 
-    return file_path
+    return str(file_path)
 
 
 @create_cache_folder
@@ -150,7 +149,8 @@ def save_uploaded_file(file: UploadFile, folder_name):
 
     # Save the file with the hash as its name
     file_path = folder_path / file_name
-    with open(file_path, "wb") as new_file:
+
+    with file_path.open("wb") as new_file:
         while chunk := file_object.read(8192):
             new_file.write(chunk)
 

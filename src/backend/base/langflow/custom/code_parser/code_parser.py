@@ -2,6 +2,7 @@ import ast
 import contextlib
 import inspect
 import traceback
+from pathlib import Path
 from typing import Any
 
 from cachetools import TTLCache, keys
@@ -30,7 +31,7 @@ def find_class_ast_node(class_obj):
         return None, []
 
     # Read the source code from the file
-    with open(source_file) as file:
+    with Path(source_file).open() as file:
         source_code = file.read()
 
     # Parse the source code into an AST
