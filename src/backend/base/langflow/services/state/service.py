@@ -69,6 +69,6 @@ class InMemoryStateService(StateService):
         for callback in self.observers[key]:
             try:
                 callback(key, new_state, append=True)
-            except Exception as e:
-                logger.error(f"Error in observer {callback} for key {key}: {e}")
+            except Exception:
+                logger.exception(f"Error in observer {callback} for key {key}")
                 logger.warning("Callbacks not implemented yet")

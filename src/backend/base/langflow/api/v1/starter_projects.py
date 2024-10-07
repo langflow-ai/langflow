@@ -19,5 +19,5 @@ def get_starter_projects(
     try:
         return get_starter_projects_dump()
     except Exception as exc:
-        logger.error(exc)
+        logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
