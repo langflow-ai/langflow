@@ -90,11 +90,11 @@ class JSONToDataComponent(Component):
             return result
 
         except (json.JSONDecodeError, SyntaxError, ValueError) as e:
-            error_message = f"Invalid JSON or Python literal: {str(e)}"
+            error_message = f"Invalid JSON or Python literal: {e}"
             self.status = error_message
             raise ValueError(error_message) from e
 
         except Exception as e:
-            error_message = f"An error occurred: {str(e)}"
+            error_message = f"An error occurred: {e}"
             self.status = error_message
             raise ValueError(error_message) from e

@@ -127,13 +127,15 @@ class DatabaseVariableService(VariableService, Service):
     ):
         query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
         db_variable = session.exec(query).one()
+        db_variable.updated_at = datetime.now(timezone.utc)
+
+        variable.value = variable.value or ""
+        encrypted = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
+        variable.value = encrypted
 
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():
             setattr(db_variable, key, value)
-        db_variable.updated_at = datetime.now(timezone.utc)
-        encrypted = auth_utils.encrypt_api_key(db_variable.value, settings_service=self.settings_service)
-        variable.value = encrypted
 
         session.add(db_variable)
         session.commit()

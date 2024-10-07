@@ -75,7 +75,7 @@ class SearXNGToolComponent(LCToolComponent):
                 languages.append(language)
             build_config["language"]["options"] = languages.copy()
         except Exception as e:
-            self.status = f"Failed to extract names: {str(e)}"
+            self.status = f"Failed to extract names: {e}"
             build_config["categories"]["options"] = ["Failed to parse", str(e)]
         return build_config
 
@@ -113,7 +113,7 @@ class SearXNGToolComponent(LCToolComponent):
                         results.append(response["results"][i])
                     return results
                 except Exception as e:
-                    return [f"Failed to search: {str(e)}"]
+                    return [f"Failed to search: {e}"]
 
         SearxSearch._url = self.url
         SearxSearch._categories = self.categories.copy()

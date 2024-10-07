@@ -59,8 +59,8 @@ class NotionDatabaseProperties(LCToolComponent):
             data = response.json()
             return data.get("properties", {})
         except requests.exceptions.RequestException as e:
-            return f"Error fetching Notion database properties: {str(e)}"
+            return f"Error fetching Notion database properties: {e}"
         except ValueError as e:
-            return f"Error parsing Notion API response: {str(e)}"
+            return f"Error parsing Notion API response: {e}"
         except Exception as e:
-            return f"An unexpected error occurred: {str(e)}"
+            return f"An unexpected error occurred: {e}"

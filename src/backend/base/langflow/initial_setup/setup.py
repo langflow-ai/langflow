@@ -20,7 +20,10 @@ from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
-from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
+from langflow.services.database.models.folder.utils import (
+    create_default_folder_if_it_doesnt_exist,
+    get_default_folder_id,
+)
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
@@ -161,7 +164,7 @@ def update_new_output(data):
                         new_source_handle["output_types"] = new_source_handle["baseClasses"]
                 del new_source_handle["baseClasses"]
 
-            if "inputTypes" in new_target_handle and new_target_handle["inputTypes"]:
+            if new_target_handle.get("inputTypes"):
                 intersection = [
                     type_ for type_ in new_source_handle["output_types"] if type_ in new_target_handle["inputTypes"]
                 ]
@@ -497,6 +500,12 @@ def _is_valid_uuid(val):
 
 
 def load_flows_from_directory():
+    """
+    On langflow startup, this loads all flows from the directory specified in the settings.
+
+    All flows are uploaded into the default folder for the superuser.
+    Note that this feature currently only works if AUTO_LOGIN is enabled in the settings.
+    """
     settings_service = get_settings_service()
     flows_path = settings_service.settings.load_flows_path
     if not flows_path:
@@ -522,6 +531,7 @@ def load_flows_from_directory():
 
                 existing = find_existing_flow(session, flow_id, flow_endpoint_name)
                 if existing:
+                    logger.debug(f"Found existing flow: {existing.name}")
                     logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
                     for key, value in flow.items():
                         if hasattr(existing, key):
@@ -529,10 +539,23 @@ def load_flows_from_directory():
                             setattr(existing, key, value)
                     existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
                     existing.user_id = user_id
+
+                    # Generally, folder_id should not be None, but we must check this due to the previous
+                    # behavior where flows could be added and folder_id was None, orphaning
+                    # them within Langflow.
+                    if existing.folder_id is None:
+                        folder_id = get_default_folder_id(session, user_id)
+                        existing.folder_id = folder_id
+
                     session.add(existing)
                 else:
                     logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
+
+                    # Current behavior loads all new flows into default folder
+                    folder_id = get_default_folder_id(session, user_id)
+
                     flow["user_id"] = user_id
+                    flow["folder_id"] = folder_id
                     flow = Flow.model_validate(flow, from_attributes=True)
                     flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
                     session.add(flow)
@@ -540,11 +563,14 @@ def load_flows_from_directory():
 
 def find_existing_flow(session, flow_id, flow_endpoint_name):
     if flow_endpoint_name:
+        logger.debug(f"flow_endpoint_name: {flow_endpoint_name}")
         stmt = select(Flow).where(Flow.endpoint_name == flow_endpoint_name)
         if existing := session.exec(stmt).first():
+            logger.debug(f"Found existing flow by endpoint name: {existing.name}")
             return existing
     stmt = select(Flow).where(Flow.id == flow_id)
     if existing := session.exec(stmt).first():
+        logger.debug(f"Found existing flow by id: {flow_id}")
         return existing
     return None
 

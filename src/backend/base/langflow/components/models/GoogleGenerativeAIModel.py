@@ -12,11 +12,10 @@ class GoogleGenerativeAIComponent(LCModelComponent):
     icon = "GoogleGenerativeAI"
     name = "GoogleGenerativeAIModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
-            name="max_output_tokens",
-            display_name="Max Output Tokens",
-            info="The maximum number of tokens to generate.",
+            name="max_output_tokens", display_name="Max Output Tokens", info="The maximum number of tokens to generate."
         ),
         DropdownInput(
             name="model",

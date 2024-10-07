@@ -296,18 +296,15 @@ jobs:
         python-version:
           - "3.12"
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_caching"
+      - name: Check out the code at a specific ref
+        uses: actions/checkout@v4
         with:
-          python-version: ${{ matrix.python-version }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-      - name: Install Python dependencies
-        run: |
-          poetry env use ${{ matrix.python-version }}
-          poetry install
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
+        with:
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
 
       - name: Restart HuggingFace Spaces Build
         run: |
-          poetry run python ./scripts/factory_restart_space.py --space "Langflow/Langflow" --token ${{ secrets.HUGGINGFACE_API_TOKEN }}
+          uv run ./scripts/factory_restart_space.py --space "Langflow/Langflow" --token ${{ secrets.HUGGINGFACE_API_TOKEN }}

@@ -133,7 +133,7 @@ def build_invalid_menu_items(menu_item):
             menu_items[component_name] = component_template
             logger.debug(f"Added {component_name} to invalid menu.")
         except Exception as exc:
-            logger.exception(f"Error while creating custom component [{component_name}]: {str(exc)}")
+            logger.exception(f"Error while creating custom component [{component_name}]: {exc}")
     return menu_items
 
 

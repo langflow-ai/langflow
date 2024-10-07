@@ -82,11 +82,11 @@ class CSVToDataComponent(Component):
             return result
 
         except csv.Error as e:
-            error_message = f"CSV parsing error: {str(e)}"
+            error_message = f"CSV parsing error: {e}"
             self.status = error_message
             raise ValueError(error_message) from e
 
         except Exception as e:
-            error_message = f"An error occurred: {str(e)}"
+            error_message = f"An error occurred: {e}"
             self.status = error_message
             raise ValueError(error_message) from e
