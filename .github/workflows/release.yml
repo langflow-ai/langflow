@@ -79,10 +79,7 @@ jobs:
       - name: Test CLI
         if: steps.check-version.outputs.skipped == 'false'
         run: |
-          echo "Testing CLI"
-          echo $(ls)
-          echo $(dist)
-          echo $(src/backend/base/dist)
+          # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist
           uv pip install src/backend/base/dist/*.whl
@@ -106,7 +103,7 @@ jobs:
         run: |
           make publish base=true
       - name: Upload Artifact
-        # if: steps.check-version.outputs.skipped == 'false'
+        if: steps.check-version.outputs.skipped == 'false'
         uses: actions/upload-artifact@v4
         with:
           name: dist-base

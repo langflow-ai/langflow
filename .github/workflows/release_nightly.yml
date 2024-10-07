@@ -89,8 +89,7 @@ jobs:
 
       - name: Test CLI
         run: |
-          # TODO: unsure why the whl is not built in src/backend/base
-          # uv pip install src/backend/base/dist/*.whl
+          # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist/
           uv pip install src/backend/base/dist/*.whl
