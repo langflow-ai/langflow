@@ -29,7 +29,6 @@ const useHandleNodeClass = (
 
       return newNode;
     });
-
   };
 
   return { handleNodeClass };
