@@ -30,6 +30,7 @@ export default function MultiselectComponent({
   id = "",
 }: InputProps<string[], MultiselectComponentType>): JSX.Element {
   const [open, setOpen] = useState(false);
+  const treatedValue = typeof value === "string" ? [value] : value;
 
   const refButton = useRef<HTMLButtonElement>(null);
 
@@ -45,7 +46,7 @@ export default function MultiselectComponent({
   const [options, setOptions] = useState<string[]>(defaultOptions);
 
   const fuseOptions = new Fuse(options, { keys: ["name", "value"] });
-  const fuseValues = new Fuse(value, { keys: ["name", "value"] });
+  const fuseValues = new Fuse(treatedValue, { keys: ["name", "value"] });
 
   const searchRoleByTerm = async (v: string) => {
     const fuse = onlySelected ? fuseValues : fuseOptions;
@@ -56,13 +57,13 @@ export default function MultiselectComponent({
       v
         ? filtered
         : onlySelected
-          ? options.filter((x) => value.includes(x))
+          ? options.filter((x) => treatedValue.includes(x))
           : options,
     );
   };
 
   useEffect(() => {
-    if (disabled && value.length > 0 && value[0] !== "") {
+    if (disabled && treatedValue.length > 0 && treatedValue[0] !== "") {
       handleOnNewValue({ value: [] }, { skipSnapshot: true });
     }
   }, [disabled]);
@@ -76,9 +77,9 @@ export default function MultiselectComponent({
   }, [options]);
 
   useEffect(() => {
-    setCustomValues(value.filter((v) => !defaultOptions.includes(v)) ?? []);
+    setCustomValues(treatedValue.filter((v) => !defaultOptions.includes(v)) ?? []);
     setOptions([
-      ...value.filter((v) => !defaultOptions.includes(v) && v),
+      ...treatedValue.filter((v) => !defaultOptions.includes(v) && v),
       ...defaultOptions,
     ]);
   }, [value]);
@@ -92,10 +93,10 @@ export default function MultiselectComponent({
   }, [open]);
 
   const handleOptionSelect = (currentValue) => {
-    if (value.includes(currentValue)) {
-      handleOnNewValue({ value: value.filter((v) => v !== currentValue) });
+    if (treatedValue.includes(currentValue)) {
+      handleOnNewValue({ value: treatedValue.filter((v) => v !== currentValue) });
     } else {
-      handleOnNewValue({ value: [...value, currentValue] });
+      handleOnNewValue({ value: [...treatedValue, currentValue] });
     }
   };
 
@@ -117,8 +118,8 @@ export default function MultiselectComponent({
         )}
       >
         <span className="truncate" data-testid={`value-dropdown-${id}`}>
-          {value.length > 0 && options.find((option) => value.includes(option))
-            ? value.join(", ")
+          {treatedValue.length > 0 && options.find((option) => treatedValue.includes(option))
+            ? treatedValue.join(", ")
             : "Choose an option..."}
         </span>
         <ForwardedIconComponent
@@ -176,7 +177,7 @@ export default function MultiselectComponent({
                   name="Check"
                   className={cn(
                     "ml-auto h-4 w-4 shrink-0 text-primary",
-                    value.includes(option) ? "opacity-100" : "opacity-0",
+                    treatedValue.includes(option) ? "opacity-100" : "opacity-0",
                   )}
                 />
               </CommandItem>
