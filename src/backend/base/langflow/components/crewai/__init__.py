@@ -9,5 +9,5 @@ __all__ = [
     "HierarchicalCrewComponent",
     "HierarchicalTaskComponent",
     "SequentialCrewComponent",
-    "SequentialTaskAgentComponent"
+    "SequentialTaskAgentComponent",
 ]
