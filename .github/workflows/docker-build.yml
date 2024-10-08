@@ -174,13 +174,13 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
 
-      - name: Install the project
-        run: |
-          if [[ "${{ inputs.release_type }}" == "base" ]]; then
-            cd src/backend/base && uv sync --no-dev --no-sources
-          else
-            uv sync --no-dev --no-sources
-          fi
+      # - name: Install the project
+      #   run: |
+      #     if [[ "${{ inputs.release_type }}" == "base" ]]; then
+      #       cd src/backend/base && uv sync --no-dev
+      #     else
+      #       uv sync --no-dev --no-sources
+      #     fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
