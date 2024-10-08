@@ -10,7 +10,7 @@ from pathlib import Path
 from uuid import UUID
 
 import orjson
-from emoji import demojize, purely_emoji  # type: ignore
+from emoji import demojize, purely_emoji
 from loguru import logger
 from sqlmodel import select
 

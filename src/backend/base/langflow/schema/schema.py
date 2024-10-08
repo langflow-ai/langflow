@@ -123,7 +123,7 @@ def recursive_serialize_or_str(obj):
             if hasattr(obj, "model_dump"):
                 obj_dict = obj.model_dump()
             elif hasattr(obj, "dict"):
-                obj_dict = obj.dict()  # type: ignore
+                obj_dict = obj.dict()
             return {k: recursive_serialize_or_str(v) for k, v in obj_dict.items()}
 
         if isinstance(obj, AsyncIterator | Generator | Iterator):

@@ -62,7 +62,6 @@ ignore = [
     "EXE",
     "FBT",
     "N",
-    "PGH",
     "RUF006", # Store a reference to the return value of `asyncio.create_task`
     "S",
     "SLF",

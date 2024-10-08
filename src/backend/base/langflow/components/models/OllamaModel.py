@@ -180,7 +180,7 @@ class ChatOllamaComponent(LCModelComponent):
         mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
 
         # Default to 0 for 'Disabled'
-        mirostat_value = mirostat_options.get(self.mirostat, 0)  # type: ignore
+        mirostat_value = mirostat_options.get(self.mirostat, 0)
 
         # Set mirostat_eta and mirostat_tau to None if mirostat is disabled
         if mirostat_value == 0:
@@ -220,9 +220,9 @@ class ChatOllamaComponent(LCModelComponent):
         llm_params = {k: v for k, v in llm_params.items() if v is not None}
 
         try:
-            output = ChatOllama(**llm_params)  # type: ignore
+            output = ChatOllama(**llm_params)
         except Exception as e:
             msg = "Could not initialize Ollama LLM."
             raise ValueError(msg) from e
 
-        return output  # type: ignore
+        return output

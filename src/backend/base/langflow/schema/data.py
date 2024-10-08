@@ -144,9 +144,9 @@ class Data(BaseModel):
                     image_template = ImagePromptTemplate()
                     image_prompt_value: ImagePromptValue = image_template.invoke(
                         input={"path": file_path}, config={"callbacks": self.get_langchain_callbacks()}
-                    )  # type: ignore
+                    )
                     contents.append({"type": "image_url", "image_url": image_prompt_value.image_url})
-                human_message = HumanMessage(content=contents)  # type: ignore
+                human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(
                     content=[{"type": "text", "text": text}],
@@ -154,7 +154,7 @@ class Data(BaseModel):
 
             return human_message
 
-        return AIMessage(content=text)  # type: ignore
+        return AIMessage(content=text)
 
     def __getattr__(self, key):
         """
