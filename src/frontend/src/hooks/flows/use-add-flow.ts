@@ -65,9 +65,14 @@ const useAddFlow = () => {
           await deleteFlow({ id: flowId.id });
         }
       }
+
+      const flowsToCheckNames = flows?.filter(
+        (f) => f.folder_id === myCollectionId,
+      );
+
       const newFlow = createNewFlow(flowData!, folder_id, flow);
 
-      const newName = addVersionToDuplicates(newFlow, flows ?? []);
+      const newName = addVersionToDuplicates(newFlow, flowsToCheckNames ?? []);
       newFlow.name = newName;
       newFlow.folder_id = folder_id;
 
