@@ -12,6 +12,8 @@ from langflow.field_typing import Tool
 from langflow.inputs import MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
+MIN_ROWS_IN_TABLE = 3
+
 
 class AddContentToPage(LCToolComponent):
     display_name: str = "Add Content to Page "
@@ -91,12 +93,8 @@ class AddContentToPage(LCToolComponent):
                 if text.startswith("#"):
                     heading_level = text.count("#", 0, 6)
                     heading_text = text[heading_level:].strip()
-                    if heading_level == 1:
-                        blocks.append(self.create_block("heading_1", heading_text))
-                    elif heading_level == 2:
-                        blocks.append(self.create_block("heading_2", heading_text))
-                    elif heading_level == 3:
-                        blocks.append(self.create_block("heading_3", heading_text))
+                    if heading_level in range(3):
+                        blocks.append(self.create_block(f"heading_{heading_level+1}", heading_text))
                 else:
                     blocks.append(self.create_block("paragraph", text))
         elif node.name == "h1":
@@ -154,7 +152,7 @@ class AddContentToPage(LCToolComponent):
 
     def is_table(self, text):
         rows = text.split("\n")
-        if len(rows) < 2:
+        if len(rows) < MIN_ROWS_IN_TABLE:
             return False
 
         has_separator = False
@@ -167,7 +165,7 @@ class AddContentToPage(LCToolComponent):
                 elif not cells:
                     return False
 
-        return has_separator and len(rows) >= 3
+        return has_separator
 
     def process_list(self, node, list_type):
         blocks = []
@@ -191,7 +189,7 @@ class AddContentToPage(LCToolComponent):
         if header_row or body_rows:
             table_width = max(
                 len(header_row.find_all(["th", "td"])) if header_row else 0,
-                max(len(row.find_all(["th", "td"])) for row in body_rows),
+                *(len(row.find_all(["th", "td"])) for row in body_rows),
             )
 
             table_block = self.create_block("table", "", table_width=table_width, has_column_header=bool(header_row))

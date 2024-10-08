@@ -67,7 +67,7 @@ async def get_and_cache_all_types_dict(
     force_refresh: bool = False,
     lock: asyncio.Lock | None = None,
 ):
-    global all_types_dict_cache
+    global all_types_dict_cache  # noqa: PLW0603
     if all_types_dict_cache is None:
         logger.debug("Building langchain types dict")
         all_types_dict_cache = await aget_all_types_dict(settings_service.settings.components_path)

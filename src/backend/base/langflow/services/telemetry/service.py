@@ -67,7 +67,7 @@ class TelemetryService(Service):
         try:
             payload_dict = payload.model_dump(exclude_none=True, exclude_unset=True)
             response = await self.client.get(url, params=payload_dict)
-            if response.status_code != 200:
+            if response.status_code != httpx.codes.OK:
                 logger.error(f"Failed to send telemetry data: {response.status_code} {response.text}")
             else:
                 logger.debug("Telemetry data sent successfully.")

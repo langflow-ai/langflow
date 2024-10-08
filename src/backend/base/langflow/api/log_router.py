@@ -11,8 +11,11 @@ from langflow.logging.logger import log_buffer
 log_router = APIRouter(tags=["Log"])
 
 
+NUMBER_OF_NOT_SENT_BEFORE_KEEPALIVE = 5
+
+
 async def event_generator(request: Request):
-    global log_buffer
+    global log_buffer  # noqa: PLW0602
     last_read_item = None
     current_not_sent = 0
     while not await request.is_disconnected():
@@ -41,7 +44,7 @@ async def event_generator(request: Request):
                 yield f"{json.dumps({ts:msg})}\n\n"
         else:
             current_not_sent += 1
-            if current_not_sent == 5:
+            if current_not_sent == NUMBER_OF_NOT_SENT_BEFORE_KEEPALIVE:
                 current_not_sent = 0
                 yield "keepalive\n\n"
 
@@ -57,7 +60,7 @@ async def stream_logs(
     it establishes a long-lived connection to the server and receives log messages in real-time
     the client should use the head "Accept: text/event-stream"
     """
-    global log_buffer
+    global log_buffer  # noqa: PLW0602
     if log_buffer.enabled() is False:
         raise HTTPException(
             status_code=HTTPStatus.NOT_IMPLEMENTED,
@@ -73,7 +76,7 @@ async def logs(
     lines_after: int = Query(0, description="The number of logs after the timestamp"),
     timestamp: int = Query(0, description="The timestamp to start getting logs from"),
 ):
-    global log_buffer
+    global log_buffer  # noqa: PLW0602
     if log_buffer.enabled() is False:
         raise HTTPException(
             status_code=HTTPStatus.NOT_IMPLEMENTED,
@@ -91,11 +94,10 @@ async def logs(
                 detail="Timestamp is required when requesting logs after the timestamp",
             )
         content = log_buffer.get_last_n(10) if lines_before <= 0 else log_buffer.get_last_n(lines_before)
+    elif lines_before > 0:
+        content = log_buffer.get_before_timestamp(timestamp=timestamp, lines=lines_before)
+    elif lines_after > 0:
+        content = log_buffer.get_after_timestamp(timestamp=timestamp, lines=lines_after)
     else:
-        if lines_before > 0:
-            content = log_buffer.get_before_timestamp(timestamp=timestamp, lines=lines_before)
-        elif lines_after > 0:
-            content = log_buffer.get_after_timestamp(timestamp=timestamp, lines=lines_after)
-        else:
-            content = log_buffer.get_before_timestamp(timestamp=timestamp, lines=10)
+        content = log_buffer.get_before_timestamp(timestamp=timestamp, lines=10)
     return JSONResponse(content=content)

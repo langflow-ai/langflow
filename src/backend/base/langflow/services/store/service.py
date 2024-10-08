@@ -42,7 +42,7 @@ async def user_data_context(store_service: StoreService, api_key: str | None = N
             )
             user_data_var.set(user_data[0])
         except HTTPStatusError as exc:
-            if exc.response.status_code == 403:
+            if exc.response.status_code == httpx.codes.FORBIDDEN:
                 msg = "Invalid API key"
                 raise ValueError(msg) from exc
     try:
@@ -487,7 +487,7 @@ class StoreService(Service):
                 timeout=self.timeout,
             )
             response.raise_for_status()
-        if response.status_code == 200:
+        if response.status_code == httpx.codes.OK:
             result = response.json()
 
             if isinstance(result, list):
@@ -543,10 +543,10 @@ class StoreService(Service):
                 if metadata:
                     comp_count = metadata.get("filter_count", 0)
             except HTTPStatusError as exc:
-                if exc.response.status_code == 403:
+                if exc.response.status_code == httpx.codes.FORBIDDEN:
                     msg = "You are not authorized to access this public resource"
                     raise ForbiddenError(msg) from exc
-                if exc.response.status_code == 401:
+                if exc.response.status_code == httpx.codes.UNAUTHORIZED:
                     msg = "You are not authorized to access this resource. Please check your API key."
                     raise APIKeyError(msg) from exc
             except Exception as exc:
@@ -565,10 +565,10 @@ class StoreService(Service):
                 elif not metadata:
                     comp_count = 0
             except HTTPStatusError as exc:
-                if exc.response.status_code == 403:
+                if exc.response.status_code == httpx.codes.FORBIDDEN:
                     msg = "You are not authorized to access this public resource"
                     raise ForbiddenError(msg) from exc
-                if exc.response.status_code == 401:
+                if exc.response.status_code == httpx.codes.UNAUTHORIZED:
                     msg = "You are not authorized to access this resource. Please check your API key."
                     raise APIKeyError(msg) from exc
 

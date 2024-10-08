@@ -30,10 +30,11 @@ class EventManager:
             raise ValueError(msg)
         # Check if it has `self, event_type and data`
         sig = inspect.signature(callback)
-        if len(sig.parameters) != 3:
+        parameters = ["manager", "event_type", "data"]
+        if len(sig.parameters) != len(parameters):
             msg = "Callback must have exactly 3 parameters"
             raise ValueError(msg)
-        if not all(param.name in ["manager", "event_type", "data"] for param in sig.parameters.values()):
+        if not all(param.name in parameters for param in sig.parameters.values()):
             msg = "Callback must have exactly 3 parameters: manager, event_type, and data"
             raise ValueError(msg)
 

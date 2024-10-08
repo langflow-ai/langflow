@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from langflow.services.database.models.user import User
     from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 
+HEX_COLOR_LENGTH = 7
+
 
 class FlowBase(SQLModel):
     name: str = Field(index=True)
@@ -64,7 +66,7 @@ class FlowBase(SQLModel):
             raise ValueError(msg)
 
         # validate that it is a valid hex color
-        if v and len(v) != 7:
+        if v and len(v) != HEX_COLOR_LENGTH:
             msg = "Icon background color must be 7 characters long"
             raise ValueError(msg)
         return v

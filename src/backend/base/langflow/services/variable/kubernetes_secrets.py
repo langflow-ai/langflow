@@ -1,4 +1,5 @@
 from base64 import b64decode, b64encode
+from http import HTTPStatus
 from uuid import UUID
 
 from kubernetes import client, config  # type: ignore
@@ -71,7 +72,7 @@ class KubernetesSecretManager:
             return self.core_api.replace_namespaced_secret(secret_name, self.namespace, existing_secret)
 
         except ApiException as e:
-            if e.status == 404:
+            if e.status == HTTPStatus.NOT_FOUND:
                 # Secret doesn't exist, create a new one
                 return self.create_secret(secret_name, data)
             logger.exception(f"Error upserting secret {secret_name}")
@@ -91,7 +92,7 @@ class KubernetesSecretManager:
             secret = self.core_api.read_namespaced_secret(name, self.namespace)
             return {k: b64decode(v).decode() for k, v in secret.data.items()}
         except ApiException as e:
-            if e.status == 404:
+            if e.status == HTTPStatus.NOT_FOUND:
                 return None
             raise
 

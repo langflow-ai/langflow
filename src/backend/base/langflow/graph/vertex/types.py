@@ -63,9 +63,9 @@ class ComponentVertex(Vertex):
         Updates the built object and its artifacts.
         """
         if isinstance(result, tuple):
-            if len(result) == 2:
+            if len(result) == 2:  # noqa: PLR2004
                 self._built_object, self.artifacts = result
-            elif len(result) == 3:
+            elif len(result) == 3:  # noqa: PLR2004
                 self._custom_component, self._built_object, self.artifacts = result
                 self.logs = self._custom_component._output_logs
                 for key in self.artifacts:
@@ -233,8 +233,8 @@ class InterfaceVertex(ComponentVertex):
             artifacts = []
             for artifact in _artifacts:
                 # artifacts = {k.title().replace("_", " "): v for k, v in self.artifacts.items() if v is not None}
-                artifact = {k.title().replace("_", " "): v for k, v in artifact.items() if v is not None}
-                artifacts.append(artifact)
+                _artifact = {k.title().replace("_", " "): v for k, v in artifact.items() if v is not None}
+                artifacts.append(_artifact)
             return yaml.dump(artifacts, default_flow_style=False, allow_unicode=True)
         return super()._built_object_repr()
 
@@ -387,16 +387,16 @@ class InterfaceVertex(ComponentVertex):
         complete_message = ""
         if is_async:
             async for message in iterator:
-                message = message.content if hasattr(message, "content") else message
-                message = message.text if hasattr(message, "text") else message
-                yield message
-                complete_message += message
+                _message = message.content if hasattr(message, "content") else message
+                _message = _message.text if hasattr(_message, "text") else _message
+                yield _message
+                complete_message += _message
         else:
             for message in iterator:
-                message = message.content if hasattr(message, "content") else message
-                message = message.text if hasattr(message, "text") else message
-                yield message
-                complete_message += message
+                _message = message.content if hasattr(message, "content") else message
+                _message = _message.text if hasattr(_message, "text") else _message
+                yield _message
+                complete_message += _message
 
         files = self.params.get("files", [])
 

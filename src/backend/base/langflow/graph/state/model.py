@@ -222,7 +222,7 @@ def create_state_model(model_name: str = "State", validate: bool = True, **kwarg
         elif isinstance(value, FieldInfo):
             field_tuple = (value.annotation or Any, value)
             fields[name] = field_tuple
-        elif isinstance(value, tuple) and len(value) == 2:
+        elif isinstance(value, tuple) and len(value) == 2:  # noqa: PLR2004
             # Fields are defined by one of the following tuple forms:
 
             # (<type>, <default value>)

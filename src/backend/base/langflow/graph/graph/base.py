@@ -1051,7 +1051,7 @@ class Graph:
         """Updates the edges of a vertex in the Graph."""
         new_edges = []
         for edge in self.edges:
-            if edge.source_id == other_vertex.id or edge.target_id == other_vertex.id:
+            if other_vertex.id in (edge.source_id, edge.target_id):
                 continue
             new_edges.append(edge)
         new_edges += other_vertex.edges
@@ -1203,7 +1203,7 @@ class Graph:
             return
         self.vertices.remove(vertex)
         self.vertex_map.pop(vertex_id)
-        self.edges = [edge for edge in self.edges if edge.source_id != vertex_id and edge.target_id != vertex_id]
+        self.edges = [edge for edge in self.edges if vertex_id not in (edge.source_id, edge.target_id)]
 
     def _build_vertex_params(self) -> None:
         """Identifies and handles the LLM vertex within the graph."""
@@ -1525,8 +1525,8 @@ class Graph:
                 for t in tasks[i + 1 :]:
                     t.cancel()
                 raise result
-            if isinstance(result, tuple) and len(result) == 5:
-                vertices.append(result[4])
+            if isinstance(result, VertexBuildResult):
+                vertices.append(result.vertex)
             else:
                 msg = f"Invalid result from task {task_name}: {result}"
                 raise ValueError(msg)

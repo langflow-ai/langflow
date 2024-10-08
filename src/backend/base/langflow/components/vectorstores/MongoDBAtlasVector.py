@@ -56,24 +56,15 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             else:
                 documents.append(_input)
 
-            if documents:
-                vector_store = MongoDBAtlasVectorSearch.from_documents(
-                    documents=documents, embedding=self.embedding, collection=collection, index_name=self.index_name
-                )
-            else:
-                vector_store = MongoDBAtlasVectorSearch(
-                    embedding=self.embedding,
-                    collection=collection,
-                    index_name=self.index_name,
-                )
-        else:
-            vector_store = MongoDBAtlasVectorSearch(
-                embedding=self.embedding,
-                collection=collection,
-                index_name=self.index_name,
+        if documents:
+            return MongoDBAtlasVectorSearch.from_documents(
+                documents=documents, embedding=self.embedding, collection=collection, index_name=self.index_name
             )
-
-        return vector_store
+        return MongoDBAtlasVectorSearch(
+            embedding=self.embedding,
+            collection=collection,
+            index_name=self.index_name,
+        )
 
     def search_documents(self) -> list[Data]:
         from bson.objectid import ObjectId

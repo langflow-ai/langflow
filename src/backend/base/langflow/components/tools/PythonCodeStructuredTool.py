@@ -86,7 +86,7 @@ class PythonCodeStructuredTool(LCToolComponent):
         if field_name is None:
             return build_config
 
-        if field_name != "tool_code" and field_name != "tool_function":
+        if field_name not in ("tool_code", "tool_function"):
             return build_config
 
         try:

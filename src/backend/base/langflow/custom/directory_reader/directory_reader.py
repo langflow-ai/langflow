@@ -116,8 +116,8 @@ class DirectoryReader:
             except UnicodeDecodeError:
                 # This is happening in Windows, so we need to open the file in binary mode
                 # The file is always just a python file, so we can safely read it as utf-8
-                with _file_path.open("rb") as file:
-                    return file.read().decode("utf-8")
+                with _file_path.open("rb") as f:
+                    return f.read().decode("utf-8")
 
     def get_files(self):
         """

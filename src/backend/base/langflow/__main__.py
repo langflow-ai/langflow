@@ -228,7 +228,7 @@ def wait_for_server_ready(host, port):
     Wait for the server to become ready by polling the health endpoint.
     """
     status_code = 0
-    while status_code != 200:
+    while status_code != httpx.codes.OK:
         try:
             status_code = httpx.get(f"http://{host}:{port}/health").status_code
         except Exception:
@@ -250,7 +250,6 @@ def run_on_windows(host, port, log_level, options, app):
     """
     print_banner(host, port)
     run_langflow(host, port, log_level, options, app)
-    return
 
 
 def is_port_in_use(port, host="localhost"):

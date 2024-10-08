@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
@@ -114,15 +115,18 @@ def format_elapsed_time(elapsed_time: float) -> str:
     - Less than 1 minute: returns seconds rounded to 2 decimals
     - 1 minute or more: returns minutes and seconds
     """
-    if elapsed_time < 1:
-        milliseconds = int(round(elapsed_time * 1000))
+    delta = timedelta(seconds=elapsed_time)
+    if delta < timedelta(seconds=1):
+        milliseconds = round(delta / timedelta(milliseconds=1))
         return f"{milliseconds} ms"
-    if elapsed_time < 60:
+
+    if delta < timedelta(minutes=1):
         seconds = round(elapsed_time, 2)
         unit = "second" if seconds == 1 else "seconds"
         return f"{seconds} {unit}"
-    minutes = int(elapsed_time // 60)
-    seconds = round(elapsed_time % 60, 2)
+
+    minutes = delta // timedelta(minutes=1)
+    seconds = round((delta - timedelta(minutes=minutes)).total_seconds(), 2)
     minutes_unit = "minute" if minutes == 1 else "minutes"
     seconds_unit = "second" if seconds == 1 else "seconds"
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"

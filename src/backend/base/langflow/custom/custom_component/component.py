@@ -42,7 +42,7 @@ _ComponentToolkit = None
 
 
 def _get_component_toolkit():
-    global _ComponentToolkit
+    global _ComponentToolkit  # noqa: PLW0603
     if _ComponentToolkit is None:
         from langflow.base.tools.component_tool import ComponentToolkit
 

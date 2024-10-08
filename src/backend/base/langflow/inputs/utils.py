@@ -11,7 +11,7 @@ _InputTypesMap: dict[str, type["InputTypes"]] | None = None
 
 
 def get_InputTypesMap():
-    global _InputTypesMap
+    global _InputTypesMap  # noqa: PLW0603
     if _InputTypesMap is None:
         from langflow.inputs.inputs import InputTypesMap
 
