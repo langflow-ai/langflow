@@ -353,7 +353,7 @@ class Graph:
             raise ValueError(msg)
         if config is not None:
             self.__apply_config(config)
-        #! Change this ASAP
+        # ! Change this ASAP
         nest_asyncio.apply()
         loop = asyncio.get_event_loop()
         async_gen = self.async_start(inputs, max_iterations, event_manager)
@@ -1555,7 +1555,7 @@ class Graph:
             ValueError: If the graph contains a cycle.
         """
         # States: 0 = unvisited, 1 = visiting, 2 = visited
-        state = {vertex: 0 for vertex in self.vertices}
+        state = dict.fromkeys(self.vertices, 0)
         sorted_vertices = []
 
         def dfs(vertex):

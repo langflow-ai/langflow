@@ -14,8 +14,8 @@ class ShouldRunNextComponent(CustomComponent):
         template = (
             "Given the following question and the context below, answer with a yes or no.\n\n"
             "{error_message}\n\n"
-            "Question: {question}\n\n"
-            "Context: {context}\n\n"
+            "Question: {question}\n\n"  # noqa: RUF100, RUF027
+            "Context: {context}\n\n"  # noqa: RUF100, RUF027
             "Answer:"
         )
 

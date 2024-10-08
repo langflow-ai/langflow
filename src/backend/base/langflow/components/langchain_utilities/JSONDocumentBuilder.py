@@ -1,4 +1,4 @@
-### JSON Document Builder
+# JSON Document Builder
 
 # Build a Document containing a JSON object using a key and another Document page content.
 

@@ -64,7 +64,7 @@ class NameTest(FastHttpUser):
             "inputs": {"text": f"Hello, My name is {name}"},
             "sync": False,
         }
-        result1, session_id = self.process(name, self.flow_id, payload1)
+        _result1, session_id = self.process(name, self.flow_id, payload1)
 
         payload2 = {
             "inputs": {"text": "What is my name? Please, answer like this: Your name is <name>"},

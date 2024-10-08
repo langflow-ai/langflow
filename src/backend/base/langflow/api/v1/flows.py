@@ -5,6 +5,7 @@ import json
 import re
 import zipfile
 from datetime import datetime, timezone
+from typing import Annotated
 from uuid import UUID
 
 import orjson
@@ -326,7 +327,9 @@ async def upload_file(
 
 @router.delete("/")
 async def delete_multiple_flows(
-    flow_ids: list[UUID], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
+    flow_ids: list[UUID],
+    user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[Session, Depends(get_session)],
 ):
     """
     Delete multiple flows by their IDs.
@@ -362,8 +365,8 @@ async def delete_multiple_flows(
 @router.post("/download/", status_code=200)
 async def download_multiple_file(
     flow_ids: list[UUID],
-    user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_session),
+    user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[Session, Depends(get_session)],
 ):
     """Download all flows as a zip file."""
     flows = db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids)))).all()  # type: ignore
