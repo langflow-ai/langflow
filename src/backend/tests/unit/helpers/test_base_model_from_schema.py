@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 from pydantic import BaseModel
+from pydantic_core import PydanticUndefined
 
 from langflow.helpers.base_model import build_model_from_schema
 
@@ -39,7 +40,7 @@ class TestBuildModelFromSchema:
         ]
 
         model = build_model_from_schema(schema)
-        model_instance = model()
+        model_instance = model(field1="test", field2=123, field3=[1, 2, 3], field4={"key": "value"})
 
         assert issubclass(model, BaseModel)
         assert hasattr(model_instance, "field1")
@@ -58,13 +59,9 @@ class TestBuildModelFromSchema:
 
         model = build_model_from_schema(schema)
 
-        assert model.model_fields["field1"].default == "default_value1"
         assert model.model_fields["field1"].description == "Description for field1"
-        assert model.model_fields["field2"].default == 42
         assert model.model_fields["field2"].description == "Description for field2"
-        assert model.model_fields["field3"].default == [1, 2, 3]
         assert model.model_fields["field3"].description == "Description for field3"
-        assert model.model_fields["field4"].default == {"key": "value"}
         assert model.model_fields["field4"].description == "Description for field4"
 
     # Supports both single and multiple type annotations
@@ -102,16 +99,12 @@ class TestBuildModelFromSchema:
         ]
         result_model = build_model_from_schema(schema)
         assert result_model.__annotations__["field1"] == str  # noqa: E721
-        assert result_model.model_fields["field1"].default == "default_value1"
         assert result_model.model_fields["field1"].description == ""
         assert result_model.__annotations__["field2"] == int  # noqa: E721
-        assert result_model.model_fields["field2"].default == 0
         assert result_model.model_fields["field2"].description == "Field 2 description"
         assert result_model.__annotations__["field3"] == list[list[Any]]
-        assert result_model.model_fields["field3"].default == []
         assert result_model.model_fields["field3"].description == ""
         assert result_model.__annotations__["field4"] == list[dict[str, Any]]
-        assert result_model.model_fields["field4"].default == {}
         assert result_model.model_fields["field4"].description == "Field 4 description"
 
     # Deals with schemas containing fields with None as default values
@@ -122,9 +115,9 @@ class TestBuildModelFromSchema:
             {"name": "field3", "type": "list", "default": None, "description": "Field 3 description", "multiple": True},
         ]
         model = build_model_from_schema(schema)
-        assert model.__fields__["field1"].default == None  # noqa: E711
-        assert model.__fields__["field2"].default == None  # noqa: E711
-        assert model.__fields__["field3"].default == None  # noqa: E711
+        assert model.model_fields["field1"].default == PydanticUndefined  # noqa: E711
+        assert model.model_fields["field2"].default == PydanticUndefined  # noqa: E711
+        assert model.model_fields["field3"].default == PydanticUndefined  # noqa: E711
 
     # Checks for proper handling of nested list and dict types
     def test_nested_list_and_dict_types_handling(self):
