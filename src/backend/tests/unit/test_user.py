@@ -1,8 +1,8 @@
 from datetime import datetime
 
 import pytest
-from sqlmodel import select
 from httpx import AsyncClient
+from sqlmodel import select
 
 from langflow.services.auth.utils import create_super_user, get_password_hash
 from langflow.services.database.models.user import UserUpdate
@@ -54,7 +54,7 @@ def deactivated_user():
     return user
 
 
-def test_user_waiting_for_approval(client):
+async def test_user_waiting_for_approval(client):
     username = "waitingforapproval"
     password = "testpassword"
 
