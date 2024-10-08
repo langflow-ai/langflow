@@ -4,7 +4,7 @@ from astra_assistants import patch  # type: ignore
 from openai import OpenAI
 from openai.lib.streaming import AssistantEventHandler
 
-from langflow.components.astra_assistants.util import get_patched_openai_client
+from langflow.base.astra_assistants.util import get_patched_openai_client
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs import MultilineInput
 from langflow.schema import dotdict
