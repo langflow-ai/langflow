@@ -4,17 +4,22 @@ from astra_assistants import patch  # type: ignore
 from openai import OpenAI
 from openai.lib.streaming import AssistantEventHandler
 
-from langflow.custom import Component
+from langflow.components.astra_assistants.util import get_patched_openai_client
+from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs import MultilineInput
 from langflow.schema import dotdict
 from langflow.schema.message import Message
 from langflow.template import Output
 
 
-class AssistantsRun(Component):
+class AssistantsRun(ComponentWithCache):
     display_name = "Run Assistant"
     description = "Executes an Assistant Run against a thread"
-    client = patch(OpenAI())
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.client = get_patched_openai_client(self._shared_component_cache)
+        self.thread_id = None
 
     def update_build_config(
         self,
