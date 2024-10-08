@@ -70,7 +70,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self) -> Clickhouse:
         try:
-            import clickhouse_connect  # type: ignore
+            import clickhouse_connect
         except ImportError as e:
             msg = (
                 "Failed to import Clickhouse dependencies. "

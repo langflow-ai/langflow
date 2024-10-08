@@ -52,7 +52,7 @@ def create_flow(
         # based on the highest number found
         if session.exec(select(Flow).where(Flow.name == flow.name).where(Flow.user_id == current_user.id)).first():
             flows = session.exec(
-                select(Flow).where(Flow.name.like(f"{flow.name} (%")).where(Flow.user_id == current_user.id)  # type: ignore
+                select(Flow).where(Flow.name.like(f"{flow.name} (%")).where(Flow.user_id == current_user.id)  # type: ignore[attr-defined]
             ).all()
             if flows:
                 extract_number = re.compile(r"\((\d+)\)$")
@@ -74,14 +74,14 @@ def create_flow(
         ):
             flows = session.exec(
                 select(Flow)
-                .where(Flow.endpoint_name.like(f"{flow.endpoint_name}-%"))  # type: ignore
+                .where(Flow.endpoint_name.like(f"{flow.endpoint_name}-%"))  # type: ignore[union-attr]
                 .where(Flow.user_id == current_user.id)
             ).all()
             if flows:
                 # The endpoitn name is like "my-endpoint","my-endpoint-1", "my-endpoint-2"
                 # so we need to get the highest number and add 1
                 # we need to get the last part of the endpoint name
-                numbers = [int(flow.endpoint_name.split("-")[-1]) for flow in flows]  # type: ignore
+                numbers = [int(flow.endpoint_name.split("-")[-1]) for flow in flows]
                 flow.endpoint_name = f"{flow.endpoint_name}-{max(numbers) + 1}"
             else:
                 flow.endpoint_name = f"{flow.endpoint_name}-1"
@@ -148,16 +148,16 @@ def read_flows(
         auth_settings = settings_service.auth_settings
         if auth_settings.AUTO_LOGIN:
             stmt = select(Flow).where(
-                (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa
+                (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa: E711
             )
             if components_only:
-                stmt = stmt.where(Flow.is_component == True)  # noqa
+                stmt = stmt.where(Flow.is_component == True)  # noqa: E712
             flows = session.exec(stmt).all()
 
         else:
             flows = current_user.flows
 
-        flows = validate_is_component(flows)  # type: ignore
+        flows = validate_is_component(flows)
         if components_only:
             flows = [flow for flow in flows if flow.is_component]
         flow_ids = [flow.id for flow in flows]
@@ -169,7 +169,7 @@ def read_flows(
                 example_flows = folder.flows if folder else []
                 for example_flow in example_flows:
                     if example_flow.id not in flow_ids:
-                        flows.append(example_flow)  # type: ignore
+                        flows.append(example_flow)
             except Exception as e:
                 logger.exception(e)
 
@@ -196,7 +196,7 @@ def read_flow(
         # If auto login is enable user_id can be current_user.id or None
         # so write an OR
         stmt = stmt.where(
-            (Flow.user_id == current_user.id) | (Flow.user_id == None)  # noqa
+            (Flow.user_id == current_user.id) | (Flow.user_id == None)  # noqa: E711
         )
     if user_flow := session.exec(stmt).first():
         return user_flow
@@ -369,7 +369,7 @@ async def download_multiple_file(
     db: Annotated[Session, Depends(get_session)],
 ):
     """Download all flows as a zip file."""
-    flows = db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids)))).all()  # type: ignore
+    flows = db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids)))).all()  # type: ignore[attr-defined]
 
     if not flows:
         raise HTTPException(status_code=404, detail="No flows found.")

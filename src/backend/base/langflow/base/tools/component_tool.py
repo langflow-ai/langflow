@@ -60,7 +60,7 @@ def _format_tool_name(name: str):
     return re.sub(r"[^a-zA-Z0-9_-]", "-", name)
 
 
-class ComponentToolkit:  # type: ignore
+class ComponentToolkit:
     def __init__(self, component: Component):
         self.component = component
 

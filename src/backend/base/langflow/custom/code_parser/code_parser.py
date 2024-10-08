@@ -108,8 +108,8 @@ class CodeParser:
         Parses an AST node and updates the data
         dictionary with the relevant information.
         """
-        if handler := self.handlers.get(type(node)):  # type: ignore
-            handler(node)  # type: ignore
+        if handler := self.handlers.get(type(node)):
+            handler(node)  # type: ignore[operator]
 
     def parse_imports(self, node: ast.Import | ast.ImportFrom) -> None:
         """

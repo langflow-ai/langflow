@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any
 
-import socketio  # type: ignore
+import socketio
 from loguru import logger
 
 from langflow.services.base import Service

@@ -12,7 +12,7 @@ class Code(BaseModel):
 
 
 class FrontendNodeRequest(FrontendNode):
-    template: dict  # type: ignore
+    template: dict  # type: ignore[assignment]
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

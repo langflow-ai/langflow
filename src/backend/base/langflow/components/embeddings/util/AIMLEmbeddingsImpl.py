@@ -40,7 +40,7 @@ class AIMLEmbeddingsImpl(BaseModel, Embeddings):
                     logger.exception("Error occurred")
                     raise
 
-        return embeddings  # type: ignore
+        return embeddings  # type: ignore[return-value]
 
     def _embed_text(self, client: httpx.Client, headers: dict, text: str) -> dict:
         payload = {

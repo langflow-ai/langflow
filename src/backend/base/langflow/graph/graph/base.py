@@ -1725,8 +1725,8 @@ class Graph:
 
     def _create_vertex(self, frontend_data: NodeData):
         vertex_data = frontend_data["data"]
-        vertex_type: str = vertex_data["type"]  # type: ignore
-        vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
+        vertex_type: str = vertex_data["type"]
+        vertex_base_type: str = vertex_data["node"]["template"]["_type"]
         if "id" not in vertex_data:
             msg = f"Vertex data for {vertex_data['display_name']} does not contain an id"
             raise ValueError(msg)

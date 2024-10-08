@@ -35,7 +35,7 @@ SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value
 
 
 # Base mixin for common input field attributes and methods
-class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore
+class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-arg]
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         extra="forbid",

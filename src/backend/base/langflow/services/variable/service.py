@@ -83,7 +83,7 @@ class DatabaseVariableService(VariableService, Service):
             msg = f"{name} variable not found."
             raise ValueError(msg)
 
-        if variable.type == CREDENTIAL_TYPE and field == "session_id":  # type: ignore
+        if variable.type == CREDENTIAL_TYPE and field == "session_id":
             msg = (
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
                 "because its purpose is to prevent the exposure of values."

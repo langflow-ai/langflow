@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import Any
 
-from composio_langchain import Action, App, ComposioToolSet  # type: ignore
+from composio_langchain import Action, App, ComposioToolSet
 from langchain_core.tools import Tool
 from loguru import logger
 

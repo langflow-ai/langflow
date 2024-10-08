@@ -79,7 +79,7 @@ async def delete_messages(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     try:
-        session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore
+        session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]
         session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -147,7 +147,7 @@ async def delete_messages_session(
     session: Annotated[Session, Depends(get_session)],
 ):
     try:
-        session.exec(  # type: ignore
+        session.exec(
             delete(MessageTable)
             .where(col(MessageTable.session_id) == session_id)
             .execution_options(synchronize_session="fetch")

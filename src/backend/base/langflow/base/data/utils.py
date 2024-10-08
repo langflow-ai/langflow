@@ -76,7 +76,7 @@ def retrieve_file_paths(
 
 def partition_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
     # Use the partition function to load the file
-    from unstructured.partition.auto import partition  # type: ignore
+    from unstructured.partition.auto import partition
 
     try:
         elements = partition(file_path)
@@ -108,14 +108,14 @@ def read_text_file(file_path: str) -> str:
 
 
 def read_docx_file(file_path: str) -> str:
-    from docx import Document  # type: ignore
+    from docx import Document
 
     doc = Document(file_path)
     return "\n\n".join([p.text for p in doc.paragraphs])
 
 
 def parse_pdf_to_text(file_path: str) -> str:
-    from pypdf import PdfReader  # type: ignore
+    from pypdf import PdfReader
 
     with Path(file_path).open("rb") as f:
         reader = PdfReader(f)

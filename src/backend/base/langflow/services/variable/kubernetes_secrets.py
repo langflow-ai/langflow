@@ -2,8 +2,8 @@ from base64 import b64decode, b64encode
 from http import HTTPStatus
 from uuid import UUID
 
-from kubernetes import client, config  # type: ignore
-from kubernetes.client.rest import ApiException  # type: ignore
+from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 from loguru import logger
 
 

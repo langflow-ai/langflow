@@ -113,12 +113,12 @@ class Message(Data):
             if self.files:
                 contents = [{"type": "text", "text": text}]
                 contents.extend(self.sync_get_file_content_dicts())
-                human_message = HumanMessage(content=contents)  # type: ignore
+                human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(content=text)
             return human_message
 
-        return AIMessage(content=text)  # type: ignore
+        return AIMessage(content=text)
 
     @classmethod
     def from_lc_message(cls, lc_message: BaseMessage) -> Message:
@@ -180,7 +180,7 @@ class Message(Data):
                 content_dicts.append(file.to_content_dict())
             else:
                 image_template = ImagePromptTemplate()
-                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})  # type: ignore
+                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})
                 content_dicts.append({"type": "image_url", "image_url": image_prompt_value.image_url})
         return content_dicts
 
@@ -235,7 +235,7 @@ class Message(Data):
         if contents:
             message = HumanMessage(content=[{"type": "text", "text": text}, *contents])
 
-        prompt_template = ChatPromptTemplate.from_messages([message])  # type: ignore
+        prompt_template = ChatPromptTemplate.from_messages([message])
 
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])

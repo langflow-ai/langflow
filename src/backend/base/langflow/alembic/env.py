@@ -6,7 +6,7 @@ from alembic import context
 from loguru import logger
 from sqlalchemy import engine_from_config, pool
 
-from langflow.services.database.models import *  # noqa
+from langflow.services.database.models import *
 from langflow.services.database.service import SQLModel
 
 # this is the Alembic Config object, which provides

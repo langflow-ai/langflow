@@ -44,9 +44,9 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self) -> CouchbaseVectorStore:
         try:
-            from couchbase.auth import PasswordAuthenticator  # type: ignore
-            from couchbase.cluster import Cluster  # type: ignore
-            from couchbase.options import ClusterOptions  # type: ignore
+            from couchbase.auth import PasswordAuthenticator
+            from couchbase.cluster import Cluster
+            from couchbase.options import ClusterOptions
         except ImportError as e:
             msg = "Failed to import Couchbase dependencies. Install it using `pip install langflow[couchbase] --pre`"
             raise ImportError(msg) from e

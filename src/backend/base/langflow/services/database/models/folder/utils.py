@@ -20,10 +20,10 @@ def create_default_folder_if_it_doesnt_exist(session: Session, user_id: UUID):
         session.commit()
         session.refresh(folder)
         session.exec(
-            update(Flow)  # type: ignore
+            update(Flow)
             .where(
                 and_(
-                    Flow.folder_id == None,  # type: ignore # noqa
+                    Flow.folder_id is None,
                     Flow.user_id == user_id,
                 )
             )

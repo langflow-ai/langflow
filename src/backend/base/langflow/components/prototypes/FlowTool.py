@@ -100,4 +100,4 @@ class FlowToolComponent(LCToolComponent):
         description_repr = repr(tool.description).strip("'")
         args_str = "\n".join([f"- {arg_name}: {arg_data['description']}" for arg_name, arg_data in tool.args.items()])
         self.status = f"{description_repr}\nArguments:\n{args_str}"
-        return tool  # type: ignore
+        return tool

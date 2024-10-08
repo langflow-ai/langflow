@@ -6,7 +6,7 @@ from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
 
-import nanoid  # type: ignore
+import nanoid
 import yaml
 from pydantic import BaseModel
 

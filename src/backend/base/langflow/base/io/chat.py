@@ -97,4 +97,4 @@ class ChatComponent(Component):
                 flow_id=self.graph.flow_id,
             )
             self.status = messages
-        return message_text  # type: ignore
+        return message_text  # type: ignore[return-value]

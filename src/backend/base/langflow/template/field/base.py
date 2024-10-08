@@ -1,9 +1,11 @@
-from collections.abc import Callable  # noqa: I001
+from collections.abc import Callable
 from enum import Enum
-from typing import Any
-from typing import GenericAlias  # type: ignore
-from typing import _GenericAlias  # type: ignore
-from typing import _UnionGenericAlias  # type: ignore
+from typing import (  # type: ignore[attr-defined]
+    Any,
+    GenericAlias,  # type: ignore[attr-defined]
+    _GenericAlias,  # type: ignore[attr-defined]
+    _UnionGenericAlias,  # type: ignore[attr-defined]
+)
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 

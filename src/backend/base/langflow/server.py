@@ -2,11 +2,11 @@ import asyncio
 import logging
 import signal
 
-from gunicorn import glogging  # type: ignore
-from gunicorn.app.base import BaseApplication  # type: ignore
+from gunicorn import glogging
+from gunicorn.app.base import BaseApplication
 from uvicorn.workers import UvicornWorker
 
-from langflow.logging.logger import InterceptHandler  # type: ignore
+from langflow.logging.logger import InterceptHandler
 
 
 class LangflowUvicornWorker(UvicornWorker):

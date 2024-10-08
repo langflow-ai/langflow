@@ -53,8 +53,8 @@ class Edge:
         else:
             # Logging here because this is a breaking change
             logger.error("Edge data is empty")
-            self._source_handle = edge.get("sourceHandle", "")  # type: ignore
-            self._target_handle = edge.get("targetHandle", "")  # type: ignore
+            self._source_handle = edge.get("sourceHandle", "")  # type: ignore[assignment]
+            self._target_handle = edge.get("targetHandle", "")  # type: ignore[assignment]
             # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
             # target_param is documents
             if isinstance(self._target_handle, str):

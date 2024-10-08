@@ -82,4 +82,4 @@ class AzureChatOpenAIComponent(LCModelComponent):
             msg = f"Could not connect to AzureOpenAI API: {e}"
             raise ValueError(msg) from e
 
-        return output  # type: ignore
+        return output

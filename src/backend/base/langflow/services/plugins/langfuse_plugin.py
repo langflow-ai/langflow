@@ -8,7 +8,7 @@ from langflow.services.deps import get_settings_service
 from langflow.services.plugins.base import CallbackPlugin
 
 if TYPE_CHECKING:
-    from langfuse import Langfuse  # type: ignore
+    from langfuse import Langfuse
 
 
 class LangfuseInstance:
@@ -25,7 +25,7 @@ class LangfuseInstance:
     def create(cls):
         try:
             logger.debug("Creating Langfuse instance")
-            from langfuse import Langfuse  # type: ignore
+            from langfuse import Langfuse
 
             settings_manager = get_settings_service()
 

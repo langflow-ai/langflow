@@ -45,7 +45,7 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
         document_content_description: str,
         llm: LanguageModel,
         metadata_field_info: list[str],
-    ) -> Retriever:  # type: ignore
+    ) -> Retriever:
         metadata_field_obj = []
 
         for meta in metadata_field_info:

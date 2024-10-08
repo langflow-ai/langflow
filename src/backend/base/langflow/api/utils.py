@@ -259,9 +259,9 @@ def parse_value(value: Any, input_type: str) -> Any:
 
 async def cascade_delete_flow(session: Session, flow: Flow):
     try:
-        session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))  # type: ignore
-        session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))  # type: ignore
-        session.exec(delete(Flow).where(Flow.id == flow.id))  # type: ignore
+        session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))
+        session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))
+        session.exec(delete(Flow).where(Flow.id == flow.id))
     except Exception as e:
         msg = f"Unable to cascade delete flow: ${flow.id}"
         raise RuntimeError(msg, e) from e

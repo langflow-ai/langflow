@@ -73,7 +73,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
         top_p = self.top_p
         n = self.n
 
-        return ChatGoogleGenerativeAI(  # type: ignore
+        return ChatGoogleGenerativeAI(
             model=model,
             max_output_tokens=max_output_tokens or None,
             temperature=temperature,

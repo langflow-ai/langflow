@@ -108,7 +108,7 @@ def run_flow_from_json(
     """
     # Set all streaming to false
     try:
-        import nest_asyncio  # type: ignore
+        import nest_asyncio
 
         nest_asyncio.apply()
     except Exception:

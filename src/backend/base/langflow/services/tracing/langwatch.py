@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-import nanoid  # type: ignore
+import nanoid
 from loguru import logger
 
 from langflow.schema.data import Data
