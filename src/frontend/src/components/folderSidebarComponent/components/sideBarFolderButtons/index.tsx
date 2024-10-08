@@ -230,7 +230,13 @@ const SideBarFoldersButtonsComponent = ({
     exact: false,
   });
 
-  const isUpdatingFolder = isFetchingFolders || isPending || loading;
+  const isFetchingFolder = !!useIsFetching({
+    queryKey: ["useGetFolder"],
+    exact: false,
+  });
+
+  const isUpdatingFolder =
+    isFetchingFolders || isFetchingFolder || isPending || loading;
 
   const HeaderButtons = () => (
     <div className="flex shrink-0 items-center justify-between gap-2">
