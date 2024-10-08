@@ -1,3 +1,4 @@
+import MustachePromptModal from "@/modals/mustachePromptModal";
 import PromptModal from "@/modals/promptModal";
 import { useEffect } from "react";
 import { PromptAreaComponentType } from "../../types/components";
@@ -15,6 +16,7 @@ export default function PromptAreaComponent({
   editNode = false,
   id = "",
   readonly = false,
+  mustache = false,
 }: PromptAreaComponentType): JSX.Element {
   useEffect(() => {
     if (disabled && value !== "") {
@@ -54,22 +56,41 @@ export default function PromptAreaComponent({
 
   return (
     <div className={cn("w-full", disabled && "pointer-events-none")}>
-      <PromptModal
-        id={id}
-        field_name={field_name}
-        readonly={readonly}
-        value={value}
-        setValue={onChange}
-        nodeClass={nodeClass}
-        setNodeClass={setNodeClass}
-      >
-        <Button unstyled className="w-full">
-          <div className="flex w-full items-center gap-3">
-            {renderPromptText()}
-            {renderExternalLinkIcon()}
-          </div>
-        </Button>
-      </PromptModal>
+      {mustache ? (
+        <MustachePromptModal
+          id={id}
+          field_name={field_name}
+          readonly={readonly}
+          value={value}
+          setValue={onChange}
+          nodeClass={nodeClass}
+          setNodeClass={setNodeClass}
+        >
+          <Button unstyled className="w-full">
+            <div className="flex w-full items-center gap-3">
+              {renderPromptText()}
+              {renderExternalLinkIcon()}
+            </div>
+          </Button>
+        </MustachePromptModal>
+      ) : (
+        <PromptModal
+          id={id}
+          field_name={field_name}
+          readonly={readonly}
+          value={value}
+          setValue={onChange}
+          nodeClass={nodeClass}
+          setNodeClass={setNodeClass}
+        >
+          <Button unstyled className="w-full">
+            <div className="flex w-full items-center gap-3">
+              {renderPromptText()}
+              {renderExternalLinkIcon()}
+            </div>
+          </Button>
+        </PromptModal>
+      )}
     </div>
   );
 }

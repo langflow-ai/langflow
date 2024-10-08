@@ -128,7 +128,8 @@ export function ParameterRenderComponent({
             fileTypes={templateData.fileTypes}
             id={`inputfile_${id}`}
           />
-        ) : templateData.type === "prompt" ? (
+        ) : templateData.type === "prompt" ||
+          templateData.type === "mustache" ? (
           <PromptAreaComponent
             readonly={nodeClass.flow ? true : false}
             field_name={name}
@@ -139,6 +140,7 @@ export function ParameterRenderComponent({
             value={templateValue ?? ""}
             onChange={onChange}
             id={`promptarea_${id}`}
+            mustache={templateData.type === "mustache"}
           />
         ) : templateData.type === "code" ? (
           <CodeAreaComponent

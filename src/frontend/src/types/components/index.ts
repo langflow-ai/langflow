@@ -215,6 +215,7 @@ export type PromptAreaComponentType = {
   readonly?: boolean;
   editNode?: boolean;
   id?: string;
+  mustache?: boolean;
 };
 
 export type CodeAreaComponentType = {
@@ -359,6 +360,7 @@ export type TextHighlightType = {
 
 export interface IVarHighlightType {
   name: string;
+  addCurlyBraces?: boolean;
 }
 
 export type IconComponentProps = {
