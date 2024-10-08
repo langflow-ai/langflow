@@ -332,6 +332,7 @@ class Settings(BaseSettings):
             logger.debug(f"Updating {key}")
             if isinstance(getattr(self, key), list):
                 # value might be a '[something]' string
+                _value = value
                 with contextlib.suppress(json.decoder.JSONDecodeError):
                     _value = orjson.loads(str(value))
                 if isinstance(_value, list):

@@ -1525,8 +1525,8 @@ class Graph:
                 for t in tasks[i + 1 :]:
                     t.cancel()
                 raise result
-            if isinstance(result, tuple) and len(result) == 5:  # TODO: what 5 corresponds to ?
-                vertices.append(result[4])
+            if isinstance(result, VertexBuildResult):
+                vertices.append(result.vertex)
             else:
                 msg = f"Invalid result from task {task_name}: {result}"
                 raise ValueError(msg)

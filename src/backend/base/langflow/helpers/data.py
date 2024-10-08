@@ -30,10 +30,11 @@ def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str
     if isinstance(data, (Data)):
         data = [data]
     # Check if there are any format strings in the template
-    _data = []
-    for value in data:
+    _data = [
         # If it is not a record, create one with the key "text"
-        _data.append(Data(text=value) if not isinstance(value, Data) else value)
+        Data(text=value) if not isinstance(value, Data) else value
+        for value in data
+    ]
 
     formated_data = [template.format(data=value.data, **value.data) for value in _data]
     return sep.join(formated_data)

@@ -22,7 +22,7 @@ class CreateDataComponent(Component):
             info="Number of fields to be added to the record.",
             real_time_refresh=True,
             value=1,
-            range_spec=RangeSpec(min=1, max=MAX_NUMBER_OF_FIELDS, step=1, step_type="int"),
+            range_spec=RangeSpec(min=1, max=15, step=1, step_type="int"),
         ),
         MessageTextInput(
             name="text_key",
