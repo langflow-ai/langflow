@@ -325,5 +325,5 @@ def extract_class_name(code):
     for node in module.body:
         if isinstance(node, ast.ClassDef):
             return node.name
-    msg = "No class definition found in the code string"
+    msg = f"No class definition found in the code string. Code snippet: {code[:100]}"
     raise ValueError(msg)
