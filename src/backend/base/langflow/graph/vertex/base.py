@@ -758,7 +758,7 @@ class Vertex:
 
             logger.warning(message)
         elif isinstance(self._built_object, Iterator | AsyncIterator):
-            if self.display_name in ["Text Output"]:
+            if self.display_name == "Text Output":
                 msg = f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
                 raise ValueError(msg)
 

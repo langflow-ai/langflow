@@ -125,7 +125,7 @@ class APIRequestComponent(Component):
                 body = None
                 raise ValueError(msg) from e
 
-        data = body if body else None
+        data = body or None
 
         try:
             response = await client.request(method, url, headers=headers, json=data, timeout=timeout)

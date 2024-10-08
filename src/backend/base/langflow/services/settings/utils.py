@@ -12,7 +12,7 @@ def set_secure_permissions(file_path: Path):
         import win32con
         import win32security
 
-        user, domain, _ = win32security.LookupAccountName("", win32api.GetUserName())
+        user, _, _ = win32security.LookupAccountName("", win32api.GetUserName())
         sd = win32security.GetFileSecurity(str(file_path), win32security.DACL_SECURITY_INFORMATION)
         dacl = win32security.ACL()
 

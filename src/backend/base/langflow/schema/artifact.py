@@ -42,10 +42,8 @@ def get_artifact_type(value, build_result=None) -> str:
             result = ArtifactType.ARRAY
 
     if result == ArtifactType.UNKNOWN and (
-        build_result
-        and isinstance(build_result, Generator)
-        or isinstance(value, Message)
-        and isinstance(value.text, Generator)
+        (build_result and isinstance(build_result, Generator))
+        or (isinstance(value, Message) and isinstance(value.text, Generator))
     ):
         result = ArtifactType.STREAM
 

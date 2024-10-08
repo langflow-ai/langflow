@@ -86,7 +86,7 @@ class DataConditionalRouterComponent(Component):
                     else:
                         false_output.append(item)
             self.stop("false_output" if true_output else "true_output")
-            return true_output if true_output else false_output
+            return true_output or false_output
         if not self.validate_input(self.data_input):
             return Data(data={"error": self.status})
         result = self.process_single_data(self.data_input)

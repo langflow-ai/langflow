@@ -78,7 +78,7 @@ class LangFuseTracer(BaseTracer):
 
         _metadata: dict = {}
         _metadata |= {"trace_type": trace_type} if trace_type else {}
-        _metadata |= metadata if metadata else {}
+        _metadata |= metadata or {}
 
         _name = trace_name.removesuffix(f" ({trace_id})")
         content_span = {
@@ -108,7 +108,7 @@ class LangFuseTracer(BaseTracer):
         span = self.spans.get(trace_id, None)
         if span:
             _output: dict = {}
-            _output |= outputs if outputs else {}
+            _output |= outputs or {}
             _output |= {"error": str(error)} if error else {}
             _output |= {"logs": list(logs)} if logs else {}
             content = {"output": _output, "end_time": end_time}

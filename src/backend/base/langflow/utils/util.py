@@ -42,7 +42,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
 
             variables = {"_type": _type}
             for class_field_items, value in _class.model_fields.items():
-                if class_field_items in ["callback_manager"]:
+                if class_field_items == "callback_manager":
                     continue
                 variables[class_field_items] = {}
                 for name_, value_ in value.__repr_args__():
@@ -53,7 +53,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
                             )
                         except Exception:
                             variables[class_field_items]["default"] = None
-                    elif name_ not in ["name"]:
+                    elif name_ != "name":
                         variables[class_field_items][name_] = value_
 
                 variables[class_field_items]["placeholder"] = docs.params.get(class_field_items, "")
@@ -209,7 +209,7 @@ def format_dict(dictionary: dict[str, Any], class_name: str | None = None) -> di
     """
 
     for key, value in dictionary.items():
-        if key in ["_type"]:
+        if key == "_type":
             continue
 
         _type: str | type = get_type(value)

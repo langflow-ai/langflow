@@ -17,7 +17,7 @@ class ForbiddenError(CustomException):
 
 class APIKeyError(CustomException):
     def __init__(self, detail="API key error"):
-        super().__init__(detail, 400)  #! Should be 401
+        super().__init__(detail, 400)  # ! Should be 401
 
 
 class FilterError(CustomException):

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
@@ -39,7 +40,7 @@ def get_flow_id(
 @router.post("/upload/{flow_id}", status_code=HTTPStatus.CREATED)
 async def upload_file(
     file: UploadFile,
-    flow_id: UUID = Depends(get_flow_id),
+    flow_id: Annotated[UUID, Depends(get_flow_id)],
     current_user=Depends(get_current_active_user),
     session=Depends(get_session),
     storage_service: StorageService = Depends(get_storage_service),
@@ -68,7 +69,9 @@ async def upload_file(
 
 
 @router.get("/download/{flow_id}/{file_name}")
-async def download_file(file_name: str, flow_id: UUID, storage_service: StorageService = Depends(get_storage_service)):
+async def download_file(
+    file_name: str, flow_id: UUID, storage_service: Annotated[StorageService, Depends(get_storage_service)]
+):
     try:
         flow_id_str = str(flow_id)
         extension = file_name.split(".")[-1]
@@ -93,7 +96,9 @@ async def download_file(file_name: str, flow_id: UUID, storage_service: StorageS
 
 
 @router.get("/images/{flow_id}/{file_name}")
-async def download_image(file_name: str, flow_id: UUID, storage_service: StorageService = Depends(get_storage_service)):
+async def download_image(
+    file_name: str, flow_id: UUID, storage_service: Annotated[StorageService, Depends(get_storage_service)]
+):
     try:
         extension = file_name.split(".")[-1]
         flow_id_str = str(flow_id)
@@ -118,7 +123,7 @@ async def download_image(file_name: str, flow_id: UUID, storage_service: Storage
 async def download_profile_picture(
     folder_name: str,
     file_name: str,
-    storage_service: StorageService = Depends(get_storage_service),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
         extension = file_name.split(".")[-1]
@@ -134,7 +139,7 @@ async def download_profile_picture(
 
 
 @router.get("/profile_pictures/list")
-async def list_profile_pictures(storage_service: StorageService = Depends(get_storage_service)):
+async def list_profile_pictures(storage_service: Annotated[StorageService, Depends(get_storage_service)]):
     try:
         config_dir = get_storage_service().settings_service.settings.config_dir
         config_path = Path(config_dir)  # type: ignore
@@ -156,7 +161,8 @@ async def list_profile_pictures(storage_service: StorageService = Depends(get_st
 
 @router.get("/list/{flow_id}")
 async def list_files(
-    flow_id: UUID = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
+    flow_id: Annotated[UUID, Depends(get_flow_id)],
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
         flow_id_str = str(flow_id)
@@ -168,7 +174,9 @@ async def list_files(
 
 @router.delete("/delete/{flow_id}/{file_name}")
 async def delete_file(
-    file_name: str, flow_id: UUID = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
+    file_name: str,
+    flow_id: Annotated[UUID, Depends(get_flow_id)],
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
         flow_id_str = str(flow_id)

@@ -129,8 +129,8 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         es_params = {
             "index_name": self.index_name,
             "embedding": self.embedding,
-            "es_user": self.username if self.username else None,
-            "es_password": self.password if self.password else None,
+            "es_user": self.username or None,
+            "es_password": self.password or None,
         }
 
         if self.cloud_id:

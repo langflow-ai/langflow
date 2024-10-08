@@ -58,8 +58,8 @@ def check_if_store_is_enabled(
 
 @router.get("/check/api_key")
 async def check_if_store_has_api_key(
-    api_key: str | None = Depends(get_optional_user_store_api_key),
-    store_service: StoreService = Depends(get_store_service),
+    api_key: Annotated[str | None, Depends(get_optional_user_store_api_key)],
+    store_service: Annotated[StoreService, Depends(get_store_service)],
 ):
     if api_key is None:
         return {"has_api_key": False, "is_valid": False}
@@ -75,8 +75,8 @@ async def check_if_store_has_api_key(
 @router.post("/components/", response_model=CreateComponentResponse, status_code=201)
 async def share_component(
     component: StoreComponentCreate,
-    store_service: StoreService = Depends(get_store_service),
-    store_api_key: str = Depends(get_user_store_api_key),
+    store_service: Annotated[StoreService, Depends(get_store_service)],
+    store_api_key: Annotated[str, Depends(get_user_store_api_key)],
 ):
     try:
         await check_langflow_version(component)
@@ -89,8 +89,8 @@ async def share_component(
 async def update_shared_component(
     component_id: UUID,
     component: StoreComponentCreate,
-    store_service: StoreService = Depends(get_store_service),
-    store_api_key: str = Depends(get_user_store_api_key),
+    store_service: Annotated[StoreService, Depends(get_store_service)],
+    store_api_key: Annotated[str, Depends(get_user_store_api_key)],
 ):
     try:
         await check_langflow_version(component)
@@ -139,8 +139,8 @@ async def get_components(
 @router.get("/components/{component_id}", response_model=DownloadComponentResponse)
 async def download_component(
     component_id: UUID,
-    store_service: StoreService = Depends(get_store_service),
-    store_api_key: str = Depends(get_user_store_api_key),
+    store_service: Annotated[StoreService, Depends(get_store_service)],
+    store_api_key: Annotated[str, Depends(get_user_store_api_key)],
 ):
     try:
         component = await store_service.download(store_api_key, component_id)
@@ -157,7 +157,7 @@ async def download_component(
 
 @router.get("/tags", response_model=list[TagResponse])
 async def get_tags(
-    store_service: StoreService = Depends(get_store_service),
+    store_service: Annotated[StoreService, Depends(get_store_service)],
 ):
     try:
         return await store_service.get_tags()
@@ -169,8 +169,8 @@ async def get_tags(
 
 @router.get("/users/likes", response_model=list[UsersLikesResponse])
 async def get_list_of_components_liked_by_user(
-    store_service: StoreService = Depends(get_store_service),
-    store_api_key: str = Depends(get_user_store_api_key),
+    store_service: Annotated[StoreService, Depends(get_store_service)],
+    store_api_key: Annotated[str, Depends(get_user_store_api_key)],
 ):
     try:
         return await store_service.get_user_likes(store_api_key)
@@ -183,8 +183,8 @@ async def get_list_of_components_liked_by_user(
 @router.post("/users/likes/{component_id}", response_model=UsersLikesResponse)
 async def like_component(
     component_id: UUID,
-    store_service: StoreService = Depends(get_store_service),
-    store_api_key: str = Depends(get_user_store_api_key),
+    store_service: Annotated[StoreService, Depends(get_store_service)],
+    store_api_key: Annotated[str, Depends(get_user_store_api_key)],
 ):
     try:
         result = await store_service.like_component(store_api_key, str(component_id))

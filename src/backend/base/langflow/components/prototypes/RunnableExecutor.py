@@ -111,7 +111,7 @@ class RunnableExecComponent(Component):
             if input_key in runnable.input_keys:
                 input_dict[input_key] = input_value
             else:
-                input_dict = {k: input_value for k in runnable.input_keys}
+                input_dict = dict.fromkeys(runnable.input_keys, input_value)
                 status = f"Warning: The input key is not '{input_key}'. The input key is '{runnable.input_keys}'."
         return input_dict, status
 

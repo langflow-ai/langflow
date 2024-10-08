@@ -1,4 +1,5 @@
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
@@ -37,7 +38,7 @@ async def health():
 # It's a reliable health check for a langflow instance
 @health_check_router.get("/health_check", response_model=HealthResponse)
 async def health_check(
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
 ):
     response = HealthResponse()
     # use a fixed valid UUId that UUID collision is very unlikely

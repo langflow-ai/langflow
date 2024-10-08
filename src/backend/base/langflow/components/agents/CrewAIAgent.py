@@ -68,7 +68,7 @@ class CrewAIAgentComponent(Component):
     ]
 
     def build_output(self) -> Agent:
-        kwargs = self.kwargs if self.kwargs else {}
+        kwargs = self.kwargs or {}
         agent = Agent(
             role=self.role,
             goal=self.goal,
@@ -76,7 +76,7 @@ class CrewAIAgentComponent(Component):
             llm=self.llm,
             verbose=self.verbose,
             memory=self.memory,
-            tools=self.tools if self.tools else [],
+            tools=self.tools or [],
             allow_delegation=self.allow_delegation,
             allow_code_execution=self.allow_code_execution,
             **kwargs,

@@ -172,7 +172,7 @@ async def simple_run_flow_task(
         logger.exception(f"Error running flow {flow.id} task")
 
 
-@router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)
+@router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)  # noqa: RUF100, FAST003
 async def simplified_run_flow(
     background_tasks: BackgroundTasks,
     flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
@@ -296,13 +296,13 @@ async def simplified_run_flow(
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
 
 
-@router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
+@router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
 async def webhook_run_flow(
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     user: Annotated[User, Depends(get_user_by_flow_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
-    telemetry_service: TelemetryService = Depends(get_telemetry_service),
+    telemetry_service: Annotated[TelemetryService, Depends(get_telemetry_service)],
 ):
     """
     Run a flow using a webhook request.
@@ -441,10 +441,9 @@ async def experimental_run_flow(
         if inputs is None:
             inputs = [InputValueRequest(components=[], input_value="")]
 
-        artifacts = {}
         if session_id:
             session_data = await session_service.load_session(session_id, flow_id=flow_id_str)
-            graph, artifacts = session_data if session_data else (None, None)
+            graph, _artifacts = session_data or (None, None)
             if graph is None:
                 msg = f"Session {session_id} not found"
                 raise ValueError(msg)
@@ -585,7 +584,7 @@ def get_version():
 @router.post("/custom_component", status_code=HTTPStatus.OK, response_model=CustomComponentResponse)
 async def custom_component(
     raw_code: CustomComponentRequest,
-    user: User = Depends(get_current_active_user),
+    user: Annotated[User, Depends(get_current_active_user)],
 ):
     component = Component(_code=raw_code.code)
 
@@ -600,7 +599,7 @@ async def custom_component(
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
-    user: User = Depends(get_current_active_user),
+    user: Annotated[User, Depends(get_current_active_user)],
 ):
     """
     Update a custom component with the provided code request.

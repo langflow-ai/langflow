@@ -13,17 +13,17 @@ from langflow.api.v1.validate import router as validate_router
 from langflow.api.v1.variable import router as variables_router
 
 __all__ = [
+    "api_key_router",
     "chat_router",
     "endpoints_router",
-    "store_router",
-    "validate_router",
-    "flows_router",
-    "users_router",
-    "api_key_router",
-    "login_router",
-    "variables_router",
-    "monitor_router",
     "files_router",
+    "flows_router",
     "folders_router",
+    "login_router",
+    "monitor_router",
     "starter_projects_router",
+    "store_router",
+    "users_router",
+    "validate_router",
+    "variables_router",
 ]

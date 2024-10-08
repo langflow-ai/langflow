@@ -272,14 +272,14 @@ class Settings(BaseSettings):
                 elif Path(new_path).exists():
                     logger.debug(f"Database already exists at {new_path}, using it")
                     final_path = new_path
-                elif Path("./{db_file_name}").exists():
+                elif Path(f"./{db_file_name}").exists():
                     try:
                         logger.debug("Copying existing database to new location")
-                        copy2("./{db_file_name}", new_path)
+                        copy2(f"./{db_file_name}", new_path)
                         logger.debug(f"Copied existing database to {new_path}")
                     except Exception:
                         logger.exception("Failed to copy database, using default path")
-                        new_path = "./{db_file_name}"
+                        new_path = f"./{db_file_name}"
                 else:
                     final_path = new_path
 

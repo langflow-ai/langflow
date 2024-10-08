@@ -13,17 +13,17 @@ from .WikipediaAPI import WikipediaAPIComponent
 from .WolframAlphaAPI import WolframAlphaAPIComponent
 
 __all__ = [
-    "RetrieverToolComponent",
     "BingSearchAPIComponent",
+    "CalculatorToolComponent",
     "GleanSearchAPIComponent",
     "GoogleSearchAPIComponent",
     "GoogleSerperAPIComponent",
     "PythonCodeStructuredTool",
     "PythonREPLToolComponent",
-    "SearchAPIComponent",
+    "RetrieverToolComponent",
     "SearXNGToolComponent",
+    "SearchAPIComponent",
     "SerpAPIComponent",
     "WikipediaAPIComponent",
     "WolframAlphaAPIComponent",
-    "CalculatorToolComponent",
 ]

@@ -1,3 +1,4 @@
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -24,7 +25,7 @@ router = APIRouter(tags=["Users"], prefix="/users")
 @router.post("/", response_model=UserRead, status_code=201)
 def add_user(
     user: UserCreate,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     settings_service=Depends(get_settings_service),
 ) -> User:
     """
@@ -49,7 +50,7 @@ def add_user(
 
 @router.get("/whoami", response_model=UserRead)
 def read_current_user(
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> User:
     """
     Retrieve the current user's data.
@@ -57,7 +58,7 @@ def read_current_user(
     return current_user
 
 
-@router.get("/", response_model=UsersResponse)
+@router.get("/")
 def read_all_users(
     skip: int = 0,
     limit: int = 10,
@@ -83,8 +84,8 @@ def read_all_users(
 def patch_user(
     user_id: UUID,
     user_update: UserUpdate,
-    user: User = Depends(get_current_active_user),
-    session: Session = Depends(get_session),
+    user: Annotated[User, Depends(get_current_active_user)],
+    session: Annotated[Session, Depends(get_session)],
 ) -> User:
     """
     Update an existing user's data.
@@ -113,8 +114,8 @@ def patch_user(
 def reset_password(
     user_id: UUID,
     user_update: UserUpdate,
-    user: User = Depends(get_current_active_user),
-    session: Session = Depends(get_session),
+    user: Annotated[User, Depends(get_current_active_user)],
+    session: Annotated[Session, Depends(get_session)],
 ) -> User:
     """
     Reset a user's password.
@@ -134,11 +135,11 @@ def reset_password(
     return user
 
 
-@router.delete("/{user_id}", response_model=dict)
+@router.delete("/{user_id}")
 def delete_user(
     user_id: UUID,
-    current_user: User = Depends(get_current_active_superuser),
-    session: Session = Depends(get_session),
+    current_user: Annotated[User, Depends(get_current_active_superuser)],
+    session: Annotated[Session, Depends(get_session)],
 ) -> dict:
     """
     Delete a user from the database.

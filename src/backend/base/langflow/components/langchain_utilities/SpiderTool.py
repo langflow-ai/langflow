@@ -92,12 +92,12 @@ class SpiderTool(Component):
             parameters = self.params["data"]
         else:
             parameters = {
-                "limit": self.limit if self.limit else None,
-                "depth": self.depth if self.depth else None,
-                "blacklist": self.blacklist if self.blacklist else None,
-                "whitelist": self.whitelist if self.whitelist else None,
+                "limit": self.limit or None,
+                "depth": self.depth or None,
+                "blacklist": self.blacklist or None,
+                "whitelist": self.whitelist or None,
                 "readability": self.readability,
-                "request_timeout": self.request_timeout if self.request_timeout else None,
+                "request_timeout": self.request_timeout or None,
                 "metadata": self.metadata,
                 "return_format": "markdown",
             }
