@@ -53,12 +53,14 @@ class StructuredOutputComponent(Component):
                     "description": (
                         "Indicate the data type of the output field " "(e.g., str, int, float, bool, list, dict)."
                     ),
+                    "default": "text",
                 },
                 {
                     "name": "multiple",
                     "display_name": "Multiple",
                     "type": "bool",
                     "description": "Set to True if this output field should be a list of the specified type.",
+                    "default": "False",
                 },
             ],
         ),
@@ -89,9 +91,11 @@ class StructuredOutputComponent(Component):
             )
         else:
             output_model = _output_model
-        llm_with_structured_output = cast(
-            LanguageModel, self.llm.with_structured_output(schema=output_model, method="json_schema")
-        )
+        try:
+            llm_with_structured_output = cast(LanguageModel, self.llm.with_structured_output(schema=output_model))
+        except NotImplementedError as exc:
+            msg = f"{self.llm.__class__.__name__} does not support structured output."
+            raise TypeError(msg) from exc
         config_dict = {
             "run_name": self.display_name,
             "project_name": self.get_project_name(),
