@@ -138,10 +138,7 @@ class GleanSearchAPIComponent(LCToolComponent):
         )
 
         # Build the data
-        data = []
-        for result in results:
-            data.append(Data(data=result, text=result["snippets"][0]["text"]))
-
+        data = [Data(data=result, text=result["snippets"][0]["text"]) for result in results]
         self.status = data
 
         return data

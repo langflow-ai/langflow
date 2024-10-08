@@ -66,9 +66,7 @@ def add_messages(messages: Message | list[Message], flow_id: str | None = None):
             msg = f"The messages must be instances of Message. Found: {types}"
             raise ValueError(msg)
 
-        messages_models: list[MessageTable] = []
-        for msg in messages:
-            messages_models.append(MessageTable.from_message(msg, flow_id=flow_id))
+        messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
         with session_scope() as session:
             messages_models = add_messagetables(messages_models, session)
         return [Message(**message.model_dump()) for message in messages_models]
