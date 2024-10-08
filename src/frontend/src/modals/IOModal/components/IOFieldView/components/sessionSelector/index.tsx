@@ -37,7 +37,10 @@ export default function SessionSelector({
   const handleConfirm = () => {
     setIsEditing(false);
     // Here you would typically update the session name in your state or backend
-    updateSessionName({ old_session_id: session, new_session_id: editedSession });
+    updateSessionName({
+      old_session_id: session,
+      new_session_id: editedSession,
+    });
   };
 
   const handleCancel = () => {

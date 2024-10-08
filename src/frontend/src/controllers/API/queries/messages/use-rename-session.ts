@@ -22,15 +22,13 @@ export const useUpdateSessionName: useMutationFunctionType<
       null,
       {
         params: { new_session_id: data.new_session_id },
-      }
+      },
     );
     return result.data;
   };
 
-  const mutation: UseMutationResult<Message[], any, UpdateSessionParams> = mutate(
-    ["useUpdateSessionName"],
-    updateSessionApi,
-    {
+  const mutation: UseMutationResult<Message[], any, UpdateSessionParams> =
+    mutate(["useUpdateSessionName"], updateSessionApi, {
       ...options,
       onSettled: (data, variables, context) => {
         // Invalidate and refetch relevant queries
@@ -38,8 +36,7 @@ export const useUpdateSessionName: useMutationFunctionType<
           queryKey: ["useGetMessagesQuery"],
         });
       },
-    }
-  );
+    });
 
   return mutation;
 };
