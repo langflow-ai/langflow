@@ -198,6 +198,8 @@ export async function buildFlowVertices({
         onBuildStart(ids.map((id) => ({ id: id, reference: id })));
       ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
     };
+    console.log("type", type);
+    console.log("data", data);
     switch (type) {
       case "vertices_sorted": {
         const verticesToRun = data.to_run;
@@ -283,8 +285,10 @@ export async function buildFlowVertices({
       }
       case "token": {
         // await one milisencond so we avoid react batched updates
-        await new Promise((resolve) => setTimeout(resolve, 1));
-        useMessagesStore.getState().updateMessagePartial(data);
+        await new Promise((resolve) => {
+          useMessagesStore.getState().updateMessagePartial(data);
+          setTimeout(resolve, 10);
+        });
         return true;
       }
       case "end": {
