@@ -28,9 +28,9 @@ import { NodeType } from "../../types/flow";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
+import SessionSelector from "./components/IOFieldView/components/sessionSelector";
 import SessionView from "./components/SessionView";
 import ChatView from "./components/chatView";
-import SessionSelector from "./components/IOFieldView/components/sessionSelector";
 
 export default function IOModal({
   children,
@@ -422,7 +422,7 @@ export default function IOModal({
                       session={session}
                       deleteSession={(session) => {
                         handleDeleteSession(session);
-                        if(selectedViewField?.id === session){
+                        if (selectedViewField?.id === session) {
                           setSelectedViewField(undefined);
                         }
                       }}
@@ -432,7 +432,7 @@ export default function IOModal({
                             ? prev.filter((item) => item !== session)
                             : SessionInFlow
                               ? [...prev, session]
-                              : [session]
+                              : [session],
                         );
                       }}
                       isVisible={visibleSessions.includes(session)}
@@ -489,31 +489,31 @@ export default function IOModal({
                     {inputs.some(
                       (input) => input.id === selectedViewField.id,
                     ) && (
-                        <IOFieldView
-                          type={InputOutput.INPUT}
-                          left={false}
-                          fieldType={selectedViewField.type!}
-                          fieldId={selectedViewField.id!}
-                        />
-                      )}
+                      <IOFieldView
+                        type={InputOutput.INPUT}
+                        left={false}
+                        fieldType={selectedViewField.type!}
+                        fieldId={selectedViewField.id!}
+                      />
+                    )}
                     {outputs.some(
                       (output) => output.id === selectedViewField.id,
                     ) && (
-                        <IOFieldView
-                          type={InputOutput.OUTPUT}
-                          left={false}
-                          fieldType={selectedViewField.type!}
-                          fieldId={selectedViewField.id!}
-                        />
-                      )}
+                      <IOFieldView
+                        type={InputOutput.OUTPUT}
+                        left={false}
+                        fieldType={selectedViewField.type!}
+                        fieldId={selectedViewField.id!}
+                      />
+                    )}
                     {sessions.some(
                       (session) => session === selectedViewField.id,
                     ) && (
-                        <SessionView
-                          session={selectedViewField.id}
-                          id={currentFlowId}
-                        />
-                      )}
+                      <SessionView
+                        session={selectedViewField.id}
+                        id={currentFlowId}
+                      />
+                    )}
                   </div>
                 </div>
               )}
