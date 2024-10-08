@@ -37,7 +37,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    uv sync --no-install-project --no-dev --no-editable
+    uv sync --directory src/backend/base --no-install-project --no-dev --no-editable
 
 ADD ./src /app/src
 
