@@ -126,7 +126,7 @@ class Vertex:
 
     def set_state(self, state: str):
         self.state = VertexStates[state]
-        if self.state == VertexStates.INACTIVE and self.graph.in_degree_map[self.id] < 2:
+        if self.state == VertexStates.INACTIVE and self.graph.in_degree_map[self.id] <= 1:
             # If the vertex is inactive and has only one in degree
             # it means that it is not a merge point in the graph
             self.graph.inactivated_vertices.add(self.id)
@@ -361,11 +361,10 @@ class Vertex:
                         "Setting to None."
                     )
                     params[field_name] = None
+                elif field["list"]:
+                    params[field_name] = []
                 else:
-                    if field["list"]:
-                        params[field_name] = []
-                    else:
-                        params[field_name] = None
+                    params[field_name] = None
 
             elif field.get("type") in DIRECT_TYPES and params.get(field_name) is None:
                 val = field.get("value")
@@ -732,9 +731,9 @@ class Vertex:
         Updates the built object and its artifacts.
         """
         if isinstance(result, tuple):
-            if len(result) == 2:
+            if len(result) == 2:  # noqa: PLR2004
                 self._built_object, self.artifacts = result
-            elif len(result) == 3:
+            elif len(result) == 3:  # noqa: PLR2004
                 self._custom_component, self._built_object, self.artifacts = result
                 self.logs = self._custom_component._output_logs
                 self.artifacts_raw = self.artifacts.get("raw", None)

@@ -352,8 +352,8 @@ class CodeParser:
             methods=[],
             init=None,
         )
-        for node in nodes:
-            self.process_class_node(node, class_details)
+        for _node in nodes:
+            self.process_class_node(_node, class_details)
         self.data["classes"].append(class_details.model_dump())
 
     def process_class_node(self, node, class_details):

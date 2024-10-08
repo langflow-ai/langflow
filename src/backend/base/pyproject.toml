@@ -48,6 +48,7 @@ ignore = [
     "FIX002", # Line contains TODO
     "ISC001", # Messes with the formatter
     "PERF203", # Rarely useful
+    "PLR09", # Too many something (arg, statements, etc)
     "RUF012", # Pydantic models are currently not well detected. See https://github.com/astral-sh/ruff/issues/13630
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
@@ -61,7 +62,6 @@ ignore = [
     "EXE",
     "FBT",
     "N",
-    "PL",
     "RUF006", # Store a reference to the return value of `asyncio.create_task`
     "S",
     "SLF",
