@@ -210,6 +210,18 @@ def get_cache_service() -> CacheService:
     return get_service(ServiceType.CACHE_SERVICE, CacheServiceFactory())  # type: ignore
 
 
+def get_shared_component_cache_service() -> CacheService:
+    """
+    Retrieves the cache service from the service manager.
+
+    Returns:
+        The cache service instance.
+    """
+    from langflow.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
+
+    return get_service(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, SharedComponentCacheServiceFactory())  # type: ignore
+
+
 def get_session_service() -> SessionService:
     """
     Retrieves the session service from the service manager.
