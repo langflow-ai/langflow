@@ -105,7 +105,7 @@ test("chat_io_teste", async ({ page }) => {
   await page.mouse.up();
 
   await page.getByLabel("fit view").click();
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
   });

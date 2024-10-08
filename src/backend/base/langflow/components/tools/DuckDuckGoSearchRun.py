@@ -1,11 +1,13 @@
-from typing import Dict, Any, List
-from pydantic import BaseModel, Field
-from langchain_community.tools import DuckDuckGoSearchRun
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import MessageTextInput, IntInput
-from langflow.schema import Data
-from langflow.field_typing import Tool
+from typing import Any
+
 from langchain.tools import StructuredTool
+from langchain_community.tools import DuckDuckGoSearchRun
+from pydantic import BaseModel, Field
+
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
+from langflow.inputs import IntInput, MessageTextInput
+from langflow.schema import Data
 
 
 class DuckDuckGoSearchComponent(LCToolComponent):
@@ -35,7 +37,7 @@ class DuckDuckGoSearchComponent(LCToolComponent):
     def build_tool(self) -> Tool:
         wrapper = self._build_wrapper()
 
-        def search_func(query: str, max_results: int = 5, max_snippet_length: int = 100) -> List[Dict[str, Any]]:
+        def search_func(query: str, max_results: int = 5, max_snippet_length: int = 100) -> list[dict[str, Any]]:
             full_results = wrapper.run(f"{query} (site:*)")
             result_list = full_results.split("\n")[:max_results]
             limited_results = []
@@ -55,7 +57,7 @@ class DuckDuckGoSearchComponent(LCToolComponent):
         self.status = "DuckDuckGo Search Tool created"
         return tool
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         tool = self.build_tool()
         results = tool.run(
             {

@@ -16,6 +16,8 @@ import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { VertexBuildTypeAPI } from "@/types/api";
+import { NodeDataType } from "@/types/flow";
+import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames } from "@/utils/utils";
 import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -28,6 +30,7 @@ export default function NodeStatus({
   setBorderColor,
   frozen,
   showNode,
+  data,
 }: {
   nodeId: string;
   display_name: string;
@@ -35,15 +38,39 @@ export default function NodeStatus({
   setBorderColor: (color: string) => void;
   frozen?: boolean;
   showNode: boolean;
+  data: NodeDataType;
 }) {
+  const nodeId_ = data.node?.flow?.data
+    ? (findLastNode(data.node?.flow.data!)?.id ?? nodeId)
+    : nodeId;
   const [validationString, setValidationString] = useState<string>("");
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
-  const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[nodeId]?.status,
-  );
+  const buildStatus = useFlowStore((state) => {
+    if (data.node?.flow && data.node.flow.data?.nodes) {
+      const flow = data.node.flow;
+      const nodes = flow.data?.nodes; // check all the build status of the nodes in the flow
+      const buildStatus_: BuildStatus[] = [];
+      //@ts-ignore
+      for (const node of nodes) {
+        buildStatus_.push(state.flowBuildStatus[node.id]?.status);
+      }
+      if (buildStatus_.every((status) => status === BuildStatus.BUILT)) {
+        return BuildStatus.BUILT;
+      }
+      if (buildStatus_.some((status) => status === BuildStatus.BUILDING)) {
+        return BuildStatus.BUILDING;
+      }
+      if (buildStatus_.some((status) => status === BuildStatus.ERROR)) {
+        return BuildStatus.ERROR;
+      } else {
+        return BuildStatus.TO_BUILD;
+      }
+    }
+    return state.flowBuildStatus[nodeId]?.status;
+  });
   const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[nodeId]?.timestamp,
+    (state) => state.flowBuildStatus[nodeId_]?.timestamp,
   );
   const iconStatus = useIconStatus(buildStatus, validationStatus);
   const buildFlow = useFlowStore((state) => state.buildFlow);
@@ -62,7 +89,7 @@ export default function NodeStatus({
   const flowPool = useFlowStore((state) => state.flowPool);
   useHotkeys(play, handlePlayWShortcut, { preventDefault: true });
   useValidationStatusString(validationStatus, setValidationString);
-  useUpdateValidationStatus(nodeId, flowPool, setValidationStatus);
+  useUpdateValidationStatus(nodeId_, flowPool, setValidationStatus);
 
   const getBaseBorderClass = (selected) => {
     let className = selected

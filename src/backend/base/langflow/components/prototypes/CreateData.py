@@ -1,10 +1,9 @@
 from typing import Any
 
 from langflow.custom import Component
-from langflow.inputs.inputs import IntInput, MessageTextInput, DictInput, BoolInput
-from langflow.io import Output
-
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.inputs.inputs import BoolInput, DictInput, IntInput, MessageTextInput
+from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
@@ -51,7 +50,8 @@ class CreateDataComponent(Component):
             existing_fields = {}
             if field_value_int > 15:
                 build_config["number_of_fields"]["value"] = 15
-                raise ValueError("Number of fields cannot exceed 15. Try using a Component to combine two Data.")
+                msg = "Number of fields cannot exceed 15. Try using a Component to combine two Data."
+                raise ValueError(msg)
             if len(build_config) > len(default_keys):
                 # back up the existing template fields
                 for key in build_config.copy():
@@ -100,4 +100,5 @@ class CreateDataComponent(Component):
         data_keys = self.get_data().keys()
         if self.text_key not in data_keys and self.text_key != "":
             formatted_data_keys = ", ".join(data_keys)
-            raise ValueError(f"Text Key: '{self.text_key}' not found in the Data keys: '{formatted_data_keys}'")
+            msg = f"Text Key: '{self.text_key}' not found in the Data keys: '{formatted_data_keys}'"
+            raise ValueError(msg)

@@ -18,6 +18,7 @@ from .constants import (
     Data,
     Document,
     Embeddings,
+    LanguageModel,
     NestedDict,
     Object,
     PromptTemplate,
@@ -26,7 +27,6 @@ from .constants import (
     TextSplitter,
     Tool,
     VectorStore,
-    LanguageModel,
 )
 from .range_spec import RangeSpec
 
@@ -48,7 +48,7 @@ def __getattr__(name: str) -> Any:
     if name == "Input":
         return _import_input_class()
         return RangeSpec
-    elif name == "Output":
+    if name == "Output":
         return _import_output_class()
     # The other names should work as if they were imported from constants
     # Import the constants module langflow.field_typing.constants

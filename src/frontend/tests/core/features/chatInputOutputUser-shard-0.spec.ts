@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import { readFileSync } from "fs";
 import path from "path";
@@ -65,7 +65,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByTestId("edit-button-modal").click();
   await page.getByText("Close").last().click();
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   // Read the image file as a binary string
   const filePath = "tests/assets/chain.png";

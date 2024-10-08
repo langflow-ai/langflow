@@ -139,6 +139,6 @@
     "tailwindcss-dotted-background": "^1.1.0",
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
-    "vite": "^5.3.1"
+    "vite": "^5.4.7"
   }
 }

@@ -1,19 +1,18 @@
-from typing import Optional
-
 from fastapi import Depends
-from langflow.utils.version import get_version_info
 from sqlmodel import Session
 
 from langflow.services.deps import get_session
+from langflow.utils.version import get_version_info
 
 from .model import Flow
 
 
-def get_flow_by_id(session: Session = Depends(get_session), flow_id: Optional[str] = None) -> Flow | None:
+def get_flow_by_id(session: Session = Depends(get_session), flow_id: str | None = None) -> Flow | None:
     """Get flow by id."""
 
     if flow_id is None:
-        raise ValueError("Flow id is required.")
+        msg = "Flow id is required."
+        raise ValueError(msg)
 
     return session.get(Flow, flow_id)
 

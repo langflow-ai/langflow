@@ -1,11 +1,13 @@
-from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field
-from langchain_community.utilities.serpapi import SerpAPIWrapper
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, DictInput, MultilineInput, IntInput
-from langflow.schema import Data
-from langflow.field_typing import Tool
+from typing import Any
+
 from langchain.tools import StructuredTool
+from langchain_community.utilities.serpapi import SerpAPIWrapper
+from pydantic import BaseModel, Field
+
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
+from langflow.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
+from langflow.schema import Data
 
 
 class SerpAPIComponent(LCToolComponent):
@@ -26,7 +28,7 @@ class SerpAPIComponent(LCToolComponent):
 
     class SerpAPISchema(BaseModel):
         query: str = Field(..., description="The search query")
-        params: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional search parameters")
+        params: dict[str, Any] | None = Field(default_factory=dict, description="Additional search parameters")
         max_results: int = Field(5, description="Maximum number of results to return")
         max_snippet_length: int = Field(100, description="Maximum length of each result snippet")
 
@@ -42,8 +44,8 @@ class SerpAPIComponent(LCToolComponent):
         wrapper = self._build_wrapper()
 
         def search_func(
-            query: str, params: Optional[Dict[str, Any]] = None, max_results: int = 5, max_snippet_length: int = 100
-        ) -> List[Dict[str, Any]]:
+            query: str, params: dict[str, Any] | None = None, max_results: int = 5, max_snippet_length: int = 100
+        ) -> list[dict[str, Any]]:
             params = params or {}
             full_results = wrapper.results(query, **params)
             organic_results = full_results.get("organic_results", [])[:max_results]
@@ -69,7 +71,7 @@ class SerpAPIComponent(LCToolComponent):
         self.status = "SerpAPI Tool created"
         return tool
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         tool = self.build_tool()
         try:
             results = tool.run(
@@ -86,5 +88,5 @@ class SerpAPIComponent(LCToolComponent):
             self.status = data_list
             return data_list
         except Exception as e:
-            self.status = f"Error: {str(e)}"
+            self.status = f"Error: {e}"
             return [Data(data={"error": str(e)}, text=str(e))]

@@ -1,5 +1,5 @@
 import json
-from typing import List, cast
+from typing import cast
 
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
@@ -31,7 +31,11 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
         },
         "metadata_field_info": {
             "display_name": "Metadata Field Info",
-            "info": 'Each metadata field info is a string in the form of key value pair dictionary containing additional search metadata.\nExample input: {"name":"speech","description":"what name of the speech","type":"string or list[string]"}.\nThe keys should remain constant(name, description, type)',
+            "info": "Each metadata field info is a string in the form of key value pair dictionary containing "
+            "additional search metadata.\n"
+            'Example input: {"name":"speech","description":"what name of the speech","type":'
+            '"string or list[string]"}.\n'
+            "The keys should remain constant(name, description, type)",
         },
     }
 
@@ -40,14 +44,15 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
         vectorstore: VectorStore,
         document_content_description: str,
         llm: LanguageModel,
-        metadata_field_info: List[str],
+        metadata_field_info: list[str],
     ) -> Retriever:  # type: ignore
         metadata_field_obj = []
 
         for meta in metadata_field_info:
             meta_obj = json.loads(meta)
             if "name" not in meta_obj or "description" not in meta_obj or "type" not in meta_obj:
-                raise Exception("Incorrect metadata field info format.")
+                msg = "Incorrect metadata field info format."
+                raise Exception(msg)
             attribute_info = AttributeInfo(
                 name=meta_obj["name"],
                 description=meta_obj["description"],

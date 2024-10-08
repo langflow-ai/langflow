@@ -1,11 +1,12 @@
+import { INVALID_FILE_SIZE_ALERT } from "@/constants/alerts_constants";
 import { useDeleteBuilds } from "@/controllers/API/queries/_builds";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import IconComponent from "../../../../components/genericIconComponent";
-import { Button } from "../../../../components/ui/button";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
   CHAT_FIRST_INITIAL_TEXT,
@@ -16,13 +17,8 @@ import {
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { VertexBuildTypeAPI } from "../../../../types/api";
 import { ChatMessageType } from "../../../../types/chat";
 import { FilePreviewType, chatViewProps } from "../../../../types/components";
-import {
-  classNames,
-  removeDuplicatesBasedOnAttribute,
-} from "../../../../utils/utils";
 import ChatInput from "./chatInput";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import ChatMessage from "./chatMessage";
@@ -47,6 +43,7 @@ export default function ChatView({
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const [id, setId] = useState<string>("");
   const { mutate: mutateDeleteFlowPool } = useDeleteBuilds();
+  const maxFileSizeUpload = useUtilityStore((state) => state.maxFileSizeUpload);
 
   //build chat history
   useEffect(() => {
@@ -153,6 +150,13 @@ export default function ChatView({
     if (files) {
       const file = files?.[0];
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
+      if (file.size > maxFileSizeUpload) {
+        setErrorData({
+          title: INVALID_FILE_SIZE_ALERT(maxFileSizeUpload / 1024 / 1024),
+        });
+        return;
+      }
+
       if (
         !fileExtension ||
         !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
@@ -188,13 +192,17 @@ export default function ChatView({
               return newFiles;
             });
           },
-          onError: () => {
+          onError: (error) => {
             setFiles((prev) => {
               const newFiles = [...prev];
               const updatedIndex = newFiles.findIndex((file) => file.id === id);
               newFiles[updatedIndex].loading = false;
               newFiles[updatedIndex].error = true;
               return newFiles;
+            });
+            setErrorData({
+              title: "Error uploading file",
+              list: [error.response?.data?.detail],
             });
           },
         },

@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_community.vectorstores import FAISS
 from loguru import logger
 
@@ -43,7 +41,8 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         BoolInput(
             name="allow_dangerous_deserialization",
             display_name="Allow Dangerous Deserialization",
-            info="Set to True to allow loading pickle files from untrusted sources. Only enable this if you trust the source of the data.",
+            info="Set to True to allow loading pickle files from untrusted sources. "
+            "Only enable this if you trust the source of the data.",
             advanced=True,
             value=True,
         ),
@@ -63,7 +62,8 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         Builds the FAISS object.
         """
         if not self.persist_directory:
-            raise ValueError("Folder path is required to save the FAISS index.")
+            msg = "Folder path is required to save the FAISS index."
+            raise ValueError(msg)
         path = self.resolve_path(self.persist_directory)
 
         documents = []
@@ -79,12 +79,13 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
 
         return faiss
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         """
         Search for documents in the FAISS vector store.
         """
         if not self.persist_directory:
-            raise ValueError("Folder path is required to load the FAISS index.")
+            msg = "Folder path is required to load the FAISS index."
+            raise ValueError(msg)
         path = self.resolve_path(self.persist_directory)
 
         vector_store = FAISS.load_local(
@@ -95,7 +96,8 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         )
 
         if not vector_store:
-            raise ValueError("Failed to load the FAISS index.")
+            msg = "Failed to load the FAISS index."
+            raise ValueError(msg)
 
         logger.debug(f"Search input: {self.search_query}")
         logger.debug(f"Number of results: {self.number_of_results}")
@@ -112,6 +114,5 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
             logger.debug(f"Converted documents to data: {len(data)}")
             logger.debug(data)
             return data  # Return the search results data
-        else:
-            logger.debug("No search input provided. Skipping search.")
-            return []
+        logger.debug("No search input provided. Skipping search.")
+        return []

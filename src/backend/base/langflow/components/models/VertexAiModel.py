@@ -3,6 +3,7 @@ from typing import cast
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput
+from langflow.inputs.inputs import HandleInput
 from langflow.io import BoolInput, FileInput, FloatInput, IntInput, StrInput
 
 
@@ -12,7 +13,8 @@ class ChatVertexAIComponent(LCModelComponent):
     icon = "VertexAI"
     name = "VertexAiModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         FileInput(
             name="credentials",
             display_name="Credentials",
@@ -28,15 +30,21 @@ class ChatVertexAIComponent(LCModelComponent):
         IntInput(name="top_k", display_name="Top K", advanced=True),
         FloatInput(name="top_p", display_name="Top P", value=0.95, advanced=True),
         BoolInput(name="verbose", display_name="Verbose", value=False, advanced=True),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The parser to use to parse the output of the model",
+            advanced=True,
+            input_types=["OutputParser"],
+        ),
     ]
 
     def build_model(self) -> LanguageModel:
         try:
             from langchain_google_vertexai import ChatVertexAI
-        except ImportError:
-            raise ImportError(
-                "Please install the langchain-google-vertexai package to use the VertexAIEmbeddings component."
-            )
+        except ImportError as e:
+            msg = "Please install the langchain-google-vertexai package to use the VertexAIEmbeddings component."
+            raise ImportError(msg) from e
         location = self.location or None
         if self.credentials:
             from google.cloud import aiplatform

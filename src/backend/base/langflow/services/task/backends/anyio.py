@@ -1,5 +1,6 @@
 import traceback
-from typing import Any, Callable, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import anyio
 from loguru import logger
@@ -51,7 +52,7 @@ class AnyIOBackend(TaskBackend):
 
     async def launch_task(
         self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
-    ) -> Tuple[Optional[str], Optional[AnyIOTaskResult]]:
+    ) -> tuple[str | None, AnyIOTaskResult | None]:
         """
         Launch a new task in an asynchronous manner.
 
@@ -71,8 +72,8 @@ class AnyIOBackend(TaskBackend):
                 self.tasks[task_id] = task_result
                 logger.info(f"Task {task_id} started.")
                 return task_id, task_result
-            except Exception as e:
-                logger.error(f"An error occurred while launching the task: {e}")
+            except Exception:
+                logger.exception("An error occurred while launching the task")
                 return None, None
 
     def get_task(self, task_id: str) -> Any:

@@ -1,12 +1,15 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
+
+from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from loguru import logger
 
 from langflow.api.v1.schemas import ChatResponse, PromptResponse
 from langflow.services.deps import get_chat_service, get_socket_service
 from langflow.utils.util import remove_ansi_escape_codes
-from langchain_core.agents import AgentAction, AgentFinish
 
 if TYPE_CHECKING:
     from langflow.services.socket.service import SocketIOService
@@ -24,7 +27,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
     def __init__(self, session_id: str):
         self.chat_service = get_chat_service()
         self.client_id = session_id
-        self.socketio_service: "SocketIOService" = get_socket_service()
+        self.socketio_service: SocketIOService = get_socket_service()
         self.sid = session_id
         # self.socketio_service = self.chat_service.active_connections[self.client_id]
 
@@ -64,15 +67,15 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
             )
             for word in rest_of_output
         ]
-        resps = [resp] + rest_of_resps
+        resps = [resp, *rest_of_resps]
         # Try to send the response, handle potential errors.
 
         try:
             # This is to emulate the stream of tokens
             for resp in resps:
                 await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
-        except Exception as exc:
-            logger.error(f"Error sending response: {exc}")
+        except Exception:
+            logger.exception("Error sending response")
 
     async def on_tool_error(
         self,

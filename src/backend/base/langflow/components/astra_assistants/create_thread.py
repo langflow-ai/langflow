@@ -1,12 +1,11 @@
-from astra_assistants import patch  # type: ignore
-from langflow.custom import Component
-from openai import OpenAI
+from langflow.components.astra_assistants.util import get_patched_openai_client
+from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs import MultilineInput
 from langflow.schema.message import Message
 from langflow.template import Output
 
 
-class AssistantsCreateThread(Component):
+class AssistantsCreateThread(ComponentWithCache):
     display_name = "Create Assistant Thread"
     description = "Creates a thread and returns the thread id"
 
@@ -22,11 +21,12 @@ class AssistantsCreateThread(Component):
         Output(display_name="Thread ID", name="thread_id", method="process_inputs"),
     ]
 
-    def process_inputs(self) -> Message:
-        client = patch(OpenAI())
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.client = get_patched_openai_client(self._shared_component_cache)
 
-        thread = client.beta.threads.create()
+    def process_inputs(self) -> Message:
+        thread = self.client.beta.threads.create()
         thread_id = thread.id
 
-        message = Message(text=thread_id)
-        return message
+        return Message(text=thread_id)

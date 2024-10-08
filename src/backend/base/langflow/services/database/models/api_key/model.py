@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
@@ -14,15 +14,15 @@ def utc_now():
 
 
 class ApiKeyBase(SQLModel):
-    name: Optional[str] = Field(index=True, nullable=True, default=None)
-    last_used_at: Optional[datetime] = Field(default=None, nullable=True)
+    name: str | None = Field(index=True, nullable=True, default=None)
+    last_used_at: datetime | None = Field(default=None, nullable=True)
     total_uses: int = Field(default=0)
     is_active: bool = Field(default=True)
 
 
 class ApiKey(ApiKeyBase, table=True):  # type: ignore
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
-    created_at: Optional[datetime] = Field(
+    created_at: datetime | None = Field(
         default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     )
     api_key: str = Field(index=True, unique=True)
@@ -35,9 +35,9 @@ class ApiKey(ApiKeyBase, table=True):  # type: ignore
 
 
 class ApiKeyCreate(ApiKeyBase):
-    api_key: Optional[str] = None
-    user_id: Optional[UUID] = None
-    created_at: Optional[datetime] = Field(default_factory=utc_now)
+    api_key: str | None = None
+    user_id: UUID | None = None
+    created_at: datetime | None = Field(default_factory=utc_now)
 
     @field_validator("created_at", mode="before")
     @classmethod

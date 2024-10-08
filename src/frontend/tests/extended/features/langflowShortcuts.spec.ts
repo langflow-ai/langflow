@@ -106,4 +106,19 @@ test("LangflowShortcuts", async ({ page }) => {
   if (numberOfNodes != 1) {
     expect(false).toBeTruthy();
   }
+
+  // Test undo (Command+Z or Control+Z)
+  await page.getByTestId("title-Ollama").click();
+  await page.keyboard.press("Backspace");
+  numberOfNodes = await page.getByTestId("title-Ollama")?.count();
+  expect(numberOfNodes).toBe(0);
+
+  await page.keyboard.press(`${control}+z`);
+  numberOfNodes = await page.getByTestId("title-Ollama")?.count();
+  expect(numberOfNodes).toBe(1);
+
+  // Test redo (Command+Y or Control+Y)
+  await page.keyboard.press(`${control}+y`);
+  numberOfNodes = await page.getByTestId("title-Ollama")?.count();
+  expect(numberOfNodes).toBe(0);
 });

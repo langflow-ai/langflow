@@ -13,7 +13,7 @@ def is_image_file(file_path):
         with PILImage.open(file_path) as img:
             img.verify()  # Verify that it is, in fact, an image
         return True
-    except (IOError, SyntaxError):
+    except (OSError, SyntaxError):
         return False
 
 
@@ -51,7 +51,8 @@ class Image(BaseModel):
         if self.path:
             files = get_files([self.path], convert_to_base64=True)
             return files[0]
-        raise ValueError("Image path is not set.")
+        msg = "Image path is not set."
+        raise ValueError(msg)
 
     def to_content_dict(self):
         return {

@@ -1,5 +1,3 @@
-from typing import List, Union
-
 from langchain_community.agent_toolkits.base import BaseToolkit
 from langchain_core.tools import Tool, tool
 from metaphor_python import Metaphor  # type: ignore
@@ -25,7 +23,7 @@ class MetaphorToolkit(CustomComponent):
         use_autoprompt: bool = True,
         search_num_results: int = 5,
         similar_num_results: int = 5,
-    ) -> Union[Tool, BaseToolkit]:
+    ) -> Tool | BaseToolkit:
         # If documents, then we need to create a Vectara instance using .from_documents
         client = Metaphor(api_key=metaphor_api_key)
 
@@ -35,7 +33,7 @@ class MetaphorToolkit(CustomComponent):
             return client.search(query, use_autoprompt=use_autoprompt, num_results=search_num_results)
 
         @tool
-        def get_contents(ids: List[str]):
+        def get_contents(ids: list[str]):
             """Get contents of a webpage.
 
             The ids passed in should be a list of ids as fetched from `search`.

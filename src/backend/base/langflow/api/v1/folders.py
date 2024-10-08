@@ -1,9 +1,9 @@
-from langflow.api.utils import cascade_delete_flow
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy import or_, update
 from sqlmodel import Session, select
 
+from langflow.api.utils import cascade_delete_flow
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.schemas import FlowListCreate, FlowListReadWithFolderName
 from langflow.helpers.flow import generate_unique_flow_name
@@ -74,7 +74,7 @@ def create_folder(
 
         return new_folder
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/", response_model=list[FolderRead], status_code=200)
@@ -89,10 +89,9 @@ def read_folders(
                 or_(Folder.user_id == current_user.id, Folder.user_id == None)  # type: ignore # noqa: E711
             )
         ).all()
-        sorted_folders = sorted(folders, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
-        return sorted_folders
+        return sorted(folders, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/{folder_id}", response_model=FolderReadWithFlows, status_code=200)
@@ -111,8 +110,8 @@ def read_folder(
         return folder
     except Exception as e:
         if "No result found" in str(e):
-            raise HTTPException(status_code=404, detail="Folder not found")
-        raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=404, detail="Folder not found") from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.patch("/{folder_id}", response_model=FolderRead, status_code=200)
@@ -168,7 +167,7 @@ def update_folder(
         return existing_folder
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/{folder_id}", status_code=204)
@@ -192,7 +191,7 @@ async def delete_folder(
 
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/download/{folder_id}", response_model=FlowListReadWithFolderName, status_code=200)
@@ -204,12 +203,11 @@ async def download_file(
 ):
     """Download all flows from folder."""
     try:
-        folder = session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
-        return folder
+        return session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
     except Exception as e:
         if "No result found" in str(e):
-            raise HTTPException(status_code=404, detail="Folder not found")
-        raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=404, detail="Folder not found") from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)

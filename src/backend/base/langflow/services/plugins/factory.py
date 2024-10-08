@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from langflow.services.factory import ServiceFactory
@@ -11,6 +13,5 @@ class PluginServiceFactory(ServiceFactory):
     def __init__(self):
         super().__init__(PluginService)
 
-    def create(self, settings_service: "SettingsService"):
-        service = PluginService(settings_service)
-        return service
+    def create(self, settings_service: SettingsService):
+        return PluginService(settings_service)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from langflow.services.base import Service
 from langflow.services.settings.auth import AuthSettings
 from langflow.services.settings.base import Settings
@@ -12,12 +14,13 @@ class SettingsService(Service):
         self.auth_settings: AuthSettings = auth_settings
 
     @classmethod
-    def initialize(cls) -> "SettingsService":
+    def initialize(cls) -> SettingsService:
         # Check if a string is a valid path or a file name
 
         settings = Settings()
         if not settings.config_dir:
-            raise ValueError("CONFIG_DIR must be set in settings")
+            msg = "CONFIG_DIR must be set in settings"
+            raise ValueError(msg)
 
         auth_settings = AuthSettings(
             CONFIG_DIR=settings.config_dir,

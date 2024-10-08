@@ -1,8 +1,7 @@
-from typing import List
+from uuid import UUID
 
 from langchain_community.graph_vectorstores import CassandraGraphVectorStore
 from loguru import logger
-from uuid import UUID
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
@@ -107,7 +106,8 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="search_score_threshold",
             display_name="Search Score Threshold",
-            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            info="Minimum similarity score threshold for search results. "
+            "(when using 'Similarity with score threshold')",
             value=0,
             advanced=True,
         ),
@@ -125,10 +125,9 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
         try:
             import cassio
             from langchain_community.utilities.cassandra import SetupMode
-        except ImportError:
-            raise ImportError(
-                "Could not import cassio integration package. " "Please install it with `pip install cassio`."
-            )
+        except ImportError as e:
+            msg = "Could not import cassio integration package. Please install it with `pip install cassio`."
+            raise ImportError(msg) from e
 
         database_ref = self.database_ref
 
@@ -162,10 +161,7 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             else:
                 documents.append(_input)
 
-        if self.setup_mode == "Off":
-            setup_mode = SetupMode.OFF
-        else:
-            setup_mode = SetupMode.SYNC
+        setup_mode = SetupMode.OFF if self.setup_mode == "Off" else SetupMode.SYNC
 
         if documents:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
@@ -188,16 +184,15 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
     def _map_search_type(self):
         if self.search_type == "Similarity":
             return "similarity"
-        elif self.search_type == "Similarity with score threshold":
+        if self.search_type == "Similarity with score threshold":
             return "similarity_score_threshold"
-        elif self.search_type == "MMR (Max Marginal Relevance)":
+        if self.search_type == "MMR (Max Marginal Relevance)":
             return "mmr"
-        elif self.search_type == "MMR Traversal":
+        if self.search_type == "MMR Traversal":
             return "mmr_traversal"
-        else:
-            return "traversal"
+        return "traversal"
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         logger.debug(f"Search input: {self.search_query}")
@@ -209,24 +204,24 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
                 search_type = self._map_search_type()
                 search_args = self._build_search_args()
 
-                logger.debug(f"Search args: {str(search_args)}")
+                logger.debug(f"Search args: {search_args}")
 
                 docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
             except KeyError as e:
                 if "content" in str(e):
-                    raise ValueError(
-                        "You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'."
-                    ) from e
-                else:
-                    raise e
+                    msg = (
+                        "You should ingest data through Langflow (or LangChain) to query it in Langflow. "
+                        "Your collection does not contain a field name 'content'."
+                    )
+                    raise ValueError(msg) from e
+                raise e
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []
 
     def _build_search_args(self):
         args = {

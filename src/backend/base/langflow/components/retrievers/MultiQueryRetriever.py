@@ -1,5 +1,3 @@
-from typing import Optional
-
 from langchain.retrievers import MultiQueryRetriever
 
 from langflow.custom import CustomComponent
@@ -42,13 +40,10 @@ class MultiQueryRetrieverComponent(CustomComponent):
         self,
         llm: LanguageModel,
         retriever: BaseRetriever,
-        prompt: Optional[Text] = None,
+        prompt: Text | None = None,
         parser_key: str = "lines",
     ) -> MultiQueryRetriever:
         if not prompt:
             return MultiQueryRetriever.from_llm(llm=llm, retriever=retriever, parser_key=parser_key)
-        else:
-            prompt_template = PromptTemplate.from_template(prompt)
-            return MultiQueryRetriever.from_llm(
-                llm=llm, retriever=retriever, prompt=prompt_template, parser_key=parser_key
-            )
+        prompt_template = PromptTemplate.from_template(prompt)
+        return MultiQueryRetriever.from_llm(llm=llm, retriever=retriever, prompt=prompt_template, parser_key=parser_key)

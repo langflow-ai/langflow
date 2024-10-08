@@ -1,16 +1,16 @@
 import json
-from typing import Optional
-from google.oauth2.credentials import Credentials
+from json.decoder import JSONDecodeError
+
 from google.auth.exceptions import RefreshError
+from google.oauth2.credentials import Credentials
+from langchain_google_community import GoogleDriveLoader
+
 from langflow.custom import Component
+from langflow.helpers.data import docs_to_data
 from langflow.inputs import MessageTextInput
 from langflow.io import SecretStrInput
-from langflow.template import Output
 from langflow.schema import Data
-from langchain_google_community import GoogleDriveLoader
-from langflow.helpers.data import docs_to_data
-
-from json.decoder import JSONDecodeError
+from langflow.template import Output
 
 
 class GoogleDriveComponent(Component):
@@ -36,15 +36,15 @@ class GoogleDriveComponent(Component):
 
     def load_documents(self) -> Data:
         class CustomGoogleDriveLoader(GoogleDriveLoader):
-            creds: Optional[Credentials] = None
+            creds: Credentials | None = None
             """Credentials object to be passed directly."""
 
             def _load_credentials(self):
                 """Load credentials from the provided creds attribute or fallback to the original method."""
                 if self.creds:
                     return self.creds
-                else:
-                    raise ValueError("No credentials provided.")
+                msg = "No credentials provided."
+                raise ValueError(msg)
 
             class Config:
                 arbitrary_types_allowed = True
@@ -53,7 +53,8 @@ class GoogleDriveComponent(Component):
 
         document_ids = [self.document_id]
         if len(document_ids) != 1:
-            raise ValueError("Expected a single document ID")
+            msg = "Expected a single document ID"
+            raise ValueError(msg)
 
         # TODO: Add validation to check if the document ID is valid
 
@@ -61,7 +62,8 @@ class GoogleDriveComponent(Component):
         try:
             token_info = json.loads(json_string)
         except JSONDecodeError as e:
-            raise ValueError("Invalid JSON string") from e
+            msg = "Invalid JSON string"
+            raise ValueError(msg) from e
 
         # Initialize the custom loader with the provided credentials and document IDs
         loader = CustomGoogleDriveLoader(
@@ -73,11 +75,11 @@ class GoogleDriveComponent(Component):
             docs = loader.load()
         # catch google.auth.exceptions.RefreshError
         except RefreshError as e:
-            raise ValueError(
-                "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."
-            ) from e
+            msg = "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."
+            raise ValueError(msg) from e
         except Exception as e:
-            raise ValueError(f"Error loading documents: {e}") from e
+            msg = f"Error loading documents: {e}"
+            raise ValueError(msg) from e
 
         assert len(docs) == 1, "Expected a single document to be loaded."
 

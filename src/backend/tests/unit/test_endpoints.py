@@ -3,14 +3,14 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
 from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 
 
-def run_post(client, flow_id, headers, post_data):
-    response = client.post(
+async def run_post(client, flow_id, headers, post_data):
+    response = await client.post(
         f"api/v1/process/{flow_id}",
         headers=headers,
         json=post_data,
@@ -20,9 +20,9 @@ def run_post(client, flow_id, headers, post_data):
 
 
 # Helper function to poll task status
-def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1):
+async def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1):
     for _ in range(max_attempts):
-        task_status_response = client.get(
+        task_status_response = await client.get(
             href,
             headers=headers,
         )
@@ -135,7 +135,7 @@ PROMPT_REQUEST = {
 #         "session_id": None,
 #     }
 
-#     response = client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
+#     response = await client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
 
 #     assert response.status_code == 403
 #     assert response.json() == {"detail": "Invalid or missing API key"}
@@ -160,7 +160,7 @@ PROMPT_REQUEST = {
 #     }
 
 #     invalid_id = uuid.uuid4()
-#     response = client.post(f"api/v1/process/{invalid_id}", headers=headers, json=post_data)
+#     response = await client.post(f"api/v1/process/{invalid_id}", headers=headers, json=post_data)
 
 #     assert response.status_code == 404
 #     assert f"Flow {invalid_id} not found" in response.json()["detail"]
@@ -216,7 +216,7 @@ PROMPT_REQUEST = {
 
 #     # Make the request to the FastAPI TestClient
 
-#     response = client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
+#     response = await client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
 
 #     # Check the response
 #     assert response.status_code == 200, response.json()
@@ -253,15 +253,15 @@ PROMPT_REQUEST = {
 
 #     # Make the request to the FastAPI TestClient
 
-#     response = client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
+#     response = await client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
 
 #     # Check the response
 #     assert response.status_code == 403, response.json()
 #     assert response.json() == {"detail": "Invalid or missing API key"}
 
 
-def test_get_all(client: TestClient, logged_in_headers):
-    response = client.get("api/v1/all", headers=logged_in_headers)
+async def test_get_all(client: AsyncClient, logged_in_headers):
+    response = await client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     settings = get_settings_service().settings
     dir_reader = DirectoryReader(settings.components_path[0])
@@ -278,7 +278,7 @@ def test_get_all(client: TestClient, logged_in_headers):
     assert "ChatOutput" in json_response["outputs"]
 
 
-def test_post_validate_code(client: TestClient):
+async def test_post_validate_code(client: AsyncClient):
     # Test case with a valid import and function
     code1 = """
 import math
@@ -286,7 +286,7 @@ import math
 def square(x):
     return x ** 2
 """
-    response1 = client.post("api/v1/validate/code", json={"code": code1})
+    response1 = await client.post("api/v1/validate/code", json={"code": code1})
     assert response1.status_code == 200
     assert response1.json() == {"imports": {"errors": []}, "function": {"errors": []}}
 
@@ -297,7 +297,7 @@ import non_existent_module
 def square(x):
     return x ** 2
 """
-    response2 = client.post("api/v1/validate/code", json={"code": code2})
+    response2 = await client.post("api/v1/validate/code", json={"code": code2})
     assert response2.status_code == 200
     assert response2.json() == {
         "imports": {"errors": ["No module named 'non_existent_module'"]},
@@ -311,7 +311,7 @@ import math
 def square(x)
     return x ** 2
 """
-    response3 = client.post("api/v1/validate/code", json={"code": code3})
+    response3 = await client.post("api/v1/validate/code", json={"code": code3})
     assert response3.status_code == 200
     assert response3.json() == {
         "imports": {"errors": []},
@@ -319,11 +319,11 @@ def square(x)
     }
 
     # Test case with invalid JSON payload
-    response4 = client.post("api/v1/validate/code", json={"invalid_key": code1})
+    response4 = await client.post("api/v1/validate/code", json={"invalid_key": code1})
     assert response4.status_code == 422
 
     # Test case with an empty code string
-    response5 = client.post("api/v1/validate/code", json={"code": ""})
+    response5 = await client.post("api/v1/validate/code", json={"code": ""})
     assert response5.status_code == 200
     assert response5.json() == {"imports": {"errors": []}, "function": {"errors": []}}
 
@@ -334,7 +334,7 @@ import math
 def square(x)
     return x ** 2
 """
-    response6 = client.post("api/v1/validate/code", json={"code": code6})
+    response6 = await client.post("api/v1/validate/code", json={"code": code6})
     assert response6.status_code == 200
     assert response6.json() == {
         "imports": {"errors": []},
@@ -359,16 +359,16 @@ What is a good name for a company that makes {product}?
 INVALID_PROMPT = "This is an invalid prompt without any input variable."
 
 
-def test_valid_prompt(client: TestClient):
+async def test_valid_prompt(client: AsyncClient):
     PROMPT_REQUEST["template"] = VALID_PROMPT
-    response = client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
+    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
     assert response.status_code == 200
     assert response.json()["input_variables"] == ["product"]
 
 
-def test_invalid_prompt(client: TestClient):
+async def test_invalid_prompt(client: AsyncClient):
     PROMPT_REQUEST["template"] = INVALID_PROMPT
-    response = client.post(
+    response = await client.post(
         "api/v1/validate/prompt",
         json=PROMPT_REQUEST,
     )
@@ -385,22 +385,22 @@ def test_invalid_prompt(client: TestClient):
         ("{a}, {b}, and {c} are variables.", ["a", "b", "c"]),
     ],
 )
-def test_various_prompts(client, prompt, expected_input_variables):
+async def test_various_prompts(client, prompt, expected_input_variables):
     PROMPT_REQUEST["template"] = prompt
-    response = client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
+    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
     assert response.status_code == 200
     assert response.json()["input_variables"] == expected_input_variables
 
 
-def test_get_vertices_flow_not_found(client, logged_in_headers):
+async def test_get_vertices_flow_not_found(client, logged_in_headers):
     uuid = uuid4()
-    response = client.post(f"/api/v1/build/{uuid}/vertices", headers=logged_in_headers)
+    response = await client.post(f"/api/v1/build/{uuid}/vertices", headers=logged_in_headers)
     assert response.status_code == 500
 
 
-def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_headers):
-    flow_id = added_flow_with_prompt_and_history["id"]
-    response = client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
     assert response.status_code == 200
     assert "ids" in response.json()
     # The response should contain the list in this order
@@ -408,29 +408,25 @@ def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_head
     # The important part is before the - (ConversationBufferMemory, PromptTemplate, ChatOpenAI, LLMChain)
     ids = [_id.split("-")[0] for _id in response.json()["ids"]]
 
-    assert set(ids) == {
-        "ChatOpenAI",
-        "PromptTemplate",
-        "ConversationBufferMemory",
-    }
+    assert set(ids) == {"Webhook", "ChatInput"}
 
 
-def test_build_vertex_invalid_flow_id(client, logged_in_headers):
+async def test_build_vertex_invalid_flow_id(client, logged_in_headers):
     uuid = uuid4()
-    response = client.post(f"/api/v1/build/{uuid}/vertices/vertex_id", headers=logged_in_headers)
+    response = await client.post(f"/api/v1/build/{uuid}/vertices/vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
 
 
-def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_history, logged_in_headers):
-    flow_id = added_flow_with_prompt_and_history["id"]
-    response = client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
+async def test_build_vertex_invalid_vertex_id(client, added_flow_webhook_test, logged_in_headers):
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
 
 
-def test_successful_run_no_payload(client, simple_api_test, created_api_key):
+async def test_successful_run_no_payload(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -455,13 +451,13 @@ def test_successful_run_no_payload(client, simple_api_test, created_api_key):
     assert all([result is not None for result in inner_results]), (outputs_dict, output_results_has_results)
 
 
-def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):
+async def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
     payload = {
         "output_type": "text",
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -485,14 +481,14 @@ def test_successful_run_with_output_type_text(client, simple_api_test, created_a
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
-def test_successful_run_with_output_type_any(client, simple_api_test, created_api_key):
+async def test_successful_run_with_output_type_any(client, simple_api_test, created_api_key):
     # This one should have both the ChatOutput and TextOutput components
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
     payload = {
         "output_type": "any",
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -516,7 +512,7 @@ def test_successful_run_with_output_type_any(client, simple_api_test, created_ap
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
-def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key):
+async def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key):
     # This one should return outputs for all components
     # Let's just check the amount of outputs(there should be 7)
     headers = {"x-api-key": created_api_key.api_key}
@@ -524,7 +520,7 @@ def test_successful_run_with_output_type_debug(client, simple_api_test, created_
     payload = {
         "output_type": "debug",
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -541,7 +537,7 @@ def test_successful_run_with_output_type_debug(client, simple_api_test, created_
     assert len(outputs_dict.get("outputs")) == 3
 
 
-def test_successful_run_with_input_type_text(client, simple_api_test, created_api_key):
+async def test_successful_run_with_input_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -549,7 +545,7 @@ def test_successful_run_with_input_type_text(client, simple_api_test, created_ap
         "output_type": "debug",
         "input_value": "value1",
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -574,7 +570,8 @@ def test_successful_run_with_input_type_text(client, simple_api_test, created_ap
     ), text_input_outputs
 
 
-def test_successful_run_with_input_type_chat(client, simple_api_test, created_api_key):
+@pytest.mark.api_key_required
+async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -582,7 +579,7 @@ def test_successful_run_with_input_type_chat(client, simple_api_test, created_ap
         "output_type": "debug",
         "input_value": "value1",
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -606,7 +603,7 @@ def test_successful_run_with_input_type_chat(client, simple_api_test, created_ap
     ), chat_input_outputs
 
 
-def test_invalid_run_with_input_type_chat(client, simple_api_test, created_api_key):
+async def test_invalid_run_with_input_type_chat(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -615,12 +612,12 @@ def test_invalid_run_with_input_type_chat(client, simple_api_test, created_api_k
         "input_value": "value1",
         "tweaks": {"Chat Input": {"input_value": "value2"}},
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST, response.text
     assert "If you pass an input_value to the chat input, you cannot pass a tweak with the same name." in response.text
 
 
-def test_successful_run_with_input_type_any(client, simple_api_test, created_api_key):
+async def test_successful_run_with_input_type_any(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -628,7 +625,7 @@ def test_successful_run_with_input_type_any(client, simple_api_test, created_api
         "output_type": "debug",
         "input_value": "value1",
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -660,19 +657,19 @@ def test_successful_run_with_input_type_any(client, simple_api_test, created_api
     ), any_input_outputs
 
 
-def test_invalid_flow_id(client, created_api_key):
+async def test_invalid_flow_id(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = "invalid-flow-id"
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = UUID(int=0)
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
     # Check if the error detail is as expected
 
 
-def test_starter_projects(client, created_api_key):
+async def test_starter_projects(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    response = client.get("/api/v1/starter-projects/", headers=headers)
+    response = await client.get("api/v1/starter-projects/", headers=headers)
     assert response.status_code == status.HTTP_200_OK, response.text

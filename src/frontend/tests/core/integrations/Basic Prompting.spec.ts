@@ -72,7 +72,7 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
     timeout: 15000,
   });
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
   await page
     .getByText("No input message provided.", { exact: true })
     .last()

@@ -1,6 +1,5 @@
 import httpx
 
-from typing import Optional
 from langflow.logging.logger import logger
 
 
@@ -47,7 +46,9 @@ def _get_version_info():
             pass
 
     if __version__ is None:
-        raise ValueError(f"Package not found from options {package_options}")
+        msg = f"Package not found from options {package_options}"
+        raise ValueError(msg)
+    return None
 
 
 VERSION_INFO = _get_version_info()
@@ -69,23 +70,21 @@ def is_nightly(v: str) -> bool:
     return "dev" in v
 
 
-def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optional[str]:
+def fetch_latest_version(package_name: str, include_prerelease: bool) -> str | None:
     from packaging import version as pkg_version
 
     package_name = package_name.replace(" ", "-").lower()
-    valid_versions = []
     try:
         response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
         versions = response.json()["releases"].keys()
         valid_versions = [v for v in versions if include_prerelease or not is_pre_release(v)]
-
-    except Exception as e:
-        logger.exception(e)
-
-    finally:
         if not valid_versions:
             return None  # Handle case where no valid versions are found
         return max(valid_versions, key=lambda v: pkg_version.parse(v))
+
+    except Exception as e:
+        logger.exception(e)
+        return None
 
 
 def get_version_info():

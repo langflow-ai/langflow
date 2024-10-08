@@ -1,17 +1,20 @@
-from typing import Coroutine, Optional
+from collections.abc import Coroutine
+from typing import TYPE_CHECKING
 
 from langflow.services.base import Service
-from langflow.services.cache.base import CacheService
 from langflow.services.session.utils import compute_dict_hash, session_id_generator
+
+if TYPE_CHECKING:
+    from langflow.services.cache.base import CacheService
 
 
 class SessionService(Service):
     name = "session_service"
 
     def __init__(self, cache_service):
-        self.cache_service: "CacheService" = cache_service
+        self.cache_service: CacheService = cache_service
 
-    async def load_session(self, key, flow_id: str, data_graph: Optional[dict] = None):
+    async def load_session(self, key, flow_id: str, data_graph: dict | None = None):
         # Check if the data is cached
         if key in self.cache_service:
             result = self.cache_service.get(key)
