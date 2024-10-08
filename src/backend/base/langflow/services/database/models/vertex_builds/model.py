@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_serializer, field_validator
+from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -14,7 +15,7 @@ class VertexBuildBase(SQLModel):
     id: str = Field(nullable=False)
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     artifacts: dict | None = Field(default=None, sa_column=Column(JSON))
-    params: str | None = Field(nullable=True)
+    params: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     valid: bool = Field(nullable=False)
     flow_id: UUID = Field(foreign_key="flow.id")
 

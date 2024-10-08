@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores.redis import Redis
 
@@ -53,7 +55,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
-        with open("docuemnts.txt", "w") as f:
+        with Path("docuemnts.txt").open("w") as f:
             f.write(str(documents))
 
         if not documents:

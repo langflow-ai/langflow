@@ -192,8 +192,8 @@ def session_scope() -> Generator[Session, None, None]:
         try:
             yield session
             session.commit()
-        except Exception as e:
-            logger.exception("An error occurred during the session scope.", e)
+        except Exception:
+            logger.exception("An error occurred during the session scope.")
             session.rollback()
             raise
 
@@ -208,6 +208,18 @@ def get_cache_service() -> CacheService:
     from langflow.services.cache.factory import CacheServiceFactory
 
     return get_service(ServiceType.CACHE_SERVICE, CacheServiceFactory())  # type: ignore
+
+
+def get_shared_component_cache_service() -> CacheService:
+    """
+    Retrieves the cache service from the service manager.
+
+    Returns:
+        The cache service instance.
+    """
+    from langflow.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
+
+    return get_service(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, SharedComponentCacheServiceFactory())  # type: ignore
 
 
 def get_session_service() -> SessionService:

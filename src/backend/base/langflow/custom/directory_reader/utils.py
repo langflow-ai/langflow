@@ -132,8 +132,8 @@ def build_invalid_menu_items(menu_item):
             component_name, component_template = build_invalid_component(component)
             menu_items[component_name] = component_template
             logger.debug(f"Added {component_name} to invalid menu.")
-        except Exception as exc:
-            logger.exception(f"Error while creating custom component [{component_name}]: {exc}")
+        except Exception:
+            logger.exception(f"Error while creating custom component [{component_name}]")
     return menu_items
 
 
@@ -165,7 +165,6 @@ def build_menu_items(menu_item):
     for component_name, component_template, component in menu_item["components"]:
         try:
             menu_items[component_name] = component_template
-        except Exception as exc:
-            logger.error(f"Error loading Component: {component['output_types']}")
-            logger.exception(f"Error while building custom component {component['output_types']}: {exc}")
+        except Exception:
+            logger.exception(f"Error while building custom component {component['output_types']}")
     return menu_items

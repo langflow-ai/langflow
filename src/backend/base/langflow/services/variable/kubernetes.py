@@ -47,8 +47,8 @@ class KubernetesSecretService(VariableService, Service):
                     name=secret_name,
                     data=variables,
                 )
-            except Exception as e:
-                logger.error(f"Error creating {var} variable: {e}")
+            except Exception:
+                logger.exception(f"Error creating {var} variable")
 
         else:
             logger.info("Skipping environment variable storage.")
@@ -123,7 +123,6 @@ class KubernetesSecretService(VariableService, Service):
 
         secret_key, _ = self.resolve_variable(secret_name, user_id, name)
         self.kubernetes_secrets.delete_secret_key(name=secret_name, key=secret_key)
-        return
 
     def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID | str, _session: Session) -> None:
         self.delete_variable(user_id, _session, str(variable_id))

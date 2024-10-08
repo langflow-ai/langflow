@@ -86,7 +86,7 @@ class PythonCodeStructuredTool(LCToolComponent):
         if field_name is None:
             return build_config
 
-        if field_name != "tool_code" and field_name != "tool_function":
+        if field_name not in ("tool_code", "tool_function"):
             return build_config
 
         try:
@@ -292,13 +292,12 @@ class PythonCodeStructuredTool(LCToolComponent):
         return classes, functions
 
     def _find_imports(self, code: str) -> dotdict:
-        imports = []
+        imports: list[str] = []
         from_imports = []
         parsed_code = ast.parse(code)
         for node in parsed_code.body:
             if isinstance(node, ast.Import):
-                for alias in node.names:
-                    imports.append(alias.name)
+                imports.extend(alias.name for alias in node.names)
             elif isinstance(node, ast.ImportFrom):
                 from_imports.append(node)
         return dotdict({"imports": imports, "from_imports": from_imports})

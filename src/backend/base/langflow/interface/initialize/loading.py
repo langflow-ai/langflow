@@ -137,9 +137,8 @@ def update_params_with_load_from_db_fields(
             except TypeError as exc:
                 raise exc
 
-            except Exception as exc:
-                logger.error(f"Failed to get value for {field} from custom component. Setting it to None. Error: {exc}")
-
+            except Exception:
+                logger.exception(f"Failed to get value for {field} from custom component. Setting it to None.")
                 params[field] = None
 
     return params

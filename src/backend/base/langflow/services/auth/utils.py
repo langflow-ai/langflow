@@ -27,6 +27,8 @@ API_KEY_NAME = "x-api-key"
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
+MINIMUM_KEY_LENGTH = 32
+
 
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
 async def api_key_security(
@@ -132,8 +134,7 @@ async def get_current_user_by_jwt(
                 headers={"WWW-Authenticate": "Bearer"},
             )
     except JWTError as e:
-        logger.error(f"JWT decoding error: {e}")
-        logger.exception(e)
+        logger.exception("JWT decoding error")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -318,7 +319,7 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
         return create_user_tokens(user_id, db)
 
     except JWTError as e:
-        logger.error(f"JWT decoding error: {e}")
+        logger.exception("JWT decoding error")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
@@ -347,7 +348,7 @@ def add_padding(s):
 
 def ensure_valid_key(s: str) -> bytes:
     # If the key is too short, we'll use it as a seed to generate a valid key
-    if len(s) < 32:
+    if len(s) < MINIMUM_KEY_LENGTH:
         # Use the input as a seed for the random number generator
         random.seed(s)
         # Generate 32 random bytes

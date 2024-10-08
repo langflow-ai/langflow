@@ -36,8 +36,8 @@ class AIMLEmbeddingsImpl(BaseModel, Embeddings):
                     httpx.RequestError,
                     json.JSONDecodeError,
                     KeyError,
-                ) as e:
-                    logger.error(f"Error occurred: {e}")
+                ):
+                    logger.exception("Error occurred")
                     raise
 
         return embeddings  # type: ignore

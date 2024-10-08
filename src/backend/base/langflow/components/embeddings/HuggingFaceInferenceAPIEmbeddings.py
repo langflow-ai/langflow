@@ -62,7 +62,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
             )
             raise ValueError(msg) from e
 
-        if response.status_code != 200:
+        if response.status_code != requests.codes.ok:
             msg = f"HuggingFace health check failed: {response.status_code}"
             raise ValueError(msg)
         # returning True to solve linting error

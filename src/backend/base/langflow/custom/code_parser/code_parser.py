@@ -2,6 +2,7 @@ import ast
 import contextlib
 import inspect
 import traceback
+from pathlib import Path
 from typing import Any
 
 from cachetools import TTLCache, keys
@@ -30,7 +31,7 @@ def find_class_ast_node(class_obj):
         return None, []
 
     # Read the source code from the file
-    with open(source_file) as file:
+    with Path(source_file).open() as file:
         source_code = file.read()
 
     # Parse the source code into an AST
@@ -340,8 +341,8 @@ class CodeParser:
                 for import_node in import_nodes:
                     self.parse_imports(import_node)
                 nodes.append(class_node)
-            except Exception as exc:
-                logger.error(f"Error finding base class node: {exc}")
+            except Exception:
+                logger.exception("Error finding base class node")
         nodes.insert(0, node)
         class_details = ClassCodeDetails(
             name=node.name,
@@ -351,8 +352,8 @@ class CodeParser:
             methods=[],
             init=None,
         )
-        for node in nodes:
-            self.process_class_node(node, class_details)
+        for _node in nodes:
+            self.process_class_node(_node, class_details)
         self.data["classes"].append(class_details.model_dump())
 
     def process_class_node(self, node, class_details):
@@ -388,8 +389,7 @@ class CodeParser:
         bases = []
         for base in dunder_class.__bases__:
             bases.append(base)
-            for bases_base in base.__bases__:
-                bases.append(bases_base)
+            bases.extend(base.__bases__)
         return bases
 
     def parse_code(self) -> dict[str, Any]:
