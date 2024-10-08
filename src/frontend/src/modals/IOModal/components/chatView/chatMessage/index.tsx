@@ -207,6 +207,7 @@ export default function ChatMessage({
                           />
                         ) : (
                           <Markdown
+                            remarkPlugins={[remarkGfm]}
                             linkTarget="_blank"
                             rehypePlugins={[rehypeMathjax]}
                             className={cn(
