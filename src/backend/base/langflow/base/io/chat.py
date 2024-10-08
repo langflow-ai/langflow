@@ -61,7 +61,7 @@ class ChatComponent(Component):
         iterator = message.text
         if not isinstance(iterator, AsyncIterator | Iterator):
             msg = "The message must be an iterator or an async iterator."
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         if isinstance(iterator, AsyncIterator):
             return run_until_complete(self._handle_async_iterator(iterator, message, message_id))

@@ -62,12 +62,14 @@ ignore = [
     "EXE",
     "FBT",
     "N",
+    "PGH",
     "RUF006", # Store a reference to the return value of `asyncio.create_task`
     "S",
     "SLF",
     "T201",
-    "TRY",
-    "PGH",
+    "TRY002",
+    "TRY2",
+    "TRY3",
 ]
 
 [tool.ruff.lint.per-file-ignores]

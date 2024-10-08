@@ -30,7 +30,7 @@ class Data(BaseModel):
     def validate_data(cls, values):
         if not isinstance(values, dict):
             msg = "Data must be a dictionary"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
         if not values.get("data"):
             values["data"] = {}
         # Any other keyword should be added to the data dictionary
