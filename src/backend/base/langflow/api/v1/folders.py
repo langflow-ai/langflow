@@ -137,7 +137,7 @@ def update_folder(
 
         folder_data = existing_folder.model_dump(exclude_unset=True)
         for key, value in folder_data.items():
-            if key != "components" and key != "flows":
+            if key not in ("components", "flows"):
                 setattr(existing_folder, key, value)
         session.add(existing_folder)
         session.commit()
