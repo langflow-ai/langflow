@@ -1,3 +1,6 @@
+import operator
+from functools import reduce
+
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
@@ -5,7 +8,6 @@ from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs import (
     BoolInput,
     DictInput,
@@ -14,7 +16,6 @@ from langflow.inputs import (
     IntInput,
     SecretStrInput,
     StrInput,
-    TableInput,
 )
 from langflow.inputs.inputs import HandleInput
 
@@ -40,6 +41,15 @@ class OpenAIModelComponent(LCModelComponent):
             display_name="JSON Mode",
             advanced=True,
             info="If True, it will output JSON regardless of passing a schema.",
+        ),
+        DictInput(
+            name="output_schema",
+            is_list=True,
+            display_name="Schema",
+            advanced=True,
+            info="The schema for the Output of the model. "
+            "You must pass the word JSON in the prompt. "
+            "If left blank, JSON mode will be disabled.",
         ),
         DropdownInput(
             name="model_name",
@@ -78,61 +88,19 @@ class OpenAIModelComponent(LCModelComponent):
             advanced=True,
             input_types=["OutputParser"],
         ),
-        # Start of Selection
-        TableInput(
-            name="output_schema",
-            is_list=True,
-            display_name="Schema",
-            advanced=True,
-            info="The schema for the Output of the model. "
-            "You must pass the word JSON in the prompt. "
-            "If left blank, JSON mode will be disabled.",
-            value=[],
-            table_schema=[
-                {
-                    "name": "name",
-                    "display_name": "Name",
-                    "type": "str",
-                    "description": "The name of the output",
-                },
-                {
-                    "name": "default",
-                    "display_name": "Default",
-                    "type": "str",
-                    "description": "The default value of the output",
-                },
-                {
-                    "name": "description",
-                    "display_name": "Description",
-                    "type": "str",
-                    "description": "The description of the output",
-                },
-                {
-                    "name": "type",
-                    "display_name": "Type",
-                    "type": "str",
-                    "description": "The type of the output. One of: str, int, float, bool, list, dict.",
-                },
-                {
-                    "name": "multiple",
-                    "display_name": "Multiple",
-                    "type": "bool",
-                    "description": "If True, the output is expected to be a list of the type specified.",
-                },
-            ],
-        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         # self.output_schema is a list of dictionaries
         # let's convert it to a dictionary
+        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})
         openai_api_key = self.api_key
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
         openai_api_base = self.openai_api_base or "https://api.openai.com/v1"
-        json_mode = bool(self.output_schema) or self.json_mode
+        json_mode = bool(output_schema_dict) or self.json_mode
         seed = self.seed
 
         api_key = SecretStr(openai_api_key) if openai_api_key else None
@@ -146,9 +114,8 @@ class OpenAIModelComponent(LCModelComponent):
             seed=seed,
         )
         if json_mode:
-            if self.output_schema:
-                output_model = build_model_from_schema(self.output_schema)
-                output = output.with_structured_output(schema=output_model, method="json_schema")  # type: ignore
+            if output_schema_dict:
+                output = output.with_structured_output(schema=output_schema_dict, method="json_mode")  # type: ignore
             else:
                 output = output.bind(response_format={"type": "json_object"})
 
