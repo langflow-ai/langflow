@@ -2,6 +2,7 @@ import ast
 import contextlib
 import inspect
 import traceback
+from itertools import starmap
 from pathlib import Path
 from typing import Any
 
@@ -161,7 +162,7 @@ class CodeParser:
                 if " as " in module:
                     module, alias = module.split(" as ")
                 if module in return_type_str or (alias and alias in return_type_str):
-                    exec(f"import {module} as {alias if alias else module}", eval_env)
+                    exec(f"import {module} as {alias or module}", eval_env)
         return eval_env
 
     def parse_callable_details(self, node: ast.FunctionDef) -> dict[str, Any]:
@@ -218,7 +219,7 @@ class CodeParser:
 
         defaults = missing_defaults + default_values
 
-        return [self.parse_arg(arg, default) for arg, default in zip(node.args.args, defaults, strict=True)]
+        return list(starmap(self.parse_arg, zip(node.args.args, defaults, strict=True)))
 
     def parse_varargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
@@ -239,7 +240,7 @@ class CodeParser:
             ast.unparse(default) if default else None for default in node.args.kw_defaults
         ]
 
-        return [self.parse_arg(arg, default) for arg, default in zip(node.args.kwonlyargs, kw_defaults, strict=True)]
+        return list(starmap(self.parse_arg, zip(node.args.kwonlyargs, kw_defaults, strict=True)))
 
     def parse_kwargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """

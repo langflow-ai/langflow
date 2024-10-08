@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
@@ -23,8 +25,8 @@ router = APIRouter(tags=["Login"])
 @router.post("/login", response_model=Token)
 async def login_to_get_access_token(
     response: Response,
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_session),
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: Annotated[Session, Depends(get_session)],
     # _: Session = Depends(get_current_active_user)
     settings_service=Depends(get_settings_service),
     variable_service: VariableService = Depends(get_variable_service),
@@ -82,7 +84,7 @@ async def login_to_get_access_token(
 
 @router.get("/auto_login")
 async def auto_login(
-    response: Response, db: Session = Depends(get_session), settings_service=Depends(get_settings_service)
+    response: Response, db: Annotated[Session, Depends(get_session)], settings_service=Depends(get_settings_service)
 ):
     auth_settings = settings_service.auth_settings
 
@@ -129,8 +131,8 @@ async def auto_login(
 async def refresh_token(
     request: Request,
     response: Response,
-    settings_service: SettingsService = Depends(get_settings_service),
-    db: Session = Depends(get_session),
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+    db: Annotated[Session, Depends(get_session)],
 ):
     auth_settings = settings_service.auth_settings
 

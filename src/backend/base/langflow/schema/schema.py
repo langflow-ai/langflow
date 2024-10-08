@@ -57,10 +57,8 @@ def get_type(payload):
             result = LogType.TEXT
 
     if result == LogType.UNKNOWN and (
-        payload
-        and isinstance(payload, Generator)
-        or isinstance(payload, Message)
-        and isinstance(payload.text, Generator)
+        (payload and isinstance(payload, Generator))
+        or (isinstance(payload, Message) and isinstance(payload.text, Generator))
     ):
         result = LogType.STREAM
 
