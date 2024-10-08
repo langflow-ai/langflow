@@ -42,7 +42,7 @@ _ComponentToolkit = None
 
 
 def _get_component_toolkit():
-    global _ComponentToolkit
+    global _ComponentToolkit  # noqa: PLW0603
     if _ComponentToolkit is None:
         from langflow.base.tools.component_tool import ComponentToolkit
 
@@ -404,11 +404,13 @@ class Component(CustomComponent):
         # Get the input object from the current component
         input_ = self._inputs[input_name]
         # Iterate over outputs to find matches based on types
-        for output in outputs:
-            for output_type in output.types:
-                # Check if the output type matches the input's accepted types
-                if input_.input_types and output_type in input_.input_types:
-                    matching_pairs.append((output, input_))
+        matching_pairs = [
+            (output, input_)
+            for output in outputs
+            for output_type in output.types
+            # Check if the output type matches the input's accepted types
+            if input_.input_types and output_type in input_.input_types
+        ]
         # If multiple matches are found, raise an error indicating ambiguity
         if len(matching_pairs) > 1:
             matching_pairs_str = self._build_error_string_from_matching_pairs(matching_pairs)
@@ -593,7 +595,7 @@ class Component(CustomComponent):
         #! works and then update this later
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
-        for key, _value in self._inputs.items():
+        for key in self._inputs:
             frontend_node.set_field_load_from_db_in_template(key, False)
         self._map_parameters_on_frontend_node(frontend_node)
 

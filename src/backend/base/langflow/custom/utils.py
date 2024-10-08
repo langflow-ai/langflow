@@ -44,15 +44,15 @@ def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: l
                 },
             )
         if return_type is str:
-            return_type = "Text"
+            _return_type = "Text"
         elif hasattr(return_type, "__name__"):
-            return_type = return_type.__name__
+            _return_type = return_type.__name__
         elif hasattr(return_type, "__class__"):
-            return_type = return_type.__class__.__name__
+            _return_type = return_type.__class__.__name__
         else:
-            return_type = str(return_type)
+            _return_type = str(return_type)
 
-        frontend_node.add_output_type(return_type)
+        frontend_node.add_output_type(_return_type)
 
 
 def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list[str]):
@@ -64,9 +64,7 @@ def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list
     field_dict = {field.name: field for field in frontend_node.template.fields}
     reordered_fields = [field_dict[name] for name in field_order if name in field_dict]
     # Add any fields that are not in the field_order list
-    for field in frontend_node.template.fields:
-        if field.name not in field_order:
-            reordered_fields.append(field)
+    reordered_fields.extend(field for field in frontend_node.template.fields if field.name not in field_order)
     frontend_node.template.fields = reordered_fields
     frontend_node.field_order = field_order
 
@@ -226,19 +224,18 @@ def add_extra_fields(frontend_node, field_config, function_args):
             config,
         )
     if "kwargs" in function_args_names and not all(key in function_args_names for key in field_config):
-        for field_name, field_config in _field_config.copy().items():
-            if "name" not in field_config or field_name == "code":
+        for field_name, config in _field_config.items():
+            if "name" not in config or field_name == "code":
                 continue
-            config = _field_config.get(field_name, {})
-            config = config.model_dump() if isinstance(config, BaseModel) else config
-            field_name, field_type, field_value, field_required = get_field_properties(extra_field=config)
+            _config = config.model_dump() if isinstance(config, BaseModel) else config
+            _field_name, field_type, field_value, field_required = get_field_properties(extra_field=_config)
             frontend_node = add_new_custom_field(
                 frontend_node,
-                field_name,
+                _field_name,
                 field_type,
                 field_value,
                 field_required,
-                config,
+                _config,
             )
 
 

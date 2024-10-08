@@ -39,51 +39,35 @@ flake8-type-checking.runtime-evaluated-base-classes = [
     "typing.TypedDict", # Needed by fastapi
     "typing_extensions.TypedDict", # Needed by fastapi
 ]
-select = [
-    "A",
-    "ASYNC",
-    "B",
-    "C4",
-    "COM",
-    "DJ",
-    "DTZ",
-    "E",
-    "EM",
-    "F",
-    "FA",
-    "FLY",
-    "FURB",
-    "G",
-    "I",
-    "ICN",
-    "INT",
-    "INP",
-    "ISC",
-    "LOG",
-    "NPY",
-    "PD",
-    "PIE",
-    "PT",
-    "PTH",
-    "PYI",
-    "Q",
-    "RET",
-    "RSE",
-    "RUF",
-    "SIM",
-    "SLOT",
-    "T10",
-    "TCH",
-    "TID",
-    "UP",
-    "W",
-    "YTT"
-]
+select = ["ALL"]
 ignore = [
+    "C90", # McCabe complexity
+    "CPY", # Missing copyright
     "COM812", # Messes with the formatter
+    "ERA", # Eradicate commented-out code
+    "FIX002", # Line contains TODO
     "ISC001", # Messes with the formatter
-    "RUF006", # TODO (Store a reference to the return value of `asyncio.create_task`)
-    "RUF012", # TODO (Mutable class attributes should be annotated with `typing.ClassVar`)
+    "PERF203", # Rarely useful
+    "PLR09", # Too many something (arg, statements, etc)
+    "RUF012", # Pydantic models are currently not well detected. See https://github.com/astral-sh/ruff/issues/13630
+    "TD002", # Missing author in TODO
+    "TD003", # Missing issue link in TODO
+
+    # Rules that are TODOs
+    "ANN",
+    "ARG",
+    "BLE",
+    "D",
+    "DOC",
+    "EXE",
+    "FBT",
+    "N",
+    "RUF006", # Store a reference to the return value of `asyncio.create_task`
+    "S",
+    "SLF",
+    "T201",
+    "TRY",
+    "PGH",
 ]
 
 [tool.ruff.lint.per-file-ignores]

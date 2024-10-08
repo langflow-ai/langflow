@@ -352,8 +352,8 @@ class CodeParser:
             methods=[],
             init=None,
         )
-        for node in nodes:
-            self.process_class_node(node, class_details)
+        for _node in nodes:
+            self.process_class_node(_node, class_details)
         self.data["classes"].append(class_details.model_dump())
 
     def process_class_node(self, node, class_details):
@@ -389,8 +389,7 @@ class CodeParser:
         bases = []
         for base in dunder_class.__bases__:
             bases.append(base)
-            for bases_base in base.__bases__:
-                bases.append(bases_base)
+            bases.extend(base.__bases__)
         return bases
 
     def parse_code(self) -> dict[str, Any]:
