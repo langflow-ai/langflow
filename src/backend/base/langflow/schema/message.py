@@ -214,17 +214,17 @@ class Message(Data):
         prompt_json = prompt.to_json()
         return cls(prompt=prompt_json)
 
-    def format_text(self):
-        prompt_template = PromptTemplate.from_template(self.template)
+    def format_text(self, template_format="f-string"):
+        prompt_template = PromptTemplate.from_template(self.template, template_format=template_format)
         variables_with_str_values = dict_values_to_string(self.variables)
         formatted_prompt = prompt_template.format(**variables_with_str_values)
         self.text = formatted_prompt
         return formatted_prompt
 
     @classmethod
-    async def from_template_and_variables(cls, template: str, **variables):
+    async def from_template_and_variables(cls, template: str, template_format="f-string", **variables):
         instance = cls(template=template, variables=variables)
-        text = instance.format_text()
+        text = instance.format_text(template_format)
         # Get all Message instances from the kwargs
         message = HumanMessage(content=text)
         contents = []
@@ -235,7 +235,7 @@ class Message(Data):
         if contents:
             message = HumanMessage(content=[{"type": "text", "text": text}, *contents])
 
-        prompt_template = ChatPromptTemplate.from_messages([message])  # type: ignore
+        prompt_template = ChatPromptTemplate.from_messages([message], template_format=template_format)  # type: ignore
 
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
