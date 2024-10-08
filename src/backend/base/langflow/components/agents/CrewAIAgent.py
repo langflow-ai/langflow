@@ -1,4 +1,4 @@
-from crewai import Agent  # type: ignore
+from crewai import Agent
 
 from langflow.custom import Component
 from langflow.io import BoolInput, DictInput, HandleInput, MultilineInput, Output

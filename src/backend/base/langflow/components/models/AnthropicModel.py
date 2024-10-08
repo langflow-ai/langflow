@@ -69,7 +69,7 @@ class AnthropicModelComponent(LCModelComponent):
             output = ChatAnthropic(
                 model=model,
                 anthropic_api_key=(SecretStr(anthropic_api_key) if anthropic_api_key else None),
-                max_tokens_to_sample=max_tokens,  # type: ignore
+                max_tokens_to_sample=max_tokens,
                 temperature=temperature,
                 anthropic_api_url=anthropic_api_url,
                 streaming=self.stream,
@@ -78,7 +78,7 @@ class AnthropicModelComponent(LCModelComponent):
             msg = "Could not connect to Anthropic API."
             raise ValueError(msg) from e
 
-        return output  # type: ignore
+        return output
 
     def _get_exception_message(self, exception: Exception) -> str | None:
         """
@@ -95,7 +95,7 @@ class AnthropicModelComponent(LCModelComponent):
         except ImportError:
             return None
         if isinstance(exception, BadRequestError):
-            message = exception.body.get("error", {}).get("message")  # type: ignore
+            message = exception.body.get("error", {}).get("message")
             if message:
                 return message
         return None

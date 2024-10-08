@@ -82,7 +82,7 @@ def build_json(root, graph) -> dict:
                 raise ValueError(msg)
             values = [build_json(child, graph) for child in children]
             value = (
-                list(values) if value["list"] else next(iter(values), None)  # type: ignore
+                list(values) if value["list"] else next(iter(values), None)  # type: ignore[arg-type]
             )
         final_dict[key] = value
 

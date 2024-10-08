@@ -10,8 +10,8 @@ import click
 import httpx
 import typer
 from dotenv import load_dotenv
-from multiprocess import cpu_count  # type: ignore
-from multiprocess.context import Process  # type: ignore
+from multiprocess import cpu_count
+from multiprocess.context import Process
 from packaging import version as pkg_version
 from rich import box
 from rich import print as rprint
@@ -530,7 +530,7 @@ def api_key(
 
 def api_key_banner(unmasked_api_key):
     is_mac = platform.system() == "Darwin"
-    import pyperclip  # type: ignore
+    import pyperclip
 
     pyperclip.copy(unmasked_api_key.api_key)
     panel = Panel(

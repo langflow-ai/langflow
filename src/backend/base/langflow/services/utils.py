@@ -141,7 +141,7 @@ def initialize_session_service():
     Initialize the session manager.
     """
     from langflow.services.cache import factory as cache_factory
-    from langflow.services.session import factory as session_service_factory  # type: ignore
+    from langflow.services.session import factory as session_service_factory
 
     initialize_settings_service()
 

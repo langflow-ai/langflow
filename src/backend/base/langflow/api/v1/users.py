@@ -71,11 +71,11 @@ def read_all_users(
     query: SelectOfScalar = select(User).offset(skip).limit(limit)
     users = session.exec(query).fetchall()
 
-    count_query = select(func.count()).select_from(User)  # type: ignore
+    count_query = select(func.count()).select_from(User)
     total_count = session.exec(count_query).first()
 
     return UsersResponse(
-        total_count=total_count,  # type: ignore
+        total_count=total_count,
         users=[UserRead(**user.model_dump()) for user in users],
     )
 
