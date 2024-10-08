@@ -162,10 +162,10 @@ test("change flow folder", async ({ page }) => {
 
   await page.getByText("My Collection").nth(2).isVisible();
   await page.getByPlaceholder("Search flows").isVisible();
-  await page.getByText("Flows").isVisible();
-  await page.getByText("Components").isVisible();
+  await page.getByText("Flows").first().isVisible();
+  await page.getByText("Components").first().isVisible();
   await page.getByText("All").first().isVisible();
-  await page.getByText("Select All").isVisible();
+  await page.getByText("Select All").first().isVisible();
 
   await page.getByTestId("add-folder-button").click();
   await page.getByText("New Folder").last().isVisible();
