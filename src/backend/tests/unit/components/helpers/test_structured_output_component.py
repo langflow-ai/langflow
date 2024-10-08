@@ -18,7 +18,7 @@ class TestStructuredOutputComponent:
         from unittest.mock import patch
 
         class MockLanguageModel:
-            def with_structured_output(self, schema, method):
+            def with_structured_output(self, schema):
                 return self
 
             def with_config(self, config):
