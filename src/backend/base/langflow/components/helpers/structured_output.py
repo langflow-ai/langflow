@@ -1,4 +1,4 @@
-from typing import Generic, cast  # Added import
+from typing import cast
 
 from pydantic import BaseModel, Field, create_model
 
@@ -10,7 +10,7 @@ from langflow.io import BoolInput, HandleInput, MessageTextInput, Output, StrInp
 from langflow.schema.data import Data
 
 
-class StructuredOutputComponent(Component, Generic[LanguageModel]):
+class StructuredOutputComponent(Component):
     display_name = "Structured Output"
     description = (
         "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information "
@@ -92,7 +92,7 @@ class StructuredOutputComponent(Component, Generic[LanguageModel]):
         else:
             output_model = _output_model
         try:
-            llm_with_structured_output = cast(LanguageModel, self.llm).with_structured_output(schema=output_model)
+            llm_with_structured_output = cast(LanguageModel, self.llm).with_structured_output(schema=output_model)  # type: ignore
 
         except NotImplementedError as exc:
             msg = f"{self.llm.__class__.__name__} does not support structured output."
