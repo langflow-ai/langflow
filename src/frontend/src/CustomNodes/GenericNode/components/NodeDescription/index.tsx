@@ -146,6 +146,7 @@ export default function NodeDescription({
             emptyPlaceholder
           ) : (
             <Markdown
+              linkTarget="_blank"
               className={cn(
                 "markdown prose flex h-full w-full flex-col text-primary word-break-break-word note-node-markdown dark:prose-invert",
                 mdClassName,
