@@ -37,7 +37,10 @@ export const usePatchUpdateFlow: useMutationFunctionType<
       onSettled: (res) => {
         queryClient.refetchQueries({
           queryKey: ["useGetFolders", res.folder_id],
-        });
+        }),
+          queryClient.refetchQueries({
+            queryKey: ["useGetFolder"],
+          });
       },
       ...options,
     });
