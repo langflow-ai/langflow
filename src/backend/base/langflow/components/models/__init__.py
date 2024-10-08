@@ -1,15 +1,18 @@
-from .AIMLModel import AIMLModelComponent
-from .AmazonBedrockModel import AmazonBedrockComponent
-from .AnthropicModel import AnthropicModelComponent
-from .AzureOpenAIModel import AzureChatOpenAIComponent
-from .BaiduQianfanChatModel import QianfanChatEndpointComponent
-from .CohereModel import CohereComponent
-from .GoogleGenerativeAIModel import GoogleGenerativeAIComponent
-from .HuggingFaceModel import HuggingFaceEndpointsComponent
-from .OllamaModel import ChatOllamaComponent
-from .OpenAIModel import OpenAIModelComponent
-from .PerplexityModel import PerplexityComponent
-from .VertexAiModel import ChatVertexAIComponent
+from langflow.components.langchain import (
+    AIMLModelComponent,
+    AmazonBedrockComponent,
+    AnthropicModelComponent,
+    AzureChatOpenAIComponent,
+    ChatOllamaComponent,
+    ChatVertexAIComponent,
+    CohereComponent,
+    GoogleGenerativeAIComponent,
+    HuggingFaceEndpointsComponent,
+    MistralAIModelComponent,
+    OpenAIModelComponent,
+    PerplexityComponent,
+    QianfanChatEndpointComponent,
+)
 
 __all__ = [
     "AIMLModelComponent",
@@ -24,5 +27,5 @@ __all__ = [
     "OpenAIModelComponent",
     "ChatVertexAIComponent",
     "PerplexityComponent",
-    "base",
+    "MistralAIModelComponent",
 ]

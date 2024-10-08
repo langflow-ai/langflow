@@ -1,6 +1,6 @@
-from .ComposioAPI import ComposioAPIComponent
-from .Metaphor import MetaphorToolkit
-from .VectorStoreInfo import VectorStoreInfoComponent
+from langflow.components.composio.ComposioAPI import ComposioAPIComponent
+from langflow.components.toolkits.Metaphor import MetaphorToolkit
+from langflow.components.toolkits.VectorStoreInfo import VectorStoreInfoComponent
 
 __all__ = [
     "MetaphorToolkit",

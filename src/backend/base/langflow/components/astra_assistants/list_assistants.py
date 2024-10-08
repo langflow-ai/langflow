@@ -7,6 +7,7 @@ from langflow.template.field.base import Output
 class AssistantsListAssistants(ComponentWithCache):
     display_name = "List Assistants"
     description = "Returns a list of assistant id's"
+    icon = "AstraDB"
 
     outputs = [
         Output(display_name="Assistants", name="assistants", method="process_inputs"),

@@ -1,7 +1,7 @@
 import pytest
 
-from langflow.components.agents.CrewAIAgent import CrewAIAgentComponent
-from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
+from langflow.components.crewai.CrewAIAgent import CrewAIAgentComponent
+from langflow.components.langchain.ToolCallingAgent import ToolCallingAgentComponent
 from langflow.components.helpers.SequentialTask import SequentialTaskComponent
 from langflow.components.inputs.ChatInput import ChatInput
 from langflow.components.models.OpenAIModel import OpenAIModelComponent

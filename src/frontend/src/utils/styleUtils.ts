@@ -1,10 +1,21 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { CohereIconSidebar } from "@/icons/CohereSidebar";
+import { CrewAISidebar } from "@/icons/CrewAISidebar";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
+import { FirecrawlIconSidebar } from "@/icons/FirecrawlSidebar";
+import { GoogleIconSidebar } from "@/icons/GoogleSidebar";
+import { LangChainIconSidebar } from "@/icons/LangChainSidebar";
+import { NotionIconSidebar } from "@/icons/NotionSidebar";
+import { NvidiaIconSidebar } from "@/icons/NvidiaSidebar";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
+
+import { AstraDBIconSidebar } from "@/icons/AstraDBSidebar";
+import { ComposioIconSidebar } from "@/icons/ComposioSidebar";
+import { CrewAiIcon } from "@/icons/CrewAI";
 import {
   AlertCircle,
   AlertTriangle,
@@ -188,7 +199,6 @@ import { CohereIcon } from "../icons/Cohere";
 import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
 import { CouchbaseIcon } from "../icons/Couchbase";
-import { CrewAiIcon } from "../icons/CrewAI";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
@@ -318,6 +328,21 @@ export const nodeColors: { [char: string]: string } = {
   Embeddings: "#10b981",
   BaseLanguageModel: "#c026d3",
   LanguageModel: "#c026d3",
+  CrewAI: "#461816",
+  crewai: "#461816",
+  Cohere: "#bd8fc0",
+  cohere: "#bd8fc0",
+  Nvidia: "#77b900",
+  nvidia: "#77b900",
+  gmail: "#4285f4",
+  Gmail: "#4285f4",
+  google_drive: "#4285f4",
+  langchain: "#234241",
+  Langchain: "#234241",
+  Firecrawl: "#fd7307",
+  firecrawl: "#fd7307",
+  composio: "#7f1cfb",
+  Composio: "#7f1cfb",
 };
 
 export const nodeNames: { [char: string]: string } = {
@@ -330,6 +355,22 @@ export const nodeNames: { [char: string]: string } = {
   Notion: "Notion",
   AssemblyAI: "AssemblyAI",
   assemblyai: "AssemblyAI",
+  crewai: "CrewAI",
+  CrewAI: "CrewAI",
+  cohere: "Cohere",
+  Cohere: "Cohere",
+  Nvidia: "Nvidia",
+  nvidia: "Nvidia",
+  Gmail: "Gmail",
+  gmail: "Gmail",
+  google_drive: "Google Drive",
+
+  langchain: "Langchain",
+  Langchain: "Langchain",
+  Firecrawl: "Firecrawl",
+  firecrawl: "Firecrawl",
+  Composio: "Composio",
+  composio: "Composio",
   model_specs: "Model Specs",
   chains: "Chains",
   agents: "Agents",
@@ -398,10 +439,24 @@ export const nodeIconsLucide: iconsType = {
   ChatAnthropic: AnthropicIcon,
   assemblyai: AssemblyAIIcon,
   AssemblyAI: AssemblyAIIcon,
+  crewai: CrewAISidebar,
+  CrewAI: CrewAiIcon,
+  cohere: CohereIconSidebar,
+  Cohere: CohereIcon,
+  Nvidia: NvidiaIcon,
+  nvidia: NvidiaIconSidebar,
+  gmail: GoogleIconSidebar,
+  Gmail: GoogleIconSidebar,
+  google_drive: GoogleIconSidebar,
+  google: GoogleIcon,
+  Google: GoogleIcon,
+  langchain: LangChainIconSidebar,
+  Langchain: LangChainIcon,
+  Firecrawl: FirecrawlIconSidebar,
+  firecrawl: FirecrawlIconSidebar,
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
-  Cohere: CohereIcon,
   ChevronsUpDownIcon,
   CohereEmbeddings: CohereIcon,
   EverNoteLoader: EvernoteIcon,
@@ -412,7 +467,6 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchAPIWrapper: GoogleIcon,
   GoogleSearchResults: GoogleIcon,
   GoogleSearchRun: GoogleIcon,
-  Google: GoogleIcon,
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
   ArrowRight,
   Groq: GroqIcon,
@@ -424,7 +478,6 @@ export const nodeIconsLucide: iconsType = {
   HuggingFace: HuggingFaceIcon,
   HuggingFaceEmbeddings: HuggingFaceIcon,
   IFixitLoader: IFixIcon,
-  CrewAI: CrewAiIcon,
   Composio: ComposioIcon,
   Meta: MetaIcon,
   CheckCheck,
@@ -433,7 +486,7 @@ export const nodeIconsLucide: iconsType = {
   MongoDBAtlasVectorSearch: MongoDBIcon,
   MongoDB: MongoDBIcon,
   MongoDBChatMessageHistory: MongoDBIcon,
-  notion: NotionIcon,
+  notion: NotionIconSidebar,
   Notion: NotionIcon,
   NotionDirectoryLoader: NotionIcon,
   NVIDIA: NvidiaIcon,
@@ -479,7 +532,8 @@ export const nodeIconsLucide: iconsType = {
   textsplitters: Scissors,
   wrappers: Gift,
   helpers: Wand2,
-  astra_assistants: Sparkles,
+  astra_assistants: AstraDBIconSidebar,
+  composio: ComposioIconSidebar,
   ScanEye,
   prototypes: FlaskConical,
   langchain_utilities: PocketKnife,

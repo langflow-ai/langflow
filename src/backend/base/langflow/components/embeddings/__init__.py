@@ -1,13 +1,15 @@
-from .AIMLEmbeddings import AIMLEmbeddingsComponent
-from .AmazonBedrockEmbeddings import AmazonBedrockEmbeddingsComponent
-from .AstraVectorize import AstraVectorizeComponent
-from .AzureOpenAIEmbeddings import AzureOpenAIEmbeddingsComponent
-from .CohereEmbeddings import CohereEmbeddingsComponent
-from .GoogleGenerativeAIEmbeddings import GoogleGenerativeAIEmbeddingsComponent
-from .HuggingFaceInferenceAPIEmbeddings import HuggingFaceInferenceAPIEmbeddingsComponent
-from .OllamaEmbeddings import OllamaEmbeddingsComponent
-from .OpenAIEmbeddings import OpenAIEmbeddingsComponent
-from .VertexAIEmbeddings import VertexAIEmbeddingsComponent
+from langflow.components.langchain import (
+    AIMLEmbeddingsComponent,
+    AmazonBedrockEmbeddingsComponent,
+    AstraVectorizeComponent,
+    AzureOpenAIEmbeddingsComponent,
+    CohereEmbeddingsComponent,
+    GoogleGenerativeAIEmbeddingsComponent,
+    HuggingFaceInferenceAPIEmbeddingsComponent,
+    MistralAIEmbeddingsComponent,
+    OllamaEmbeddingsComponent,
+    OpenAIEmbeddingsComponent,
+)
 
 __all__ = [
     "AIMLEmbeddingsComponent",
@@ -20,4 +22,5 @@ __all__ = [
     "OpenAIEmbeddingsComponent",
     "VertexAIEmbeddingsComponent",
     "GoogleGenerativeAIEmbeddingsComponent",
+    "MistralAIEmbeddingsComponent",
 ]

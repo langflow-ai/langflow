@@ -250,7 +250,7 @@ export default function ExtraSidebar(): JSX.Element {
             defaultOpen={true}
             key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
             button={{
-              title: "Integrations",
+              title: "Bundles",
               Icon: nodeIconsLucide.unknown,
             }}
             testId="bundle-extended-disclosure"

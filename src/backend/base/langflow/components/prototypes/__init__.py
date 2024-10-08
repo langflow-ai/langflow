@@ -1,15 +1,15 @@
-from .ConditionalRouter import ConditionalRouterComponent
-from .CreateData import CreateDataComponent
-from .FlowTool import FlowToolComponent
-from .Listen import ListenComponent
-from .Notify import NotifyComponent
-from .Pass import PassMessageComponent
-from .PythonFunction import PythonFunctionComponent
-from .RunFlow import RunFlowComponent
-from .RunnableExecutor import RunnableExecComponent
-from .SQLExecutor import SQLExecutorComponent
-from .SubFlow import SubFlowComponent
-from .UpdateData import UpdateDataComponent
+from langflow.components.langchain.RunnableExecutor import RunnableExecComponent
+from langflow.components.prototypes.ConditionalRouter import ConditionalRouterComponent
+from langflow.components.prototypes.CreateData import CreateDataComponent
+from langflow.components.prototypes.FlowTool import FlowToolComponent
+from langflow.components.prototypes.Listen import ListenComponent
+from langflow.components.prototypes.Notify import NotifyComponent
+from langflow.components.prototypes.Pass import PassMessageComponent
+from langflow.components.prototypes.PythonFunction import PythonFunctionComponent
+from langflow.components.prototypes.RunFlow import RunFlowComponent
+from langflow.components.prototypes.SQLExecutor import SQLExecutorComponent
+from langflow.components.prototypes.SubFlow import SubFlowComponent
+from langflow.components.prototypes.UpdateData import UpdateDataComponent
 
 __all__ = [
     "ConditionalRouterComponent",

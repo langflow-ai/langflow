@@ -4,7 +4,7 @@ from collections import deque
 import pytest
 from pytest import LogCaptureFixture
 
-from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
+from langflow.components.langchain.ToolCallingAgent import ToolCallingAgentComponent
 from langflow.components.inputs.ChatInput import ChatInput
 from langflow.components.outputs.ChatOutput import ChatOutput
 from langflow.components.outputs.TextOutput import TextOutputComponent

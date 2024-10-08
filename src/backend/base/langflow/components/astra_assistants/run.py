@@ -15,7 +15,7 @@ from langflow.template import Output
 class AssistantsRun(ComponentWithCache):
     display_name = "Run Assistant"
     description = "Executes an Assistant Run against a thread"
-
+    icon = "AstraDB"
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.client = get_patched_openai_client(self._shared_component_cache)

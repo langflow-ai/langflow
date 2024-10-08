@@ -1,9 +1,9 @@
-from .CSVAgent import CSVAgentComponent
-from .JsonAgent import JsonAgentComponent
-from .SQLAgent import SQLAgentComponent
-from .VectorStoreAgent import VectorStoreAgentComponent
-from .VectorStoreRouterAgent import VectorStoreRouterAgentComponent
-from .XMLAgent import XMLAgentComponent
+from langflow.components.langchain.CSVAgent import CSVAgentComponent
+from langflow.components.langchain.JsonAgent import JsonAgentComponent
+from langflow.components.langchain.SQLAgent import SQLAgentComponent
+from langflow.components.langchain.VectorStoreAgent import VectorStoreAgentComponent
+from langflow.components.langchain.VectorStoreRouterAgent import VectorStoreRouterAgentComponent
+from langflow.components.langchain.XMLAgent import XMLAgentComponent
 
 __all__ = [
     "CSVAgentComponent",

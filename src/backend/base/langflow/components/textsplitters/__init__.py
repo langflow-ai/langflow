@@ -1,7 +1,7 @@
-from .CharacterTextSplitter import CharacterTextSplitterComponent
-from .LanguageRecursiveTextSplitter import LanguageRecursiveTextSplitterComponent
-from .NaturalLanguageTextSplitter import NaturalLanguageTextSplitterComponent
-from .RecursiveCharacterTextSplitter import RecursiveCharacterTextSplitterComponent
+from langflow.components.langchain.CharacterTextSplitter import CharacterTextSplitterComponent
+from langflow.components.langchain.LanguageRecursiveTextSplitter import LanguageRecursiveTextSplitterComponent
+from langflow.components.langchain.NaturalLanguageTextSplitter import NaturalLanguageTextSplitterComponent
+from langflow.components.langchain.RecursiveCharacterTextSplitter import RecursiveCharacterTextSplitterComponent
 
 __all__ = [
     "CharacterTextSplitterComponent",

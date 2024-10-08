@@ -8,7 +8,7 @@ from langflow.template import Output
 class AssistantsGetAssistantName(ComponentWithCache):
     display_name = "Get Assistant name"
     description = "Assistant by id"
-
+    icon = "AstraDB"
     inputs = [
         StrInput(
             name="assistant_id",
