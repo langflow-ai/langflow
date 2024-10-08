@@ -248,11 +248,11 @@ class Graph:
         source_vertex = self.get_vertex(source_id)
         if not isinstance(source_vertex, ComponentVertex):
             msg = f"Source vertex {source_id} is not a component vertex."
-            raise ValueError(msg)
+            raise TypeError(msg)
         target_vertex = self.get_vertex(target_id)
         if not isinstance(target_vertex, ComponentVertex):
             msg = f"Target vertex {target_id} is not a component vertex."
-            raise ValueError(msg)
+            raise TypeError(msg)
         output_name, input_name = output_input_tuple
         if source_vertex._custom_component is None:
             msg = f"Source vertex {source_id} does not have a custom component."
@@ -661,7 +661,7 @@ class Graph:
 
         if not isinstance(inputs.get(INPUT_FIELD_NAME, ""), str):
             msg = f"Invalid input value: {inputs.get(INPUT_FIELD_NAME)}. Expected string"
-            raise ValueError(msg)
+            raise TypeError(msg)
         if inputs:
             self._set_inputs(input_components, inputs, input_type)
         # Update all the vertices with the session_id
@@ -1529,7 +1529,7 @@ class Graph:
                 vertices.append(result.vertex)
             else:
                 msg = f"Invalid result from task {task_name}: {result}"
-                raise ValueError(msg)
+                raise TypeError(msg)
 
         for v in vertices:
             # set all executed vertices as non-runnable to not run them again.

@@ -268,7 +268,7 @@ def get_component_instance(custom_component: CustomComponent, user_id: str | UUI
             custom_class = eval_custom_component_code(custom_component._code)
         else:
             msg = "Invalid code type"
-            raise ValueError(msg)
+            raise TypeError(msg)
     except Exception as exc:
         logger.exception("Error while evaluating custom component code")
         raise HTTPException(
@@ -303,7 +303,7 @@ def run_build_config(
             custom_class = eval_custom_component_code(custom_component._code)
         else:
             msg = "Invalid code type"
-            raise ValueError(msg)
+            raise TypeError(msg)
     except Exception as exc:
         logger.exception("Error while evaluating custom component code")
         raise HTTPException(

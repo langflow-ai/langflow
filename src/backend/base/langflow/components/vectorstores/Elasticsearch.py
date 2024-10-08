@@ -162,7 +162,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             else:
                 error_message = "Vector Store Inputs must be Data objects."
                 logger.error(error_message)
-                raise ValueError(error_message)
+                raise TypeError(error_message)
         return documents
 
     def _add_documents_to_vector_store(self, vector_store: "ElasticsearchStore") -> None:

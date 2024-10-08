@@ -230,7 +230,7 @@ def create_state_model(model_name: str = "State", validate: bool = True, **kwarg
             # typing.Annotated[<type>, Field(...)]
             if not isinstance(value[0], type):
                 msg = f"Invalid type for field {name}: {type(value[0])}"
-                raise ValueError(msg)
+                raise TypeError(msg)
             fields[name] = (value[0], value[1])
         else:
             msg = f"Invalid value type {type(value)} for field {name}"
