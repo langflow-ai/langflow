@@ -34,10 +34,10 @@ RUN apt-get update \
 
 # Install the project's dependencies using the lockfile and settings
 RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
-    --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    cd src/backend/base && uv sync --frozen --no-install-project --no-dev --no-editable
+    uv sync --no-install-project --no-dev --no-editable
 
 ADD ./src /app/src
 
@@ -50,7 +50,7 @@ RUN npm install \
 
 WORKDIR /app/src/backend/base
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-editable
+    uv sync --no-dev --no-editable
 
 ################################
 # RUNTIME
