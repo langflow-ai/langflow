@@ -3,6 +3,7 @@ from typing import Any
 
 from fastapi import HTTPException
 from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts.string import mustache_template_vars
 from loguru import logger
 
 from langflow.inputs.inputs import DefaultPromptField
@@ -121,8 +122,11 @@ def _check_input_variables(input_variables):
     return fixed_variables
 
 
-def validate_prompt(prompt_template: str, silent_errors: bool = False) -> list[str]:
-    input_variables = extract_input_variables_from_prompt(prompt_template)
+def validate_prompt(prompt_template: str, silent_errors: bool = False, is_mustache: bool = False) -> list[str]:
+    if is_mustache:
+        input_variables = extract_input_variables_from_prompt(prompt_template)
+    else:
+        input_variables = mustache_template_vars(prompt_template)
 
     # Check if there are invalid characters in the input_variables
     input_variables = _check_input_variables(input_variables)
