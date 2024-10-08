@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
+from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -15,7 +16,7 @@ class MessageBase(SQLModel):
     sender: str
     sender_name: str
     session_id: str
-    text: str
+    text: str = Field(sa_column=Column(Text))
     files: list[str] = Field(default_factory=list)
 
     @field_validator("files", mode="before")
