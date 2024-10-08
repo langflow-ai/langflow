@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import uaParser from "ua-parser-js";
 
 test("user must be able to interact with table input component", async ({
   page,
@@ -25,6 +26,14 @@ test("user must be able to interact with table input component", async ({
   const randomText = Math.random().toString(36).substring(7);
   const secondRandomText = Math.random().toString(36).substring(7);
   const thirdRandomText = Math.random().toString(36).substring(7);
+
+  const getUA = await page.evaluate(() => navigator.userAgent);
+  const userAgentInfo = uaParser(getUA);
+  let control = "Control";
+
+  if (userAgentInfo.os.name.includes("Mac")) {
+    control = "Meta";
+  }
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
@@ -99,7 +108,7 @@ class CustomComponent(Component):
         return data
   `;
 
-  await page.locator("textarea").press("Control+a");
+  await page.locator("textarea").press(`${control}+a`);
   await page.locator("textarea").fill(customCodeWithError);
 
   await page.getByText("Check & Save").last().click();

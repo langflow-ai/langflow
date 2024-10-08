@@ -2,7 +2,7 @@ import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { DropDownComponentType } from "../../types/components";
+import { DropDownComponent } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { default as ForwardedIconComponent } from "../genericIconComponent";
 import ShadTooltip from "../shadTooltipComponent";
@@ -31,7 +31,7 @@ export default function Dropdown({
   editNode = false,
   id = "",
   children,
-}: DropDownComponentType): JSX.Element {
+}: DropDownComponent): JSX.Element {
   const [open, setOpen] = useState(children ? true : false);
 
   const refButton = useRef<HTMLButtonElement>(null);
