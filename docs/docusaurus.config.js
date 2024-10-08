@@ -8,9 +8,9 @@ const { remarkCodeHike } = require("@code-hike/mdx");
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "Langflow Documentation",
-  tagline: "Langflow is a GUI for LangChain, designed with react-flow",
+  tagline: "Langflow is a low-code app builder for RAG and multi-agent AI applications.",
   favicon: "img/favicon.ico",
-  url: "https://langflow-ai.github.io",
+  url: "https://docs.langflow.org",
   baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
