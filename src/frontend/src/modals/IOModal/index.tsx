@@ -426,6 +426,15 @@ export default function IOModal({
                           setSelectedViewField(undefined);
                         }
                       }}
+                      updateVisibleSession={(session) => {
+                        setvisibleSessions((prev) =>
+                          prev.includes(session)
+                            ? prev.filter((item) => item !== session)
+                            : SessionInFlow
+                              ? [...prev, session]
+                              : [session],
+                        );
+                      }}
                       toggleVisibility={() => {
                         setvisibleSessions((prev) =>
                           prev.includes(session)

@@ -13,12 +13,14 @@ export default function SessionSelector({
     toggleVisibility,
     isVisible,
     inspectSession,
+    updateVisibleSession,
 }: {
     deleteSession: (session: string) => void;
     session: string;
     toggleVisibility: () => void;
     isVisible: boolean;
     inspectSession: (session: string) => void;
+    updateVisibleSession: (session: string) => void;
 }) {
     const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
     const [isEditing, setIsEditing] = useState(false);
@@ -36,7 +38,12 @@ export default function SessionSelector({
 
     const handleConfirm = () => {
         setIsEditing(false);
-        updateSessionName({ old_session_id: session, new_session_id: editedSession });
+        updateSessionName({ old_session_id: session, new_session_id: editedSession }, {
+            onSuccess: () => {
+                updateVisibleSession(editedSession);
+            }
+        });
+
     };
 
     const handleCancel = () => {
