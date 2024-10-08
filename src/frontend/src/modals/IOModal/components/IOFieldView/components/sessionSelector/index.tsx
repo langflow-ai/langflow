@@ -3,6 +3,7 @@ import ShadTooltip from "@/components/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import useFlowStore from "@/stores/flowStore";
 import { useState } from "react";
 
@@ -22,6 +23,7 @@ export default function SessionSelector({
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
   const [isEditing, setIsEditing] = useState(false);
   const [editedSession, setEditedSession] = useState(session);
+  const { mutate: updateSessionName } = useUpdateSessionName();
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -35,7 +37,7 @@ export default function SessionSelector({
   const handleConfirm = () => {
     setIsEditing(false);
     // Here you would typically update the session name in your state or backend
-    console.log("Updated session name:", editedSession);
+    updateSessionName({ old_session_id: session, new_session_id: editedSession });
   };
 
   const handleCancel = () => {

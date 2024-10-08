@@ -10,8 +10,8 @@ interface UpdateSessionParams {
   new_session_id: string;
 }
 
-export const useUpdateSession: useMutationFunctionType<
-  Message[],
+export const useUpdateSessionName: useMutationFunctionType<
+  undefined,
   UpdateSessionParams
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
@@ -28,15 +28,14 @@ export const useUpdateSession: useMutationFunctionType<
   };
 
   const mutation: UseMutationResult<Message[], any, UpdateSessionParams> = mutate(
-    ["useUpdateSession"],
+    ["useUpdateSessionName"],
     updateSessionApi,
     {
       ...options,
       onSettled: (data, variables, context) => {
         // Invalidate and refetch relevant queries
-        queryClient.invalidateQueries({
+        queryClient.refetchQueries({
           queryKey: ["useGetMessagesQuery"],
-          exact: true,
         });
       },
     }
