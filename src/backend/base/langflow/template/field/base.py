@@ -138,7 +138,7 @@ class Input(BaseModel):
     def validate_file_types(cls, value):
         if not isinstance(value, list):
             msg = "file_types must be a list"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
         return [
             (f".{file_type}" if isinstance(file_type, str) and not file_type.startswith(".") else file_type)
             for file_type in value
@@ -155,7 +155,7 @@ class Input(BaseModel):
             v = format_type(v)
         elif not isinstance(v, str):
             msg = f"type must be a string or a type, not {type(v)}"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
         return v
 
 

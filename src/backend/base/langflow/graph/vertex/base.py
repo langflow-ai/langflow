@@ -750,7 +750,7 @@ class Vertex:
         """
         if isinstance(self._built_object, UnbuiltObject):
             msg = f"{self.display_name}: {self._built_object_repr()}"
-            raise ValueError(msg)
+            raise TypeError(msg)
         if self._built_object is None:
             message = f"{self.display_name} returned None."
             if self.base_type == "custom_components":
