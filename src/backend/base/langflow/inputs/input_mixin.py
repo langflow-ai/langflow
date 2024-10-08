@@ -133,12 +133,12 @@ class FileMixin(BaseModel):
     def validate_file_types(cls, v):
         if not isinstance(v, list):
             msg = "file_types must be a list"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
         # types should be a list of extensions without the dot
         for file_type in v:
             if not isinstance(file_type, str):
                 msg = "file_types must be a list of strings"
-                raise ValueError(msg)
+                raise ValueError(msg)  # noqa: TRY004
             if file_type.startswith("."):
                 msg = "file_types should not start with a dot"
                 raise ValueError(msg)

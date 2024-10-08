@@ -159,7 +159,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             else:
                 error_message = f"Expected Data object, got {type(_input)}"
                 logger.error(error_message)
-                raise ValueError(error_message)
+                raise TypeError(error_message)
 
         if documents and self.embedding is not None:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")

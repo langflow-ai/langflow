@@ -61,7 +61,7 @@ def upload_file(file_path: str, host: str, flow_id: str, components: list[str], 
                     tweaks[component] = {"path": response["file_path"]}
                 else:
                     msg = f"Component ID or name must be a string. Got {type(component)}"
-                    raise ValueError(msg)
+                    raise TypeError(msg)
             return tweaks
         msg = "Error uploading file"
         raise ValueError(msg)

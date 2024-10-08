@@ -27,7 +27,7 @@ class MessageToDataComponent(Component):
         try:
             if not isinstance(self.message, Message):
                 msg = "Input must be a Message object"
-                raise ValueError(msg)
+                raise TypeError(msg)
 
             # Convert Message to Data
             data = Data(data=self.message.data)

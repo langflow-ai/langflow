@@ -87,7 +87,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         if not isinstance(self.embedding, Embeddings):
             msg = "Invalid embedding object"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         if documents:
             qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs, **server_kwargs)

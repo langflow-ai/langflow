@@ -24,17 +24,17 @@ def test_gauge(opentelemetry_instance):
 
 
 def test_gauge_with_counter_method(opentelemetry_instance):
-    with pytest.raises(ValueError, match="Metric 'file_uploads' is not a counter"):
+    with pytest.raises(TypeError, match="Metric 'file_uploads' is not a counter"):
         opentelemetry_instance.increment_counter(metric_name="file_uploads", value=1, labels=fixed_labels)
 
 
 def test_gauge_with_historgram_method(opentelemetry_instance):
-    with pytest.raises(ValueError, match="Metric 'file_uploads' is not a histogram"):
+    with pytest.raises(TypeError, match="Metric 'file_uploads' is not a histogram"):
         opentelemetry_instance.observe_histogram("file_uploads", 1, fixed_labels)
 
 
 def test_gauge_with_up_down_counter_method(opentelemetry_instance):
-    with pytest.raises(ValueError, match="Metric 'file_uploads' is not an up down counter"):
+    with pytest.raises(TypeError, match="Metric 'file_uploads' is not an up down counter"):
         opentelemetry_instance.up_down_counter("file_uploads", 1, labels=fixed_labels)
 
 

@@ -116,7 +116,7 @@ class FlowBase(SQLModel):
             return v
         if not isinstance(v, dict):
             msg = "Flow must be a valid JSON"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
 
         # data must contain nodes and edges
         if "nodes" not in v:

@@ -382,7 +382,7 @@ class InterfaceVertex(ComponentVertex):
         iterator = self.params.get(INPUT_FIELD_NAME, None)
         if not isinstance(iterator, AsyncIterator | Iterator):
             msg = "The message must be an iterator or an async iterator."
-            raise ValueError(msg)
+            raise TypeError(msg)
         is_async = isinstance(iterator, AsyncIterator)
         complete_message = ""
         if is_async:

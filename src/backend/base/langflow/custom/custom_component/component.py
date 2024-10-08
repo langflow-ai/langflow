@@ -430,7 +430,7 @@ class Component(CustomComponent):
         # Ensure that the output method is a valid method name (string)
         if not isinstance(output.method, str):
             msg = f"Method {output.method} is not a valid output of {value.__class__.__name__}"
-            raise ValueError(msg)
+            raise TypeError(msg)
         return getattr(value, output.method)
 
     def _process_connection_or_parameter(self, key, value):
@@ -503,7 +503,7 @@ class Component(CustomComponent):
                 f"You set {value.display_name} as value for `{key}`. "
                 f"You should pass one of the following: {methods}"
             )
-            raise ValueError(msg)
+            raise TypeError(msg)
         self._set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value

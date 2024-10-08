@@ -113,7 +113,7 @@ class CacheService(Subject, Service):
             self.add(name, obj.to_csv(), "pandas", extension="csv")
         else:
             msg = "Object is not a pandas DataFrame or Series"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
     def add_image(self, name: str, obj: Any, extension: str = "png"):
         """
@@ -127,7 +127,7 @@ class CacheService(Subject, Service):
             self.add(name, obj, "image", extension=extension)
         else:
             msg = "Object is not a PIL Image"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
     def get(self, name: str):
         """
