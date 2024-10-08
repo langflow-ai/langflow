@@ -1447,15 +1447,15 @@ wheels = [
 
 [[package]]
 name = "duckduckgo-search"
-version = "6.2.13"
+version = "6.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "primp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/55/2e/fe93c096b2b2bfcbd0a4f3a1de47d9a1c4b0dd4c7573d9f6c2b5c80ce6dc/duckduckgo_search-6.2.13.tar.gz", hash = "sha256:f89a9782f0f47d18c01a761c83453d0aef7a4335d1b6466fc47709652d5ca791", size = 33075 }
+sdist = { url = "https://files.pythonhosted.org/packages/da/e8/575e4d1879e49ee52438f8435b663b391c3a7a6e7383133ddcdb0e519da7/duckduckgo_search-6.3.0.tar.gz", hash = "sha256:e9f56955569325a7d9cacda2488ca78bf6629a459e74415892bee560b664f5eb", size = 33045 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e2/07/c0a6d0b1192790364ee9cf655c72c47ad13d68971570f19401f220cac50d/duckduckgo_search-6.2.13-py3-none-any.whl", hash = "sha256:a6618fb2744fa1d081b1bf2e47ef8051de993276a15c20f4e879a150726472de", size = 27468 },
+    { url = "https://files.pythonhosted.org/packages/5b/14/8a1c9a31046dd5b35c69e348ccdeb1c9a533294a2372abf958c0a9d30c37/duckduckgo_search-6.3.0-py3-none-any.whl", hash = "sha256:9a231a7b325226811cf7d35a240f3f501e718ae10a1aa0a638cabc80e129dfe7", size = 27455 },
 ]
 
 [[package]]
@@ -3593,7 +3593,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "dspy-ai", specifier = ">=2.4.0" },
-    { name = "duckduckgo-search", specifier = ">=6.2.11" },
+    { name = "duckduckgo-search", specifier = ">=6.3.0" },
     { name = "elasticsearch", specifier = ">=8.12.0" },
     { name = "faiss-cpu", specifier = ">=1.8.0" },
     { name = "fake-useragent", specifier = ">=1.5.0" },

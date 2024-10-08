@@ -98,10 +98,7 @@ class SizedLogBuffer:
         try:
             with self._wlock:
                 as_list = list(self.buffer)
-            rc = {}
-            for ts, msg in as_list[-last_idx:]:
-                rc[ts] = msg
-            return rc
+            return dict(as_list[-last_idx:])
         finally:
             self._rsemaphore.release()
 
