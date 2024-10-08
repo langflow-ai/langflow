@@ -34,7 +34,7 @@ def _get_type_annotation(type_str: str, multiple: bool) -> type:
         msg = f"Invalid type: {type_str}"
         raise ValueError(msg) from e
     if multiple:
-        return list[base_type]
+        return list[base_type]  # type: ignore
     return base_type  # type: ignore
 
 
