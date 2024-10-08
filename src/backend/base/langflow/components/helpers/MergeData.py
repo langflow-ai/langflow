@@ -84,7 +84,7 @@ class MergeDataComponent(Component):
                     text_key=data_input.text_key, data=merged_data_dict, default_value=data_input.default_value
                 )
                 merged_data_list.append(merged_data)
-                logger.debug(f"Merged Data object created for input at index {idx}.")
+                logger.debug("Merged Data object created for input at index: " + str(idx))
 
             logger.info("Data merging process completed successfully.")
             return merged_data_list
