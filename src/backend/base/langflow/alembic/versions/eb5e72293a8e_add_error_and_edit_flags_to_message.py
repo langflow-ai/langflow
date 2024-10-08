@@ -1,7 +1,7 @@
 """Add error and edit flags to message
 
 Revision ID: eb5e72293a8e
-Revises: e5a65ecff2cd
+Revises: 0ae3a2674f32
 Create Date: 2024-09-19 16:18:50.828648
 
 """
@@ -15,7 +15,7 @@ from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision: str = "eb5e72293a8e"
-down_revision: Union[str, None] = "e5a65ecff2cd"
+down_revision: Union[str, None] = "0ae3a2674f32"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
