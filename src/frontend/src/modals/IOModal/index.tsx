@@ -280,7 +280,7 @@ export default function IOModal({
                       <TabsTrigger value={"2"}>Outputs</TabsTrigger>
                     )}
                     {haveChat && (
-                      <TabsTrigger value={"0"}>Memories</TabsTrigger>
+                      <TabsTrigger value={"0"}>Chat</TabsTrigger>
                     )}
                   </TabsList>
                 </div>

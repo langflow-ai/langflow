@@ -1,11 +1,11 @@
+import React, { useState } from "react";
 import IconComponent from "@/components/genericIconComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import useFlowStore from "@/stores/flowStore";
-import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select-custom";
 
 export default function SessionSelector({
   deleteSession,
@@ -27,8 +27,7 @@ export default function SessionSelector({
   const [editedSession, setEditedSession] = useState(session);
   const { mutate: updateSessionName } = useUpdateSessionName();
 
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleEditClick = () => {
     setIsEditing(true);
   };
 
@@ -53,6 +52,20 @@ export default function SessionSelector({
     setEditedSession(session);
   };
 
+  const handleSelectChange = (value: string) => {
+    switch (value) {
+      case "rename":
+        handleEditClick();
+        break;
+      case "messageLogs":
+        inspectSession(session);
+        break;
+      case "delete":
+        deleteSession(session);
+        break;
+    }
+  };
+
   return (
     <div className="file-component-accordion-div group">
       <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3.5 align-middle">
@@ -69,7 +82,6 @@ export default function SessionSelector({
               }}
               onChange={handleInputChange}
               onBlur={(e) => {
-                // Check if the related target is the confirm button
                 if (
                   !e.relatedTarget ||
                   e.relatedTarget.getAttribute("data-confirm") !== "true"
@@ -94,106 +106,35 @@ export default function SessionSelector({
               </div>
             </ShadTooltip>
           )}
-          {!isEditing && (
-            <Button
-              unstyled
-              size="icon"
-              onClick={handleEditClick}
-              className="ml-2 opacity-0 group-hover:opacity-100"
-            >
-              <ShadTooltip styleClasses="z-50" content="Edit Session Name">
-                <div>
-                  <IconComponent name="SquarePen" className="h-4 w-4" />
+        </div>
+        <Select open onValueChange={handleSelectChange}>
+          <SelectTrigger className="w-8 h-8 p-0 border-none bg-transparent hover:bg-muted focus:ring-0">
+            <IconComponent name="MoreHorizontal" className="h-4 w-4" />
+          </SelectTrigger>
+          <SelectContent side="right" align="start" className="w-40 p-0">
+            <SelectItem value="rename" className="py-2 px-3 focus:bg-muted cursor-pointer">
+              <div className="flex items-center">
+                <IconComponent name="Pencil" className="mr-2 h-4 w-4" />
+                Rename
+              </div>
+            </SelectItem>
+            <SelectItem value="messageLogs" className="py-2 px-3 focus:bg-muted cursor-pointer">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center">
+                  <IconComponent name="ScrollText" className="mr-2 h-4 w-4" />
+                  Message logs
                 </div>
-              </ShadTooltip>
-            </Button>
-          )}
-          {isEditing && (
-            <div className="flex items-center">
-              <Button
-                data-confirm="true"
-                unstyled
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleConfirm();
-                }}
-                className="mr-1"
-              >
-                <ShadTooltip styleClasses="z-50" content="Confirm">
-                  <div>
-                    <IconComponent
-                      name="Check"
-                      className="h-4 w-4 text-green-500"
-                    />
-                  </div>
-                </ShadTooltip>
-              </Button>
-              <Button
-                unstyled
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCancel();
-                }}
-              >
-                <ShadTooltip styleClasses="z-50" content="Cancel">
-                  <div>
-                    <IconComponent name="X" className="h-4 w-4 text-red-500" />
-                  </div>
-                </ShadTooltip>
-              </Button>
-            </div>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center justify-center gap-2 align-middle">
-          <Button
-            unstyled
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleVisibility();
-            }}
-          >
-            <ShadTooltip styleClasses="z-50" content="Toggle Visibility">
-              <div>
-                <IconComponent
-                  name={!isVisible ? "EyeOff" : "Eye"}
-                  className="h-4 w-4"
-                />
+                <IconComponent name="ExternalLink" className="h-4 w-4 ml-2" />
               </div>
-            </ShadTooltip>
-          </Button>
-          <Button
-            unstyled
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              inspectSession(session);
-            }}
-          >
-            <ShadTooltip styleClasses="z-50" content="Table View">
-              <div>
-                <IconComponent name="Table" className="h-4 w-4" />
+            </SelectItem>
+            <SelectItem value="delete" className="py-2 px-3 focus:bg-muted cursor-pointer text-red-600 hover:text-red-600">
+              <div className="flex items-center">
+                <IconComponent name="Trash2" className="mr-2 h-4 w-4" />
+                Delete
               </div>
-            </ShadTooltip>
-          </Button>
-          <Button
-            unstyled
-            size="icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              deleteSession(session);
-            }}
-          >
-            <ShadTooltip styleClasses="z-50" content="Delete">
-              <div>
-                <IconComponent name="Trash2" className="h-4 w-4" />
-              </div>
-            </ShadTooltip>
-          </Button>
-        </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
