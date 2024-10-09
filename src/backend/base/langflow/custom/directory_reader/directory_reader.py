@@ -78,9 +78,7 @@ class DirectoryReader:
                         component_tuple = (*build_component(component), component)
                         components.append(component_tuple)
                 except Exception:  # noqa: BLE001
-                    logger.opt(exception=True).debug(
-                        f"Error while loading component '{ component['name']}' from file '{component['file']}"
-                    )
+                    logger.debug(f"Error while loading component {component['name']} from {component['file']}")
                     continue
             items.append({"name": menu["name"], "path": menu["path"], "components": components})
         filtered = [menu for menu in items if menu["components"]]
