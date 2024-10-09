@@ -1,4 +1,7 @@
-import { ENABLE_MVPS } from "@/customization/feature-flags";
+import {
+  ENABLE_INTEGRATIONS,
+  ENABLE_MVPS,
+} from "@/customization/feature-flags";
 import { useStoreStore } from "@/stores/storeStore";
 import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
@@ -245,7 +248,7 @@ export default function ExtraSidebar(): JSX.Element {
               <div key={index}></div>
             ),
           )}
-        <>
+        {ENABLE_INTEGRATIONS && (
           <ParentDisclosureComponent
             defaultOpen={true}
             key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
@@ -273,7 +276,7 @@ export default function ExtraSidebar(): JSX.Element {
                 ),
               )}
           </ParentDisclosureComponent>
-        </>
+        )}
         <ParentDisclosureComponent
           defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
           key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Advanced`}
