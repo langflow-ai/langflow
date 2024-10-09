@@ -267,7 +267,7 @@ class Vertex:
     def get_task(self):
         # using the task_id, get the task from celery
         # and return it
-        from celery.result import AsyncResult  # type: ignore
+        from celery.result import AsyncResult
 
         return AsyncResult(self.task_id)
 
@@ -446,9 +446,9 @@ class Vertex:
         if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
             return
         if not overwrite:
-            for key in new_params.copy():  # type: ignore
+            for key in new_params.copy():  # type: ignore[attr-defined]
                 if key not in self._raw_params:
-                    new_params.pop(key)  # type: ignore
+                    new_params.pop(key)  # type: ignore[attr-defined]
         self._raw_params.update(new_params)
         self.params = self._raw_params.copy()
         self.updated_raw_params = True
@@ -692,9 +692,9 @@ class Vertex:
         if key == "func":
             if not isinstance(result, types.FunctionType):
                 if hasattr(result, "run"):
-                    result = result.run  # type: ignore
+                    result = result.run
                 elif hasattr(result, "get_function"):
-                    result = result.get_function()  # type: ignore
+                    result = result.get_function()
             elif inspect.iscoroutinefunction(result):
                 self.params["coroutine"] = result
             else:
@@ -750,7 +750,7 @@ class Vertex:
         """
         if isinstance(self._built_object, UnbuiltObject):
             msg = f"{self.display_name}: {self._built_object_repr()}"
-            raise ValueError(msg)
+            raise TypeError(msg)
         if self._built_object is None:
             message = f"{self.display_name} returned None."
             if self.base_type == "custom_components":
@@ -758,7 +758,7 @@ class Vertex:
 
             logger.warning(message)
         elif isinstance(self._built_object, Iterator | AsyncIterator):
-            if self.display_name in ["Text Output"]:
+            if self.display_name == "Text Output":
                 msg = f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
                 raise ValueError(msg)
 

@@ -8,7 +8,7 @@ from langflow.services.deps import get_plugins_service
 
 if TYPE_CHECKING:
     from langchain_core.callbacks import BaseCallbackHandler
-    from langfuse.callback import CallbackHandler  # type: ignore
+    from langfuse.callback import CallbackHandler
 
 
 def setup_callbacks(sync, trace_id, **kwargs):

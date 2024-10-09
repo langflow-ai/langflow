@@ -120,7 +120,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
-            import litellm  # type: ignore
+            import litellm
 
             litellm.drop_params = True
             litellm.set_verbose = self.verbose
@@ -155,4 +155,4 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         )
         output.client.api_key = self.api_key
 
-        return output  # type: ignore
+        return output

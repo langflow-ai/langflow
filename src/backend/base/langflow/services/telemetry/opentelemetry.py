@@ -208,7 +208,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             counter.add(value, labels)
         else:
             msg = f"Metric '{metric_name}' is not a counter"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
     def up_down_counter(self, metric_name: str, value: float, labels: Mapping[str, str]):
         self.validate_labels(metric_name, labels)
@@ -217,7 +217,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             up_down_counter.add(value, labels)
         else:
             msg = f"Metric '{metric_name}' is not an up down counter"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
     def update_gauge(self, metric_name: str, value: float, labels: Mapping[str, str]):
         self.validate_labels(metric_name, labels)
@@ -226,7 +226,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             gauge.set_value(value, labels)
         else:
             msg = f"Metric '{metric_name}' is not a gauge"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
     def observe_histogram(self, metric_name: str, value: float, labels: Mapping[str, str]):
         self.validate_labels(metric_name, labels)
@@ -235,4 +235,4 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             histogram.record(value, labels)
         else:
             msg = f"Metric '{metric_name}' is not a histogram"
-            raise ValueError(msg)
+            raise TypeError(msg)

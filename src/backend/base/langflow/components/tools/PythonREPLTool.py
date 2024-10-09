@@ -55,7 +55,7 @@ class PythonREPLToolComponent(LCToolComponent):
             modules = global_imports
         else:
             msg = "global_imports must be either a string or a list"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         for module in modules:
             try:

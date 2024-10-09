@@ -106,7 +106,7 @@ def get_artifact_type(value, build_result) -> str:
             result = ArtifactType.MESSAGE
 
     if result == ArtifactType.UNKNOWN and (
-        isinstance(build_result, Generator) or isinstance(value, Message) and isinstance(value.text, Generator)
+        isinstance(build_result, Generator) or (isinstance(value, Message) and isinstance(value.text, Generator))
     ):
         result = ArtifactType.STREAM
 

@@ -124,9 +124,7 @@ class TracingService(Service):
         )
 
     def _initialize_langwatch_tracer(self):
-        if (
-            "langwatch" not in self._tracers or self._tracers["langwatch"].trace_id != self.run_id  # type: ignore
-        ):
+        if "langwatch" not in self._tracers or self._tracers["langwatch"].trace_id != self.run_id:
             langwatch_tracer = _get_langwatch_tracer()
             self._tracers["langwatch"] = langwatch_tracer(
                 trace_name=self.run_name,
@@ -164,7 +162,7 @@ class TracingService(Service):
         self.inputs[trace_name] = inputs
         self.inputs_metadata[trace_name] = metadata or {}
         for tracer in self._tracers.values():
-            if not tracer.ready:  # type: ignore
+            if not tracer.ready:  # type: ignore[truthy-function]
                 continue
             try:
                 tracer.add_trace(trace_id, trace_name, trace_type, inputs, metadata, vertex)
@@ -173,7 +171,7 @@ class TracingService(Service):
 
     def _end_traces(self, trace_id: str, trace_name: str, error: Exception | None = None):
         for tracer in self._tracers.values():
-            if not tracer.ready:  # type: ignore
+            if not tracer.ready:  # type: ignore[truthy-function]
                 continue
             try:
                 tracer.end_trace(
@@ -188,7 +186,7 @@ class TracingService(Service):
 
     def _end_all_traces(self, outputs: dict, error: Exception | None = None):
         for tracer in self._tracers.values():
-            if not tracer.ready:  # type: ignore
+            if not tracer.ready:  # type: ignore[truthy-function]
                 continue
             try:
                 tracer.end(self.inputs, outputs=self.outputs, error=error, metadata=outputs)
@@ -254,7 +252,7 @@ class TracingService(Service):
     def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
         callbacks = []
         for tracer in self._tracers.values():
-            if not tracer.ready:  # type: ignore
+            if not tracer.ready:  # type: ignore[truthy-function]
                 continue
             langchain_callback = tracer.get_langchain_callback()
             if langchain_callback:
