@@ -117,7 +117,7 @@ def create_flow(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
         if isinstance(e, HTTPException):
-            raise e
+            raise
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -255,7 +255,7 @@ def update_flow(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
         if isinstance(e, HTTPException):
-            raise e
+            raise
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

@@ -136,10 +136,10 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         if self.provider == "Azure":
             if "api_base" not in self.kwargs:
                 msg = "Missing api_base on kwargs"
-                raise Exception(msg)
+                raise ValueError(msg)
             if "api_version" not in self.model_kwargs:
                 msg = "Missing api_version on model_kwargs"
-                raise Exception(msg)
+                raise ValueError(msg)
         output = ChatLiteLLM(
             model=f"{self.provider.lower()}/{self.model}",
             client=None,

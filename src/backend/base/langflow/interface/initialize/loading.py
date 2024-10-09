@@ -120,7 +120,7 @@ def update_params_with_load_from_db_fields(
                 except ValueError as e:
                     # check if "User id is not set" is in the error message, this is an internal bug
                     if "User id is not set" in str(e):
-                        raise e
+                        raise
                     logger.debug(str(e))
                 if fallback_to_env_vars and key is None:
                     var = os.getenv(params[field])
@@ -134,8 +134,8 @@ def update_params_with_load_from_db_fields(
 
                 params[field] = key
 
-            except TypeError as exc:
-                raise exc
+            except TypeError:
+                raise
 
             except Exception:  # noqa: BLE001
                 logger.exception(f"Failed to get value for {field} from custom component. Setting it to None.")

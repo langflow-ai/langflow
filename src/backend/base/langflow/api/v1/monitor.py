@@ -102,8 +102,8 @@ async def update_message(
         session.commit()
         session.refresh(db_message)
         return db_message
-    except HTTPException as e:
-        raise e
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -135,8 +135,8 @@ async def update_session_id(
             session.refresh(message)
             message_responses.append(MessageResponse.model_validate(message, from_attributes=True))
         return message_responses
-    except HTTPException as e:
-        raise e
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

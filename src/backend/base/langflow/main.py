@@ -77,7 +77,7 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
                 )
                 error_messages = json.dumps([message, str(exc)])
                 raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages) from exc
-            raise exc
+            raise
         if (
             "files/" not in request.url.path
             and request.url.path.endswith(".js")

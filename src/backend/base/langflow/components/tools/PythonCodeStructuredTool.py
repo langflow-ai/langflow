@@ -178,7 +178,7 @@ class PythonCodeStructuredTool(LCToolComponent):
             func_arg = self._find_arg(named_functions, func_name, field_name)
             if func_arg is None:
                 msg = f"Failed to find arg: {field_name}"
-                raise Exception(msg)
+                raise ValueError(msg)
 
             field_annotation = func_arg["annotation"]
             field_description = self._get_value(self._attributes[attr], str)
@@ -251,7 +251,7 @@ class PythonCodeStructuredTool(LCToolComponent):
             for arg in node.args.args:
                 if arg.lineno != arg.end_lineno:
                     msg = "Multiline arguments are not supported"
-                    raise Exception(msg)
+                    raise ValueError(msg)
 
                 func_arg = {
                     "name": arg.arg,

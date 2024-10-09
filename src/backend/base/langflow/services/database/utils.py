@@ -40,7 +40,7 @@ def initialize_database(fix_migration: bool = False):
         if "overlaps with other requested revisions" not in str(
             exc
         ) and "Can't locate revision identified by" not in str(exc):
-            raise exc
+            raise
         # This means there's wrong revision in the DB
         # We need to delete the alembic_version table
         # and run the migrations again

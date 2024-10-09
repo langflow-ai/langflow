@@ -58,7 +58,7 @@ class SQLExecutorComponent(CustomComponent):
             result = str(e)
             self.status = result
             if not passthrough:
-                raise e
+                raise
             error = repr(e)
 
         if add_error and error is not None:

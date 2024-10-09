@@ -65,8 +65,6 @@ ignore = [
     "S",
     "SLF",
     "T201",
-    "TRY002",
-    "TRY2",
     "TRY3",
 ]
 

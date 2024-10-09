@@ -24,6 +24,6 @@ def log_transaction(db: Session, transaction: TransactionBase) -> TransactionTab
     try:
         db.commit()
         return table
-    except IntegrityError as e:
+    except IntegrityError:
         db.rollback()
-        raise e
+        raise

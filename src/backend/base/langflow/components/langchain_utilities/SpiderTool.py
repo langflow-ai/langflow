@@ -6,6 +6,10 @@ from langflow.io import BoolInput, DictInput, DropdownInput, IntInput, Output, S
 from langflow.schema import Data
 
 
+class SpiderToolError(Exception):
+    """SpiderTool error"""
+
+
 class SpiderTool(Component):
     display_name: str = "Spider Web Crawler & Scraper"
     description: str = "Spider API for web crawling and scraping."
@@ -114,7 +118,7 @@ class SpiderTool(Component):
                 raise ValueError(msg)
         except Exception as e:
             msg = f"Error: {e}"
-            raise Exception(msg) from e
+            raise SpiderToolError(msg) from e
 
         records = []
 

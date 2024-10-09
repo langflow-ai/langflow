@@ -156,7 +156,7 @@ class GmailLoaderComponent(Component):
                         yield self._get_message_data(service, message)
                     except Exception as e:
                         if self.raise_error:
-                            raise e
+                            raise
                         else:
                             print(f"Error processing message {message['id']}: {e}")
 

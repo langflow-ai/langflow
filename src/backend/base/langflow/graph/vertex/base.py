@@ -352,7 +352,7 @@ class Vertex:
                         if "too many values to unpack" in str(e):
                             full_path = file_path
                         else:
-                            raise e
+                            raise
                     params[field_name] = full_path
                 elif field.get("required"):
                     field_display_name = field.get("display_name")
