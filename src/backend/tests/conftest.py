@@ -5,10 +5,10 @@ import shutil
 # we need to import tmpdir
 import tempfile
 from collections.abc import AsyncGenerator
-from contextlib import contextmanager
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 import orjson
 import pytest
@@ -30,7 +30,7 @@ from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.database.models.transactions.crud import delete_transactions_by_flow_id
+from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
 from langflow.services.database.utils import session_getter
@@ -85,10 +85,17 @@ def get_text():
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
 
 
+def delete_transactions_by_flow_id(db: Session, flow_id: UUID):
+    stmt = select(TransactionTable).where(TransactionTable.flow_id == flow_id)
+    transactions = db.exec(stmt)
+    for transaction in transactions:
+        db.delete(transaction)
+    db.commit()
+
+
 def _delete_transactions_and_vertex_builds(session, user: User):
     flow_ids = [flow.id for flow in user.flows]
     for flow_id in flow_ids:
-        delete_transactions_by_flow_id(session, flow_id)
         delete_vertex_builds_by_flow_id(session, flow_id)
 
 
