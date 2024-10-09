@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import IconComponent from "@/components/genericIconComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import useFlowStore from "@/stores/flowStore";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select-custom";
+import { cn } from "@/utils/utils";
 
 export default function SessionSelector({
   deleteSession,
@@ -26,13 +27,15 @@ export default function SessionSelector({
   const [isEditing, setIsEditing] = useState(false);
   const [editedSession, setEditedSession] = useState(session);
   const { mutate: updateSessionName } = useUpdateSessionName();
+  const inputRef = useRef<HTMLInputElement>(null);
 
 
   useEffect(() => {
     console.log(isEditing)
   },[isEditing])
 
-  const handleEditClick = () => {
+  const handleEditClick = (e?: React.MouseEvent<HTMLDivElement>) => {
+    e?.stopPropagation();
     setIsEditing(true);
   };
 
@@ -42,14 +45,16 @@ export default function SessionSelector({
 
   const handleConfirm = () => {
     setIsEditing(false);
+    if(editedSession.trim()!==session){
     updateSessionName(
-      { old_session_id: session, new_session_id: editedSession },
+      { old_session_id: session, new_session_id: editedSession.trim() },
       {
         onSuccess: () => {
           updateVisibleSession(editedSession);
         },
-      },
-    );
+        },
+      );
+    }
   };
 
   const handleCancel = () => {
@@ -72,12 +77,13 @@ export default function SessionSelector({
   };
 
   return (
-    <div className="file-component-accordion-div group">
-      <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3.5 align-middle">
+    <div onClick={(e)=>{if(isEditing)e.stopPropagation(); else toggleVisibility()}} className={cn("file-component-accordion-div cursor-pointer group hover:bg-muted-foreground/30 rounded-md",(isVisible) ? "bg-muted-foreground/1" : "")}>
+      <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3 align-middle">
         <div className="flex min-w-0 items-center gap-2">
           {isEditing ? (
             <div className="flex items-center">
               <Input
+                ref={inputRef}
                 value={editedSession}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -119,7 +125,6 @@ export default function SessionSelector({
                 <Badge
                   variant="gray"
                   size="md"
-                  onDoubleClick={handleEditClick}
                   className="block cursor-pointer truncate"
                 >
                   {session === currentFlowId ? "Default Session" : session}
@@ -129,7 +134,9 @@ export default function SessionSelector({
           )}
         </div>
         <Select value={""} onValueChange={handleSelectChange}>
-          <SelectTrigger data-confirm="true" className="w-8 h-8 p-0 border-none bg-transparent hover:bg-muted focus:ring-0">
+          <SelectTrigger onFocusCapture={()=>{
+            inputRef.current?.focus();
+          }} data-confirm="true" className="w-8 h-8 p-0 border-none bg-transparent focus:ring-0">
             <IconComponent name="MoreHorizontal" className="h-4 w-4" />
           </SelectTrigger>
           <SelectContent side="right" align="start" className="w-40 p-0">
