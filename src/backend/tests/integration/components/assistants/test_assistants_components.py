@@ -26,7 +26,7 @@ async def iterate(system_prompt, user_message):
             "instructions": system_prompt,
             "model_name": "gpt-4o-mini",
             "user_message": user_message,
-            "tool": "ReActThoughtTool",
+            "tool_names": ["ReActThoughtTool"],
         },
     )
     assert results["assistant_response"].text is not None
@@ -38,7 +38,7 @@ async def iterate(system_prompt, user_message):
             "instructions": system_prompt,
             "model_name": "gpt-4o-mini",
             "user_message": "check to see if you are finished, do at least a few iterations",
-            "tool": "ReActDeciderTool",
+            "tool_names": ["ReActDeciderTool"],
             "input_thread_id": thread_id,
         },
     )

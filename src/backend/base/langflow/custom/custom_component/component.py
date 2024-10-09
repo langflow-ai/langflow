@@ -452,7 +452,12 @@ class Component(CustomComponent):
         # if value is a list of components, we need to process each component
         if isinstance(value, list):
             for val in value:
-                self._process_connection_or_parameter(key, val)
+                if isinstance(val,Component):
+                    self._process_connection_or_parameter(key, val)
+                # but sometimes value is just a list because the input/output takes a list
+                else:
+                    self._process_connection_or_parameter(key, value)
+                    break
         else:
             self._process_connection_or_parameter(key, value)
 

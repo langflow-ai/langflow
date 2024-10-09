@@ -2,7 +2,7 @@ import warnings
 from collections.abc import AsyncIterator, Iterator
 from typing import Any, get_args
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, root_validator, model_validator
 
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
@@ -455,6 +455,14 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
     options: list[str] = Field(default_factory=list)
     is_list: bool = Field(default=True, serialization_alias="list")
     combobox: CoalesceBool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_list_alias(cls, values):
+        # If 'list' is present in values but 'is_list' is not, use 'list' for 'is_list'
+        if 'list' in values and 'is_list' not in values:
+            values['is_list'] = values.pop('list')
+        return values
 
     @field_validator("value")
     @classmethod

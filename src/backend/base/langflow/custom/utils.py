@@ -539,69 +539,75 @@ def build_tool_components(tool_packages: List[object]) -> Dict:
 
     for name, cls in tool_components[category].items():
         # Extract the tool class details for the imports
-        tool_cls = cls.tool_cls
-        tool_module = tool_cls.__module__
-        tool_class_name = tool_cls.__name__
+        #tool_cls = cls.tool_cls
+        #tool_module = tool_cls.__module__
+        #tool_class_name = tool_cls.__name__
 
         # Generate the import statements
-        imports = (
-            "import inspect\n"
-            "import asyncio\n"
-            "from typing import Type, Dict, Any, Union\n"
-            "from pydantic import BaseModel, Field as PydanticField, Undefined as PydanticUndefined\n"
-            "from langflow.inputs import (\n"
-            "    StrInput, IntInput, FloatInput, BoolInput, DictInput, DataInput,\n"
-            "    DefaultPromptField, DropdownInput, MultiselectInput, FileInput,\n"
-            "    HandleInput, MultilineInput, MultilineSecretInput, NestedDictInput,\n"
-            "    PromptInput, CodeInput, SecretStrInput, MessageTextInput, MessageInput,\n"
-            "    TableInput, LinkInput\n"
-            ")\n"
-            "from langflow.outputs import Output\n"
-            "from langflow.component import Component\n"
-            f"from {tool_module} import {tool_class_name}\n"
-        )
+        #imports = (
+        #    "import inspect\n"
+        #    "import asyncio\n"
+        #    "from typing import Type, Dict, Any, Union\n"
+        #    "from pydantic import BaseModel, Field as PydanticField, Undefined as PydanticUndefined\n"
+        #    "from langflow.inputs import (\n"
+        #    "    StrInput, IntInput, FloatInput, BoolInput, DictInput, DataInput,\n"
+        #    "    DefaultPromptField, DropdownInput, MultiselectInput, FileInput,\n"
+        #    "    HandleInput, MultilineInput, MultilineSecretInput, NestedDictInput,\n"
+        #    "    PromptInput, CodeInput, SecretStrInput, MessageTextInput, MessageInput,\n"
+        #    "    TableInput, LinkInput\n"
+        #    ")\n"
+        #    "from langflow.outputs import Output\n"
+        #    "from langflow.component import Component\n"
+        #    f"from {tool_module} import {tool_class_name}\n"
+        #)
 
         # Define the component class name
-        component_class_name = f"{tool_cls.__name__}Component"
+        #component_class_name = f"{tool_cls.__name__}Component"
 
         # Begin constructing the class definition
-        class_code = f"{imports}\n\nclass {component_class_name}(Component):\n"
+        #class_code = f"{imports}\n\nclass {component_class_name}(Component):\n"
 
+        #members = inspect.getmembers(cls)
         # Iterate through the members of cls and generate attributes and methods
-        for member_name, member_value in inspect.getmembers(cls):
-            # Skip private members and properties
-            if not member_name.startswith('_') and not isinstance(member_value, property):
-                if not callable(member_value):
-                    # Add an attribute definition
-                    class_code += f"    {member_name} = {repr(member_value)}\n"
-                else:
-                    # Add a method definition
-                    class_code += f"\n    def {member_name}(self, *args, **kwargs):\n"
-                    if isinstance(member_value, type(lambda: None)):
-                        # Use the original code of the function if available
-                        func_code = inspect.getsource(member_value).splitlines()
-                        func_body = "\n".join([f"        {line}" for line in func_code[1:]])
-                        class_code += f"{func_body}\n"
-                    else:
-                        class_code += f"        return cls.{member_name}(*args, **kwargs)\n"
+        #for member_name, member_value in members:
+        #    # Skip private members and properties
+        #    if not member_name.startswith('_') and not isinstance(member_value, property):
+        #        if not callable(member_value):
+        #            # Add an attribute definition
+        #            class_code += f"    {member_name} = {repr(member_value)}\n"
+        #        else:
+        #            # Add a method definition
+        #            class_code += f"\n    def {member_name}(self, *args, **kwargs):\n"
+        #            if isinstance(member_value, type(lambda: None)):
+        #                # Use the original code of the function if available
+        #                func_code = inspect.getsource(member_value).splitlines()
+        #                func_body = "\n".join([f"        {line.strip()}" for line in func_code[1:]])
+        #                class_code += f"{func_body}\n"
+        #            else:
+        #                class_code += f"        return cls.{member_name}(*args, **kwargs)\n"
 
-        # Ensure the class has some content, otherwise add a `pass`
-        if class_code.strip().endswith(f"class {component_class_name}(Component):"):
-            class_code += "    pass\n"
+        #members.index("outputs")
+
+        ## Ensure the class has some content, otherwise add a `pass`
+        #if class_code.strip().endswith(f"class {component_class_name}(Component):"):
+        #    class_code += "    pass\n"
 
         component_info = {
-            "name": component_class_name,
+            "name": f"{name}Component",
             # TODO: fix this? Looks like it's almost always [] sometimes [Data] or [str]
             "output_types": [],
             "file": "",
-            "code": class_code,
+            "code": cls,
             "error": "",
         }
+        # Iterate over the provided packages (which are module objects)
         try:
             component_tuple = (*build_component(component_info), component_info)
             components_list.append(component_tuple)
         except Exception as e:
-            logger.error(f"Error while building component {component_class_name}: {e}")
+            logger.error(f"Error while building component {name}Component: {e}")
+            trace = traceback.format_exc()
+            logger.error(trace)
             continue
     components_dict = {
         "name": category,

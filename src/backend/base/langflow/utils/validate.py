@@ -264,7 +264,11 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
     :return: Constructor function for the class
     """
 
-    exec(compiled_class, exec_globals, locals())
+    try:
+        exec(compiled_class, exec_globals, locals())
+    except Exception as e:
+        msg = "Class string does not contain a class"
+        raise ValueError(msg) from e
     exec_globals[class_name] = locals()[class_name]
 
     # Return a function that imports necessary modules and creates an instance of the target class
@@ -321,7 +325,11 @@ def extract_function_name(code):
 
 
 def extract_class_name(code):
-    module = ast.parse(code)
+    try:
+        module = ast.parse(code)
+    except SyntaxError:
+        msg = "Invalid syntax in the code string"
+        raise ValueError(msg)
     for node in module.body:
         if isinstance(node, ast.ClassDef):
             return node.name

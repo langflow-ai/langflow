@@ -21,6 +21,7 @@ from langflow.template import Output
 
 logger = logging.getLogger(__name__)
 
+
 # This converts a class structure into a Pydantic BaseModel. Used it for generating flows naively:
 # RawGraphDataModel = typed_dict_to_basemodel("GraphDataModel", GraphData)
 def typed_dict_to_basemodel(name: str, typed_dict: type[TypedDict], created_models: dict = None) -> type[BaseModel]:
@@ -37,6 +38,7 @@ def typed_dict_to_basemodel(name: str, typed_dict: type[TypedDict], created_mode
 
     # Determine required and optional fields
     required_keys = getattr(typed_dict, "__required_keys__", set())
+
     # optional_keys = getattr(typed_dict, "__optional_keys__", set())
 
     # Helper function to safely check subclass
@@ -92,15 +94,16 @@ def typed_dict_to_basemodel(name: str, typed_dict: type[TypedDict], created_mode
     created_models[name] = model
     return model
 
-def tool_interface_to_component(tool_cls: Type[ToolInterface]) -> Type[Component]:
+
+def tool_interface_to_component(tool_cls: Type[ToolInterface]) -> str:
     """
-    Dynamically creates a Langflow Component subclass based on a ToolInterface subclass.
+    Generates Python code for a Langflow Component class based on a ToolInterface subclass.
 
     Args:
         tool_cls (Type[ToolInterface]): The ToolInterface subclass to transform.
 
     Returns:
-        Type[Component]: A new Component subclass corresponding to the tool_cls.
+        str: The generated Python code for the Component class.
     """
 
     # Ensure the tool_cls is indeed a subclass of ToolInterface
@@ -122,6 +125,7 @@ def tool_interface_to_component(tool_cls: Type[ToolInterface]) -> Type[Component
         logger.warning(f"The 'call' method must have exactly one parameter, (not counting self). Found {len(parameters)}.")
         return None
 
+    process_inputs_args = []
     # Extract the second parameter (which should be the arguments)
     for param in parameters:
         if param == "self":
@@ -138,7 +142,7 @@ def tool_interface_to_component(tool_cls: Type[ToolInterface]) -> Type[Component
             argument_fields["arguments"] = Field(any, description="Arguments for the tool")
 
         # Define inputs based on the argument_fields (only if it's a BaseModel)
-        inputs = []
+        inputs_code = []
         for field_name, field_info in argument_fields.items():
             input_type = field_info.annotation
             # Handle Optional and Union types
@@ -147,46 +151,42 @@ def tool_interface_to_component(tool_cls: Type[ToolInterface]) -> Type[Component
                 input_type = [arg for arg in input_type.__args__ if arg is not type(None)][0]  # Remove NoneType
 
             # Map Pydantic types to Langflow InputTypes
-            input_class = StrInput  # default to StrInput
+            input_class = "StrInput"  # default to StrInput
             if input_type == str:
-                input_class = StrInput
+                input_class = "StrInput"
             elif input_type == int:
-                input_class = IntInput
+                input_class = "IntInput"
             elif input_type == float:
-                input_class = FloatInput
+                input_class = "FloatInput"
             elif input_type == bool:
-                input_class = BoolInput
+                input_class = "BoolInput"
             elif input_type == dict:
-                input_class = DictInput
+                input_class = "DictInput"
             elif input_type == list:
-                input_class = DataInput  # Assuming list can be used with DataInput
+                input_class = "DataInput"  # Assuming list can be used with DataInput
             # else handle other types as needed
 
             # Determine if the field is required based on whether it has a default value
             required = field_info.default is PydanticUndefined
 
             # Add each field as an input to the component
-            inputs.append(
-                input_class(
-                    name=field_name,
-                    display_name=field_info.alias or field_name.capitalize(),
-                    required=required,
-                )
+            inputs_code.append(
+                f"{input_class}(name='{field_name}', display_name='{field_info.alias or field_name.capitalize()}', required={required})"
             )
+            if input_type is None:
+                input_type = str
+            process_inputs_args.append((field_name,  input_type.__name__))
 
     # Extract the return type of the 'call' method
     return_annotation = call_sig.return_annotation
-    # TODO: maybe handle Dict better
     if return_annotation is inspect.Signature.empty or return_annotation is Dict:
         return_annotation = any
 
     # Check if the return type is either a BaseModel or a string
     if inspect.isclass(return_annotation) and not issubclass(return_annotation, BaseModel):
         return_annotation = any
-        #raise TypeError("The return type of 'call' must be a subclass of pydantic.BaseModel, a string, or any.")
     elif return_annotation != str and return_annotation != any:
         return_annotation = any
-        #raise TypeError("The return type of 'call' must be a subclass of pydantic.BaseModel, a string, or any.")
 
     # Extract fields from the return type if it's a BaseModel
     output_fields = {}
@@ -196,8 +196,7 @@ def tool_interface_to_component(tool_cls: Type[ToolInterface]) -> Type[Component
         output_fields["result"] = Field(any, description="Result of the tool")
 
     # Define outputs based on the return type fields (only if it's a BaseModel)
-    outputs = []
-    class_dict = {}  # To store methods that will be added to the class
+    outputs_code = []
     for field_name, field_info in output_fields.items():
         output_type = field_info.annotation
         # Handle Optional and Union types
@@ -206,115 +205,61 @@ def tool_interface_to_component(tool_cls: Type[ToolInterface]) -> Type[Component
             output_type = [arg for arg in output_type.__args__ if arg is not type(None)][0]  # Remove NoneType
 
         # Map Pydantic types to Langflow Output types
-        types = ["string"]  # default to string
+        types = "[\"string\"]"  # default to string
         if output_type == str:
-            types = ["string"]
+            types = "[\"string\"]"
         elif output_type == int:
-            types = ["int"]
+            types = "[\"int\"]"
         elif output_type == float:
-            types = ["float"]
+            types = "[\"float\"]"
         elif output_type == bool:
-            types = ["bool"]
+            types = "[\"bool\"]"
         elif output_type == dict:
-            types = ["object"]
+            types = "[\"object\"]"
         elif output_type == list:
-            types = ["array"]
+            types = "[\"array\"]"
         elif output_type == tuple:
-            types = ["array"]
+            types = "[\"array\"]"
         elif output_type == set:
-            types = ["array"]
+            types = "[\"array\"]"
         elif output_type == bytes:
-            types = ["array"]
-        # else handle other types as needed
-
-        # TODO: delete this?
-        # Define a method that will retrieve the output value from results
-        def make_output_method(field_name):
-            def output_method(self):
-                return self._results.get(field_name)
-            return output_method
-
+            types = "[\"array\"]"
 
         # Add each output field as an output to the component
-        outputs.append(
-            Output(
-                name=field_name,
-                display_name=field_info.alias or field_name.capitalize(),
-                method="process_inputs",
-                types=types
-            )
+        outputs_code.append(
+            f"Output(name='{field_name}', display_name='{field_info.alias or field_name.capitalize()}', method='process_inputs', types={types})"
         )
 
-    # Define the run method for the component
-    async def run_method(self: Component) -> Dict[str, Any]:
-        """
-        Executes the tool's call method with the provided inputs and sets the outputs.
-        """
-        # Collect inputs into the arguments model
-        args_data = {}
-        for input_ in self.inputs:
-            value = self.get_input(input_.name)
-            args_data[input_.name] = value
+    # Generate the process_inputs method code
+    process_inputs_code = f"""
+    def process_inputs(self, {', '.join([f"{process_input[0]}: {process_input[1]}" for process_input in process_inputs_args])}) -> Message:
+        tool = self.tool_cls({', '.join([process_input[0] for process_input in process_inputs_args])})
+        result = tool.call()
+        # TODO: handle cases where this is not a string
+        return Message(text=result)
+    """
 
-        # If arguments_type is a BaseModel, instantiate it; otherwise use the string value
-        if inspect.isclass(arguments_type) and issubclass(arguments_type, BaseModel):
-            arguments = arguments_type(**args_data)
-        else:
-            arguments = args_data.get("arguments", "")  # When arguments is a simple string
+    # Generate the complete class code as a string
+    component_code = f"""
+from typing import Type, Dict, Any, Union
+import inspect
+from pydantic import BaseModel, Field
+from langflow.inputs.inputs import StrInput, IntInput, FloatInput, BoolInput, DictInput, DataInput
+from langflow.template import Output
+from langflow.schema.message import Message
+from langflow.custom import Component
+from {tool_cls.__module__} import {tool_cls.__name__}
 
-        # Instantiate the tool
-        tool_instance = tool_cls()
+class {component_class_name}(Component):
+    display_name = "{tool_cls.__name__} Component"
+    description = "Component for {tool_cls.__name__}."
+    icon = "tool_icon"
+    name = "{tool_cls.__name__}"
+    inputs = [{', '.join(inputs_code)}]
+    outputs = [{', '.join(outputs_code)}]
+    tool_cls = {tool_cls.__name__}
 
-        # Check if 'call' is asynchronous
-        if inspect.iscoroutinefunction(tool_instance.call):
-            # If asynchronous, await the result
-            tool_result = await tool_instance.call(arguments)
-        else:
-            # If synchronous, run the method in a thread executor to avoid blocking
-            loop = asyncio.get_event_loop()
-            tool_result = await loop.run_in_executor(None, tool_instance.call, arguments)
+    {process_inputs_code}
+"""
 
-        # Set outputs
-        self._results = {}
-        if isinstance(tool_result, BaseModel):
-            # If the result is a BaseModel, extract its fields as outputs
-            for field_name in output_fields:
-                field_value = getattr(tool_result, field_name)
-                self.set_output_value(field_name, field_value)
-                self._results[field_name] = field_value
-        else:
-            # If the result is a string, set it as the output under the key "result"
-            self.set_output_value("result", tool_result)
-            self._results["result"] = tool_result
-
-        return self._results
-
-    # Define the process_inputs method for the component
-    def process_inputs(self: Component) -> Any:
-        """
-        Calls the tool's call method with the provided inputs without further processing.
-        """
-        tool_instance = tool_cls()
-        return tool_instance.call()
-
-    # Prepare the class dictionary with component properties and methods
-    class_dict.update({
-        "display_name": f"{tool_cls.__name__} Component",
-        "description": f"Component for {tool_cls.__name__}.",
-        "icon": "tool_icon",  # Customize or extract from tool_cls if available
-        "name": tool_cls.__name__,
-        "inputs": inputs,
-        "outputs": outputs,
-        "run": run_method,
-        "process_inputs": process_inputs,
-        "tool_cls": tool_cls,
-    })
-
-    # Create the new Component subclass dynamically
-    component_cls = type(
-        component_class_name,
-        (Component,),
-        class_dict
-    )
-
-    return component_cls
+    return component_code

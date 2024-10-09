@@ -238,7 +238,7 @@ def test_react():
     assistant_component_1.set(
         instructions=system_prompt,
         model_name="gpt-4o-mini",
-        tool="ReActThoughtTool",
+        tool_names=["ReActThoughtTool"],
         user_message=prompt_component_1.build_prompt,
     )
 
@@ -247,7 +247,7 @@ def test_react():
     assistant_component_2.set(
         instructions="determine if you are done, do more iterations if at all unsure",
         model_name="gpt-4o-mini",
-        tool="ReActDeciderTool",
+        tool_names=["ReActDeciderTool"],
         input_thread_id=assistant_component_1.get_thread_id,
         user_message=assistant_component_1.get_assistant_response,
     )

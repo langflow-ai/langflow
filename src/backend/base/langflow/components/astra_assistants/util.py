@@ -42,21 +42,29 @@ tool_names = []
 tools_and_names = {}
 
 
-def tools_from_package(your_package):
-    # Iterate over all modules in the package
-    package_name = your_package.__name__
-    for module_info in pkgutil.iter_modules(your_package.__path__):
-        module_name = f"{package_name}.{module_info.name}"
+def tools_from_package(pkg):
+    # Helper function to process a module or package
+    def process_module_or_package(package_name, package_path):
+        for module_info in pkgutil.iter_modules(package_path):
+            module_name = f"{package_name}.{module_info.name}"
 
-        # Dynamically import the module
-        module = importlib.import_module(module_name)
+            # Dynamically import the module
+            module = importlib.import_module(module_name)
 
-        # Iterate over all members of the module
-        for name, obj in inspect.getmembers(module, inspect.isclass):
-            # Check if the class is a subclass of ToolInterface and is not ToolInterface itself
-            if issubclass(obj, ToolInterface) and obj is not ToolInterface:
-                tool_names.append(name)
-                tools_and_names[name] = obj
+            # If the module is a package itself, recurse into it
+            if module_info.ispkg:
+                process_module_or_package(module_name, module.__path__)
+            else:
+                # Iterate over all members of the module
+                for name, obj in inspect.getmembers(module, inspect.isclass):
+                    # Check if the class is a subclass of ToolInterface and is not ToolInterface itself
+                    if issubclass(obj, ToolInterface) and obj is not ToolInterface:
+                        tool_names.append(name)
+                        tools_and_names[name] = obj
+
+    # Start processing from the top-level package
+    package_name = pkg.__name__
+    process_module_or_package(package_name, pkg.__path__)
 
 
 tools_from_package(astra_assistants_tools)

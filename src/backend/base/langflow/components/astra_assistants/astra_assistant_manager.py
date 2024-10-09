@@ -9,7 +9,7 @@ from langflow.components.astra_assistants.util import (
     tools_and_names,
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
-from langflow.inputs import DropdownInput, MultilineInput, StrInput
+from langflow.inputs import DropdownInput, MultilineInput, StrInput, MultiselectInput
 from langflow.schema.message import Message
 from langflow.template import Output
 
@@ -32,10 +32,13 @@ class AstraAssistantManager(ComponentWithCache):
             options=litellm_model_names,
             value="gpt-4o-mini",
         ),
-        DropdownInput(
-            display_name="Tool",
-            name="tool",
+        MultiselectInput(
+            display_name="Tools",
+            name="tool_names",
             options=tool_names,
+            value=[],
+            info="The tools the agent has access to.",
+            required=False,
         ),
         MultilineInput(
             name="user_message",
@@ -100,13 +103,14 @@ class AstraAssistantManager(ComponentWithCache):
 
     async def process_inputs(self):
         print(f"env_set is {self.env_set}")
-        print(self.tool)
+        print(self.tool_names)
         tools = []
         tool_obj = None
-        if self.tool is not None and self.tool != "":
-            tool_cls = tools_and_names[self.tool]
-            tool_obj = tool_cls()
-            tools.append(tool_obj)
+        if self.tool_names is not None and len(self.tool_names) > 0:
+            for tool in self.tool_names:
+                tool_cls = tools_and_names[tool]
+                tool_obj = tool_cls()
+                tools.append(tool_obj)
         assistant_id = None
         thread_id = None
         if self.input_assistant_id:
