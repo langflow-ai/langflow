@@ -134,7 +134,9 @@ export default function SessionSelector({
           )}
         </div>
         <Select value={""} onValueChange={handleSelectChange}>
-          <SelectTrigger onFocusCapture={()=>{
+          <SelectTrigger onClick={(e)=>{
+            e.stopPropagation();
+          }} onFocusCapture={()=>{
             inputRef.current?.focus();
           }} data-confirm="true" className="w-8 h-8 p-0 border-none bg-transparent focus:ring-0">
             <IconComponent name="MoreHorizontal" className="h-4 w-4" />
