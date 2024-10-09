@@ -30,7 +30,7 @@ def get_langfuse_callback(trace_id):
         try:
             trace = langfuse.trace(name="langflow-" + trace_id, id=trace_id)
             return trace.getNewHandler()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error initializing langfuse callback")
 
     return None

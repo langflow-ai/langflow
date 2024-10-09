@@ -121,7 +121,7 @@ class Graph:
         self._snapshots: list[dict[str, Any]] = []
         try:
             self.tracing_service: TracingService | None = get_tracing_service()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error getting tracing service")
             self.tracing_service = None
         if start is not None and end is not None:
@@ -676,8 +676,8 @@ class Graph:
             cache_service = get_chat_service()
             if self.flow_id:
                 await cache_service.set_cache(self.flow_id, self)
-        except Exception as exc:
-            logger.exception(exc)
+        except Exception:  # noqa: BLE001
+            logger.exception("Error setting cache")
 
         try:
             # Prioritize the webhook component if it exists
@@ -1368,7 +1368,8 @@ class Graph:
                             vertex._finalize_build()
                             if vertex.result is not None:
                                 vertex.result.used_frozen_result = True
-                        except Exception:
+                        except Exception:  # noqa: BLE001
+                            logger.opt(exception=True).debug("Error finalizing build")
                             should_build = True
                     except KeyError:
                         should_build = True
@@ -1747,8 +1748,8 @@ class Graph:
         if stop_component_id or start_component_id:
             try:
                 first_layer = self.sort_vertices(stop_component_id, start_component_id)
-            except Exception as exc:
-                logger.exception(exc)
+            except Exception:  # noqa: BLE001
+                logger.exception("Error sorting vertices")
                 first_layer = self.sort_vertices()
         else:
             first_layer = self.sort_vertices()

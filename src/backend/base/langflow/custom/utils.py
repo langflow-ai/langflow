@@ -286,7 +286,7 @@ def get_component_instance(custom_component: CustomComponent, user_id: str | UUI
         if hasattr(exc, "detail") and "traceback" in exc.detail:
             logger.error(exc.detail["traceback"])
 
-        raise exc
+        raise
 
 
 def run_build_config(
@@ -334,7 +334,7 @@ def run_build_config(
         if hasattr(exc, "detail") and "traceback" in exc.detail:
             logger.error(exc.detail["traceback"])
 
-        raise exc
+        raise
 
 
 def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code):
@@ -416,7 +416,7 @@ def build_custom_component_template(
         return frontend_node.to_dict(keep_name=False), custom_instance
     except Exception as exc:
         if isinstance(exc, HTTPException):
-            raise exc
+            raise
         raise HTTPException(
             status_code=400,
             detail={

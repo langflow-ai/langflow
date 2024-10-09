@@ -117,7 +117,7 @@ def create_flow(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
         if isinstance(e, HTTPException):
-            raise e
+            raise
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -170,8 +170,8 @@ def read_flows(
                 for example_flow in example_flows:
                     if example_flow.id not in flow_ids:
                         flows.append(example_flow)
-            except Exception as e:
-                logger.exception(e)
+            except Exception:  # noqa: BLE001
+                logger.exception("Error getting example flows")
 
         if remove_example_flows:
             flows = [flow for flow in flows if flow.folder_id != folder.id]
@@ -255,7 +255,7 @@ def update_flow(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
         if isinstance(e, HTTPException):
-            raise e
+            raise
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
