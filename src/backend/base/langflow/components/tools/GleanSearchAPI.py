@@ -67,7 +67,8 @@ class GleanSearchAPIComponent(LCToolComponent):
             results = self._search_api_results(query, **kwargs)
 
             if len(results) == 0:
-                raise AssertionError("No good Glean Search Result was found")
+                msg = "No good Glean Search Result was found"
+                raise AssertionError(msg)
 
             return results
 
@@ -137,10 +138,7 @@ class GleanSearchAPIComponent(LCToolComponent):
         )
 
         # Build the data
-        data = []
-        for result in results:
-            data.append(Data(data=result, text=result["snippets"][0]["text"]))
-
+        data = [Data(data=result, text=result["snippets"][0]["text"]) for result in results]
         self.status = data
 
         return data

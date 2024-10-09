@@ -6,7 +6,7 @@ from alembic import context
 from loguru import logger
 from sqlalchemy import engine_from_config, pool
 
-from langflow.services.database.models import *  # noqa
+from langflow.services.database.models import *
 from langflow.services.database.service import SQLModel
 
 # this is the Alembic Config object, which provides
@@ -72,8 +72,8 @@ def run_migrations_online() -> None:
         initialize_settings_service()
         service_manager.register_factory(DatabaseServiceFactory())
         connectable = get_db_service().engine
-    except Exception as e:
-        logger.error(f"Error getting database engine: {e}")
+    except Exception:
+        logger.exception("Error getting database engine")
         url = os.getenv("LANGFLOW_DATABASE_URL")
         url = url or config.get_main_option("sqlalchemy.url")
         if url:

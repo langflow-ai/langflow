@@ -1,20 +1,19 @@
-import os
 import platform
 from pathlib import Path
 
 from loguru import logger
 
 
-def set_secure_permissions(file_path):
+def set_secure_permissions(file_path: Path):
     if platform.system() in ["Linux", "Darwin"]:  # Unix/Linux/Mac
-        os.chmod(file_path, 0o600)
+        file_path.chmod(0o600)
     elif platform.system() == "Windows":
         import win32api
         import win32con
         import win32security
 
-        user, domain, _ = win32security.LookupAccountName("", win32api.GetUserName())
-        sd = win32security.GetFileSecurity(file_path, win32security.DACL_SECURITY_INFORMATION)
+        user, _, _ = win32security.LookupAccountName("", win32api.GetUserName())
+        sd = win32security.GetFileSecurity(str(file_path), win32security.DACL_SECURITY_INFORMATION)
         dacl = win32security.ACL()
 
         # Set the new DACL for the file: read and write access for the owner, no access for everyone else
@@ -24,7 +23,7 @@ def set_secure_permissions(file_path):
             user,
         )
         sd.SetSecurityDescriptorDacl(1, dacl, 0)
-        win32security.SetFileSecurity(file_path, win32security.DACL_SECURITY_INFORMATION, sd)
+        win32security.SetFileSecurity(str(file_path), win32security.DACL_SECURITY_INFORMATION, sd)
     else:
         print("Unsupported OS")
 
@@ -35,7 +34,7 @@ def write_secret_to_file(path: Path, value: str) -> None:
     try:
         set_secure_permissions(path)
     except Exception:
-        logger.error("Failed to set secure permissions on secret key")
+        logger.exception("Failed to set secure permissions on secret key")
 
 
 def read_secret_from_file(path: Path) -> str:

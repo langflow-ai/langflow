@@ -64,8 +64,7 @@ class FrontendNode(BaseModel):
     def process_base_classes(self, base_classes: list[str]) -> list[str]:
         """Removes unwanted base classes from the list of base classes."""
 
-        sorted_base_classes = sorted(set(base_classes), key=lambda x: x.lower())
-        return sorted_base_classes
+        return sorted(set(base_classes), key=lambda x: x.lower())
 
     @field_serializer("display_name")
     def process_display_name(self, display_name: str) -> str:
@@ -124,13 +123,12 @@ class FrontendNode(BaseModel):
         overlap = set(output_names).intersection(input_names)
         if overlap:
             overlap_str = ", ".join(f"'{x}'" for x in overlap)
-            raise ValueError(
-                f"There should be no overlap between input and output names. Names {overlap_str} are duplicated."
-            )
+            msg = f"There should be no overlap between input and output names. Names {overlap_str} are duplicated."
+            raise ValueError(msg)
 
     def validate_attributes(self) -> None:
-        # None of inputs, outputs, _artifacts, _results, logs, status, vertex, graph, display_name, description, documentation, icon
-        # should be present in outputs or input names
+        # None of inputs, outputs, _artifacts, _results, logs, status, vertex, graph, display_name, description,
+        # documentation, icon should be present in outputs or input names
         output_names = [output.name for output in self.outputs]
         input_names = [input_.name for input_ in self.template.fields]
         attributes = [
@@ -175,7 +173,8 @@ class FrontendNode(BaseModel):
     def from_inputs(cls, **kwargs):
         """Create a frontend node from inputs."""
         if "inputs" not in kwargs:
-            raise ValueError("Missing 'inputs' argument.")
+            msg = "Missing 'inputs' argument."
+            raise ValueError(msg)
         if "_outputs_map" in kwargs:
             kwargs["outputs"] = kwargs.pop("_outputs_map")
         inputs = kwargs.pop("inputs")

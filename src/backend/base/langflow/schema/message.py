@@ -1,14 +1,15 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
@@ -24,15 +25,19 @@ from langflow.utils.constants import (
     MESSAGE_SENDER_USER,
 )
 
+if TYPE_CHECKING:
+    from langchain_core.prompt_values import ImagePromptValue
+
 
 def _timestamp_to_str(timestamp: datetime | str) -> str:
     if isinstance(timestamp, str):
         # Just check if the string is a valid datetime
         try:
-            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
             return timestamp
-        except ValueError:
-            raise ValueError(f"Invalid timestamp: {timestamp}")
+        except ValueError as e:
+            msg = f"Invalid timestamp: {timestamp}"
+            raise ValueError(msg) from e
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -102,24 +107,21 @@ class Message(Data):
         # they are: "text", "sender"
         if self.text is None or not self.sender:
             logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
-        if not isinstance(self.text, str):
-            text = ""
-        else:
-            text = self.text
+        text = "" if not isinstance(self.text, str) else self.text
 
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": text}]
                 contents.extend(self.sync_get_file_content_dicts())
-                human_message = HumanMessage(content=contents)  # type: ignore
+                human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(content=text)
             return human_message
 
-        return AIMessage(content=text)  # type: ignore
+        return AIMessage(content=text)
 
     @classmethod
-    def from_lc_message(cls, lc_message: BaseMessage) -> "Message":
+    def from_lc_message(cls, lc_message: BaseMessage) -> Message:
         if lc_message.type == "human":
             sender = MESSAGE_SENDER_USER
             sender_name = MESSAGE_SENDER_NAME_USER
@@ -136,7 +138,7 @@ class Message(Data):
         return cls(text=lc_message.content, sender=sender, sender_name=sender_name)
 
     @classmethod
-    def from_data(cls, data: "Data") -> "Message":
+    def from_data(cls, data: Data) -> Message:
         """
         Converts a BaseMessage to a Data.
 
@@ -159,9 +161,7 @@ class Message(Data):
 
     @field_serializer("text", mode="plain")
     def serialize_text(self, value):
-        if isinstance(value, AsyncIterator):
-            return ""
-        elif isinstance(value, Iterator):
+        if isinstance(value, AsyncIterator | Iterator):
             return ""
         return value
 
@@ -180,13 +180,14 @@ class Message(Data):
                 content_dicts.append(file.to_content_dict())
             else:
                 image_template = ImagePromptTemplate()
-                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})  # type: ignore
+                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})
                 content_dicts.append({"type": "image_url", "image_url": image_prompt_value.image_url})
         return content_dicts
 
     def load_lc_prompt(self):
         if "prompt" not in self:
-            raise ValueError("Prompt is required.")
+            msg = "Prompt is required."
+            raise ValueError(msg)
         # self.prompt was passed through jsonable_encoder
         # so inner messages are not BaseMessage
         # we need to convert them to BaseMessage
@@ -203,8 +204,7 @@ class Message(Data):
                     messages.append(AIMessage(content=message.get("content")))
 
         self.prompt["kwargs"]["messages"] = messages
-        loaded_prompt = load(self.prompt)
-        return loaded_prompt
+        return load(self.prompt)
 
     @classmethod
     def from_lc_prompt(
@@ -233,9 +233,9 @@ class Message(Data):
                 content_dicts = await value.get_file_content_dicts()
                 contents.extend(content_dicts)
         if contents:
-            message = HumanMessage(content=[{"type": "text", "text": text}] + contents)
+            message = HumanMessage(content=[{"type": "text", "text": text}, *contents])
 
-        prompt_template = ChatPromptTemplate.from_messages([message])  # type: ignore
+        prompt_template = ChatPromptTemplate.from_messages([message])
 
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
@@ -268,7 +268,8 @@ class DefaultModel(BaseModel):
     def custom_encoder(obj):
         if isinstance(obj, datetime):
             return obj.isoformat()
-        raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+        msg = f"Object of type {obj.__class__.__name__} is not JSON serializable"
+        raise TypeError(msg)
 
 
 class MessageResponse(DefaultModel):
@@ -305,7 +306,8 @@ class MessageResponse(DefaultModel):
     def from_message(cls, message: Message, flow_id: str | None = None):
         # first check if the record has all the required fields
         if message.text is None or not message.sender or not message.sender_name:
-            raise ValueError("The message does not have the required fields (text, sender, sender_name).")
+            msg = "The message does not have the required fields (text, sender, sender_name)."
+            raise ValueError(msg)
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,

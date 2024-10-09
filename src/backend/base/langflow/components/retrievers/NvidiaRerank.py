@@ -55,14 +55,16 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
                 build_config["model"]["options"] = ids
                 build_config["model"]["value"] = ids[0]
             except Exception as e:
-                raise ValueError(f"Error getting model names: {e}")
+                msg = f"Error getting model names: {e}"
+                raise ValueError(msg) from e
         return build_config
 
     def build_model(self):
         try:
             from langchain_nvidia_ai_endpoints import NVIDIARerank
-        except ImportError:
-            raise ImportError("Please install langchain-nvidia-ai-endpoints to use the NVIDIA model.")
+        except ImportError as e:
+            msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
+            raise ImportError(msg) from e
         return NVIDIARerank(api_key=self.api_key, model=self.model, base_url=self.base_url)
 
     def build_base_retriever(self) -> Retriever:  # type: ignore[type-var]
@@ -70,7 +72,7 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
         retriever = ContextualCompressionRetriever(base_compressor=nvidia_reranker, base_retriever=self.retriever)
         return cast(Retriever, retriever)
 
-    async def search_documents(self) -> list[Data]:  # type: ignore
+    async def search_documents(self) -> list[Data]:  # type: ignore[override]
         retriever = self.build_base_retriever()
         documents = await retriever.ainvoke(self.search_query, config={"callbacks": self.get_langchain_callbacks()})
         data = self.to_data(documents)
@@ -79,4 +81,5 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> VectorStore:
-        raise NotImplementedError("NVIDIA Rerank does not support vector stores.")
+        msg = "NVIDIA Rerank does not support vector stores."
+        raise NotImplementedError(msg)

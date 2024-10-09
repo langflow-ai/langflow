@@ -12,7 +12,8 @@ class NVIDIAModelComponent(LCModelComponent):
     description = "Generates text using NVIDIA LLMs."
     icon = "NVIDIA"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -61,29 +62,30 @@ class NVIDIAModelComponent(LCModelComponent):
         if field_name == "base_url" and field_value:
             try:
                 build_model = self.build_model()
-                ids = [model.id for model in build_model.available_models]  # type: ignore
+                ids = [model.id for model in build_model.available_models]
                 build_config["model_name"]["options"] = ids
                 build_config["model_name"]["value"] = ids[0]
             except Exception as e:
-                raise ValueError(f"Error getting model names: {e}")
+                msg = f"Error getting model names: {e}"
+                raise ValueError(msg) from e
         return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
-        except ImportError:
-            raise ImportError("Please install langchain-nvidia-ai-endpoints to use the NVIDIA model.")
+        except ImportError as e:
+            msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
+            raise ImportError(msg) from e
         nvidia_api_key = self.nvidia_api_key
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         seed = self.seed
-        output = ChatNVIDIA(
+        return ChatNVIDIA(
             max_tokens=max_tokens or None,
             model=model_name,
             base_url=self.base_url,
-            api_key=nvidia_api_key,  # type: ignore
+            api_key=nvidia_api_key,
             temperature=temperature or 0.1,
             seed=seed,
         )
-        return output  # type: ignore

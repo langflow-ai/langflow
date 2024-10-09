@@ -12,7 +12,8 @@ class AnthropicModelComponent(LCModelComponent):
     icon = "Anthropic"
     name = "AnthropicModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -32,11 +33,7 @@ class AnthropicModelComponent(LCModelComponent):
             info="https://python.langchain.com/docs/integrations/chat/anthropic",
             value="claude-3-5-sonnet-20240620",
         ),
-        SecretStrInput(
-            name="anthropic_api_key",
-            display_name="Anthropic API Key",
-            info="Your Anthropic API key.",
-        ),
+        SecretStrInput(name="anthropic_api_key", display_name="Anthropic API Key", info="Your Anthropic API key."),
         FloatInput(name="temperature", display_name="Temperature", value=0.1),
         MessageTextInput(
             name="anthropic_api_url",
@@ -45,10 +42,7 @@ class AnthropicModelComponent(LCModelComponent):
             info="Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
         ),
         MessageTextInput(
-            name="prefill",
-            display_name="Prefill",
-            info="Prefill text to guide the model's response.",
-            advanced=True,
+            name="prefill", display_name="Prefill", info="Prefill text to guide the model's response.", advanced=True
         ),
         HandleInput(
             name="output_parser",
@@ -62,10 +56,9 @@ class AnthropicModelComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
             from langchain_anthropic.chat_models import ChatAnthropic
-        except ImportError:
-            raise ImportError(
-                "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
-            )
+        except ImportError as e:
+            msg = "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
+            raise ImportError(msg) from e
         model = self.model
         anthropic_api_key = self.anthropic_api_key
         max_tokens = self.max_tokens
@@ -76,15 +69,16 @@ class AnthropicModelComponent(LCModelComponent):
             output = ChatAnthropic(
                 model=model,
                 anthropic_api_key=(SecretStr(anthropic_api_key) if anthropic_api_key else None),
-                max_tokens_to_sample=max_tokens,  # type: ignore
+                max_tokens_to_sample=max_tokens,
                 temperature=temperature,
                 anthropic_api_url=anthropic_api_url,
                 streaming=self.stream,
             )
         except Exception as e:
-            raise ValueError("Could not connect to Anthropic API.") from e
+            msg = "Could not connect to Anthropic API."
+            raise ValueError(msg) from e
 
-        return output  # type: ignore
+        return output
 
     def _get_exception_message(self, exception: Exception) -> str | None:
         """
@@ -101,7 +95,7 @@ class AnthropicModelComponent(LCModelComponent):
         except ImportError:
             return None
         if isinstance(exception, BadRequestError):
-            message = exception.body.get("error", {}).get("message")  # type: ignore
+            message = exception.body.get("error", {}).get("message")
             if message:
                 return message
         return None

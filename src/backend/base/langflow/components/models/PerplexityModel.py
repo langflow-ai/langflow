@@ -14,7 +14,8 @@ class PerplexityComponent(LCModelComponent):
     icon = "Perplexity"
     name = "PerplexityModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         DropdownInput(
             name="model_name",
             display_name="Model Name",
@@ -31,9 +32,7 @@ class PerplexityComponent(LCModelComponent):
             value="llama-3.1-sonar-small-128k-online",
         ),
         IntInput(
-            name="max_output_tokens",
-            display_name="Max Output Tokens",
-            info="The maximum number of tokens to generate.",
+            name="max_output_tokens", display_name="Max Output Tokens", info="The maximum number of tokens to generate."
         ),
         SecretStrInput(
             name="api_key",
@@ -51,7 +50,8 @@ class PerplexityComponent(LCModelComponent):
         IntInput(
             name="n",
             display_name="N",
-            info="Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.",
+            info="Number of chat completions to generate for each prompt. "
+            "Note that the API may not return the full n completions if duplicates are generated.",
             advanced=True,
         ),
         IntInput(
@@ -78,7 +78,7 @@ class PerplexityComponent(LCModelComponent):
         top_p = self.top_p
         n = self.n
 
-        output = ChatPerplexity(
+        return ChatPerplexity(
             model=model,
             temperature=temperature or 0.75,
             pplx_api_key=api_key,
@@ -87,5 +87,3 @@ class PerplexityComponent(LCModelComponent):
             n=n or 1,
             max_output_tokens=max_output_tokens,
         )
-
-        return output  # type: ignore

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores.redis import Redis
 
@@ -53,12 +55,13 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
-        with open("docuemnts.txt", "w") as f:
+        with Path("docuemnts.txt").open("w") as f:
             f.write(str(documents))
 
         if not documents:
             if self.schema is None:
-                raise ValueError("If no documents are provided, a schema must be provided.")
+                msg = "If no documents are provided, a schema must be provided."
+                raise ValueError(msg)
             redis_vs = Redis.from_existing_index(
                 embedding=self.embedding,
                 index_name=self.redis_index_name,
@@ -89,5 +92,4 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

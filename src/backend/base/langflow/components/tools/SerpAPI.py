@@ -88,5 +88,5 @@ class SerpAPIComponent(LCToolComponent):
             self.status = data_list
             return data_list
         except Exception as e:
-            self.status = f"Error: {str(e)}"
+            self.status = f"Error: {e}"
             return [Data(data={"error": str(e)}, text=str(e))]

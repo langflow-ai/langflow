@@ -39,11 +39,9 @@ class LCDocumentTransformerComponent(Component):
         """
         Get the data input.
         """
-        pass
 
     @abstractmethod
     def build_document_transformer(self) -> BaseDocumentTransformer:
         """
         Build the text splitter.
         """
-        pass

@@ -92,12 +92,12 @@ class SpiderTool(Component):
             parameters = self.params["data"]
         else:
             parameters = {
-                "limit": self.limit if self.limit else None,
-                "depth": self.depth if self.depth else None,
-                "blacklist": self.blacklist if self.blacklist else None,
-                "whitelist": self.whitelist if self.whitelist else None,
+                "limit": self.limit or None,
+                "depth": self.depth or None,
+                "blacklist": self.blacklist or None,
+                "whitelist": self.whitelist or None,
                 "readability": self.readability,
-                "request_timeout": self.request_timeout if self.request_timeout else None,
+                "request_timeout": self.request_timeout or None,
                 "metadata": self.metadata,
                 "return_format": "markdown",
             }
@@ -110,9 +110,11 @@ class SpiderTool(Component):
             elif self.mode == "crawl":
                 result = app.crawl_url(self.url, parameters)
             else:
-                raise ValueError(f"Invalid mode: {self.mode}. Must be 'scrape' or 'crawl'.")
+                msg = f"Invalid mode: {self.mode}. Must be 'scrape' or 'crawl'."
+                raise ValueError(msg)
         except Exception as e:
-            raise Exception(f"Error: {str(e)}")
+            msg = f"Error: {e}"
+            raise Exception(msg) from e
 
         records = []
 

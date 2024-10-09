@@ -14,7 +14,8 @@ class CohereComponent(LCModelComponent):
     icon = "Cohere"
     name = "CohereModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         SecretStrInput(
             name="cohere_api_key",
             display_name="Cohere API Key",
@@ -36,14 +37,9 @@ class CohereComponent(LCModelComponent):
         cohere_api_key = self.cohere_api_key
         temperature = self.temperature
 
-        if cohere_api_key:
-            api_key = SecretStr(cohere_api_key)
-        else:
-            api_key = None
+        api_key = SecretStr(cohere_api_key) if cohere_api_key else None
 
-        output = ChatCohere(
+        return ChatCohere(
             temperature=temperature or 0.75,
             cohere_api_key=api_key,
         )
-
-        return output  # type: ignore

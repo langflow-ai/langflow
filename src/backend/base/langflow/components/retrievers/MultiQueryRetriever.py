@@ -45,8 +45,5 @@ class MultiQueryRetrieverComponent(CustomComponent):
     ) -> MultiQueryRetriever:
         if not prompt:
             return MultiQueryRetriever.from_llm(llm=llm, retriever=retriever, parser_key=parser_key)
-        else:
-            prompt_template = PromptTemplate.from_template(prompt)
-            return MultiQueryRetriever.from_llm(
-                llm=llm, retriever=retriever, prompt=prompt_template, parser_key=parser_key
-            )
+        prompt_template = PromptTemplate.from_template(prompt)
+        return MultiQueryRetriever.from_llm(llm=llm, retriever=retriever, prompt=prompt_template, parser_key=parser_key)

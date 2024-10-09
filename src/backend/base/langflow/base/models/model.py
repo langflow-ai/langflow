@@ -48,9 +48,11 @@ class LCModelComponent(Component):
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
-                raise ValueError(f"Output with name '{method_name}' must be defined.")
-            elif not hasattr(self, method_name):
-                raise ValueError(f"Method '{method_name}' must be defined.")
+                msg = f"Output with name '{method_name}' must be defined."
+                raise ValueError(msg)
+            if not hasattr(self, method_name):
+                msg = f"Method '{method_name}' must be defined."
+                raise ValueError(msg)
 
     def text_response(self) -> Message:
         input_value = self.input_value
@@ -131,9 +133,9 @@ class LCModelComponent(Component):
                     }
                 }
             else:
-                status_message = f"Response: {content}"  # type: ignore
+                status_message = f"Response: {content}"  # type: ignore[assignment]
         else:
-            status_message = f"Response: {message.content}"  # type: ignore
+            status_message = f"Response: {message.content}"  # type: ignore[assignment]
         return status_message
 
     def get_chat_result(
@@ -145,7 +147,8 @@ class LCModelComponent(Component):
     ):
         messages: list[BaseMessage] = []
         if not input_value and not system_message:
-            raise ValueError("The message you want to send to the model is empty.")
+            msg = "The message you want to send to the model is empty."
+            raise ValueError(msg)
         system_message_added = False
         if input_value:
             if isinstance(input_value, Message):
@@ -154,7 +157,10 @@ class LCModelComponent(Component):
                     if "prompt" in input_value:
                         prompt = input_value.load_lc_prompt()
                         if system_message:
-                            prompt.messages = [SystemMessage(content=system_message)] + prompt.messages
+                            prompt.messages = [
+                                SystemMessage(content=system_message),
+                                *prompt.messages,  # type: ignore[has-type]
+                            ]
                             system_message_added = True
                         runnable = prompt | runnable
                     else:
@@ -163,13 +169,13 @@ class LCModelComponent(Component):
                 messages.append(HumanMessage(content=input_value))
 
         if system_message and not system_message_added:
-            messages.append(SystemMessage(content=system_message))
+            messages.insert(0, SystemMessage(content=system_message))
         inputs: list | dict = messages or {}
         try:
             if self.output_parser is not None:
                 runnable = runnable | self.output_parser
 
-            runnable = runnable.with_config(  # type: ignore
+            runnable = runnable.with_config(
                 {
                     "run_name": self.display_name,
                     "project_name": self.get_project_name(),
@@ -177,19 +183,18 @@ class LCModelComponent(Component):
                 }
             )
             if stream:
-                return runnable.stream(inputs)  # type: ignore
+                return runnable.stream(inputs)
+            message = runnable.invoke(inputs)
+            result = message.content if hasattr(message, "content") else message
+            if isinstance(message, AIMessage):
+                status_message = self.build_status_message(message)
+                self.status = status_message
+            elif isinstance(result, dict):
+                result = json.dumps(message, indent=4)
+                self.status = result
             else:
-                message = runnable.invoke(inputs)  # type: ignore
-                result = message.content if hasattr(message, "content") else message
-                if isinstance(message, AIMessage):
-                    status_message = self.build_status_message(message)
-                    self.status = status_message
-                elif isinstance(result, dict):
-                    result = json.dumps(message, indent=4)
-                    self.status = result
-                else:
-                    self.status = result
-                return result
+                self.status = result
+            return result
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e

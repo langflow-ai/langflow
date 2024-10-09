@@ -14,12 +14,9 @@ class GroqModel(LCModelComponent):
     icon = "Groq"
     name = "GroqModel"
 
-    inputs = LCModelComponent._base_inputs + [
-        SecretStrInput(
-            name="groq_api_key",
-            display_name="Groq API Key",
-            info="API key for the Groq API.",
-        ),
+    inputs = [
+        *LCModelComponent._base_inputs,
+        SecretStrInput(name="groq_api_key", display_name="Groq API Key", info="API key for the Groq API."),
         MessageTextInput(
             name="groq_api_base",
             display_name="Groq API Base",
@@ -42,7 +39,8 @@ class GroqModel(LCModelComponent):
         IntInput(
             name="n",
             display_name="N",
-            info="Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.",
+            info="Number of chat completions to generate for each prompt. "
+            "Note that the API may not return the full n completions if duplicates are generated.",
             advanced=True,
         ),
         DropdownInput(
@@ -74,11 +72,11 @@ class GroqModel(LCModelComponent):
             model_list = response.json()
             return [model["id"] for model in model_list.get("data", [])]
         except requests.RequestException as e:
-            self.status = f"Error fetching models: {str(e)}"
+            self.status = f"Error fetching models: {e}"
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        if field_name == "groq_api_key" or field_name == "groq_api_base" or field_name == "model_name":
+        if field_name in ("groq_api_key", "groq_api_base", "model_name"):
             models = self.get_models()
             build_config["model_name"]["options"] = models
         return build_config
@@ -92,7 +90,7 @@ class GroqModel(LCModelComponent):
         n = self.n
         stream = self.stream
 
-        output = ChatGroq(  # type: ignore
+        return ChatGroq(
             model=model_name,
             max_tokens=max_tokens or None,
             temperature=temperature,
@@ -101,5 +99,3 @@ class GroqModel(LCModelComponent):
             api_key=SecretStr(groq_api_key),
             streaming=stream,
         )
-
-        return output  # type: ignore

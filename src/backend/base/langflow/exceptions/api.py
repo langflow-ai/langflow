@@ -31,5 +31,4 @@ class APIException(HTTPException):
             outdated_components = get_outdated_components(flow)
             if outdated_components:
                 body["suggestion"] = get_suggestion_message(outdated_components)
-        excep = ExceptionBody(**body)
-        return excep
+        return ExceptionBody(**body)

@@ -9,9 +9,7 @@ import { noteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NodeResizer, NodeToolbar } from "reactflow";
-import IconComponent from "../../components/genericIconComponent";
 import NodeDescription from "../GenericNode/components/NodeDescription";
-import NodeName from "../GenericNode/components/NodeName";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 function NoteNode({
   data,
@@ -28,8 +26,8 @@ function NoteNode({
   useEffect(() => {
     if (nodeDiv.current) {
       setSize({
-        width: nodeDiv.current.offsetWidth - 43,
-        height: nodeDiv.current.offsetHeight - 80,
+        width: nodeDiv.current.offsetWidth - 25,
+        height: nodeDiv.current.offsetHeight - 25,
       });
     }
   }, []);
@@ -51,7 +49,7 @@ function NoteNode({
         maxWidth={NOTE_NODE_MAX_WIDTH}
         onResize={(_, params) => {
           const { width, height } = params;
-          setSize({ width: width - 43, height: height - 80 });
+          setSize({ width: width - 25, height: height - 25 });
         }}
         isVisible={selected}
         lineClassName="border-[3px] border-border"
@@ -67,25 +65,10 @@ function NoteNode({
         }}
         ref={nodeDiv}
         className={cn(
-          "flex h-full w-full flex-col gap-3 rounded-md border border-b p-5 transition-all",
+          "flex h-full w-full flex-col gap-3 border border-b p-3 transition-all",
           selected ? "" : "-z-50 shadow-sm",
         )}
       >
-        <div className="flex h-fit w-full items-center align-middle">
-          <div className="flex w-full gap-2">
-            <div data-testid="note_icon">
-              <IconComponent name="SquarePen" className="min-w-fit" />
-            </div>
-
-            <div className="w-11/12">
-              <NodeName
-                nodeId={data.id}
-                selected={selected}
-                display_name={data.node?.display_name || "Note"}
-              />
-            </div>
-          </div>
-        </div>
         <div
           style={{
             width: size.width,

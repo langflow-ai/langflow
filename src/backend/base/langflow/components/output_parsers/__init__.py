@@ -1,3 +1,3 @@
-from .CSVOutputParser import CSVOutputParserComponent
+from .OutputParser import OutputParserComponent
 
-__all__ = ["CSVOutputParserComponent"]
+__all__ = ["OutputParserComponent"]

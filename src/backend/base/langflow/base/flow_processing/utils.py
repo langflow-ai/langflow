@@ -56,7 +56,7 @@ def build_data_from_result_data(result_data: ResultData, get_final_results_only:
                     data.append(artifact)
                 else:
                     # Warn about unknown output type
-                    logger.warning(f"Unable to build record output from unknown ResultData.artifact: {str(artifact)}")
+                    logger.warning(f"Unable to build record output from unknown ResultData.artifact: {artifact}")
         # Chat or text output
         elif result_data.results:
             data.append(Data(data={"result": result_data.results}, text_key="result"))
@@ -67,10 +67,7 @@ def build_data_from_result_data(result_data: ResultData, get_final_results_only:
     if isinstance(result_data.results, dict):
         for name, result in result_data.results.items():
             dataobj: Data | Message | None = None
-            if isinstance(result, Message):
-                dataobj = result
-            else:
-                dataobj = Data(data=result, text_key=name)
+            dataobj = result if isinstance(result, Message) else Data(data=result, text_key=name)
 
             data.append(dataobj)
     else:

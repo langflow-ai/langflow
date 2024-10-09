@@ -66,16 +66,16 @@ class RunnableExecComponent(Component):
 
         if output_key in result:
             result_value = result.get(output_key)
-        elif len(result) == 2 and input_key in result:
+        elif len(result) == 2 and input_key in result:  # noqa: PLR2004
             # get the other key from the result dict
-            other_key = [k for k in result if k != input_key][0]
+            other_key = next(k for k in result if k != input_key)
             if other_key == output_key:
                 result_value = result.get(output_key)
             else:
                 status += f"Warning: The output key is not '{output_key}'. The output key is '{other_key}'."
                 result_value = result.get(other_key)
         elif len(result) == 1:
-            result_value = list(result.values())[0]
+            result_value = next(iter(result.values()))
         elif any(k in result for k in possible_output_keys):
             for key in possible_output_keys:
                 if key in result:
@@ -111,27 +111,27 @@ class RunnableExecComponent(Component):
             if input_key in runnable.input_keys:
                 input_dict[input_key] = input_value
             else:
-                input_dict = {k: input_value for k in runnable.input_keys}
+                input_dict = dict.fromkeys(runnable.input_keys, input_value)
                 status = f"Warning: The input key is not '{input_key}'. The input key is '{runnable.input_keys}'."
         return input_dict, status
 
     async def build_executor(self) -> Message:
         input_dict, status = self.get_input_dict(self.runnable, self.input_key, self.input_value)
         if not isinstance(self.runnable, AgentExecutor):
-            raise ValueError("The runnable must be an AgentExecutor")
+            msg = "The runnable must be an AgentExecutor"
+            raise TypeError(msg)
 
         if self.use_stream:
             return self.astream_events(input_dict)
-        else:
-            result = await self.runnable.ainvoke(input_dict)
+        result = await self.runnable.ainvoke(input_dict)
         result_value, _status = self.get_output(result, self.input_key, self.output_key)
         status += _status
         status += f"\n\nOutput: {result_value}\n\nRaw Output: {result}"
         self.status = status
         return result_value
 
-    async def astream_events(self, input):
-        async for event in self.runnable.astream_events(input, version="v1"):
+    async def astream_events(self, runnable_input):
+        async for event in self.runnable.astream_events(runnable_input, version="v1"):
             if event.get("event") != "on_chat_model_stream":
                 continue
 

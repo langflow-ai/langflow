@@ -11,7 +11,8 @@ def get_flow_by_id(session: Session = Depends(get_session), flow_id: str | None 
     """Get flow by id."""
 
     if flow_id is None:
-        raise ValueError("Flow id is required.")
+        msg = "Flow id is required."
+        raise ValueError(msg)
 
     return session.get(Flow, flow_id)
 

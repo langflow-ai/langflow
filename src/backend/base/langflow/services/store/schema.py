@@ -45,8 +45,7 @@ class ListComponentResponse(BaseModel):
             return v
         if all("id" in tag and "name" in tag for tag in v):
             return v
-        else:
-            return [TagResponse(**tag.get("tags_id")) for tag in v if tag.get("tags_id")]
+        return [TagResponse(**tag.get("tags_id")) for tag in v if tag.get("tags_id")]
 
 
 class ListComponentResponseModel(BaseModel):

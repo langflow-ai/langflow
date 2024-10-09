@@ -73,7 +73,7 @@ class CohereRerankComponent(LCVectorStoreComponent):
         retriever = ContextualCompressionRetriever(base_compressor=cohere_reranker, base_retriever=self.retriever)
         return cast(Retriever, retriever)
 
-    async def search_documents(self) -> list[Data]:  # type: ignore
+    async def search_documents(self) -> list[Data]:  # type: ignore[override]
         retriever = self.build_base_retriever()
         documents = await retriever.ainvoke(self.search_query, config={"callbacks": self.get_langchain_callbacks()})
         data = self.to_data(documents)
@@ -82,4 +82,5 @@ class CohereRerankComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> VectorStore:
-        raise NotImplementedError("Cohere Rerank does not support vector stores.")
+        msg = "Cohere Rerank does not support vector stores."
+        raise NotImplementedError(msg)

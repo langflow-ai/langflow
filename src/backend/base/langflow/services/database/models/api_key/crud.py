@@ -1,12 +1,15 @@
 import datetime
 import secrets
 import threading
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlmodel import Session, select
-from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
+
+if TYPE_CHECKING:
+    from sqlmodel.sql.expression import SelectOfScalar
 
 
 def get_api_keys(session: Session, user_id: UUID) -> list[ApiKeyRead]:
@@ -37,7 +40,8 @@ def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID
 def delete_api_key(session: Session, api_key_id: UUID) -> None:
     api_key = session.get(ApiKey, api_key_id)
     if api_key is None:
-        raise ValueError("API Key not found")
+        msg = "API Key not found"
+        raise ValueError(msg)
     session.delete(api_key)
     session.commit()
 
@@ -65,7 +69,8 @@ def update_total_uses(session, api_key: ApiKey):
     with Session(session.get_bind()) as new_session:
         new_api_key = new_session.get(ApiKey, api_key.id)
         if new_api_key is None:
-            raise ValueError("API Key not found")
+            msg = "API Key not found"
+            raise ValueError(msg)
         new_api_key.total_uses += 1
         new_api_key.last_used_at = datetime.datetime.now(datetime.timezone.utc)
         new_session.add(new_api_key)
