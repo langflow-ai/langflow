@@ -119,6 +119,7 @@ class Graph:
         self._cycle_vertices: set[str] | None = None
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
+        self._end_trace_tasks: set[asyncio.Task] = set()
         try:
             self.tracing_service: TracingService | None = get_tracing_service()
         except Exception:  # noqa: BLE001
@@ -583,6 +584,11 @@ class Graph:
         if self.tracing_service:
             await self.tracing_service.initialize_tracers()
 
+    def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None):
+        task = asyncio.create_task(self.end_all_traces(outputs, error))
+        self._end_trace_tasks.add(task)
+        task.add_done_callback(self._end_trace_tasks.discard)
+
     async def end_all_traces(self, outputs: dict[str, Any] | None = None, error: Exception | None = None):
         if not self.tracing_service:
             return
@@ -685,11 +691,11 @@ class Graph:
             await self.process(start_component_id=start_component_id, fallback_to_env_vars=fallback_to_env_vars)
             self.increment_run_count()
         except Exception as exc:
-            asyncio.create_task(self.end_all_traces(error=exc))
+            self._end_all_traces_async(error=exc)
             msg = f"Error running graph: {exc}"
             raise ValueError(msg) from exc
-        finally:
-            asyncio.create_task(self.end_all_traces())
+
+        self._end_all_traces_async()
         # Get the outputs
         vertex_outputs = []
         for vertex in self.vertices:
@@ -1257,7 +1263,7 @@ class Graph:
             msg = "Graph not prepared. Call prepare() first."
             raise ValueError(msg)
         if not self._run_queue:
-            asyncio.create_task(self.end_all_traces())
+            self._end_all_traces_async()
             return Finish()
         vertex_id = self.get_next_in_queue()
         chat_service = get_chat_service()

@@ -57,6 +57,7 @@ class TracingService(Service):
         self.logs_queue: asyncio.Queue = asyncio.Queue()
         self.running = False
         self.worker_task = None
+        self.end_trace_tasks: set[asyncio.Task] = set()
 
     async def log_worker(self):
         while self.running or not self.logs_queue.empty():
@@ -162,7 +163,7 @@ class TracingService(Service):
         self.inputs[trace_name] = inputs
         self.inputs_metadata[trace_name] = metadata or {}
         for tracer in self._tracers.values():
-            if not tracer.ready:  # type: ignore[truthy-function]
+            if not tracer.ready:
                 continue
             try:
                 tracer.add_trace(trace_id, trace_name, trace_type, inputs, metadata, vertex)
@@ -171,30 +172,28 @@ class TracingService(Service):
 
     def _end_traces(self, trace_id: str, trace_name: str, error: Exception | None = None):
         for tracer in self._tracers.values():
-            if not tracer.ready:  # type: ignore[truthy-function]
-                continue
-            try:
-                tracer.end_trace(
-                    trace_id=trace_id,
-                    trace_name=trace_name,
-                    outputs=self.outputs[trace_name],
-                    error=error,
-                    logs=self._logs[trace_name],
-                )
-            except Exception:  # noqa: BLE001
-                logger.exception(f"Error ending trace {trace_name}")
+            if tracer.ready:
+                try:
+                    tracer.end_trace(
+                        trace_id=trace_id,
+                        trace_name=trace_name,
+                        outputs=self.outputs[trace_name],
+                        error=error,
+                        logs=self._logs[trace_name],
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.exception(f"Error ending trace {trace_name}")
 
     def _end_all_traces(self, outputs: dict, error: Exception | None = None):
         for tracer in self._tracers.values():
-            if not tracer.ready:  # type: ignore[truthy-function]
-                continue
-            try:
-                tracer.end(self.inputs, outputs=self.outputs, error=error, metadata=outputs)
-            except Exception:  # noqa: BLE001
-                logger.exception("Error ending all traces")
+            if tracer.ready:
+                try:
+                    tracer.end(self.inputs, outputs=self.outputs, error=error, metadata=outputs)
+                except Exception:  # noqa: BLE001
+                    logger.exception("Error ending all traces")
 
     async def end(self, outputs: dict, error: Exception | None = None):
-        self._end_all_traces(outputs, error)
+        await asyncio.to_thread(self._end_all_traces, outputs, error)
         self._reset_io()
         await self.stop()
 
@@ -224,13 +223,15 @@ class TracingService(Service):
         try:
             yield self
         except Exception as e:
-            self._end_traces(trace_id, trace_name, e)
+            self._end_and_reset(trace_id, trace_name, e)
             raise
-        finally:
-            asyncio.create_task(await asyncio.to_thread(self._end_and_reset, trace_id, trace_name, None))
+        else:
+            self._end_and_reset(trace_id, trace_name)
 
-    async def _end_and_reset(self, trace_id: str, trace_name: str, error: Exception | None = None):
-        self._end_traces(trace_id, trace_name, error)
+    def _end_and_reset(self, trace_id: str, trace_name: str, error: Exception | None = None):
+        task = asyncio.create_task(asyncio.to_thread(self._end_traces, trace_id, trace_name, error))
+        self.end_trace_tasks.add(task)
+        task.add_done_callback(self.end_trace_tasks.discard)
         self._reset_io()
 
     def set_outputs(

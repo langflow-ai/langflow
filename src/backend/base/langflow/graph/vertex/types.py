@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import json
 from collections.abc import AsyncIterator, Generator, Iterator
@@ -11,7 +10,7 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, log_transaction, log_vertex_build, rewrite_file_path, serialize_field
+from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.exceptions import NoComponentInstance
 from langflow.schema import Data
@@ -109,9 +108,7 @@ class ComponentVertex(Vertex):
                     default_value = requester.get_value_from_template_dict(edge.target_param)
 
             if flow_id:
-                asyncio.create_task(
-                    log_transaction(source=self, target=requester, flow_id=str(flow_id), status="error")
-                )
+                self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="error")
             if default_value is not UNDEFINED:
                 return default_value
             msg = f"Component {self.display_name} has not been built yet"
@@ -150,7 +147,7 @@ class ComponentVertex(Vertex):
             msg = f"Result not found for {edge.source_handle.name} in {edge}"
             raise ValueError(msg)
         if flow_id:
-            asyncio.create_task(log_transaction(source=self, target=requester, flow_id=str(flow_id), status="success"))
+            self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="success")
         return result
 
     def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:

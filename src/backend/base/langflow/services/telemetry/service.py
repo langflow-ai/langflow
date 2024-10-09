@@ -119,7 +119,7 @@ class TelemetryService(Service):
             self.running = True
             self._start_time = datetime.now(timezone.utc)
             self.worker_task = asyncio.create_task(self.telemetry_worker())
-            asyncio.create_task(self.log_package_version())
+            self.log_package_version_task = asyncio.create_task(self.log_package_version())
         except Exception:  # noqa: BLE001
             logger.exception("Error starting telemetry service")
 
