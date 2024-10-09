@@ -77,7 +77,7 @@ export default function SessionSelector({
   };
 
   return (
-    <div onClick={(e)=>{if(isEditing)e.stopPropagation(); else toggleVisibility()}} className={cn("file-component-accordion-div cursor-pointer group hover:bg-muted-foreground/30 rounded-md",(isVisible) ? "bg-muted-foreground/1" : "")}>
+    <div onClick={(e)=>{if(isEditing)e.stopPropagation(); else toggleVisibility()}} className={cn("file-component-accordion-div cursor-pointer group hover:bg-muted-foreground/30 rounded-md",(isVisible) ? "bg-muted-foreground/15" : "")}>
       <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3 align-middle">
         <div className="flex min-w-0 items-center gap-2">
           {isEditing ? (
