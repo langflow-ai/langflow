@@ -214,7 +214,7 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
                         "Your collection does not contain a field name 'content'."
                     )
                     raise ValueError(msg) from e
-                raise e
+                raise
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 

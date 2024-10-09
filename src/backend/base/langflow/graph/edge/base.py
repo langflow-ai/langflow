@@ -42,7 +42,7 @@ class Edge:
                             "might not be a valid input."
                         )
                         raise ValueError(msg) from e
-                    raise e
+                    raise
 
             else:
                 msg = "Target handle is not a dictionary"
