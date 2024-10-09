@@ -44,7 +44,7 @@ def create_folder(
         ).first():
             folder_results = session.exec(
                 select(Folder).where(
-                    Folder.name.like(f"{new_folder.name}%"),  # type: ignore
+                    Folder.name.like(f"{new_folder.name}%"),  # type: ignore[attr-defined]
                     Folder.user_id == current_user.id,
                 )
             )
@@ -62,14 +62,14 @@ def create_folder(
 
         if folder.components_list:
             update_statement_components = (
-                update(Flow).where(Flow.id.in_(folder.components_list)).values(folder_id=new_folder.id)  # type: ignore
+                update(Flow).where(Flow.id.in_(folder.components_list)).values(folder_id=new_folder.id)  # type: ignore[attr-defined]
             )
-            session.exec(update_statement_components)  # type: ignore
+            session.exec(update_statement_components)
             session.commit()
 
         if folder.flows_list:
-            update_statement_flows = update(Flow).where(Flow.id.in_(folder.flows_list)).values(folder_id=new_folder.id)  # type: ignore
-            session.exec(update_statement_flows)  # type: ignore
+            update_statement_flows = update(Flow).where(Flow.id.in_(folder.flows_list)).values(folder_id=new_folder.id)  # type: ignore[attr-defined]
+            session.exec(update_statement_flows)
             session.commit()
 
         return new_folder
@@ -86,7 +86,7 @@ def read_folders(
     try:
         folders = session.exec(
             select(Folder).where(
-                or_(Folder.user_id == current_user.id, Folder.user_id == None)  # type: ignore # noqa: E711
+                or_(Folder.user_id == current_user.id, Folder.user_id == None)  # noqa: E711
             )
         ).all()
         return sorted(folders, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
@@ -152,16 +152,16 @@ def update_folder(
         my_collection_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
         if my_collection_folder:
             update_statement_my_collection = (
-                update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_folder.id)  # type: ignore
+                update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_folder.id)  # type: ignore[attr-defined]
             )
-            session.exec(update_statement_my_collection)  # type: ignore
+            session.exec(update_statement_my_collection)
             session.commit()
 
         if concat_folder_components:
             update_statement_components = (
-                update(Flow).where(Flow.id.in_(concat_folder_components)).values(folder_id=existing_folder.id)  # type: ignore
+                update(Flow).where(Flow.id.in_(concat_folder_components)).values(folder_id=existing_folder.id)  # type: ignore[attr-defined]
             )
-            session.exec(update_statement_components)  # type: ignore
+            session.exec(update_statement_components)
             session.commit()
 
         return existing_folder

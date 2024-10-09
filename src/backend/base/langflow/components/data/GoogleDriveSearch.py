@@ -110,7 +110,7 @@ class GoogleDriveSearchComponent(Component):
         creds = Credentials.from_authorized_user_info(token_info)
 
         # Use the query string from the input (which might have been edited by the user)
-        query = self.query_string if self.query_string else self.generate_query_string()
+        query = self.query_string or self.generate_query_string()
 
         # Initialize the Google Drive API service
         service = build("drive", "v3", credentials=creds)

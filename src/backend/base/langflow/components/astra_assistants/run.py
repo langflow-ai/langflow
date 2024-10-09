@@ -1,6 +1,6 @@
 from typing import Any
 
-from astra_assistants import patch  # type: ignore
+from astra_assistants import patch
 from openai import OpenAI
 from openai.lib.streaming import AssistantEventHandler
 

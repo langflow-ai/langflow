@@ -10,15 +10,15 @@ from .SplitText import SplitTextComponent
 from .StoreMessage import StoreMessageComponent
 
 __all__ = [
-    "CreateListComponent",
     "CombineTextComponent",
+    "CreateListComponent",
     "CustomComponent",
     "FilterDataComponent",
     "IDGeneratorComponent",
+    "ListComponent",
     "MemoryComponent",
     "MergeDataComponent",
     "ParseDataComponent",
     "SplitTextComponent",
     "StoreMessageComponent",
-    "ListComponent",
 ]

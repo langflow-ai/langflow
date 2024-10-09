@@ -37,7 +37,7 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
 
     def build_embeddings(self) -> Embeddings:
         if self.aws_access_key:
-            import boto3  # type: ignore
+            import boto3
 
             session = boto3.Session(
                 aws_access_key_id=self.aws_access_key,
@@ -65,4 +65,4 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
             model_id=self.model_id,
             endpoint_url=self.endpoint_url,
             region_name=self.region_name,
-        )  # type: ignore
+        )
