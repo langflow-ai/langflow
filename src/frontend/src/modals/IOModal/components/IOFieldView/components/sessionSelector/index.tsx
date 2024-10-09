@@ -25,7 +25,7 @@ export default function SessionSelector({
   inspectSession: (session: string) => void;
   updateVisibleSession: (session: string) => void;
   selectedView?:{ type: string; id: string }
-  setSelectedView: (view: { type: string; id: string }) => void;
+  setSelectedView: (view: { type: string; id: string } | undefined) => void;
 }) {
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
   const [isEditing, setIsEditing] = useState(false);
