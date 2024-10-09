@@ -197,6 +197,9 @@ format: ## run code formatters
 	@uv run ruff format .
 	@cd src/frontend && npm run format
 
+unsafe_fix:
+	@uv run ruff check . --fix --unsafe-fixes
+
 lint: install_backend ## run linters
 	@uv run mypy --namespace-packages -p "langflow"
 
