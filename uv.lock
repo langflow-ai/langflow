@@ -3911,7 +3911,7 @@ requires-dist = [
     { name = "requests", marker = "extra == 'dev'", specifier = ">=2.32.0" },
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21.1" },
     { name = "rich", specifier = ">=13.7.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.5" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.2" },
     { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
     { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1" },

@@ -78,7 +78,7 @@ class DirectoryReader:
                         component_tuple = (*build_component(component), component)
                         components.append(component_tuple)
                 except Exception as e:
-                    logger.debug(f"Error while loading component { component['name']}")
+                    logger.debug(f"Error while loading component {component['name']}")
                     logger.debug(e)
                     continue
             items.append({"name": menu["name"], "path": menu["path"], "components": components})

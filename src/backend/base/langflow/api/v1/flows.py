@@ -5,6 +5,7 @@ import json
 import re
 import zipfile
 from datetime import datetime, timezone
+from typing import Annotated
 from uuid import UUID
 
 import orjson
@@ -54,7 +55,7 @@ def create_flow(
         # based on the highest number found
         if session.exec(select(Flow).where(Flow.name == flow.name).where(Flow.user_id == current_user.id)).first():
             flows = session.exec(
-                select(Flow).where(Flow.name.like(f"{flow.name} (%")).where(Flow.user_id == current_user.id)  # type: ignore
+                select(Flow).where(Flow.name.like(f"{flow.name} (%")).where(Flow.user_id == current_user.id)  # type: ignore[attr-defined]
             ).all()
             if flows:
                 extract_number = re.compile(r"\((\d+)\)$")
@@ -76,14 +77,14 @@ def create_flow(
         ):
             flows = session.exec(
                 select(Flow)
-                .where(Flow.endpoint_name.like(f"{flow.endpoint_name}-%"))  # type: ignore
+                .where(Flow.endpoint_name.like(f"{flow.endpoint_name}-%"))  # type: ignore[union-attr]
                 .where(Flow.user_id == current_user.id)
             ).all()
             if flows:
                 # The endpoitn name is like "my-endpoint","my-endpoint-1", "my-endpoint-2"
                 # so we need to get the highest number and add 1
                 # we need to get the last part of the endpoint name
-                numbers = [int(flow.endpoint_name.split("-")[-1]) for flow in flows]  # type: ignore
+                numbers = [int(flow.endpoint_name.split("-")[-1]) for flow in flows]
                 flow.endpoint_name = f"{flow.endpoint_name}-{max(numbers) + 1}"
             else:
                 flow.endpoint_name = f"{flow.endpoint_name}-1"
@@ -166,7 +167,7 @@ def read_flows(
 
         if auth_settings.AUTO_LOGIN:
             stmt = select(Flow).where(
-                (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa
+                (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa: E711
             )
         else:
             stmt = select(Flow).where(Flow.user_id == current_user.id)
@@ -175,14 +176,14 @@ def read_flows(
             stmt = stmt.where(Flow.folder_id != starter_folder_id)
 
         if components_only:
-            stmt = stmt.where(Flow.is_component == True)  # noqa
+            stmt = stmt.where(Flow.is_component == True)  # noqa: E712
 
         if not get_all:
             stmt = stmt.where(Flow.folder_id == folder_id)
 
         if get_all:
             flows = session.exec(stmt).all()
-            flows = validate_is_component(flows)  # type: ignore
+            flows = validate_is_component(flows)
             if components_only:
                 flows = [flow for flow in flows if flow.is_component]
             if remove_example_flows and starter_folder_id:
@@ -191,7 +192,7 @@ def read_flows(
                 return [
                     {"id": flow.id, "name": flow.name, "folder_id": flow.folder_id, "is_component": flow.is_component}
                     for flow in flows
-                ]  # type: ignore
+                ]
             return flows
         return paginate(session, stmt, params=params)
 
@@ -214,7 +215,7 @@ def read_flow(
         # If auto login is enable user_id can be current_user.id or None
         # so write an OR
         stmt = stmt.where(
-            (Flow.user_id == current_user.id) | (Flow.user_id == None)  # noqa
+            (Flow.user_id == current_user.id) | (Flow.user_id == None)  # noqa: E711
         )
     if user_flow := session.exec(stmt).first():
         return user_flow
@@ -345,7 +346,9 @@ async def upload_file(
 
 @router.delete("/")
 async def delete_multiple_flows(
-    flow_ids: list[UUID], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
+    flow_ids: list[UUID],
+    user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[Session, Depends(get_session)],
 ):
     """
     Delete multiple flows by their IDs.
@@ -381,11 +384,11 @@ async def delete_multiple_flows(
 @router.post("/download/", status_code=200)
 async def download_multiple_file(
     flow_ids: list[UUID],
-    user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_session),
+    user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[Session, Depends(get_session)],
 ):
     """Download all flows as a zip file."""
-    flows = db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids)))).all()  # type: ignore
+    flows = db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids)))).all()  # type: ignore[attr-defined]
 
     if not flows:
         raise HTTPException(status_code=404, detail="No flows found.")

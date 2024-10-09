@@ -36,7 +36,7 @@ class CohereEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        return CohereEmbeddings(  # type: ignore
+        return CohereEmbeddings(
             cohere_api_key=self.cohere_api_key,
             model=self.model,
             truncate=self.truncate,

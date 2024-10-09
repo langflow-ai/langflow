@@ -1,8 +1,8 @@
 from collections.abc import Callable
 from typing import cast
 
-from crewai import Agent, Crew, Process, Task  # type: ignore
-from crewai.task import TaskOutput  # type: ignore
+from crewai import Agent, Crew, Process, Task
+from crewai.task import TaskOutput
 from langchain_core.agents import AgentAction, AgentFinish
 
 from langflow.custom import Component
