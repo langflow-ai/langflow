@@ -225,7 +225,7 @@ class TracingService(Service):
             yield self
         except Exception as e:
             self._end_traces(trace_id, trace_name, e)
-            raise e
+            raise
         finally:
             asyncio.create_task(await asyncio.to_thread(self._end_and_reset, trace_id, trace_name, None))
 
