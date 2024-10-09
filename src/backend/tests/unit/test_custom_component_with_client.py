@@ -1,7 +1,9 @@
 import pytest
 
 from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.custom.utils import build_custom_component_template
 from langflow.field_typing.constants import Data
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 
 @pytest.fixture
@@ -28,3 +30,11 @@ def test_list_flows_flow_objects(component):
 def test_list_flows_return_type(component):
     flows = component.list_flows()
     assert isinstance(flows, list)
+
+
+def test_feature_flags_add_toolkit_output(active_user, code_component_with_multiple_outputs):
+    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
+    len_outputs = len(frontnd_node_dict["outputs"])
+    FEATURE_FLAGS.add_toolkit_output = True
+    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
+    assert len(frontnd_node_dict["outputs"]) == len_outputs + 1
