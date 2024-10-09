@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { useEffect } from "react";
 import { SliderComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
+import { InputProps } from "../parameterRenderComponent/types";
 
 const THRESHOLDS = [0.25, 0.5, 0.75, 1];
 const BACKGROUND_COLORS = ["#4f46e5", "#7c3aed", "#a21caf", "#c026d3"];
@@ -14,7 +15,6 @@ type ColorType = "background" | "text";
 
 export default function SliderComponent({
   value,
-  onChange,
   disabled,
   rangeSpec,
   editNode = false,
@@ -30,7 +30,8 @@ export default function SliderComponent({
     { value: 3, label: "Wild" },
   ],
   sliderInput = false,
-}: SliderComponentType): JSX.Element {
+  handleOnNewValue,
+}: InputProps<any[], SliderComponentType>): JSX.Element {
   const step = rangeSpec?.step ?? 0.1;
   const min = rangeSpec?.min ?? 0;
   const max = rangeSpec?.max ?? 2;
@@ -38,12 +39,12 @@ export default function SliderComponent({
 
   useEffect(() => {
     if (disabled && value !== "") {
-      onChange("", undefined, true);
+      handleOnNewValue({ value: "" }, { skipSnapshot: true });
     }
   }, [disabled]);
 
   const handleChange = (newValue: number[]) => {
-    onChange(newValue[0]);
+    handleOnNewValue({ value: newValue[0] });
   };
 
   const handleOptionClick = (option: number) => {
@@ -52,7 +53,7 @@ export default function SliderComponent({
 
     if (selectedPercentage !== undefined) {
       const calculatedValue = min + (max - min) * selectedPercentage;
-      onChange(calculatedValue);
+      handleOnNewValue({ value: calculatedValue });
     }
 
     return null;

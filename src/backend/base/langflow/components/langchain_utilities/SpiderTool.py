@@ -6,6 +6,10 @@ from langflow.io import BoolInput, DictInput, DropdownInput, IntInput, Output, S
 from langflow.schema import Data
 
 
+class SpiderToolError(Exception):
+    """SpiderTool error"""
+
+
 class SpiderTool(Component):
     display_name: str = "Spider Web Crawler & Scraper"
     description: str = "Spider API for web crawling and scraping."
@@ -92,12 +96,12 @@ class SpiderTool(Component):
             parameters = self.params["data"]
         else:
             parameters = {
-                "limit": self.limit if self.limit else None,
-                "depth": self.depth if self.depth else None,
-                "blacklist": self.blacklist if self.blacklist else None,
-                "whitelist": self.whitelist if self.whitelist else None,
+                "limit": self.limit or None,
+                "depth": self.depth or None,
+                "blacklist": self.blacklist or None,
+                "whitelist": self.whitelist or None,
                 "readability": self.readability,
-                "request_timeout": self.request_timeout if self.request_timeout else None,
+                "request_timeout": self.request_timeout or None,
                 "metadata": self.metadata,
                 "return_format": "markdown",
             }
@@ -114,7 +118,7 @@ class SpiderTool(Component):
                 raise ValueError(msg)
         except Exception as e:
             msg = f"Error: {e}"
-            raise Exception(msg) from e
+            raise SpiderToolError(msg) from e
 
         records = []
 

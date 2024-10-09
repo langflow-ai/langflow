@@ -143,7 +143,7 @@ class AssemblyAITranscriptionJobCreator(Component):
                 self.status = "Error: Expected Number of Speakers must be a valid integer"
                 return Data(data={"error": "Error: Expected Number of Speakers must be a valid integer"})
 
-        language_code = self.language_code if self.language_code else None
+        language_code = self.language_code or None
 
         config = aai.TranscriptionConfig(
             speech_model=self.speech_model,
@@ -180,6 +180,7 @@ class AssemblyAITranscriptionJobCreator(Component):
             result = Data(data={"transcript_id": transcript.id})
             self.status = result
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error submitting transcription job")
             self.status = f"An error occurred: {e}"
             return Data(data={"error": f"An error occurred: {e}"})

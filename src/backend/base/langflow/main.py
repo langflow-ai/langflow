@@ -8,7 +8,7 @@ from http import HTTPStatus
 from pathlib import Path
 from urllib.parse import urlencode
 
-import nest_asyncio  # type: ignore
+import nest_asyncio
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -34,6 +34,9 @@ from langflow.services.utils import initialize_services, teardown_services
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+
+
+MAX_PORT = 65535
 
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
@@ -74,8 +77,12 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
                 )
                 error_messages = json.dumps([message, str(exc)])
                 raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages) from exc
-            raise exc
-        if "files/" not in request.url.path and request.url.path.endswith(".js") and response.status_code == 200:
+            raise
+        if (
+            "files/" not in request.url.path
+            and request.url.path.endswith(".js")
+            and response.status_code == HTTPStatus.OK
+        ):
             response.headers["Content-Type"] = "text/javascript"
         return response
 
@@ -176,7 +183,7 @@ def create_app():
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
-        if prome_port > 0 or prome_port < 65535:
+        if prome_port > 0 or prome_port < MAX_PORT:
             rprint(f"[bold green]Starting Prometheus server on port {prome_port}...[/bold green]")
             settings.prometheus_enabled = True
             settings.prometheus_port = prome_port
@@ -185,7 +192,7 @@ def create_app():
             raise ValueError(msg)
 
     if settings.prometheus_enabled:
-        from prometheus_client import start_http_server  # type: ignore
+        from prometheus_client import start_http_server
 
         start_http_server(settings.prometheus_port)
 

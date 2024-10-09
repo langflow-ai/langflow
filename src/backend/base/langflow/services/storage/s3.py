@@ -1,5 +1,5 @@
-import boto3  # type: ignore
-from botocore.exceptions import ClientError, NoCredentialsError  # type: ignore
+import boto3
+from botocore.exceptions import ClientError, NoCredentialsError
 from loguru import logger
 
 from .service import StorageService

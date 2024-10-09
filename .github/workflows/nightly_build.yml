@@ -30,8 +30,6 @@ jobs:
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ github.ref }}
       - name: Install the project
         run: uv sync --dev
 
@@ -75,10 +73,6 @@ jobs:
           echo "Updating base project version to $BASE_TAG"
           uv run ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
           uv run ./scripts/ci/update_pyproject_version.py $BASE_TAG base
-
-          # This updates the dependency of langflow-base to langflow-base-nightly in {project_root}/pyproject.toml
-          # Note: Still necessary for poetry
-          uv run ./scripts/ci/update_lf_base_dependency.py $BASE_TAG
 
           # Use the main tag created earlier
           MAIN_TAG="${{ steps.generate_main_tag.outputs.main_tag }}"

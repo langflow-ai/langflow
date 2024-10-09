@@ -42,10 +42,10 @@ def get_service(service_type: ServiceType, default=None):
     from langflow.services.manager import service_manager
 
     if not service_manager.factories:
-        #! This is a workaround to ensure that the service manager is initialized
-        #! Not optimal, but it works for now
+        # ! This is a workaround to ensure that the service manager is initialized
+        # ! Not optimal, but it works for now
         service_manager.register_factories()
-    return service_manager.get(service_type, default)  # type: ignore
+    return service_manager.get(service_type, default)
 
 
 def get_telemetry_service() -> TelemetryService:
@@ -57,7 +57,7 @@ def get_telemetry_service() -> TelemetryService:
     """
     from langflow.services.telemetry.factory import TelemetryServiceFactory
 
-    return get_service(ServiceType.TELEMETRY_SERVICE, TelemetryServiceFactory())  # type: ignore
+    return get_service(ServiceType.TELEMETRY_SERVICE, TelemetryServiceFactory())
 
 
 def get_tracing_service() -> TracingService:
@@ -69,7 +69,7 @@ def get_tracing_service() -> TracingService:
     """
     from langflow.services.tracing.factory import TracingServiceFactory
 
-    return get_service(ServiceType.TRACING_SERVICE, TracingServiceFactory())  # type: ignore
+    return get_service(ServiceType.TRACING_SERVICE, TracingServiceFactory())
 
 
 def get_state_service() -> StateService:
@@ -81,7 +81,7 @@ def get_state_service() -> StateService:
     """
     from langflow.services.state.factory import StateServiceFactory
 
-    return get_service(ServiceType.STATE_SERVICE, StateServiceFactory())  # type: ignore
+    return get_service(ServiceType.STATE_SERVICE, StateServiceFactory())
 
 
 def get_socket_service() -> SocketIOService:
@@ -91,7 +91,7 @@ def get_socket_service() -> SocketIOService:
     Returns:
         SocketIOService: The SocketIOService instance.
     """
-    return get_service(ServiceType.SOCKETIO_SERVICE)  # type: ignore
+    return get_service(ServiceType.SOCKETIO_SERVICE)  # type: ignore[attr-defined]
 
 
 def get_storage_service() -> StorageService:
@@ -103,7 +103,7 @@ def get_storage_service() -> StorageService:
     """
     from langflow.services.storage.factory import StorageServiceFactory
 
-    return get_service(ServiceType.STORAGE_SERVICE, default=StorageServiceFactory())  # type: ignore
+    return get_service(ServiceType.STORAGE_SERVICE, default=StorageServiceFactory())
 
 
 def get_variable_service() -> VariableService:
@@ -116,7 +116,7 @@ def get_variable_service() -> VariableService:
     """
     from langflow.services.variable.factory import VariableServiceFactory
 
-    return get_service(ServiceType.VARIABLE_SERVICE, VariableServiceFactory())  # type: ignore
+    return get_service(ServiceType.VARIABLE_SERVICE, VariableServiceFactory())
 
 
 def get_plugins_service() -> PluginService:
@@ -126,7 +126,7 @@ def get_plugins_service() -> PluginService:
     Returns:
         PluginService: The PluginService instance.
     """
-    return get_service(ServiceType.PLUGIN_SERVICE)  # type: ignore
+    return get_service(ServiceType.PLUGIN_SERVICE)  # type: ignore[attr-defined]
 
 
 def get_settings_service() -> SettingsService:
@@ -143,7 +143,7 @@ def get_settings_service() -> SettingsService:
     """
     from langflow.services.settings.factory import SettingsServiceFactory
 
-    return get_service(ServiceType.SETTINGS_SERVICE, SettingsServiceFactory())  # type: ignore
+    return get_service(ServiceType.SETTINGS_SERVICE, SettingsServiceFactory())
 
 
 def get_db_service() -> DatabaseService:
@@ -156,7 +156,7 @@ def get_db_service() -> DatabaseService:
     """
     from langflow.services.database.factory import DatabaseServiceFactory
 
-    return get_service(ServiceType.DATABASE_SERVICE, DatabaseServiceFactory())  # type: ignore
+    return get_service(ServiceType.DATABASE_SERVICE, DatabaseServiceFactory())
 
 
 def get_session() -> Generator[Session, None, None]:
@@ -207,7 +207,19 @@ def get_cache_service() -> CacheService:
     """
     from langflow.services.cache.factory import CacheServiceFactory
 
-    return get_service(ServiceType.CACHE_SERVICE, CacheServiceFactory())  # type: ignore
+    return get_service(ServiceType.CACHE_SERVICE, CacheServiceFactory())
+
+
+def get_shared_component_cache_service() -> CacheService:
+    """
+    Retrieves the cache service from the service manager.
+
+    Returns:
+        The cache service instance.
+    """
+    from langflow.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
+
+    return get_service(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, SharedComponentCacheServiceFactory())
 
 
 def get_session_service() -> SessionService:
@@ -219,7 +231,7 @@ def get_session_service() -> SessionService:
     """
     from langflow.services.session.factory import SessionServiceFactory
 
-    return get_service(ServiceType.SESSION_SERVICE, SessionServiceFactory())  # type: ignore
+    return get_service(ServiceType.SESSION_SERVICE, SessionServiceFactory())
 
 
 def get_task_service() -> TaskService:
@@ -232,7 +244,7 @@ def get_task_service() -> TaskService:
     """
     from langflow.services.task.factory import TaskServiceFactory
 
-    return get_service(ServiceType.TASK_SERVICE, TaskServiceFactory())  # type: ignore
+    return get_service(ServiceType.TASK_SERVICE, TaskServiceFactory())
 
 
 def get_chat_service() -> ChatService:
@@ -242,7 +254,7 @@ def get_chat_service() -> ChatService:
     Returns:
         ChatService: The chat service instance.
     """
-    return get_service(ServiceType.CHAT_SERVICE)  # type: ignore
+    return get_service(ServiceType.CHAT_SERVICE)
 
 
 def get_store_service() -> StoreService:
@@ -252,4 +264,4 @@ def get_store_service() -> StoreService:
     Returns:
         StoreService: The StoreService instance.
     """
-    return get_service(ServiceType.STORE_SERVICE)  # type: ignore
+    return get_service(ServiceType.STORE_SERVICE)

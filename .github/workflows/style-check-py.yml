@@ -21,8 +21,6 @@ jobs:
         uses: actions/checkout@v4
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-        with:
-          ref: ${{ github.ref }}
       - name: Register problem matcher
         run: echo "::add-matcher::.github/workflows/matchers/ruff.json"
       - name: Run Ruff Check

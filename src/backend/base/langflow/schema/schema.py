@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator, Generator, Iterator
 from enum import Enum
 from typing import Literal
 
+from loguru import logger
 from pydantic import BaseModel
 from typing_extensions import TypedDict
 
@@ -57,10 +58,8 @@ def get_type(payload):
             result = LogType.TEXT
 
     if result == LogType.UNKNOWN and (
-        payload
-        and isinstance(payload, Generator)
-        or isinstance(payload, Message)
-        and isinstance(payload.text, Generator)
+        (payload and isinstance(payload, Generator))
+        or (isinstance(payload, Message) and isinstance(payload.text, Generator))
     ):
         result = LogType.STREAM
 
@@ -125,7 +124,7 @@ def recursive_serialize_or_str(obj):
             if hasattr(obj, "model_dump"):
                 obj_dict = obj.model_dump()
             elif hasattr(obj, "dict"):
-                obj_dict = obj.dict()  # type: ignore
+                obj_dict = obj.dict()
             return {k: recursive_serialize_or_str(v) for k, v in obj_dict.items()}
 
         if isinstance(obj, AsyncIterator | Generator | Iterator):
@@ -143,5 +142,6 @@ def recursive_serialize_or_str(obj):
             # This a type BaseModel and not an instance of it
             return repr(obj)
         return str(obj)
-    except Exception:
+    except Exception:  # noqa: BLE001
+        logger.opt(exception=True).debug(f"Cannot serialize object {obj}")
         return str(obj)

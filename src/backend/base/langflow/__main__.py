@@ -10,8 +10,9 @@ import click
 import httpx
 import typer
 from dotenv import load_dotenv
-from multiprocess import cpu_count  # type: ignore
-from multiprocess.context import Process  # type: ignore
+from httpx import HTTPError
+from multiprocess import cpu_count
+from multiprocess.context import Process
 from packaging import version as pkg_version
 from rich import box
 from rich import print as rprint
@@ -68,7 +69,7 @@ def set_var_for_macos_issue():
     # we need to set this var is we are running on MacOS
     # otherwise we get an error when running gunicorn
 
-    if platform.system() in ["Darwin"]:
+    if platform.system() == "Darwin":
         import os
 
         os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
@@ -202,7 +203,7 @@ def run(
         return
     process: Process | None = None
     try:
-        if platform.system() in ["Windows"]:
+        if platform.system() == "Windows":
             # Run using uvicorn on MacOS and Windows
             # Windows doesn't support gunicorn
             # MacOS requires an env variable to be set to use gunicorn
@@ -218,7 +219,7 @@ def run(
         if process is not None:
             process.terminate()
         sys.exit(0)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.exception(e)
         sys.exit(1)
 
@@ -228,10 +229,13 @@ def wait_for_server_ready(host, port):
     Wait for the server to become ready by polling the health endpoint.
     """
     status_code = 0
-    while status_code != 200:
+    while status_code != httpx.codes.OK:
         try:
             status_code = httpx.get(f"http://{host}:{port}/health").status_code
-        except Exception:
+        except HTTPError:
+            time.sleep(1)
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error while waiting for the server to become ready.")
             time.sleep(1)
 
 
@@ -250,7 +254,6 @@ def run_on_windows(host, port, log_level, options, app):
     """
     print_banner(host, port)
     run_langflow(host, port, log_level, options, app)
-    return
 
 
 def is_port_in_use(port, host="localhost"):
@@ -370,7 +373,7 @@ def run_langflow(host, port, log_level, options, app):
     Run Langflow server on localhost
     """
 
-    if platform.system() in ["Windows"]:
+    if platform.system() == "Windows":
         # Run using uvicorn on MacOS and Windows
         # Windows doesn't support gunicorn
         # MacOS requires an env variable to be set to use gunicorn
@@ -531,7 +534,7 @@ def api_key(
 
 def api_key_banner(unmasked_api_key):
     is_mac = platform.system() == "Darwin"
-    import pyperclip  # type: ignore
+    import pyperclip
 
     pyperclip.copy(unmasked_api_key.api_key)
     panel = Panel(
@@ -539,7 +542,7 @@ def api_key_banner(unmasked_api_key):
         f"[bold blue]{unmasked_api_key.api_key}[/bold blue]\n\n"
         "This is the only time the API key will be displayed. \n"
         "Make sure to store it in a secure location. \n\n"
-        f"The API key has been copied to your clipboard. [bold]{['Ctrl','Cmd'][is_mac]} + V[/bold] to paste it.",
+        f"The API key has been copied to your clipboard. [bold]{['Ctrl', 'Cmd'][is_mac]} + V[/bold] to paste it.",
         box=box.ROUNDED,
         border_style="blue",
         expand=False,

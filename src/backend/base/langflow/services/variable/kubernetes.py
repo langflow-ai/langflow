@@ -47,7 +47,7 @@ class KubernetesSecretService(VariableService, Service):
                     name=secret_name,
                     data=variables,
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception(f"Error creating {var} variable")
 
         else:
@@ -82,7 +82,7 @@ class KubernetesSecretService(VariableService, Service):
     ) -> str:
         secret_name = encode_user_id(user_id)
         key, value = self.resolve_variable(secret_name, user_id, name)
-        if key.startswith(CREDENTIAL_TYPE + "_") and field == "session_id":  # type: ignore
+        if key.startswith(CREDENTIAL_TYPE + "_") and field == "session_id":
             msg = (
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
                 "because its purpose is to prevent the exposure of values."
@@ -123,7 +123,6 @@ class KubernetesSecretService(VariableService, Service):
 
         secret_key, _ = self.resolve_variable(secret_name, user_id, name)
         self.kubernetes_secrets.delete_secret_key(name=secret_name, key=secret_key)
-        return
 
     def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID | str, _session: Session) -> None:
         self.delete_variable(user_id, _session, str(variable_id))

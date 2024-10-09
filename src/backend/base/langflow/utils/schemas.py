@@ -37,7 +37,7 @@ class ChatOutputResponse(BaseModel):
         for file in files:
             if not isinstance(file, dict):
                 msg = "Files must be a list of dictionaries."
-                raise ValueError(msg)
+                raise ValueError(msg)  # noqa: TRY004
 
             if not all(key in file for key in ["path", "name", "type"]):
                 # If any of the keys are missing, we should extract the
@@ -79,7 +79,7 @@ class ChatOutputResponse(BaseModel):
     ):
         """Build chat output response from message."""
         content = message.content
-        return cls(message=content, sender=sender, sender_name=sender_name)  # type: ignore
+        return cls(message=content, sender=sender, sender_name=sender_name)
 
     @model_validator(mode="after")
     def validate_message(self):

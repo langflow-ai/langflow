@@ -77,9 +77,8 @@ class DirectoryReader:
                     if component["error"] if with_errors else not component["error"]:
                         component_tuple = (*build_component(component), component)
                         components.append(component_tuple)
-                except Exception as e:
-                    logger.debug(f"Error while loading component { component['name']}")
-                    logger.debug(e)
+                except Exception:  # noqa: BLE001
+                    logger.opt(exception=True).debug(f"Error while loading component {component['name']}")
                     continue
             items.append({"name": menu["name"], "path": menu["path"], "components": components})
         filtered = [menu for menu in items if menu["components"]]
@@ -116,8 +115,8 @@ class DirectoryReader:
             except UnicodeDecodeError:
                 # This is happening in Windows, so we need to open the file in binary mode
                 # The file is always just a python file, so we can safely read it as utf-8
-                with _file_path.open("rb") as file:
-                    return file.read().decode("utf-8")
+                with _file_path.open("rb") as f:
+                    return f.read().decode("utf-8")
 
     def get_files(self):
         """
@@ -215,7 +214,7 @@ class DirectoryReader:
         """
         try:
             file_content = self.read_file_content(file_path)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception(f"Error while reading file {file_path}")
             return False, f"Could not read {file_path}"
 
@@ -270,7 +269,8 @@ class DirectoryReader:
             if validation_result:
                 try:
                     output_types = self.get_output_types_from_code(result_content)
-                except Exception:
+                except Exception:  # noqa: BLE001
+                    logger.opt(exception=True).debug("Error while getting output types from code")
                     output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]
@@ -292,7 +292,7 @@ class DirectoryReader:
     async def process_file_async(self, file_path):
         try:
             file_content = self.read_file_content(file_path)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception(f"Error while reading file {file_path}")
             return False, f"Could not read {file_path}"
 
@@ -346,7 +346,7 @@ class DirectoryReader:
             if validation_result:
                 try:
                     output_types = await self.get_output_types_from_code_async(result_content)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.exception("Error while getting output types from code")
                     output_types = [component_name_camelcase]
             else:

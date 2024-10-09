@@ -1,4 +1,5 @@
 import assemblyai as aai
+from loguru import logger
 
 from langflow.custom import Component
 from langflow.io import DataInput, DropdownInput, FloatInput, IntInput, MultilineInput, Output, SecretStrInput
@@ -134,7 +135,8 @@ class AssemblyAILeMUR(Component):
             result = Data(data=response)
             self.status = result
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error running LeMUR")
             error = f"An Error happened: {e}"
             self.status = error
             return Data(data={"error": error})
