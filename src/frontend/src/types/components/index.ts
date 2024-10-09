@@ -289,6 +289,19 @@ export type FloatComponentType = {
   rangeSpec: RangeSpecType;
   editNode?: boolean;
   id?: string;
+};
+
+export type SliderComponentType = {
+  value: string;
+  disabled?: boolean;
+  onChange: (
+    value: string | number,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => void;
+  rangeSpec: RangeSpecType;
+  editNode?: boolean;
+  id?: string;
   minLabel?: string;
   maxLabel?: string;
   minLabelIcon?: string;
@@ -298,6 +311,7 @@ export type FloatComponentType = {
     label: string;
     value: number;
   }[];
+  sliderInput?: boolean;
 };
 
 export type FilePreviewType = {
