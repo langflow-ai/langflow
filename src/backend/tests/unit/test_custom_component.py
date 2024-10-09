@@ -506,7 +506,7 @@ def test_custom_component_multiple_outputs(code_component_with_multiple_outputs)
     assert frontnd_node_dict["outputs"][0]["types"] == ["Text"]
 
 
-def test_feature_flags_add_toolkit_output(active_user, code_component_with_multiple_outputs):
+def test_feature_flags_add_toolkit_output(client, active_user, code_component_with_multiple_outputs):
     frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
     len_outputs = len(frontnd_node_dict["outputs"])
     FEATURE_FLAGS.add_toolkit_output = True
