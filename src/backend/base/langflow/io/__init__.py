@@ -18,6 +18,7 @@ from langflow.inputs import (
     NestedDictInput,
     PromptInput,
     SecretStrInput,
+    SliderInput,
     StrInput,
     TableInput,
 )
@@ -46,4 +47,5 @@ __all__ = [
     "TableInput",
     "DefaultPromptField",
     "LinkInput",
+    "SliderInput",
 ]
