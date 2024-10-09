@@ -42,7 +42,7 @@ def get_optional_user_store_api_key(
         return None
     try:
         return auth_utils.decrypt_api_key(user.store_api_key, settings_service)
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Failed to decrypt API key")
         return user.store_api_key
 

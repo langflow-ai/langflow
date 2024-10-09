@@ -2,6 +2,7 @@ import time
 from collections.abc import Callable
 
 import socketio
+from loguru import logger
 from sqlmodel import select
 
 from langflow.api.utils import format_elapsed_time
@@ -35,7 +36,8 @@ async def get_vertices(sio, sid, flow_id, chat_service):
         # Emit the vertices to the client
         await sio.emit("vertices_order", data=vertices, to=sid)
 
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
+        logger.opt(exception=True).debug("Error getting vertices")
         await sio.emit("error", data=str(exc), to=sid)
 
 
@@ -80,7 +82,8 @@ async def build_vertex(
                 duration=duration,
                 timedelta=timedelta,
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error building vertex")
             params = str(exc)
             valid = False
             result_dict = ResultDataResponse(results={})
@@ -99,5 +102,6 @@ async def build_vertex(
         response = VertexBuildResponse(valid=valid, params=params, id=vertex.id, data=result_dict)
         await sio.emit("vertex_build", data=response.model_dump(), to=sid)
 
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
+        logger.opt(exception=True).debug("Error building vertex")
         await sio.emit("error", data=str(exc), to=sid)

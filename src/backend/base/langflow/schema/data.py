@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, cast
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts.image import ImagePromptTemplate
+from loguru import logger
 from pydantic import BaseModel, model_serializer, model_validator
 
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
@@ -209,7 +210,8 @@ class Data(BaseModel):
         try:
             data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
             return json.dumps(data, indent=4)
-        except Exception:
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error converting Data to JSON")
             return str(self.data)
 
     def __contains__(self, key):

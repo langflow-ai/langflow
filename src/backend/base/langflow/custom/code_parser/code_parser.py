@@ -342,7 +342,7 @@ class CodeParser:
                 for import_node in import_nodes:
                     self.parse_imports(import_node)
                 nodes.append(class_node)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("Error finding base class node")
         nodes.insert(0, node)
         class_details = ClassCodeDetails(
