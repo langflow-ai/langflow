@@ -1,5 +1,5 @@
-from langchain_core.tools import Tool, tool
-from metaphor_python import Metaphor  # type: ignore
+from langchain_core.tools import tool
+from metaphor_python import Metaphor
 
 from langflow.custom import Component
 from langflow.field_typing import Tool
