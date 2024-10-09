@@ -465,7 +465,7 @@ export default function IOModal({
                           setvisibleSessions([]);
                         }}
                       >
-                        Start fresh
+                        New Chat
                       </Button>
                     </div>
                   )}
