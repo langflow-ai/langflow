@@ -120,8 +120,6 @@ export default function IOModal({
   const messages = useMessagesStore((state) => state.messages);
   const flowPool = useFlowStore((state) => state.flowPool);
   const [sessionId, setSessionId] = useState<string>(currentFlowId);
-  const [SessionInFlow, setSessionInFlow] = useState<boolean>(false);
-
   useGetMessagesQuery(
     {
       mode: "union",
@@ -129,19 +127,6 @@ export default function IOModal({
     },
     { enabled: open },
   );
-
-  useEffect(() => {
-    const hasSectionInFlow = someFlowTemplateFields(
-      { nodes: allNodes },
-      (Field) =>
-        Field.display_name?.toLocaleLowerCase() === "session id" && Field.value,
-    );
-    setSessionInFlow(hasSectionInFlow);
-    //if there is no session in the flow components we should not allow the user to see multiple sessions at a time
-    if (!hasSectionInFlow && visibleSessions.length > 1) {
-      setvisibleSessions([]);
-    }
-  }, [allNodes]);
 
   async function sendMessage({
     repeat = 1,
@@ -155,16 +140,6 @@ export default function IOModal({
     setLockChat(true);
     setChatValue("");
     const runSession = visibleSessions.length > 1 ? undefined : sessionId;
-    // check for multiple sessions view without session id in flow
-    if (!SessionInFlow && !runSession) {
-      setNoticeData({
-        title:
-          "Multiple sessions are supported only when a session id is set inside components, otherwise only the default session will be used.",
-      });
-      if (sessions.includes(currentFlowId)) {
-        setvisibleSessions([currentFlowId]);
-      }
-    }
     for (let i = 0; i < repeat; i++) {
       await buildFlow({
         input_value: chatValue,
@@ -430,8 +405,6 @@ export default function IOModal({
                         setvisibleSessions((prev) =>
                           prev.includes(session)
                             ? prev.filter((item) => item !== session)
-                            : SessionInFlow
-                              ? [...prev, session]
                               : [session],
                         );
                       }}
@@ -439,9 +412,7 @@ export default function IOModal({
                         setvisibleSessions((prev) =>
                           prev.includes(session)
                             ? prev.filter((item) => item !== session)
-                            : SessionInFlow
-                              ? [...prev, session]
-                              : [session],
+                            : [session],
                         );
                       }}
                       isVisible={visibleSessions.includes(session)}
