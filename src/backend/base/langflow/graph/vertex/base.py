@@ -370,9 +370,12 @@ class Vertex:
                 val = field.get("value")
                 if field.get("type") == "code":
                     try:
-                        params[field_name] = ast.literal_eval(val) if val else None
+                        if field_name == "code":
+                            params[field_name] = val
+                        else:
+                            params[field_name] = ast.literal_eval(val) if val else None
                     except Exception:  # noqa: BLE001
-                        logger.opt(exception=True).debug(f"Error evaluating code for {field_name}")
+                        logger.debug(f"Error evaluating code for {field_name}")
                         params[field_name] = val
                 elif field.get("type") in ["dict", "NestedDict"]:
                     # When dict comes from the frontend it comes as a
