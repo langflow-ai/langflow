@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import IconComponent from "@/components/genericIconComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,11 @@ export default function SessionSelector({
   const [isEditing, setIsEditing] = useState(false);
   const [editedSession, setEditedSession] = useState(session);
   const { mutate: updateSessionName } = useUpdateSessionName();
+
+
+  useEffect(() => {
+    console.log(isEditing)
+  },[isEditing])
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -71,27 +76,43 @@ export default function SessionSelector({
       <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3.5 align-middle">
         <div className="flex min-w-0 items-center gap-2">
           {isEditing ? (
-            <Input
-              value={editedSession}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleConfirm();
-                }
-              }}
-              onChange={handleInputChange}
-              onBlur={(e) => {
-                if (
-                  !e.relatedTarget ||
-                  e.relatedTarget.getAttribute("data-confirm") !== "true"
-                ) {
-                  handleCancel();
-                }
-              }}
-              autoFocus
-              className="h-6 px-1 py-0"
-            />
+            <div className="flex items-center">
+              <Input
+                value={editedSession}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleConfirm();
+                  }
+                }}
+                onChange={handleInputChange}
+                onBlur={(e) => {
+                  console.log(e.relatedTarget)
+                  if (
+                    !e.relatedTarget ||
+                    e.relatedTarget.getAttribute("data-confirm") !== "true"
+                  ) {
+                    handleCancel();
+                  }
+                }}
+                autoFocus
+                className="h-6 px-1 py-0 flex-grow"
+              />
+              <button
+                onClick={handleCancel}
+                className="ml-2 text-status-red hover:text-status-red-hover"
+              >
+                <IconComponent name="X" className="h-4 w-4" />
+              </button>
+              <button
+                onClick={handleConfirm}
+                data-confirm="true"
+                className="ml-2 text-green-500 hover:text-green-600"
+              >
+                <IconComponent name="Check" className="h-4 w-4" />
+              </button>
+            </div>
           ) : (
             <ShadTooltip styleClasses="z-50" content={session}>
               <div>
@@ -107,8 +128,8 @@ export default function SessionSelector({
             </ShadTooltip>
           )}
         </div>
-        <Select open onValueChange={handleSelectChange}>
-          <SelectTrigger className="w-8 h-8 p-0 border-none bg-transparent hover:bg-muted focus:ring-0">
+        <Select value={""} onValueChange={handleSelectChange}>
+          <SelectTrigger data-confirm="true" className="w-8 h-8 p-0 border-none bg-transparent hover:bg-muted focus:ring-0">
             <IconComponent name="MoreHorizontal" className="h-4 w-4" />
           </SelectTrigger>
           <SelectContent side="right" align="start" className="w-40 p-0">
@@ -124,11 +145,11 @@ export default function SessionSelector({
                   <IconComponent name="ScrollText" className="mr-2 h-4 w-4" />
                   Message logs
                 </div>
-                <IconComponent name="ExternalLink" className="h-4 w-4 ml-2" />
+                <IconComponent name="ExternalLink" className="h-4 w-4 absolute right-2" />
               </div>
             </SelectItem>
-            <SelectItem value="delete" className="py-2 px-3 focus:bg-muted cursor-pointer text-red-600 hover:text-red-600">
-              <div className="flex items-center">
+            <SelectItem value="delete" className="py-2 px-3 focus:bg-muted cursor-pointer">
+              <div className="flex items-center hover:text-status-red text-status-red">
                 <IconComponent name="Trash2" className="mr-2 h-4 w-4" />
                 Delete
               </div>
