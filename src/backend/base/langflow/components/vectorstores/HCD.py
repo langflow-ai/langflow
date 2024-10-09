@@ -260,7 +260,7 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input.to_lc_document())
             else:
                 msg = "Vector Store Inputs must be Data objects."
-                raise ValueError(msg)
+                raise TypeError(msg)
 
         if documents:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")

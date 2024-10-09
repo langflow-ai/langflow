@@ -64,7 +64,7 @@ class SourceHandle(BaseModel):
         if _info.data["data_type"] == "GroupNode":
             # 'OpenAIModel-u4iGV_text_output'
             splits = v.split("_", 1)
-            if len(splits) != 2:
+            if len(splits) != 2:  # noqa: PLR2004
                 msg = f"Invalid source handle name {v}"
                 raise ValueError(msg)
             v = splits[1]

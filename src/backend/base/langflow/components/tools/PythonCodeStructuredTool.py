@@ -86,7 +86,7 @@ class PythonCodeStructuredTool(LCToolComponent):
         if field_name is None:
             return build_config
 
-        if field_name != "tool_code" and field_name != "tool_function":
+        if field_name not in ("tool_code", "tool_function"):
             return build_config
 
         try:
@@ -125,7 +125,7 @@ class PythonCodeStructuredTool(LCToolComponent):
         return build_config
 
     async def build_tool(self) -> Tool:
-        _local_namespace = {}  # type: ignore
+        _local_namespace = {}  # type: ignore[var-annotated]
         modules = self._find_imports(self.tool_code)
         import_code = ""
         for module in modules["imports"]:
@@ -149,7 +149,7 @@ class PythonCodeStructuredTool(LCToolComponent):
                 return _local_namespace[self.tool_function](**PythonCodeToolFunc.params)
 
         _globals = globals()
-        _local = {}  # type: ignore
+        _local = {}
         _local[self.tool_function] = PythonCodeToolFunc
         _globals.update(_local)
 
@@ -196,7 +196,7 @@ class PythonCodeStructuredTool(LCToolComponent):
 
         PythonCodeToolSchema = None
         if schema_fields:
-            PythonCodeToolSchema = create_model("PythonCodeToolSchema", **schema_fields)  # type: ignore
+            PythonCodeToolSchema = create_model("PythonCodeToolSchema", **schema_fields)
 
         return StructuredTool.from_function(
             func=_local[self.tool_function].run,

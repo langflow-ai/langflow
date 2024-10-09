@@ -46,7 +46,7 @@ class JSONCleaner(Component):
 
     def clean_json(self) -> Message:
         try:
-            from json_repair import repair_json  # type: ignore
+            from json_repair import repair_json
         except ImportError as e:
             msg = "Could not import the json_repair package. Please install it with `pip install json_repair`."
             raise ImportError(msg) from e

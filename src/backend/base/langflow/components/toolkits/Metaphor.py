@@ -1,5 +1,6 @@
-from langchain_core.tools import tool
 from metaphor_python import Metaphor  # type: ignore
+from langchain_community.agent_toolkits.base import BaseToolkit
+from langchain_core.tools import Tool, tool
 
 from langflow.custom import Component
 from langflow.field_typing import Tool
@@ -63,4 +64,4 @@ class MetaphorToolkit(Component):
             """
             return client.find_similar(url, num_results=self.similar_num_results)
 
-        return [search, get_contents, find_similar]  # type: ignore
+        return [search, get_contents, find_similar]

@@ -134,7 +134,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             runnable = agent
         else:
             runnable = AgentExecutor.from_agent_and_tools(
-                agent=agent,  # type: ignore
+                agent=agent,
                 tools=self.tools,
                 handle_parsing_errors=self.handle_parsing_errors,
                 verbose=self.verbose,

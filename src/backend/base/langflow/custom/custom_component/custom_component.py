@@ -288,7 +288,7 @@ class CustomComponent(BaseComponent):
                 data_dict = item.copy()
             else:
                 msg = f"Invalid data type: {type(item)}"
-                raise ValueError(msg)
+                raise TypeError(msg)
 
             data_objects.append(Data(data=data_dict))
 

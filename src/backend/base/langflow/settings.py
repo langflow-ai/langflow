@@ -2,7 +2,7 @@ DEV = False
 
 
 def _set_dev(value):
-    global DEV
+    global DEV  # noqa: PLW0603
     DEV = value
 
 

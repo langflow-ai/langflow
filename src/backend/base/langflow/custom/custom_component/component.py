@@ -6,7 +6,7 @@ from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
 
-import nanoid  # type: ignore
+import nanoid
 import yaml
 from pydantic import BaseModel
 
@@ -42,7 +42,7 @@ _ComponentToolkit = None
 
 
 def _get_component_toolkit():
-    global _ComponentToolkit
+    global _ComponentToolkit  # noqa: PLW0603
     if _ComponentToolkit is None:
         from langflow.base.tools.component_tool import ComponentToolkit
 
@@ -430,7 +430,7 @@ class Component(CustomComponent):
         # Ensure that the output method is a valid method name (string)
         if not isinstance(output.method, str):
             msg = f"Method {output.method} is not a valid output of {value.__class__.__name__}"
-            raise ValueError(msg)
+            raise TypeError(msg)
         return getattr(value, output.method)
 
     def _process_connection_or_parameter(self, key, value):
@@ -503,7 +503,7 @@ class Component(CustomComponent):
                 f"You set {value.display_name} as value for `{key}`. "
                 f"You should pass one of the following: {methods}"
             )
-            raise ValueError(msg)
+            raise TypeError(msg)
         self._set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
@@ -590,9 +590,9 @@ class Component(CustomComponent):
         return frontend_node
 
     def to_frontend_node(self):
-        #! This part here is clunky but we need it like this for
-        #! backwards compatibility. We can change how prompt component
-        #! works and then update this later
+        # ! This part here is clunky but we need it like this for
+        # ! backwards compatibility. We can change how prompt component
+        # ! works and then update this later
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
         for key in self._inputs:

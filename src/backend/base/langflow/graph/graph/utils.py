@@ -235,7 +235,7 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
         if new_edge["source"] == group_node_id:
             new_edge = update_source_handle(new_edge, g_nodes, g_edges)
 
-        if edge["target"] == group_node_id or edge["source"] == group_node_id:
+        if group_node_id in (edge["target"], edge["source"]):
             updated_edges.append(new_edge)
     return updated_edges
 
