@@ -11,6 +11,11 @@ def client():
 
 
 class TestColumn:
+    # Creating a Column instance without display_name sets it to the name
+    def test_create_column_without_display_name(self):
+        column = Column(name="test_column")
+        assert column.display_name == "test_column"
+
     # Creating a Column instance with valid formatter values
     def test_create_column_with_valid_formatter(self):
         column = Column(display_name="Test Column", name="test_column", formatter="date")
