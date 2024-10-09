@@ -24,9 +24,9 @@ def log_vertex_build(db: Session, vertex_build: VertexBuildBase) -> VertexBuildT
     try:
         db.commit()
         return table
-    except IntegrityError as e:
+    except IntegrityError:
         db.rollback()
-        raise e
+        raise
 
 
 def delete_vertex_builds_by_flow_id(db: Session, flow_id: UUID) -> None:

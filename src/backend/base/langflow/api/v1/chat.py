@@ -365,9 +365,9 @@ async def build_flow(
             except Exception as e:
                 if isinstance(e, HTTPException):
                     event_manager.on_error(data={"error": str(e.detail), "statusCode": e.status_code})
-                    raise e
+                    raise
                 event_manager.on_error(data={"error": str(e)})
-                raise e
+                raise
 
             ids, vertices_to_run, graph = vertices_task.result()
         else:
@@ -376,9 +376,9 @@ async def build_flow(
             except Exception as e:
                 if isinstance(e, HTTPException):
                     event_manager.on_error(data={"error": str(e.detail), "statusCode": e.status_code})
-                    raise e
+                    raise
                 event_manager.on_error(data={"error": str(e)})
-                raise e
+                raise
         event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
         await client_consumed_queue.get()
 

@@ -133,8 +133,8 @@ class StoreService(Service):
             try:
                 response = await client.get(url, headers=headers, params=params, timeout=self.timeout)
                 response.raise_for_status()
-            except HTTPError as exc:
-                raise exc
+            except HTTPError:
+                raise
             except Exception as exc:
                 msg = f"GET failed: {exc}"
                 raise ValueError(msg) from exc
@@ -159,8 +159,8 @@ class StoreService(Service):
                 )
                 response.raise_for_status()
             return response.json()
-        except HTTPError as exc:
-            raise exc
+        except HTTPError:
+            raise
         except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Webhook failed")
 

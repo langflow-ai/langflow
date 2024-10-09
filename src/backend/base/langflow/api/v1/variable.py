@@ -48,7 +48,7 @@ def create_variable(
         )
     except Exception as e:
         if isinstance(e, HTTPException):
-            raise e
+            raise
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
