@@ -87,6 +87,9 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         return response
 
 
+telemetry_service_tasks = set()
+
+
 def get_lifespan(fix_migration=False, socketio_server=None, version=None):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -102,7 +105,9 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
             initialize_super_user_if_needed()
             task = asyncio.create_task(get_and_cache_all_types_dict(get_settings_service(), get_cache_service()))
             await create_or_update_starter_projects(task)
-            asyncio.create_task(get_telemetry_service().start())
+            telemetry_service_task = asyncio.create_task(get_telemetry_service().start())
+            telemetry_service_tasks.add(telemetry_service_task)
+            telemetry_service_task.add_done_callback(telemetry_service_tasks.discard)
             load_flows_from_directory()
             yield
         except Exception as exc:
