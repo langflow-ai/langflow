@@ -47,7 +47,7 @@ class KubernetesSecretService(VariableService, Service):
                     name=secret_name,
                     data=variables,
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception(f"Error creating {var} variable")
 
         else:

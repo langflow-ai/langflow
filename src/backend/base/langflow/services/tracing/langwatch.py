@@ -46,7 +46,7 @@ class LangWatchTracer(BaseTracer):
                 name=name_without_id,
                 type="workflow",
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Error setting up LangWatch tracer")
             self._ready = False
 

@@ -4,6 +4,7 @@ from typing import Any
 
 from langchain.agents import Tool
 from langchain_core.tools import StructuredTool
+from loguru import logger
 from pydantic.v1 import Field, create_model
 from pydantic.v1.fields import Undefined
 
@@ -119,8 +120,9 @@ class PythonCodeStructuredTool(LCToolComponent):
             build_config["_functions"]["value"] = json.dumps(named_functions)
             build_config["_classes"]["value"] = json.dumps(classes)
             build_config["tool_function"]["options"] = names
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.status = f"Failed to extract names: {e}"
+            logger.opt(exception=True).debug(self.status)
             build_config["tool_function"]["options"] = ["Failed to parse", str(e)]
         return build_config
 
