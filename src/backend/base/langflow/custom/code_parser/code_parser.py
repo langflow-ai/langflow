@@ -320,10 +320,10 @@ class CodeParser:
         """
         try:
             bases = self.execute_and_inspect_classes(self.code)
-        except Exception as e:
+        except Exception:
             # If the code cannot be executed, return an empty list
             bases = []
-            raise e
+            raise
         return bases
 
     def parse_classes(self, node: ast.ClassDef) -> None:

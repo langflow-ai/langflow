@@ -24,14 +24,6 @@ def log_transaction(db: Session, transaction: TransactionBase) -> TransactionTab
     try:
         db.commit()
         return table
-    except IntegrityError as e:
+    except IntegrityError:
         db.rollback()
-        raise e
-
-
-def delete_transactions_by_flow_id(db: Session, flow_id: UUID):
-    stmt = select(TransactionTable).where(TransactionTable.flow_id == flow_id)
-    transactions = db.exec(stmt)
-    for transaction in transactions:
-        db.delete(transaction)
-    db.commit()
+        raise
