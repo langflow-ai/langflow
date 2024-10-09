@@ -12,10 +12,6 @@ from langflow.schema.message import Message
 from langflow.template import Output
 
 
-class AssistantsRunError(Exception):
-    """Error running assistant"""
-
-
 class AssistantsRun(ComponentWithCache):
     display_name = "Run Assistant"
     description = "Executes an Assistant Run against a thread"
@@ -101,3 +97,7 @@ class AssistantsRun(ComponentWithCache):
             print(e)
             msg = f"Error running assistant: {e}"
             raise AssistantsRunError(msg) from e
+
+
+class AssistantsRunError(Exception):
+    """AssistantsRun error"""
