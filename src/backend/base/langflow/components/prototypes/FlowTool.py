@@ -85,7 +85,7 @@ class FlowToolComponent(LCToolComponent):
         graph = Graph.from_payload(flow_data.data["data"])
         try:
             graph.set_run_id(self.graph.run_id)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.opt(exception=True).warning("Failed to set run_id")
         inputs = get_flow_inputs(graph)
         tool = FlowTool(

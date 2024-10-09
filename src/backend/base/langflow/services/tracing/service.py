@@ -63,7 +63,7 @@ class TracingService(Service):
             log_func, args = await self.logs_queue.get()
             try:
                 await log_func(*args)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("Error processing log")
             finally:
                 self.logs_queue.task_done()
@@ -74,13 +74,13 @@ class TracingService(Service):
         try:
             self.running = True
             self.worker_task = asyncio.create_task(self.log_worker())
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error starting tracing service")
 
     async def flush(self):
         try:
             await self.logs_queue.join()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error flushing logs")
 
     async def stop(self):
@@ -94,7 +94,7 @@ class TracingService(Service):
                 self.worker_task.cancel()
                 self.worker_task = None
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error stopping tracing service")
 
     def _reset_io(self):
@@ -109,7 +109,7 @@ class TracingService(Service):
             self._initialize_langsmith_tracer()
             self._initialize_langwatch_tracer()
             self._initialize_langfuse_tracer()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Error initializing tracers")
 
     def _initialize_langsmith_tracer(self):
@@ -166,7 +166,7 @@ class TracingService(Service):
                 continue
             try:
                 tracer.add_trace(trace_id, trace_name, trace_type, inputs, metadata, vertex)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception(f"Error starting trace {trace_name}")
 
     def _end_traces(self, trace_id: str, trace_name: str, error: Exception | None = None):
@@ -181,7 +181,7 @@ class TracingService(Service):
                     error=error,
                     logs=self._logs[trace_name],
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception(f"Error ending trace {trace_name}")
 
     def _end_all_traces(self, outputs: dict, error: Exception | None = None):
@@ -190,7 +190,7 @@ class TracingService(Service):
                 continue
             try:
                 tracer.end(self.inputs, outputs=self.outputs, error=error, metadata=outputs)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("Error ending all traces")
 
     async def end(self, outputs: dict, error: Exception | None = None):
@@ -225,7 +225,7 @@ class TracingService(Service):
             yield self
         except Exception as e:
             self._end_traces(trace_id, trace_name, e)
-            raise e
+            raise
         finally:
             asyncio.create_task(await asyncio.to_thread(self._end_and_reset, trace_id, trace_name, None))
 

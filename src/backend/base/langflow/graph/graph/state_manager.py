@@ -16,7 +16,7 @@ class GraphStateManager:
     def __init__(self):
         try:
             self.state_service: StateService = get_state_service()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Error getting state service. Defaulting to InMemoryStateService")
             from langflow.services.state.service import InMemoryStateService
 
@@ -42,6 +42,6 @@ class GraphStateManager:
         for callback in self.observers[key]:
             try:
                 callback(key, new_state, append=True)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception(f"Error in observer {callback} for key {key}")
                 logger.warning("Callbacks not implemented yet")
