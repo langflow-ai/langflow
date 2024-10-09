@@ -31,7 +31,7 @@ from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
-from langflow.services.database.models.user.model import User, UserCreate
+from langflow.services.database.models.user.model import User, UserCreate, UserRead
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
@@ -96,7 +96,10 @@ def delete_transactions_by_flow_id(db: Session, flow_id: UUID):
 def _delete_transactions_and_vertex_builds(session, user: User):
     flow_ids = [flow.id for flow in user.flows]
     for flow_id in flow_ids:
+        if not flow_id:
+            continue
         delete_vertex_builds_by_flow_id(session, flow_id)
+        delete_transactions_by_flow_id(session, flow_id)
 
 
 @pytest.fixture
@@ -347,7 +350,7 @@ async def test_user(client):
 @pytest.fixture(scope="function")
 def active_user(client):
     db_manager = get_db_service()
-    with session_getter(db_manager) as session:
+    with db_manager.with_session() as session:
         user = User(
             username="activeuser",
             password=get_password_hash("testpassword"),
@@ -355,14 +358,17 @@ def active_user(client):
             is_superuser=False,
         )
         if active_user := session.exec(select(User).where(User.username == user.username)).first():
-            yield active_user
-            return
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-        yield user
-        # Clean up
-        # Now cleanup transactions, vertex_build
+            user = active_user
+        else:
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+        user = UserRead.model_validate(user, from_attributes=True)
+    yield user
+    # Clean up
+    # Now cleanup transactions, vertex_build
+    with db_manager.with_session() as session:
+        user = session.get(User, user.id)
         _delete_transactions_and_vertex_builds(session, user)
         session.delete(user)
 
