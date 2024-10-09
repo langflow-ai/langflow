@@ -393,6 +393,8 @@ export default function IOModal({
                 <TabsContent value={"0"} className="api-modal-tabs-content">
                   {sessions.map((session, index) => (
                     <SessionSelector
+                      setSelectedView={setSelectedViewField}
+                      selectedView={selectedViewField}
                       key={index}
                       session={session}
                       deleteSession={(session) => {

@@ -15,6 +15,8 @@ export default function SessionSelector({
   isVisible,
   inspectSession,
   updateVisibleSession,
+  selectedView,
+  setSelectedView
 }: {
   deleteSession: (session: string) => void;
   session: string;
@@ -22,6 +24,8 @@ export default function SessionSelector({
   isVisible: boolean;
   inspectSession: (session: string) => void;
   updateVisibleSession: (session: string) => void;
+  selectedView?:{ type: string; id: string }
+  setSelectedView: (view: { type: string; id: string }) => void;
 }) {
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
   const [isEditing, setIsEditing] = useState(false);
@@ -51,6 +55,9 @@ export default function SessionSelector({
       {
         onSuccess: () => {
           updateVisibleSession(editedSession);
+          if(selectedView?.type==="Session" && selectedView?.id===session){
+            setSelectedView({type: "Session", id: editedSession})
+          }
         },
         },
       );
