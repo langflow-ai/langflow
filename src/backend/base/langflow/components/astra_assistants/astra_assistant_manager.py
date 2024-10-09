@@ -2,7 +2,7 @@ import asyncio
 
 from astra_assistants.astra_assistants_manager import AssistantManager
 
-from langflow.components.astra_assistants.util import (
+from langflow.base.astra_assistants.util import (
     get_patched_openai_client,
     litellm_model_names,
     tool_names,

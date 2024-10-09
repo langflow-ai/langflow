@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
 
 import nanoid
 import yaml
-from loguru import logger
 from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
@@ -340,7 +339,6 @@ class Component(CustomComponent):
                 source_code = inspect.getsource(method)
                 ast_tree = ast.parse(dedent(source_code))
             except Exception:  # noqa: BLE001
-                logger.opt(exception=True).debug(f"Could not get source code for method {method}")
                 source_code = self._code
                 ast_tree = ast.parse(dedent(source_code))
 
