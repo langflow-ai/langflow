@@ -1,8 +1,9 @@
+import { Case } from "@/shared/components/caseComponent";
 import { useDarkStore } from "@/stores/darkStore";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import clsx from "clsx";
 import { useEffect } from "react";
-import { FloatComponentType } from "../../types/components";
+import { SliderComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 
 const THRESHOLDS = [0.25, 0.5, 0.75, 1];
@@ -21,14 +22,15 @@ export default function SliderComponent({
   maxLabel = "Wild",
   minLabelIcon = "pencil-ruler",
   maxLabelIcon = "palette",
-  sliderButtons = true,
+  sliderButtons = false,
   sliderButtonsOptions = [
     { value: 0, label: "Precise" },
     { value: 1, label: "Balanced" },
     { value: 2, label: "Creative" },
     { value: 3, label: "Wild" },
   ],
-}: FloatComponentType): JSX.Element {
+  sliderInput = false,
+}: SliderComponentType): JSX.Element {
   const step = rangeSpec?.step ?? 0.1;
   const min = rangeSpec?.min ?? 0;
   const max = rangeSpec?.max ?? 2;
@@ -109,33 +111,60 @@ export default function SliderComponent({
 
   return (
     <div className="w-full rounded-lg pb-2">
-      <div className="relative bottom-2 flex items-center justify-end">
-        <span className="font-mono text-sm">{valueAsNumber.toFixed(2)}</span>
-      </div>
-      <SliderPrimitive.Root
-        className="relative flex h-5 w-full touch-none select-none items-center"
-        value={[valueAsNumber]}
-        onValueChange={handleChange}
-        min={min}
-        max={max}
-        step={step}
-        disabled={disabled}
-      >
-        <SliderPrimitive.Track
-          className={clsx(
-            "relative h-1 w-full grow rounded-full",
-            isDark ? "bg-zinc-800" : "bg-zinc-200",
-          )}
+      <Case condition={!sliderButtons && !sliderInput}>
+        <div className="relative bottom-2 flex items-center justify-end">
+          <span className="font-mono text-sm">{valueAsNumber.toFixed(2)}</span>
+        </div>
+      </Case>
+      <Case condition={sliderButtons && !sliderInput}>
+        <div className="relative bottom-1 flex items-center pb-2">
+          <span className="font-mono text-2xl">{valueAsNumber.toFixed(2)}</span>
+        </div>
+      </Case>
+
+      <div className="flex items-center justify-center">
+        <SliderPrimitive.Root
+          className="relative flex h-5 w-full touch-none select-none items-center"
+          value={[valueAsNumber]}
+          onValueChange={handleChange}
+          min={min}
+          max={max}
+          step={step}
+          disabled={disabled}
         >
-          <SliderPrimitive.Range className="absolute h-full rounded-full bg-gradient-to-r from-indigo-600 to-pink-500" />
-        </SliderPrimitive.Track>
-        <SliderPrimitive.Thumb
-          className={clsx(
-            "block h-6 w-6 rounded-full border-2 bg-pink-500 shadow-lg",
-            isDark ? "border-[#fff]" : "border-zinc-800",
-          )}
-        />
-      </SliderPrimitive.Root>
+          <SliderPrimitive.Track
+            className={clsx(
+              "relative h-1 w-full grow rounded-full",
+              isDark ? "bg-zinc-800" : "bg-zinc-200",
+            )}
+          >
+            <SliderPrimitive.Range className="absolute h-full rounded-full bg-gradient-to-r from-indigo-600 to-pink-500" />
+          </SliderPrimitive.Track>
+          <SliderPrimitive.Thumb
+            className={clsx(
+              "block h-6 w-6 rounded-full border-2 bg-pink-500 shadow-lg",
+              isDark ? "border-[#fff]" : "border-zinc-800",
+            )}
+          />
+        </SliderPrimitive.Root>
+        {sliderInput && (
+          <input
+            type="number"
+            value={valueAsNumber.toFixed(2)}
+            onChange={(e) => handleChange([parseFloat(e.target.value)])}
+            className={clsx(
+              "ml-2 h-10 w-12 rounded-md border px-2 py-1 text-sm arrow-hide",
+              isDark
+                ? "border-zinc-700 bg-zinc-800 text-white"
+                : "border-zinc-300 bg-white text-black",
+            )}
+            min={min}
+            max={max}
+            step={step}
+            disabled={disabled}
+          />
+        )}
+      </div>
 
       {sliderButtons && (
         <div className="my-3">
