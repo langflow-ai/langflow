@@ -50,13 +50,14 @@ def get_or_create_super_user(session: Session, username, password, is_default):
         logger.debug("Creating superuser.")
     try:
         return create_super_user(username, password, db=session)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         if "UNIQUE constraint failed: user.username" in str(exc):
             # This is to deal with workers running this
             # at startup and trying to create the superuser
             # at the same time.
-            logger.debug("Superuser already exists.")
+            logger.opt(exception=True).debug("Superuser already exists.")
             return None
+        logger.opt(exception=True).debug("Error creating superuser.")
 
 
 def setup_superuser(settings_service, session: Session):
@@ -117,13 +118,13 @@ async def teardown_services():
     """
     try:
         teardown_superuser(get_settings_service(), next(get_session()))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.exception(exc)
     try:
         from langflow.services.manager import service_manager
 
         await service_manager.teardown()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.exception(exc)
 
 

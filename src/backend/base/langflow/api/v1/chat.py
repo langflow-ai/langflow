@@ -60,7 +60,7 @@ async def try_running_celery_task(vertex, user_id):
 
         task = build_vertex.delay(vertex)
         vertex.task_id = task.id
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.opt(exception=True).debug("Error running task in celery")
         vertex.task_id = None
         await vertex.build(user_id=user_id)
@@ -167,8 +167,8 @@ async def build_flow(
             if stop_component_id or start_component_id:
                 try:
                     first_layer = graph.sort_vertices(stop_component_id, start_component_id)
-                except Exception as exc:
-                    logger.exception(exc)
+                except Exception:  # noqa: BLE001
+                    logger.exception("Error sorting vertices")
                     first_layer = graph.sort_vertices()
             else:
                 first_layer = graph.sort_vertices()
@@ -233,7 +233,7 @@ async def build_flow(
                 top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
 
                 result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 if isinstance(exc, ComponentBuildException):
                     params = exc.message
                     tb = exc.formatted_traceback
@@ -515,7 +515,7 @@ async def build_vertex(
             next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
             top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
             result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             if isinstance(exc, ComponentBuildException):
                 params = exc.message
                 tb = exc.formatted_traceback
@@ -690,7 +690,7 @@ async def build_vertex_stream(
                     msg = f"No result found for vertex {vertex_id}"
                     raise ValueError(msg)
 
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.exception("Error building Component")
                 exc_message = parse_exception(exc)
                 if exc_message == "The message must be an iterator or an async iterator.":
