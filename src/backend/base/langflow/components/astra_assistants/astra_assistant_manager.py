@@ -1,6 +1,7 @@
 import asyncio
 
 from astra_assistants.astra_assistants_manager import AssistantManager
+from loguru import logger
 
 from langflow.base.astra_assistants.util import (
     get_patched_openai_client,
@@ -99,8 +100,8 @@ class AstraAssistantManager(ComponentWithCache):
                 self.initialized = True
 
     async def process_inputs(self):
-        print(f"env_set is {self.env_set}")
-        print(self.tool)
+        logger.info(f"env_set is {self.env_set}")
+        logger.info(self.tool)
         tools = []
         tool_obj = None
         if self.tool is not None and self.tool != "":
