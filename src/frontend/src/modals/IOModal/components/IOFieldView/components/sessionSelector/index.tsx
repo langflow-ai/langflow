@@ -33,10 +33,11 @@ export default function SessionSelector({
   const { mutate: updateSessionName } = useUpdateSessionName();
   const inputRef = useRef<HTMLInputElement>(null);
 
-
-  useEffect(() => {
-    console.log(isEditing)
-  },[isEditing])
+  useEffect(()=>{
+    setEditedSession(session);
+  },[
+    session
+  ])
 
   const handleEditClick = (e?: React.MouseEvent<HTMLDivElement>) => {
     e?.stopPropagation();
