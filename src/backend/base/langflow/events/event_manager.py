@@ -27,7 +27,7 @@ class EventManager:
     def _validate_callback(callback: EventCallback):
         if not callable(callback):
             msg = "Callback must be callable"
-            raise ValueError(msg)
+            raise TypeError(msg)
         # Check if it has `self, event_type and data`
         sig = inspect.signature(callback)
         parameters = ["manager", "event_type", "data"]

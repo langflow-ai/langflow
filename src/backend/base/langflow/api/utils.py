@@ -45,7 +45,7 @@ def build_input_keys_response(langchain_object, artifacts):
     """Build the input keys response."""
 
     input_keys_response = {
-        "input_keys": {key: "" for key in langchain_object.input_keys},
+        "input_keys": dict.fromkeys(langchain_object.input_keys, ""),
         "memory_keys": [],
         "handle_keys": artifacts.get("handle_keys", []),
     }
@@ -259,9 +259,9 @@ def parse_value(value: Any, input_type: str) -> Any:
 
 async def cascade_delete_flow(session: Session, flow: Flow):
     try:
-        session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))  # type: ignore
-        session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))  # type: ignore
-        session.exec(delete(Flow).where(Flow.id == flow.id))  # type: ignore
+        session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))
+        session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))
+        session.exec(delete(Flow).where(Flow.id == flow.id))
     except Exception as e:
         msg = f"Unable to cascade delete flow: ${flow.id}"
         raise RuntimeError(msg, e) from e

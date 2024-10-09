@@ -8,7 +8,7 @@ from http import HTTPStatus
 from pathlib import Path
 from urllib.parse import urlencode
 
-import nest_asyncio  # type: ignore
+import nest_asyncio
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -192,7 +192,7 @@ def create_app():
             raise ValueError(msg)
 
     if settings.prometheus_enabled:
-        from prometheus_client import start_http_server  # type: ignore
+        from prometheus_client import start_http_server
 
         start_http_server(settings.prometheus_port)
 

@@ -107,7 +107,7 @@ class AIMLModelComponent(LCModelComponent):
         except ImportError:
             return None
         if isinstance(e, BadRequestError):
-            message = e.json_body.get("error", {}).get("message", "")  # type: ignore
+            message = e.json_body.get("error", {}).get("message", "")
             if message:
                 return message
         return None

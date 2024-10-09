@@ -39,7 +39,7 @@ class WikipediaAPIComponent(LCToolComponent):
         return cast(Tool, WikipediaQueryRun(api_wrapper=wrapper))
 
     def _build_wrapper(self) -> WikipediaAPIWrapper:
-        return WikipediaAPIWrapper(  # type: ignore
+        return WikipediaAPIWrapper(
             top_k_results=self.k,
             lang=self.lang,
             load_all_available_meta=self.load_all_available_meta,
