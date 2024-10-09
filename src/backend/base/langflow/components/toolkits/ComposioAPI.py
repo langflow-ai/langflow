@@ -65,7 +65,8 @@ class ComposioAPIComponent(LCToolComponent):
         try:
             entity.get_connection(app=app)
             return f"{app} CONNECTED"
-        except Exception:
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Authorization error")
             return self._handle_authorization_failure(toolset, entity, app)
 
     def _handle_authorization_failure(self, toolset: ComposioToolSet, entity: Any, app: str) -> str:
@@ -85,7 +86,7 @@ class ComposioAPIComponent(LCToolComponent):
             if auth_schemes[0].auth_mode == "API_KEY":
                 return self._process_api_key_auth(entity, app)
             return self._initiate_default_connection(entity, app)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Authorization error")
             return "Error"
 

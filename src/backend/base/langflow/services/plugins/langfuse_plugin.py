@@ -80,7 +80,7 @@ class LangfusePlugin(CallbackPlugin):
                 if trace:
                     return trace.getNewHandler()
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error initializing langfuse callback")
 
         return None

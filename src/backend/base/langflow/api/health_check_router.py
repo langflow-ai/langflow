@@ -48,16 +48,16 @@ async def health_check(
         stmt = select(Flow).where(Flow.id == uuid.uuid4())
         session.exec(stmt).first()
         response.db = "ok"
-    except Exception as e:
-        logger.exception(e)
+    except Exception:  # noqa: BLE001
+        logger.exception("Error checking database")
 
     try:
         chat = get_chat_service()
         await chat.set_cache("health_check", str(user_id))
         await chat.get_cache("health_check")
         response.chat = "ok"
-    except Exception as e:
-        logger.exception(e)
+    except Exception:  # noqa: BLE001
+        logger.exception("Error checking chat service")
 
     if response.has_error():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response.model_dump())

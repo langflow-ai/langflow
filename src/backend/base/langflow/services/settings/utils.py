@@ -33,7 +33,7 @@ def write_secret_to_file(path: Path, value: str) -> None:
         f.write(value.encode("utf-8"))
     try:
         set_secure_permissions(path)
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Failed to set secure permissions on secret key")
 
 

@@ -192,7 +192,7 @@ def configure(
                 rotation="10 MB",  # Log rotation based on file size
                 serialize=True,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error setting up log file")
 
     if log_buffer.enabled():

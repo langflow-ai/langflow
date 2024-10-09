@@ -34,7 +34,7 @@ class ServiceManager:
         for factory in self.get_factories():
             try:
                 self.register_factory(factory)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception(f"Error initializing {factory}")
 
     def register_factory(
@@ -111,7 +111,7 @@ class ServiceManager:
                 result = service.teardown()
                 if asyncio.iscoroutine(result):
                     await result
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.exception(exc)
         self.services = {}
         self.factories = {}

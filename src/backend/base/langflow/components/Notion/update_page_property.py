@@ -104,7 +104,7 @@ class NotionPageUpdate(LCToolComponent):
             error_message = f"An error occurred while making the request: {e}"
             logger.exception(error_message)
             return error_message
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             error_message = f"An unexpected error occurred: {e}"
             logger.exception(error_message)
             return error_message

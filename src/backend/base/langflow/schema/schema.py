@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator, Generator, Iterator
 from enum import Enum
 from typing import Literal
 
+from loguru import logger
 from pydantic import BaseModel
 from typing_extensions import TypedDict
 
@@ -141,5 +142,6 @@ def recursive_serialize_or_str(obj):
             # This a type BaseModel and not an instance of it
             return repr(obj)
         return str(obj)
-    except Exception:
+    except Exception:  # noqa: BLE001
+        logger.opt(exception=True).debug(f"Cannot serialize object {obj}")
         return str(obj)

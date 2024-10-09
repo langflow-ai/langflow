@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
+from loguru import logger
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import Session, select
@@ -53,5 +54,5 @@ def update_user_last_login_at(user_id: UUID, db: Session = Depends(get_session))
         user_data = UserUpdate(last_login_at=datetime.now(timezone.utc))
         user = get_user_by_id(db, user_id)
         return update_user(user, user_data, db)
-    except Exception:
-        pass
+    except Exception:  # noqa: BLE001
+        logger.opt(exception=True).debug("Error updating user last login at")

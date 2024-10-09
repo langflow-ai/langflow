@@ -1,3 +1,5 @@
+from loguru import logger
+
 from langflow.custom import Component
 from langflow.io import MessageInput, Output
 from langflow.schema import Data
@@ -34,7 +36,8 @@ class MessageToDataComponent(Component):
 
             self.status = "Successfully converted Message to Data"
             return data
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             error_message = f"Error converting Message to Data: {e}"
+            logger.opt(exception=True).debug(error_message)
             self.status = error_message
             return Data(data={"error": error_message})

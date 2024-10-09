@@ -2,6 +2,7 @@ from collections.abc import Generator
 from enum import Enum
 
 from fastapi.encoders import jsonable_encoder
+from loguru import logger
 from pydantic import BaseModel
 
 from langflow.schema import Data
@@ -66,7 +67,8 @@ def post_process_raw(raw, artifact_type: str):
             try:
                 raw = jsonable_encoder(raw)
                 artifact_type = ArtifactType.OBJECT.value
-            except Exception:
+            except Exception:  # noqa: BLE001
+                logger.opt(exception=True).debug("Error converting to json")
                 raw = "Built Successfully ✨"
         else:
             raw = "Built Successfully ✨"

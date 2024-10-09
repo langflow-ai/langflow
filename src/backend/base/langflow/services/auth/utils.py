@@ -379,6 +379,7 @@ def decrypt_api_key(encrypted_api_key: str, settings_service=Depends(get_setting
     if isinstance(encrypted_api_key, str):
         try:
             decrypted_key = fernet.decrypt(encrypted_api_key.encode()).decode()
-        except Exception:
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Failed to decrypt API key")
             decrypted_key = fernet.decrypt(encrypted_api_key).decode()
     return decrypted_key

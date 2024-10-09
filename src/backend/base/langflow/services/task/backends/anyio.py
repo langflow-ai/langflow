@@ -37,7 +37,7 @@ class AnyIOTaskResult:
     async def run(self, func, *args, **kwargs):
         try:
             self._result = await func(*args, **kwargs)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self._exception = e
             self._traceback = e.__traceback__
         finally:
@@ -72,7 +72,7 @@ class AnyIOBackend(TaskBackend):
                 self.tasks[task_id] = task_result
                 logger.info(f"Task {task_id} started.")
                 return task_id, task_result
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("An error occurred while launching the task")
                 return None, None
 

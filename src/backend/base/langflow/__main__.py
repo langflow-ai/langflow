@@ -10,6 +10,7 @@ import click
 import httpx
 import typer
 from dotenv import load_dotenv
+from httpx import HTTPError
 from multiprocess import cpu_count
 from multiprocess.context import Process
 from packaging import version as pkg_version
@@ -218,7 +219,7 @@ def run(
         if process is not None:
             process.terminate()
         sys.exit(0)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.exception(e)
         sys.exit(1)
 
@@ -231,7 +232,10 @@ def wait_for_server_ready(host, port):
     while status_code != httpx.codes.OK:
         try:
             status_code = httpx.get(f"http://{host}:{port}/health").status_code
-        except Exception:
+        except HTTPError:
+            time.sleep(1)
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error while waiting for the server to become ready.")
             time.sleep(1)
 
 

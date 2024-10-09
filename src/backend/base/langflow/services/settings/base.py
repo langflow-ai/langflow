@@ -277,7 +277,7 @@ class Settings(BaseSettings):
                         logger.debug("Copying existing database to new location")
                         copy2(f"./{db_file_name}", new_path)
                         logger.debug(f"Copied existing database to {new_path}")
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         logger.exception("Failed to copy database, using default path")
                         new_path = f"./{db_file_name}"
                 else:

@@ -3,6 +3,7 @@ from typing import Any
 
 import requests
 from langchain.tools import StructuredTool
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -116,5 +117,6 @@ class NotionListPages(LCToolComponent):
             return f"Error querying Notion database: {e}"
         except KeyError:
             return "Unexpected response format from Notion API"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error querying Notion database")
             return f"An unexpected error occurred: {e}"

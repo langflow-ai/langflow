@@ -57,7 +57,7 @@ class LangFuseTracer(BaseTracer):
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
             return False
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Error setting up LangSmith tracer")
             return False
 

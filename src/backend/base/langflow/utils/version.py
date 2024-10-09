@@ -82,8 +82,8 @@ def fetch_latest_version(package_name: str, include_prerelease: bool) -> str | N
             return None  # Handle case where no valid versions are found
         return max(valid_versions, key=lambda v: pkg_version.parse(v))
 
-    except Exception as e:
-        logger.exception(e)
+    except Exception:  # noqa: BLE001
+        logger.exception("Error fetching latest version")
         return None
 
 
