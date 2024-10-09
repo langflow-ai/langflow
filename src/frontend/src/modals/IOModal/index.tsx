@@ -82,6 +82,9 @@ export default function IOModal({
             title: "Session deleted successfully.",
           });
           deleteSession(session_id);
+          setvisibleSessions((prev) =>
+            prev.filter((item) => item !== session_id),
+          );
         },
         onError: () => {
           setErrorData({
