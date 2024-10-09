@@ -57,7 +57,7 @@ class AsciiCanvas:
     def draw(self):
         """Draws ASCII canvas on the screen."""
         lines = self.get_lines()
-        print("\n".join(lines))
+        print("\n".join(lines))  # noqa: T201
 
     def point(self, x, y, char):
         """Create a point on ASCII canvas."""

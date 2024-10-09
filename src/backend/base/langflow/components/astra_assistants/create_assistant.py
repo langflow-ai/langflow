@@ -1,3 +1,5 @@
+from loguru import logger
+
 from langflow.base.astra_assistants.util import get_patched_openai_client
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs import MultilineInput, StrInput
@@ -48,7 +50,7 @@ class AssistantsCreateAssistant(ComponentWithCache):
         self.client = get_patched_openai_client(self._shared_component_cache)
 
     def process_inputs(self) -> Message:
-        print(f"env_set is {self.env_set}")
+        logger.info(f"env_set is {self.env_set}")
         assistant = self.client.beta.assistants.create(
             name=self.assistant_name,
             instructions=self.instructions,

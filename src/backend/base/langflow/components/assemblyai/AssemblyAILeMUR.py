@@ -142,7 +142,7 @@ class AssemblyAILeMUR(Component):
             return Data(data={"error": error})
 
     def perform_lemur_action(self, transcript_group: aai.TranscriptGroup, endpoint: str) -> dict:
-        print("Endpoint:", endpoint, type(endpoint))
+        logger.info("Endpoint:", endpoint, type(endpoint))
         if endpoint == "task":
             result = transcript_group.lemur.task(
                 prompt=self.prompt,

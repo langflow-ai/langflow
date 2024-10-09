@@ -3,6 +3,7 @@ from json import JSONDecodeError
 
 import jq
 from json_repair import repair_json
+from loguru import logger
 
 from langflow.custom import Component
 from langflow.inputs import HandleInput, MessageTextInput
@@ -67,8 +68,8 @@ class ParseJSONDataComponent(Component):
 
         full_filter_str = json.dumps(to_filter_as_dict)
 
-        print("to_filter: ", to_filter)
+        logger.info("to_filter: ", to_filter)
 
         results = jq.compile(self.query).input_text(full_filter_str).all()
-        print("results: ", results)
+        logger.info("results: ", results)
         return [Data(data=value) if isinstance(value, dict) else Data(text=str(value)) for value in results]
