@@ -58,7 +58,7 @@ def get_chat_result(
             runnable = runnable | config["output_parser"]
 
         if config:
-            runnable = runnable.with_config(  # type: ignore
+            runnable = runnable.with_config(
                 {
                     "run_name": config.get("display_name", ""),
                     "project_name": config.get("get_project_name", lambda: "")(),
@@ -66,10 +66,10 @@ def get_chat_result(
                 }
             )
         if stream:
-            return runnable.stream(inputs)  # type: ignore
-        message = runnable.invoke(inputs)  # type: ignore
+            return runnable.stream(inputs)
+        message = runnable.invoke(inputs)
         return message.content if hasattr(message, "content") else message
     except Exception as e:
         if config and config.get("_get_exception_message") and (message := config["_get_exception_message"](e)):
             raise ValueError(message) from e
-        raise e
+        raise

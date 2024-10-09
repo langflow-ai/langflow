@@ -87,12 +87,12 @@ class StructuredOutputComponent(Component):
         if self.multiple:
             output_model = create_model(
                 self.schema_name,
-                objects=(list[_output_model], Field(description=f"A list of {self.schema_name}.")),  # type: ignore
+                objects=(list[_output_model], Field(description=f"A list of {self.schema_name}.")),  # type: ignore[valid-type]
             )
         else:
             output_model = _output_model
         try:
-            llm_with_structured_output = cast(LanguageModel, self.llm).with_structured_output(schema=output_model)  # type: ignore
+            llm_with_structured_output = cast(LanguageModel, self.llm).with_structured_output(schema=output_model)  # type: ignore[valid-type, attr-defined]
 
         except NotImplementedError as exc:
             msg = f"{self.llm.__class__.__name__} does not support structured output."
@@ -107,5 +107,5 @@ class StructuredOutputComponent(Component):
             output_dict = output.model_dump()
         else:
             msg = f"Output should be a Pydantic BaseModel, got {type(output)} ({output})"
-            raise ValueError(msg)
+            raise TypeError(msg)
         return Data(data=output_dict)

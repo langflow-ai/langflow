@@ -34,8 +34,8 @@ def _get_type_annotation(type_str: str, multiple: bool) -> type:
         msg = f"Invalid type: {type_str}"
         raise ValueError(msg) from e
     if multiple:
-        return list[base_type]  # type: ignore
-    return base_type  # type: ignore
+        return list[base_type]  # type: ignore[valid-type]
+    return base_type  # type: ignore[return-value]
 
 
 def build_model_from_schema(schema: list[SchemaField]) -> type[PydanticBaseModel]:
