@@ -86,7 +86,7 @@ class LCModelComponent(Component):
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
-            raise e
+            raise
 
     def build_status_message(self, message: AIMessage):
         """
@@ -198,7 +198,7 @@ class LCModelComponent(Component):
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
-            raise e
+            raise
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
