@@ -160,7 +160,7 @@ async def log_transaction(
         with session_getter(get_db_service()) as session:
             inserted = crud_log_transaction(session, transaction)
             logger.debug(f"Logged transaction: {inserted.id}")
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Error logging transaction")
 
 
@@ -188,7 +188,7 @@ def log_vertex_build(
         with session_getter(get_db_service()) as session:
             inserted = crud_log_vertex_build(session, vertex_build)
             logger.debug(f"Logged vertex build: {inserted.build_id}")
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Error logging vertex build")
 
 

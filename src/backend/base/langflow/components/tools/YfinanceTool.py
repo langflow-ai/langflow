@@ -3,6 +3,7 @@ import pprint
 
 import yfinance as yf
 from langchain.tools import StructuredTool
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -95,7 +96,8 @@ class YfinanceToolComponent(LCToolComponent):
 
             return data_list
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             error_message = f"Error retrieving data: {e}"
+            logger.opt(exception=True).debug(error_message)
             self.status = error_message
             return [Data(data={"error": error_message})]

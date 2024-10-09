@@ -4,6 +4,7 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 from langchain.tools import StructuredTool
+from loguru import logger
 from markdown import markdown
 from pydantic import BaseModel, Field
 
@@ -82,7 +83,8 @@ class AddContentToPage(LCToolComponent):
             if hasattr(e, "response") and e.response is not None:
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error adding content to Notion page")
             return f"Error: An unexpected error occurred while adding content to Notion page. {e}"
 
     def process_node(self, node):

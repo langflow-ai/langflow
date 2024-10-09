@@ -168,7 +168,7 @@ async def simple_run_flow_task(
             api_key_user=api_key_user,
         )
 
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception(f"Error running flow {flow.id} task")
 
 

@@ -51,7 +51,7 @@ class TelemetryService(Service):
             func, payload, path = await self.telemetry_queue.get()
             try:
                 await func(payload, path)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("Error sending telemetry data")
             finally:
                 self.telemetry_queue.task_done()
@@ -75,7 +75,7 @@ class TelemetryService(Service):
             logger.exception("HTTP error occurred")
         except httpx.RequestError:
             logger.exception("Request error occurred")
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Unexpected error occurred")
 
     async def log_package_run(self, payload: RunPayload):
@@ -120,7 +120,7 @@ class TelemetryService(Service):
             self._start_time = datetime.now(timezone.utc)
             self.worker_task = asyncio.create_task(self.telemetry_worker())
             asyncio.create_task(self.log_package_version())
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error starting telemetry service")
 
     async def flush(self):
@@ -128,7 +128,7 @@ class TelemetryService(Service):
             return
         try:
             await self.telemetry_queue.join()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error flushing logs")
 
     async def stop(self):
@@ -144,7 +144,7 @@ class TelemetryService(Service):
                 with contextlib.suppress(asyncio.CancelledError):
                     await self.worker_task
             await self.client.aclose()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error stopping tracing service")
 
     async def teardown(self):
