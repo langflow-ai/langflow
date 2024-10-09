@@ -132,7 +132,7 @@ def build_invalid_menu_items(menu_item):
             component_name, component_template = build_invalid_component(component)
             menu_items[component_name] = component_template
             logger.debug(f"Added {component_name} to invalid menu.")
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception(f"Error while creating custom component [{component_name}]")
     return menu_items
 
@@ -165,6 +165,6 @@ def build_menu_items(menu_item):
     for component_name, component_template, component in menu_item["components"]:
         try:
             menu_items[component_name] = component_template
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception(f"Error while building custom component {component['output_types']}")
     return menu_items

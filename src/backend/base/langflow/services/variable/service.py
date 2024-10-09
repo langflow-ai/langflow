@@ -62,7 +62,7 @@ class DatabaseVariableService(VariableService, Service):
                                 _type=CREDENTIAL_TYPE,
                                 session=session,
                             )
-                        except Exception:
+                        except Exception:  # noqa: BLE001
                             logger.exception(f"Error creating {var} variable")
 
         else:

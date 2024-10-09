@@ -20,7 +20,7 @@ def check_celery_availability():
 
         status = get_celery_worker_status(celery_app)
         logger.debug(f"Celery status: {status}")
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.opt(exception=True).debug("Celery not available")
         status = {"availability": None}
     return status
