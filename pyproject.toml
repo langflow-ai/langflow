@@ -1,8 +1,8 @@
 
 
 [tool.uv.sources]
-langflow-base = { workspace = true }
-langflow = { workspace = true }
+langflow-base-nightly = { workspace = true }
+langflow-nightly = { workspace = true }
 
 [tool.uv.workspace]
 members = ["src/backend/base", "."]
@@ -11,8 +11,8 @@ members = ["src/backend/base", "."]
 packages = ["src/backend/langflow"]
 
 [project]
-name = "langflow"
-version = "1.0.18"
+name = "langflow-nightly"
+version = "1.0.18.dev23"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 license = "MIT"
@@ -31,7 +31,7 @@ maintainers = [
 
 # Define your main dependencies here
 dependencies = [
-    "langflow-base==0.0.96",
+    "langflow-base-nightly==0.0.96.dev24",
     "beautifulsoup4>=4.12.2",
     "google-search-results>=2.4.1",
     "google-api-python-client>=2.130.0",
