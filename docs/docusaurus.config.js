@@ -46,6 +46,13 @@ const config = {
             ],
           ],
         },
+        sitemap: {
+          // https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-sitemap
+          // https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
+          lastmod: 'datetime',
+          changefreq: null,
+          priority: null,
+        },
         gtag: {
           trackingID: "G-XHC7G628ZP",
           anonymizeIP: true,
@@ -87,12 +94,6 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      sitemap: {
-        // https://www.sitemaps.org/protocol.html#xmlTagDefinitions
-        changefreq: "weekly",
-        priority: 0.5,
-        ignorePatterns: [],
-      },
       navbar: {
         hideOnScroll: true,
         title: "Langflow",
