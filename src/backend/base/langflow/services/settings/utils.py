@@ -12,7 +12,7 @@ def set_secure_permissions(file_path: Path):
         import win32con
         import win32security
 
-        user, domain, _ = win32security.LookupAccountName("", win32api.GetUserName())
+        user, _, _ = win32security.LookupAccountName("", win32api.GetUserName())
         sd = win32security.GetFileSecurity(str(file_path), win32security.DACL_SECURITY_INFORMATION)
         dacl = win32security.ACL()
 
@@ -33,7 +33,7 @@ def write_secret_to_file(path: Path, value: str) -> None:
         f.write(value.encode("utf-8"))
     try:
         set_secure_permissions(path)
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Failed to set secure permissions on secret key")
 
 

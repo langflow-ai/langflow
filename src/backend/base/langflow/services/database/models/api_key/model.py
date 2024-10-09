@@ -20,7 +20,7 @@ class ApiKeyBase(SQLModel):
     is_active: bool = Field(default=True)
 
 
-class ApiKey(ApiKeyBase, table=True):  # type: ignore
+class ApiKey(ApiKeyBase, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     created_at: datetime | None = Field(
         default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

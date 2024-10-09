@@ -126,7 +126,7 @@ class Vertex:
 
     def set_state(self, state: str):
         self.state = VertexStates[state]
-        if self.state == VertexStates.INACTIVE and self.graph.in_degree_map[self.id] < 2:
+        if self.state == VertexStates.INACTIVE and self.graph.in_degree_map[self.id] <= 1:
             # If the vertex is inactive and has only one in degree
             # it means that it is not a merge point in the graph
             self.graph.inactivated_vertices.add(self.id)
@@ -267,7 +267,7 @@ class Vertex:
     def get_task(self):
         # using the task_id, get the task from celery
         # and return it
-        from celery.result import AsyncResult  # type: ignore
+        from celery.result import AsyncResult
 
         return AsyncResult(self.task_id)
 
@@ -352,7 +352,7 @@ class Vertex:
                         if "too many values to unpack" in str(e):
                             full_path = file_path
                         else:
-                            raise e
+                            raise
                     params[field_name] = full_path
                 elif field.get("required"):
                     field_display_name = field.get("display_name")
@@ -361,18 +361,21 @@ class Vertex:
                         "Setting to None."
                     )
                     params[field_name] = None
+                elif field["list"]:
+                    params[field_name] = []
                 else:
-                    if field["list"]:
-                        params[field_name] = []
-                    else:
-                        params[field_name] = None
+                    params[field_name] = None
 
             elif field.get("type") in DIRECT_TYPES and params.get(field_name) is None:
                 val = field.get("value")
                 if field.get("type") == "code":
                     try:
-                        params[field_name] = ast.literal_eval(val) if val else None
-                    except Exception:
+                        if field_name == "code":
+                            params[field_name] = val
+                        else:
+                            params[field_name] = ast.literal_eval(val) if val else None
+                    except Exception:  # noqa: BLE001
+                        logger.debug(f"Error evaluating code for {field_name}")
                         params[field_name] = val
                 elif field.get("type") in ["dict", "NestedDict"]:
                     # When dict comes from the frontend it comes as a
@@ -447,9 +450,9 @@ class Vertex:
         if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
             return
         if not overwrite:
-            for key in new_params.copy():  # type: ignore
+            for key in new_params.copy():  # type: ignore[attr-defined]
                 if key not in self._raw_params:
-                    new_params.pop(key)  # type: ignore
+                    new_params.pop(key)  # type: ignore[attr-defined]
         self._raw_params.update(new_params)
         self.params = self._raw_params.copy()
         self.updated_raw_params = True
@@ -693,9 +696,9 @@ class Vertex:
         if key == "func":
             if not isinstance(result, types.FunctionType):
                 if hasattr(result, "run"):
-                    result = result.run  # type: ignore
+                    result = result.run
                 elif hasattr(result, "get_function"):
-                    result = result.get_function()  # type: ignore
+                    result = result.get_function()
             elif inspect.iscoroutinefunction(result):
                 self.params["coroutine"] = result
             else:
@@ -732,9 +735,9 @@ class Vertex:
         Updates the built object and its artifacts.
         """
         if isinstance(result, tuple):
-            if len(result) == 2:
+            if len(result) == 2:  # noqa: PLR2004
                 self._built_object, self.artifacts = result
-            elif len(result) == 3:
+            elif len(result) == 3:  # noqa: PLR2004
                 self._custom_component, self._built_object, self.artifacts = result
                 self.logs = self._custom_component._output_logs
                 self.artifacts_raw = self.artifacts.get("raw", None)
@@ -751,7 +754,7 @@ class Vertex:
         """
         if isinstance(self._built_object, UnbuiltObject):
             msg = f"{self.display_name}: {self._built_object_repr()}"
-            raise ValueError(msg)
+            raise TypeError(msg)
         if self._built_object is None:
             message = f"{self.display_name} returned None."
             if self.base_type == "custom_components":
@@ -759,7 +762,7 @@ class Vertex:
 
             logger.warning(message)
         elif isinstance(self._built_object, Iterator | AsyncIterator):
-            if self.display_name in ["Text Output"]:
+            if self.display_name == "Text Output":
                 msg = f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
                 raise ValueError(msg)
 

@@ -8,7 +8,7 @@ from langflow.services.deps import get_settings_service
 from langflow.services.plugins.base import CallbackPlugin
 
 if TYPE_CHECKING:
-    from langfuse import Langfuse  # type: ignore
+    from langfuse import Langfuse
 
 
 class LangfuseInstance:
@@ -25,7 +25,7 @@ class LangfuseInstance:
     def create(cls):
         try:
             logger.debug("Creating Langfuse instance")
-            from langfuse import Langfuse  # type: ignore
+            from langfuse import Langfuse
 
             settings_manager = get_settings_service()
 
@@ -80,7 +80,7 @@ class LangfusePlugin(CallbackPlugin):
                 if trace:
                     return trace.getNewHandler()
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error initializing langfuse callback")
 
         return None

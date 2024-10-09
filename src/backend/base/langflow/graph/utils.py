@@ -106,7 +106,7 @@ def get_artifact_type(value, build_result) -> str:
             result = ArtifactType.MESSAGE
 
     if result == ArtifactType.UNKNOWN and (
-        isinstance(build_result, Generator) or isinstance(value, Message) and isinstance(value.text, Generator)
+        isinstance(build_result, Generator) or (isinstance(value, Message) and isinstance(value.text, Generator))
     ):
         result = ArtifactType.STREAM
 
@@ -155,7 +155,7 @@ async def log_transaction(
         with session_getter(get_db_service()) as session:
             inserted = crud_log_transaction(session, transaction)
             logger.debug(f"Logged transaction: {inserted.id}")
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Error logging transaction")
 
 
@@ -183,7 +183,7 @@ def log_vertex_build(
         with session_getter(get_db_service()) as session:
             inserted = crud_log_vertex_build(session, vertex_build)
             logger.debug(f"Logged vertex build: {inserted.build_id}")
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Error logging vertex build")
 
 
@@ -195,7 +195,7 @@ def rewrite_file_path(file_path: str):
 
     file_path_split = [part for part in file_path.split("/") if part]
 
-    if len(file_path_split) >= 2:
+    if len(file_path_split) > 1:
         consistent_file_path = f"{file_path_split[-2]}/{file_path_split[-1]}"
     else:
         consistent_file_path = "/".join(file_path_split)

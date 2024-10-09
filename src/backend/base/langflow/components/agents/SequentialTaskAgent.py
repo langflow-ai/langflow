@@ -114,7 +114,7 @@ class SequentialTaskAgentComponent(Component):
             llm=self.llm,
             verbose=self.verbose,
             memory=self.memory,
-            tools=self.tools if self.tools else [],
+            tools=self.tools or [],
             allow_delegation=self.allow_delegation,
             allow_code_execution=self.allow_code_execution,
             **agent_kwargs,

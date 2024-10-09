@@ -57,10 +57,11 @@ def build_json(root, graph) -> dict:
     template = root.data["node"]["template"]
     final_dict = template.copy()
 
-    for key, value in final_dict.items():
+    for key in final_dict:
         if key == "_type":
             continue
 
+        value = final_dict[key]
         node_type = value["type"]
 
         if "value" in value and value["value"] is not None:
@@ -81,7 +82,7 @@ def build_json(root, graph) -> dict:
                 raise ValueError(msg)
             values = [build_json(child, graph) for child in children]
             value = (
-                list(values) if value["list"] else next(iter(values), None)  # type: ignore
+                list(values) if value["list"] else next(iter(values), None)  # type: ignore[arg-type]
             )
         final_dict[key] = value
 

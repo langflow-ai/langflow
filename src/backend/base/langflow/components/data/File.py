@@ -48,5 +48,5 @@ class FileComponent(Component):
             raise ValueError(msg)
 
         data = parse_text_file_to_data(resolved_path, silent_errors)
-        self.status = data if data else "No data"
+        self.status = data or "No data"
         return data or Data()

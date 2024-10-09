@@ -129,13 +129,13 @@ class GmailLoaderComponent(Component):
                     messages = thread["messages"]
 
                     response_email = None
-                    for message in messages:
-                        email_data = message["payload"]["headers"]
+                    for _message in messages:
+                        email_data = _message["payload"]["headers"]
                         for values in email_data:
                             if values["name"] == "Message-ID":
                                 message_id = values["value"]
                                 if message_id == in_reply_to:
-                                    response_email = message
+                                    response_email = _message
                     if response_email is None:
                         msg = "Response email not found in the thread."
                         raise ValueError(msg)
@@ -156,7 +156,7 @@ class GmailLoaderComponent(Component):
                         yield self._get_message_data(service, message)
                     except Exception as e:
                         if self.raise_error:
-                            raise e
+                            raise
                         else:
                             print(f"Error processing message {message['id']}: {e}")
 
