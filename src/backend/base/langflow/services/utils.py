@@ -166,8 +166,8 @@ def initialize_services(fix_migration: bool = False, socketio_server=None):
     # Setup the superuser
     try:
         initialize_database(fix_migration=fix_migration)
-    except Exception as exc:
-        raise exc
+    except Exception:
+        raise
     setup_superuser(get_service(ServiceType.SETTINGS_SERVICE), next(get_session()))
     try:
         get_db_service().migrate_flows_if_auto_login()

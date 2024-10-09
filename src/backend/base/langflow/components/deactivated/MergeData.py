@@ -89,6 +89,6 @@ class MergeDataComponent(Component):
             logger.info("Data merging process completed successfully.")
             return merged_data_list
 
-        except Exception as e:
+        except Exception:
             logger.exception("An error occurred during the data merging process.")
-            raise e
+            raise
