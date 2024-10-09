@@ -675,10 +675,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().setLockChat(false);
       },
       onBuildError: (title: string, list: string[], elementList) => {
-        const idList = elementList
-          .map((element) => element.id)
-          .filter(Boolean) as string[];
-        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
+        const idList =
+          (elementList
+            ?.map((element) => element.id)
+            .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
+        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
         if (get().componentsToUpdate)
           setErrorData({
             title:
