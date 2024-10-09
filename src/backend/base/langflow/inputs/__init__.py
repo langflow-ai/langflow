@@ -19,6 +19,7 @@ from .inputs import (
     NestedDictInput,
     PromptInput,
     SecretStrInput,
+    SliderInput,
     StrInput,
     TableInput,
 )
@@ -46,4 +47,5 @@ __all__ = [
     "Input",
     "DefaultPromptField",
     "LinkInput",
+    "SliderInput",
 ]
