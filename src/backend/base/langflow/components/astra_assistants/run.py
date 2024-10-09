@@ -79,7 +79,6 @@ class AssistantsRun(ComponentWithCache):
                 super().__init__()
 
             def on_exception(self, exception: Exception) -> None:
-                print(f"Exception: {exception}")
                 raise exception
 
         event_handler = EventHandler()
@@ -88,8 +87,6 @@ class AssistantsRun(ComponentWithCache):
             assistant_id=self.assistant_id,
             event_handler=event_handler,
         ) as stream:
-            # return stream.text_deltas
             for part in stream.text_deltas:
                 text += part
-                print(part)
         return Message(text=text)
