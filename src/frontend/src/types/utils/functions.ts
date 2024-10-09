@@ -16,10 +16,12 @@ export enum FormatterType {
   json = "json",
 }
 
-export type ColumnField = {
-  display_name: string;
+export interface ColumnField {
   name: string;
+  display_name: string;
   sortable: boolean;
   filterable: boolean;
   formatter?: FormatterType;
-};
+  description?: string;
+  default?: any; // Add this line
+}

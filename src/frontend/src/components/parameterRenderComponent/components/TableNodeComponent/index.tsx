@@ -92,7 +92,7 @@ export default function TableNodeComponent({
   function addRow() {
     const newRow = {};
     componentColumns.forEach((column) => {
-      newRow[column.name] = null;
+      newRow[column.name] = column.default ?? null; // Use the default value if available
     });
     handleOnNewValue({ value: [...value, newRow] });
   }
