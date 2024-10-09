@@ -1,0 +1,12 @@
+{
+  "AWSEBDockerrunVersion": "1",
+  "Image": {
+    "Name": "langflowai/langflow",
+    "Update": "true"
+  },
+  "Ports": [
+    {
+      "ContainerPort": "7860"
+    }
+  ]
+}
