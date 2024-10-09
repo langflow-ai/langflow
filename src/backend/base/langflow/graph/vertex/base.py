@@ -809,7 +809,12 @@ class Vertex:
                     self.update_raw_params({"session_id": inputs.get("session")}, overwrite=True)
             if self._is_chat_input() and (inputs or files):
                 chat_input = {}
-                if inputs and isinstance(inputs, dict) and "input_value" in inputs:
+                if (
+                    inputs
+                    and isinstance(inputs, dict)
+                    and "input_value" in inputs
+                    and inputs.get("input_value") is not None
+                ):
                     chat_input.update({"input_value": inputs.get(INPUT_FIELD_NAME, "")})
                 if files:
                     chat_input.update({"files": files})
