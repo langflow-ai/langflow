@@ -28,6 +28,8 @@ from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async, unescape_string
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from langflow.custom import Component
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.base import CycleEdge, Edge
@@ -101,6 +103,7 @@ class Vertex:
         self.use_result = False
         self.build_times: list[float] = []
         self.state = VertexStates.ACTIVE
+        self.log_transaction_tasks: set[asyncio.Task] = set()
 
     def set_input_value(self, name: str, value: Any):
         if self._custom_component is None:
@@ -370,9 +373,12 @@ class Vertex:
                 val = field.get("value")
                 if field.get("type") == "code":
                     try:
-                        params[field_name] = ast.literal_eval(val) if val else None
+                        if field_name == "code":
+                            params[field_name] = val
+                        else:
+                            params[field_name] = ast.literal_eval(val) if val else None
                     except Exception:  # noqa: BLE001
-                        logger.opt(exception=True).debug(f"Error evaluating code for {field_name}")
+                        logger.debug(f"Error evaluating code for {field_name}")
                         params[field_name] = val
                 elif field.get("type") in ["dict", "NestedDict"]:
                     # When dict comes from the frontend it comes as a
@@ -622,6 +628,13 @@ class Vertex:
         async with self._lock:
             return await self._get_result(requester, target_handle_name)
 
+    def _log_transaction_async(
+        self, flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
+    ) -> None:
+        task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
+        self.log_transaction_tasks.add(task)
+        task.add_done_callback(self.log_transaction_tasks.discard)
+
     async def _get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
         """
         Retrieves the result of the built component.
@@ -634,13 +647,13 @@ class Vertex:
         flow_id = self.graph.flow_id
         if not self._built:
             if flow_id:
-                asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="error"))
+                self._log_transaction_async(str(flow_id), source=self, target=requester, status="error")
             msg = f"Component {self.display_name} has not been built yet"
             raise ValueError(msg)
 
         result = self._built_result if self.use_result else self._built_object
         if flow_id:
-            asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="success"))
+            self._log_transaction_async(str(flow_id), source=self, target=requester, status="success")
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: Vertex):
