@@ -112,6 +112,8 @@ class ThreadSafeSingletonMetaUsingWeakref(type):
 
 class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
     _metrics_registry: dict[str, Metric] = {}
+    _metrics: dict[str, Counter | ObservableGaugeWrapper | Histogram | UpDownCounter] = {}
+    _meter_provider: MeterProvider | None = None
 
     def _add_metric(self, name: str, description: str, unit: str, metric_type: MetricType, labels: dict[str, bool]):
         metric = Metric(name=name, description=description, metric_type=metric_type, unit=unit, labels=labels)
@@ -140,33 +142,37 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             labels={"flow_id": mandatory_label},
         )
 
-    _metrics: dict[str, Counter | ObservableGaugeWrapper | Histogram | UpDownCounter] = {}
-
     def __init__(self, prometheus_enabled: bool = True):
-        self._register_metric()
+        if not self._metrics_registry:
+            self._register_metric()
 
-        resource = Resource.create({"service.name": "langflow"})
-        metric_readers = []
+        if self._meter_provider is None:
+            resource = Resource.create({"service.name": "langflow"})
+            metric_readers = []
 
-        # configure prometheus exporter
-        self.prometheus_enabled = prometheus_enabled
-        if prometheus_enabled:
-            metric_readers.append(PrometheusMetricReader())
+            # configure prometheus exporter
+            self.prometheus_enabled = prometheus_enabled
+            if prometheus_enabled:
+                metric_readers.append(PrometheusMetricReader())
 
-        meter_provider = MeterProvider(resource=resource, metric_readers=metric_readers)
-        metrics.set_meter_provider(meter_provider)
-        self.meter = meter_provider.get_meter(langflow_meter_name)
+            self._meter_provider = MeterProvider(resource=resource, metric_readers=metric_readers)
+            metrics.set_meter_provider(self._meter_provider)
+
+        self.meter = self._meter_provider.get_meter(langflow_meter_name)
 
         for name, metric in self._metrics_registry.items():
             if name != metric.name:
                 msg = f"Key '{name}' does not match metric name '{metric.name}'"
                 raise ValueError(msg)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-
-                self._metrics[metric.name] = self._create_metric(metric)
+            if name not in self._metrics:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    self._metrics[metric.name] = self._create_metric(metric)
 
     def _create_metric(self, metric):
+        if metric.name in self._metrics:
+            return self._metrics[metric.name]
+
         if metric.type == MetricType.COUNTER:
             return self.meter.create_counter(
                 name=metric.name,
