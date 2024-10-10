@@ -3,7 +3,7 @@ import ShadTooltip from "@/components/shadTooltipComponent";
 import useFlowStore from "@/stores/flowStore";
 import { isTargetHandleConnected } from "@/utils/reactflowUtils";
 import { CustomCellRendererProps } from "ag-grid-react";
-import ToggleShadComponent from "../../../toggleShadComponent";
+import ToggleShadComponent from "../../../parameterRenderComponent/components/toggleShadComponent";
 
 export default function TableAdvancedToggleCellRender({
   value: { nodeId, parameterId },
@@ -38,14 +38,13 @@ export default function TableAdvancedToggleCellRender({
         <div>
           <div className="flex h-full items-center">
             <ToggleShadComponent
-              id={"show" + parameterId}
               disabled={disabled}
-              enabled={!parameter.advanced}
-              setEnabled={(e) => {
-                handleOnNewValue({ advanced: !e });
-              }}
-              size="small"
+              value={!parameter.advanced}
+              handleOnNewValue={handleOnNewValue}
               editNode={true}
+              showToogle
+              size="small"
+              id={"show" + parameterId}
             />
           </div>
         </div>

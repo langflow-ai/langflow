@@ -26,7 +26,8 @@ class OpenAIModelComponent(LCModelComponent):
     icon = "OpenAI"
     name = "OpenAIModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -114,11 +115,11 @@ class OpenAIModelComponent(LCModelComponent):
         )
         if json_mode:
             if output_schema_dict:
-                output = output.with_structured_output(schema=output_schema_dict, method="json_mode")  # type: ignore
+                output = output.with_structured_output(schema=output_schema_dict, method="json_mode")
             else:
-                output = output.bind(response_format={"type": "json_object"})  # type: ignore
+                output = output.bind(response_format={"type": "json_object"})
 
-        return output  # type: ignore
+        return output
 
     def _get_exception_message(self, e: Exception):
         """
@@ -136,7 +137,7 @@ class OpenAIModelComponent(LCModelComponent):
         except ImportError:
             return None
         if isinstance(e, BadRequestError):
-            message = e.body.get("message")  # type: ignore
+            message = e.body.get("message")
             if message:
                 return message
         return None

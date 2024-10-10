@@ -1,21 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, cast
-from uuid import UUID
 
-import nanoid  # type: ignore
+import nanoid
 from loguru import logger
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
-from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from uuid import UUID
+
     from langchain.callbacks.base import BaseCallbackHandler
     from langwatch.tracer import ContextSpan
 
     from langflow.graph.vertex.base import Vertex
+    from langflow.services.tracing.schema import Log
 
 
 class LangWatchTracer(BaseTracer):
@@ -45,8 +46,8 @@ class LangWatchTracer(BaseTracer):
                 name=name_without_id,
                 type="workflow",
             )
-        except Exception as e:
-            logger.debug(f"Error setting up LangWatch tracer: {e}")
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error setting up LangWatch tracer")
             self._ready = False
 
     @property
@@ -59,7 +60,7 @@ class LangWatchTracer(BaseTracer):
 
             self._client = langwatch
         except ImportError:
-            logger.error("Could not import langwatch. Please install it with `pip install langwatch`.")
+            logger.exception("Could not import langwatch. Please install it with `pip install langwatch`.")
             return False
         return True
 

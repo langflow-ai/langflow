@@ -1,4 +1,5 @@
 import assemblyai as aai
+from loguru import logger
 
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
@@ -85,7 +86,8 @@ class AssemblyAIListTranscripts(Component):
 
             self.status = transcripts
             return transcripts
-        except Exception as e:
-            error_data = Data(data={"error": f"An error occurred: {str(e)}"})
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error listing transcripts")
+            error_data = Data(data={"error": f"An error occurred: {e}"})
             self.status = [error_data]
             return [error_data]

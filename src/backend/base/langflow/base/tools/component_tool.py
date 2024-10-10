@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from langchain_core.tools import BaseTool
 from langchain_core.tools.structured import StructuredTool
 from loguru import logger
 
@@ -12,17 +10,21 @@ from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.io.schema import create_input_schema
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from langchain_core.tools import BaseTool
+
     from langflow.custom.custom_component.component import Component
     from langflow.inputs.inputs import InputTypes
     from langflow.io import Output
 
 
-def _get_input_type(input: InputTypes):
-    if input.input_types:
-        if len(input.input_types) == 1:
-            return input.input_types[0]
-        return " | ".join(input.input_types)
-    return input.field_type
+def _get_input_type(_input: InputTypes):
+    if _input.input_types:
+        if len(_input.input_types) == 1:
+            return _input.input_types[0]
+        return " | ".join(_input.input_types)
+    return _input.field_type
 
 
 def build_description(component: Component, output: Output):
@@ -58,7 +60,7 @@ def _format_tool_name(name: str):
     return re.sub(r"[^a-zA-Z0-9_-]", "-", name)
 
 
-class ComponentToolkit:  # type: ignore
+class ComponentToolkit:
     def __init__(self, component: Component):
         self.component = component
 

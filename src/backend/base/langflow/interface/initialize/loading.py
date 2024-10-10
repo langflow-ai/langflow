@@ -10,13 +10,13 @@ from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
-from langflow.events.event_manager import EventManager
 from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.services.deps import get_tracing_service
 
 if TYPE_CHECKING:
     from langflow.custom import Component, CustomComponent
+    from langflow.events.event_manager import EventManager
     from langflow.graph.vertex.base import Vertex
 
 
@@ -120,7 +120,7 @@ def update_params_with_load_from_db_fields(
                 except ValueError as e:
                     # check if "User id is not set" is in the error message, this is an internal bug
                     if "User id is not set" in str(e):
-                        raise e
+                        raise
                     logger.debug(str(e))
                 if fallback_to_env_vars and key is None:
                     var = os.getenv(params[field])
@@ -134,12 +134,11 @@ def update_params_with_load_from_db_fields(
 
                 params[field] = key
 
-            except TypeError as exc:
-                raise exc
+            except TypeError:
+                raise
 
-            except Exception as exc:
-                logger.error(f"Failed to get value for {field} from custom component. Setting it to None. Error: {exc}")
-
+            except Exception:  # noqa: BLE001
+                logger.exception(f"Failed to get value for {field} from custom component. Setting it to None.")
                 params[field] = None
 
     return params

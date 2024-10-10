@@ -1,23 +1,24 @@
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 from loguru import logger
 from sqlalchemy import delete
-from sqlmodel import Session
 
 from langflow.graph.graph.base import Graph
-from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.store.schema import StoreComponentCreate
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.flow.model import Flow
+    from sqlmodel import Session
+
+    from langflow.services.chat.service import ChatService
+    from langflow.services.store.schema import StoreComponentCreate
 
 
 API_WORDS = ["api", "key", "token"]
@@ -44,7 +45,7 @@ def build_input_keys_response(langchain_object, artifacts):
     """Build the input keys response."""
 
     input_keys_response = {
-        "input_keys": {key: "" for key in langchain_object.input_keys},
+        "input_keys": dict.fromkeys(langchain_object.input_keys, ""),
         "memory_keys": [],
         "handle_keys": artifacts.get("handle_keys", []),
     }
@@ -114,15 +115,18 @@ def format_elapsed_time(elapsed_time: float) -> str:
     - Less than 1 minute: returns seconds rounded to 2 decimals
     - 1 minute or more: returns minutes and seconds
     """
-    if elapsed_time < 1:
-        milliseconds = int(round(elapsed_time * 1000))
+    delta = timedelta(seconds=elapsed_time)
+    if delta < timedelta(seconds=1):
+        milliseconds = round(delta / timedelta(milliseconds=1))
         return f"{milliseconds} ms"
-    if elapsed_time < 60:
+
+    if delta < timedelta(minutes=1):
         seconds = round(elapsed_time, 2)
         unit = "second" if seconds == 1 else "seconds"
         return f"{seconds} {unit}"
-    minutes = int(elapsed_time // 60)
-    seconds = round(elapsed_time % 60, 2)
+
+    minutes = delta // timedelta(minutes=1)
+    seconds = round((delta - timedelta(minutes=minutes)).total_seconds(), 2)
     minutes_unit = "minute" if minutes == 1 else "minutes"
     seconds_unit = "second" if seconds == 1 else "seconds"
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
@@ -255,9 +259,9 @@ def parse_value(value: Any, input_type: str) -> Any:
 
 async def cascade_delete_flow(session: Session, flow: Flow):
     try:
-        session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))  # type: ignore
-        session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))  # type: ignore
-        session.exec(delete(Flow).where(Flow.id == flow.id))  # type: ignore
+        session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))
+        session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))
+        session.exec(delete(Flow).where(Flow.id == flow.id))
     except Exception as e:
         msg = f"Unable to cascade delete flow: ${flow.id}"
         raise RuntimeError(msg, e) from e

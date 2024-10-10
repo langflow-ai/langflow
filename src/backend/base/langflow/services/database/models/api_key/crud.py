@@ -1,12 +1,15 @@
 import datetime
 import secrets
 import threading
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlmodel import Session, select
-from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
+
+if TYPE_CHECKING:
+    from sqlmodel.sql.expression import SelectOfScalar
 
 
 def get_api_keys(session: Session, user_id: UUID) -> list[ApiKeyRead]:

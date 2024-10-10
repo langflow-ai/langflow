@@ -2,6 +2,7 @@ import ast
 import operator
 
 from langchain.tools import StructuredTool
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -69,14 +70,15 @@ class CalculatorToolComponent(LCToolComponent):
             return [Data(data={"result": formatted_result})]
 
         except (SyntaxError, TypeError, KeyError) as e:
-            error_message = f"Invalid expression: {str(e)}"
+            error_message = f"Invalid expression: {e}"
             self.status = error_message
             return [Data(data={"error": error_message})]
         except ZeroDivisionError:
             error_message = "Error: Division by zero"
             self.status = error_message
             return [Data(data={"error": error_message})]
-        except Exception as e:
-            error_message = f"Error: {str(e)}"
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error evaluating expression")
+            error_message = f"Error: {e}"
             self.status = error_message
             return [Data(data={"error": error_message})]

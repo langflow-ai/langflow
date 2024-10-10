@@ -15,30 +15,37 @@ followed by a newline with a space.
 
 import re
 import shlex
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from http.cookies import SimpleCookie
+from typing import NamedTuple
 
-ParsedArgs = namedtuple(
-    "ParsedArgs",
-    [
-        "command",
-        "url",
-        "data",
-        "data_binary",
-        "method",
-        "headers",
-        "compressed",
-        "insecure",
-        "user",
-        "include",
-        "silent",
-        "proxy",
-        "proxy_user",
-        "cookies",
-    ],
-)
 
-ParsedContext = namedtuple("ParsedContext", ["method", "url", "data", "headers", "cookies", "verify", "auth", "proxy"])
+class ParsedArgs(NamedTuple):
+    command: str | None
+    url: str | None
+    data: str | None
+    data_binary: str | None
+    method: str
+    headers: list[str]
+    compressed: bool
+    insecure: bool
+    user: tuple[str, str]
+    include: bool
+    silent: bool
+    proxy: str | None
+    proxy_user: str | None
+    cookies: dict[str, str]
+
+
+class ParsedContext(NamedTuple):
+    method: str
+    url: str
+    data: str | None
+    headers: dict[str, str]
+    cookies: dict[str, str]
+    verify: bool
+    auth: tuple[str, str] | None
+    proxy: dict[str, str] | None
 
 
 def normalize_newlines(multiline_text):

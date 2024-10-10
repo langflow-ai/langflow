@@ -12,7 +12,8 @@ class NVIDIAModelComponent(LCModelComponent):
     description = "Generates text using NVIDIA LLMs."
     icon = "NVIDIA"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -61,7 +62,7 @@ class NVIDIAModelComponent(LCModelComponent):
         if field_name == "base_url" and field_value:
             try:
                 build_model = self.build_model()
-                ids = [model.id for model in build_model.available_models]  # type: ignore
+                ids = [model.id for model in build_model.available_models]
                 build_config["model_name"]["options"] = ids
                 build_config["model_name"]["value"] = ids[0]
             except Exception as e:
@@ -84,7 +85,7 @@ class NVIDIAModelComponent(LCModelComponent):
             max_tokens=max_tokens or None,
             model=model_name,
             base_url=self.base_url,
-            api_key=nvidia_api_key,  # type: ignore
+            api_key=nvidia_api_key,
             temperature=temperature or 0.1,
             seed=seed,
         )

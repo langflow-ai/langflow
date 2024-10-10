@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 from typing import TYPE_CHECKING
 
@@ -9,6 +8,8 @@ from loguru import logger
 from langflow.custom.utils import abuild_custom_components, build_custom_components
 
 if TYPE_CHECKING:
+    import asyncio
+
     from langflow.services.cache.base import CacheService
     from langflow.services.settings.service import SettingsService
 
@@ -66,7 +67,7 @@ async def get_and_cache_all_types_dict(
     force_refresh: bool = False,
     lock: asyncio.Lock | None = None,
 ):
-    global all_types_dict_cache
+    global all_types_dict_cache  # noqa: PLW0603
     if all_types_dict_cache is None:
         logger.debug("Building langchain types dict")
         all_types_dict_cache = await aget_all_types_dict(settings_service.settings.components_path)

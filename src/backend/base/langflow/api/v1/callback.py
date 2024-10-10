@@ -67,15 +67,15 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
             )
             for word in rest_of_output
         ]
-        resps = [resp] + rest_of_resps
+        resps = [resp, *rest_of_resps]
         # Try to send the response, handle potential errors.
 
         try:
             # This is to emulate the stream of tokens
             for resp in resps:
                 await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
-        except Exception as exc:
-            logger.error(f"Error sending response: {exc}")
+        except Exception:  # noqa: BLE001
+            logger.exception("Error sending response")
 
     async def on_tool_error(
         self,

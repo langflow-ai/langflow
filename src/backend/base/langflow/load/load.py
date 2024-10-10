@@ -53,7 +53,7 @@ def load_flow_from_json(
     update_settings(cache=cache)
 
     if isinstance(flow, str | Path):
-        with open(flow, encoding="utf-8") as f:
+        with Path(flow).open(encoding="utf-8") as f:
             flow_graph = json.load(f)
     # If input is a dictionary, assume it's a JSON object
     elif isinstance(flow, dict):
@@ -72,6 +72,7 @@ def load_flow_from_json(
 def run_flow_from_json(
     flow: Path | str | dict,
     input_value: str,
+    session_id: str | None = None,
     tweaks: dict | None = None,
     input_type: str = "chat",
     output_type: str = "chat",
@@ -89,6 +90,7 @@ def run_flow_from_json(
     Args:
         flow (Union[Path, str, dict]): The path to the JSON file or the JSON dictionary representing the flow.
         input_value (str): The input value to be processed by the flow.
+        session_id (str | None, optional): The session ID to be used for the flow. Defaults to None.
         tweaks (Optional[dict], optional): Optional tweaks to be applied to the flow. Defaults to None.
         input_type (str, optional): The type of the input value. Defaults to "chat".
         output_type (str, optional): The type of the output value. Defaults to "chat".
@@ -106,11 +108,11 @@ def run_flow_from_json(
     """
     # Set all streaming to false
     try:
-        import nest_asyncio  # type: ignore
+        import nest_asyncio
 
         nest_asyncio.apply()
-    except Exception as e:
-        logger.warning(f"Could not apply nest_asyncio: {e}")
+    except Exception:  # noqa: BLE001
+        logger.opt(exception=True).warning("Could not apply nest_asyncio")
     if tweaks is None:
         tweaks = {}
     tweaks["stream"] = False
@@ -125,6 +127,7 @@ def run_flow_from_json(
     )
     return run_graph(
         graph=graph,
+        session_id=session_id,
         input_value=input_value,
         input_type=input_type,
         output_type=output_type,

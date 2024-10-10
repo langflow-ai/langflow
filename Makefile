@@ -197,6 +197,9 @@ format: ## run code formatters
 	@uv run ruff format .
 	@cd src/frontend && npm run format
 
+unsafe_fix:
+	@uv run ruff check . --fix --unsafe-fixes
+
 lint: install_backend ## run linters
 	@uv run mypy --namespace-packages -p "langflow"
 
@@ -243,7 +246,7 @@ start:
 
 ifeq ($(open_browser),false)
 	@make install_backend && uv run langflow run \
-		--path $(path) \
+		--frontend-path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
 		--port $(port) \
@@ -251,7 +254,7 @@ ifeq ($(open_browser),false)
 		--no-open-browser
 else
 	@make install_backend && uv run langflow run \
-		--path $(path) \
+		--frontend-path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
 		--port $(port) \
@@ -262,7 +265,7 @@ setup_devcontainer: ## set up the development container
 	make install_backend
 	make install_frontend
 	make build_frontend
-	uv run langflow --path src/frontend/build
+	uv run langflow --frontend-path src/frontend/build
 
 setup_env: ## set up the environment
 	@sh ./scripts/setup/setup_env.sh
@@ -394,8 +397,8 @@ lock_langflow:
 
 lock: ## lock dependencies
 	@echo 'Locking dependencies'
-	cd src/backend/base && uv lock --no-update
-	uv lock --no-update
+	cd src/backend/base && uv lock
+	uv lock
 
 update: ## update dependencies
 	@echo 'Updating dependencies'
@@ -440,3 +443,34 @@ ifdef main
 	poetry config repositories.test-pypi https://test.pypi.org/legacy/
 	make publish_langflow_testpypi
 endif
+
+
+# example make alembic-revision message="Add user table"
+alembic-revision: ## generate a new migration
+	@echo 'Generating a new Alembic revision'
+	cd src/backend/base/langflow/ && uv run alembic revision --autogenerate -m "$(message)"
+
+
+alembic-upgrade: ## upgrade database to the latest version
+	@echo 'Upgrading database to the latest version'
+	cd src/backend/base/langflow/ && uv run alembic upgrade head
+
+alembic-downgrade: ## downgrade database by one version
+	@echo 'Downgrading database by one version'
+	cd src/backend/base/langflow/ && uv run alembic downgrade -1
+
+alembic-current: ## show current revision
+	@echo 'Showing current Alembic revision'
+	cd src/backend/base/langflow/ && uv run alembic current
+
+alembic-history: ## show migration history
+	@echo 'Showing Alembic migration history'
+	cd src/backend/base/langflow/ && uv run alembic history --verbose
+
+alembic-check: ## check migration status
+	@echo 'Running alembic check'
+	cd src/backend/base/langflow/ && uv run alembic check
+
+alembic-stamp: ## stamp the database with a specific revision
+	@echo 'Stamping the database with revision $(revision)'
+	cd src/backend/base/langflow/ && uv run alembic stamp $(revision)

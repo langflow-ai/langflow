@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import json
 from collections.abc import AsyncIterator, Generator, Iterator
@@ -11,11 +10,9 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, log_transaction, log_vertex_build, rewrite_file_path, serialize_field
+from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.exceptions import NoComponentInstance
-from langflow.graph.vertex.schema import NodeData
-from langflow.inputs.inputs import InputTypes
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.message import Message
@@ -26,6 +23,8 @@ from langflow.utils.util import unescape_string
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import CycleEdge
+    from langflow.graph.vertex.schema import NodeData
+    from langflow.inputs.inputs import InputTypes
 
 
 class CustomComponentVertex(Vertex):
@@ -63,9 +62,9 @@ class ComponentVertex(Vertex):
         Updates the built object and its artifacts.
         """
         if isinstance(result, tuple):
-            if len(result) == 2:
+            if len(result) == 2:  # noqa: PLR2004
                 self._built_object, self.artifacts = result
-            elif len(result) == 3:
+            elif len(result) == 3:  # noqa: PLR2004
                 self._custom_component, self._built_object, self.artifacts = result
                 self.logs = self._custom_component._output_logs
                 for key in self.artifacts:
@@ -109,9 +108,7 @@ class ComponentVertex(Vertex):
                     default_value = requester.get_value_from_template_dict(edge.target_param)
 
             if flow_id:
-                asyncio.create_task(
-                    log_transaction(source=self, target=requester, flow_id=str(flow_id), status="error")
-                )
+                self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="error")
             if default_value is not UNDEFINED:
                 return default_value
             msg = f"Component {self.display_name} has not been built yet"
@@ -150,7 +147,7 @@ class ComponentVertex(Vertex):
             msg = f"Result not found for {edge.source_handle.name} in {edge}"
             raise ValueError(msg)
         if flow_id:
-            asyncio.create_task(log_transaction(source=self, target=requester, flow_id=str(flow_id), status="success"))
+            self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="success")
         return result
 
     def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:
@@ -233,8 +230,8 @@ class InterfaceVertex(ComponentVertex):
             artifacts = []
             for artifact in _artifacts:
                 # artifacts = {k.title().replace("_", " "): v for k, v in self.artifacts.items() if v is not None}
-                artifact = {k.title().replace("_", " "): v for k, v in artifact.items() if v is not None}
-                artifacts.append(artifact)
+                _artifact = {k.title().replace("_", " "): v for k, v in artifact.items() if v is not None}
+                artifacts.append(_artifact)
             return yaml.dump(artifacts, default_flow_style=False, allow_unicode=True)
         return super()._built_object_repr()
 
@@ -382,21 +379,21 @@ class InterfaceVertex(ComponentVertex):
         iterator = self.params.get(INPUT_FIELD_NAME, None)
         if not isinstance(iterator, AsyncIterator | Iterator):
             msg = "The message must be an iterator or an async iterator."
-            raise ValueError(msg)
+            raise TypeError(msg)
         is_async = isinstance(iterator, AsyncIterator)
         complete_message = ""
         if is_async:
             async for message in iterator:
-                message = message.content if hasattr(message, "content") else message
-                message = message.text if hasattr(message, "text") else message
-                yield message
-                complete_message += message
+                _message = message.content if hasattr(message, "content") else message
+                _message = _message.text if hasattr(_message, "text") else _message
+                yield _message
+                complete_message += _message
         else:
             for message in iterator:
-                message = message.content if hasattr(message, "content") else message
-                message = message.text if hasattr(message, "text") else message
-                yield message
-                complete_message += message
+                _message = message.content if hasattr(message, "content") else message
+                _message = _message.text if hasattr(_message, "text") else _message
+                yield _message
+                complete_message += _message
 
         files = self.params.get("files", [])
 

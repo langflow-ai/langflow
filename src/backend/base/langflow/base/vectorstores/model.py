@@ -1,8 +1,7 @@
 from abc import abstractmethod
 from functools import wraps
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
-from langchain_core.documents import Document
 from loguru import logger
 
 from langflow.custom import Component
@@ -10,6 +9,9 @@ from langflow.field_typing import Retriever, Text, VectorStore
 from langflow.helpers.data import docs_to_data
 from langflow.io import Output
 from langflow.schema import Data
+
+if TYPE_CHECKING:
+    from langchain_core.documents import Document
 
 
 def check_cached_vector_store(f):

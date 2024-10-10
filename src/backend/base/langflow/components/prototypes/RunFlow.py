@@ -1,10 +1,12 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langflow.base.flow_processing.utils import build_data_from_run_outputs
 from langflow.custom import Component
-from langflow.graph.schema import RunOutputs
 from langflow.io import DropdownInput, MessageTextInput, NestedDictInput, Output
 from langflow.schema import Data, dotdict
+
+if TYPE_CHECKING:
+    from langflow.graph.schema import RunOutputs
 
 
 class RunFlowComponent(Component):

@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, ToolException
 from loguru import logger
-from pydantic.v1 import BaseModel
 
 from langflow.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
-from langflow.graph.graph.base import Graph
-from langflow.graph.vertex.base import Vertex
+from langflow.graph.graph.base import Graph  # cannot be a part of TYPE_CHECKING   # noqa: TCH001
+from langflow.graph.vertex.base import Vertex  # cannot be a part of TYPE_CHECKING  # noqa: TCH001
 from langflow.helpers.flow import build_schema_from_inputs, get_arg_names, get_flow_inputs, run_flow
 from langflow.utils.async_helpers import run_until_complete
+
+if TYPE_CHECKING:
+    from langchain_core.runnables import RunnableConfig
+    from pydantic.v1 import BaseModel
 
 
 class FlowTool(BaseTool):
@@ -100,8 +102,8 @@ class FlowTool(BaseTool):
         tweaks = self.build_tweaks_dict(args, kwargs)
         try:
             run_id = self.graph.run_id if self.graph else None
-        except Exception as e:
-            logger.warning(f"Failed to set run_id: {e}")
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).warning("Failed to set run_id")
             run_id = None
         run_outputs = await run_flow(
             tweaks={key: {"input_value": value} for key, value in tweaks.items()},

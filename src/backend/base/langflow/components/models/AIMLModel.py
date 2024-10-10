@@ -23,7 +23,8 @@ class AIMLModelComponent(LCModelComponent):
     name = "AIMLModel"
     documentation = "https://docs.aimlapi.com/api-reference"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -106,7 +107,7 @@ class AIMLModelComponent(LCModelComponent):
         except ImportError:
             return None
         if isinstance(e, BadRequestError):
-            message = e.json_body.get("error", {}).get("message", "")  # type: ignore
+            message = e.json_body.get("error", {}).get("message", "")
             if message:
                 return message
         return None

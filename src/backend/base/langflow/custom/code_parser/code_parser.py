@@ -2,6 +2,8 @@ import ast
 import contextlib
 import inspect
 import traceback
+from itertools import starmap
+from pathlib import Path
 from typing import Any
 
 from cachetools import TTLCache, keys
@@ -30,7 +32,7 @@ def find_class_ast_node(class_obj):
         return None, []
 
     # Read the source code from the file
-    with open(source_file) as file:
+    with Path(source_file).open() as file:
         source_code = file.read()
 
     # Parse the source code into an AST
@@ -106,8 +108,8 @@ class CodeParser:
         Parses an AST node and updates the data
         dictionary with the relevant information.
         """
-        if handler := self.handlers.get(type(node)):  # type: ignore
-            handler(node)  # type: ignore
+        if handler := self.handlers.get(type(node)):
+            handler(node)  # type: ignore[operator]
 
     def parse_imports(self, node: ast.Import | ast.ImportFrom) -> None:
         """
@@ -160,7 +162,7 @@ class CodeParser:
                 if " as " in module:
                     module, alias = module.split(" as ")
                 if module in return_type_str or (alias and alias in return_type_str):
-                    exec(f"import {module} as {alias if alias else module}", eval_env)
+                    exec(f"import {module} as {alias or module}", eval_env)
         return eval_env
 
     def parse_callable_details(self, node: ast.FunctionDef) -> dict[str, Any]:
@@ -217,7 +219,7 @@ class CodeParser:
 
         defaults = missing_defaults + default_values
 
-        return [self.parse_arg(arg, default) for arg, default in zip(node.args.args, defaults, strict=True)]
+        return list(starmap(self.parse_arg, zip(node.args.args, defaults, strict=True)))
 
     def parse_varargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
@@ -238,7 +240,7 @@ class CodeParser:
             ast.unparse(default) if default else None for default in node.args.kw_defaults
         ]
 
-        return [self.parse_arg(arg, default) for arg, default in zip(node.args.kwonlyargs, kw_defaults, strict=True)]
+        return list(starmap(self.parse_arg, zip(node.args.kwonlyargs, kw_defaults, strict=True)))
 
     def parse_kwargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
@@ -318,10 +320,10 @@ class CodeParser:
         """
         try:
             bases = self.execute_and_inspect_classes(self.code)
-        except Exception as e:
+        except Exception:
             # If the code cannot be executed, return an empty list
             bases = []
-            raise e
+            raise
         return bases
 
     def parse_classes(self, node: ast.ClassDef) -> None:
@@ -340,8 +342,8 @@ class CodeParser:
                 for import_node in import_nodes:
                     self.parse_imports(import_node)
                 nodes.append(class_node)
-            except Exception as exc:
-                logger.error(f"Error finding base class node: {exc}")
+            except Exception:  # noqa: BLE001
+                logger.exception("Error finding base class node")
         nodes.insert(0, node)
         class_details = ClassCodeDetails(
             name=node.name,
@@ -351,8 +353,8 @@ class CodeParser:
             methods=[],
             init=None,
         )
-        for node in nodes:
-            self.process_class_node(node, class_details)
+        for _node in nodes:
+            self.process_class_node(_node, class_details)
         self.data["classes"].append(class_details.model_dump())
 
     def process_class_node(self, node, class_details):
@@ -388,8 +390,7 @@ class CodeParser:
         bases = []
         for base in dunder_class.__bases__:
             bases.append(base)
-            for bases_base in base.__bases__:
-                bases.append(bases_base)
+            bases.extend(base.__bases__)
         return bases
 
     def parse_code(self) -> dict[str, Any]:

@@ -42,7 +42,7 @@ class Edge:
                             "might not be a valid input."
                         )
                         raise ValueError(msg) from e
-                    raise e
+                    raise
 
             else:
                 msg = "Target handle is not a dictionary"
@@ -53,8 +53,8 @@ class Edge:
         else:
             # Logging here because this is a breaking change
             logger.error("Edge data is empty")
-            self._source_handle = edge.get("sourceHandle", "")  # type: ignore
-            self._target_handle = edge.get("targetHandle", "")  # type: ignore
+            self._source_handle = edge.get("sourceHandle", "")  # type: ignore[assignment]
+            self._target_handle = edge.get("targetHandle", "")  # type: ignore[assignment]
             # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
             # target_param is documents
             if isinstance(self._target_handle, str):
@@ -89,7 +89,7 @@ class Edge:
         if not self.valid_handles:
             logger.debug(self.source_handle)
             logger.debug(self.target_handle)
-            msg = f"Edge between {source.display_name} and {target.display_name} " f"has invalid handles"
+            msg = f"Edge between {source.display_name} and {target.display_name} has invalid handles"
             raise ValueError(msg)
 
     def _legacy_validate_handles(self, source, target) -> None:
@@ -103,7 +103,7 @@ class Edge:
         if not self.valid_handles:
             logger.debug(self.source_handle)
             logger.debug(self.target_handle)
-            msg = f"Edge between {source.vertex_type} and {target.vertex_type} " f"has invalid handles"
+            msg = f"Edge between {source.vertex_type} and {target.vertex_type} has invalid handles"
             raise ValueError(msg)
 
     def __setstate__(self, state):
@@ -160,7 +160,7 @@ class Edge:
         if no_matched_type:
             logger.debug(self.source_types)
             logger.debug(self.target_reqs)
-            msg = f"Edge between {source.vertex_type} and {target.vertex_type} " f"has no matched type. "
+            msg = f"Edge between {source.vertex_type} and {target.vertex_type} has no matched type."
             raise ValueError(msg)
 
     def _legacy_validate_edge(self, source, target) -> None:
@@ -182,7 +182,7 @@ class Edge:
         if no_matched_type:
             logger.debug(self.source_types)
             logger.debug(self.target_reqs)
-            msg = f"Edge between {source.vertex_type} and {target.vertex_type} " f"has no matched type"
+            msg = f"Edge between {source.vertex_type} and {target.vertex_type} has no matched type"
             raise ValueError(msg)
 
     def __repr__(self) -> str:

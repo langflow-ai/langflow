@@ -191,7 +191,7 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             from astrapy.authentication import UsernamePasswordTokenProvider
             from astrapy.constants import Environment
         except ImportError as e:
-            msg = "Could not import astrapy integration package. " "Please install it with `pip install astrapy`."
+            msg = "Could not import astrapy integration package. Please install it with `pip install astrapy`."
             raise ImportError(msg) from e
 
         try:
@@ -247,7 +247,7 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
         try:
             vector_store = AstraDBVectorStore(**vector_store_kwargs)
         except Exception as e:
-            msg = f"Error initializing AstraDBVectorStore: {str(e)}"
+            msg = f"Error initializing AstraDBVectorStore: {e}"
             raise ValueError(msg) from e
 
         self._add_documents_to_vector_store(vector_store)
@@ -260,14 +260,14 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input.to_lc_document())
             else:
                 msg = "Vector Store Inputs must be Data objects."
-                raise ValueError(msg)
+                raise TypeError(msg)
 
         if documents:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
             except Exception as e:
-                msg = f"Error adding documents to AstraDBVectorStore: {str(e)}"
+                msg = f"Error adding documents to AstraDBVectorStore: {e}"
                 raise ValueError(msg) from e
         else:
             logger.debug("No documents to add to the Vector Store.")
@@ -305,7 +305,7 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
 
                 docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
             except Exception as e:
-                msg = f"Error performing search in AstraDBVectorStore: {str(e)}"
+                msg = f"Error performing search in AstraDBVectorStore: {e}"
                 raise ValueError(msg) from e
 
             logger.debug(f"Retrieved documents: {len(docs)}")

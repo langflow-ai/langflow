@@ -137,7 +137,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             import cassio
             from langchain_community.utilities.cassandra import SetupMode
         except ImportError as e:
-            msg = "Could not import cassio integration package. " "Please install it with `pip install cassio`."
+            msg = "Could not import cassio integration package. Please install it with `pip install cassio`."
             raise ImportError(msg) from e
 
         from uuid import UUID
@@ -225,7 +225,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 search_type = self._map_search_type()
                 search_args = self._build_search_args()
 
-                logger.debug(f"Search args: {str(search_args)}")
+                logger.debug(f"Search args: {search_args}")
 
                 docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
             except KeyError as e:
@@ -235,7 +235,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                         "Your collection does not contain a field name 'content'."
                     )
                     raise ValueError(msg) from e
-                raise e
+                raise
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 

@@ -36,7 +36,7 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
         # Check if value is a list of dicts
         if not isinstance(v, list):
             msg = f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list."
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
 
         for item in v:
             if not isinstance(item, dict | Data):
@@ -44,7 +44,7 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
                     "TableInput value must be a list of dictionaries or Data. "
                     f"Item '{item}' is not a dictionary or Data."
                 )
-                raise ValueError(msg)
+                raise ValueError(msg)  # noqa: TRY004
         return v
 
 
@@ -206,7 +206,7 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
             value = v
         else:
             msg = f"Invalid value type {type(v)}"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
         return value
 
 
@@ -462,11 +462,11 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
         # Check if value is a list of dicts
         if not isinstance(v, list):
             msg = f"MultiselectInput value must be a list. Value: '{v}'"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
         for item in v:
             if not isinstance(item, str):
                 msg = f"MultiselectInput value must be a list of strings. Item: '{item}' is not a string"
-                raise ValueError(msg)
+                raise ValueError(msg)  # noqa: TRY004
         return v
 
 

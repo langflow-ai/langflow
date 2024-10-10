@@ -11,7 +11,7 @@ from langflow.services.cache.base import AsyncBaseCacheService, AsyncLockType, C
 from langflow.services.cache.utils import CACHE_MISS
 
 
-class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
+class ThreadingInMemoryCache(CacheService, Generic[LockType]):
     """
     A simple in-memory cache using an OrderedDict.
 
@@ -174,7 +174,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
 
 
-class RedisCache(AsyncBaseCacheService, Generic[LockType]):  # type: ignore
+class RedisCache(AsyncBaseCacheService, Generic[LockType]):
     """
     A Redis-based cache implementation.
 
@@ -236,8 +236,8 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):  # type: ignore
         try:
             self._client.ping()
             return True
-        except redis.exceptions.ConnectionError as exc:
-            logger.error(f"RedisCache could not connect to the Redis server: {exc}")
+        except redis.exceptions.ConnectionError:
+            logger.exception("RedisCache could not connect to the Redis server")
             return False
 
     async def get(self, key, lock=None):
@@ -327,7 +327,7 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):  # type: ignore
         return f"RedisCache(expiration_time={self.expiration_time})"
 
 
-class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type: ignore
+class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
     def __init__(self, max_size=None, expiration_time=3600):
         self.cache = OrderedDict()
 

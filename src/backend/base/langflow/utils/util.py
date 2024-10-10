@@ -42,7 +42,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
 
             variables = {"_type": _type}
             for class_field_items, value in _class.model_fields.items():
-                if class_field_items in ["callback_manager"]:
+                if class_field_items == "callback_manager":
                     continue
                 variables[class_field_items] = {}
                 for name_, value_ in value.__repr_args__():
@@ -51,9 +51,10 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
                             variables[class_field_items]["default"] = get_default_factory(
                                 module=_class.__base__.__module__, function=value_
                             )
-                        except Exception:
+                        except Exception:  # noqa: BLE001
+                            logger.opt(exception=True).debug(f"Error getting default factory for {value_}")
                             variables[class_field_items]["default"] = None
-                    elif name_ not in ["name"]:
+                    elif name_ != "name":
                         variables[class_field_items][name_] = value_
 
                 variables[class_field_items]["placeholder"] = docs.params.get(class_field_items, "")
@@ -142,7 +143,7 @@ def get_base_classes(cls):
         bases = cls.__bases__
         result = []
         for base in bases:
-            if any(type in base.__module__ for type in ["pydantic", "abc"]):
+            if any(_type in base.__module__ for _type in ["pydantic", "abc"]):
                 continue
             result.append(base.__name__)
             base_classes = get_base_classes(base)
@@ -155,7 +156,7 @@ def get_base_classes(cls):
         result = [cls.__name__]
     if not result:
         result = [cls.__name__]
-    return list(set(result + [cls.__name__]))
+    return list({*result, cls.__name__})
 
 
 def get_default_factory(module: str, function: str):
@@ -209,7 +210,7 @@ def format_dict(dictionary: dict[str, Any], class_name: str | None = None) -> di
     """
 
     for key, value in dictionary.items():
-        if key in ["_type"]:
+        if key == "_type":
             continue
 
         _type: str | type = get_type(value)

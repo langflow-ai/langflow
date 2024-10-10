@@ -1,5 +1,7 @@
 from collections.abc import Callable
 
+from loguru import logger
+
 from langflow.custom import Component
 from langflow.custom.utils import get_function
 from langflow.io import CodeInput, Output
@@ -54,8 +56,9 @@ class PythonFunctionComponent(Component):
         try:
             func = get_function(function_code)
             return func()
-        except Exception as e:
-            return f"Error executing function: {str(e)}"
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error executing function")
+            return f"Error executing function: {e}"
 
     def execute_function_data(self) -> list[Data]:
         results = self.execute_function()
