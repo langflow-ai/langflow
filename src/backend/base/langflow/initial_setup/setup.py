@@ -390,10 +390,9 @@ def get_project_data(project):
     project_is_component = project.get("is_component")
     project_updated_at = project.get("updated_at")
     if not project_updated_at:
-        project_updated_at = datetime.now(tz=timezone.utc).isoformat()
-        updated_at_datetime = datetime.strptime(project_updated_at, "%Y-%m-%dT%H:%M:%S.%f%z")
+        updated_at_datetime = datetime.now(tz=timezone.utc)
     else:
-        updated_at_datetime = datetime.strptime(project_updated_at, "%Y-%m-%dT%H:%M:%S.%f")
+        updated_at_datetime = datetime.fromisoformat(project_updated_at)
     project_data = project.get("data")
     project_icon = project.get("icon")
     project_icon = demojize(project_icon) if project_icon and purely_emoji(project_icon) else ""
@@ -528,14 +527,14 @@ def load_flows_from_directory():
                         if hasattr(existing, key):
                             # flow dict from json and db representation are not 100% the same
                             setattr(existing, key, value)
-                    existing.updated_at = datetime.utcnow()
+                    existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
                     existing.user_id = user_id
                     session.add(existing)
                 else:
                     logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
                     flow["user_id"] = user_id
                     flow = Flow.model_validate(flow, from_attributes=True)
-                    flow.updated_at = datetime.utcnow()
+                    flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
                     session.add(flow)
 
 

@@ -80,7 +80,7 @@ dependencies = [
     "langchain-anthropic>=0.1.23",
     "langchain-astradb>=0.3.5",
     "langchain-openai==0.1.22",
-    "zep-python>=2.0.0rc5",
+    "zep-python>=2.0.0",
     "langchain-google-vertexai>=1.0.10",
     "langchain-groq>=0.1.9",
     "langchain-pinecone>=0.1.3",
@@ -113,6 +113,7 @@ dependencies = [
     "pydantic-settings==2.4.0",
     "ragstack-ai-knowledge-store>=0.2.1",
     "duckduckgo-search>=6.2.11",
+    "langchain-elasticsearch>=0.2.0",
 ]
 
 [project.optional-dependencies]
@@ -229,6 +230,7 @@ langchain-unstructured = "^0.1.2"
 pydantic-settings = "2.4.0"
 ragstack-ai-knowledge-store = "^0.2.1"
 duckduckgo-search = "^6.2.12"
+langchain-elasticsearch = "^0.2.0"
 opensearch-py = "^2.7.1"
 
 
