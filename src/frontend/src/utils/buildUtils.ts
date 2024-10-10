@@ -301,6 +301,10 @@ export async function buildFlowVertices({
       throw new Error("Error Building Component");
     },
     onNetworkError: (error: Error) => {
+      if (error.name === "AbortError") {
+        onBuildStopped && onBuildStopped();
+        return;
+      }
       onBuildError!("Error Building Component", [
         "Network error. Please check the connection to the server.",
       ]);
