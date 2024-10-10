@@ -312,7 +312,7 @@ export const nodeColors: { [char: string]: string } = {
   Text: "#4F46E5",
   unknown: "#9CA3AF",
   Document: "#65a30d",
-  Data: "#dc2626",
+  Data: "#007BFF",
   Message: "#4f46e5",
   Prompt: "#7c3aed",
   Embeddings: "#10b981",
