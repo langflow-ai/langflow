@@ -48,10 +48,11 @@ RUN npm install \
     && cp -r build /app/src/backend/base/langflow/frontend \
     && rm -rf /tmp/src/frontend
 
-WORKDIR /app/src/backend/base
 ADD ./uv.lock /app/src/backend/base/uv.lock
 ADD ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 ADD ./src/backend/base/README.md /app/src/backend/base/README.md
+
+WORKDIR /app/src/backend/base
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable
 
