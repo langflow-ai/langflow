@@ -11,6 +11,12 @@ import { getMinOrMaxValue } from "./utils/get-min-max-value";
 const THRESHOLDS = [0.25, 0.5, 0.75, 1];
 const BACKGROUND_COLORS = ["#4f46e5", "#7c3aed", "#a21caf", "#c026d3"];
 const TEXT_COLORS = ["#fff", "#fff", "#fff", "#fff"];
+const PERCENTAGES = [0.125, 0.375, 0.625, 0.875];
+
+const DARK_COLOR_BACKGROUND = "#09090b";
+const DARK_COLOR_TEXT = "#52525b";
+const LIGHT_COLOR_BACKGROUND = "#e4e4e7";
+const LIGHT_COLOR_TEXT = "#000";
 
 type ColorType = "background" | "text";
 
@@ -23,7 +29,7 @@ export default function SliderComponent({
   maxLabel = "Wild",
   minLabelIcon = "pencil-ruler",
   maxLabelIcon = "palette",
-  sliderButtons = false,
+  sliderButtons = true,
   sliderButtonsOptions = [
     { value: 0, label: "Precise" },
     { value: 1, label: "Balanced" },
@@ -50,8 +56,7 @@ export default function SliderComponent({
   };
 
   const handleOptionClick = (option: number) => {
-    const percentages = [0.25, 0.5, 0.75, 1];
-    const selectedPercentage = percentages[option];
+    const selectedPercentage = PERCENTAGES[option];
 
     if (selectedPercentage !== undefined) {
       const calculatedValue = min + (max - min) * selectedPercentage;
@@ -79,11 +84,11 @@ export default function SliderComponent({
     const colors = colorType === "background" ? BACKGROUND_COLORS : TEXT_COLORS;
     const defaultColor = isDark
       ? colorType === "background"
-        ? "#09090b"
-        : "#52525b"
+        ? DARK_COLOR_BACKGROUND
+        : DARK_COLOR_TEXT
       : colorType === "background"
-        ? "#e4e4e7"
-        : "#000";
+        ? LIGHT_COLOR_BACKGROUND
+        : LIGHT_COLOR_TEXT;
 
     if (normalizedValue <= THRESHOLDS[0] && optionValue === 0) {
       return colors[0];
@@ -157,8 +162,7 @@ export default function SliderComponent({
           <SliderPrimitive.Thumb
             data-testid={`slider_thumb${editNode ? "_advanced" : ""}`}
             className={clsx(
-              "block h-6 w-6 rounded-full border-2 bg-pink-500 shadow-lg",
-              isDark ? "border-[#fff]" : "border-zinc-800",
+              "block h-6 w-6 rounded-full border-2 border-muted bg-pink-500 shadow-lg",
             )}
           />
         </SliderPrimitive.Root>
