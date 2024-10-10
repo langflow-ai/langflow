@@ -250,18 +250,19 @@ async function performStreamingRequest({
   }
   let current: string[] = [];
   let textDecoder = new TextDecoder();
-  const response = await fetch(url, params);
-  if (!response.ok) {
-    if (onError) {
-      onError(response.status);
-    } else {
-      throw new Error("error in streaming request");
-    }
-  }
-  if (response.body === null) {
-    return;
-  }
+
   try {
+    const response = await fetch(url, params);
+    if (!response.ok) {
+      if (onError) {
+        onError(response.status);
+      } else {
+        throw new Error("Error in streaming request.");
+      }
+    }
+    if (response.body === null) {
+      return;
+    }
     const reader = response.body.getReader();
     while (true) {
       const { done, value } = await reader.read();
