@@ -8,9 +8,9 @@ const { remarkCodeHike } = require("@code-hike/mdx");
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "Langflow Documentation",
-  tagline: "Langflow is a GUI for LangChain, designed with react-flow",
+  tagline: "Langflow is a low-code app builder for RAG and multi-agent AI applications.",
   favicon: "img/favicon.ico",
-  url: "https://langflow-ai.github.io",
+  url: "https://docs.langflow.org",
   baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -19,7 +19,7 @@ const config = {
   trailingSlash: false,
   staticDirectories: ["static"],
   customFields: {
-    mendableAnonKey: process.env.MENDABLE_ANON_KEY,
+    mendableAnonKey: "b7f52734-297c-41dc-8737-edbd13196394", // Mendable Anon Client-side key, safe to expose to the public
   },
   i18n: {
     defaultLocale: "en",
@@ -45,6 +45,13 @@ const config = {
               },
             ],
           ],
+        },
+        sitemap: {
+          // https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-sitemap
+          // https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
+          lastmod: 'datetime',
+          changefreq: null,
+          priority: null,
         },
         gtag: {
           trackingID: "G-XHC7G628ZP",
@@ -87,12 +94,6 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      sitemap: {
-        // https://www.sitemaps.org/protocol.html#xmlTagDefinitions
-        changefreq: "weekly",
-        priority: 0.5,
-        ignorePatterns: [],
-      },
       navbar: {
         hideOnScroll: true,
         title: "Langflow",

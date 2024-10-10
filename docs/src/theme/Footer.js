@@ -37,7 +37,7 @@ export default function FooterWrapper(props) {
 
   const mendableFloatingButton = React.createElement(MendableFloatingButton, {
     floatingButtonStyle: { color: "#000000", backgroundColor: "#f6f6f6" },
-    anon_key: 'b7f52734-297c-41dc-8737-edbd13196394', // Mendable Search Public ANON key, ok to be public
+    anon_key: customFields.mendableAnonKey,
     showSimpleSearch: true,
     icon: icon,
   });
