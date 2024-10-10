@@ -25,7 +25,7 @@ def set_secure_permissions(file_path: Path):
         sd.SetSecurityDescriptorDacl(1, dacl, 0)
         win32security.SetFileSecurity(str(file_path), win32security.DACL_SECURITY_INFORMATION, sd)
     else:
-        print("Unsupported OS")
+        logger.error("Unsupported OS")
 
 
 def write_secret_to_file(path: Path, value: str) -> None:
