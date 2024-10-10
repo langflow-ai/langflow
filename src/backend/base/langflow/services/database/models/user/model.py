@@ -46,6 +46,7 @@ class UserRead(SQLModel):
     id: UUID = Field(default_factory=uuid4)
     username: str = Field()
     profile_image: str | None = Field()
+    store_api_key: str | None = Field(nullable=True)
     is_active: bool = Field()
     is_superuser: bool = Field()
     create_at: datetime = Field()
