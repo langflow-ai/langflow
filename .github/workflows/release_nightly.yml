@@ -75,7 +75,7 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --package langflow-base-nightly --no-editable
+        run: uv sync --no-editable
 
       - name: Verify Nightly Name and Version
         id: verify
