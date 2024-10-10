@@ -108,9 +108,10 @@ class AstraAssistantManager(ComponentWithCache):
         tool_obj = None
         if self.tool_names is not None and len(self.tool_names) > 0:
             for tool in self.tool_names:
-                tool_cls = tools_and_names[tool]
-                tool_obj = tool_cls()
-                tools.append(tool_obj)
+                if tool is not None and tool != "":
+                    tool_cls = tools_and_names[tool]
+                    tool_obj = tool_cls()
+                    tools.append(tool_obj)
         assistant_id = None
         thread_id = None
         if self.input_assistant_id:
