@@ -1,3 +1,4 @@
+from langflow.base.embeddings.aiml_embeddings import AIMLEmbeddingsImpl
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.aiml_constants import AIML_EMBEDDING_MODELS
 from langflow.components.embeddings.util import AIMLEmbeddingsImpl
