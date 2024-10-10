@@ -651,6 +651,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "NestedDict",
   "table",
   "link",
+  "slider",
 ]);
 
 export const priorityFields = new Set(["code", "template"]);
