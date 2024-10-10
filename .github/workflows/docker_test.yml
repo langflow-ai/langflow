@@ -1,11 +1,17 @@
 name: Test Docker images
 
 on:
+  workflow_call:
+    inputs:
+      image_name:
+        required: true
+        type: string
+  workflow_dispatch: {}
   push:
     branches: [main]
     paths:
       - "docker/**"
-      - "poetry.lock"
+      - "uv.lock"
       - "pyproject.toml"
       - "src/backend/**"
       - ".github/workflows/docker_test.yml"
@@ -13,7 +19,7 @@ on:
     branches: [dev]
     paths:
       - "docker/**"
-      - "poetry.lock"
+      - "uv.lock"
       - "pyproject.toml"
       - "src/**"
       - ".github/workflows/docker_test.yml"
@@ -27,15 +33,21 @@ jobs:
     name: Test docker images
     steps:
       - uses: actions/checkout@v4
+      - name: Install UV
+        run: |
+          pip install uv
+      - name: Sync dependencies
+        run: |
+          uv sync
       - name: Build image
         run: |
-          docker build -t langflowai/langflow:latest-dev \
+          docker build -t ${{ inputs.image_name }}:latest-dev \
             -f docker/build_and_push.Dockerfile \
             .
       - name: Test image
         run: |
           expected_version=$(cat pyproject.toml | grep version | head -n 1 | cut -d '"' -f 2)
-          version=$(docker run --rm --entrypoint bash langflowai/langflow:latest-dev -c 'python -c "from langflow.version import __version__ as langflow_version; print(langflow_version)"')
+          version=$(docker run --rm --entrypoint bash ${{ inputs.image_name }}:latest-dev -c 'python -c "from langflow.version import __version__ as langflow_version; print(langflow_version)"')
           if [ "$expected_version" != "$version" ]; then
               echo "Expected version: $expected_version"
               echo "Actual version: $version"
@@ -45,7 +57,7 @@ jobs:
       - name: Build backend image
         run: |
           docker build -t langflowai/langflow-backend:latest-dev \
-            --build-arg LANGFLOW_IMAGE=langflowai/langflow:latest-dev \
+            --build-arg LANGFLOW_IMAGE=${{ inputs.image_name }}:latest-dev \
             -f docker/build_and_push_backend.Dockerfile \
             .
       - name: Test backend image
