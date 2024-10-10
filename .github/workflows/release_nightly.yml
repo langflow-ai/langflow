@@ -116,6 +116,7 @@ jobs:
         uses: ./.github/workflows/docker_test.yml
         with:
           image_name: 'langflowai/langflow-base-nightly'
+          tag_name: ${{ inputs.nightly_tag_base }}
 
       # - name: Publish to PyPI
       #   env:
@@ -197,6 +198,7 @@ jobs:
         uses: ./.github/workflows/docker_test.yml
         with:
           image_name: 'langflowai/langflow-nightly'
+          tag_name: ${{ inputs.nightly_tag_main }}
 
       # - name: Publish to PyPI
       #   env:

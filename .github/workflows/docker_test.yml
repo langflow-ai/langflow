@@ -6,6 +6,9 @@ on:
       image_name:
         required: true
         type: string
+      tag_name:
+        required: true
+        type: string
   workflow_dispatch: {}
   push:
     branches: [main]
@@ -33,21 +36,19 @@ jobs:
     name: Test docker images
     steps:
       - uses: actions/checkout@v4
-      - name: Install UV
-        run: |
-          pip install uv
-      - name: Sync dependencies
-        run: |
-          uv sync
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
+      - name: Install the project
+        run: uv sync --dev
       - name: Build image
         run: |
-          docker build -t ${{ inputs.image_name }}:latest-dev \
+          docker build -t ${{ inputs.image_name }}:${{inputs.tag_name}} \
             -f docker/build_and_push.Dockerfile \
             .
       - name: Test image
         run: |
           expected_version=$(cat pyproject.toml | grep version | head -n 1 | cut -d '"' -f 2)
-          version=$(docker run --rm --entrypoint bash ${{ inputs.image_name }}:latest-dev -c 'python -c "from langflow.version import __version__ as langflow_version; print(langflow_version)"')
+          version=$(docker run --rm --entrypoint bash ${{ inputs.image_name }}:${{inputs.tag_name}} -c 'python -c "from langflow.version import __version__ as langflow_version; print(langflow_version)"')
           if [ "$expected_version" != "$version" ]; then
               echo "Expected version: $expected_version"
               echo "Actual version: $version"
@@ -56,14 +57,14 @@ jobs:
 
       - name: Build backend image
         run: |
-          docker build -t langflowai/langflow-backend:latest-dev \
-            --build-arg LANGFLOW_IMAGE=${{ inputs.image_name }}:latest-dev \
+          docker build -t langflowai/langflow-backend:latest \
+            --build-arg LANGFLOW_IMAGE=${{ inputs.image_name }}:${{inputs.tag_name}} \
             -f docker/build_and_push_backend.Dockerfile \
             .
       - name: Test backend image
         run: |
           expected_version=$(cat pyproject.toml | grep version | head -n 1 | cut -d '"' -f 2)
-          version=$(docker run --rm --entrypoint bash langflowai/langflow-backend:latest-dev -c 'python -c "from langflow.version import __version__ as langflow_version; print(langflow_version)"')
+          version=$(docker run --rm --entrypoint bash langflowai/langflow-backend:latest -c 'python -c "from langflow.version import __version__ as langflow_version; print(langflow_version)"')
           if [ "$expected_version" != "$version" ]; then
               echo "Expected version: $expected_version"
               echo "Actual version: $version"
@@ -71,6 +72,6 @@ jobs:
           fi
       - name: Build frontend image
         run: |
-          docker build -t langflowai/langflow-frontend:latest-dev \
+          docker build -t langflowai/langflow-frontend:latest \
             -f docker/frontend/build_and_push_frontend.Dockerfile \
             .
