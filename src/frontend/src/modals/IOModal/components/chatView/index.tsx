@@ -29,7 +29,7 @@ export default function ChatView({
   setChatValue,
   lockChat,
   setLockChat,
-  visibleSessions,
+  visibleSession,
   focusChat,
 }: chatViewProps): JSX.Element {
   const { flowPool, outputs, inputs, CleanFlowPool } = useFlowStore();
@@ -51,7 +51,7 @@ export default function ChatView({
       .filter(
         (message) =>
           message.flow_id === currentFlowId &&
-          (visibleSessions?.includes(message.session_id) ?? true),
+          (visibleSession ===message.session_id ?? true),
       )
       .map((message) => {
         let files = message.files;
@@ -75,7 +75,7 @@ export default function ChatView({
     });
 
     setChatHistory(finalChatHistory);
-  }, [flowPool, messages, visibleSessions]);
+  }, [flowPool, messages, visibleSession]);
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;

@@ -852,7 +852,7 @@ export type chatViewProps = {
   setChatValue: (value: string) => void;
   lockChat: boolean;
   setLockChat: (lock: boolean) => void;
-  visibleSessions?: string[];
+  visibleSession?: string;
   focusChat?: string;
 };
 

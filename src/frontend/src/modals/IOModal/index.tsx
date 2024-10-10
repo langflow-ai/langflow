@@ -67,7 +67,7 @@ export default function IOModal({
   const deleteSession = useMessagesStore((state) => state.deleteSession);
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
-  const [visibleSessions, setvisibleSessions] = useState<string[]>([]);
+  const [visibleSession, setvisibleSession] = useState<string|undefined>();
 
   function handleDeleteSession(session_id: string) {
     deleteSessionFunction(
@@ -82,9 +82,9 @@ export default function IOModal({
             title: "Session deleted successfully.",
           });
           deleteSession(session_id);
-          setvisibleSessions((prev) =>
-            prev.filter((item) => item !== session_id),
-          );
+          if(visibleSession === session_id){
+            setvisibleSession(undefined);
+          }
         },
         onError: () => {
           setErrorData({
@@ -150,14 +150,13 @@ export default function IOModal({
     setIsBuilding(true);
     setLockChat(true);
     setChatValue("");
-    const runSession = visibleSessions.length > 1 ? undefined : sessionId;
     for (let i = 0; i < repeat; i++) {
       await buildFlow({
         input_value: chatValue,
         startNodeId: chatInput?.id,
         files: files,
         silent: true,
-        session: runSession,
+        session: sessionId,
         setLockChat,
       }).catch((err) => {
         console.error(err);
@@ -190,24 +189,23 @@ export default function IOModal({
     setSessions((prev) => {
       if (prev.length < Array.from(sessions).length) {
         // set the new session as visible
-        setvisibleSessions((prev) => [
-          ...prev,
+        setvisibleSession(
           Array.from(sessions)[Array.from(sessions).length - 1],
-        ]);
+        );
       }
       return Array.from(sessions);
     });
   }, [messages]);
 
   useEffect(() => {
-    if (visibleSessions.length === 0 && sessions.length > 0) {
+    if (!visibleSession && sessions.length > 0) {
       setSessionId(
         `Session ${new Date().toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true, second: "2-digit" })}`,
       );
-    } else if (visibleSessions.length === 1) {
-      setSessionId(visibleSessions[0]);
+    } else if (visibleSession) {
+      setSessionId(visibleSession);
     }
-  }, [visibleSessions]);
+  }, [visibleSession]);
 
   const setPlaygroundScrollBehaves = useUtilityStore(
     (state) => state.setPlaygroundScrollBehaves,
@@ -415,16 +413,16 @@ export default function IOModal({
                         }
                       }}
                       updateVisibleSession={(session) => {
-                        setvisibleSessions([session]);
+                        setvisibleSession(session);
                       }}
                       toggleVisibility={() => {
-                        setvisibleSessions((prev) =>
-                          prev.includes(session)
-                            ? prev.filter((item) => item !== session)
-                            : [session],
+                        setvisibleSession((prev) =>
+                          prev === session
+                            ? undefined
+                            : session,
                         );
                       }}
-                      isVisible={visibleSessions.includes(session)}
+                      isVisible={visibleSession === session}
                       inspectSession={(session) => {
                         setSelectedViewField({
                           id: session,
@@ -442,7 +440,7 @@ export default function IOModal({
                     <div className="pt-6">
                       <Button
                         onClick={(_) => {
-                          setvisibleSessions([]);
+                          setvisibleSession(undefined);
                         }}
                       >
                         New Chat
@@ -520,7 +518,7 @@ export default function IOModal({
                     setChatValue={setChatValue}
                     lockChat={lockChat}
                     setLockChat={setLockChat}
-                    visibleSessions={visibleSessions}
+                    visibleSession={visibleSession}
                   />
                 ) : (
                   <span className="flex h-full w-full items-center justify-center font-thin text-muted-foreground">
