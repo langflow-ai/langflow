@@ -54,7 +54,7 @@ ADD ./src/backend/base/README.md /app/src/backend/base/README.md
 
 WORKDIR /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --directory src/backend/base --frozen --no-dev --no-editable
+    uv sync --directory /app/src/backend/base --frozen --no-dev --no-editable
 
 ################################
 # RUNTIME
