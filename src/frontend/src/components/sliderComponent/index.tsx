@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { SliderComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { InputProps } from "../parameterRenderComponent/types";
+import { getMinOrMaxValue } from "./utils/get-min-max-value";
 
 const THRESHOLDS = [0.25, 0.5, 0.75, 1];
 const BACKGROUND_COLORS = ["#4f46e5", "#7c3aed", "#a21caf", "#c026d3"];
@@ -32,10 +33,11 @@ export default function SliderComponent({
   sliderInput = false,
   handleOnNewValue,
 }: InputProps<any[], SliderComponentType>): JSX.Element {
-  const step = rangeSpec?.step ?? 0.1;
-  const min = rangeSpec?.min ?? 0;
+  const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
-  const valueAsNumber = Number(value);
+
+  const valueAsNumber = getMinOrMaxValue(Number(value), min, max);
+  const step = rangeSpec?.step ?? 0.1;
 
   useEffect(() => {
     if (disabled && value !== "") {
@@ -114,16 +116,26 @@ export default function SliderComponent({
     <div className="w-full rounded-lg pb-2">
       <Case condition={!sliderButtons && !sliderInput}>
         <div className="relative bottom-2 flex items-center justify-end">
-          <span className="font-mono text-sm">{valueAsNumber.toFixed(2)}</span>
+          <span
+            data-testid={`default_slider_display_value${editNode ? "_advanced" : ""}`}
+            className="font-mono text-sm"
+          >
+            {valueAsNumber.toFixed(2)}
+          </span>
         </div>
       </Case>
       <Case condition={sliderButtons && !sliderInput}>
         <div className="relative bottom-1 flex items-center pb-2">
-          <span className="font-mono text-2xl">{valueAsNumber.toFixed(2)}</span>
+          <span
+            data-testid={`button_slider_display_value${editNode ? "_advanced" : ""}`}
+            className="font-mono text-2xl"
+          >
+            {valueAsNumber.toFixed(2)}
+          </span>
         </div>
       </Case>
 
-      <div className="flex items-center justify-center">
+      <div className="flex cursor-default items-center justify-center">
         <SliderPrimitive.Root
           className="relative flex h-5 w-full touch-none select-none items-center"
           value={[valueAsNumber]}
@@ -134,6 +146,7 @@ export default function SliderComponent({
           disabled={disabled}
         >
           <SliderPrimitive.Track
+            data-testid={`slider_track${editNode ? "_advanced" : ""}`}
             className={clsx(
               "relative h-1 w-full grow rounded-full",
               isDark ? "bg-zinc-800" : "bg-zinc-200",
@@ -142,6 +155,7 @@ export default function SliderComponent({
             <SliderPrimitive.Range className="absolute h-full rounded-full bg-gradient-to-r from-indigo-600 to-pink-500" />
           </SliderPrimitive.Track>
           <SliderPrimitive.Thumb
+            data-testid={`slider_thumb${editNode ? "_advanced" : ""}`}
             className={clsx(
               "block h-6 w-6 rounded-full border-2 bg-pink-500 shadow-lg",
               isDark ? "border-[#fff]" : "border-zinc-800",
@@ -150,6 +164,7 @@ export default function SliderComponent({
         </SliderPrimitive.Root>
         {sliderInput && (
           <input
+            data-testid={`slider_input_value${editNode ? "_advanced" : ""}`}
             type="number"
             value={valueAsNumber.toFixed(2)}
             onChange={(e) => handleChange([parseFloat(e.target.value)])}
@@ -198,16 +213,16 @@ export default function SliderComponent({
       <div className="mt-2 grid grid-cols-2 gap-x-2 text-sm text-gray-500">
         <div className="flex items-center">
           <IconComponent
-            className="mr-1 h-3 w-3"
+            className="mr-1 h-4 w-4"
             name={minLabelIcon}
             aria-hidden="true"
           />
-          <span>{minLabel}</span>
+          <span data-testid="min_label">{minLabel}</span>
         </div>
         <div className="flex items-center justify-end">
-          <span>{maxLabel}</span>
+          <span data-testid="max_label">{maxLabel}</span>
           <IconComponent
-            className="ml-1 h-3 w-3"
+            className="ml-1 h-4 w-4"
             name={maxLabelIcon}
             aria-hidden="true"
           />
