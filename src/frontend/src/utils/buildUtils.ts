@@ -25,7 +25,7 @@ type BuildVerticesParams = {
     buildId: string,
   ) => void; // Replace any with the actual type if it's not any
   onBuildComplete?: (allNodesValid: boolean) => void;
-  onBuildError?: (title, list, idList: VertexLayerElementType[]) => void;
+  onBuildError?: (title, list, idList?: VertexLayerElementType[]) => void;
   onBuildStopped?: () => void;
   onBuildStart?: (idList: VertexLayerElementType[]) => void;
   onValidateNodes?: (nodes: string[]) => void;
@@ -40,6 +40,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
     results: {},
     outputs: {},
     messages: [],
+    logs: {},
     inactive: true,
   };
   let inactiveVertexData = {
@@ -125,7 +126,7 @@ export async function buildFlowVerticesWithFallback(
   try {
     return await buildFlowVertices(params);
   } catch (e: any) {
-    if (e.message === "endpoint not available") {
+    if (e.message === "Endpoint not available") {
       return await buildVertices(params);
     }
     throw e;
@@ -295,12 +296,19 @@ export async function buildFlowVertices({
     },
     onError: (statusCode) => {
       if (statusCode === 404) {
-        throw new Error("endpoint not available");
+        throw new Error("Endpoint not available");
       }
-      throw new Error("error in streaming request");
+      throw new Error("Error Building Component");
     },
-    // network error are likely caused by the window.stop() called in the stopBuild function
-    onNetworkError: onBuildStopped,
+    onNetworkError: (error: Error) => {
+      if (error.name === "AbortError") {
+        onBuildStopped && onBuildStopped();
+        return;
+      }
+      onBuildError!("Error Building Component", [
+        "Network error. Please check the connection to the server.",
+      ]);
+    },
   });
 }
 
