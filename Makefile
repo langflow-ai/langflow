@@ -217,7 +217,7 @@ else
 	@cd src/frontend && npx playwright test --project=chromium
 endif
 
-run_cli: install_frontend install_backend build_frontend ## run the CLI
+run_cli: ## run the CLI
 	@echo 'Running the CLI'
 ifdef env
 	@make start env=$(env) host=$(host) port=$(port) log_level=$(log_level)
@@ -227,22 +227,15 @@ endif
 
 run_cli_debug:
 	@echo 'Running the CLI in debug mode'
-	@make install_frontend > /dev/null
-	@echo 'Building the frontend'
-	@make build_frontend > /dev/null
-	@echo 'Install backend dependencies'
-	@make install_backend > /dev/null
 ifdef env
 	@make start env=$(env) host=$(host) port=$(port) log_level=debug
 else
 	@make start host=$(host) port=$(port) log_level=debug
 endif
 
-start:
-	@echo 'Running the CLI'
-
+start: install_frontend build_frontend install_backend
 ifeq ($(open_browser),false)
-	@make install_backend && uv run langflow run \
+	uv run langflow run \
 		--frontend-path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
@@ -250,7 +243,7 @@ ifeq ($(open_browser),false)
 		--env-file $(env) \
 		--no-open-browser
 else
-	@make install_backend && uv run langflow run \
+	uv run langflow run \
 		--frontend-path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
