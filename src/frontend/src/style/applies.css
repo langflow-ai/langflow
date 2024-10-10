@@ -324,7 +324,7 @@
     @apply relative flex flex-col justify-center bg-background transition-all;
   }
   .generic-node-div-title {
-    @apply flex w-full items-center gap-2 border-b bg-muted p-5;
+    @apply flex w-full items-center gap-2 border-b p-5;
   }
   .generic-node-title-arrangement {
     @apply flex-max-width items-center truncate;
