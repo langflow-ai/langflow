@@ -174,7 +174,7 @@ class SliderMixin(BaseModel):
     min_label_icon: str = Field(default="pencil-ruler")
     max_label_icon: str = Field(default="palette")
     slider_buttons: bool = Field(default=False)
-    slider_buttons_options: list[dict[str, Any]] = Field(default=[])
+    slider_buttons_options: list[str] = Field(default=[])
     slider_input: bool = Field(default=False)
 
 
