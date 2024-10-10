@@ -215,8 +215,8 @@ def create_state_model(model_name: str = "State", validate: bool = True, **kwarg
                 property_method = property(getter, setter)
             except ValueError as e:
                 # If the method is not valid,assume it is already a getter
-                if "get_output_by_method" not in str(e) and "__self__" not in str(e) or validate:
-                    raise e
+                if ("get_output_by_method" not in str(e) and "__self__" not in str(e)) or validate:
+                    raise
                 property_method = value
             fields[name] = computed_field(property_method)
         elif isinstance(value, FieldInfo):

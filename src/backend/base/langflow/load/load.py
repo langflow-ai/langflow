@@ -113,10 +113,10 @@ def run_flow_from_json(
     """
     # Set all streaming to false
     try:
-        import nest_asyncio  # type: ignore
+        import nest_asyncio
 
         nest_asyncio.apply()
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.opt(exception=True).warning("Could not apply nest_asyncio")
     if tweaks is None:
         tweaks = {}

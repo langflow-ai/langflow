@@ -11,6 +11,7 @@ from googleapiclient.discovery import build
 from langchain_core.chat_sessions import ChatSession
 from langchain_core.messages import HumanMessage
 from langchain_google_community.gmail.loader import GMailLoader
+from loguru import logger
 
 from langflow.custom import Component
 from langflow.inputs import MessageTextInput
@@ -150,15 +151,15 @@ class GmailLoaderComponent(Component):
                 )
                 messages = results.get("messages", [])
                 if not messages:
-                    print("No messages found with the specified labels.")
+                    logger.warning("No messages found with the specified labels.")
                 for message in messages:
                     try:
                         yield self._get_message_data(service, message)
-                    except Exception as e:
+                    except Exception:
                         if self.raise_error:
-                            raise e
+                            raise
                         else:
-                            print(f"Error processing message {message['id']}: {e}")
+                            logger.exception(f"Error processing message {message['id']}")
 
         json_string = self.json_string
         label_ids = self.label_ids.split(",") if self.label_ids else ["INBOX"]

@@ -1,4 +1,4 @@
-from crewai import Agent, Crew, Process, Task  # type: ignore
+from crewai import Agent, Crew, Process, Task
 
 from langflow.base.agents.crewai.crew import BaseCrewComponent
 from langflow.io import HandleInput

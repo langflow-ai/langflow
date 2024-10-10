@@ -3,10 +3,10 @@ from langflow.services.cache.service import AsyncInMemoryCache, CacheService, Re
 from . import factory, service
 
 __all__ = [
-    "factory",
-    "service",
-    "ThreadingInMemoryCache",
     "AsyncInMemoryCache",
     "CacheService",
     "RedisCache",
+    "ThreadingInMemoryCache",
+    "factory",
+    "service",
 ]

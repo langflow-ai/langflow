@@ -6,7 +6,7 @@ from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
 
-import nanoid  # type: ignore
+import nanoid
 import yaml
 from pydantic import BaseModel
 
@@ -338,7 +338,7 @@ class Component(CustomComponent):
             try:
                 source_code = inspect.getsource(method)
                 ast_tree = ast.parse(dedent(source_code))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 source_code = self._code
                 ast_tree = ast.parse(dedent(source_code))
 
@@ -590,9 +590,9 @@ class Component(CustomComponent):
         return frontend_node
 
     def to_frontend_node(self):
-        #! This part here is clunky but we need it like this for
-        #! backwards compatibility. We can change how prompt component
-        #! works and then update this later
+        # ! This part here is clunky but we need it like this for
+        # ! backwards compatibility. We can change how prompt component
+        # ! works and then update this later
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
         for key in self._inputs:

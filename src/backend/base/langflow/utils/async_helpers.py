@@ -22,7 +22,7 @@ def run_in_thread(coro):
         nonlocal result, exception
         try:
             result = asyncio.run(coro)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             exception = e
 
     thread = threading.Thread(target=target)

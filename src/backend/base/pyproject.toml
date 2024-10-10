@@ -56,19 +56,12 @@ ignore = [
     # Rules that are TODOs
     "ANN",
     "ARG",
-    "BLE",
     "D",
     "DOC",
-    "EXE",
     "FBT",
     "N",
-    "PGH",
-    "RUF006", # Store a reference to the return value of `asyncio.create_task`
     "S",
     "SLF",
-    "T201",
-    "TRY002",
-    "TRY2",
     "TRY3",
 ]
 
@@ -194,7 +187,7 @@ dev = [
     "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
-    "ruff>=0.4.5",
+    "ruff>=0.6.2",
     "httpx>=0.27",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",

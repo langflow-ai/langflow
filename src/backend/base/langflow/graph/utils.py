@@ -106,7 +106,7 @@ def get_artifact_type(value, build_result) -> str:
             result = ArtifactType.MESSAGE
 
     if result == ArtifactType.UNKNOWN and (
-        isinstance(build_result, Generator) or isinstance(value, Message) and isinstance(value.text, Generator)
+        isinstance(build_result, Generator) or (isinstance(value, Message) and isinstance(value.text, Generator))
     ):
         result = ArtifactType.STREAM
 
@@ -141,6 +141,11 @@ async def log_transaction(
     try:
         if not get_settings_service().settings.transactions_storage_enabled:
             return
+        if not flow_id:
+            if source.graph.flow_id:
+                flow_id = source.graph.flow_id
+            else:
+                return
         inputs = _vertex_to_primitive_dict(source)
         transaction = TransactionBase(
             vertex_id=source.id,
@@ -155,7 +160,7 @@ async def log_transaction(
         with session_getter(get_db_service()) as session:
             inserted = crud_log_transaction(session, transaction)
             logger.debug(f"Logged transaction: {inserted.id}")
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Error logging transaction")
 
 
@@ -183,7 +188,7 @@ def log_vertex_build(
         with session_getter(get_db_service()) as session:
             inserted = crud_log_vertex_build(session, vertex_build)
             logger.debug(f"Logged vertex build: {inserted.build_id}")
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Error logging vertex build")
 
 
