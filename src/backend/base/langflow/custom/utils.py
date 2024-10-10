@@ -1,13 +1,12 @@
 import ast
 import contextlib
+import importlib
+import inspect
 import pkgutil
 import re
 import traceback
-from typing import Any, Dict
+from typing import Any
 from uuid import UUID
-import importlib
-import inspect
-from typing import List
 
 from astra_assistants.tools.tool_interface import ToolInterface
 from fastapi import HTTPException
@@ -426,7 +425,11 @@ def build_custom_component_template(
         return frontend_node.to_dict(keep_name=False), custom_instance
     except Exception as exc:
         if custom_component.ERROR_CODE_NULL:
-            logger.error(f"Error building Component: {custom_component.template_config} \n {custom_component.ERROR_CODE_NULL}")
+            logger.error(
+                f"Error building Component: "
+                f"{custom_component.template_config} \n "
+                f"{custom_component.ERROR_CODE_NULL}"
+            )
         try:
             logger.error(f"Error building Component: {custom_component.template_config['display_name']} \n {str(exc)}")
         except Exception as e:
@@ -483,7 +486,7 @@ def build_custom_components(components_paths: list[str]):
     return custom_components_from_file
 
 
-async def abuild_custom_components(components_paths: List[str], tool_packages: List[object] = None):
+async def abuild_custom_components(components_paths: list[str], tool_packages: list[object] = None):
     """Build custom components from the specified paths and tool packages."""
     if not components_paths and not tool_packages:
         return {}
@@ -510,14 +513,12 @@ async def abuild_custom_components(components_paths: List[str], tool_packages: L
     # Process components from tool packages (which are now module objects)
     if tool_packages:
         tool_components = build_tool_components(tool_packages)  # Now correctly handling module objects
-        custom_components_from_file = merge_nested_dicts_with_renaming(
-            custom_components_from_file, tool_components
-        )
+        custom_components_from_file = merge_nested_dicts_with_renaming(custom_components_from_file, tool_components)
 
     return custom_components_from_file
 
 
-def build_tool_components(tool_packages: List[object]) -> Dict:
+def build_tool_components(tool_packages: list[object]) -> dict:
     """Build components from classes extending ToolInterface in the specified modules."""
     tool_components = {}
     processed_modules = set()
@@ -535,16 +536,16 @@ def build_tool_components(tool_packages: List[object]) -> Dict:
             logger.error(trace)
 
     components_list = []
-    category = 'converted_tools'
+    category = "converted_tools"
 
     for name, cls in tool_components[category].items():
         # Extract the tool class details for the imports
-        #tool_cls = cls.tool_cls
-        #tool_module = tool_cls.__module__
-        #tool_class_name = tool_cls.__name__
+        # tool_cls = cls.tool_cls
+        # tool_module = tool_cls.__module__
+        # tool_class_name = tool_cls.__name__
 
         # Generate the import statements
-        #imports = (
+        # imports = (
         #    "import inspect\n"
         #    "import asyncio\n"
         #    "from typing import Type, Dict, Any, Union\n"
@@ -559,17 +560,17 @@ def build_tool_components(tool_packages: List[object]) -> Dict:
         #    "from langflow.outputs import Output\n"
         #    "from langflow.component import Component\n"
         #    f"from {tool_module} import {tool_class_name}\n"
-        #)
+        # )
 
         # Define the component class name
-        #component_class_name = f"{tool_cls.__name__}Component"
+        # component_class_name = f"{tool_cls.__name__}Component"
 
         # Begin constructing the class definition
-        #class_code = f"{imports}\n\nclass {component_class_name}(Component):\n"
+        # class_code = f"{imports}\n\nclass {component_class_name}(Component):\n"
 
-        #members = inspect.getmembers(cls)
+        # members = inspect.getmembers(cls)
         # Iterate through the members of cls and generate attributes and methods
-        #for member_name, member_value in members:
+        # for member_name, member_value in members:
         #    # Skip private members and properties
         #    if not member_name.startswith('_') and not isinstance(member_value, property):
         #        if not callable(member_value):
@@ -586,10 +587,10 @@ def build_tool_components(tool_packages: List[object]) -> Dict:
         #            else:
         #                class_code += f"        return cls.{member_name}(*args, **kwargs)\n"
 
-        #members.index("outputs")
+        # members.index("outputs")
 
         ## Ensure the class has some content, otherwise add a `pass`
-        #if class_code.strip().endswith(f"class {component_class_name}(Component):"):
+        # if class_code.strip().endswith(f"class {component_class_name}(Component):"):
         #    class_code += "    pass\n"
 
         component_info = {
@@ -614,8 +615,8 @@ def build_tool_components(tool_packages: List[object]) -> Dict:
         "components": components_list,
     }
     built_menu_items = build_menu_items(components_dict)
-    menu = { category: built_menu_items }
-    return menu
+    return {category: built_menu_items}
+
 
 def _process_module(module, tool_components, processed_modules):
     """Process an individual module for ToolInterface subclasses."""
@@ -626,7 +627,7 @@ def _process_module(module, tool_components, processed_modules):
     logger.info(f"Inspecting module {module.__name__}")
 
     # Inspect the members of the module
-    for name, obj in inspect.getmembers(module):
+    for _, obj in inspect.getmembers(module):
         if inspect.ismodule(obj):
             # Recursively inspect submodules
             _process_module(obj, tool_components, processed_modules)
@@ -634,12 +635,13 @@ def _process_module(module, tool_components, processed_modules):
             logger.info(f"Found ToolInterface class: {obj.__name__}")
 
             component = tool_interface_to_component(obj)
-            category = getattr(obj, 'category', 'converted_tools')
+            category = getattr(obj, "category", "converted_tools")
 
             # Organize components by category
             if category not in tool_components:
                 tool_components[category] = {}
             tool_components[category][obj.__name__] = component
+
 
 def _iter_submodules(package, processed_modules=None):
     """Recursively iterate over all submodules in a package."""
@@ -649,8 +651,8 @@ def _iter_submodules(package, processed_modules=None):
         return
     yield package  # Start with the root package
     processed_modules.add(package)
-    if hasattr(package, '__path__'):  # If the package has submodules
-        for _, submodule_name, is_pkg in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
+    if hasattr(package, "__path__"):  # If the package has submodules
+        for _, submodule_name, _ in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
             try:
                 submodule = importlib.import_module(submodule_name)
                 if submodule not in processed_modules:

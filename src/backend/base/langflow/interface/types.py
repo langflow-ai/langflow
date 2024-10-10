@@ -4,11 +4,10 @@ import asyncio
 import json
 from typing import TYPE_CHECKING
 
-import langflow.components.astra_assistants.tools as langflow_assistant_tools
 import astra_assistants.tools as astra_assistants_tools
-
 from loguru import logger
 
+import langflow.components.astra_assistants.tools as langflow_assistant_tools
 from langflow.custom.utils import abuild_custom_components, build_custom_components
 
 if TYPE_CHECKING:
@@ -46,6 +45,7 @@ async def aget_all_components(components_paths, as_dict=False):
                 components.append(component)
     return components
 
+
 # is this still used? seems like get_and_cache_all_types_dict is used instead
 def get_all_components(components_paths, as_dict=False):
     """Get all components names combining native and custom components."""
@@ -66,14 +66,16 @@ all_types_dict_cache = None
 
 async def get_and_cache_all_types_dict(
     settings_service: SettingsService,
-    cache_service: CacheService, # not used?
-    force_refresh: bool = False, # not used?
-    lock: asyncio.Lock | None = None, # not used?
+    cache_service: CacheService,  # not used?
+    force_refresh: bool = False,  # not used?
+    lock: asyncio.Lock | None = None,  # not used?
 ):
     tool_packages = [astra_assistants_tools, langflow_assistant_tools]
     global all_types_dict_cache
     if all_types_dict_cache is None:
         logger.debug("Building langchain types dict")
-        all_types_dict_cache = await aget_all_types_dict(settings_service.settings.components_path, tool_packages=tool_packages)
+        all_types_dict_cache = await aget_all_types_dict(
+            settings_service.settings.components_path, tool_packages=tool_packages
+        )
 
     return all_types_dict_cache

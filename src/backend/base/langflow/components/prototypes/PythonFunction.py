@@ -41,6 +41,7 @@ class PythonFunctionComponent(Component):
 
     def get_function_callable(self) -> Callable:
         from langflow.custom.utils import get_function
+
         function_code = self.function_code
         self.status = function_code
         return get_function(function_code)
@@ -53,6 +54,7 @@ class PythonFunctionComponent(Component):
 
         try:
             from langflow.custom.utils import get_function
+
             func = get_function(function_code)
             return func()
         except Exception as e:

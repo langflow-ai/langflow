@@ -327,9 +327,9 @@ def extract_function_name(code):
 def extract_class_name(code):
     try:
         module = ast.parse(code)
-    except SyntaxError:
+    except SyntaxError as e:
         msg = "Invalid syntax in the code string"
-        raise ValueError(msg)
+        raise ValueError(msg) from e
     for node in module.body:
         if isinstance(node, ast.ClassDef):
             return node.name

@@ -9,7 +9,7 @@ from langflow.components.astra_assistants.util import (
     tools_and_names,
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
-from langflow.inputs import DropdownInput, MultilineInput, StrInput, MultiselectInput
+from langflow.inputs import DropdownInput, MultilineInput, MultiselectInput, StrInput
 from langflow.schema.message import Message
 from langflow.template import Output
 
