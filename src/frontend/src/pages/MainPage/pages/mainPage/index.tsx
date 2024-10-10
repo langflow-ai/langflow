@@ -72,43 +72,43 @@ export default function HomePage(): JSX.Element {
 
   return (
     <>
-      <PageLayout
-        title={USER_PROJECTS_HEADER}
-        description={MY_COLLECTION_DESC}
-        button={
-          <div className="flex gap-2">
-            <DropdownButton
-              firstButtonName="New Project"
-              onFirstBtnClick={() => {
-                setOpenModal(true);
-                track("New Project Button Clicked");
-              }}
-              options={dropdownOptions}
-              plusButton={true}
-              dropdownOptions={false}
-              isFetchingFolders={isFetchingFolders}
-            />
-          </div>
-        }
-      >
-        <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-x-8 lg:space-y-0">
-          <aside className="flex h-fit w-fit flex-col space-y-6">
-            <FolderSidebarNav
-              handleChangeFolder={(id: string) => {
-                navigate(`all/folder/${id}`);
-              }}
-              handleDeleteFolder={(item) => {
-                setFolderToEdit(item);
-                setOpenDeleteFolderModal(true);
-              }}
-              className="w-[20vw]"
-            />
-          </aside>
+      <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-y-0">
+        <aside className="hidden lg:flex h-full w-fit flex-col space-y-6 px-4 border-r">
+          <FolderSidebarNav
+            handleChangeFolder={(id: string) => {
+              navigate(`all/folder/${id}`);
+            }}
+            handleDeleteFolder={(item) => {
+              setFolderToEdit(item);
+              setOpenDeleteFolderModal(true);
+            }}
+            className="w-[20vw]"
+          />
+        </aside>
+        <PageLayout
+          title={USER_PROJECTS_HEADER}
+          description={MY_COLLECTION_DESC}
+          button={
+            <div className="flex gap-2">
+              <DropdownButton
+                firstButtonName="New Project"
+                onFirstBtnClick={() => {
+                  setOpenModal(true);
+                  track("New Project Button Clicked");
+                }}
+                options={dropdownOptions}
+                plusButton={true}
+                dropdownOptions={false}
+                isFetchingFolders={isFetchingFolders}
+              />
+            </div>
+          }
+        >
           <div className="relative h-full w-full flex-1">
             <Outlet />
           </div>
-        </div>
-      </PageLayout>
+        </PageLayout>
+      </div>
       <ModalsComponent
         openModal={openModal}
         setOpenModal={setOpenModal}
