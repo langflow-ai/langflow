@@ -33,6 +33,15 @@ export default function PaginatorComponent({
     setMaxPageIndex(pages ?? Math.ceil(totalRowsCount / size));
   }, [totalRowsCount]);
 
+  const disableFirstPage = pageIndex <= 1;
+  const disableLastPage = pageIndex === maxIndex;
+
+  const handleValueChange = (pageSize: string) => {
+    setPageSize(Number(pageSize));
+    setMaxPageIndex(pages ?? Math.ceil(totalRowsCount / Number(pageSize)));
+    paginate(1, Number(pageSize));
+  };
+
   return (
     <>
       <div className="flex items-center justify-between px-2">
@@ -47,13 +56,7 @@ export default function PaginatorComponent({
           <div className="flex items-center space-x-2">
             <p className="text-sm font-medium">Rows per page</p>
             <Select
-              onValueChange={(pageSize: string) => {
-                setPageSize(Number(pageSize));
-                setMaxPageIndex(
-                  pages ?? Math.ceil(totalRowsCount / Number(pageSize)),
-                );
-                paginate(1, Number(pageSize));
-              }}
+              onValueChange={handleValueChange}
               value={pageSize.toString()}
             >
               <SelectTrigger className="w-[100px]">
@@ -86,7 +89,7 @@ export default function PaginatorComponent({
               <IconComponent name="ChevronsLeft" className="h-4 w-4" />
             </Button>
             <Button
-              disabled={pageIndex <= 1}
+              disabled={disableFirstPage}
               onClick={() => {
                 if (pageIndex > 0) {
                   paginate(pageIndex - 1, size);
@@ -100,7 +103,7 @@ export default function PaginatorComponent({
               <IconComponent name="ChevronLeft" className="h-4 w-4" />
             </Button>
             <Button
-              disabled={pageIndex === maxIndex}
+              disabled={disableLastPage}
               onClick={() => {
                 paginate(pageIndex + 1, size);
               }}
@@ -112,7 +115,7 @@ export default function PaginatorComponent({
               <IconComponent name="ChevronRight" className="h-4 w-4" />
             </Button>
             <Button
-              disabled={pageIndex === maxIndex}
+              disabled={disableLastPage}
               variant="outline"
               className="hidden h-8 w-8 p-0 lg:flex"
               size={"icon"}

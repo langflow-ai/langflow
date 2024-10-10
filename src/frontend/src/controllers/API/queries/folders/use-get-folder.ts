@@ -1,10 +1,10 @@
 import buildQueryStringUrl from "@/controllers/utils/create-query-param-string";
-import { FolderType, PaginatedFolderType } from "@/pages/MainPage/entities";
+import {  PaginatedFolderType } from "@/pages/MainPage/entities";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useQueryFunctionType } from "@/types/api";
 import { processFlows } from "@/utils/reactflowUtils";
-import { UseQueryOptions } from "@tanstack/react-query";
 import { cloneDeep } from "lodash";
+import { useRef } from "react";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -29,11 +29,17 @@ export const useGetFolderQuery: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const folders = useFolderStore((state) => state.folders);
+  const latestIdRef = useRef("");
 
   const getFolderFn = async (
     params: IGetFolder,
   ): Promise<PaginatedFolderType | undefined> => {
     if (params.id) {
+      if (latestIdRef.current !== params.id) {
+        params.page = 1;
+      }
+      latestIdRef.current = params.id;
+
       const existingFolder = folders.find((f) => f.id === params.id);
       if (!existingFolder) {
         return;
