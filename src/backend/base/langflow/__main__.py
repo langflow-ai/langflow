@@ -367,7 +367,7 @@ def run_langflow(host, port, log_level, options, app) -> None:
             app,
             host=host,
             port=port,
-            log_level=log_level.lower(),
+            log_level="critical",
             loop="asyncio",
         )
     else:

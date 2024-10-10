@@ -292,7 +292,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=7860,
         workers=get_number_of_workers(),
-        log_level="error",
+        log_level="critical",
         reload=True,
         loop="asyncio",
     )
