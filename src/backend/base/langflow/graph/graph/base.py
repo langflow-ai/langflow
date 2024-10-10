@@ -209,6 +209,8 @@ class Graph:
         for vertex in self._vertices:
             if vertex_id := vertex.get("id"):
                 self.top_level_vertices.append(vertex_id)
+            if vertex_id in self.cycle_vertices:
+                self.run_manager.add_to_cycle_vertices(vertex_id)
         self._graph_data = process_flow(self.raw_graph_data)
 
         self._vertices = self._graph_data["nodes"]
@@ -1128,6 +1130,9 @@ class Graph:
         self._build_vertex_params()
         run_until_complete(self._instantiate_components_in_vertices())
         self._set_cache_to_vertices_in_cycle()
+        for vertex in self.vertices:
+            if vertex.id in self.run_manager.cycle_vertices:
+                self.run_manager.add_to_cycle_vertices(vertex.id)
 
     def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
         """Returns the edges of the graph as a list of tuples."""
@@ -1709,6 +1714,8 @@ class Graph:
 
         for vertex_id in first_layer:
             self.run_manager.add_to_vertices_being_run(vertex_id)
+            if vertex_id in self.cycle_vertices:
+                self.run_manager.add_to_cycle_vertices(vertex_id)
         self._first_layer = sorted(first_layer)
         self._run_queue = deque(self._first_layer)
         self._prepared = True
