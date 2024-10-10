@@ -119,8 +119,16 @@ export default function IOModal({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setNode = useFlowStore((state) => state.setNode);
-  const [sessions, setSessions] = useState<string[]>([]);
   const messages = useMessagesStore((state) => state.messages);
+  const [sessions, setSessions] = useState<string[]>(
+    Array.from(
+      new Set(
+        messages
+          .filter((message) => message.flow_id === currentFlowId)
+          .map((message) => message.session_id),
+      ),
+    ),
+  );
   const flowPool = useFlowStore((state) => state.flowPool);
   const [sessionId, setSessionId] = useState<string>(currentFlowId);
   useGetMessagesQuery(
@@ -407,11 +415,7 @@ export default function IOModal({
                         }
                       }}
                       updateVisibleSession={(session) => {
-                        setvisibleSessions((prev) =>
-                          prev.includes(session)
-                            ? prev.filter((item) => item !== session)
-                              : [session],
-                        );
+                        setvisibleSessions([session]);
                       }}
                       toggleVisibility={() => {
                         setvisibleSessions((prev) =>
