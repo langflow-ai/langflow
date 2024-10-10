@@ -41,6 +41,7 @@ export default function EditMessageField({
       <div className="flex w-full flex-row-reverse justify-between">
         <div className="flex flex-row-reverse gap-2">
           <Button
+            data-testid="save-button"
             onMouseDown={() => setIsButtonClicked(true)}
             onClick={() => {
               onEdit(message);
@@ -51,6 +52,7 @@ export default function EditMessageField({
             Save
           </Button>
           <Button
+            data-testid="cancel-button"
             onMouseDown={() => setIsButtonClicked(true)}
             onClick={() => {
               onCancel();

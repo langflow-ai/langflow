@@ -115,85 +115,102 @@ test("fresh start playground", async ({ page }) => {
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
   });
+
+  //send message
   await page.getByTestId('input-chat-playground').click();
   await page.getByTestId('input-chat-playground').fill('message 1');
+  await page.keyboard.press('Enter');
+  //check message
   await page.getByTestId('chat-message-User-message 1').click();
   await page.getByTestId('chat-message-AI-message 1').getByText('message').click();
+  //check session
   await page.getByText('Default Session').click();
+  //check hide session
   await page.getByText('👋 Langflow Chat').click();
-  await page.getByText('Default SessionRenameMessage').click();
+  //check show session
+  await page.getByText('Default Session').click();
   await page.getByTestId('chat-message-User-message 1').click();
-  await page.getByTestId('chat-message-AI-message 1').getByText('message').click();
-  await page.locator('div').filter({ hasText: /^Usermessage 1$/ }).getByRole('button').click();
-  await page.getByTestId('textarea').click();
-  await page.getByText('ChatDefault SessionRenameMessage logsDeleteNew ChatUsermessage').click();
-  await page.getByTestId('chat-message-User-message 1').click();
-  await page.locator('div').filter({ hasText: /^Usermessage 1$/ }).getByRole('button').click();
-  await page.getByTestId('textarea').click();
+  //check edit message
+  await page.getByTestId('chat-message-User-message 1').hover();
+  await page.locator('div').filter({ hasText: /^Usermessage 1$/ }).getByTestId("icon-pencil").click();
   await page.getByTestId('textarea').fill('edit_1');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByTestId('save-button').click();
   await page.getByTestId('chat-message-User-edit_1').click();
-  await page.locator('div').filter({ hasText: /^Useredit_1$/ }).getByRole('button').click();
-  await page.getByTestId('textarea').click();
+  await page.getByTestId('chat-message-User-edit_1').hover();
+  // check cancel edit
+  await page.locator('div').filter({ hasText: /^Useredit_1$/ }).getByTestId("icon-pencil").click();
   await page.getByTestId('textarea').fill('cancel_edit');
-  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByTestId('cancel-button').click();
   await page.getByTestId('chat-message-User-edit_1').click();
-  await page.locator('div').filter({ hasText: /^Useredit_1$/ }).getByRole('button').click();
-  await page.getByTestId('textarea').click();
+  await page.getByTestId('chat-message-User-edit_1').hover();
+  // check cancel edit blur
+  await page.locator('div').filter({ hasText: /^Useredit_1$/ }).getByTestId("icon-pencil").click();
   await page.getByTestId('textarea').fill('cancel_edit_blur');
   await page.getByLabel('Playground').locator('div').filter({ hasText: 'ChatDefault' }).nth(2).click();
   await page.getByTestId('chat-message-User-edit_1').click();
+  //check edit bot message
   await page.getByTestId('chat-message-AI-message 1').getByText('message').click();
-  await page.locator('div').filter({ hasText: /^AImessage 1$/ }).getByRole('button').click();
-  await page.getByTestId('textarea').click();
+  await page.getByTestId('chat-message-AI-message 1').hover();
+  await page.locator('div').filter({ hasText: /^AImessage 1$/ }).getByTestId("icon-pencil").click();
   await page.getByTestId('textarea').fill('edit_bot_1');
-  await page.getByRole('button', { name: 'Save' }).click();
-  await page.locator('div').filter({ hasText: /^AIedit_bot_1$/ }).getByRole('button').click();
-  await page.getByTestId('textarea').click();
-  await page.getByTestId('textarea').fill('edit_bot_cancel');
-  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByTestId('save-button').click();
   await page.getByText('edit_bot_1').click();
-  await page.locator('div').filter({ hasText: /^AIedit_bot_1$/ }).getByRole('button').click();
-  await page.getByTestId('textarea').click();
+  // check cancel edit bot
+  await page.getByTestId('chat-message-AI-edit_bot_1').hover();
+  await page.locator('div').filter({ hasText: /^AIedit_bot_1$/ }).getByTestId("icon-pencil").click();
+  await page.getByTestId('textarea').fill('edit_bot_cancel');
+  await page.getByTestId('cancel-button').click();
+  await page.getByText('edit_bot_1').click();
+  await page.getByTestId('chat-message-AI-edit_bot_1').hover();
+  // check cancel edit bot blur
+  await page.locator('div').filter({ hasText: /^AIedit_bot_1$/ }).getByTestId("icon-pencil").click();
   await page.getByTestId('textarea').fill('edit_bot_blur_cancel');
-  await page.locator('div').filter({ hasText: /^AI$/ }).first().click();
-
+  await page.getByLabel('Playground').locator('div').filter({ hasText: 'ChatDefault' }).nth(2).click();
+  await page.getByText('edit_bot_1').click();
+  // check table messages view
   await page.getByRole('combobox').click();
   await page.getByLabel('Message logs').click();
   await page.getByText('Page 1 of 1', { exact: true }).click();
+  // check rename session
   await page.getByRole('combobox').click();
   await page.getByLabel('Rename').getByText('Rename').click();
   await page.getByRole('textbox').fill('new name');
-  await page.getByLabel('Chat', { exact: true }).getByRole('button').nth(1).click();
+  await page.getByLabel('Chat', { exact: true }).getByTestId("icon-Check").click();
+  await page.getByLabel('Chat', { exact: true }).getByText('new name').click();
+  // check cancel rename
   await page.getByRole('combobox').click();
   await page.getByLabel('Rename').getByText('Rename').click();
   await page.getByRole('textbox').fill('cancel name');
-  await page.getByRole('button').first().click();
-  await page.getByText('new name').click();
-  await page.getByText('new name').click();
+  await page.getByLabel('Chat', { exact: true }).getByTestId("icon-X").click();
+  await page.getByLabel('Chat', { exact: true }).getByText('new name').click();
+  // check cancel rename blur
   await page.getByRole('combobox').click();
   await page.getByLabel('Rename').getByText('Rename').click();
   await page.getByRole('textbox').fill('cancel_blur');
-  await page.getByLabel('Chat', { exact: true }).click();
-  await page.getByText('new name').click();
-  await page.getByText('new name').click();
-
+  await page.getByRole('tab', { name: 'Chat' }).click();
+  await page.getByLabel('Chat', { exact: true }).getByText('new name').click();
+  // check delete session
   await page.getByRole('combobox').click();
   await page.getByLabel('Delete').click();
   await page.getByText('No memories available.').click();
-  await page.locator('form').getByRole('button').click();
+  // check new session
   await page.getByTestId('input-chat-playground').click();
   await page.getByTestId('input-chat-playground').fill('session_after_delete');
+  await page.keyboard.press('Enter');
+  await page.getByTestId('chat-message-User-session_after_delete').click();
+  await expect(page.getByTestId('session-selector')).toBeVisible();
+
+  // check new chat
   await page.getByRole('button', { name: 'New Chat' }).click();
+  await page.waitForTimeout(3000);
   await page.getByText('👋 Langflow Chat').click();
   await page.getByTestId('input-chat-playground').click();
-
   await page.getByTestId('input-chat-playground').fill('second session');
+  await page.keyboard.press('Enter');
   await page.getByTestId('chat-message-User-second session').click();
   await page.getByTestId('chat-message-AI-second session').getByText('second session').click();
-  await page.getByLabel('Playground').getByText('Session Oct 09, 05:35:39 PM').click();
-  await page.getByText('new nameRenameMessage').click();
-  await page.getByTestId('chat-message-User-session_after_delete').click();
-  await page.getByText('Session Oct 09, 05:35:39 PMRenameMessage logsDelete').click();
-  await page.getByTestId('chat-message-User-second session').click();
+  expect(await page.getByTestId('session-selector').count()).toBe(2);
+
+  const sessionElements = await page.getByLabel('Playground').getByText(/^Session .+/).all();
+  expect(sessionElements.length).toBe(2);
 });
