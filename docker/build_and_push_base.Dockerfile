@@ -52,9 +52,9 @@ ADD ./uv.lock /app/src/backend/base/uv.lock
 ADD ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 ADD ./src/backend/base/README.md /app/src/backend/base/README.md
 
-WORKDIR /app/src/backend/base
+WORKDIR /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-editable
+    uv sync --directory src/backend/base --frozen --no-dev --no-editable
 
 ################################
 # RUNTIME
