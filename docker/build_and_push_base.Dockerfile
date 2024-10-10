@@ -34,11 +34,13 @@ RUN apt-get update \
 
 # Install the project's dependencies using the lockfile and settings
 RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=uv.lock,target=src/backend/base/uv.lock \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    uv sync --frozen --directory src/backend/base --no-install-project --no-dev --no-editable
+    uv sync --frozen --directory src/backend/base --no-install-project --no-dev
 
+# ADD . /app
 ADD ./src /app/src
 
 COPY src/frontend /tmp/src/frontend
@@ -48,13 +50,21 @@ RUN npm install \
     && cp -r build /app/src/backend/base/langflow/frontend \
     && rm -rf /tmp/src/frontend
 
-ADD ./uv.lock /app/src/backend/base/uv.lock
-ADD ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
-ADD ./src/backend/base/README.md /app/src/backend/base/README.md
-
 WORKDIR /app
+ADD ./uv.lock src/backend/base/uv.lock
+ADD ./src/backend/base/pyproject.toml src/backend/base/pyproject.toml
+ADD ./src/backend/base/README.md src/backend/base/README.md
+
+ARG CACHEBUST=11
+RUN echo "Contents of /app/src:" && ls /app/src
+RUN echo "Contents of /app/src/backend/base:" && ls /app/src/backend/base
+RUN grep "langflow" /app/src/backend/base/pyproject.toml
+RUN grep "langflow" /app/src/backend/base/uv.lock
+
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --directory /app/src/backend/base --frozen --no-dev --no-editable
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=uv.lock,target=src/backend/base/uv.lock \
+    uv sync --frozen --directory src/backend/base --no-dev
 
 ################################
 # RUNTIME
