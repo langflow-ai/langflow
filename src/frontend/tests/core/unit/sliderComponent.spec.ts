@@ -1,4 +1,5 @@
 import { expect, Page, test } from "@playwright/test";
+import uaParser from "ua-parser-js";
 
 test("user should be able to use slider input", async ({ page }) => {
   await page.goto("/");
@@ -25,6 +26,15 @@ test("user should be able to use slider input", async ({ page }) => {
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
+
+  const getUA = await page.evaluate(() => navigator.userAgent);
+  const userAgentInfo = uaParser(getUA);
+  let control = "Control";
+
+  if (userAgentInfo.os.name.includes("Mac")) {
+    control = "Meta";
+  }
+
   await page.waitForSelector('[data-testid="blank-flow"]', {
     timeout: 30000,
   });
@@ -53,9 +63,51 @@ test("user should be able to use slider input", async ({ page }) => {
   let cleanCode = await extractAndCleanCode(page);
 
   // Replace the import statement
+  cleanCode = cleanCode.replace("FloatInput(", "SliderInput(");
   cleanCode = cleanCode.replace(
-    "from langflow.io import MessageTextInput, Output",
-    "from langflow.io import MessageTextInput, Output, LinkInput",
+    "from langflow.io import BoolInput, DictInput, DropdownInput, IntInput, StrInput",
+    "from langflow.io import BoolInput, DictInput, DropdownInput, SliderInput, IntInput, StrInput",
+  );
+
+  cleanCode = cleanCode.replace(
+    "value=0.2,",
+    "value=0.2, range_spec=RangeSpec(min=3, max=30, step=1), min_label='test', max_label='test2', min_label_icon='pencil-ruler', max_label_icon='palette', slider_buttons=False, slider_buttons_options=[], slider_input=False,",
+  );
+
+  await page.locator("textarea").last().press(`${control}+a`);
+  await page.keyboard.press("Backspace");
+  await page.locator("textarea").last().fill(cleanCode);
+  await page.locator('//*[@id="checkAndSaveBtn"]').click();
+  await page.waitForTimeout(500);
+
+  await page.getByTitle("fit view").click();
+
+  await mutualValidation(page);
+
+  await moveSlider(page, "right", false);
+
+  await page.waitForTimeout(500);
+
+  await page.getByTitle("zoom out").click();
+
+  await page.getByTestId("more-options-modal").click();
+  await page.getByText("Advanced", { exact: true }).click();
+  await expect(
+    page.getByTestId("default_slider_display_value_advanced"),
+  ).toHaveText("19.00");
+
+  await moveSlider(page, "left", true);
+  // Wait for any potential updates
+  await page.waitForTimeout(500);
+
+  await expect(
+    page.getByTestId("default_slider_display_value_advanced"),
+  ).toHaveText("14.00");
+
+  await page.getByText("Close").last().click();
+
+  await expect(page.getByTestId("default_slider_display_value")).toHaveText(
+    "14.00",
   );
 });
 
@@ -78,4 +130,37 @@ async function extractAndCleanCode(page: Page): Promise<string> {
     .replace(/&#x2F;/g, "/");
 
   return codeContent;
+}
+
+async function mutualValidation(page: Page) {
+  await expect(page.getByTestId("default_slider_display_value")).toHaveText(
+    "3.00",
+  );
+  await expect(page.getByTestId("min_label")).toHaveText("test");
+  await expect(page.getByTestId("max_label")).toHaveText("test2");
+  await expect(page.getByTestId("icon-pencil-ruler")).toBeVisible();
+  await expect(page.getByTestId("icon-palette")).toBeVisible();
+}
+async function moveSlider(
+  page: Page,
+  side: "left" | "right",
+  advanced: boolean = false,
+) {
+  const thumbSelector = `slider_thumb${advanced ? "_advanced" : ""}`;
+  const trackSelector = `slider_track${advanced ? "_advanced" : ""}`;
+
+  await page.getByTestId(thumbSelector).click();
+
+  const trackBoundingBox = await page.getByTestId(trackSelector).boundingBox();
+
+  if (trackBoundingBox) {
+    const moveDistance =
+      trackBoundingBox.width * 0.1 * (side === "left" ? -1 : 1);
+    const centerX = trackBoundingBox.x + trackBoundingBox.width / 2;
+    const centerY = trackBoundingBox.y + trackBoundingBox.height / 2;
+
+    await page.mouse.move(centerX + moveDistance, centerY);
+    await page.mouse.down();
+    await page.mouse.up();
+  }
 }
