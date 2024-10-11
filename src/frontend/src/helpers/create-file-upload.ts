@@ -12,8 +12,8 @@ export function createFileUpload(props?: {
     let isResolved = false;
 
     const cleanup = () => {
-      if (input && input.parentNode) {
-        input.parentNode.removeChild(input);
+      if (input && document.body.contains(input)) {
+        document.body.removeChild(input);
       }
       window.removeEventListener("focus", handleFocus);
     };
@@ -43,12 +43,13 @@ export function createFileUpload(props?: {
     document.body.appendChild(input);
     input.click();
 
+    // Fallback timeout to ensure resolution
     setTimeout(() => {
       if (!isResolved) {
         isResolved = true;
         cleanup();
         resolve([]);
       }
-    }, 60000);
+    }, 60000); // 1 minute timeout
   });
 }
