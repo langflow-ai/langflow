@@ -8,6 +8,8 @@ from .MergeData import MergeDataComponent
 from .ParseData import ParseDataComponent
 from .SplitText import SplitTextComponent
 from .StoreMessage import StoreMessageComponent
+from .ParseExcelData import ParseExcelDataComponent
+
 
 __all__ = [
     "CombineTextComponent",
@@ -20,5 +22,6 @@ __all__ = [
     "MergeDataComponent",
     "ParseDataComponent",
     "SplitTextComponent",
-    "StoreMessageComponent",
+    "StoreMessageComponent"
+    "ParseExcelDataComponent"
 ]
