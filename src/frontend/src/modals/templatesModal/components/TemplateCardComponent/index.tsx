@@ -1,3 +1,4 @@
+import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
 import gradient from "random-gradient";
 import IconComponent, {
   ForwardedIconComponent,
@@ -40,7 +41,10 @@ export default function TemplateCardComponent({
       <div className="flex flex-1 flex-col justify-between">
         <div>
           <div className="flex w-full items-center justify-between">
-            <h3 className="line-clamp-3 text-lg font-semibold">
+            <h3
+              className="line-clamp-3 text-lg font-semibold"
+              data-testid={`template_${convertTestName(example.name)}`}
+            >
               {example.name}
             </h3>
             <ForwardedIconComponent
