@@ -1,4 +1,4 @@
-export function createFileUpload(props?: {
+export async function createFileUpload(props?: {
   accept?: string;
   multiple?: boolean;
 }): Promise<File[]> {
