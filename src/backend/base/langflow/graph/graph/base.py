@@ -26,7 +26,6 @@ from langflow.graph.graph.utils import (
     find_all_cycle_edges,
     find_cycle_vertices,
     find_start_component_id,
-    has_cycle,
     process_flow,
     should_continue,
     sort_up_to_vertex,
@@ -527,12 +526,7 @@ class Graph:
             bool: True if the graph has any cycles, False otherwise.
         """
         if self._is_cyclic is None:
-            vertices = [vertex.id for vertex in self.vertices]
-            try:
-                edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
-            except KeyError:
-                edges = [(e["source"], e["target"]) for e in self._edges]
-            self._is_cyclic = has_cycle(vertices, edges)
+            self._is_cyclic = bool(self.cycle_vertices)
         return self._is_cyclic
 
     @property
@@ -1131,7 +1125,7 @@ class Graph:
         run_until_complete(self._instantiate_components_in_vertices())
         self._set_cache_to_vertices_in_cycle()
         for vertex in self.vertices:
-            if vertex.id in self.run_manager.cycle_vertices:
+            if vertex.id in self.cycle_vertices:
                 self.run_manager.add_to_cycle_vertices(vertex.id)
 
     def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
