@@ -34,7 +34,7 @@ class ServiceManager:
         for factory in self.get_factories():
             try:
                 self.register_factory(factory)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception(f"Error initializing {factory}")
 
     def register_factory(
@@ -111,7 +111,7 @@ class ServiceManager:
                 result = service.teardown()
                 if asyncio.iscoroutine(result):
                     await result
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.exception(exc)
         self.services = {}
         self.factories = {}
@@ -161,7 +161,7 @@ def initialize_session_service():
     Initialize the session manager.
     """
     from langflow.services.cache import factory as cache_factory
-    from langflow.services.session import factory as session_service_factory  # type: ignore
+    from langflow.services.session import factory as session_service_factory
 
     initialize_settings_service()
 

@@ -45,14 +45,14 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
         document_content_description: str,
         llm: LanguageModel,
         metadata_field_info: list[str],
-    ) -> Retriever:  # type: ignore
+    ) -> Retriever:
         metadata_field_obj = []
 
         for meta in metadata_field_info:
             meta_obj = json.loads(meta)
             if "name" not in meta_obj or "description" not in meta_obj or "type" not in meta_obj:
                 msg = "Incorrect metadata field info format."
-                raise Exception(msg)
+                raise ValueError(msg)
             attribute_info = AttributeInfo(
                 name=meta_obj["name"],
                 description=meta_obj["description"],

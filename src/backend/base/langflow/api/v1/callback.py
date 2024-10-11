@@ -74,7 +74,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
             # This is to emulate the stream of tokens
             for resp in resps:
                 await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error sending response")
 
     async def on_tool_error(

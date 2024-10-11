@@ -3,11 +3,10 @@ import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import Convert from "ansi-to-html";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
 import MaleTechnology from "../../../../../assets/male-technologist.png";
 import Robot from "../../../../../assets/robot.png";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent";
@@ -18,9 +17,8 @@ import {
   EMPTY_OUTPUT_SEND_MESSAGE,
 } from "../../../../../constants/constants";
 import useAlertStore from "../../../../../stores/alertStore";
-import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
-import { classNames, cn } from "../../../../../utils/utils";
+import { cn } from "../../../../../utils/utils";
 import { EditMessageButton } from "./components/editMessageButton";
 import EditMessageField from "./components/editMessageField";
 import FileCardWrapper from "./components/fileCardWrapper";
@@ -288,6 +286,7 @@ export default function ChatMessage({
                             <div className="flex gap-2">
                               <Markdown
                                 remarkPlugins={[remarkGfm]}
+                                linkTarget="_blank"
                                 rehypePlugins={[rehypeMathjax]}
                                 className={cn(
                                   "markdown prose flex flex-col word-break-break-word dark:prose-invert",
@@ -315,40 +314,38 @@ export default function ChatMessage({
                                             </span>
                                           );
                                         }
-                                        children![0] = (
-                                          children![0] as string
-                                        ).replace("`▍`", "▍");
                                       }
+
+                                      const match = /language-(\w+)/.exec(
+                                        className || "",
+                                      );
+
+                                      return !inline ? (
+                                        <CodeTabsComponent
+                                          isMessage
+                                          tabs={[
+                                            {
+                                              name: (match && match[1]) || "",
+                                              mode: (match && match[1]) || "",
+                                              image:
+                                                "https://curl.se/logo/curl-symbol-transparent.png",
+                                              language:
+                                                (match && match[1]) || "",
+                                              code: String(children).replace(
+                                                /\n$/,
+                                                "",
+                                              ),
+                                            },
+                                          ]}
+                                          activeTab={"0"}
+                                          setActiveTab={() => {}}
+                                        />
+                                      ) : (
+                                        <code className={className} {...props}>
+                                          {children}
+                                        </code>
+                                      );
                                     }
-
-                                    const match = /language-(\w+)/.exec(
-                                      className || "",
-                                    );
-
-                                    return !inline ? (
-                                      <CodeTabsComponent
-                                        isMessage
-                                        tabs={[
-                                          {
-                                            name: (match && match[1]) || "",
-                                            mode: (match && match[1]) || "",
-                                            image:
-                                              "https://curl.se/logo/curl-symbol-transparent.png",
-                                            language: (match && match[1]) || "",
-                                            code: String(children).replace(
-                                              /\n$/,
-                                              "",
-                                            ),
-                                          },
-                                        ]}
-                                        activeTab={"0"}
-                                        setActiveTab={() => {}}
-                                      />
-                                    ) : (
-                                      <code className={className} {...props}>
-                                        {children}
-                                      </code>
-                                    );
                                   },
                                 }}
                               >

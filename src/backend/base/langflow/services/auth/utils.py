@@ -27,6 +27,8 @@ API_KEY_NAME = "x-api-key"
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
+MINIMUM_KEY_LENGTH = 32
+
 
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
 async def api_key_security(
@@ -112,8 +114,8 @@ async def get_current_user_by_jwt(
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             payload = jwt.decode(token, secret_key, algorithms=[settings_service.auth_settings.ALGORITHM])
-        user_id: UUID = payload.get("sub")  # type: ignore
-        token_type: str = payload.get("type")  # type: ignore
+        user_id: UUID = payload.get("sub")  # type: ignore[assignment]
+        token_type: str = payload.get("type")  # type: ignore[assignment]
         if expires := payload.get("exp", None):
             expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
             if datetime.now(timezone.utc) > expires_datetime:
@@ -303,8 +305,8 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
                 settings_service.auth_settings.SECRET_KEY.get_secret_value(),
                 algorithms=[settings_service.auth_settings.ALGORITHM],
             )
-        user_id: UUID = payload.get("sub")  # type: ignore
-        token_type: str = payload.get("type")  # type: ignore
+        user_id: UUID = payload.get("sub")  # type: ignore[assignment]
+        token_type: str = payload.get("type")  # type: ignore[assignment]
 
         if user_id is None or token_type == "":
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
@@ -346,7 +348,7 @@ def add_padding(s):
 
 def ensure_valid_key(s: str) -> bytes:
     # If the key is too short, we'll use it as a seed to generate a valid key
-    if len(s) < 32:
+    if len(s) < MINIMUM_KEY_LENGTH:
         # Use the input as a seed for the random number generator
         random.seed(s)
         # Generate 32 random bytes
@@ -377,6 +379,7 @@ def decrypt_api_key(encrypted_api_key: str, settings_service=Depends(get_setting
     if isinstance(encrypted_api_key, str):
         try:
             decrypted_key = fernet.decrypt(encrypted_api_key.encode()).decode()
-        except Exception:
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Failed to decrypt API key")
             decrypted_key = fernet.decrypt(encrypted_api_key).decode()
     return decrypted_key

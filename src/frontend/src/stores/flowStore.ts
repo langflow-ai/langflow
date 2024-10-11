@@ -269,14 +269,32 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     return get().nodes.find((node) => node.id === id);
   },
   deleteNode: (nodeId) => {
-    get().setNodes(
-      get().nodes.filter((node) =>
-        typeof nodeId === "string"
-          ? node.id !== nodeId
-          : !nodeId.includes(node.id),
-      ),
+    const { filteredNodes, deletedNode } = get().nodes.reduce<{
+      filteredNodes: Node[];
+      deletedNode: Node | null;
+    }>(
+      (acc, node) => {
+        const isMatch =
+          typeof nodeId === "string"
+            ? node.id === nodeId
+            : nodeId.includes(node.id);
+
+        if (isMatch) {
+          acc.deletedNode = node;
+        } else {
+          acc.filteredNodes.push(node);
+        }
+
+        return acc;
+      },
+      { filteredNodes: [], deletedNode: null },
     );
-    track("Component Deleted", { nodeId });
+
+    get().setNodes(filteredNodes);
+
+    if (deletedNode) {
+      track("Component Deleted", { componentType: deletedNode.data.type });
+    }
   },
   deleteEdge: (edgeId) => {
     get().setEdges(
@@ -660,10 +678,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().setLockChat(false);
       },
       onBuildError: (title: string, list: string[], elementList) => {
-        const idList = elementList
-          .map((element) => element.id)
-          .filter(Boolean) as string[];
-        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
+        const idList =
+          (elementList
+            ?.map((element) => element.id)
+            .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
+        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
         if (get().componentsToUpdate)
           setErrorData({
             title:

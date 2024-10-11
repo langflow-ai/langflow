@@ -17,7 +17,8 @@ def post_validate_code(code: Code):
             imports=errors.get("imports", {}),
             function=errors.get("function", {}),
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
+        logger.opt(exception=True).debug("Error validating code")
         return HTTPException(status_code=500, detail=str(e))
 
 

@@ -5,6 +5,7 @@ from typing import Any
 import requests
 from langchain.agents import Tool
 from langchain_core.tools import StructuredTool
+from loguru import logger
 from pydantic.v1 import Field, create_model
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -72,8 +73,9 @@ class SearXNGToolComponent(LCToolComponent):
                     build_config["categories"]["value"].remove(selected_category)
             languages = list(data["locales"])
             build_config["language"]["options"] = languages.copy()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.status = f"Failed to extract names: {e}"
+            logger.opt(exception=True).debug(self.status)
             build_config["categories"]["options"] = ["Failed to parse", str(e)]
         return build_config
 
@@ -107,7 +109,8 @@ class SearXNGToolComponent(LCToolComponent):
 
                     num_results = min(SearxSearch._max_results, len(response["results"]))
                     return [response["results"][i] for i in range(num_results)]
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
+                    logger.opt(exception=True).debug("Error running SearXNG Search")
                     return [f"Failed to search: {e}"]
 
         SearxSearch._url = self.url
@@ -126,7 +129,7 @@ class SearXNGToolComponent(LCToolComponent):
             "categories": (list[str], Field(default=[], description="The categories to search in.")),
         }
 
-        SearxSearchSchema = create_model("SearxSearchSchema", **schema_fields)  # type: ignore
+        SearxSearchSchema = create_model("SearxSearchSchema", **schema_fields)
 
         return StructuredTool.from_function(
             func=_local["SearxSearch"].search,

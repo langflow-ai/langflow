@@ -30,11 +30,9 @@ class ConversationChainComponent(LCChainComponent):
 
         result = chain.invoke({"input": self.input_value}, config={"callbacks": self.get_langchain_callbacks()})
         if isinstance(result, dict):
-            result = result.get(chain.output_key, "")  # type: ignore
+            result = result.get(chain.output_key, "")
 
-        elif isinstance(result, str):
-            result = result
-        else:
+        elif not isinstance(result, str):
             result = result.get("response")
         result = str(result)
         self.status = result

@@ -72,7 +72,7 @@ def add_messages(messages: Message | list[Message], flow_id: str | None = None):
         return [Message(**message.model_dump()) for message in messages_models]
     except Exception as e:
         logger.exception(e)
-        raise e
+        raise
 
 
 def add_messagetables(messages: list[MessageTable], session: Session):
@@ -83,7 +83,7 @@ def add_messagetables(messages: list[MessageTable], session: Session):
             session.refresh(message)
         except Exception as e:
             logger.exception(e)
-            raise e
+            raise
     return [MessageRead.model_validate(message, from_attributes=True) for message in messages]
 
 

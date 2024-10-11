@@ -6,6 +6,6 @@ from .RecursiveCharacterTextSplitter import RecursiveCharacterTextSplitterCompon
 __all__ = [
     "CharacterTextSplitterComponent",
     "LanguageRecursiveTextSplitterComponent",
-    "RecursiveCharacterTextSplitterComponent",
     "NaturalLanguageTextSplitterComponent",
+    "RecursiveCharacterTextSplitterComponent",
 ]

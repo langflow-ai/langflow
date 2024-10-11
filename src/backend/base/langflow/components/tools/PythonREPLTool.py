@@ -2,6 +2,7 @@ import importlib
 
 from langchain.tools import StructuredTool
 from langchain_experimental.utilities import PythonREPL
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -55,7 +56,7 @@ class PythonREPLToolComponent(LCToolComponent):
             modules = global_imports
         else:
             msg = "global_imports must be either a string or a list"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         for module in modules:
             try:
@@ -73,7 +74,8 @@ class PythonREPLToolComponent(LCToolComponent):
         def run_python_code(code: str) -> str:
             try:
                 return python_repl.run(code)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
+                logger.opt(exception=True).debug("Error running Python code")
                 return f"Error: {e}"
 
         tool = StructuredTool.from_function(

@@ -10,7 +10,7 @@ from pathlib import Path
 from uuid import UUID
 
 import orjson
-from emoji import demojize, purely_emoji  # type: ignore
+from emoji import demojize, purely_emoji
 from loguru import logger
 from sqlmodel import select
 
@@ -382,7 +382,7 @@ def copy_profile_pictures():
         shutil.copytree(origin, target, dirs_exist_ok=True)
         logger.debug(f"Folder copied from '{origin}' to '{target}'")
 
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Error copying the folder")
 
 
@@ -602,8 +602,8 @@ async def create_or_update_starter_projects(get_all_components_coro: Awaitable[d
             updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
             try:
                 Graph.from_payload(updated_project_data)
-            except Exception as e:
-                logger.exception(e)
+            except Exception:  # noqa: BLE001
+                logger.exception(f"Error loading project {project_name}")
             if updated_project_data != project_data:
                 project_data = updated_project_data
                 # We also need to update the project data in the file
