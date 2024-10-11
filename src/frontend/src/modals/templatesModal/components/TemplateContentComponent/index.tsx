@@ -52,7 +52,7 @@ export default function TemplateContentComponent({
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
-  }, [searchQuery]);
+  }, [searchQuery, currentTab]);
 
   const handleCardClick = (example) => {
     updateIds(example.data);
