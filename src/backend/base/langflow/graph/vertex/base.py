@@ -870,4 +870,4 @@ class Vertex:
         if not self.custom_component or not self.custom_component.outputs:
             return
         # Apply the function to each output
-        [func(output) for output in self.custom_component.outputs]
+        [func(output) for output in self.custom_component._outputs_map.values()]
