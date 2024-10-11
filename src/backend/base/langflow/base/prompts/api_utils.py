@@ -174,7 +174,6 @@ def add_new_variables_to_template(input_variables, custom_fields, template, name
                 custom_fields[name].append(variable)
 
         except Exception as exc:
-            logger.exception(exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
@@ -190,7 +189,6 @@ def remove_old_variables_from_template(old_custom_fields, input_variables, custo
                 template.pop(variable, None)
 
             except Exception as exc:
-                logger.exception(exc)
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

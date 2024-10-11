@@ -358,7 +358,6 @@ async def delete_multiple_flows(
         db.commit()
         return {"deleted": len(flows_to_delete)}
     except Exception as exc:
-        logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
