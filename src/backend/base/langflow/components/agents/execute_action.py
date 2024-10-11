@@ -30,6 +30,6 @@ class ExecuteActionComponent(Component):
             error_msg = f"Error: Action '{action}' not found in available tools."
             self.agent_context.last_action_result = error_msg
             self.agent_context.update_context("Action Result", error_msg)
-        tool_call_result = f"Tool: {action.tool} called with input: {action.tool_input} and returned: {data.result}"
+        tool_call_result = f"Tool: {action.tool} called with input: {action.tool_input} and returned: {data}"
         self.status = self.agent_context.to_data_repr()
         return Message(text=tool_call_result)
