@@ -159,6 +159,7 @@ dependencies = [
     "clickhouse-connect==0.7.19",
     "assemblyai>=0.33.0",
     "fastapi-pagination>=0.12.29",
+    "defusedxml>=0.7.1",
 ]
 
 [project.urls]
