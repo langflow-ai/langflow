@@ -47,7 +47,7 @@ test("Simple Agent", async ({ page }) => {
   }
 
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Simple Agent" }).click();
+  await page.getByRole("heading", { name: "Simple Agent" }).first().click();
 
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
