@@ -215,14 +215,14 @@ def create_state_model(model_name: str = "State", validate: bool = True, **kwarg
                 property_method = property(getter, setter)
             except ValueError as e:
                 # If the method is not valid,assume it is already a getter
-                if "get_output_by_method" not in str(e) and "__self__" not in str(e) or validate:
-                    raise e
+                if ("get_output_by_method" not in str(e) and "__self__" not in str(e)) or validate:
+                    raise
                 property_method = value
             fields[name] = computed_field(property_method)
         elif isinstance(value, FieldInfo):
             field_tuple = (value.annotation or Any, value)
             fields[name] = field_tuple
-        elif isinstance(value, tuple) and len(value) == 2:
+        elif isinstance(value, tuple) and len(value) == 2:  # noqa: PLR2004
             # Fields are defined by one of the following tuple forms:
 
             # (<type>, <default value>)
@@ -230,7 +230,7 @@ def create_state_model(model_name: str = "State", validate: bool = True, **kwarg
             # typing.Annotated[<type>, Field(...)]
             if not isinstance(value[0], type):
                 msg = f"Invalid type for field {name}: {type(value[0])}"
-                raise ValueError(msg)
+                raise TypeError(msg)
             fields[name] = (value[0], value[1])
         else:
             msg = f"Invalid value type {type(value)} for field {name}"

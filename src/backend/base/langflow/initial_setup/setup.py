@@ -1,6 +1,5 @@
 import copy
 import json
-import os
 import shutil
 import time
 from collections import defaultdict
@@ -11,7 +10,7 @@ from pathlib import Path
 from uuid import UUID
 
 import orjson
-from emoji import demojize, purely_emoji  # type: ignore
+from emoji import demojize, purely_emoji
 from loguru import logger
 from sqlmodel import select
 
@@ -414,7 +413,7 @@ def load_starter_projects(retries=3, delay=1) -> list[tuple[Path, dict]]:
     for file in folder.glob("*.json"):
         attempt = 0
         while attempt < retries:
-            with open(file, encoding="utf-8") as f:
+            with file.open(encoding="utf-8") as f:
                 try:
                     project = orjson.loads(f.read())
                     starter_projects.append((file, project))
@@ -434,19 +433,19 @@ def copy_profile_pictures():
     origin = Path(__file__).parent / "profile_pictures"
     target = Path(config_dir) / "profile_pictures"
 
-    if not os.path.exists(origin):
+    if not origin.exists():
         msg = f"The source folder '{origin}' does not exist."
         raise ValueError(msg)
 
-    if not os.path.exists(target):
-        os.makedirs(target)
+    if not target.exists():
+        target.mkdir(parents=True)
 
     try:
         shutil.copytree(origin, target, dirs_exist_ok=True)
         logger.debug(f"Folder copied from '{origin}' to '{target}'")
 
-    except Exception as e:
-        logger.error(f"Error copying the folder: {e}")
+    except Exception:  # noqa: BLE001
+        logger.exception("Error copying the folder")
 
 
 def get_project_data(project):
@@ -481,9 +480,9 @@ def get_project_data(project):
     )
 
 
-def update_project_file(project_path, project, updated_project_data):
+def update_project_file(project_path: Path, project: dict, updated_project_data):
     project["data"] = updated_project_data
-    with open(project_path, "w", encoding="utf-8") as f:
+    with project_path.open("w", encoding="utf-8") as f:
         f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
     logger.info(f"Updated starter project {project['name']} file")
 
@@ -596,18 +595,15 @@ def load_flows_from_directory():
         user_id = get_user_by_username(
             session, settings_service.auth_settings.SUPERUSER
         ).id
-        files = [
-            f
-            for f in os.listdir(flows_path)
-            if os.path.isfile(os.path.join(flows_path, f))
-        ]
-        for filename in files:
-            if not filename.endswith(".json"):
+        _flows_path = Path(flows_path)
+        files = [f for f in _flows_path.iterdir() if f.is_file()]
+        for f in files:
+            if f.suffix != ".json":
                 continue
-            logger.info(f"Loading flow from file: {filename}")
-            with open(os.path.join(flows_path, filename), encoding="utf-8") as file:
+            logger.info(f"Loading flow from file: {f.name}")
+            with f.open(encoding="utf-8") as file:
                 flow = orjson.loads(file.read())
-                no_json_name = filename.replace(".json", "")
+                no_json_name = f.stem
                 flow_endpoint_name = flow.get("endpoint_name")
                 if _is_valid_uuid(no_json_name):
                     flow["id"] = no_json_name
@@ -666,9 +662,9 @@ def find_existing_flow(session, flow_id, flow_endpoint_name):
 async def create_or_update_starter_projects(get_all_components_coro: Awaitable[dict]):
     try:
         all_types_dict = await get_all_components_coro
-    except Exception as e:
-        logger.exception(f"Error loading components: {e}")
-        raise e
+    except Exception:
+        logger.exception("Error loading components")
+        raise
     with session_scope() as session:
         new_folder = create_starter_folder(session)
         starter_projects = load_starter_projects()
@@ -696,8 +692,8 @@ async def create_or_update_starter_projects(get_all_components_coro: Awaitable[d
             )
             try:
                 Graph.from_payload(updated_project_data)
-            except Exception as e:
-                logger.error(e)
+            except Exception:  # noqa: BLE001
+                logger.exception(f"Error loading project {project_name}")
             if updated_project_data != project_data:
                 project_data = updated_project_data
                 # We also need to update the project data in the file

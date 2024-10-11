@@ -129,8 +129,8 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         es_params = {
             "index_name": self.index_name,
             "embedding": self.embedding,
-            "es_user": self.username if self.username else None,
-            "es_password": self.password if self.password else None,
+            "es_user": self.username or None,
+            "es_password": self.password or None,
         }
 
         if self.cloud_id:
@@ -162,7 +162,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             else:
                 error_message = "Vector Store Inputs must be Data objects."
                 logger.error(error_message)
-                raise ValueError(error_message)
+                raise TypeError(error_message)
         return documents
 
     def _add_documents_to_vector_store(self, vector_store: "ElasticsearchStore") -> None:
@@ -198,11 +198,11 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
                     msg = f"Invalid search type: {self.search_type}"
                     raise ValueError(msg)
             except Exception as e:
-                logger.error(f"Search query failed: {e}")
                 msg = (
                     "Error occurred while querying the Elasticsearch VectorStore,"
                     " there is no Data into the VectorStore."
                 )
+                logger.exception(msg)
                 raise ValueError(msg) from e
             return [
                 {"page_content": doc.page_content, "metadata": doc.metadata, "score": score} for doc, score in results

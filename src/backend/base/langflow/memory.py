@@ -66,15 +66,13 @@ def add_messages(messages: Message | list[Message], flow_id: str | None = None):
             msg = f"The messages must be instances of Message. Found: {types}"
             raise ValueError(msg)
 
-        messages_models: list[MessageTable] = []
-        for msg in messages:
-            messages_models.append(MessageTable.from_message(msg, flow_id=flow_id))
+        messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
         with session_scope() as session:
             messages_models = add_messagetables(messages_models, session)
         return [Message(**message.model_dump()) for message in messages_models]
     except Exception as e:
         logger.exception(e)
-        raise e
+        raise
 
 
 def add_messagetables(messages: list[MessageTable], session: Session):
@@ -85,7 +83,7 @@ def add_messagetables(messages: list[MessageTable], session: Session):
             session.refresh(message)
         except Exception as e:
             logger.exception(e)
-            raise e
+            raise
     return [MessageRead.model_validate(message, from_attributes=True) for message in messages]
 
 

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 import emoji
-from emoji import purely_emoji  # type: ignore
+from emoji import purely_emoji
 from fastapi import HTTPException, status
 from loguru import logger
 from pydantic import field_serializer, field_validator
@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from langflow.services.database.models.message import MessageTable
     from langflow.services.database.models.user import User
     from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+
+HEX_COLOR_LENGTH = 7
 
 
 class FlowBase(SQLModel):
@@ -70,7 +72,7 @@ class FlowBase(SQLModel):
             raise ValueError(msg)
 
         # validate that it is a valid hex color
-        if v and len(v) != 7:
+        if v and len(v) != HEX_COLOR_LENGTH:
             msg = "Icon background color must be 7 characters long"
             raise ValueError(msg)
         return v
@@ -120,7 +122,7 @@ class FlowBase(SQLModel):
             return v
         if not isinstance(v, dict):
             msg = "Flow must be a valid JSON"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
 
         # data must contain nodes and edges
         if "nodes" not in v:
@@ -154,7 +156,7 @@ class FlowBase(SQLModel):
         return datetime.fromisoformat(v)
 
 
-class Flow(FlowBase, table=True):  # type: ignore
+class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     user_id: UUID | None = Field(index=True, foreign_key="user.id", nullable=True)

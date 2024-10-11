@@ -7,6 +7,8 @@ from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
+MAX_NUMBER_OF_FIELDS = 15
+
 
 class UpdateDataComponent(Component):
     display_name: str = "Update data"
@@ -54,9 +56,11 @@ class UpdateDataComponent(Component):
             except ValueError:
                 return build_config
             existing_fields = {}
-            if field_value_int > 15:
-                build_config["number_of_fields"]["value"] = 15
-                msg = "Number of fields cannot exceed 15. Try using a Component to combine two Data."
+            if field_value_int > MAX_NUMBER_OF_FIELDS:
+                build_config["number_of_fields"]["value"] = MAX_NUMBER_OF_FIELDS
+                msg = (
+                    f"Number of fields cannot exceed {MAX_NUMBER_OF_FIELDS}. Try using a Component to combine two Data."
+                )
                 raise ValueError(msg)
             if len(build_config) > len(default_keys):
                 # back up the existing template fields
@@ -96,10 +100,10 @@ class UpdateDataComponent(Component):
         for value_dict in self._attributes.values():
             if isinstance(value_dict, dict):
                 # Check if the value of the value_dict is a Data
-                value_dict = {
+                _value_dict = {
                     key: value.get_text() if isinstance(value, Data) else value for key, value in value_dict.items()
                 }
-                data.update(value_dict)
+                data.update(_value_dict)
         return data
 
     def validate_text_key(self, data: Data):

@@ -2,7 +2,15 @@ from spider.spider import Spider
 
 from langflow.base.langchain_utilities.spider_constants import MODES
 from langflow.custom import Component
-from langflow.io import BoolInput, DictInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput
+from langflow.io import (
+    BoolInput,
+    DictInput,
+    DropdownInput,
+    IntInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+)
 from langflow.schema import Data
 
 
@@ -92,37 +100,43 @@ class SpiderTool(Component):
             parameters = self.params["data"]
         else:
             parameters = {
-                "limit": self.limit if self.limit else None,
-                "depth": self.depth if self.depth else None,
-                "blacklist": self.blacklist if self.blacklist else None,
-                "whitelist": self.whitelist if self.whitelist else None,
+                "limit": self.limit or None,
+                "depth": self.depth or None,
+                "blacklist": self.blacklist or None,
+                "whitelist": self.whitelist or None,
                 "readability": self.readability,
-                "request_timeout": self.request_timeout if self.request_timeout else None,
+                "request_timeout": self.request_timeout or None,
                 "metadata": self.metadata,
                 "return_format": "markdown",
             }
 
         app = Spider(api_key=self.spider_api_key)
-        try:
-            if self.mode == "scrape":
-                parameters["limit"] = 1
-                result = app.scrape_url(self.url, parameters)
-            elif self.mode == "crawl":
-                result = app.crawl_url(self.url, parameters)
-            else:
-                msg = f"Invalid mode: {self.mode}. Must be 'scrape' or 'crawl'."
-                raise ValueError(msg)
-        except Exception as e:
-            msg = f"Error: {e}"
-            raise Exception(msg) from e
+        if self.mode == "scrape":
+            parameters["limit"] = 1
+            result = app.scrape_url(self.url, parameters)
+        elif self.mode == "crawl":
+            result = app.crawl_url(self.url, parameters)
+        else:
+            msg = f"Invalid mode: {self.mode}. Must be 'scrape' or 'crawl'."
+            raise ValueError(msg)
 
         records = []
 
         for record in result:
             if self.metadata:
                 records.append(
-                    Data(data={"content": record["content"], "url": record["url"], "metadata": record["metadata"]})
+                    Data(
+                        data={
+                            "content": record["content"],
+                            "url": record["url"],
+                            "metadata": record["metadata"],
+                        }
+                    )
                 )
             else:
                 records.append(Data(data={"content": record["content"], "url": record["url"]}))
         return records
+
+
+class SpiderToolError(Exception):
+    """SpiderTool error"""

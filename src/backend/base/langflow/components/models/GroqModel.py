@@ -76,7 +76,7 @@ class GroqModel(LCModelComponent):
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        if field_name == "groq_api_key" or field_name == "groq_api_base" or field_name == "model_name":
+        if field_name in ("groq_api_key", "groq_api_base", "model_name"):
             models = self.get_models()
             build_config["model_name"]["options"] = models
         return build_config
@@ -90,7 +90,7 @@ class GroqModel(LCModelComponent):
         n = self.n
         stream = self.stream
 
-        return ChatGroq(  # type: ignore
+        return ChatGroq(
             model=model_name,
             max_tokens=max_tokens or None,
             temperature=temperature,

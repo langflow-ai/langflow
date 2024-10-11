@@ -98,10 +98,7 @@ class SizedLogBuffer:
         try:
             with self._wlock:
                 as_list = list(self.buffer)
-            rc = {}
-            for ts, msg in as_list[-last_idx:]:
-                rc[ts] = msg
-            return rc
+            return dict(as_list[-last_idx:])
         finally:
             self._rsemaphore.release()
 
@@ -195,8 +192,8 @@ def configure(
                 rotation="10 MB",  # Log rotation based on file size
                 serialize=True,
             )
-        except Exception as exc:
-            logger.error(f"Error setting up log file: {exc}")
+        except Exception:  # noqa: BLE001
+            logger.exception("Error setting up log file")
 
     if log_buffer.enabled():
         logger.add(sink=log_buffer.write, format="{time} {level} {message}", serialize=True)

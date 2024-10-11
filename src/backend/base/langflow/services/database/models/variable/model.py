@@ -22,7 +22,7 @@ class VariableBase(SQLModel):
     type: str | None = Field(None, description="Type of the variable")
 
 
-class Variable(VariableBase, table=True):  # type: ignore
+class Variable(VariableBase, table=True):  # type: ignore[call-arg]
     id: UUID | None = Field(
         default_factory=uuid4,
         primary_key=True,

@@ -17,7 +17,8 @@ def post_validate_code(code: Code):
             imports=errors.get("imports", {}),
             function=errors.get("function", {}),
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
+        logger.opt(exception=True).debug("Error validating code")
         return HTTPException(status_code=500, detail=str(e))
 
 
@@ -43,5 +44,4 @@ def post_validate_prompt(prompt_request: ValidatePromptRequest):
             frontend_node=prompt_request.frontend_node,
         )
     except Exception as e:
-        logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e

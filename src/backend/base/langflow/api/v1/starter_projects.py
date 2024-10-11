@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException
-from loguru import logger
 
 from langflow.graph.graph.schema import GraphDump
 from langflow.services.auth.utils import get_current_active_user
@@ -19,5 +18,4 @@ def get_starter_projects(
     try:
         return get_starter_projects_dump()
     except Exception as exc:
-        logger.error(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc

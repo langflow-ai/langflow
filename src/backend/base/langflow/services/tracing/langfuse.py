@@ -30,21 +30,18 @@ class LangFuseTracer(BaseTracer):
         self.flow_id = trace_name.split(" - ")[-1]
         self.last_span: StatefulSpanClient | None = None
         self.spans: dict = {}
-        self._ready: bool = self.setup_langfuse()
+
+        config = self._get_config()
+        self._ready: bool = self.setup_langfuse(config) if config else False
 
     @property
     def ready(self):
         return self._ready
 
-    def setup_langfuse(self) -> bool:
+    def setup_langfuse(self, config) -> bool:
         try:
             from langfuse import Langfuse
             from langfuse.callback.langchain import LangchainCallbackHandler
-
-            config = self._get_config()
-            if not all(config.values()):
-                msg = "Missing Langfuse configuration"
-                raise ValueError(msg)
 
             self._client = Langfuse(**config)
             self.trace = self._client.trace(id=str(self.trace_id), name=self.flow_id)
@@ -57,11 +54,11 @@ class LangFuseTracer(BaseTracer):
             self._callback = LangchainCallbackHandler(**config)
 
         except ImportError:
-            logger.error("Could not import langfuse. Please install it with `pip install langfuse`.")
+            logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
             return False
 
-        except Exception as e:
-            logger.debug(f"Error setting up LangSmith tracer: {e}")
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error setting up LangSmith tracer")
             return False
 
         return True
@@ -81,7 +78,7 @@ class LangFuseTracer(BaseTracer):
 
         _metadata: dict = {}
         _metadata |= {"trace_type": trace_type} if trace_type else {}
-        _metadata |= metadata if metadata else {}
+        _metadata |= metadata or {}
 
         _name = trace_name.removesuffix(f" ({trace_id})")
         content_span = {
@@ -111,7 +108,7 @@ class LangFuseTracer(BaseTracer):
         span = self.spans.get(trace_id, None)
         if span:
             _output: dict = {}
-            _output |= outputs if outputs else {}
+            _output |= outputs or {}
             _output |= {"error": str(error)} if error else {}
             _output |= {"logs": list(logs)} if logs else {}
             content = {"output": _output, "end_time": end_time}
@@ -134,8 +131,10 @@ class LangFuseTracer(BaseTracer):
             return None
         return None  # self._callback
 
-    def _get_config(self):
+    def _get_config(self) -> dict:
         secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)
         public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
         host = os.getenv("LANGFUSE_HOST", None)
-        return {"secret_key": secret_key, "public_key": public_key, "host": host}
+        if secret_key and public_key and host:
+            return {"secret_key": secret_key, "public_key": public_key, "host": host}
+        return {}
