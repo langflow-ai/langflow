@@ -74,7 +74,7 @@ def test_truncate_long_strings_in_place_modification():
 def test_truncate_long_strings_invalid_input():
     input_string = "not a dict or list"
     result = truncate_long_strings(input_string, 10)
-    assert result == input_string  # The function should return the input unchanged
+    assert result == "not a dict..."  # The function should truncate the string
 
 
 # Updated test for negative max_length
