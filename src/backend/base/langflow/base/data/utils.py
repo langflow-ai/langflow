@@ -155,7 +155,7 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
         elif file_path.endswith((".yaml", ".yml")):
             text = yaml.safe_load(text)
         elif file_path.endswith(".xml"):
-            xml_element = ET.fromstring(text)
+            xml_element = ET.fromstring(text)  # noqa: S314
             text = ET.tostring(xml_element, encoding="unicode")
     except Exception as e:
         if not silent_errors:

@@ -81,7 +81,7 @@ class NotionPageCreator(LCToolComponent):
         }
 
         try:
-            response = requests.post("https://api.notion.com/v1/pages", headers=headers, json=data)
+            response = requests.post("https://api.notion.com/v1/pages", headers=headers, json=data, timeout=10)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:

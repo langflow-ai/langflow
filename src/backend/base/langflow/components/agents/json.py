@@ -25,7 +25,7 @@ class JsonAgentComponent(LCAgentComponent):
         path = Path(self.path)
         if path.suffix in ("yaml", "yml"):
             with path.open(encoding="utf-8") as file:
-                yaml_dict = yaml.load(file, Loader=yaml.FullLoader)
+                yaml_dict = yaml.full_load(file)
             spec = JsonSpec(dict_=yaml_dict)
         else:
             spec = JsonSpec.from_file(path)

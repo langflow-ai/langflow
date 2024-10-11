@@ -87,7 +87,7 @@ class NotionPageUpdate(LCToolComponent):
 
         try:
             logger.info(f"Sending request to Notion API: URL: {url}, Data: {json.dumps(data)}")
-            response = requests.patch(url, headers=headers, json=data)
+            response = requests.patch(url, headers=headers, json=data, timeout=10)
             response.raise_for_status()
             updated_page = response.json()
 
