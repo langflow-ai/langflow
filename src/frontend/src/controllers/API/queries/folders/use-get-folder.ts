@@ -1,5 +1,5 @@
 import buildQueryStringUrl from "@/controllers/utils/create-query-param-string";
-import {  PaginatedFolderType } from "@/pages/MainPage/entities";
+import { PaginatedFolderType } from "@/pages/MainPage/entities";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useQueryFunctionType } from "@/types/api";
 import { processFlows } from "@/utils/reactflowUtils";
