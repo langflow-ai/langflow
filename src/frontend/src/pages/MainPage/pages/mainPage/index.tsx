@@ -80,7 +80,7 @@ export default function HomePage(): JSX.Element {
   return (
     <>
       <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-y-0">
-        <aside className="hidden lg:flex h-full w-fit flex-col space-y-6 px-4 border-r">
+        <aside className="hidden h-full w-fit flex-col space-y-6 border-r px-4 lg:flex">
           <FolderSidebarNav
             handleChangeFolder={(id: string) => {
               navigate(`all/folder/${id}`);
