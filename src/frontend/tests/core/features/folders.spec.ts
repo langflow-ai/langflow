@@ -26,6 +26,7 @@ test("CRUD folders", async ({ page }) => {
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
@@ -152,6 +153,7 @@ test("change flow folder", async ({ page }) => {
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {

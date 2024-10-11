@@ -72,6 +72,7 @@ test("vector store from starter projects should have its connections and nodes o
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Vector Store RAG" }).click();
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
