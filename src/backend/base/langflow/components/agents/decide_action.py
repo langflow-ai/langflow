@@ -31,7 +31,10 @@ class DecideActionComponent(Component):
         full_prompt = f"{self.agent_context.get_full_context()}\n{self.prompt}\nAction:"
         response: AIMessage = self.agent_context.llm.invoke(full_prompt)
         action = parse_ai_message_to_tool_action(response)
-        self.agent_context.last_action = action[0]
+        if isinstance(action, list):
+            self.agent_context.last_action = action[0]
+        else:
+            self.agent_context.last_action = action
         self.agent_context.update_context("Action", action)
         self.status = self.agent_context.to_data_repr()
         return self.agent_context
