@@ -18,6 +18,7 @@ class BaseTracer(ABC):
     def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
         raise NotImplementedError
 
+    @property
     @abstractmethod
     def ready(self) -> bool:
         raise NotImplementedError

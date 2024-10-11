@@ -4,6 +4,7 @@ import importlib
 from types import FunctionType
 from typing import Optional, Union
 
+from loguru import logger
 from pydantic import ValidationError
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
@@ -25,7 +26,8 @@ def validate_code(code):
     # Parse the code string into an abstract syntax tree (AST)
     try:
         tree = ast.parse(code)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
+        logger.opt(exception=True).debug("Error parsing code")
         errors["function"]["errors"].append(str(e))
         return errors
 
@@ -48,7 +50,8 @@ def validate_code(code):
             code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             try:
                 exec(code_obj)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
+                logger.opt(exception=True).debug("Error executing function code")
                 errors["function"]["errors"].append(str(e))
 
     # Return the errors dictionary
@@ -325,5 +328,5 @@ def extract_class_name(code):
     for node in module.body:
         if isinstance(node, ast.ClassDef):
             return node.name
-    msg = "No class definition found in the code string"
+    msg = f"No class definition found in the code string. Code snippet: {code[:100]}"
     raise ValueError(msg)

@@ -36,7 +36,7 @@ async def login_to_get_access_token(
         user = authenticate_user(form_data.username, form_data.password, db)
     except Exception as exc:
         if isinstance(exc, HTTPException):
-            raise exc
+            raise
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),

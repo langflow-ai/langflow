@@ -338,7 +338,7 @@ class Component(CustomComponent):
             try:
                 source_code = inspect.getsource(method)
                 ast_tree = ast.parse(dedent(source_code))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 source_code = self._code
                 ast_tree = ast.parse(dedent(source_code))
 

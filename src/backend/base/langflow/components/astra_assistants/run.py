@@ -4,7 +4,7 @@ from astra_assistants import patch
 from openai import OpenAI
 from openai.lib.streaming import AssistantEventHandler
 
-from langflow.components.astra_assistants.util import get_patched_openai_client
+from langflow.base.astra_assistants.util import get_patched_openai_client
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs import MultilineInput
 from langflow.schema import dotdict
@@ -64,36 +64,29 @@ class AssistantsRun(ComponentWithCache):
 
     def process_inputs(self) -> Message:
         patch(OpenAI())
-        try:
-            text = ""
 
-            if self.thread_id is None:
-                thread = self.client.beta.threads.create()
-                self.thread_id = thread.id
+        text = ""
 
-            # add the user message
-            self.client.beta.threads.messages.create(thread_id=self.thread_id, role="user", content=self.user_message)
+        if self.thread_id is None:
+            thread = self.client.beta.threads.create()
+            self.thread_id = thread.id
 
-            class EventHandler(AssistantEventHandler):
-                def __init__(self):
-                    super().__init__()
+        # add the user message
+        self.client.beta.threads.messages.create(thread_id=self.thread_id, role="user", content=self.user_message)
 
-                def on_exception(self, exception: Exception) -> None:
-                    print(f"Exception: {exception}")
-                    raise exception
+        class EventHandler(AssistantEventHandler):
+            def __init__(self):
+                super().__init__()
 
-            event_handler = EventHandler()
-            with self.client.beta.threads.runs.create_and_stream(
-                thread_id=self.thread_id,
-                assistant_id=self.assistant_id,
-                event_handler=event_handler,
-            ) as stream:
-                # return stream.text_deltas
-                for part in stream.text_deltas:
-                    text += part
-                    print(part)
-            return Message(text=text)
-        except Exception as e:
-            print(e)
-            msg = f"Error running assistant: {e}"
-            raise Exception(msg) from e
+            def on_exception(self, exception: Exception) -> None:
+                raise exception
+
+        event_handler = EventHandler()
+        with self.client.beta.threads.runs.create_and_stream(
+            thread_id=self.thread_id,
+            assistant_id=self.assistant_id,
+            event_handler=event_handler,
+        ) as stream:
+            for part in stream.text_deltas:
+                text += part
+        return Message(text=text)

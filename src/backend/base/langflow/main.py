@@ -77,7 +77,7 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
                 )
                 error_messages = json.dumps([message, str(exc)])
                 raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages) from exc
-            raise exc
+            raise
         if (
             "files/" not in request.url.path
             and request.url.path.endswith(".js")
@@ -85,6 +85,9 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         ):
             response.headers["Content-Type"] = "text/javascript"
         return response
+
+
+telemetry_service_tasks = set()
 
 
 def get_lifespan(fix_migration=False, socketio_server=None, version=None):
@@ -102,7 +105,9 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
             initialize_super_user_if_needed()
             task = asyncio.create_task(get_and_cache_all_types_dict(get_settings_service(), get_cache_service()))
             await create_or_update_starter_projects(task)
-            asyncio.create_task(get_telemetry_service().start())
+            telemetry_service_task = asyncio.create_task(get_telemetry_service().start())
+            telemetry_service_tasks.add(telemetry_service_task)
+            telemetry_service_task.add_done_callback(telemetry_service_tasks.discard)
             load_flows_from_directory()
             yield
         except Exception as exc:
@@ -203,12 +208,12 @@ def create_app():
     @app.exception_handler(Exception)
     async def exception_handler(request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
-            logger.error(f"HTTPException: {exc.detail}")
+            logger.error(f"HTTPException: {exc}", exc_info=exc)
             return JSONResponse(
                 status_code=exc.status_code,
                 content={"message": str(exc.detail)},
             )
-        logger.error(f"unhandled error: {exc}")
+        logger.error(f"unhandled error: {exc}", exc_info=exc)
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             content={"message": str(exc)},

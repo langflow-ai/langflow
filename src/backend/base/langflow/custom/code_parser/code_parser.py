@@ -320,10 +320,10 @@ class CodeParser:
         """
         try:
             bases = self.execute_and_inspect_classes(self.code)
-        except Exception as e:
+        except Exception:
             # If the code cannot be executed, return an empty list
             bases = []
-            raise e
+            raise
         return bases
 
     def parse_classes(self, node: ast.ClassDef) -> None:
@@ -342,7 +342,7 @@ class CodeParser:
                 for import_node in import_nodes:
                     self.parse_imports(import_node)
                 nodes.append(class_node)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("Error finding base class node")
         nodes.insert(0, node)
         class_details = ClassCodeDetails(

@@ -76,7 +76,6 @@ async def get_all(
             )
 
     except Exception as exc:
-        logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
@@ -168,7 +167,7 @@ async def simple_run_flow_task(
             api_key_user=api_key_user,
         )
 
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception(f"Error running flow {flow.id} task")
 
 
@@ -277,13 +276,10 @@ async def simplified_run_flow(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         if "not found" in str(exc):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        logger.exception(exc)
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
     except InvalidChatInputException as exc:
-        logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:
-        logger.exception(exc)
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
@@ -371,7 +367,6 @@ async def webhook_run_flow(
         )
         if "Flow ID is required" in str(exc) or "Request body is empty" in str(exc):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
@@ -486,10 +481,8 @@ async def experimental_run_flow(
         if f"Session {session_id} not found" in str(exc):
             logger.exception(f"Session {session_id} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     except Exception as exc:
-        logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
@@ -650,7 +643,6 @@ async def custom_component_update(
 
         return component_node
     except Exception as exc:
-        logger.exception(exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -662,5 +654,4 @@ def get_config():
         settings_service: SettingsService = get_settings_service()
         return settings_service.settings.model_dump()
     except Exception as exc:
-        logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc

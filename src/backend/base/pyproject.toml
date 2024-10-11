@@ -56,18 +56,12 @@ ignore = [
     # Rules that are TODOs
     "ANN",
     "ARG",
-    "BLE",
     "D",
     "DOC",
-    "EXE",
     "FBT",
     "N",
-    "RUF006", # Store a reference to the return value of `asyncio.create_task`
     "S",
     "SLF",
-    "T201",
-    "TRY002",
-    "TRY2",
     "TRY3",
 ]
 
@@ -87,7 +81,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langflow-base"
-version = "0.0.96"
+version = "0.0.97"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 license = "MIT"

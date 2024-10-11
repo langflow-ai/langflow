@@ -14,7 +14,6 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params, add_pagination
 from fastapi_pagination.ext.sqlalchemy import paginate
-from loguru import logger
 from sqlmodel import Session, and_, col, select
 
 from langflow.api.utils import cascade_delete_flow, remove_api_keys, validate_is_component
@@ -120,7 +119,7 @@ def create_flow(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
         if isinstance(e, HTTPException):
-            raise e
+            raise
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -274,7 +273,7 @@ def update_flow(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
         if isinstance(e, HTTPException):
-            raise e
+            raise
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -377,7 +376,6 @@ async def delete_multiple_flows(
         db.commit()
         return {"deleted": len(flows_to_delete)}
     except Exception as exc:
-        logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
