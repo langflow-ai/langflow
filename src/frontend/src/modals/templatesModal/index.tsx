@@ -49,6 +49,7 @@ export default function TemplatesModal({
               <div key={index} className="flex flex-col gap-2">
                 <h2
                   className={`pl-2 font-semibold ${index === 0 ? "mb-3 text-lg leading-none tracking-tight text-primary" : "text-sm text-muted-foreground"}`}
+                  data-testid={index === 0 ? "modal-title" : undefined}
                 >
                   {category.title}
                 </h2>
