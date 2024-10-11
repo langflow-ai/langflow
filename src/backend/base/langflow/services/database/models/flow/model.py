@@ -27,20 +27,14 @@ HEX_COLOR_LENGTH = 7
 
 class FlowBase(SQLModel):
     name: str = Field(index=True)
-    description: str | None = Field(
-        default=None, sa_column=Column(Text, index=True, nullable=True)
-    )
+    description: str | None = Field(default=None, sa_column=Column(Text, index=True, nullable=True))
     icon: str | None = Field(default=None, nullable=True)
     icon_bg_color: str | None = Field(default=None, nullable=True)
     gradient: str | None = Field(default=None, nullable=True)
     data: dict | None = Field(default=None, nullable=True)
     is_component: bool | None = Field(default=False, nullable=True)
-    updated_at: datetime | None = Field(
-        default_factory=lambda: datetime.now(timezone.utc), nullable=True
-    )
-    webhook: bool | None = Field(
-        default=False, nullable=True, description="Can be used on the webhook endpoint"
-    )
+    updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
+    webhook: bool | None = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
     tags: list[str] | None = None
 
@@ -163,9 +157,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     user: "User" = Relationship(back_populates="flows")
     icon: str | None = Field(default=None, nullable=True)
     tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
-    folder_id: UUID | None = Field(
-        default=None, foreign_key="folder.id", nullable=True, index=True
-    )
+    folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
     messages: list["MessageTable"] = Relationship(back_populates="flow")
     transactions: list["TransactionTable"] = Relationship(back_populates="flow")
