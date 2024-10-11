@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/genericIconComponent";
+import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 import { NavProps } from "../../../../types/templates/types";
@@ -22,7 +23,12 @@ export function Nav({ links, currentTab, onClick }: NavProps) {
                 link.id === currentTab && "text-pink-400",
               )}
             />
-            <span className="flex-1 text-left text-primary">{link.title}</span>
+            <span
+              data-testid={`side_nav_options_${convertTestName(link.title)}`}
+              className="flex-1 text-left text-primary"
+            >
+              {link.title}
+            </span>
           </Button>
         ))}
       </nav>
