@@ -1035,7 +1035,6 @@ class Graph:
         except KeyError as exc:
             logger.exception(exc)
             if "nodes" not in payload and "edges" not in payload:
-                logger.exception(exc)
                 msg = f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
                 raise ValueError(msg) from exc
 
