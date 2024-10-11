@@ -74,7 +74,7 @@ class AddContentToPage(LCToolComponent):
                 "children": blocks,
             }
 
-            response = requests.patch(url, headers=headers, json=data)
+            response = requests.patch(url, headers=headers, json=data, timeout=10)
             response.raise_for_status()
 
             return response.json()
