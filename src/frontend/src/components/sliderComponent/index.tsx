@@ -25,6 +25,11 @@ const DEFAULT_SLIDER_BUTTONS_OPTIONS = [
   { id: 3, label: "Wild" },
 ];
 
+const MIN_LABEL = "Precise";
+const MAX_LABEL = "Wild";
+const MIN_LABEL_ICON = "pencil-ruler";
+const MAX_LABEL_ICON = "palette";
+
 type ColorType = "background" | "text";
 
 export default function SliderComponent({
@@ -32,10 +37,10 @@ export default function SliderComponent({
   disabled,
   rangeSpec,
   editNode = false,
-  minLabel = "Precise",
-  maxLabel = "Wild",
-  minLabelIcon = "pencil-ruler",
-  maxLabelIcon = "palette",
+  minLabel = MIN_LABEL,
+  maxLabel = MAX_LABEL,
+  minLabelIcon = MIN_LABEL_ICON,
+  maxLabelIcon = MAX_LABEL_ICON,
   sliderButtons = false,
   sliderButtonsOptions = DEFAULT_SLIDER_BUTTONS_OPTIONS,
   sliderInput = false,
@@ -44,9 +49,15 @@ export default function SliderComponent({
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
 
-  if (sliderButtons && sliderButtonsOptions.length === 0) {
-    sliderButtonsOptions = DEFAULT_SLIDER_BUTTONS_OPTIONS;
-  }
+  sliderButtonsOptions =
+    sliderButtons && sliderButtonsOptions && sliderButtonsOptions.length > 0
+      ? sliderButtonsOptions
+      : DEFAULT_SLIDER_BUTTONS_OPTIONS;
+
+  minLabelIcon = minLabelIcon || MIN_LABEL_ICON;
+  maxLabelIcon = maxLabelIcon || MAX_LABEL_ICON;
+  minLabel = minLabel || MIN_LABEL;
+  maxLabel = maxLabel || MAX_LABEL;
 
   const valueAsNumber = getMinOrMaxValue(Number(value), min, max);
   const step = rangeSpec?.step ?? 0.1;
