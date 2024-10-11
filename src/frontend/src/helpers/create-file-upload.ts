@@ -1,35 +1,54 @@
-export async function createFileUpload(props?: {
+export function createFileUpload(props?: {
   accept?: string;
   multiple?: boolean;
 }): Promise<File[]> {
-  let lock = false;
   return new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = props?.accept ?? ".json";
     input.multiple = props?.multiple ?? true;
     input.style.display = "none";
-    // add a change event listener to the file input
-    input.onchange = async (e: Event) => {
-      lock = true;
-      resolve(Array.from((e.target as HTMLInputElement).files!));
-      document.body.removeChild(input);
+
+    let isResolved = false;
+
+    const cleanup = () => {
+      if (input && input.parentNode) {
+        input.parentNode.removeChild(input);
+      }
+      window.removeEventListener("focus", handleFocus);
     };
-    window.addEventListener(
-      "focus",
-      () => {
-        setTimeout(() => {
-          if (!lock) {
-            resolve([]);
-            document.body.removeChild(input);
-          }
-        }, 300);
-      },
-      { once: true },
-    );
-    // add the input element to the body to ensure it is part of the DOM
+
+    const handleChange = (e: Event) => {
+      if (!isResolved) {
+        isResolved = true;
+        const files = Array.from((e.target as HTMLInputElement).files!);
+        cleanup();
+        resolve(files);
+      }
+    };
+
+    const handleFocus = () => {
+      setTimeout(() => {
+        if (!isResolved) {
+          isResolved = true;
+          cleanup();
+          resolve([]);
+        }
+      }, 300);
+    };
+
+    input.addEventListener("change", handleChange);
+    window.addEventListener("focus", handleFocus);
+
     document.body.appendChild(input);
-    // trigger the file input click event to open the file dialog
     input.click();
+
+    setTimeout(() => {
+      if (!isResolved) {
+        isResolved = true;
+        cleanup();
+        resolve([]);
+      }
+    }, 60000);
   });
 }
