@@ -107,6 +107,9 @@ class Component(CustomComponent):
         self.set_class_code()
         self._set_output_required_inputs()
 
+    def _pre_run_setup(self):
+        pass
+
     def set_event_manager(self, event_manager: EventManager | None = None) -> None:
         self._event_manager = event_manager
 
@@ -699,6 +702,8 @@ class Component(CustomComponent):
     async def _build_results(self):
         _results = {}
         _artifacts = {}
+        if hasattr(self, "_pre_run_setup"):
+            self._pre_run_setup()
         if hasattr(self, "outputs"):
             for output in self._outputs_map.values():
                 # Build the output if it's connected to some other vertex
