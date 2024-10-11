@@ -1,13 +1,29 @@
 import os
 
 import pytest
+
+from langflow.components.agents import (
+    AgentActionRouter,
+    AgentContextBuilder,
+    DecideActionComponent,
+    GenerateThoughtComponent,
+)
+from langflow.components.agents.execute_action import ExecuteActionComponent
+from langflow.components.agents.write_final_answer import ProvideFinalAnswerComponent
 from langflow.components.inputs import ChatInput
+from langflow.components.inputs.ChatInput import ChatInput
 from langflow.components.models import OpenAIModelComponent
+from langflow.components.models.OpenAIModel import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput, TextOutputComponent
+from langflow.components.outputs.TextOutput import TextOutputComponent
 from langflow.components.prompts import PromptComponent
 from langflow.components.prototypes import ConditionalRouterComponent
+from langflow.components.prototypes.ConditionalRouter import ConditionalRouterComponent
+from langflow.components.tools.Calculator import CalculatorToolComponent
 from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.graph import Graph
+from langflow.graph.graph.base import Graph
 from langflow.graph.graph.utils import find_cycle_vertices
 from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message
@@ -205,3 +221,90 @@ def test_updated_graph_with_prompts():
     # Extract the vertex IDs for analysis
     results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
     assert "chat_output_1" in results_ids, f"Expected outputs not in results: {results_ids}"
+
+
+@pytest.mark.api_key_required
+def test_complex_agent_flow():
+    # Chat input initialization
+    chat_input = ChatInput(_id="chat_input").set(input_value="What is 19423 times 12345?")
+
+    # OpenAI LLM component
+    openai_component = OpenAIModelComponent(_id="openai").set(api_key=os.getenv("OPENAI_API_KEY"))
+
+    # calculator tool
+    calculator_tool = CalculatorToolComponent(_id="calculator_tool")
+
+    # Agent Context Builder
+    agent_context = AgentContextBuilder(_id="agent_context").set(
+        initial_context=chat_input.message_response,
+        tools=[calculator_tool.build_tool],
+        llm=openai_component.build_model,
+    )
+
+    # Generate Thought
+    generate_thought = GenerateThoughtComponent(_id="generate_thought").set(agent_context=agent_context.build_context)
+
+    # Decide Action
+    decide_action = DecideActionComponent(_id="decide_action").set(agent_context=generate_thought.generate_thought)
+
+    # Agent Action Router
+    action_router = AgentActionRouter(_id="action_router").set(agent_context=decide_action.decide_action)
+
+    execute_action = ExecuteActionComponent(_id="execute_action").set(agent_context=action_router.route_to_execute_tool)
+
+    # Final Answer
+    loop_prompt = PromptComponent(_id="loop_prompt").set(
+        template="Last Action Result: {last_action_result}\nBased on the actions taken, here's the final answer:",
+        answer=execute_action.execute_action,
+    )
+
+    generate_thought.set(prompt=loop_prompt.build_prompt)
+
+    final_answer = ProvideFinalAnswerComponent(_id="final_answer").set(
+        agent_context=action_router.route_to_final_answer
+    )
+
+    # Chat output
+    chat_output = ChatOutput(_id="chat_output").set(input_value=final_answer.get_final_answer)
+
+    # Build the graph
+    graph = Graph(chat_input, chat_output)
+
+    # Assertions for graph cyclicity and correctness
+    if graph.is_cyclic is False:
+        pytest.fail("This graph should contain cycles.")
+
+    # Run and validate the execution of the graph
+    results = []
+    max_iterations = 10
+    snapshots = [graph.get_snapshot()]
+
+    for result in graph.start(max_iterations=max_iterations):
+        snapshots.append(graph.get_snapshot())
+        results.append(result)
+
+    if len(snapshots) <= 1:
+        pytest.fail("Graph should have more than one snapshot")
+
+    # Extract the vertex IDs for analysis
+    results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
+    expected_ids = [
+        "chat_input",
+        "openai",
+        "calculator_tool",
+        "agent_context",
+        "generate_thought",
+        "decide_action",
+        "action_router",
+        "execute_action",
+        "loop_prompt",
+        "final_answer",
+        "chat_output",
+    ]
+
+    for expected_id in expected_ids:
+        assert expected_id in results_ids, f"Expected component {expected_id} not in results: {results_ids}"
+
+    assert results_ids[-1] == "chat_output", "Last executed component should be chat_output"
+
+    print(f"Execution completed with results: {results_ids}")
