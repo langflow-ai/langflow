@@ -22,6 +22,6 @@ __all__ = [
     "MergeDataComponent",
     "ParseDataComponent",
     "SplitTextComponent",
-    "StoreMessageComponent"
+    "StoreMessageComponent",
     "ParseExcelDataComponent"
 ]
