@@ -15,6 +15,7 @@ const useFileDrop = (folderId: string) => {
     (state) => state.setFolderIdDragging,
   );
 
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const flows = useFlowsManagerStore((state) => state.flows);
   const saveFlow = useSaveFlow();
@@ -105,7 +106,14 @@ const useFileDrop = (folderId: string) => {
     }
     const updatedFlow = { ...selectedFlow, folder_id: folderId };
 
-    const newName = addVersionToDuplicates(updatedFlow, flows ?? []);
+    const flowsToCheckNames = flows?.filter(
+      (f) => f.folder_id === myCollectionId,
+    );
+
+    const newName = addVersionToDuplicates(
+      updatedFlow,
+      flowsToCheckNames ?? [],
+    );
 
     updatedFlow.name = newName;
 

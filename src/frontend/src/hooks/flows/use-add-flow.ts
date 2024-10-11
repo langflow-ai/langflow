@@ -1,3 +1,4 @@
+import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -28,13 +29,20 @@ const useAddFlow = () => {
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const { deleteFlow } = useDeleteFlow();
 
+  const { setFlowToCanvas } = useFlowsManagerStore();
+
   const { folderId } = useParams();
 
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const { mutate: postAddFlow } = usePostAddFlow();
+  const { mutate: refreshFlows } = useGetRefreshFlows();
 
-  const addFlow = async (params?: { flow?: FlowType; override?: boolean }) => {
+  const addFlow = async (params?: {
+    flow?: FlowType;
+    override?: boolean;
+    new_blank?: boolean;
+  }) => {
     return new Promise(async (resolve, reject) => {
       const flow = cloneDeep(params?.flow) ?? undefined;
       let flowData = flow
@@ -57,9 +65,14 @@ const useAddFlow = () => {
           await deleteFlow({ id: flowId.id });
         }
       }
+
+      const flowsToCheckNames = flows?.filter(
+        (f) => f.folder_id === myCollectionId,
+      );
+
       const newFlow = createNewFlow(flowData!, folder_id, flow);
 
-      const newName = addVersionToDuplicates(newFlow, flows ?? []);
+      const newName = addVersionToDuplicates(newFlow, flowsToCheckNames ?? []);
       newFlow.name = newName;
       newFlow.folder_id = folder_id;
 
@@ -78,17 +91,24 @@ const useAddFlow = () => {
               ["saved_components"]: data,
             }),
           }));
+
+          refreshFlows({
+            get_all: true,
+            header_flows: true,
+          });
+
+          setFlowToCanvas(createdFlow);
           resolve(createdFlow.id);
         },
         onError: (error) => {
           if (error.response?.data?.detail) {
             useAlertStore.getState().setErrorData({
-              title: "Could not load flows from database",
+              title: "Could not create flow",
               list: [error.response?.data?.detail],
             });
           } else {
             useAlertStore.getState().setErrorData({
-              title: "Could not load flows from database",
+              title: "Could not create flow",
               list: [
                 error.message ??
                   "An unexpected error occurred, please try again",

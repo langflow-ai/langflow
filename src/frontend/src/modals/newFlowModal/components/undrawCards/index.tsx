@@ -10,9 +10,6 @@ import APIRequest from "../../../../assets/undraw_real_time_analytics_re_yliv.sv
 import BasicPrompt from "../../../../assets/undraw_short_bio_re_fmx0.svg?react";
 import TransferFiles from "../../../../assets/undraw_transfer_files_re_a2a9.svg?react";
 
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { track } from "@/customization/utils/analytics";
-import useAddFlow from "@/hooks/flows/use-add-flow";
 import {
   Card,
   CardContent,
@@ -22,16 +19,16 @@ import {
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { UndrawCardComponentProps } from "../../../../types/components";
 import { updateIds } from "../../../../utils/reactflowUtils";
+import { useFlowCardClick } from "../hooks/use-redirect-flow-card-click";
 
 export default function UndrawCardComponent({
   flow,
 }: UndrawCardComponentProps): JSX.Element {
-  const addFlow = useAddFlow();
-  const navigate = useCustomNavigate();
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-
   const folderIdUrl = folderId ?? myCollectionId;
+
+  const handleFlowCardClick = useFlowCardClick();
 
   function selectImage() {
     switch (flow.name) {
@@ -140,13 +137,7 @@ export default function UndrawCardComponent({
 
   return (
     <Card
-      onClick={() => {
-        updateIds(flow.data!);
-        addFlow({ flow }).then((id) => {
-          navigate(`/flow/${id}/folder/${folderIdUrl}`);
-        });
-        track("New Flow Created", { template: `${flow.name} Template` });
-      }}
+      onClick={() => handleFlowCardClick(flow, folderIdUrl!)}
       className="h-64 w-80 cursor-pointer bg-background pt-4"
     >
       <CardContent className="h-full w-full">

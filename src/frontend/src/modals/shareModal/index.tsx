@@ -1,5 +1,5 @@
-import { useGetTagsQuery } from "@/controllers/API/queries/store";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
@@ -59,7 +59,7 @@ export default function ShareModal({
     { id: string; name: string }[]
   >([]);
   const saveFlow = useSaveFlow();
-  const { data, isFetching } = useGetTagsQuery();
+  const tags = useUtilityStore((state) => state.tags);
 
   const [loadingNames, setLoadingNames] = useState(false);
 
@@ -114,7 +114,7 @@ export default function ShareModal({
     if (!update)
       saveFlowStore(
         flow!,
-        getTagsIds(selectedTags, cloneDeep(data) ?? []),
+        getTagsIds(selectedTags, cloneDeep(tags) ?? []),
         sharePublic,
       ).then(successShare, (err) => {
         setErrorData({
@@ -125,7 +125,7 @@ export default function ShareModal({
     else
       updateFlowStore(
         flow!,
-        getTagsIds(selectedTags, cloneDeep(data) ?? []),
+        getTagsIds(selectedTags, cloneDeep(tags) ?? []),
         sharePublic,
         unavaliableNames.find((e) => e.name === name)!.id,
       ).then(successShare, (err) => {
@@ -226,8 +226,8 @@ export default function ShareModal({
           </div>
           <div className="mt-3 flex h-8 w-full">
             <TagsSelector
-              tags={data ?? []}
-              loadingTags={isFetching}
+              tags={tags ?? []}
+              loadingTags={false}
               disabled={false}
               selectedTags={selectedTags}
               setSelectedTags={setSelectedTags}

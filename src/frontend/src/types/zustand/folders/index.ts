@@ -11,4 +11,6 @@ export type FoldersStoreType = {
   setFolderIdDragging: (id: string) => void;
   starterProjectId: string;
   setStarterProjectId: (id: string) => void;
+  folders: FolderType[];
+  setFolders: (folders: FolderType[]) => void;
 };

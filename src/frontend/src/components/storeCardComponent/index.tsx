@@ -116,7 +116,7 @@ export default function StoreCardComponent({
         data-testid={`card-${convertTestName(data.name)}`}
         //TODO check color schema
         className={cn(
-          "group relative flex h-[11rem] flex-col justify-between overflow-hidden",
+          "group relative flex h-[12rem] flex-col justify-between overflow-hidden",
           !data.is_component &&
             "hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#5f5f5f0e]",
           disabled ? "pointer-events-none opacity-50" : "",

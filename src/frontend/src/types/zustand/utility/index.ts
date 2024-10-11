@@ -1,3 +1,5 @@
+import { Pagination, Tag } from "@/types/utils/types";
+
 export type UtilityStoreType = {
   selectedItems: any[];
   setSelectedItems: (itemId: any) => void;
@@ -7,4 +9,8 @@ export type UtilityStoreType = {
   setPlaygroundScrollBehaves: (behaves: ScrollBehavior) => void;
   maxFileSizeUpload: number;
   setMaxFileSizeUpload: (maxFileSizeUpload: number) => void;
+  flowsPagination: Pagination;
+  setFlowsPagination: (pagination: Pagination) => void;
+  tags: Tag[];
+  setTags: (tags: Tag[]) => void;
 };

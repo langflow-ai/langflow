@@ -1,4 +1,5 @@
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useParams } from "react-router-dom";
 import CollectionCardComponent from "../../../../../../components/cardComponent";
 const CollectionCard = ({ item, type, isLoading, control }) => {
@@ -10,8 +11,13 @@ const CollectionCard = ({ item, type, isLoading, control }) => {
 
   const editFlowLink = `/flow/${item.id}${folderId ? `/folder/${folderId}` : ""}`;
 
-  const handleClick = () => {
+  const setFlowToCanvas = useFlowsManagerStore(
+    (state) => state.setFlowToCanvas,
+  );
+
+  const handleClick = async () => {
     if (!isComponent) {
+      await setFlowToCanvas(item);
       navigate(editFlowLink);
     }
   };

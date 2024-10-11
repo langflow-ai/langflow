@@ -153,6 +153,7 @@ body {
   width: 100%;
   height: 100%;
 }
+
 .react-flow__resize-control.handle {
   width: 0.75rem !important;
   height: 0.75rem !important;
