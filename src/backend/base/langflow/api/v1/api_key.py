@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -21,8 +21,8 @@ router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
 @router.get("/", response_model=ApiKeysResponse)
 def get_api_keys_route(
-    db: Session = Depends(get_session),
-    current_user: User = Depends(auth_utils.get_current_active_user),
+    db: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(auth_utils.get_current_active_user)],
 ):
     try:
         user_id = current_user.id
@@ -36,8 +36,8 @@ def get_api_keys_route(
 @router.post("/", response_model=UnmaskedApiKeyRead)
 def create_api_key_route(
     req: ApiKeyCreate,
-    current_user: User = Depends(auth_utils.get_current_active_user),
-    db: Session = Depends(get_session),
+    current_user: Annotated[User, Depends(auth_utils.get_current_active_user)],
+    db: Annotated[Session, Depends(get_session)],
 ):
     try:
         user_id = current_user.id
@@ -63,8 +63,8 @@ def delete_api_key_route(
 def save_store_api_key(
     api_key_request: ApiKeyCreateRequest,
     response: Response,
-    current_user: User = Depends(auth_utils.get_current_active_user),
-    db: Session = Depends(get_session),
+    current_user: Annotated[User, Depends(auth_utils.get_current_active_user)],
+    db: Annotated[Session, Depends(get_session)],
     settings_service=Depends(get_settings_service),
 ):
     auth_settings = settings_service.auth_settings
@@ -95,8 +95,8 @@ def save_store_api_key(
 
 @router.delete("/store")
 def delete_store_api_key(
-    current_user: User = Depends(auth_utils.get_current_active_user),
-    db: Session = Depends(get_session),
+    current_user: Annotated[User, Depends(auth_utils.get_current_active_user)],
+    db: Annotated[Session, Depends(get_session)],
 ):
     try:
         current_user.store_api_key = None

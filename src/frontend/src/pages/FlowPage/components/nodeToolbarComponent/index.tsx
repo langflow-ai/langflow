@@ -3,11 +3,11 @@ import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import CodeAreaModal from "@/modals/codeAreaModal";
 import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import { useUpdateNodeInternals } from "reactflow";
-import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
@@ -638,22 +638,17 @@ export default function NodeToolbarComponent({
           {hasCode && (
             <div className="hidden">
               {openModal && (
-                <CodeAreaComponent
+                <CodeAreaModal
+                  setValue={handleOnNewValue}
                   open={openModal}
                   setOpen={setOpenModal}
-                  readonly={
-                    data.node?.flow && data.node.template[name].dynamic
-                      ? true
-                      : false
-                  }
-                  dynamic={data.node?.template[name].dynamic ?? false}
+                  dynamic={true}
                   setNodeClass={handleNodeClass}
                   nodeClass={data.node}
-                  disabled={false}
                   value={data.node?.template[name].value ?? ""}
-                  onChange={handleOnNewValue}
-                  id={"code-input-node-toolbar-" + name}
-                />
+                >
+                  <></>
+                </CodeAreaModal>
               )}
             </div>
           )}

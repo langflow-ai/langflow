@@ -120,7 +120,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
-            import litellm  # type: ignore
+            import litellm
 
             litellm.drop_params = True
             litellm.set_verbose = self.verbose
@@ -136,10 +136,10 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         if self.provider == "Azure":
             if "api_base" not in self.kwargs:
                 msg = "Missing api_base on kwargs"
-                raise Exception(msg)
+                raise ValueError(msg)
             if "api_version" not in self.model_kwargs:
                 msg = "Missing api_version on model_kwargs"
-                raise Exception(msg)
+                raise ValueError(msg)
         output = ChatLiteLLM(
             model=f"{self.provider.lower()}/{self.model}",
             client=None,
@@ -155,4 +155,4 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         )
         output.client.api_key = self.api_key
 
-        return output  # type: ignore
+        return output

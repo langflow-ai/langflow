@@ -1,7 +1,7 @@
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, ANY
 
 import httpx
 import pytest
@@ -158,7 +158,7 @@ def test_directory_component_build_with_multithreading(
 
     # Assert
     mock_resolve_path.assert_called_once_with(path)
-    mock_retrieve_file_paths.assert_called_once_with(path, load_hidden, recursive, depth)
+    mock_retrieve_file_paths.assert_called_once_with(path, load_hidden, recursive, depth, ANY)
     mock_parallel_load_data.assert_called_once_with(
         mock_retrieve_file_paths.return_value, silent_errors, max_concurrency
     )

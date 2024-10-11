@@ -86,7 +86,7 @@ class LCModelComponent(Component):
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
-            raise e
+            raise
 
     def build_status_message(self, message: AIMessage):
         """
@@ -133,9 +133,9 @@ class LCModelComponent(Component):
                     }
                 }
             else:
-                status_message = f"Response: {content}"  # type: ignore
+                status_message = f"Response: {content}"  # type: ignore[assignment]
         else:
-            status_message = f"Response: {message.content}"  # type: ignore
+            status_message = f"Response: {message.content}"  # type: ignore[assignment]
         return status_message
 
     def get_chat_result(
@@ -175,7 +175,7 @@ class LCModelComponent(Component):
             if self.output_parser is not None:
                 runnable = runnable | self.output_parser
 
-            runnable = runnable.with_config(  # type: ignore
+            runnable = runnable.with_config(
                 {
                     "run_name": self.display_name,
                     "project_name": self.get_project_name(),
@@ -183,8 +183,8 @@ class LCModelComponent(Component):
                 }
             )
             if stream:
-                return runnable.stream(inputs)  # type: ignore
-            message = runnable.invoke(inputs)  # type: ignore
+                return runnable.stream(inputs)
+            message = runnable.invoke(inputs)
             result = message.content if hasattr(message, "content") else message
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)
@@ -198,7 +198,7 @@ class LCModelComponent(Component):
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
-            raise e
+            raise
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

@@ -86,7 +86,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
         endpoint = self.endpoint
 
         try:
-            output = QianfanChatEndpoint(  # type: ignore
+            output = QianfanChatEndpoint(
                 model=model,
                 qianfan_ak=SecretStr(qianfan_ak) if qianfan_ak else None,
                 qianfan_sk=SecretStr(qianfan_sk) if qianfan_sk else None,
@@ -99,4 +99,4 @@ class QianfanChatEndpointComponent(LCModelComponent):
             msg = "Could not connect to Baidu Qianfan API."
             raise ValueError(msg) from e
 
-        return output  # type: ignore
+        return output

@@ -1,9 +1,15 @@
+from pathlib import Path
+
 import httpx
 
 from langflow.services.database.models.flow.model import FlowBase
 
 
-def upload(file_path, host, flow_id):
+class UploadError(Exception):
+    """Raised when an error occurs during the upload process."""
+
+
+def upload(file_path: str, host: str, flow_id: str):
     """
     Upload a file to Langflow and return the file path.
 
@@ -20,15 +26,16 @@ def upload(file_path, host, flow_id):
     """
     try:
         url = f"{host}/api/v1/upload/{flow_id}"
-        with open(file_path, "rb") as file:
+        with Path(file_path).open("rb") as file:
             response = httpx.post(url, files={"file": file})
-            if response.status_code == 200 or response.status_code == 201:
+            if response.status_code in (httpx.codes.OK, httpx.codes.CREATED):
                 return response.json()
-            msg = f"Error uploading file: {response.status_code}"
-            raise Exception(msg)
     except Exception as e:
         msg = f"Error uploading file: {e}"
-        raise Exception(msg) from e
+        raise UploadError(msg) from e
+    else:
+        msg = f"Error uploading file: {response.status_code}"
+        raise UploadError(msg)
 
 
 def upload_file(file_path: str, host: str, flow_id: str, components: list[str], tweaks: dict | None = None):
@@ -59,13 +66,14 @@ def upload_file(file_path: str, host: str, flow_id: str, components: list[str], 
                     tweaks[component] = {"path": response["file_path"]}
                 else:
                     msg = f"Component ID or name must be a string. Got {type(component)}"
-                    raise ValueError(msg)
+                    raise TypeError(msg)
             return tweaks
-        msg = "Error uploading file"
-        raise ValueError(msg)
     except Exception as e:
         msg = f"Error uploading file: {e}"
-        raise ValueError(msg) from e
+        raise UploadError(msg) from e
+    else:
+        msg = "Error uploading file"
+        raise UploadError(msg)
 
 
 def get_flow(url: str, flow_id: str):
@@ -85,11 +93,12 @@ def get_flow(url: str, flow_id: str):
     try:
         flow_url = f"{url}/api/v1/flows/{flow_id}"
         response = httpx.get(flow_url)
-        if response.status_code == 200:
+        if response.status_code == httpx.codes.OK:
             json_response = response.json()
             return FlowBase(**json_response).model_dump()
-        msg = f"Error retrieving flow: {response.status_code}"
-        raise Exception(msg)
     except Exception as e:
         msg = f"Error retrieving flow: {e}"
-        raise Exception(msg) from e
+        raise UploadError(msg) from e
+    else:
+        msg = f"Error retrieving flow: {response.status_code}"
+        raise UploadError(msg)

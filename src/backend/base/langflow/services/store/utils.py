@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 import httpx
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.store.schema import ListComponentResponse
@@ -44,10 +45,11 @@ async def update_components_with_user_data(
 def get_lf_version_from_pypi():
     try:
         response = httpx.get("https://pypi.org/pypi/langflow/json")
-        if response.status_code != 200:
+        if response.status_code != httpx.codes.OK:
             return None
         return response.json()["info"]["version"]
-    except Exception:
+    except Exception:  # noqa: BLE001
+        logger.opt(exception=True).debug("Error getting the latest version of langflow from PyPI")
         return None
 
 

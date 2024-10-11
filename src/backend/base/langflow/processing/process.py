@@ -117,13 +117,13 @@ def validate_input(
 ) -> list[dict[str, Any]]:
     if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
         msg = "graph_data and tweaks should be dictionaries"
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     nodes = graph_data.get("data", {}).get("nodes") or graph_data.get("nodes")
 
     if not isinstance(nodes, list):
         msg = "graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key"
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     return nodes
 
@@ -141,8 +141,8 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
         if tweak_name in template_data:
             if isinstance(tweak_value, dict):
                 for k, v in tweak_value.items():
-                    k = "file_path" if template_data[tweak_name]["type"] == "file" else k
-                    template_data[tweak_name][k] = v
+                    _k = "file_path" if template_data[tweak_name]["type"] == "file" else k
+                    template_data[tweak_name][_k] = v
             else:
                 key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
                 template_data[tweak_name][key] = tweak_value
