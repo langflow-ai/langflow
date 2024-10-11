@@ -1,5 +1,4 @@
-"""
-This code is adapted from the DVC project.
+"""This code is adapted from the DVC project.
 
 Original source:
 https://github.com/iterative/dvc/blob/c5bac1c8cfdb2c0f54d52ac61ff754e6f583822a/dvc/dagascii.py

@@ -12,8 +12,8 @@ def _compute_non_prerelease_version(prerelease_version: str) -> str:
 
 
 def _get_version_info():
-    """
-    Retrieves the version of the package from a possible list of package names.
+    """Retrieves the version of the package from a possible list of package names.
+
     This accounts for after package names are updated for -nightly builds.
 
     Returns:
@@ -55,7 +55,8 @@ VERSION_INFO = _get_version_info()
 
 
 def is_pre_release(v: str) -> bool:
-    """
+    """Whether the version is a pre-release version.
+
     Returns a boolean indicating whether the version is a pre-release version,
     as per the definition of a pre-release segment from PEP 440.
     """
@@ -63,7 +64,8 @@ def is_pre_release(v: str) -> bool:
 
 
 def is_nightly(v: str) -> bool:
-    """
+    """Whether the version is a dev (nightly) version.
+
     Returns a boolean indicating whether the version is a dev (nightly) version,
     as per the definition of a dev segment from PEP 440.
     """

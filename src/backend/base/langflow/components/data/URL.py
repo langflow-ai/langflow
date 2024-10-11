@@ -37,8 +37,8 @@ class URLComponent(Component):
     ]
 
     def ensure_url(self, string: str) -> str:
-        """
-        Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.
+        """Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.
+
         Raises an error if the string is not a valid URL.
 
         Parameters:

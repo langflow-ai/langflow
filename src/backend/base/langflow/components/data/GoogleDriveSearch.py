@@ -93,9 +93,7 @@ class GoogleDriveSearchComponent(Component):
         self.generate_query_string()
 
     def generate_file_url(self, file_id: str, mime_type: str) -> str:
-        """
-        Generates the appropriate Google Drive URL for a file based on its MIME type.
-        """
+        """Generates the appropriate Google Drive URL for a file based on its MIME type."""
         return {
             "application/vnd.google-apps.document": f"https://docs.google.com/document/d/{file_id}/edit",
             "application/vnd.google-apps.spreadsheet": f"https://docs.google.com/spreadsheets/d/{file_id}/edit",

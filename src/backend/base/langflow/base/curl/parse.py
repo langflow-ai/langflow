@@ -1,5 +1,4 @@
-"""
-This file contains a fix for the implementation of the `uncurl` library, which is available at https://github.com/spulec/uncurl.git.
+r"""This file contains a fix for the implementation of the `uncurl` library, which is available at https://github.com/spulec/uncurl.git.
 
 The `uncurl` library provides a way to parse and convert cURL commands into Python requests.
 However, there are some issues with the original implementation that this file aims to fix.

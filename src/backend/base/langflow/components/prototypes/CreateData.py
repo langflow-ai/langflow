@@ -88,7 +88,7 @@ class CreateDataComponent(Component):
         return return_data
 
     def get_data(self):
-        """Function to get the Data from the attributes"""
+        """Function to get the Data from the attributes."""
         data = {}
         for value_dict in self._attributes.values():
             if isinstance(value_dict, dict):
@@ -100,7 +100,7 @@ class CreateDataComponent(Component):
         return data
 
     def validate_text_key(self):
-        """This function validates that the Text Key is one of the keys in the Data"""
+        """This function validates that the Text Key is one of the keys in the Data."""
         data_keys = self.get_data().keys()
         if self.text_key not in data_keys and self.text_key != "":
             formatted_data_keys = ", ".join(data_keys)

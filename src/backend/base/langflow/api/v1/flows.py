@@ -137,8 +137,7 @@ def read_flows(
     params: Params = Depends(),
     header_flows: bool = False,
 ):
-    """
-    Retrieve a list of flows with pagination support.
+    """Retrieve a list of flows with pagination support.
 
     Args:
         current_user (User): The current authenticated user.
@@ -149,10 +148,11 @@ def read_flows(
         folder_id (UUID, optional): The folder ID. Defaults to None.
         params (Params): Pagination parameters.
         remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
+        header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.
+
     Returns:
         Union[list[FlowRead], Page[FlowRead]]: A list of flows or a paginated response containing the list of flows.
     """
-
     try:
         auth_settings = settings_service.auth_settings
 
@@ -364,12 +364,12 @@ async def delete_multiple_flows(
     user: Annotated[User, Depends(get_current_active_user)],
     db: Annotated[Session, Depends(get_session)],
 ):
-    """
-    Delete multiple flows by their IDs.
+    """Delete multiple flows by their IDs.
 
     Args:
         flow_ids (List[str]): The list of flow IDs to delete.
         user (User, optional): The user making the request. Defaults to the current active user.
+        db (Session, optional): The database session.
 
     Returns:
         dict: A dictionary containing the number of flows deleted.
@@ -441,8 +441,7 @@ def read_basic_examples(
     *,
     session: Session = Depends(get_session),
 ):
-    """
-    Retrieve a list of basic example flows.
+    """Retrieve a list of basic example flows.
 
     Args:
         session (Session): The database session.
@@ -450,7 +449,6 @@ def read_basic_examples(
     Returns:
         list[FlowRead]: A list of basic example flows.
     """
-
     try:
         # Get the starter folder
         starter_folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
