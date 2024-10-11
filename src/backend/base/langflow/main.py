@@ -208,12 +208,12 @@ def create_app():
     @app.exception_handler(Exception)
     async def exception_handler(request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
-            logger.error(f"HTTPException: {exc.detail}")
+            logger.error(f"HTTPException: {exc}", exc_info=exc)
             return JSONResponse(
                 status_code=exc.status_code,
                 content={"message": str(exc.detail)},
             )
-        logger.error(f"unhandled error: {exc}")
+        logger.error(f"unhandled error: {exc}", exc_info=exc)
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             content={"message": str(exc)},
