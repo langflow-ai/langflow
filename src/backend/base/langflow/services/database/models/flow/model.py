@@ -9,7 +9,7 @@ import emoji
 from emoji import purely_emoji
 from fastapi import HTTPException, status
 from loguru import logger
-from pydantic import field_serializer, field_validator
+from pydantic import BaseModel, field_serializer, field_validator
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -188,6 +188,22 @@ class FlowRead(FlowBase):
     id: UUID
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()
+
+
+class FlowHeader(BaseModel):
+    id: UUID
+    name: str
+    folder_id: UUID | None = None
+    is_component: bool | None = None
+    endpoint_name: str | None = None
+    description: str | None = None
+
+
+class PaginatedFlowResponse(BaseModel):
+    flows: list[FlowRead]
+    total: int
+    page_size: int
+    page_index: int
 
 
 class FlowUpdate(SQLModel):

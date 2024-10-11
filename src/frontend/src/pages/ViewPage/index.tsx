@@ -33,7 +33,7 @@ export default function ViewPage() {
         setCurrentFlow(isAnExistingFlow);
       } else if (!flows) {
         setIsLoading(true);
-        await refreshFlows(undefined);
+        await refreshFlows({ get_all: true, header_flows: true });
         if (!types || Object.keys(types).length === 0) await getTypes();
         setIsLoading(false);
       }
