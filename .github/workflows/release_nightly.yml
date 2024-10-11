@@ -108,28 +108,24 @@ jobs:
             echo "Server terminated successfully"
           fi
 
-      - name: Build Docker Image
-        run: |
-          docker build -t langflowai/langflow-base-nightly:${{ inputs.nightly_tag_base }} .
-
       - name: Test Docker Image
         uses: ./.github/workflows/docker_test.yml
         with:
           image_name: 'langflowai/langflow-base-nightly'
           tag_name: ${{ inputs.nightly_tag_base }}
 
-      # - name: Publish to PyPI
-      #   env:
-      #     POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-      #     UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-      #   run: |
-      #     make publish base=true
+      - name: Publish to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          make publish base=true
 
-      # - name: Upload Artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: dist-base
-      #     path: src/backend/base/dist
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-base
+          path: src/backend/base/dist
 
   release-nightly-main:
     name: Release Langflow Nightly Main
@@ -190,27 +186,23 @@ jobs:
             echo "Server terminated successfully"
           fi
 
-      - name: Build Docker Image
-        run: |
-          docker build -t langflowai/langflow-nightly:${{ inputs.nightly_tag_main }} .
-
       - name: Test Docker Image
         uses: ./.github/workflows/docker_test.yml
         with:
           image_name: 'langflowai/langflow-nightly'
           tag_name: ${{ inputs.nightly_tag_main }}
 
-      # - name: Publish to PyPI
-      #   env:
-      #     POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-      #     UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-      #   run: |
-      #     make publish main=true
-      # - name: Upload Artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: dist-main
-      #     path: dist
+      - name: Publish to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          make publish main=true
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-main
+          path: dist
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
