@@ -88,6 +88,7 @@ export default function TemplatesModal({
                     track("New Flow Created", { template: "Blank Flow" });
                   }}
                   size="sm"
+                  data-testid="blank-flow"
                 >
                   Create Blank Project
                 </Button>
