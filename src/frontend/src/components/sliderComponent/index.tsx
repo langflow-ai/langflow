@@ -18,6 +18,13 @@ const DARK_COLOR_TEXT = "#52525b";
 const LIGHT_COLOR_BACKGROUND = "#e4e4e7";
 const LIGHT_COLOR_TEXT = "#000";
 
+const DEFAULT_SLIDER_BUTTONS_OPTIONS = [
+  { id: 0, label: "Precise" },
+  { id: 1, label: "Balanced" },
+  { id: 2, label: "Creative" },
+  { id: 3, label: "Wild" },
+];
+
 type ColorType = "background" | "text";
 
 export default function SliderComponent({
@@ -29,18 +36,17 @@ export default function SliderComponent({
   maxLabel = "Wild",
   minLabelIcon = "pencil-ruler",
   maxLabelIcon = "palette",
-  sliderButtons = true,
-  sliderButtonsOptions = [
-    { value: 0, label: "Precise" },
-    { value: 1, label: "Balanced" },
-    { value: 2, label: "Creative" },
-    { value: 3, label: "Wild" },
-  ],
+  sliderButtons = false,
+  sliderButtonsOptions = DEFAULT_SLIDER_BUTTONS_OPTIONS,
   sliderInput = false,
   handleOnNewValue,
 }: InputProps<any[], SliderComponentType>): JSX.Element {
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
+
+  if (sliderButtons && sliderButtonsOptions.length === 0) {
+    sliderButtonsOptions = DEFAULT_SLIDER_BUTTONS_OPTIONS;
+  }
 
   const valueAsNumber = getMinOrMaxValue(Number(value), min, max);
   const step = rangeSpec?.step ?? 0.1;
@@ -173,7 +179,7 @@ export default function SliderComponent({
             value={valueAsNumber.toFixed(2)}
             onChange={(e) => handleChange([parseFloat(e.target.value)])}
             className={clsx(
-              "ml-2 h-10 w-12 rounded-md border px-2 py-1 text-sm arrow-hide",
+              "ml-2 h-10 w-16 rounded-md border px-2 py-1 text-sm arrow-hide",
               isDark
                 ? "border-zinc-700 bg-zinc-800 text-white"
                 : "border-zinc-300 bg-white text-black",
@@ -196,11 +202,11 @@ export default function SliderComponent({
           >
             {sliderButtonsOptions?.map((option) => (
               <button
-                key={option.value}
-                onClick={() => handleOptionClick(option.value)}
+                key={option.id}
+                onClick={() => handleOptionClick(option.id)}
                 style={{
-                  background: getButtonBackground(option.value),
-                  color: getButtonTextColor(option.value),
+                  background: getButtonBackground(option.id),
+                  color: getButtonTextColor(option.id),
                 }}
                 className={clsx(
                   "h-9 flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200",

@@ -179,7 +179,7 @@ export type SliderComponentType = {
   sliderButtons?: boolean;
   sliderButtonsOptions?: {
     label: string;
-    value: number;
+    id: number;
   }[];
   sliderInput?: boolean;
 };
