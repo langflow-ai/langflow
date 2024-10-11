@@ -107,7 +107,7 @@ class OpenAIModelComponent(LCModelComponent):
         )
         if json_mode:
             if output_schema_dict:
-                output = output.with_structured_output(schema=output_schema_dict, method="json_mode")  # type: ignore
+                output = output.with_structured_output(schema=output_schema_dict, method="json_mode")
             else:
                 output = output.bind(response_format={"type": "json_object"})
 
