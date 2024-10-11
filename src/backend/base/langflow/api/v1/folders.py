@@ -117,7 +117,7 @@ def read_folder(
         stmt = (
             select(Flow)
             .where(Flow.folder_id == folder_id, Flow.user_id == current_user.id)
-            .order_by(Flow.updated_at.desc())
+            .order_by(Flow.updated_at.desc())  # type: ignore[attr-defined]
         )
         if is_component:
             stmt = stmt.where(Flow.is_component == True)  # noqa: E712
