@@ -12,8 +12,13 @@ export async function createFileUpload(props?: {
     let isResolved = false;
 
     const cleanup = () => {
+      // Check if the input element still exists in the DOM before attempting to remove it
       if (input && document.body.contains(input)) {
-        document.body.removeChild(input);
+        try {
+          document.body.removeChild(input);
+        } catch (error) {
+          console.warn("Error removing input element:", error);
+        }
       }
       window.removeEventListener("focus", handleFocus);
     };
@@ -50,6 +55,6 @@ export async function createFileUpload(props?: {
         cleanup();
         resolve([]);
       }
-    }, 60000); // 1 minute timeout
+    }, 60000);
   });
 }
