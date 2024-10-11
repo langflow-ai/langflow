@@ -1,3 +1,4 @@
+import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
 import { ForwardedIconComponent } from "../../../../components/genericIconComponent";
 import { TemplateCategoryProps } from "../../../../types/templates/types";
 import TemplateExampleCard from "../TemplateCardComponent";
@@ -14,7 +15,11 @@ export function TemplateCategoryComponent({
           name={currentTab?.icon ?? "Search"}
           className="h-4 w-4 text-muted-foreground"
         />
-        {currentTab?.title ?? "All Templates"}
+        <span
+          data-testid={`category_title_${convertTestName(currentTab?.title ?? "All Templates")}`}
+        >
+          {currentTab?.title ?? "All Templates"}
+        </span>
       </div>
       <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {examples.map((example, index) => (
