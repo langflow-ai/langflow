@@ -56,4 +56,4 @@ class NaturalLanguageTextPreprocessorComponent(Component):
 
             return Message(text=text)
         except Exception as e:
-            return Message(text=f"Error: {str(e)}")
+            return Message(text=f"Error: {e!s}")
