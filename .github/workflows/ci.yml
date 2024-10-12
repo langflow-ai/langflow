@@ -51,6 +51,8 @@ jobs:
       - run: echo "Labels -> ${{ join(github.event.pull_request.labels.*.name, ',') }}"
       - run: echo "IsDraft -> ${{ github.event.pull_request.draft }}"
       - run: echo "Event name -> ${{ github.event_name }}"
+      - run: echo "Should Run CI -> ${{ needs.set-ci-condition.outputs.should-run-ci }}"
+
   path-filter:
     needs: set-ci-condition
     if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' }}
@@ -80,6 +82,8 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
+    steps:
+      - run: echo "Running backend tests because Python or tests have changed."
 
   test-frontend:
     needs: path-filter
@@ -91,6 +95,8 @@ jobs:
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
+    steps:
+      - run: echo "Running frontend tests because relevant changes were detected."
 
   lint-backend:
     needs: path-filter
