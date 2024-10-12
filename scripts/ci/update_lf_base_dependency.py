@@ -13,25 +13,13 @@ def update_base_dep(pyproject_path: str, new_version: str) -> None:
     with open(filepath, "r") as file:
         content = file.read()
 
-    # Regex to match the langflow-base dep line under [tool.poetry]
-    # NOTE: this functions similarly to `update_dependencies.py`.
-    # The order of operations for these scripts is more complex than it needs to be;
-    # this is a reminder to revisit this process.
-    # Currently, the process is as follows:
-    # 1. nightly-build workflow updates all names, version, and the langflow-base
-    #    dependency in pyproject.toml, and commits the changes and creates a tag.
-    # 2. release-nightly workflow runs, which calls update_dependencies.py to update
-    #   the langflow-base dependency in pyproject.toml _again_. This is redundant, but
-    #   necessary because the release workflow relies on that script to update the base
-    #   dependency.
-    pattern = re.compile(r'langflow-base = \{ path = "\./src/backend/base", develop = true \}')
-
-    if not pattern.search(content):
-        raise Exception(f'langflow-base dependency not found in "{filepath}"')
-
     replacement = f'langflow-base-nightly = "{new_version}"'
-    content = pattern.sub(replacement, content)
 
+    # Updates the pattern for poetry
+    pattern = re.compile(r'langflow-base = \{ path = "\./src/backend/base", develop = true \}')
+    if not pattern.search(content):
+        raise Exception(f'langflow-base poetry dependency not found in "{filepath}"')
+    content = pattern.sub(replacement, content)
     with open(filepath, "w") as file:
         file.write(content)
 

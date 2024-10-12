@@ -1,5 +1,7 @@
 from collections.abc import Callable
 
+from loguru import logger
+
 from langflow.custom import Component
 from langflow.custom.utils import get_function
 from langflow.io import CodeInput, Output
@@ -43,8 +45,7 @@ class PythonFunctionComponent(Component):
     def get_function_callable(self) -> Callable:
         function_code = self.function_code
         self.status = function_code
-        func = get_function(function_code)
-        return func
+        return get_function(function_code)
 
     def execute_function(self) -> list[dotdict | str] | dotdict | str:
         function_code = self.function_code
@@ -55,19 +56,18 @@ class PythonFunctionComponent(Component):
         try:
             func = get_function(function_code)
             return func()
-        except Exception as e:
-            return f"Error executing function: {str(e)}"
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error executing function")
+            return f"Error executing function: {e}"
 
     def execute_function_data(self) -> list[Data]:
         results = self.execute_function()
         results = results if isinstance(results, list) else [results]
-        data = [(Data(text=x) if isinstance(x, str) else Data(**x)) for x in results]
-        return data
+        return [(Data(text=x) if isinstance(x, str) else Data(**x)) for x in results]
 
     def execute_function_message(self) -> Message:
         results = self.execute_function()
         results = results if isinstance(results, list) else [results]
         results_list = [str(x) for x in results]
         results_str = "\n".join(results_list)
-        data = Message(text=results_str)
-        return data
+        return Message(text=results_str)

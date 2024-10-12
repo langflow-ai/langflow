@@ -14,7 +14,8 @@ class OpenAIToolsAgentComponent(LCToolsAgentComponent):
     beta = True
     name = "OpenAIToolsAgent"
 
-    inputs = LCToolsAgentComponent._base_inputs + [
+    inputs = [
+        *LCToolsAgentComponent._base_inputs,
         HandleInput(
             name="llm",
             display_name="Language Model",
@@ -38,7 +39,8 @@ class OpenAIToolsAgentComponent(LCToolsAgentComponent):
 
     def create_agent_runnable(self):
         if "input" not in self.user_prompt:
-            raise ValueError("Prompt must contain 'input' key.")
+            msg = "Prompt must contain 'input' key."
+            raise ValueError(msg)
         messages = [
             ("system", self.system_prompt),
             ("placeholder", "{chat_history}"),

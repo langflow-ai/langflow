@@ -30,7 +30,8 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
 
     # Raise error if name is not in chains
     if name not in classes:
-        raise ValueError(f"{name} not found")
+        msg = f"{name} not found"
+        raise ValueError(msg)
 
     for _type, v in type_to_loader_dict.items():
         if v.__annotations__["return"].__name__ == name:
@@ -41,7 +42,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
 
             variables = {"_type": _type}
             for class_field_items, value in _class.model_fields.items():
-                if class_field_items in ["callback_manager"]:
+                if class_field_items == "callback_manager":
                     continue
                 variables[class_field_items] = {}
                 for name_, value_ in value.__repr_args__():
@@ -50,14 +51,13 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
                             variables[class_field_items]["default"] = get_default_factory(
                                 module=_class.__base__.__module__, function=value_
                             )
-                        except Exception:
+                        except Exception:  # noqa: BLE001
+                            logger.opt(exception=True).debug(f"Error getting default factory for {value_}")
                             variables[class_field_items]["default"] = None
-                    elif name_ not in ["name"]:
+                    elif name_ != "name":
                         variables[class_field_items][name_] = value_
 
-                variables[class_field_items]["placeholder"] = (
-                    docs.params[class_field_items] if class_field_items in docs.params else ""
-                )
+                variables[class_field_items]["placeholder"] = docs.params.get(class_field_items, "")
             # Adding function to base classes to allow
             # the output to be a function
             base_classes = get_base_classes(_class)
@@ -69,6 +69,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, add_funct
                 "description": docs.short_description or "",
                 "base_classes": base_classes,
             }
+    return None
 
 
 def build_template_from_method(
@@ -81,7 +82,8 @@ def build_template_from_method(
 
     # Raise error if class_name is not in classes
     if class_name not in classes:
-        raise ValueError(f"{class_name} not found.")
+        msg = f"{class_name} not found."
+        raise ValueError(msg)
 
     for _type, v in type_to_cls_dict.items():
         if v.__name__ == class_name:
@@ -89,7 +91,8 @@ def build_template_from_method(
 
             # Check if the method exists in this class
             if not hasattr(_class, method_name):
-                raise ValueError(f"Method {method_name} not found in class {class_name}")
+                msg = f"Method {method_name} not found in class {class_name}"
+                raise ValueError(msg)
 
             # Get the method
             method = getattr(_class, method_name)
@@ -128,6 +131,7 @@ def build_template_from_method(
                 "description": docs.short_description or "",
                 "base_classes": base_classes,
             }
+    return None
 
 
 def get_base_classes(cls):
@@ -139,7 +143,7 @@ def get_base_classes(cls):
         bases = cls.__bases__
         result = []
         for base in bases:
-            if any(type in base.__module__ for type in ["pydantic", "abc"]):
+            if any(_type in base.__module__ for _type in ["pydantic", "abc"]):
                 continue
             result.append(base.__name__)
             base_classes = get_base_classes(base)
@@ -152,7 +156,7 @@ def get_base_classes(cls):
         result = [cls.__name__]
     if not result:
         result = [cls.__name__]
-    return list(set(result + [cls.__name__]))
+    return list({*result, cls.__name__})
 
 
 def get_default_factory(module: str, function: str):
@@ -206,7 +210,7 @@ def format_dict(dictionary: dict[str, Any], class_name: str | None = None) -> di
     """
 
     for key, value in dictionary.items():
-        if key in ["_type"]:
+        if key == "_type":
             continue
 
         _type: str | type = get_type(value)
@@ -313,7 +317,7 @@ def get_formatted_type(key: str, _type: str) -> str:
     if key == "allowed_tools":
         return "Tool"
 
-    elif key == "max_value_length":
+    if key == "max_value_length":
         return "int"
 
     return _type

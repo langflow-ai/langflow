@@ -1,6 +1,5 @@
 import ast
 import asyncio
-import os
 import zlib
 from pathlib import Path
 
@@ -58,8 +57,8 @@ class DirectoryReader:
 
     def is_valid_path(self) -> bool:
         """Check if the directory path is valid by comparing it to the base path."""
-        fullpath = os.path.normpath(os.path.join(self.directory_path))
-        return fullpath.startswith(self.base_path)
+        fullpath = Path(self.directory_path).resolve()
+        return not self.base_path or fullpath.is_relative_to(self.base_path)
 
     def is_empty_file(self, file_content):
         """
@@ -78,9 +77,8 @@ class DirectoryReader:
                     if component["error"] if with_errors else not component["error"]:
                         component_tuple = (*build_component(component), component)
                         components.append(component_tuple)
-                except Exception as e:
-                    logger.debug(f"Error while loading component { component['name']}")
-                    logger.debug(e)
+                except Exception:  # noqa: BLE001
+                    logger.debug(f"Error while loading component {component['name']} from {component['file']}")
                     continue
             items.append({"name": menu["name"], "path": menu["path"], "components": components})
         filtered = [menu for menu in items if menu["components"]]
@@ -107,24 +105,26 @@ class DirectoryReader:
         """
         Read and return the content of a file.
         """
-        if not os.path.isfile(file_path):
+        _file_path = Path(file_path)
+        if not _file_path.is_file():
             return None
-        with open(file_path, encoding="utf-8") as file:
+        with _file_path.open(encoding="utf-8") as file:
             # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069: character maps to <undefined>
             try:
                 return file.read()
             except UnicodeDecodeError:
                 # This is happening in Windows, so we need to open the file in binary mode
                 # The file is always just a python file, so we can safely read it as utf-8
-                with open(file_path, "rb") as file:
-                    return file.read().decode("utf-8")
+                with _file_path.open("rb") as f:
+                    return f.read().decode("utf-8")
 
     def get_files(self):
         """
         Walk through the directory path and return a list of all .py files.
         """
         if not (safe_path := self.get_safe_path()):
-            raise CustomComponentPathValueError(f"The path needs to start with '{self.base_path}'.")
+            msg = f"The path needs to start with '{self.base_path}'."
+            raise CustomComponentPathValueError(msg)
 
         file_list = []
         safe_path_obj = Path(safe_path)
@@ -214,28 +214,26 @@ class DirectoryReader:
         """
         try:
             file_content = self.read_file_content(file_path)
-        except Exception as exc:
-            logger.exception(exc)
-            logger.error(f"Error while reading file {file_path}: {str(exc)}")
+        except Exception:  # noqa: BLE001
+            logger.exception(f"Error while reading file {file_path}")
             return False, f"Could not read {file_path}"
 
         if file_content is None:
             return False, f"Could not read {file_path}"
-        elif self.is_empty_file(file_content):
+        if self.is_empty_file(file_content):
             return False, "Empty file"
-        elif not self.validate_code(file_content):
+        if not self.validate_code(file_content):
             return False, "Syntax error"
-        elif self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
+        if self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
             "Optional", file_content
         ):
             return (
                 False,
                 "Type hint 'Optional' is used but not imported in the code.",
             )
-        else:
-            if self.compress_code_field:
-                file_content = str(StringCompressor(file_content).compress_string())
-            return True, file_content
+        if self.compress_code_field:
+            file_content = str(StringCompressor(file_content).compress_string())
+        return True, file_content
 
     def build_component_menu_list(self, file_paths):
         """
@@ -246,15 +244,16 @@ class DirectoryReader:
         logger.debug("-------------------- Building component menu list --------------------")
 
         for file_path in file_paths:
-            menu_name = os.path.basename(os.path.dirname(file_path))
-            filename = os.path.basename(file_path)
+            _file_path = Path(file_path)
+            menu_name = _file_path.parent.name
+            filename = _file_path.name
             validation_result, result_content = self.process_file(file_path)
             if not validation_result:
                 logger.error(f"Error while processing file {file_path}")
 
             menu_result = self.find_menu(response, menu_name) or {
                 "name": menu_name,
-                "path": os.path.dirname(file_path),
+                "path": str(_file_path.parent),
                 "components": [],
             }
             component_name = filename.split(".")[0]
@@ -270,7 +269,8 @@ class DirectoryReader:
             if validation_result:
                 try:
                     output_types = self.get_output_types_from_code(result_content)
-                except Exception:
+                except Exception:  # noqa: BLE001
+                    logger.opt(exception=True).debug("Error while getting output types from code")
                     output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]
@@ -292,28 +292,26 @@ class DirectoryReader:
     async def process_file_async(self, file_path):
         try:
             file_content = self.read_file_content(file_path)
-        except Exception as exc:
-            logger.exception(exc)
-            logger.error(f"Error while reading file {file_path}: {str(exc)}")
+        except Exception:  # noqa: BLE001
+            logger.exception(f"Error while reading file {file_path}")
             return False, f"Could not read {file_path}"
 
         if file_content is None:
             return False, f"Could not read {file_path}"
-        elif self.is_empty_file(file_content):
+        if self.is_empty_file(file_content):
             return False, "Empty file"
-        elif not self.validate_code(file_content):
+        if not self.validate_code(file_content):
             return False, "Syntax error"
-        elif self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
+        if self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
             "Optional", file_content
         ):
             return (
                 False,
                 "Type hint 'Optional' is used but not imported in the code.",
             )
-        else:
-            if self.compress_code_field:
-                file_content = str(StringCompressor(file_content).compress_string())
-            return True, file_content
+        if self.compress_code_field:
+            file_content = str(StringCompressor(file_content).compress_string())
+        return True, file_content
 
     async def get_output_types_from_code_async(self, code: str):
         return await asyncio.to_thread(self.get_output_types_from_code, code)
@@ -325,16 +323,17 @@ class DirectoryReader:
         tasks = [self.process_file_async(file_path) for file_path in file_paths]
         results = await asyncio.gather(*tasks)
 
-        for file_path, (validation_result, result_content) in zip(file_paths, results):
-            menu_name = os.path.basename(os.path.dirname(file_path))
-            filename = os.path.basename(file_path)
+        for file_path, (validation_result, result_content) in zip(file_paths, results, strict=True):
+            _file_path = Path(file_path)
+            menu_name = _file_path.parent.name
+            filename = _file_path.name
 
             if not validation_result:
                 logger.error(f"Error while processing file {file_path}")
 
             menu_result = self.find_menu(response, menu_name) or {
                 "name": menu_name,
-                "path": os.path.dirname(file_path),
+                "path": str(_file_path.parent),
                 "components": [],
             }
             component_name = filename.split(".")[0]
@@ -347,8 +346,8 @@ class DirectoryReader:
             if validation_result:
                 try:
                     output_types = await self.get_output_types_from_code_async(result_content)
-                except Exception as exc:
-                    logger.error(f"Error while getting output types from code: {str(exc)}")
+                except Exception:  # noqa: BLE001
+                    logger.exception("Error while getting output types from code")
                     output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]

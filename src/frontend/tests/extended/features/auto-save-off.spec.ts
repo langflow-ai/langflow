@@ -71,7 +71,20 @@ test("user should be able to manually save a flow when the auto_save is off", as
 
   await page.getByTitle("fit view").click();
 
-  expect(await page.getByText("Last saved:").isVisible()).toBeTruthy();
+  expect(await page.getByText("Saved").isVisible()).toBeTruthy();
+
+  await page
+    .getByText("Saved")
+    .first()
+    .hover()
+    .then(async () => {
+      await page.waitForTimeout(1000);
+      await page.getByText("Auto-saving is disabled").nth(0).isVisible();
+      await page
+        .getByText("Enable auto-saving to avoid losing progress.")
+        .nth(0)
+        .isVisible();
+    });
 
   expect(await page.getByTestId("save-flow-button").isEnabled()).toBeTruthy();
 

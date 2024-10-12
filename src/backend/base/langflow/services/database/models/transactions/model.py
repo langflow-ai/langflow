@@ -36,11 +36,10 @@ class TransactionBase(SQLModel):
 
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict:
-        truncated_data = truncate_long_strings(data)
-        return truncated_data
+        return truncate_long_strings(data)
 
 
-class TransactionTable(TransactionBase, table=True):  # type: ignore
+class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "transaction"
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     flow: "Flow" = Relationship(back_populates="transactions")

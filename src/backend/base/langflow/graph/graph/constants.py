@@ -35,9 +35,9 @@ class VertexTypesDict(LazyLoadDictBase):
     def get_type_dict(self):
         types = self._types()
         return {
-            **{t: types.CustomComponentVertex for t in ["CustomComponent"]},
-            **{t: types.ComponentVertex for t in ["Component"]},
-            **{t: types.InterfaceVertex for t in CHAT_COMPONENTS},
+            "CustomComponent": types.CustomComponentVertex,
+            "Component": types.ComponentVertex,
+            **dict.fromkeys(CHAT_COMPONENTS, types.InterfaceVertex),
         }
 
     def get_custom_component_vertex_type(self):

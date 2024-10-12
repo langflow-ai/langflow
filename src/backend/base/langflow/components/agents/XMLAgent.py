@@ -13,7 +13,8 @@ class XMLAgentComponent(LCToolsAgentComponent):
     icon = "LangChain"
     beta = True
     name = "XMLAgent"
-    inputs = LCToolsAgentComponent._base_inputs + [
+    inputs = [
+        *LCToolsAgentComponent._base_inputs,
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         DataInput(name="chat_history", display_name="Chat History", is_list=True, advanced=True),
         MultilineInput(
@@ -43,7 +44,7 @@ Begin!
 Question: {input}
 
 {agent_scratchpad}
-            """,
+            """,  # noqa: E501
         ),
         MultilineInput(
             name="user_prompt", display_name="Prompt", info="This prompt must contain 'input' key.", value="{input}"
@@ -55,7 +56,8 @@ Question: {input}
 
     def create_agent_runnable(self):
         if "input" not in self.user_prompt:
-            raise ValueError("Prompt must contain 'input' key.")
+            msg = "Prompt must contain 'input' key."
+            raise ValueError(msg)
         messages = [
             ("system", self.system_prompt),
             ("placeholder", "{chat_history}"),

@@ -47,25 +47,28 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
         if field_name == "base_url" and field_value:
             try:
                 build_model = self.build_embeddings()
-                ids = [model.id for model in build_model.available_models]  # type: ignore
+                ids = [model.id for model in build_model.available_models]
                 build_config["model"]["options"] = ids
                 build_config["model"]["value"] = ids[0]
             except Exception as e:
-                raise ValueError(f"Error getting model names: {e}")
+                msg = f"Error getting model names: {e}"
+                raise ValueError(msg) from e
         return build_config
 
     def build_embeddings(self) -> Embeddings:
         try:
             from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
-        except ImportError:
-            raise ImportError("Please install langchain-nvidia-ai-endpoints to use the Nvidia model.")
+        except ImportError as e:
+            msg = "Please install langchain-nvidia-ai-endpoints to use the Nvidia model."
+            raise ImportError(msg) from e
         try:
             output = NVIDIAEmbeddings(
                 model=self.model,
                 base_url=self.base_url,
                 temperature=self.temperature,
                 nvidia_api_key=self.nvidia_api_key,
-            )  # type: ignore
+            )
         except Exception as e:
-            raise ValueError(f"Could not connect to NVIDIA API. Error: {e}") from e
+            msg = f"Could not connect to NVIDIA API. Error: {e}"
+            raise ValueError(msg) from e
         return output

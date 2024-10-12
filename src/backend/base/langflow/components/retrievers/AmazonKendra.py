@@ -46,7 +46,8 @@ class AmazonKendraRetrieverComponent(CustomComponent):
                 credentials_profile_name=credentials_profile_name,
                 attribute_filter=attribute_filter,
                 user_context=user_context,
-            )  # type: ignore
+            )
         except Exception as e:
-            raise ValueError("Could not connect to AmazonKendra API.") from e
+            msg = "Could not connect to AmazonKendra API."
+            raise ValueError(msg) from e
         return cast(Retriever, output)

@@ -1,7 +1,7 @@
 from typing import cast
 
 from langchain_community.retrievers import MetalRetriever
-from metal_sdk.metal import Metal  # type: ignore
+from metal_sdk.metal import Metal
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Retriever
@@ -25,5 +25,6 @@ class MetalRetrieverComponent(CustomComponent):
         try:
             metal = Metal(api_key=api_key, client_id=client_id, index_id=index_id)
         except Exception as e:
-            raise ValueError("Could not connect to Metal API.") from e
+            msg = "Could not connect to Metal API."
+            raise ValueError(msg) from e
         return cast(Retriever, MetalRetriever(client=metal, params=params or {}))

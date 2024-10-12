@@ -37,13 +37,11 @@ class UnstructuredComponent(Component):
     def build_unstructured(self) -> UnstructuredLoader:
         file_paths = [self.file]
 
-        loader = UnstructuredLoader(
+        return UnstructuredLoader(
             file_paths,
             api_key=self.api_key,
             partition_via_api=True,
         )
-
-        return loader
 
     def load_documents(self) -> list[Data]:
         unstructured = self.build_unstructured()

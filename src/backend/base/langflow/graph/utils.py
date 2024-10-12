@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import json
 from collections.abc import Generator
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from langchain_core.documents import Document
@@ -72,16 +74,15 @@ def serialize_field(value):
 
     if isinstance(value, list | tuple):
         return [serialize_field(v) for v in value]
-    elif isinstance(value, Document):
+    if isinstance(value, Document):
         return value.to_json()
-    elif isinstance(value, BaseModel):
+    if isinstance(value, BaseModel):
         return value.model_dump()
-    elif isinstance(value, V1BaseModel):
+    if isinstance(value, V1BaseModel):
         if hasattr(value, "to_json"):
             return value.to_json()
-        else:
-            return value.dict()
-    elif isinstance(value, str):
+        return value.dict()
+    if isinstance(value, str):
         return {"result": value}
     return value
 
@@ -104,11 +105,10 @@ def get_artifact_type(value, build_result) -> str:
         case Message():
             result = ArtifactType.MESSAGE
 
-    if result == ArtifactType.UNKNOWN:
-        if isinstance(build_result, Generator):
-            result = ArtifactType.STREAM
-        elif isinstance(value, Message) and isinstance(value.text, Generator):
-            result = ArtifactType.STREAM
+    if result == ArtifactType.UNKNOWN and (
+        isinstance(build_result, Generator) or (isinstance(value, Message) and isinstance(value.text, Generator))
+    ):
+        result = ArtifactType.STREAM
 
     return result.value
 
@@ -120,7 +120,7 @@ def post_process_raw(raw, artifact_type: str):
     return raw
 
 
-def _vertex_to_primitive_dict(target: "Vertex") -> dict:
+def _vertex_to_primitive_dict(target: Vertex) -> dict:
     """
     Cleans the parameters of the target vertex.
     """
@@ -136,11 +136,16 @@ def _vertex_to_primitive_dict(target: "Vertex") -> dict:
 
 
 async def log_transaction(
-    flow_id: str | UUID, source: "Vertex", status, target: Optional["Vertex"] = None, error=None
+    flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
 ) -> None:
     try:
         if not get_settings_service().settings.transactions_storage_enabled:
             return
+        if not flow_id:
+            if source.graph.flow_id:
+                flow_id = source.graph.flow_id
+            else:
+                return
         inputs = _vertex_to_primitive_dict(source)
         transaction = TransactionBase(
             vertex_id=source.id,
@@ -155,8 +160,8 @@ async def log_transaction(
         with session_getter(get_db_service()) as session:
             inserted = crud_log_transaction(session, transaction)
             logger.debug(f"Logged transaction: {inserted.id}")
-    except Exception as e:
-        logger.error(f"Error logging transaction: {e}")
+    except Exception:  # noqa: BLE001
+        logger.exception("Error logging transaction")
 
 
 def log_vertex_build(
@@ -164,7 +169,7 @@ def log_vertex_build(
     vertex_id: str,
     valid: bool,
     params: Any,
-    data: "ResultDataResponse",
+    data: ResultDataResponse,
     artifacts: dict | None = None,
 ):
     try:
@@ -183,8 +188,8 @@ def log_vertex_build(
         with session_getter(get_db_service()) as session:
             inserted = crud_log_vertex_build(session, vertex_build)
             logger.debug(f"Logged vertex build: {inserted.build_id}")
-    except Exception as e:
-        logger.exception(f"Error logging vertex build: {e}")
+    except Exception:  # noqa: BLE001
+        logger.exception("Error logging vertex build")
 
 
 def rewrite_file_path(file_path: str):
@@ -195,7 +200,7 @@ def rewrite_file_path(file_path: str):
 
     file_path_split = [part for part in file_path.split("/") if part]
 
-    if len(file_path_split) >= 2:
+    if len(file_path_split) > 1:
         consistent_file_path = f"{file_path_split[-2]}/{file_path_split[-1]}"
     else:
         consistent_file_path = "/".join(file_path_split)

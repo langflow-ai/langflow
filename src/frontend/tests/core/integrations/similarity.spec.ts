@@ -322,7 +322,7 @@ test("user must be able to check similarity between embedding texts", async ({
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
   await page.waitForTimeout(1000);
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
   await page.waitForTimeout(1000);
 
   await page

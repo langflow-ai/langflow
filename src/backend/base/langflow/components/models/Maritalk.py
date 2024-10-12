@@ -12,7 +12,8 @@ class MaritalkModelComponent(LCModelComponent):
     description = "Generates text using Maritalk LLMs."
     icon = "Maritalk"
     name = "Maritalk"
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -51,10 +52,9 @@ class MaritalkModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
 
-        output = ChatMaritalk(
+        return ChatMaritalk(
             max_tokens=max_tokens,
             model=model_name,
             api_key=api_key,
             temperature=temperature or 0.1,
         )
-        return output  # type: ignore

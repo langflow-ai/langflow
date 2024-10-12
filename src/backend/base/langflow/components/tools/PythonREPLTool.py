@@ -2,6 +2,7 @@ import importlib
 
 from langchain.tools import StructuredTool
 from langchain_experimental.utilities import PythonREPL
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -26,7 +27,9 @@ class PythonREPLToolComponent(LCToolComponent):
             name="description",
             display_name="Tool Description",
             info="A description of the tool.",
-            value="A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.",
+            value="A Python shell. Use this to execute python commands. "
+            "Input should be a valid python command. "
+            "If you want to see the output of a value, you should print it out with `print(...)`.",
         ),
         StrInput(
             name="global_imports",
@@ -52,14 +55,16 @@ class PythonREPLToolComponent(LCToolComponent):
         elif isinstance(global_imports, list):
             modules = global_imports
         else:
-            raise ValueError("global_imports must be either a string or a list")
+            msg = "global_imports must be either a string or a list"
+            raise TypeError(msg)
 
         for module in modules:
             try:
                 imported_module = importlib.import_module(module)
                 global_dict[imported_module.__name__] = imported_module
-            except ImportError:
-                raise ImportError(f"Could not import module {module}")
+            except ImportError as e:
+                msg = f"Could not import module {module}"
+                raise ImportError(msg) from e
         return global_dict
 
     def build_tool(self) -> Tool:
@@ -69,8 +74,9 @@ class PythonREPLToolComponent(LCToolComponent):
         def run_python_code(code: str) -> str:
             try:
                 return python_repl.run(code)
-            except Exception as e:
-                return f"Error: {str(e)}"
+            except Exception as e:  # noqa: BLE001
+                logger.opt(exception=True).debug("Error running Python code")
+                return f"Error: {e}"
 
         tool = StructuredTool.from_function(
             name=self.name,

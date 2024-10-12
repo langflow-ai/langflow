@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import Any
 
-from composio_langchain import Action, App, ComposioToolSet  # type: ignore
+from composio_langchain import Action, App, ComposioToolSet
 from langchain_core.tools import Tool
 from loguru import logger
 
@@ -28,7 +28,7 @@ class ComposioAPIComponent(LCToolComponent):
         DropdownInput(
             name="app_names",
             display_name="App Name",
-            options=[app_name for app_name in App.__annotations__],
+            options=list(App.__annotations__),
             value="",
             info="The app name to use. Please refresh after selecting app name",
             refresh_button=True,
@@ -65,7 +65,8 @@ class ComposioAPIComponent(LCToolComponent):
         try:
             entity.get_connection(app=app)
             return f"{app} CONNECTED"
-        except Exception:
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Authorization error")
             return self._handle_authorization_failure(toolset, entity, app)
 
     def _handle_authorization_failure(self, toolset: ComposioToolSet, entity: Any, app: str) -> str:
@@ -84,10 +85,9 @@ class ComposioAPIComponent(LCToolComponent):
             auth_schemes = toolset.client.apps.get(app).auth_schemes
             if auth_schemes[0].auth_mode == "API_KEY":
                 return self._process_api_key_auth(entity, app)
-            else:
-                return self._initiate_default_connection(entity, app)
-        except Exception as exc:
-            logger.error(f"Authorization error: {str(exc)}")
+            return self._initiate_default_connection(entity, app)
+        except Exception:  # noqa: BLE001
+            logger.exception("Authorization error")
             return "Error"
 
     def _process_api_key_auth(self, entity: Any, app: str) -> str:
@@ -108,18 +108,16 @@ class ComposioAPIComponent(LCToolComponent):
 
         if is_different_app or is_url or is_default_api_key_message:
             return "Enter API Key"
-        else:
-            if not is_default_api_key_message:
-                entity.initiate_connection(
-                    app_name=app,
-                    auth_mode="API_KEY",
-                    auth_config={"api_key": self.auth_status_config},
-                    use_composio_auth=False,
-                    force_new_integration=True,
-                )
-                return f"{app} CONNECTED"
-            else:
-                return "Enter API Key"
+        if not is_default_api_key_message:
+            entity.initiate_connection(
+                app_name=app,
+                auth_mode="API_KEY",
+                auth_config={"api_key": self.auth_status_config},
+                use_composio_auth=False,
+                force_new_integration=True,
+            )
+            return f"{app} CONNECTED"
+        return "Enter API Key"
 
     def _initiate_default_connection(self, entity: Any, app: str) -> str:
         connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)
@@ -128,7 +126,7 @@ class ComposioAPIComponent(LCToolComponent):
     def _get_connected_app_names_for_entity(self) -> list[str]:
         toolset = self._build_wrapper()
         connections = toolset.client.get_entity(id=self.entity_id).get_connections()
-        return list(set(connection.appUniqueId for connection in connections))
+        return list({connection.appUniqueId for connection in connections})
 
     def _update_app_names_with_connected_status(self, build_config: dict) -> dict:
         connected_app_names = self._get_connected_app_names_for_entity()
@@ -157,7 +155,7 @@ class ComposioAPIComponent(LCToolComponent):
                 build_config["auth_status_config"]["value"] = self._check_for_authorization(
                     self._get_normalized_app_name()
                 )
-            all_action_names = [action_name for action_name in Action.__annotations__]
+            all_action_names = list(Action.__annotations__)
             app_action_names = [
                 action_name
                 for action_name in all_action_names
@@ -169,8 +167,7 @@ class ComposioAPIComponent(LCToolComponent):
 
     def build_tool(self) -> Sequence[Tool]:
         composio_toolset = self._build_wrapper()
-        composio_tools = composio_toolset.get_tools(actions=self.action_names)
-        return composio_tools
+        return composio_toolset.get_tools(actions=self.action_names)
 
     def _build_wrapper(self) -> ComposioToolSet:
         return ComposioToolSet(api_key=self.api_key)

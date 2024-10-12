@@ -1,10 +1,12 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langflow.base.flow_processing.utils import build_data_from_run_outputs
 from langflow.custom import Component
-from langflow.graph.schema import RunOutputs
 from langflow.io import DropdownInput, MessageTextInput, NestedDictInput, Output
 from langflow.schema import Data, dotdict
+
+if TYPE_CHECKING:
+    from langflow.graph.schema import RunOutputs
 
 
 class RunFlowComponent(Component):
@@ -49,7 +51,8 @@ class RunFlowComponent(Component):
 
     async def generate_results(self) -> list[Data]:
         if "flow_name" not in self._attributes or not self._attributes["flow_name"]:
-            raise ValueError("Flow name is required")
+            msg = "Flow name is required"
+            raise ValueError(msg)
         flow_name = self._attributes["flow_name"]
 
         results: list[RunOutputs | None] = await self.run_flow(

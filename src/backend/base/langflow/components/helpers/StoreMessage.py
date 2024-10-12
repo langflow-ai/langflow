@@ -23,7 +23,8 @@ class StoreMessageComponent(Component):
         MessageInput(
             name="sender",
             display_name="Sender",
-            info="The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
+            info="The sender of the message. Might be Machine or User. "
+            "If empty, the current sender parameter will be used.",
             advanced=True,
         ),
         MessageInput(

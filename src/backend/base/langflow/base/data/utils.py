@@ -53,7 +53,8 @@ def retrieve_file_paths(
 ) -> list[str]:
     path_obj = Path(path)
     if not path_obj.exists() or not path_obj.is_dir():
-        raise ValueError(f"Path {path} must exist and be a directory.")
+        msg = f"Path {path} must exist and be a directory."
+        raise ValueError(msg)
 
     def match_types(p: Path) -> bool:
         return any(p.suffix == f".{t}" for t in types) if types else True
@@ -70,32 +71,31 @@ def retrieve_file_paths(
 
     glob = "**/*" if recursive else "*"
     paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
-    file_paths = [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
-
-    return file_paths
+    return [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
 
 def partition_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
     # Use the partition function to load the file
-    from unstructured.partition.auto import partition  # type: ignore
+    from unstructured.partition.auto import partition
 
     try:
         elements = partition(file_path)
     except Exception as e:
         if not silent_errors:
-            raise ValueError(f"Error loading file {file_path}: {e}") from e
+            msg = f"Error loading file {file_path}: {e}"
+            raise ValueError(msg) from e
         return None
 
     # Create a Data
     text = "\n\n".join([str(el) for el in elements])
     metadata = elements.metadata if hasattr(elements, "metadata") else {}
     metadata["file_path"] = file_path
-    record = Data(text=text, data=metadata)
-    return record
+    return Data(text=text, data=metadata)
 
 
 def read_text_file(file_path: str) -> str:
-    with open(file_path, "rb") as f:
+    _file_path = Path(file_path)
+    with _file_path.open("rb") as f:
         raw_data = f.read()
         result = chardet.detect(raw_data)
         encoding = result["encoding"]
@@ -103,21 +103,21 @@ def read_text_file(file_path: str) -> str:
         if encoding in ["Windows-1252", "Windows-1254", "MacRoman"]:
             encoding = "utf-8"
 
-    with open(file_path, encoding=encoding) as f:
+    with _file_path.open(encoding=encoding) as f:
         return f.read()
 
 
 def read_docx_file(file_path: str) -> str:
-    from docx import Document  # type: ignore
+    from docx import Document
 
     doc = Document(file_path)
     return "\n\n".join([p.text for p in doc.paragraphs])
 
 
 def parse_pdf_to_text(file_path: str) -> str:
-    from pypdf import PdfReader  # type: ignore
+    from pypdf import PdfReader
 
-    with open(file_path, "rb") as f:
+    with Path(file_path).open("rb") as f:
         reader = PdfReader(f)
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
@@ -140,18 +140,18 @@ def parse_text_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
                 text = [normalize_text(item) if isinstance(item, str) else item for item in text]
             text = orjson.dumps(text).decode("utf-8")
 
-        elif file_path.endswith(".yaml") or file_path.endswith(".yml"):
+        elif file_path.endswith((".yaml", ".yml")):
             text = yaml.safe_load(text)
         elif file_path.endswith(".xml"):
             xml_element = ET.fromstring(text)
             text = ET.tostring(xml_element, encoding="unicode")
     except Exception as e:
         if not silent_errors:
-            raise ValueError(f"Error loading file {file_path}: {e}") from e
+            msg = f"Error loading file {file_path}: {e}"
+            raise ValueError(msg) from e
         return None
 
-    record = Data(data={"file_path": file_path, "text": text})
-    return record
+    return Data(data={"file_path": file_path, "text": text})
 
 
 # ! Removing unstructured dependency until

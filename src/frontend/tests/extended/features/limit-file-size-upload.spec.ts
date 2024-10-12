@@ -81,7 +81,7 @@ test("user should not be able to upload a file larger than the limit", async ({
   await page.getByTestId("edit-button-modal").click();
   await page.getByText("Close").last().click();
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   // Read the image file as a binary string
   const filePath = "tests/assets/chain.png";

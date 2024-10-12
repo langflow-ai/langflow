@@ -62,7 +62,7 @@ def _fix_variable(var, invalid_chars, wrong_variables):
         new_var, invalid_chars, wrong_variables = _fix_variable(var[1:], invalid_chars, wrong_variables)
 
     # Temporarily replace {{ and }} to avoid treating them as invalid
-    new_var = new_var.replace("{{", "ᴛᴇᴍᴘᴏᴘᴇɴ").replace("}}", "ᴛᴇᴍᴘᴄʟᴏsᴇ")
+    new_var = new_var.replace("{{", "ᴛᴇᴍᴘᴏᴘᴇɴ").replace("}}", "ᴛᴇᴍᴘᴄʟᴏsᴇ")  # noqa: RUF001
 
     # Remove invalid characters
     for char in new_var:
@@ -73,7 +73,7 @@ def _fix_variable(var, invalid_chars, wrong_variables):
                 wrong_variables.append(var)
 
     # Restore {{ and }}
-    new_var = new_var.replace("ᴛᴇᴍᴘᴏᴘᴇɴ", "{{").replace("ᴛᴇᴍᴘᴄʟᴏsᴇ", "}}")
+    new_var = new_var.replace("ᴛᴇᴍᴘᴏᴘᴇɴ", "{{").replace("ᴛᴇᴍᴘᴄʟᴏsᴇ", "}}")  # noqa: RUF001
 
     return new_var, invalid_chars, wrong_variables
 
@@ -127,14 +127,16 @@ def validate_prompt(prompt_template: str, silent_errors: bool = False) -> list[s
     # Check if there are invalid characters in the input_variables
     input_variables = _check_input_variables(input_variables)
     if any(var in _INVALID_NAMES for var in input_variables):
-        raise ValueError(f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. ")
+        msg = f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. "
+        raise ValueError(msg)
 
     try:
         PromptTemplate(template=prompt_template, input_variables=input_variables)
     except Exception as exc:
-        logger.error(f"Invalid prompt: {exc}")
+        msg = f"Invalid prompt: {exc}"
+        logger.exception(msg)
         if not silent_errors:
-            raise ValueError(f"Invalid prompt: {exc}") from exc
+            raise ValueError(msg) from exc
 
     return input_variables
 
@@ -144,7 +146,7 @@ def get_old_custom_fields(custom_fields, name):
         if len(custom_fields) == 1 and name == "":
             # If there is only one custom field and the name is empty string
             # then we are dealing with the first prompt request after the node was created
-            name = list(custom_fields.keys())[0]
+            name = next(iter(custom_fields.keys()))
 
         old_custom_fields = custom_fields[name]
         if not old_custom_fields:
@@ -172,7 +174,6 @@ def add_new_variables_to_template(input_variables, custom_fields, template, name
                 custom_fields[name].append(variable)
 
         except Exception as exc:
-            logger.exception(exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
@@ -188,7 +189,6 @@ def remove_old_variables_from_template(old_custom_fields, input_variables, custo
                 template.pop(variable, None)
 
             except Exception as exc:
-                logger.exception(exc)
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

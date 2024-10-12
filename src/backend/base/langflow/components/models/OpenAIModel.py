@@ -26,7 +26,8 @@ class OpenAIModelComponent(LCModelComponent):
     icon = "OpenAI"
     name = "OpenAIModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -46,7 +47,9 @@ class OpenAIModelComponent(LCModelComponent):
             is_list=True,
             display_name="Schema",
             advanced=True,
-            info="The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
+            info="The schema for the Output of the model. "
+            "You must pass the word JSON in the prompt. "
+            "If left blank, JSON mode will be disabled.",
         ),
         DropdownInput(
             name="model_name",
@@ -59,7 +62,9 @@ class OpenAIModelComponent(LCModelComponent):
             name="openai_api_base",
             display_name="OpenAI API Base",
             advanced=True,
-            info="The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+            info="The base URL of the OpenAI API. "
+            "Defaults to https://api.openai.com/v1. "
+            "You can change this to use other APIs like JinaChat, LocalAI and Prem.",
         ),
         SecretStrInput(
             name="api_key",
@@ -98,10 +103,7 @@ class OpenAIModelComponent(LCModelComponent):
         json_mode = bool(output_schema_dict) or self.json_mode
         seed = self.seed
 
-        if openai_api_key:
-            api_key = SecretStr(openai_api_key)
-        else:
-            api_key = None
+        api_key = SecretStr(openai_api_key) if openai_api_key else None
         output = ChatOpenAI(
             max_tokens=max_tokens or None,
             model_kwargs=model_kwargs,
@@ -113,11 +115,11 @@ class OpenAIModelComponent(LCModelComponent):
         )
         if json_mode:
             if output_schema_dict:
-                output = output.with_structured_output(schema=output_schema_dict, method="json_mode")  # type: ignore
+                output = output.with_structured_output(schema=output_schema_dict, method="json_mode")
             else:
-                output = output.bind(response_format={"type": "json_object"})  # type: ignore
+                output = output.bind(response_format={"type": "json_object"})
 
-        return output  # type: ignore
+        return output
 
     def _get_exception_message(self, e: Exception):
         """
@@ -133,9 +135,9 @@ class OpenAIModelComponent(LCModelComponent):
         try:
             from openai import BadRequestError
         except ImportError:
-            return
+            return None
         if isinstance(e, BadRequestError):
-            message = e.body.get("message")  # type: ignore
+            message = e.body.get("message")
             if message:
                 return message
-        return
+        return None

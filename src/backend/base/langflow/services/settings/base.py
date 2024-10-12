@@ -31,10 +31,7 @@ def is_list_of_any(field: FieldInfo) -> bool:
     if field.annotation is None:
         return False
     try:
-        if hasattr(field.annotation, "__args__"):
-            union_args = field.annotation.__args__
-        else:
-            union_args = []
+        union_args = field.annotation.__args__ if hasattr(field.annotation, "__args__") else []
 
         return field.annotation.__origin__ is list or any(
             arg.__origin__ is list for arg in union_args if hasattr(arg, "__origin__")
@@ -63,7 +60,8 @@ class Settings(BaseSettings):
     # Define if langflow db should be saved in config dir or
     # in the langflow directory
     save_db_in_config_dir: bool = False
-    """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory (i.e. in the package directory)."""
+    """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory
+    (i.e. in the package directory)."""
 
     dev: bool = False
     """If True, Langflow will run in development mode."""
@@ -75,7 +73,8 @@ class Settings(BaseSettings):
     """The number of connections to allow that can be opened beyond the pool size.
     If not provided, the default is 20."""
     db_connect_timeout: int = 20
-    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the database."""
+    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
+    database."""
 
     # sqlite configuration
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
@@ -147,6 +146,20 @@ class Settings(BaseSettings):
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
     # Config
+    host: str = "127.0.0.1"
+    """The host on which Langflow will run."""
+    port: int = 7860
+    """The port on which Langflow will run."""
+    workers: int = 1
+    """The number of workers to run."""
+    log_level: str = "critical"
+    """The log level for Langflow."""
+    log_file: str | None = "logs/langflow.log"
+    """The path to log file for Langflow."""
+    frontend_path: str | None = None
+    """The path to the frontend directory containing build files. This is for development purposes only.."""
+    open_browser: bool = False
+    """If set to True, Langflow will open the browser on startup."""
     auto_saving: bool = True
     """If set to True, Langflow will auto save flows."""
     auto_saving_interval: int = 1000
@@ -173,6 +186,13 @@ class Settings(BaseSettings):
 
         os.environ["USER_AGENT"] = value
         logger.debug(f"Setting user agent to {value}")
+        return value
+
+    @field_validator("log_file", mode="before")
+    @classmethod
+    def set_log_file(cls, value):
+        if isinstance(value, Path):
+            value = str(value)
         return value
 
     @field_validator("config_dir", mode="before")
@@ -213,7 +233,8 @@ class Settings(BaseSettings):
                 # so we need to migrate to the new format
                 # if there is a database in that location
                 if not info.data["config_dir"]:
-                    raise ValueError("config_dir not set, please set it or provide a database_url")
+                    msg = "config_dir not set, please set it or provide a database_url"
+                    raise ValueError(msg)
 
                 from langflow.utils.version import get_version_info
                 from langflow.utils.version import is_pre_release as langflow_is_pre_release
@@ -248,26 +269,22 @@ class Settings(BaseSettings):
                     else:
                         logger.debug(f"Creating new database at {new_pre_path}")
                         final_path = new_pre_path
+                elif Path(new_path).exists():
+                    logger.debug(f"Database already exists at {new_path}, using it")
+                    final_path = new_path
+                elif Path(f"./{db_file_name}").exists():
+                    try:
+                        logger.debug("Copying existing database to new location")
+                        copy2(f"./{db_file_name}", new_path)
+                        logger.debug(f"Copied existing database to {new_path}")
+                    except Exception:  # noqa: BLE001
+                        logger.exception("Failed to copy database, using default path")
+                        new_path = f"./{db_file_name}"
                 else:
-                    if Path(new_path).exists():
-                        logger.debug(f"Database already exists at {new_path}, using it")
-                        final_path = new_path
-                    elif Path("./{db_file_name}").exists():
-                        try:
-                            logger.debug("Copying existing database to new location")
-                            copy2("./{db_file_name}", new_path)
-                            logger.debug(f"Copied existing database to {new_path}")
-                        except Exception:
-                            logger.error("Failed to copy database, using default path")
-                            new_path = "./{db_file_name}"
-                    else:
-                        final_path = new_path
+                    final_path = new_path
 
                 if final_path is None:
-                    if is_pre_release:
-                        final_path = new_pre_path
-                    else:
-                        final_path = new_path
+                    final_path = new_pre_path if is_pre_release else new_path
 
                 value = f"sqlite:///{final_path}"
 
@@ -315,20 +332,19 @@ class Settings(BaseSettings):
             logger.debug(f"Updating {key}")
             if isinstance(getattr(self, key), list):
                 # value might be a '[something]' string
+                _value = value
                 with contextlib.suppress(json.decoder.JSONDecodeError):
-                    value = orjson.loads(str(value))
-                if isinstance(value, list):
-                    for item in value:
-                        if isinstance(item, Path):
-                            item = str(item)
-                        if item not in getattr(self, key):
-                            getattr(self, key).append(item)
+                    _value = orjson.loads(str(value))
+                if isinstance(_value, list):
+                    for item in _value:
+                        _item = str(item) if isinstance(item, Path) else item
+                        if _item not in getattr(self, key):
+                            getattr(self, key).append(_item)
                     logger.debug(f"Extended {key}")
                 else:
-                    if isinstance(value, Path):
-                        value = str(value)
-                    if value not in getattr(self, key):
-                        getattr(self, key).append(value)
+                    _value = str(_value) if isinstance(_value, Path) else _value
+                    if _value not in getattr(self, key):
+                        getattr(self, key).append(_value)
                         logger.debug(f"Appended {key}")
 
             else:
@@ -349,7 +365,7 @@ class Settings(BaseSettings):
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
-    with open(file_path, "w") as f:
+    with Path(file_path).open("w") as f:
         settings_dict = settings.model_dump()
         yaml.dump(settings_dict, f)
 
@@ -358,17 +374,19 @@ def load_settings_from_yaml(file_path: str) -> Settings:
     # Check if a string is a valid path or a file name
     if "/" not in file_path:
         # Get current path
-        current_path = os.path.dirname(os.path.abspath(__file__))
+        current_path = Path(__file__).resolve().parent
+        _file_path = Path(current_path) / file_path
+    else:
+        _file_path = Path(file_path)
 
-        file_path = os.path.join(current_path, file_path)
-
-    with open(file_path) as f:
+    with _file_path.open() as f:
         settings_dict = yaml.safe_load(f)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 
         for key in settings_dict:
-            if key not in Settings.model_fields.keys():
-                raise KeyError(f"Key {key} not found in settings")
+            if key not in Settings.model_fields:
+                msg = f"Key {key} not found in settings"
+                raise KeyError(msg)
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
     return Settings(**settings_dict)

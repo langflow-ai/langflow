@@ -14,7 +14,8 @@ class QianfanChatEndpointComponent(LCModelComponent):
     icon = "BaiduQianfan"
     name = "BaiduQianfanChatModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         DropdownInput(
             name="model",
             display_name="Model Name",
@@ -64,9 +65,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
             advanced=True,
         ),
         MessageTextInput(
-            name="endpoint",
-            display_name="Endpoint",
-            info="Endpoint of the Qianfan LLM, required if custom model used.",
+            name="endpoint", display_name="Endpoint", info="Endpoint of the Qianfan LLM, required if custom model used."
         ),
         HandleInput(
             name="output_parser",
@@ -87,7 +86,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
         endpoint = self.endpoint
 
         try:
-            output = QianfanChatEndpoint(  # type: ignore
+            output = QianfanChatEndpoint(
                 model=model,
                 qianfan_ak=SecretStr(qianfan_ak) if qianfan_ak else None,
                 qianfan_sk=SecretStr(qianfan_sk) if qianfan_sk else None,
@@ -97,6 +96,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
                 endpoint=endpoint,
             )
         except Exception as e:
-            raise ValueError("Could not connect to Baidu Qianfan API.") from e
+            msg = "Could not connect to Baidu Qianfan API."
+            raise ValueError(msg) from e
 
-        return output  # type: ignore
+        return output

@@ -27,7 +27,8 @@ class AzureChatOpenAIComponent(LCModelComponent):
         "2024-05-13",
     ]
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         MessageTextInput(
             name="azure_endpoint",
             display_name="Azure Endpoint",
@@ -78,6 +79,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
                 streaming=stream,
             )
         except Exception as e:
-            raise ValueError(f"Could not connect to AzureOpenAI API: {str(e)}") from e
+            msg = f"Could not connect to AzureOpenAI API: {e}"
+            raise ValueError(msg) from e
 
-        return output  # type: ignore
+        return output
