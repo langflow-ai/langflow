@@ -27,13 +27,13 @@ def update_memory_keys(langchain_object, possible_new_mem_key):
     input_key = next(
         key
         for key in langchain_object.input_keys
-        if key not in [langchain_object.memory.memory_key, possible_new_mem_key]
+        if key not in {langchain_object.memory.memory_key, possible_new_mem_key}
     )
 
     output_key = next(
         key
         for key in langchain_object.output_keys
-        if key not in [langchain_object.memory.memory_key, possible_new_mem_key]
+        if key not in {langchain_object.memory.memory_key, possible_new_mem_key}
     )
 
     for key, attr in [(input_key, "input_key"), (output_key, "output_key"), (possible_new_mem_key, "memory_key")]:

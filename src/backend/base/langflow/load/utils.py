@@ -28,7 +28,7 @@ def upload(file_path: str, host: str, flow_id: str):
         url = f"{host}/api/v1/upload/{flow_id}"
         with Path(file_path).open("rb") as file:
             response = httpx.post(url, files={"file": file})
-            if response.status_code in (httpx.codes.OK, httpx.codes.CREATED):
+            if response.status_code in {httpx.codes.OK, httpx.codes.CREATED}:
                 return response.json()
     except Exception as e:
         msg = f"Error uploading file: {e}"

@@ -174,7 +174,7 @@ class LCModelComponent(Component):
         inputs: list | dict = messages or {}
         try:
             if self.output_parser is not None:
-                runnable = runnable | self.output_parser
+                runnable |= self.output_parser
 
             runnable = runnable.with_config(
                 {

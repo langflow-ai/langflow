@@ -380,7 +380,7 @@ class Vertex:
                     except Exception:  # noqa: BLE001
                         logger.debug(f"Error evaluating code for {field_name}")
                         params[field_name] = val
-                elif field.get("type") in ["dict", "NestedDict"]:
+                elif field.get("type") in {"dict", "NestedDict"}:
                     # When dict comes from the frontend it comes as a
                     # list of dicts, so we need to convert it to a dict
                     # before passing it to the build method

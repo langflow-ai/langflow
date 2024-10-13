@@ -31,9 +31,9 @@ class Column(BaseModel):
     @field_validator("formatter", mode="before")
     @classmethod
     def validate_formatter(cls, value):
-        if value in ["integer", "int", "float"]:
+        if value in {"integer", "int", "float"}:
             value = FormatterType.number
-        if value in ["str", "string"]:
+        if value in {"str", "string"}:
             value = FormatterType.text
         if value == "dict":
             value = FormatterType.json
