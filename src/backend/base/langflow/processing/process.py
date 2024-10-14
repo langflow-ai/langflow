@@ -24,6 +24,7 @@ class Result(BaseModel):
 async def run_graph_internal(
     graph: Graph,
     flow_id: str,
+    *,
     stream: bool = False,
     session_id: str | None = None,
     inputs: list[InputValueRequest] | None = None,
@@ -62,6 +63,7 @@ def run_graph(
     input_value: str,
     input_type: str,
     output_type: str,
+    *,
     session_id: str | None = None,
     fallback_to_env_vars: bool = False,
     output_component: str | None = None,
@@ -104,9 +106,9 @@ def run_graph(
         types.append(input_value_request.type)
     return graph.run(
         inputs_list,
-        components,
-        types,
-        outputs or [],
+        input_components=components,
+        types=types,
+        outputs=outputs or [],
         stream=False,
         session_id=session_id,
         fallback_to_env_vars=fallback_to_env_vars,
@@ -156,7 +158,7 @@ def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: dict[str, Any]) -> None:
 
 
 def process_tweaks(
-    graph_data: dict[str, Any], tweaks: Tweaks | dict[str, dict[str, Any]], stream: bool = False
+    graph_data: dict[str, Any], tweaks: Tweaks | dict[str, dict[str, Any]], *, stream: bool = False
 ) -> dict[str, Any]:
     """This function is used to tweak the graph data using the node id and the tweaks dict.
 
