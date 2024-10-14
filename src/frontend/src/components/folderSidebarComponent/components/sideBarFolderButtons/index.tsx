@@ -1,5 +1,10 @@
-import { Select, SelectTrigger, SelectItem, SelectContent } from "@/components/ui/select-custom";
 import ShadTooltip from "@/components/shadTooltipComponent";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select-custom";
 import {
   usePatchFolders,
   usePostFolders,
@@ -247,8 +252,8 @@ const SideBarFoldersButtonsComponent = ({
     isDeletingFolder;
 
   const HeaderButtons = () => (
-    <div className="flex shrink-0 items-center justify-between gap-2 mt-4">
-      <div className="flex-1 text-md font-semibold">Folders</div> 
+    <div className="mt-4 flex shrink-0 items-center justify-between gap-2">
+      <div className="text-md flex-1 font-semibold">Folders</div>
       <UploadFolderButton
         onClick={handleUploadFlowsToFolder}
         disabled={isUpdatingFolder}
@@ -288,8 +293,13 @@ const SideBarFoldersButtonsComponent = ({
   );
 
   const FolderSelectItem = ({ name, iconName }) => (
-    <div className={cn(name === "Delete" ? "text-error": "", "flex items-center font-medium")}>
-      <IconComponent name={iconName} className="w-4 mr-2" />
+    <div
+      className={cn(
+        name === "Delete" ? "text-error" : "",
+        "flex items-center font-medium",
+      )}
+    >
+      <IconComponent name={iconName} className="mr-2 w-4" />
       <span>{name}</span>
     </div>
   );
@@ -402,58 +412,69 @@ const SideBarFoldersButtonsComponent = ({
                     className="flex w-full items-center justify-between"
                   >
                     <div className="flex items-center gap-2">
-                    <IconComponent
-                      name={"folder"}
-                      className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
-                    />
-                    {editFolderName?.edit && !isUpdatingFolder ? (
-                      <div>
-                        <Input
-                          className="w-36"
-                          onChange={(e) => {
-                            handleEditFolderName(e, item.name);
-                          }}
-                          ref={refInput}
-                          onKeyDown={(e) => {
-                            handleKeyDownFn(e, item);
-                            handleKeyDown(e, e.key, "");
-                          }}
-                          autoFocus={true}
-                          onBlur={(e) => {
-                            // fixes autofocus problem where cursor isn't present
-                            if (e.relatedTarget?.id === `options-trigger-${item.name}`) {
-                              refInput.current?.focus();
-                              return;
-                            }
+                      <IconComponent
+                        name={"folder"}
+                        className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
+                      />
+                      {editFolderName?.edit && !isUpdatingFolder ? (
+                        <div>
+                          <Input
+                            className="w-36"
+                            onChange={(e) => {
+                              handleEditFolderName(e, item.name);
+                            }}
+                            ref={refInput}
+                            onKeyDown={(e) => {
+                              handleKeyDownFn(e, item);
+                              handleKeyDown(e, e.key, "");
+                            }}
+                            autoFocus={true}
+                            onBlur={(e) => {
+                              // fixes autofocus problem where cursor isn't present
+                              if (
+                                e.relatedTarget?.id ===
+                                `options-trigger-${item.name}`
+                              ) {
+                                refInput.current?.focus();
+                                return;
+                              }
 
-                            if (refInput.current?.value !== item.name) {
-                              handleEditNameFolder(item);
-                            } else {
-                              editFolderName.edit = false;
-                            }
-                            refInput.current?.blur();
-                          }}
-                          value={foldersNames[item.name]}
-                          id={`input-folder-${item.name}`}
-                          data-testid={`input-folder`}
-                        />
-                      </div>
-                    ) : (
-                      <span className="block w-full truncate opacity-100 grow">
-                        {item.name}
-                      </span>
-                    )}
+                              if (refInput.current?.value !== item.name) {
+                                handleEditNameFolder(item);
+                              } else {
+                                editFolderName.edit = false;
+                              }
+                              refInput.current?.blur();
+                            }}
+                            value={foldersNames[item.name]}
+                            id={`input-folder-${item.name}`}
+                            data-testid={`input-folder`}
+                          />
+                        </div>
+                      ) : (
+                        <span className="block w-full grow truncate opacity-100">
+                          {item.name}
+                        </span>
+                      )}
                     </div>
-                    <Select onValueChange={(value) =>
-                      handleSelectChange(value, item)
-                      } value="">
-                      <SelectTrigger className="w-fit" id={`options-trigger-${item.name}`}>
+                    <Select
+                      onValueChange={(value) => handleSelectChange(value, item)}
+                      value=""
+                    >
+                      <SelectTrigger
+                        className="w-fit"
+                        id={`options-trigger-${item.name}`}
+                      >
                         <IconComponent
                           name={"MoreHorizontal"}
-                          className="w-4 stroke-[1.5] hidden px-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00] text-white"
+                          className="hidden w-4 stroke-[1.5] px-0 text-white hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
                         />
                       </SelectTrigger>
-                      <SelectContent align="end" alignOffset={-16} position="popper">
+                      <SelectContent
+                        align="end"
+                        alignOffset={-16}
+                        position="popper"
+                      >
                         {item.name !== "My Projects" && (
                           <SelectItem id="rename-button" value="rename">
                             <FolderSelectItem
@@ -470,10 +491,7 @@ const SideBarFoldersButtonsComponent = ({
                         </SelectItem>
                         {index > 0 && (
                           <SelectItem value="delete">
-                            <FolderSelectItem
-                              name="Delete"
-                              iconName="trash"
-                            />
+                            <FolderSelectItem name="Delete" iconName="trash" />
                           </SelectItem>
                         )}
                       </SelectContent>
