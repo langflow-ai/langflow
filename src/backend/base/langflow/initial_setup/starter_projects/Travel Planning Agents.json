@@ -8,16 +8,12 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-gRakF",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
             "id": "ToolCallingAgent-0QzrL",
-            "inputTypes": [
-              "LanguageModel"
-            ],
+            "inputTypes": ["LanguageModel"],
             "type": "other"
           }
         },
@@ -34,16 +30,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-uYdzQ",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ToolCallingAgent-0QzrL",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -60,16 +52,12 @@
             "dataType": "ToolCallingAgent",
             "id": "ToolCallingAgent-KLe5u",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ToolCallingAgent-VYDK9",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -86,16 +74,12 @@
             "dataType": "ToolCallingAgent",
             "id": "ToolCallingAgent-0QzrL",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ToolCallingAgent-KLe5u",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -112,17 +96,12 @@
             "dataType": "SearchAPI",
             "id": "SearchAPI-I4yU0",
             "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "ToolCallingAgent-0QzrL",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
+            "inputTypes": ["Tool", "BaseTool"],
             "type": "other"
           }
         },
@@ -139,17 +118,12 @@
             "dataType": "url_content_fetcher",
             "id": "url_content_fetcher-1FugB",
             "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "ToolCallingAgent-0QzrL",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
+            "inputTypes": ["Tool", "BaseTool"],
             "type": "other"
           }
         },
@@ -166,17 +140,12 @@
             "dataType": "SearchAPI",
             "id": "SearchAPI-I4yU0",
             "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "ToolCallingAgent-KLe5u",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
+            "inputTypes": ["Tool", "BaseTool"],
             "type": "other"
           }
         },
@@ -193,17 +162,12 @@
             "dataType": "url_content_fetcher",
             "id": "url_content_fetcher-1FugB",
             "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "ToolCallingAgent-KLe5u",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
+            "inputTypes": ["Tool", "BaseTool"],
             "type": "other"
           }
         },
@@ -220,17 +184,12 @@
             "dataType": "url_content_fetcher",
             "id": "url_content_fetcher-1FugB",
             "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "ToolCallingAgent-VYDK9",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
+            "inputTypes": ["Tool", "BaseTool"],
             "type": "other"
           }
         },
@@ -247,17 +206,12 @@
             "dataType": "SearchAPI",
             "id": "SearchAPI-I4yU0",
             "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "ToolCallingAgent-VYDK9",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
+            "inputTypes": ["Tool", "BaseTool"],
             "type": "other"
           }
         },
@@ -274,16 +228,12 @@
             "dataType": "ToolCallingAgent",
             "id": "ToolCallingAgent-VYDK9",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-O63dG",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -300,16 +250,12 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-gRakF",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
             "id": "ToolCallingAgent-VYDK9",
-            "inputTypes": [
-              "LanguageModel"
-            ],
+            "inputTypes": ["LanguageModel"],
             "type": "other"
           }
         },
@@ -326,16 +272,12 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-gRakF",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
             "id": "ToolCallingAgent-KLe5u",
-            "inputTypes": [
-              "LanguageModel"
-            ],
+            "inputTypes": ["LanguageModel"],
             "type": "other"
           }
         },
@@ -352,17 +294,12 @@
             "dataType": "CalculatorTool",
             "id": "CalculatorTool-5S6u9",
             "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "ToolCallingAgent-VYDK9",
-            "inputTypes": [
-              "Tool",
-              "BaseTool"
-            ],
+            "inputTypes": ["Tool", "BaseTool"],
             "type": "other"
           }
         },
@@ -378,9 +315,7 @@
         "data": {
           "id": "ChatInput-uYdzQ",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -408,9 +343,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -483,9 +416,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -507,10 +438,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -525,9 +453,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -546,9 +472,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -600,9 +524,7 @@
         "data": {
           "id": "ChatOutput-O63dG",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -630,9 +552,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -663,9 +583,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -684,9 +602,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -707,10 +623,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -725,9 +638,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -746,9 +657,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -802,10 +711,7 @@
           "display_name": "OpenAI",
           "id": "OpenAIModel-gRakF",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -837,15 +743,9 @@
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [
-                  "input_value",
-                  "stream",
-                  "system_message"
-                ],
+                "required_inputs": ["input_value", "stream", "system_message"],
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -865,9 +765,7 @@
                   "temperature"
                 ],
                 "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -880,9 +778,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -917,9 +813,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1035,9 +929,7 @@
                 "display_name": "Output Parser",
                 "dynamic": false,
                 "info": "The parser to use to parse the output of the model",
-                "input_types": [
-                  "OutputParser"
-                ],
+                "input_types": ["OutputParser"],
                 "list": false,
                 "name": "output_parser",
                 "placeholder": "",
@@ -1102,9 +994,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "system_message",
@@ -1156,10 +1046,7 @@
         "data": {
           "id": "ToolCallingAgent-0QzrL",
           "node": {
-            "base_classes": [
-              "AgentExecutor",
-              "Message"
-            ],
+            "base_classes": ["AgentExecutor", "Message"],
             "beta": true,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1189,9 +1076,7 @@
                 "method": "build_agent",
                 "name": "agent",
                 "selected": "AgentExecutor",
-                "types": [
-                  "AgentExecutor"
-                ],
+                "types": ["AgentExecutor"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1200,9 +1085,7 @@
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1215,9 +1098,7 @@
                 "display_name": "Chat History",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Data"
-                ],
+                "input_types": ["Data"],
                 "list": true,
                 "name": "chat_history",
                 "placeholder": "",
@@ -1269,9 +1150,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1290,9 +1169,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "name": "llm",
                 "placeholder": "",
@@ -1325,9 +1202,7 @@
                 "display_name": "System Prompt",
                 "dynamic": false,
                 "info": "System prompt for the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1347,10 +1222,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Tool",
-                  "BaseTool"
-                ],
+                "input_types": ["Tool", "BaseTool"],
                 "list": true,
                 "load_from_db": false,
                 "name": "tools",
@@ -1368,9 +1240,7 @@
                 "display_name": "Prompt",
                 "dynamic": false,
                 "info": "This prompt must contain 'input' key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1423,11 +1293,7 @@
         "data": {
           "id": "SearchAPI-I4yU0",
           "node": {
-            "base_classes": [
-              "Data",
-              "list",
-              "Tool"
-            ],
+            "base_classes": ["Data", "list", "Tool"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1461,9 +1327,7 @@
                   "search_params"
                 ],
                 "selected": "Data",
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1480,9 +1344,7 @@
                   "search_params"
                 ],
                 "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1495,9 +1357,7 @@
                 "display_name": "SearchAPI API Key",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1532,9 +1392,7 @@
                 "display_name": "Engine",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "engine",
@@ -1553,9 +1411,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1640,11 +1496,7 @@
         "data": {
           "id": "url_content_fetcher-1FugB",
           "node": {
-            "base_classes": [
-              "Data",
-              "list",
-              "Tool"
-            ],
+            "base_classes": ["Data", "list", "Tool"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1652,10 +1504,7 @@
             "display_name": "URL Content Fetcher",
             "documentation": "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/web_base",
             "edited": true,
-            "field_order": [
-              "url",
-              "fetch_params"
-            ],
+            "field_order": ["url", "fetch_params"],
             "frozen": false,
             "icon": "globe",
             "lf_version": "1.0.15",
@@ -1668,10 +1517,7 @@
                 "method": "run_model",
                 "name": "api_run_model",
                 "selected": "Data",
-                "types": [
-                  "Data",
-                  "list"
-                ],
+                "types": ["Data", "list"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1680,9 +1526,7 @@
                 "method": "build_tool",
                 "name": "api_build_tool",
                 "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1729,9 +1573,7 @@
                 "display_name": "URL",
                 "dynamic": false,
                 "info": "Enter a single URL to fetch content from.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "url",
@@ -1767,10 +1609,7 @@
         "data": {
           "id": "ToolCallingAgent-KLe5u",
           "node": {
-            "base_classes": [
-              "AgentExecutor",
-              "Message"
-            ],
+            "base_classes": ["AgentExecutor", "Message"],
             "beta": true,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1800,9 +1639,7 @@
                 "method": "build_agent",
                 "name": "agent",
                 "selected": "AgentExecutor",
-                "types": [
-                  "AgentExecutor"
-                ],
+                "types": ["AgentExecutor"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1811,9 +1648,7 @@
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1826,9 +1661,7 @@
                 "display_name": "Chat History",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Data"
-                ],
+                "input_types": ["Data"],
                 "list": true,
                 "name": "chat_history",
                 "placeholder": "",
@@ -1880,9 +1713,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1901,9 +1732,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "name": "llm",
                 "placeholder": "",
@@ -1936,9 +1765,7 @@
                 "display_name": "System Prompt",
                 "dynamic": false,
                 "info": "System prompt for the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1958,10 +1785,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Tool",
-                  "BaseTool"
-                ],
+                "input_types": ["Tool", "BaseTool"],
                 "list": true,
                 "load_from_db": false,
                 "name": "tools",
@@ -1979,9 +1803,7 @@
                 "display_name": "Prompt",
                 "dynamic": false,
                 "info": "This prompt must contain 'input' key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2034,10 +1856,7 @@
         "data": {
           "id": "ToolCallingAgent-VYDK9",
           "node": {
-            "base_classes": [
-              "AgentExecutor",
-              "Message"
-            ],
+            "base_classes": ["AgentExecutor", "Message"],
             "beta": true,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2067,9 +1886,7 @@
                 "method": "build_agent",
                 "name": "agent",
                 "selected": "AgentExecutor",
-                "types": [
-                  "AgentExecutor"
-                ],
+                "types": ["AgentExecutor"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2078,9 +1895,7 @@
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2093,9 +1908,7 @@
                 "display_name": "Chat History",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Data"
-                ],
+                "input_types": ["Data"],
                 "list": true,
                 "name": "chat_history",
                 "placeholder": "",
@@ -2147,9 +1960,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -2168,9 +1979,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "name": "llm",
                 "placeholder": "",
@@ -2203,9 +2012,7 @@
                 "display_name": "System Prompt",
                 "dynamic": false,
                 "info": "System prompt for the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2225,10 +2032,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Tool",
-                  "BaseTool"
-                ],
+                "input_types": ["Tool", "BaseTool"],
                 "list": true,
                 "load_from_db": false,
                 "name": "tools",
@@ -2246,9 +2050,7 @@
                 "display_name": "Prompt",
                 "dynamic": false,
                 "info": "This prompt must contain 'input' key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2301,12 +2103,7 @@
         "data": {
           "id": "CalculatorTool-5S6u9",
           "node": {
-            "base_classes": [
-              "Data",
-              "list",
-              "Sequence",
-              "Tool"
-            ],
+            "base_classes": ["Data", "list", "Sequence", "Tool"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2314,9 +2111,7 @@
             "display_name": "Calculator",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "expression"
-            ],
+            "field_order": ["expression"],
             "frozen": false,
             "icon": "calculator",
             "lf_version": "1.0.15",
@@ -2329,13 +2124,9 @@
                 "display_name": "Data",
                 "method": "run_model",
                 "name": "api_run_model",
-                "required_inputs": [
-                  "expression"
-                ],
+                "required_inputs": ["expression"],
                 "selected": "Data",
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2343,13 +2134,9 @@
                 "display_name": "Tool",
                 "method": "build_tool",
                 "name": "api_build_tool",
-                "required_inputs": [
-                  "expression"
-                ],
+                "required_inputs": ["expression"],
                 "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2380,9 +2167,7 @@
                 "display_name": "Expression",
                 "dynamic": false,
                 "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "expression",
@@ -2423,8 +2208,10 @@
   },
   "description": "Multi Agent system to plan trips.",
   "endpoint_name": null,
+  "icon": "Plane",
   "id": "c15755c5-264b-4ca7-bed8-9bbf605307f1",
   "is_component": false,
   "last_tested_version": "1.0.17",
-  "name": "Travel Planning Agents"
+  "name": "Travel Planning Agents",
+  "tags": ["agents", "openai", "chatbots"]
 }

@@ -34,7 +34,11 @@ def test_get_project_data():
             project_data,
             project_icon,
             project_icon_bg_color,
+            project_gradient,
+            project_tags,
         ) = get_project_data(project)
+        assert isinstance(project_gradient, str) or project_gradient is None
+        assert isinstance(project_tags, list)
         assert isinstance(project_name, str)
         assert isinstance(project_description, str)
         assert isinstance(project_is_component, bool)
