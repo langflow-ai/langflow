@@ -82,7 +82,7 @@ class DatabaseService(Service):
             msg = "Error creating database engine"
             raise RuntimeError(msg) from exc
 
-    def on_connection(self, dbapi_connection, connection_record):
+    def on_connection(self, dbapi_connection, _connection_record):
         from sqlite3 import Connection as sqliteConnection
 
         if isinstance(dbapi_connection, sqliteConnection):

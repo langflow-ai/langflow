@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
+from typing_extensions import override
 
 from langflow.services.tracing.base import BaseTracer
 
@@ -63,6 +64,7 @@ class LangFuseTracer(BaseTracer):
 
         return True
 
+    @override
     def add_trace(
         self,
         trace_id: str,
@@ -93,6 +95,7 @@ class LangFuseTracer(BaseTracer):
         self.last_span = span
         self.spans[trace_id] = span
 
+    @override
     def end_trace(
         self,
         trace_id: str,
@@ -114,6 +117,7 @@ class LangFuseTracer(BaseTracer):
             content = {"output": _output, "end_time": end_time}
             span.update(**content)
 
+    @override
     def end(
         self,
         inputs: dict[str, Any],

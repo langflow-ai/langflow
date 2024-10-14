@@ -40,13 +40,12 @@ from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
-from langflow.services.deps import get_chat_service, get_session, get_session_service, get_telemetry_service
+from langflow.services.deps import get_chat_service, get_session, get_telemetry_service
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 from langflow.services.telemetry.service import TelemetryService
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.types import InterfaceVertex
-    from langflow.services.session.service import SessionService
 
 router = APIRouter(tags=["Chat"])
 
@@ -696,9 +695,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
-    session_id: str | None = None,
     chat_service: ChatService = Depends(get_chat_service),
-    session_service: SessionService = Depends(get_session_service),
 ):
     """Build a vertex instead of the entire graph.
 
