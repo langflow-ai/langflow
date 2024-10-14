@@ -66,15 +66,11 @@ class SocketIOService(Service):
         )
 
     def get_cache(self, sid: str) -> Any:
-        """
-        Get the cache for a client.
-        """
+        """Get the cache for a client."""
         return self.cache_service.get(sid)
 
     def set_cache(self, sid: str, build_result: Any) -> bool:
-        """
-        Set the cache for a client.
-        """
+        """Set the cache for a client."""
         # client_id is the flow id but that already exists in the cache
         # so we need to change it to something else
 

@@ -48,8 +48,9 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 titles: list[str] | None = None,
                 output_dimensionality: int | None = 1536,
             ) -> list[list[float]]:
-                """Embed a list of strings. Google Generative AI currently
-                sets a max batch size of 100 strings.
+                """Embed a list of strings.
+
+                Google Generative AI currently sets a max batch size of 100 strings.
 
                 Args:
                     texts: List[str] The list of strings to embed.

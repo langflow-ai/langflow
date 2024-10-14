@@ -7,8 +7,7 @@ PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
 
 
 def find_start_component_id(vertices):
-    """
-    Finds the component ID from a list of vertices based on a priority list of input types.
+    """Finds the component ID from a list of vertices based on a priority list of input types.
 
     Args:
         vertices (list): A list of vertex IDs.
@@ -24,24 +23,18 @@ def find_start_component_id(vertices):
 
 
 def find_last_node(nodes, edges):
-    """
-    This function receives a flow and returns the last node.
-    """
+    """This function receives a flow and returns the last node."""
     return next((n for n in nodes if all(e["source"] != n["id"] for e in edges)), None)
 
 
 def add_parent_node_id(nodes, parent_node_id):
-    """
-    This function receives a list of nodes and adds a parent_node_id to each node.
-    """
+    """This function receives a list of nodes and adds a parent_node_id to each node."""
     for node in nodes:
         node["parent_node_id"] = parent_node_id
 
 
 def add_frozen(nodes, frozen):
-    """
-    This function receives a list of nodes and adds a frozen to each node.
-    """
+    """This function receives a list of nodes and adds a frozen to each node."""
     for node in nodes:
         node["data"]["node"]["frozen"] = frozen
 
@@ -108,8 +101,7 @@ def process_flow(flow_object):
 
 
 def update_template(template, g_nodes):
-    """
-    Updates the template of a node in a graph with the given template.
+    """Updates the template of a node in a graph with the given template.
 
     Args:
         template (dict): The new template to update the node with.
@@ -140,8 +132,7 @@ def update_template(template, g_nodes):
 
 
 def update_target_handle(new_edge, g_nodes, group_node_id):
-    """
-    Updates the target handle of a given edge if it is a proxy node.
+    """Updates the target handle of a given edge if it is a proxy node.
 
     Args:
         new_edge (dict): The edge to update.
@@ -160,8 +151,7 @@ def update_target_handle(new_edge, g_nodes, group_node_id):
 
 
 def set_new_target_handle(proxy_id, new_edge, target_handle, node):
-    """
-    Sets a new target handle for a given edge.
+    """Sets a new target handle for a given edge.
 
     Args:
         proxy_id (str): The ID of the proxy.
@@ -195,12 +185,12 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node):
 
 
 def update_source_handle(new_edge, g_nodes, g_edges):
-    """
-    Updates the source handle of a given edge to the last node in the flow data.
+    """Updates the source handle of a given edge to the last node in the flow data.
 
     Args:
         new_edge (dict): The edge to update.
-        flow_data (dict): The flow data containing the nodes and edges.
+        g_nodes: The graph nodes.
+        g_edges: The graph edges.
 
     Returns:
         dict: The updated edge with the new source handle.
@@ -214,13 +204,15 @@ def update_source_handle(new_edge, g_nodes, g_edges):
 
 
 def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
-    """
+    """Get updated edges.
+
     Given a base flow, a list of graph nodes and a group node id, returns a list of updated edges.
     An updated edge is an edge that has its target or source handle updated based on the group node id.
 
     Args:
         base_flow (dict): The base flow containing a list of edges.
         g_nodes (list): A list of graph nodes.
+        g_edges (list): A list of graph edges.
         group_node_id (str): The id of the group node.
 
     Returns:
@@ -323,8 +315,7 @@ def sort_up_to_vertex(
 
 
 def has_cycle(vertex_ids: list[str], edges: list[tuple[str, str]]) -> bool:
-    """
-    Determines whether a directed graph represented by a list of vertices and edges contains a cycle.
+    """Determines whether a directed graph represented by a list of vertices and edges contains a cycle.
 
     Args:
         vertex_ids (list[str]): A list of vertex IDs.
@@ -360,8 +351,7 @@ def has_cycle(vertex_ids: list[str], edges: list[tuple[str, str]]) -> bool:
 
 
 def find_cycle_edge(entry_point: str, edges: list[tuple[str, str]]) -> tuple[str, str]:
-    """
-    Find the edge that causes a cycle in a directed graph starting from a given entry point.
+    """Find the edge that causes a cycle in a directed graph starting from a given entry point.
 
     Args:
         entry_point (str): The vertex ID from which to start the search.
@@ -398,8 +388,7 @@ def find_cycle_edge(entry_point: str, edges: list[tuple[str, str]]) -> tuple[str
 
 
 def find_all_cycle_edges(entry_point: str, edges: list[tuple[str, str]]) -> list[tuple[str, str]]:
-    """
-    Find all edges that cause cycles in a directed graph starting from a given entry point.
+    """Find all edges that cause cycles in a directed graph starting from a given entry point.
 
     Args:
         entry_point (str): The vertex ID from which to start the search.

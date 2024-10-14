@@ -81,8 +81,7 @@ class AnthropicModelComponent(LCModelComponent):
         return output
 
     def _get_exception_message(self, exception: Exception) -> str | None:
-        """
-        Get a message from an Anthropic exception.
+        """Get a message from an Anthropic exception.
 
         Args:
             exception (Exception): The exception to get the message from.

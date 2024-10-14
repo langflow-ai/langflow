@@ -239,11 +239,11 @@ def setup_sentry(app: FastAPI):
 
 
 def setup_static_files(app: FastAPI, static_files_dir: Path):
-    """
-    Setup the static files directory.
+    """Setup the static files directory.
+
     Args:
         app (FastAPI): FastAPI app.
-        path (str): Path to the static files directory.
+        static_files_dir (str): Path to the static files directory.
     """
     app.mount(
         "/",

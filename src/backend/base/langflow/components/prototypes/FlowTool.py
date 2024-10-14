@@ -25,8 +25,7 @@ class FlowToolComponent(LCToolComponent):
         return [flow_data.data["name"] for flow_data in flow_datas]
 
     def get_flow(self, flow_name: str) -> Data | None:
-        """
-        Retrieves a flow by its name.
+        """Retrieves a flow by its name.
 
         Args:
             flow_name (str): The name of the flow to retrieve.

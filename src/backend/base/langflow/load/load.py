@@ -20,8 +20,7 @@ def load_flow_from_json(
     cache: str | None = None,
     disable_logs: bool | None = True,
 ) -> Graph:
-    """
-    Load a flow graph from a JSON file or a JSON object.
+    """Load a flow graph from a JSON file or a JSON object.
 
     Args:
         flow (Union[Path, str, dict]): The flow to load. It can be a file path (str or Path object)
@@ -84,8 +83,7 @@ def run_flow_from_json(
     disable_logs: bool | None = True,
     fallback_to_env_vars: bool = False,
 ) -> list[RunOutputs]:
-    """
-    Run a flow from a JSON file or dictionary.
+    """Run a flow from a JSON file or dictionary.
 
     Args:
         flow (Union[Path, str, dict]): The path to the JSON file or the JSON dictionary representing the flow.
