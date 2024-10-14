@@ -55,7 +55,9 @@ def post_process_type(_type):
 
     # If the return type is not a Union, then we just return it as a list
     inner_type = _type[0] if isinstance(_type, list) else _type
-    if not hasattr(inner_type, "__origin__") or inner_type.__origin__ != Union:
+    if (not hasattr(inner_type, "__origin__") or inner_type.__origin__ != Union) and (
+        not hasattr(inner_type, "__class__") or inner_type.__class__.__name__ != "UnionType"
+    ):
         return _type if isinstance(_type, list) else [_type]
     # If the return type is a Union, then we need to parse it
     _type = extract_union_types_from_generic_alias(_type)
