@@ -2,6 +2,14 @@ import { ReactFlowJsonObject, XYPosition } from "reactflow";
 import { BuildStatus } from "../../constants/enums";
 import { APIClassType } from "../api/index";
 
+export type PaginatedFlowsType = {
+  items: FlowType[];
+  total: number;
+  size: number;
+  page: number;
+  pages: number;
+};
+
 export type FlowType = {
   name: string;
   id: string;
