@@ -137,6 +137,7 @@ class LogConfig(TypedDict):
 
 
 def configure(
+    *,
     log_level: str | None = None,
     log_file: Path | None = None,
     disable: bool | None = False,

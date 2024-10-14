@@ -90,7 +90,7 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
 telemetry_service_tasks = set()
 
 
-def get_lifespan(fix_migration=False, version=None):
+def get_lifespan(*, fix_migration=False, version=None):
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         nest_asyncio.apply()
@@ -267,7 +267,7 @@ def get_static_files_dir():
     return frontend_path / "frontend"
 
 
-def setup_app(static_files_dir: Path | None = None, backend_only: bool = False) -> FastAPI:
+def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = False) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     logger.info(f"Setting up app with static files directory {static_files_dir}")

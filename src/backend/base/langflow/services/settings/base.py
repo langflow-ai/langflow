@@ -41,7 +41,8 @@ def is_list_of_any(field: FieldInfo) -> bool:
 
 
 class MyCustomSource(EnvSettingsSource):
-    def prepare_field_value(self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool) -> Any:
+    @override
+    def prepare_field_value(self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool) -> Any:  # type: ignore[misc]
         # allow comma-separated list parsing
 
         # fieldInfo contains the annotation of the field
@@ -317,7 +318,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
-    def update_from_yaml(self, file_path: str, dev: bool = False):
+    def update_from_yaml(self, file_path: str, *, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
         self.components_path = new_settings.components_path or []
         self.dev = dev
