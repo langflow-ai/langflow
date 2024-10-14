@@ -51,12 +51,12 @@ class FlowToolComponent(LCToolComponent):
             name="flow_name", display_name="Flow Name", info="The name of the flow to run.", refresh_button=True
         ),
         StrInput(
-            name="name",
+            name="tool_name",
             display_name="Name",
             info="The name of the tool.",
         ),
         StrInput(
-            name="description",
+            name="tool_description",
             display_name="Description",
             info="The description of the tool.",
         ),
@@ -89,8 +89,8 @@ class FlowToolComponent(LCToolComponent):
             logger.opt(exception=True).warning("Failed to set run_id")
         inputs = get_flow_inputs(graph)
         tool = FlowTool(
-            name=self.name,
-            description=self.description,
+            name=self.tool_name,
+            description=self.tool_description,
             graph=graph,
             return_direct=self.return_direct,
             inputs=inputs,
