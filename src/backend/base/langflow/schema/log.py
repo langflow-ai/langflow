@@ -3,7 +3,9 @@ from typing import TypeAlias
 from pydantic import BaseModel
 from typing_extensions import Protocol
 
-LoggableType: TypeAlias = str | dict | list | int | float | bool | None | BaseModel
+from langflow.schema.playground_events import PlaygroundEvent
+
+LoggableType: TypeAlias = str | dict | list | int | float | bool | None | BaseModel | PlaygroundEvent
 
 
 class LogFunctionType(Protocol):
