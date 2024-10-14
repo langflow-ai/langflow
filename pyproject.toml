@@ -1,15 +1,3 @@
-
-
-[tool.uv.sources]
-langflow-base = { workspace = true }
-langflow = { workspace = true }
-
-[tool.uv.workspace]
-members = ["src/backend/base", "."]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/backend/langflow"]
-
 [project]
 name = "langflow"
 version = "1.0.18"
@@ -108,6 +96,13 @@ dependencies = [
     "duckduckgo-search>=6.3.0",
     "langchain-elasticsearch>=0.2.0",
 ]
+
+[tool.uv.sources]
+langflow-base = { path = "src/backend/base" }
+langflow = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/backend/langflow"]
 
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
