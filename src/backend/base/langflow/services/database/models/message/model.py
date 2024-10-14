@@ -42,7 +42,10 @@ class MessageBase(SQLModel):
                 message.files = image_paths
 
         if isinstance(message.timestamp, str):
-            timestamp = datetime.fromisoformat(message.timestamp)
+            # The message.timestamp is created using strftime("%Y-%m-%dT%H:%M:%S").
+            # This format is not fully ISO 8601 compliant because it lacks timezone information.
+            # Aadd timezone info (UTC) back to the timestamp here.
+            timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
         else:
             timestamp = message.timestamp
         if not flow_id and message.flow_id:

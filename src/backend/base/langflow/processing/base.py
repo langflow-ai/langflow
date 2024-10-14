@@ -11,8 +11,8 @@ if TYPE_CHECKING:
     from langfuse.callback import CallbackHandler
 
 
-def setup_callbacks(sync, trace_id, **kwargs):
-    """Setup callbacks for langchain object"""
+def setup_callbacks(trace_id):
+    """Setup callbacks for langchain object."""
     callbacks = []
     plugin_service = get_plugins_service()
     plugin_callbacks = plugin_service.get_callbacks(_id=trace_id)
@@ -37,9 +37,7 @@ def get_langfuse_callback(trace_id):
 
 
 def flush_langfuse_callback_if_present(callbacks: list[BaseCallbackHandler | CallbackHandler]):
-    """
-    If langfuse callback is present, run callback.langfuse.flush()
-    """
+    """If langfuse callback is present, run callback.langfuse.flush()."""
     for callback in callbacks:
         if hasattr(callback, "langfuse") and hasattr(callback.langfuse, "flush"):
             callback.langfuse.flush()

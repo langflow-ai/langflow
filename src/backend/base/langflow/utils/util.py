@@ -25,7 +25,7 @@ def remove_ansi_escape_codes(text):
     return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
 
 
-def build_template_from_function(name: str, type_to_loader_dict: dict, add_function: bool = False):
+def build_template_from_function(name: str, type_to_loader_dict: dict, *, add_function: bool = False):
     classes = [item.__annotations__["return"].__name__ for item in type_to_loader_dict.values()]
 
     # Raise error if name is not in chains
@@ -76,6 +76,7 @@ def build_template_from_method(
     class_name: str,
     method_name: str,
     type_to_cls_dict: dict,
+    *,
     add_function: bool = False,
 ):
     classes = [item.__name__ for item in type_to_cls_dict.values()]
@@ -116,7 +117,7 @@ def build_template_from_method(
                         "required": param.default == param.empty,
                     }
                     for name, param in params.items()
-                    if name not in ["self", "kwargs", "args"]
+                    if name not in {"self", "kwargs", "args"}
                 },
             }
 
@@ -136,9 +137,9 @@ def build_template_from_method(
 
 def get_base_classes(cls):
     """Get the base classes of a class.
+
     These are used to determine the output of the nodes.
     """
-
     if hasattr(cls, "__bases__") and cls.__bases__:
         bases = cls.__bases__
         result = []
@@ -168,9 +169,8 @@ def get_default_factory(module: str, function: str):
     return None
 
 
-def update_verbose(d: dict, new_value: bool) -> dict:
-    """
-    Recursively updates the value of the 'verbose' key in a dictionary.
+def update_verbose(d: dict, *, new_value: bool) -> dict:
+    """Recursively updates the value of the 'verbose' key in a dictionary.
 
     Args:
         d: the dictionary to update
@@ -179,19 +179,16 @@ def update_verbose(d: dict, new_value: bool) -> dict:
     Returns:
         The updated dictionary.
     """
-
     for k, v in d.items():
         if isinstance(v, dict):
-            update_verbose(v, new_value)
+            update_verbose(v, new_value=new_value)
         elif k == "verbose":
             d[k] = new_value
     return d
 
 
 def sync_to_async(func):
-    """
-    Decorator to convert a sync function to an async function.
-    """
+    """Decorator to convert a sync function to an async function."""
 
     @wraps(func)
     async def async_wrapper(*args, **kwargs):
@@ -201,14 +198,11 @@ def sync_to_async(func):
 
 
 def format_dict(dictionary: dict[str, Any], class_name: str | None = None) -> dict[str, Any]:
-    """
-    Formats a dictionary by removing certain keys and modifying the
-    values of other keys.
+    """Formats a dictionary by removing certain keys and modifying the values of other keys.
 
     Returns:
         A new dictionary with the desired modifications applied.
     """
-
     for key, value in dictionary.items():
         if key == "_type":
             continue
@@ -251,8 +245,7 @@ def get_type_from_union_literal(union_literal: str) -> str:
 
 
 def get_type(value: Any) -> str | type:
-    """
-    Retrieves the type value from the dictionary.
+    """Retrieves the type value from the dictionary.
 
     Returns:
         The type value.
@@ -264,8 +257,7 @@ def get_type(value: Any) -> str | type:
 
 
 def remove_optional_wrapper(_type: str | type) -> str:
-    """
-    Removes the 'Optional' wrapper from the type string.
+    """Removes the 'Optional' wrapper from the type string.
 
     Returns:
         The type string with the 'Optional' wrapper removed.
@@ -279,8 +271,7 @@ def remove_optional_wrapper(_type: str | type) -> str:
 
 
 def check_list_type(_type: str, value: dict[str, Any]) -> str:
-    """
-    Checks if the type is a list type and modifies the value accordingly.
+    """Checks if the type is a list type and modifies the value accordingly.
 
     Returns:
         The modified type string.
@@ -295,8 +286,7 @@ def check_list_type(_type: str, value: dict[str, Any]) -> str:
 
 
 def replace_mapping_with_dict(_type: str) -> str:
-    """
-    Replaces 'Mapping' with 'dict' in the type string.
+    """Replaces 'Mapping' with 'dict' in the type string.
 
     Returns:
         The modified type string.
@@ -308,8 +298,7 @@ def replace_mapping_with_dict(_type: str) -> str:
 
 
 def get_formatted_type(key: str, _type: str) -> str:
-    """
-    Formats the type value based on the given key.
+    """Formats the type value based on the given key.
 
     Returns:
         The formatted type value.
@@ -324,8 +313,7 @@ def get_formatted_type(key: str, _type: str) -> str:
 
 
 def should_show_field(value: dict[str, Any], key: str) -> bool:
-    """
-    Determines if the field should be shown or not.
+    """Determines if the field should be shown or not.
 
     Returns:
         True if the field should be shown, False otherwise.
@@ -338,8 +326,7 @@ def should_show_field(value: dict[str, Any], key: str) -> bool:
 
 
 def is_password_field(key: str) -> bool:
-    """
-    Determines if the field is a password field.
+    """Determines if the field is a password field.
 
     Returns:
         True if the field is a password field, False otherwise.
@@ -348,8 +335,7 @@ def is_password_field(key: str) -> bool:
 
 
 def is_multiline_field(key: str) -> bool:
-    """
-    Determines if the field is a multiline field.
+    """Determines if the field is a multiline field.
 
     Returns:
         True if the field is a multiline field, False otherwise.
@@ -366,33 +352,25 @@ def is_multiline_field(key: str) -> bool:
 
 
 def set_dict_file_attributes(value: dict[str, Any]) -> None:
-    """
-    Sets the file attributes for the 'dict_' key.
-    """
+    """Sets the file attributes for the 'dict_' key."""
     value["type"] = "file"
     value["fileTypes"] = [".json", ".yaml", ".yml"]
 
 
 def replace_default_value_with_actual(value: dict[str, Any]) -> None:
-    """
-    Replaces the default value with the actual value.
-    """
+    """Replaces the default value with the actual value."""
     if "default" in value:
         value["value"] = value["default"]
         value.pop("default")
 
 
 def set_headers_value(value: dict[str, Any]) -> None:
-    """
-    Sets the value for the 'headers' key.
-    """
+    """Sets the value for the 'headers' key."""
     value["value"] = """{"Authorization": "Bearer <token>"}"""
 
 
 def add_options_to_field(value: dict[str, Any], class_name: str | None, key: str) -> None:
-    """
-    Adds options to the field based on the class name and key.
-    """
+    """Adds options to the field based on the class name and key."""
     options_map = {
         "OpenAI": constants.OPENAI_MODELS,
         "ChatOpenAI": constants.CHAT_OPENAI_MODELS,
@@ -407,8 +385,7 @@ def add_options_to_field(value: dict[str, Any], class_name: str | None, key: str
 
 
 def build_loader_repr_from_data(data: list[Data]) -> str:
-    """
-    Builds a string representation of the loader based on the given data.
+    """Builds a string representation of the loader based on the given data.
 
     Args:
         data (List[Data]): A list of data.
@@ -426,6 +403,7 @@ def build_loader_repr_from_data(data: list[Data]) -> str:
 
 
 def update_settings(
+    *,
     config: str | None = None,
     cache: str | None = None,
     dev: bool = False,
@@ -474,9 +452,7 @@ def update_settings(
 
 
 def is_class_method(func, cls):
-    """
-    Check if a function is a class method.
-    """
+    """Check if a function is a class method."""
     return inspect.ismethod(func) and func.__self__ is cls.__class__
 
 
@@ -485,9 +461,7 @@ def escape_json_dump(edge_dict):
 
 
 def find_closest_match(string: str, list_of_strings: list[str]) -> str | None:
-    """
-    Find the closest match in a list of strings.
-    """
+    """Find the closest match in a list of strings."""
     closest_match = difflib.get_close_matches(string, list_of_strings, n=1, cutoff=0.2)
     if closest_match:
         return closest_match[0]

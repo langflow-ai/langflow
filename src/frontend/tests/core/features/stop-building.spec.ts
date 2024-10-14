@@ -20,7 +20,7 @@ test("user must be able to stop a building", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Blank Flow" }).click();
+  await page.getByTestId("blank-flow").click();
 
   //first component
 

@@ -34,10 +34,10 @@ def _timestamp_to_str(timestamp: datetime | str) -> str:
         # Just check if the string is a valid datetime
         try:
             datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
-            return timestamp
         except ValueError as e:
             msg = f"Invalid timestamp: {timestamp}"
             raise ValueError(msg) from e
+        return timestamp
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -94,8 +94,7 @@ class Message(Data):
     def to_lc_message(
         self,
     ) -> BaseMessage:
-        """
-        Converts the Data to a BaseMessage.
+        """Converts the Data to a BaseMessage.
 
         Returns:
             BaseMessage: The converted BaseMessage.
@@ -139,16 +138,14 @@ class Message(Data):
 
     @classmethod
     def from_data(cls, data: Data) -> Message:
-        """
-        Converts a BaseMessage to a Data.
+        """Converts Data to a Message.
 
         Args:
-            record (BaseMessage): The BaseMessage to convert.
+            data: The Data to convert.
 
         Returns:
-            Data: The converted Data.
+            The converted Message.
         """
-
         return cls(
             text=data.text,
             sender=data.sender,

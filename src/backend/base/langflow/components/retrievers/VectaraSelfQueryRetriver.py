@@ -11,9 +11,7 @@ from langflow.field_typing.constants import LanguageModel
 
 
 class VectaraSelfQueryRetriverComponent(CustomComponent):
-    """
-    A custom component for implementing Vectara Self Query Retriever using a vector store.
-    """
+    """A custom component for implementing Vectara Self Query Retriever using a vector store."""
 
     display_name: str = "Vectara Self Query Retriever for Vectara Vector Store"
     description: str = "Implementation of Vectara Self Query Retriever"

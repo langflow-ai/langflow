@@ -12,9 +12,9 @@ def is_image_file(file_path):
     try:
         with PILImage.open(file_path) as img:
             img.verify()  # Verify that it is, in fact, an image
-        return True
     except (OSError, SyntaxError):
         return False
+    return True
 
 
 async def get_file_paths(files: list[str]):
@@ -28,6 +28,7 @@ async def get_file_paths(files: list[str]):
 
 async def get_files(
     file_paths: list[str],
+    *,
     convert_to_base64: bool = False,
 ):
     storage_service = get_storage_service()

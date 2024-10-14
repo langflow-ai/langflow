@@ -55,10 +55,10 @@ async def event_generator(request: Request):
 async def stream_logs(
     request: Request,
 ):
-    """
-    HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs
-    it establishes a long-lived connection to the server and receives log messages in real-time
-    the client should use the head "Accept: text/event-stream"
+    """HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs.
+
+    It establishes a long-lived connection to the server and receives log messages in real-time.
+    The client should use the header "Accept: text/event-stream".
     """
     global log_buffer  # noqa: PLW0602
     if log_buffer.enabled() is False:
