@@ -54,7 +54,7 @@ class ParseExcelDataComponent(Component):
     def load_excel(self) -> list[Data]:
         if not self.path:
             raise ValueError("Please, upload a file to use this component.")
-        sheet_name = self.sheet_name if self.sheet_name else None
+        sheet_name = self.sheet_name if self.sheet_name else 0
         resolved_path = self.resolve_path(self.path)
         excel_range = self.cells
         args = self.convert_range_string_to_read_excel_args(excel_range)
