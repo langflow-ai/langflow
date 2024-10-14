@@ -96,7 +96,7 @@ export default function NodeInputField({
     <div
       ref={ref}
       className={
-        "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
+        "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2" +
         ((name === "code" && type === "code") ||
         (name.includes("code") && proxy)
           ? " hidden"
