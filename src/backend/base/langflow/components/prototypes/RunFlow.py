@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING, Any
 
+from typing_extensions import override
+
 from langflow.base.flow_processing.utils import build_data_from_run_outputs
 from langflow.custom import Component
 from langflow.io import DropdownInput, MessageTextInput, NestedDictInput, Output
@@ -19,6 +21,7 @@ class RunFlowComponent(Component):
         flow_data = self.list_flows()
         return [flow_data.data["name"] for flow_data in flow_data]
 
+    @override
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name":
             build_config["flow_name"]["options"] = self.get_flow_names()

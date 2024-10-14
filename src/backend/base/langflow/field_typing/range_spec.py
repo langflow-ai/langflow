@@ -11,7 +11,7 @@ class RangeSpec(BaseModel):
 
     @field_validator("max")
     @classmethod
-    def max_must_be_greater_than_min(cls, v, values, **kwargs):
+    def max_must_be_greater_than_min(cls, v, values):
         if "min" in values.data and v <= values.data["min"]:
             msg = "Max must be greater than min"
             raise ValueError(msg)
@@ -19,7 +19,7 @@ class RangeSpec(BaseModel):
 
     @field_validator("step")
     @classmethod
-    def step_must_be_positive(cls, v, values, **kwargs):
+    def step_must_be_positive(cls, v, values):
         if v <= 0:
             msg = "Step must be positive"
             raise ValueError(msg)

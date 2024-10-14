@@ -186,7 +186,7 @@ async def flow_function({func_args}):
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    data.extend(build_data_from_result_data(output, get_final_results_only=True))
+                    data.extend(build_data_from_result_data(output))
         return format_flow_output_data(data)
     except Exception as e:
         raise ToolException(f'Error running flow: ' + e)

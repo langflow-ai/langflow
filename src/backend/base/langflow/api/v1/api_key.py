@@ -46,10 +46,9 @@ def create_api_key_route(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@router.delete("/{api_key_id}")
+@router.delete("/{api_key_id}", dependencies=[Depends(auth_utils.get_current_active_user)])
 def delete_api_key_route(
     api_key_id: UUID,
-    current_user=Depends(auth_utils.get_current_active_user),
     db: Session = Depends(get_session),
 ):
     try:

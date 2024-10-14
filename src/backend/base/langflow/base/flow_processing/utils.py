@@ -24,12 +24,11 @@ def build_data_from_run_outputs(run_outputs: RunOutputs) -> list[Data]:
     return data
 
 
-def build_data_from_result_data(result_data: ResultData, get_final_results_only: bool = True) -> list[Data]:
+def build_data_from_result_data(result_data: ResultData) -> list[Data]:
     """Build a list of data from the given ResultData.
 
     Args:
         result_data (ResultData): The ResultData object containing the result data.
-        get_final_results_only (bool, optional): Whether to include only final results. Defaults to True.
 
     Returns:
         List[Data]: A list of data built from the ResultData.
@@ -64,7 +63,7 @@ def build_data_from_result_data(result_data: ResultData, get_final_results_only:
 
     if isinstance(result_data.results, dict):
         for name, result in result_data.results.items():
-            dataobj: Data | Message | None = None
+            dataobj: Data | Message | None
             dataobj = result if isinstance(result, Message) else Data(data=result, text_key=name)
 
             data.append(dataobj)

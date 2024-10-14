@@ -1,6 +1,8 @@
 import uuid
 from typing import Any
 
+from typing_extensions import override
+
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema import dotdict
@@ -26,6 +28,7 @@ class IDGeneratorComponent(Component):
         Output(display_name="ID", name="id", method="generate_id"),
     ]
 
+    @override
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "unique_id":
             build_config[field_name]["value"] = str(uuid.uuid4())

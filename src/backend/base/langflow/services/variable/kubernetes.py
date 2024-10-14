@@ -4,6 +4,7 @@ import os
 from typing import TYPE_CHECKING
 
 from loguru import logger
+from typing_extensions import override
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
@@ -26,6 +27,7 @@ class KubernetesSecretService(VariableService, Service):
         # TODO: settings_service to set kubernetes namespace
         self.kubernetes_secrets = KubernetesSecretManager()
 
+    @override
     def initialize_user_variables(self, user_id: UUID | str, session: Session):
         # Check for environment variables that should be stored in the database
         should_or_should_not = "Should" if self.settings_service.settings.store_environment_variables else "Should not"

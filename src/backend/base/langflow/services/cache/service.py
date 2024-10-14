@@ -6,6 +6,7 @@ from collections import OrderedDict
 from typing import Generic, Union
 
 from loguru import logger
+from typing_extensions import override
 
 from langflow.services.cache.base import AsyncBaseCacheService, AsyncLockType, CacheService, LockType
 from langflow.services.cache.utils import CACHE_MISS
@@ -225,12 +226,14 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
             return False
         return True
 
+    @override
     async def get(self, key, lock=None):
         if key is None:
             return None
         value = self._client.get(str(key))
         return pickle.loads(value) if value else None
 
+    @override
     async def set(self, key, value, lock=None):
         try:
             if pickled := pickle.dumps(value):
@@ -242,6 +245,7 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
             msg = "RedisCache only accepts values that can be pickled. "
             raise TypeError(msg) from exc
 
+    @override
     async def upsert(self, key, value, lock=None):
         """Inserts or updates a value in the cache.
 
@@ -261,9 +265,11 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
 
         await self.set(key, value)
 
+    @override
     async def delete(self, key, lock=None):
         self._client.delete(key)
 
+    @override
     async def clear(self, lock=None):
         """Clear all items from the cache."""
         self._client.flushdb()

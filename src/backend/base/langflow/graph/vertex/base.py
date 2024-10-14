@@ -480,7 +480,7 @@ class Vertex:
     ):
         """Initiate the build process."""
         logger.debug(f"Building {self.display_name}")
-        await self._build_each_vertex_in_params_dict(user_id)
+        await self._build_each_vertex_in_params_dict()
 
         if self.base_type is None:
             msg = f"Base type for vertex {self.display_name} not found"
@@ -562,7 +562,7 @@ class Vertex:
         )
         self.set_result(result_dict)
 
-    async def _build_each_vertex_in_params_dict(self, user_id=None):
+    async def _build_each_vertex_in_params_dict(self):
         """Iterates over each vertex in the params dictionary and builds it."""
         for key, value in self._raw_params.items():
             if self._is_vertex(value):
@@ -622,7 +622,11 @@ class Vertex:
         self.log_transaction_tasks.add(task)
         task.add_done_callback(self.log_transaction_tasks.discard)
 
-    async def _get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
+    async def _get_result(
+        self,
+        requester: Vertex,
+        target_handle_name: str | None = None,  # noqa: ARG002
+    ) -> Any:
         """Retrieves the result of the built component.
 
         If the component has not been built yet, a ValueError is raised.
@@ -749,7 +753,7 @@ class Vertex:
                 msg = f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
                 raise ValueError(msg)
 
-    def _reset(self, params_update: dict[str, Any] | None = None):
+    def _reset(self):
         self._built = False
         self._built_object = UnbuiltObject()
         self._built_result = UnbuiltResult()

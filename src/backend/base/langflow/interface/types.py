@@ -8,9 +8,6 @@ from loguru import logger
 from langflow.custom.utils import abuild_custom_components, build_custom_components
 
 if TYPE_CHECKING:
-    import asyncio
-
-    from langflow.services.cache.base import CacheService
     from langflow.services.settings.service import SettingsService
 
 
@@ -63,9 +60,6 @@ all_types_dict_cache = None
 
 async def get_and_cache_all_types_dict(
     settings_service: SettingsService,
-    cache_service: CacheService,
-    force_refresh: bool = False,
-    lock: asyncio.Lock | None = None,
 ):
     global all_types_dict_cache  # noqa: PLW0603
     if all_types_dict_cache is None:

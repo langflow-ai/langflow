@@ -104,7 +104,7 @@ class SubFlowComponent(CustomComponent):
             },
         }
 
-    async def build(self, flow_name: str, get_final_results_only: bool = True, **kwargs) -> list[Data]:
+    async def build(self, flow_name: str, **kwargs) -> list[Data]:
         tweaks = {key: {"input_value": value} for key, value in kwargs.items()}
         run_outputs: list[RunOutputs | None] = await self.run_flow(
             tweaks=tweaks,
@@ -118,7 +118,7 @@ class SubFlowComponent(CustomComponent):
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    data.extend(build_data_from_result_data(output, get_final_results_only))
+                    data.extend(build_data_from_result_data(output))
 
         self.status = data
         logger.debug(data)

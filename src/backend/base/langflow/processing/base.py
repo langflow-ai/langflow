@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from langfuse.callback import CallbackHandler
 
 
-def setup_callbacks(sync, trace_id, **kwargs):
+def setup_callbacks(trace_id):
     """Setup callbacks for langchain object."""
     callbacks = []
     plugin_service = get_plugins_service()

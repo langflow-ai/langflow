@@ -7,7 +7,7 @@ from sqlmodel import Session
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable import VariableCreate, VariableRead, VariableUpdate
-from langflow.services.deps import get_session, get_settings_service, get_variable_service
+from langflow.services.deps import get_session, get_variable_service
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
@@ -21,7 +21,6 @@ def create_variable(
     session: Session = Depends(get_session),
     variable: VariableCreate,
     current_user: User = Depends(get_current_active_user),
-    settings_service=Depends(get_settings_service),
     variable_service: DatabaseVariableService = Depends(get_variable_service),
 ):
     """Create a new variable."""

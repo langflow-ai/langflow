@@ -95,12 +95,12 @@ def run(
     ),
     log_level: str | None = typer.Option(None, help="Logging level.", show_default=False),
     log_file: Path | None = typer.Option(None, help="Path to the log file.", show_default=False),
-    cache: str | None = typer.Option(
+    cache: str | None = typer.Option(  # noqa: ARG001
         None,
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
         show_default=False,
     ),
-    dev: bool | None = typer.Option(None, help="Run in development mode (may contain bugs)", show_default=False),
+    dev: bool | None = typer.Option(None, help="Run in development mode (may contain bugs)", show_default=False),  # noqa: ARG001
     frontend_path: str | None = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
@@ -111,7 +111,7 @@ def run(
         help="Open the browser after starting the server.",
         show_default=False,
     ),
-    remove_api_keys: bool | None = typer.Option(
+    remove_api_keys: bool | None = typer.Option(  # noqa: ARG001
         None,
         help="Remove API keys from the projects saved in the database.",
         show_default=False,
@@ -121,27 +121,27 @@ def run(
         help="Run only the backend server without the frontend.",
         show_default=False,
     ),
-    store: bool | None = typer.Option(
+    store: bool | None = typer.Option(  # noqa: ARG001
         None,
         help="Enables the store features.",
         show_default=False,
     ),
-    auto_saving: bool | None = typer.Option(
+    auto_saving: bool | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines if the auto save is enabled.",
         show_default=False,
     ),
-    auto_saving_interval: int | None = typer.Option(
+    auto_saving_interval: int | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines the debounce time for the auto save.",
         show_default=False,
     ),
-    health_check_max_retries: bool | None = typer.Option(
+    health_check_max_retries: bool | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines the number of retries for the health check.",
         show_default=False,
     ),
-    max_file_size_upload: int | None = typer.Option(
+    max_file_size_upload: int | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines the maximum file size for the upload in MB.",
         show_default=False,

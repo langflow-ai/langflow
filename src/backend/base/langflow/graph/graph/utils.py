@@ -131,13 +131,12 @@ def update_template(template, g_nodes):
             g_nodes[node_index]["data"]["node"]["template"][field]["display_name"] = display_name
 
 
-def update_target_handle(new_edge, g_nodes, group_node_id):
+def update_target_handle(new_edge, g_nodes):
     """Updates the target handle of a given edge if it is a proxy node.
 
     Args:
         new_edge (dict): The edge to update.
         g_nodes (list): The list of nodes in the graph.
-        group_node_id (str): The ID of the group node.
 
     Returns:
         dict: The updated edge.
@@ -222,7 +221,7 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
     for edge in base_flow["edges"]:
         new_edge = copy.deepcopy(edge)
         if new_edge["target"] == group_node_id:
-            new_edge = update_target_handle(new_edge, g_nodes, group_node_id)
+            new_edge = update_target_handle(new_edge, g_nodes)
 
         if new_edge["source"] == group_node_id:
             new_edge = update_source_handle(new_edge, g_nodes, g_edges)

@@ -42,7 +42,7 @@ class KubernetesSecretManager:
 
         return self.core_api.create_namespaced_secret(self.namespace, secret)
 
-    def upsert_secret(self, secret_name: str, data: dict, secret_type: str = "Opaque"):
+    def upsert_secret(self, secret_name: str, data: dict):
         """Upsert a secret in the specified namespace.
 
         If the secret doesn't exist, it will be created.

@@ -247,11 +247,10 @@ def get_field_dict(field: Input | dict):
 
 def run_build_inputs(
     custom_component: Component,
-    user_id: str | UUID | None = None,
 ):
     """Run the build inputs of a custom component."""
     try:
-        return custom_component.build_inputs(user_id=user_id)
+        return custom_component.build_inputs()
         # add_extra_fields(frontend_node, field_config, field_config.values())
     except Exception as exc:
         logger.exception("Error running build inputs")

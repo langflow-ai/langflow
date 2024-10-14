@@ -1,6 +1,7 @@
 import requests
 from langchain_groq import ChatGroq
 from pydantic.v1 import SecretStr
+from typing_extensions import override
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
@@ -75,6 +76,7 @@ class GroqModel(LCModelComponent):
             self.status = f"Error fetching models: {e}"
             return []
 
+    @override
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         if field_name in {"groq_api_key", "groq_api_base", "model_name"}:
             models = self.get_models()

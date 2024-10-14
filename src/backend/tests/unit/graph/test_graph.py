@@ -224,8 +224,7 @@ def test_update_target_handle_proxy():
         }
     }
     g_nodes = [{"id": "some_id", "data": {"node": {"flow": None}}}]
-    group_node_id = "group_id"
-    updated_edge = update_target_handle(new_edge, g_nodes, group_node_id)
+    updated_edge = update_target_handle(new_edge, g_nodes)
     assert updated_edge["data"]["targetHandle"] == new_edge["data"]["targetHandle"]
 
 
