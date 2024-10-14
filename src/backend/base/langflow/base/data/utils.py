@@ -45,8 +45,7 @@ def is_hidden(path: Path) -> bool:
 
 
 def format_directory_path(path: str) -> str:
-    """
-    Format a directory path to ensure it's properly escaped and valid.
+    """Format a directory path to ensure it's properly escaped and valid.
 
     Args:
     path (str): The input path string.
