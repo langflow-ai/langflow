@@ -54,7 +54,7 @@ def format_directory_path(path: str) -> str:
     Returns:
     str: A properly formatted path string.
     """
-    return path.replace("\\", "/")
+    return path.replace("\n", "\\n")
 
 
 def retrieve_file_paths(
