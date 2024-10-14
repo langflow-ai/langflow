@@ -8,6 +8,8 @@ type Message = {
   files: Array<string>;
   id: string;
   edit: boolean;
+  background_color: string;
+  text_color: string;
 };
 
 export type { Message };

@@ -16,6 +16,9 @@ export type ChatMessageType = {
   sender_name?: string;
   session?: string;
   edit?: boolean;
+  background_color: string;
+  text_color: string;
+  icon?: string;
 };
 
 export type ChatOutputType = {
@@ -42,3 +45,29 @@ export type FlowPoolObjectType = {
   data: { artifacts: any; results: any | ChatOutputType | ChatInputType };
   id: string;
 };
+
+export interface ContentBlock {
+  title: string;
+  content: string | Record<string, unknown> | unknown[];
+  allow_markdown: boolean;
+  media_url?: string[] | null;
+}
+
+export interface PlaygroundEvent {
+  event_type: "message" | "error" | "warning" | "info" | "token";
+  background_color?: string;
+  text_color?: string;
+  allow_markdown?: boolean;
+  icon?: string | null;
+  sender_name: string;
+  content_blocks?: ContentBlock[] | null;
+  files?: string[];
+  text?: string;
+  timestamp?: string;
+  token?: string;
+  id?: string;
+  flow_id?: string;
+  sender?: string;
+  session_id?: string;
+  edit?: boolean;
+}
