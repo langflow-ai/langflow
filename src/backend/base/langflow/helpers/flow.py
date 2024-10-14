@@ -125,12 +125,12 @@ async def run_flow(
 def generate_function_for_flow(
     inputs: list[Vertex], flow_id: str, user_id: str | UUID | None
 ) -> Callable[..., Awaitable[Any]]:
-    """
-    Generate a dynamic flow function based on the given inputs and flow ID.
+    """Generate a dynamic flow function based on the given inputs and flow ID.
 
     Args:
         inputs (List[Vertex]): The list of input vertices for the flow.
         flow_id (str): The ID of the flow.
+        user_id (str | UUID | None): The user ID associated with the flow.
 
     Returns:
         Coroutine: The dynamic flow function.
@@ -201,12 +201,12 @@ async def flow_function({func_args}):
 def build_function_and_schema(
     flow_data: Data, graph: Graph, user_id: str | UUID | None
 ) -> tuple[Callable[..., Awaitable[Any]], type[BaseModel]]:
-    """
-    Builds a dynamic function and schema for a given flow.
+    """Builds a dynamic function and schema for a given flow.
 
     Args:
         flow_data (Data): The flow record containing information about the flow.
         graph (Graph): The graph representing the flow.
+        user_id (str): The user ID associated with the flow.
 
     Returns:
         Tuple[Callable, BaseModel]: A tuple containing the dynamic function and the schema.
@@ -219,8 +219,7 @@ def build_function_and_schema(
 
 
 def get_flow_inputs(graph: Graph) -> list[Vertex]:
-    """
-    Retrieves the flow inputs from the given graph.
+    """Retrieves the flow inputs from the given graph.
 
     Args:
         graph (Graph): The graph object representing the flow.
@@ -232,8 +231,7 @@ def get_flow_inputs(graph: Graph) -> list[Vertex]:
 
 
 def build_schema_from_inputs(name: str, inputs: list[Vertex]) -> type[BaseModel]:
-    """
-    Builds a schema from the given inputs.
+    """Builds a schema from the given inputs.
 
     Args:
         name (str): The name of the schema.
@@ -253,8 +251,7 @@ def build_schema_from_inputs(name: str, inputs: list[Vertex]) -> type[BaseModel]
 
 
 def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
-    """
-    Returns a list of dictionaries containing the component name and its corresponding argument name.
+    """Returns a list of dictionaries containing the component name and its corresponding argument name.
 
     Args:
         inputs (List[Vertex]): A list of Vertex objects representing the inputs.

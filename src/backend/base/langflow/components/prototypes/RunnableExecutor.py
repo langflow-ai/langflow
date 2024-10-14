@@ -48,8 +48,7 @@ class RunnableExecComponent(Component):
     ]
 
     def get_output(self, result, input_key, output_key):
-        """
-        Retrieves the output value from the given result dictionary based on the specified input and output keys.
+        """Retrieves the output value from the given result dictionary based on the specified input and output keys.
 
         Args:
             result (dict): The result dictionary containing the output value.
@@ -92,8 +91,7 @@ class RunnableExecComponent(Component):
         return result_value, status
 
     def get_input_dict(self, runnable, input_key, input_value):
-        """
-        Returns a dictionary containing the input key-value pair for the given runnable.
+        """Returns a dictionary containing the input key-value pair for the given runnable.
 
         Args:
             runnable: The runnable object.

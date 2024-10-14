@@ -163,8 +163,7 @@ def create_function(code, function_name):
 
 
 def create_class(code, class_name):
-    """
-    Dynamically create a class from a string of code and a specified class name.
+    """Dynamically create a class from a string of code and a specified class name.
 
     :param code: String containing the Python code defining the class
     :param class_name: Name of the class to be created
@@ -193,8 +192,7 @@ def create_class(code, class_name):
 
 
 def create_type_ignore_class():
-    """
-    Create a TypeIgnore class for AST module if it doesn't exist.
+    """Create a TypeIgnore class for AST module if it doesn't exist.
 
     :return: TypeIgnore class
     """
@@ -206,8 +204,7 @@ def create_type_ignore_class():
 
 
 def prepare_global_scope(code, module):
-    """
-    Prepares the global scope with necessary imports from the provided code module.
+    """Prepares the global scope with necessary imports from the provided code module.
 
     :param module: AST parsed module
     :return: Dictionary representing the global scope with imported modules
@@ -234,8 +231,7 @@ def prepare_global_scope(code, module):
 
 
 def extract_class_code(module, class_name):
-    """
-    Extracts the AST node for the specified class from the module.
+    """Extracts the AST node for the specified class from the module.
 
     :param module: AST parsed module
     :param class_name: Name of the class to extract
@@ -248,8 +244,7 @@ def extract_class_code(module, class_name):
 
 
 def compile_class_code(class_code):
-    """
-    Compiles the AST node of a class into a code object.
+    """Compiles the AST node of a class into a code object.
 
     :param class_code: AST node of the class
     :return: Compiled code object of the class
@@ -258,15 +253,13 @@ def compile_class_code(class_code):
 
 
 def build_class_constructor(compiled_class, exec_globals, class_name):
-    """
-    Builds a constructor function for the dynamically created class.
+    """Builds a constructor function for the dynamically created class.
 
     :param compiled_class: Compiled code object of the class
     :param exec_globals: Global scope with necessary imports
     :param class_name: Name of the class
     :return: Constructor function for the class
     """
-
     exec(compiled_class, exec_globals, locals())
     exec_globals[class_name] = locals()[class_name]
 
@@ -285,10 +278,7 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
 
 
 def get_default_imports(code_string):
-    """
-    Returns a dictionary of default imports for the dynamic class constructor.
-    """
-
+    """Returns a dictionary of default imports for the dynamic class constructor."""
     default_imports = {
         "Optional": Optional,
         "List": list,
@@ -304,8 +294,7 @@ def get_default_imports(code_string):
 
 
 def find_names_in_code(code, names):
-    """
-    Finds if any of the specified names are present in the given code string.
+    """Finds if any of the specified names are present in the given code string.
 
     :param code: The source code as a string.
     :param names: A list of names to check for in the code.

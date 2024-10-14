@@ -19,8 +19,7 @@ BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
 
 
 def is_list_of_any(field: FieldInfo) -> bool:
-    """
-    Check if the given field is a list or an optional list of any type.
+    """Check if the given field is a list or an optional list of any type.
 
     Args:
         field (FieldInfo): The field to be checked.

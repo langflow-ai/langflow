@@ -518,8 +518,7 @@ def _is_valid_uuid(val):
 
 
 def load_flows_from_directory():
-    """
-    On langflow startup, this loads all flows from the directory specified in the settings.
+    """On langflow startup, this loads all flows from the directory specified in the settings.
 
     All flows are uploaded into the default folder for the superuser.
     Note that this feature currently only works if AUTO_LOGIN is enabled in the settings.

@@ -9,7 +9,6 @@ from .model import Flow
 
 def get_flow_by_id(session: Session = Depends(get_session), flow_id: str | None = None) -> Flow | None:
     """Get flow by id."""
-
     if flow_id is None:
         msg = "Flow id is required."
         raise ValueError(msg)
@@ -19,7 +18,6 @@ def get_flow_by_id(session: Session = Depends(get_session), flow_id: str | None 
 
 def get_webhook_component_in_flow(flow_data: dict):
     """Get webhook component in flow data."""
-
     for node in flow_data.get("nodes", []):
         if "Webhook" in node.get("id"):
             return node

@@ -43,7 +43,6 @@ def remove_api_keys(flow: dict):
 
 def build_input_keys_response(langchain_object, artifacts):
     """Build the input keys response."""
-
     input_keys_response = {
         "input_keys": dict.fromkeys(langchain_object.input_keys, ""),
         "memory_keys": [],
@@ -201,8 +200,7 @@ def format_exception_message(exc: Exception) -> str:
 
 
 def get_top_level_vertices(graph, vertices_ids):
-    """
-    Retrieves the top-level vertices from the given graph based on the provided vertex IDs.
+    """Retrieves the top-level vertices from the given graph based on the provided vertex IDs.
 
     Args:
         graph (Graph): The graph object containing the vertices.

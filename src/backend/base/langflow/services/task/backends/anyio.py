@@ -53,8 +53,7 @@ class AnyIOBackend(TaskBackend):
     async def launch_task(
         self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
     ) -> tuple[str | None, AnyIOTaskResult | None]:
-        """
-        Launch a new task in an asynchronous manner.
+        """Launch a new task in an asynchronous manner.
 
         Parameters:
             task_func: The asynchronous function to run.

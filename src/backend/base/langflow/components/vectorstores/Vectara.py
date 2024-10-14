@@ -13,9 +13,7 @@ if TYPE_CHECKING:
 
 
 class VectaraVectorStoreComponent(LCVectorStoreComponent):
-    """
-    Vectara Vector Store with search capabilities
-    """
+    """Vectara Vector Store with search capabilities."""
 
     display_name: str = "Vectara"
     description: str = "Vectara Vector Store with search capabilities"
@@ -53,9 +51,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> "Vectara":
-        """
-        Builds the Vectara object.
-        """
+        """Builds the Vectara object."""
         try:
             from langchain_community.vectorstores import Vectara
         except ImportError as e:
@@ -72,9 +68,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
         return vectara
 
     def _add_documents_to_vector_store(self, vector_store: "Vectara") -> None:
-        """
-        Adds documents to the Vector Store.
-        """
+        """Adds documents to the Vector Store."""
         if not self.ingest_data:
             self.status = "No documents to add to Vectara"
             return

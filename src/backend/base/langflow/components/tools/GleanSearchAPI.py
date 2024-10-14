@@ -31,9 +31,7 @@ class GleanSearchAPIComponent(LCToolComponent):
     ]
 
     class GleanAPIWrapper(BaseModel):
-        """
-        Wrapper around Glean API.
-        """
+        """Wrapper around Glean API."""
 
         glean_api_url: str
         glean_access_token: str

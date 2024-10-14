@@ -51,8 +51,7 @@ class ComposioAPIComponent(LCToolComponent):
     ]
 
     def _check_for_authorization(self, app: str) -> str:
-        """
-        Checks if the app is authorized.
+        """Checks if the app is authorized.
 
         Args:
             app (str): The app name to check authorization for.
@@ -71,8 +70,7 @@ class ComposioAPIComponent(LCToolComponent):
         return f"{app} CONNECTED"
 
     def _handle_authorization_failure(self, toolset: ComposioToolSet, entity: Any, app: str) -> str:
-        """
-        Handles the authorization failure by attempting to process API key auth or initiate default connection.
+        """Handles the authorization failure by attempting to process API key auth or initiate default connection.
 
         Args:
             toolset (ComposioToolSet): The toolset instance.
@@ -92,8 +90,7 @@ class ComposioAPIComponent(LCToolComponent):
             return "Error"
 
     def _process_api_key_auth(self, entity: Any, app: str) -> str:
-        """
-        Processes the API key authentication.
+        """Processes the API key authentication.
 
         Args:
             entity (Any): The entity instance.

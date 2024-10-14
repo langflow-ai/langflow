@@ -58,9 +58,7 @@ class ComponentVertex(Vertex):
         return None
 
     def _update_built_object_and_artifacts(self, result):
-        """
-        Updates the built object and its artifacts.
-        """
+        """Updates the built object and its artifacts."""
         if isinstance(result, tuple):
             if len(result) == 2:  # noqa: PLR2004
                 self._built_object, self.artifacts = result
@@ -77,8 +75,7 @@ class ComponentVertex(Vertex):
             self.add_result(key, value)
 
     def get_edge_with_target(self, target_id: str) -> Generator[CycleEdge, None, None]:
-        """
-        Get the edge with the target id.
+        """Get the edge with the target id.
 
         Args:
             target_id: The target id of the edge.
@@ -91,8 +88,7 @@ class ComponentVertex(Vertex):
                 yield edge
 
     async def _get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
-        """
-        Retrieves the result of the built component.
+        """Retrieves the result of the built component.
 
         If the component has not been built yet, a ValueError is raised.
 
@@ -151,8 +147,7 @@ class ComponentVertex(Vertex):
         return result
 
     def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:
-        """
-        Extracts messages from the artifacts.
+        """Extracts messages from the artifacts.
 
         Args:
             artifacts (Dict[str, Any]): The artifacts to extract messages from.
@@ -236,8 +231,7 @@ class InterfaceVertex(ComponentVertex):
         return super()._built_object_repr()
 
     def _process_chat_component(self):
-        """
-        Process the chat component and return the message.
+        """Process the chat component and return the message.
 
         This method processes the chat component by extracting the necessary parameters
         such as sender, sender_name, and message from the `params` dictionary. It then
@@ -324,8 +318,7 @@ class InterfaceVertex(ComponentVertex):
         return message
 
     def _process_data_component(self):
-        """
-        Process the record component of the vertex.
+        """Process the record component of the vertex.
 
         If the built object is an instance of `Data`, it calls the `model_dump` method
         and assigns the result to the `artifacts` attribute.

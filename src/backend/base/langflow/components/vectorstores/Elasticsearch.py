@@ -19,9 +19,7 @@ from langflow.schema import Data
 
 
 class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
-    """
-    Elasticsearch Vector Store with with advanced, customizable search capabilities.
-    """
+    """Elasticsearch Vector Store with with advanced, customizable search capabilities."""
 
     display_name: str = "Elasticsearch"
     description: str = "Elasticsearch Vector Store with with advanced, customizable search capabilities."
@@ -116,9 +114,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> ElasticsearchStore:
-        """
-        Builds the Elasticsearch Vector Store object.
-        """
+        """Builds the Elasticsearch Vector Store object."""
         if self.cloud_id and self.elasticsearch_url:
             msg = (
                 "Both 'cloud_id' and 'elasticsearch_url' provided. "
@@ -152,9 +148,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         return elasticsearch
 
     def _prepare_documents(self) -> list[Document]:
-        """
-        Prepares documents from the input data to add to the vector store.
-        """
+        """Prepares documents from the input data to add to the vector store."""
         documents = []
         for data in self.ingest_data:
             if isinstance(data, Data):
@@ -166,9 +160,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         return documents
 
     def _add_documents_to_vector_store(self, vector_store: "ElasticsearchStore") -> None:
-        """
-        Adds documents to the Vector Store.
-        """
+        """Adds documents to the Vector Store."""
         documents = self._prepare_documents()
         if documents and self.embedding:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
@@ -177,10 +169,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             logger.debug("No documents to add to the Vector Store.")
 
     def search(self, query: str | None = None) -> list[dict[str, Any]]:
-        """
-        Search for similar documents in the vector store or retrieve all documents
-        if no query is provided.
-        """
+        """Search for similar documents in the vector store or retrieve all documents if no query is provided."""
         vector_store = self.build_vector_store()
         search_kwargs = {
             "k": self.number_of_results,
@@ -212,9 +201,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         return [{"page_content": doc.page_content, "metadata": doc.metadata, "score": score} for doc, score in results]
 
     def get_all_documents(self, vector_store: ElasticsearchStore, **kwargs) -> list[tuple[Document, float]]:
-        """
-        Retrieve all documents from the vector store.
-        """
+        """Retrieve all documents from the vector store."""
         client = vector_store.client
         index_name = self.index_name
 
@@ -237,8 +224,8 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         return results
 
     def search_documents(self) -> list[Data]:
-        """
-        Search for documents in the vector store based on the search input.
+        """Search for documents in the vector store based on the search input.
+
         If no search input is provided, retrieve all documents.
         """
         results = self.search(self.search_input)
@@ -253,9 +240,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         return retrieved_data
 
     def get_retriever_kwargs(self):
-        """
-        Get the keyword arguments for the retriever.
-        """
+        """Get the keyword arguments for the retriever."""
         return {
             "search_type": self.search_type.lower(),
             "search_kwargs": {

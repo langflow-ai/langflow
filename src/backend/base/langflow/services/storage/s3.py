@@ -16,8 +16,7 @@ class S3StorageService(StorageService):
         self.set_ready()
 
     async def save_file(self, folder: str, file_name: str, data):
-        """
-        Save a file to the S3 bucket.
+        """Save a file to the S3 bucket.
 
         :param folder: The folder in the bucket to save the file.
         :param file_name: The name of the file to be saved.
@@ -35,8 +34,7 @@ class S3StorageService(StorageService):
             raise
 
     async def get_file(self, folder: str, file_name: str):
-        """
-        Retrieve a file from the S3 bucket.
+        """Retrieve a file from the S3 bucket.
 
         :param folder: The folder in the bucket where the file is stored.
         :param file_name: The name of the file to be retrieved.
@@ -52,8 +50,7 @@ class S3StorageService(StorageService):
             raise
 
     async def list_files(self, folder: str):
-        """
-        List all files in a specified folder of the S3 bucket.
+        """List all files in a specified folder of the S3 bucket.
 
         :param folder: The folder in the bucket to list files from.
         :return: A list of file names.
@@ -70,8 +67,7 @@ class S3StorageService(StorageService):
         return files
 
     async def delete_file(self, folder: str, file_name: str):
-        """
-        Delete a file from the S3 bucket.
+        """Delete a file from the S3 bucket.
 
         :param folder: The folder in the bucket where the file is stored.
         :param file_name: The name of the file to be deleted.

@@ -8,13 +8,10 @@ from loguru import logger
 
 
 class KubernetesSecretManager:
-    """
-    A class for managing Kubernetes secrets.
-    """
+    """A class for managing Kubernetes secrets."""
 
     def __init__(self, namespace: str = "langflow"):
-        """
-        Initialize the KubernetesSecretManager class.
+        """Initialize the KubernetesSecretManager class.
 
         Args:
             namespace (str): The namespace in which to perform secret operations.
@@ -26,8 +23,7 @@ class KubernetesSecretManager:
         self.core_api = client.CoreV1Api()
 
     def create_secret(self, name: str, data: dict, secret_type: str = "Opaque"):
-        """
-        Create a new secret in the specified namespace.
+        """Create a new secret in the specified namespace.
 
         Args:
             name (str): The name of the secret to create.
@@ -47,8 +43,8 @@ class KubernetesSecretManager:
         return self.core_api.create_namespaced_secret(self.namespace, secret)
 
     def upsert_secret(self, secret_name: str, data: dict, secret_type: str = "Opaque"):
-        """
-        Upsert a secret in the specified namespace.
+        """Upsert a secret in the specified namespace.
+
         If the secret doesn't exist, it will be created.
         If it exists, it will be updated with new data while preserving existing keys.
 
@@ -79,8 +75,7 @@ class KubernetesSecretManager:
             raise
 
     def get_secret(self, name: str) -> dict | None:
-        """
-        Read a secret from the specified namespace.
+        """Read a secret from the specified namespace.
 
         Args:
             name (str): The name of the secret to read.
@@ -97,8 +92,7 @@ class KubernetesSecretManager:
             raise
 
     def update_secret(self, name: str, data: dict):
-        """
-        Update an existing secret in the specified namespace.
+        """Update an existing secret in the specified namespace.
 
         Args:
             name (str): The name of the secret to update.
@@ -120,8 +114,7 @@ class KubernetesSecretManager:
         return self.core_api.replace_namespaced_secret(name, self.namespace, secret)
 
     def delete_secret_key(self, name: str, key: str):
-        """
-        Delete a key from the specified secret in the namespace.
+        """Delete a key from the specified secret in the namespace.
 
         Args:
             name (str): The name of the secret.
@@ -145,8 +138,7 @@ class KubernetesSecretManager:
         return self.core_api.replace_namespaced_secret(name, self.namespace, secret)
 
     def delete_secret(self, name: str):
-        """
-        Delete a secret from the specified namespace.
+        """Delete a secret from the specified namespace.
 
         Args:
             name (str): The name of the secret to delete.

@@ -11,9 +11,7 @@ from langflow.schema import Data
 
 
 class ChromaVectorStoreComponent(LCVectorStoreComponent):
-    """
-    Chroma Vector Store with search capabilities
-    """
+    """Chroma Vector Store with search capabilities."""
 
     display_name: str = "Chroma DB"
     description: str = "Chroma Vector Store with search capabilities"
@@ -96,9 +94,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> Chroma:
-        """
-        Builds the Chroma object.
-        """
+        """Builds the Chroma object."""
         try:
             from chromadb import Client
             from langchain_chroma import Chroma
@@ -133,9 +129,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         return chroma
 
     def _add_documents_to_vector_store(self, vector_store: "Chroma") -> None:
-        """
-        Adds documents to the Vector Store.
-        """
+        """Adds documents to the Vector Store."""
         if not self.ingest_data:
             self.status = ""
             return

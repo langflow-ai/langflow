@@ -95,7 +95,7 @@ class UpdateDataComponent(Component):
         return self.old_data
 
     def get_data(self):
-        """Function to get the Data from the attributes"""
+        """Function to get the Data from the attributes."""
         data = {}
         for value_dict in self._attributes.values():
             if isinstance(value_dict, dict):
@@ -107,7 +107,7 @@ class UpdateDataComponent(Component):
         return data
 
     def validate_text_key(self, data: Data):
-        """This function validates that the Text Key is one of the keys in the Data"""
+        """This function validates that the Text Key is one of the keys in the Data."""
         data_keys = data.data.keys()
         if self.text_key not in data_keys and self.text_key != "":
             msg = f"Text Key: {self.text_key} not found in the Data keys: {','.join(data_keys)}"

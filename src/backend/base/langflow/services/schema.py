@@ -2,10 +2,7 @@ from enum import Enum
 
 
 class ServiceType(str, Enum):
-    """
-    Enum for the different types of services that can be
-    registered with the service manager.
-    """
+    """Enum for the different types of services that can be registered with the service manager."""
 
     AUTH_SERVICE = "auth_service"
     CACHE_SERVICE = "cache_service"

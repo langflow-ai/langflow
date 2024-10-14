@@ -5,8 +5,7 @@ from langflow.schema.message import Message
 
 
 def docs_to_data(documents: list[Document]) -> list[Data]:
-    """
-    Converts a list of Documents to a list of Data.
+    """Converts a list of Documents to a list of Data.
 
     Args:
         documents (list[Document]): The list of Documents to convert.
@@ -18,11 +17,12 @@ def docs_to_data(documents: list[Document]) -> list[Data]:
 
 
 def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str:
-    """
-    Converts a list of Data to a list of texts.
+    """Converts a list of Data to a list of texts.
 
     Args:
+        template (str): The template to use for the conversion.
         data (list[Data]): The list of Data to convert.
+        sep (str): The separator used to join the data.
 
     Returns:
         list[str]: The converted list of texts.
@@ -41,10 +41,10 @@ def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str
 
 
 def messages_to_text(template: str, messages: Message | list[Message]) -> str:
-    """
-    Converts a list of Messages to a list of texts.
+    """Converts a list of Messages to a list of texts.
 
     Args:
+        template (str): The template to use for the conversion.
         messages (list[Message]): The list of Messages to convert.
 
     Returns:

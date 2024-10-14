@@ -21,14 +21,15 @@ def get_messages(
     flow_id: UUID | None = None,
     limit: int | None = None,
 ) -> list[Message]:
-    """
-    Retrieves messages from the monitor service based on the provided filters.
+    """Retrieves messages from the monitor service based on the provided filters.
 
     Args:
         sender (Optional[str]): The sender of the messages (e.g., "Machine" or "User")
         sender_name (Optional[str]): The name of the sender.
         session_id (Optional[str]): The session ID associated with the messages.
         order_by (Optional[str]): The field to order the messages by. Defaults to "timestamp".
+        order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
+        flow_id (Optional[UUID]): The flow ID associated with the messages.
         limit (Optional[int]): The maximum number of messages to retrieve.
 
     Returns:
@@ -54,10 +55,7 @@ def get_messages(
 
 
 def add_messages(messages: Message | list[Message], flow_id: str | None = None):
-    """
-    Add a message to the monitor service.
-    """
-
+    """Add a message to the monitor service."""
     if not isinstance(messages, list):
         messages = [messages]
 
@@ -89,8 +87,7 @@ def add_messagetables(messages: list[MessageTable], session: Session):
 
 
 def delete_messages(session_id: str):
-    """
-    Delete messages from the monitor service based on the provided session ID.
+    """Delete messages from the monitor service based on the provided session ID.
 
     Args:
         session_id (str): The session ID associated with the messages to delete.
@@ -107,8 +104,7 @@ def store_message(
     message: Message,
     flow_id: str | None = None,
 ) -> list[Message]:
-    """
-    Stores a message in the memory.
+    """Stores a message in the memory.
 
     Args:
         message (Message): The message to store.

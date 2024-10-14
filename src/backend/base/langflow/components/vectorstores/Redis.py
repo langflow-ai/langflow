@@ -10,9 +10,7 @@ from langflow.schema import Data
 
 
 class RedisVectorStoreComponent(LCVectorStoreComponent):
-    """
-    A custom component for implementing a Vector Store using Redis.
-    """
+    """A custom component for implementing a Vector Store using Redis."""
 
     display_name: str = "Redis"
     description: str = "Implementation of Vector Store using Redis"

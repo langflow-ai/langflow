@@ -18,7 +18,6 @@ class LangflowUvicornWorker(UvicornWorker):
         - https://github.com/encode/uvicorn/issues/1116
         - https://github.com/benoitc/gunicorn/issues/2604
         """
-
         loop = asyncio.get_running_loop()
         loop.add_signal_handler(signal.SIGINT, self.handle_exit, signal.SIGINT, None)
 

@@ -16,7 +16,7 @@ from langflow.schema import Data
 
 
 class MilvusVectorStoreComponent(LCVectorStoreComponent):
-    """Milvus vector store with search capabilities"""
+    """Milvus vector store with search capabilities."""
 
     display_name: str = "Milvus"
     description: str = "Milvus vector store with search capabilities"

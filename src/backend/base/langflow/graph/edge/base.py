@@ -218,8 +218,8 @@ class CycleEdge(Edge):
         target._has_cycle_edges = True
 
     async def honor(self, source: Vertex, target: Vertex) -> None:
-        """
-        Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
+        """Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
+
         If the edge is runnable, the source vertex is run with the message text and the target vertex's
         root_field param is set to the
         result. If the edge is not runnable, the target vertex's parameter is set to the result.

@@ -8,9 +8,7 @@ from langflow.schema import Data
 
 
 class FaissVectorStoreComponent(LCVectorStoreComponent):
-    """
-    FAISS Vector Store with search capabilities
-    """
+    """FAISS Vector Store with search capabilities."""
 
     display_name: str = "FAISS"
     description: str = "FAISS Vector Store with search capabilities"
@@ -58,9 +56,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> FAISS:
-        """
-        Builds the FAISS object.
-        """
+        """Builds the FAISS object."""
         if not self.persist_directory:
             msg = "Folder path is required to save the FAISS index."
             raise ValueError(msg)
@@ -80,9 +76,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         return faiss
 
     def search_documents(self) -> list[Data]:
-        """
-        Search for documents in the FAISS vector store.
-        """
+        """Search for documents in the FAISS vector store."""
         if not self.persist_directory:
             msg = "Folder path is required to load the FAISS index."
             raise ValueError(msg)

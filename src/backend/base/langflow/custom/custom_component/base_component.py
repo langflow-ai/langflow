@@ -69,9 +69,7 @@ class BaseComponent:
 
     @staticmethod
     def get_template_config(component):
-        """
-        Gets the template configuration for the custom component itself.
-        """
+        """Gets the template configuration for the custom component itself."""
         template_config = {}
 
         for attribute, func in ATTR_FUNC_MAPPING.items():
@@ -87,8 +85,7 @@ class BaseComponent:
         return template_config
 
     def build_template_config(self) -> dict:
-        """
-        Builds the template configuration for the custom component.
+        """Builds the template configuration for the custom component.
 
         Returns:
             A dictionary representing the template configuration.

@@ -73,7 +73,6 @@ class FlowTool(BaseTool):
 
     def validate_inputs(self, args_names: list[dict[str, str]], args: Any, kwargs: Any):
         """Validate the inputs."""
-
         if len(args) > 0 and len(args) != len(args_names):
             msg = "Number of positional arguments does not match the number of inputs. Pass keyword arguments instead."
             raise ToolException(msg)

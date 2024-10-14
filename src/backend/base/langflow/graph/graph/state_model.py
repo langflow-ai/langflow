@@ -9,8 +9,7 @@ def camel_to_snake(camel_str: str) -> str:
 
 
 def create_state_model_from_graph(graph: BaseModel) -> type[BaseModel]:
-    """
-    Create a Pydantic state model from a graph representation.
+    """Create a Pydantic state model from a graph representation.
 
     This function generates a Pydantic model that represents the state of an entire graph.
     It creates getter methods for each vertex in the graph, allowing access to the state

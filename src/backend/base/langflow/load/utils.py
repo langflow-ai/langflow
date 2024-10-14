@@ -10,8 +10,7 @@ class UploadError(Exception):
 
 
 def upload(file_path: str, host: str, flow_id: str):
-    """
-    Upload a file to Langflow and return the file path.
+    """Upload a file to Langflow and return the file path.
 
     Args:
         file_path (str): The path to the file to be uploaded.
@@ -39,8 +38,7 @@ def upload(file_path: str, host: str, flow_id: str):
 
 
 def upload_file(file_path: str, host: str, flow_id: str, components: list[str], tweaks: dict | None = None):
-    """
-    Upload a file to Langflow and return the file path.
+    """Upload a file to Langflow and return the file path.
 
     Args:
         file_path (str): The path to the file to be uploaded.
