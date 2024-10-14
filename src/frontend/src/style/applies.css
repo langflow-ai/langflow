@@ -234,11 +234,11 @@
     @apply flex w-full select-none items-center justify-between bg-background pl-5 pr-3 py-3;
   }
   .components-disclosure-arrangement {
-    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-primary-foreground px-3 py-2;
   }
   .components-disclosure-arrangement-child {
     /* different color than the non child */
-    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-primary-foreground px-3 py-2;
   }
   .components-disclosure-title {
     @apply flex items-center text-sm text-primary;
