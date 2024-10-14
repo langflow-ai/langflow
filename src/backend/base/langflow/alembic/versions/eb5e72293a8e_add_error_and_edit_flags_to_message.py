@@ -1,21 +1,20 @@
 """Add error and edit flags to message
 
 Revision ID: eb5e72293a8e
-Revises: 0ae3a2674f32
+Revises: 5ace73a7f223
 Create Date: 2024-09-19 16:18:50.828648
 
 """
 
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.engine.reflection import Inspector
-
 
 # revision identifiers, used by Alembic.
 revision: str = "eb5e72293a8e"
-down_revision: Union[str, None] = "0ae3a2674f32"
+down_revision: Union[str, None] = "5ace73a7f223"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
