@@ -414,9 +414,7 @@ export default function IOModal({
                         setvisibleSession(session);
                       }}
                       toggleVisibility={() => {
-                        setvisibleSession((prev) =>
-                          prev === session ? undefined : session,
-                        );
+                        setvisibleSession(session);
                       }}
                       isVisible={visibleSession === session}
                       inspectSession={(session) => {
