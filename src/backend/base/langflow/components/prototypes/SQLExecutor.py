@@ -40,6 +40,7 @@ class SQLExecutorComponent(CustomComponent):
         self,
         query: str,
         database_url: str,
+        *,
         include_columns: bool = False,
         passthrough: bool = False,
         add_error: bool = False,

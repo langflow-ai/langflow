@@ -8,9 +8,6 @@ from loguru import logger
 from langflow.custom.utils import abuild_custom_components, build_custom_components
 
 if TYPE_CHECKING:
-    import asyncio
-
-    from langflow.services.cache.base import CacheService
     from langflow.services.settings.service import SettingsService
 
 
@@ -30,7 +27,7 @@ def key_func(*args, **kwargs):
     return json.dumps(args) + json.dumps(kwargs)
 
 
-async def aget_all_components(components_paths, as_dict=False):
+async def aget_all_components(components_paths, *, as_dict=False):
     """Get all components names combining native and custom components."""
     all_types_dict = await aget_all_types_dict(components_paths)
     components = {} if as_dict else []
@@ -44,7 +41,7 @@ async def aget_all_components(components_paths, as_dict=False):
     return components
 
 
-def get_all_components(components_paths, as_dict=False):
+def get_all_components(components_paths, *, as_dict=False):
     """Get all components names combining native and custom components."""
     all_types_dict = get_all_types_dict(components_paths)
     components = [] if not as_dict else {}
@@ -63,9 +60,6 @@ all_types_dict_cache = None
 
 async def get_and_cache_all_types_dict(
     settings_service: SettingsService,
-    cache_service: CacheService,
-    force_refresh: bool = False,
-    lock: asyncio.Lock | None = None,
 ):
     global all_types_dict_cache  # noqa: PLW0603
     if all_types_dict_cache is None:

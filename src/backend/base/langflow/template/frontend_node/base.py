@@ -94,7 +94,7 @@ class FrontendNode(BaseModel):
         return cls(**data)
 
     # For backwards compatibility
-    def to_dict(self, keep_name=True) -> dict:
+    def to_dict(self, *, keep_name=True) -> dict:
         """Returns a dict representation of the frontend node."""
         dump = self.model_dump(by_alias=True, exclude_none=True)
         if not keep_name:

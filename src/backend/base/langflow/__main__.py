@@ -95,12 +95,12 @@ def run(
     ),
     log_level: str | None = typer.Option(None, help="Logging level.", show_default=False),
     log_file: Path | None = typer.Option(None, help="Path to the log file.", show_default=False),
-    cache: str | None = typer.Option(
+    cache: str | None = typer.Option(  # noqa: ARG001
         None,
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
         show_default=False,
     ),
-    dev: bool | None = typer.Option(None, help="Run in development mode (may contain bugs)", show_default=False),
+    dev: bool | None = typer.Option(None, help="Run in development mode (may contain bugs)", show_default=False),  # noqa: ARG001
     frontend_path: str | None = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
@@ -111,7 +111,7 @@ def run(
         help="Open the browser after starting the server.",
         show_default=False,
     ),
-    remove_api_keys: bool | None = typer.Option(
+    remove_api_keys: bool | None = typer.Option(  # noqa: ARG001
         None,
         help="Remove API keys from the projects saved in the database.",
         show_default=False,
@@ -121,27 +121,27 @@ def run(
         help="Run only the backend server without the frontend.",
         show_default=False,
     ),
-    store: bool | None = typer.Option(
+    store: bool | None = typer.Option(  # noqa: ARG001
         None,
         help="Enables the store features.",
         show_default=False,
     ),
-    auto_saving: bool | None = typer.Option(
+    auto_saving: bool | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines if the auto save is enabled.",
         show_default=False,
     ),
-    auto_saving_interval: int | None = typer.Option(
+    auto_saving_interval: int | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines the debounce time for the auto save.",
         show_default=False,
     ),
-    health_check_max_retries: bool | None = typer.Option(
+    health_check_max_retries: bool | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines the number of retries for the health check.",
         show_default=False,
     ),
-    max_file_size_upload: int | None = typer.Option(
+    max_file_size_upload: int | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines the maximum file size for the upload in MB.",
         show_default=False,
@@ -287,7 +287,7 @@ def get_letter_from_version(version: str):
 
 
 def build_version_notice(current_version: str, package_name: str) -> str:
-    latest_version = fetch_latest_version(package_name, langflow_is_pre_release(current_version))
+    latest_version = fetch_latest_version(package_name, include_prerelease=langflow_is_pre_release(current_version))
     if latest_version and pkg_version.parse(current_version) < pkg_version.parse(latest_version):
         release_type = "pre-release" if langflow_is_pre_release(latest_version) else "version"
         return f"A new {release_type} of {package_name} is available: {latest_version}"
@@ -302,7 +302,7 @@ def generate_pip_command(package_names, is_pre_release):
     return f"{base_command} {' '.join(package_names)} -U"
 
 
-def stylize_text(text: str, to_style: str, is_prerelease: bool) -> str:
+def stylize_text(text: str, to_style: str, *, is_prerelease: bool) -> str:
     color = "#42a7f5" if is_prerelease else "#6e42f5"
     # return "".join(f"[{color}]{char}[/]" for char in text)
     styled_text = f"[{color}]{to_style}[/]"
@@ -322,7 +322,7 @@ def print_banner(host: str, port: int):
     is_pre_release |= langflow_is_pre_release(langflow_version)  # Update pre-release status
 
     notice = build_version_notice(langflow_version, package_name)
-    notice = stylize_text(notice, package_name, is_pre_release)
+    notice = stylize_text(notice, package_name, is_prerelease=is_pre_release)
     if notice:
         notices.append(notice)
     package_names.append(package_name)
@@ -335,7 +335,9 @@ def print_banner(host: str, port: int):
         notices.append(f"Run '{pip_command}' to update.")
 
     styled_notices = [f"[bold]{notice}[/bold]" for notice in notices if notice]
-    styled_package_name = stylize_text(package_name, package_name, any("pre-release" in notice for notice in notices))
+    styled_package_name = stylize_text(
+        package_name, package_name, is_prerelease=any("pre-release" in notice for notice in notices)
+    )
 
     title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
     info_text = (
@@ -445,9 +447,9 @@ def copy_db():
 
 @app.command()
 def migration(
-    test: bool = typer.Option(True, help="Run migrations in test mode."),
-    fix: bool = typer.Option(
-        False,
+    test: bool = typer.Option(default=True, help="Run migrations in test mode."),  # noqa: FBT001
+    fix: bool = typer.Option(  # noqa: FBT001
+        default=False,
         help="Fix migrations. This is a destructive operation, and should only be used if you know what you are doing.",
     ),
 ):

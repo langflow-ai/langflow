@@ -48,8 +48,6 @@ async def build_vertex(
     vertex_id: str,
     get_cache: Callable,
     set_cache: Callable,
-    tweaks=None,
-    inputs=None,
 ):
     try:
         cache = get_cache(flow_id)

@@ -50,7 +50,7 @@ class ObservableGaugeWrapper:
             name=name, description=description, unit=unit, callbacks=[self._callback]
         )
 
-    def _callback(self, options: CallbackOptions):
+    def _callback(self, _options: CallbackOptions):
         return [Observation(value, attributes=dict(labels)) for labels, value in self._values.items()]
 
         # return [Observation(self._value)]
@@ -138,7 +138,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             labels={"flow_id": mandatory_label},
         )
 
-    def __init__(self, prometheus_enabled: bool = True):
+    def __init__(self, *, prometheus_enabled: bool = True):
         if not self._metrics_registry:
             self._register_metric()
 

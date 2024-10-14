@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import nanoid
 from loguru import logger
+from typing_extensions import override
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
@@ -64,6 +65,7 @@ class LangWatchTracer(BaseTracer):
             return False
         return True
 
+    @override
     def add_trace(
         self,
         trace_id: str,
@@ -99,6 +101,7 @@ class LangWatchTracer(BaseTracer):
         self.trace.set_current_span(span)
         self.spans[trace_id] = span
 
+    @override
     def end_trace(
         self,
         trace_id: str,

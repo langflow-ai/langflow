@@ -57,9 +57,7 @@ ignore = [
 
     # Rules that are TODOs
     "ANN",
-    "ARG",
     "D1", # Missing docstrings
-    "FBT",
     "N",
     "S",
     "SLF",
