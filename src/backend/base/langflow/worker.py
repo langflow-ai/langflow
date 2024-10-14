@@ -24,9 +24,9 @@ def build_vertex(self, vertex: Vertex) -> Vertex:
     try:
         vertex.task_id = self.request.id
         async_to_sync(vertex.build)()
-        return vertex
     except SoftTimeLimitExceeded as e:
         raise self.retry(exc=SoftTimeLimitExceeded("Task took too long"), countdown=2) from e
+    return vertex
 
 
 @celery_app.task(acks_late=True)

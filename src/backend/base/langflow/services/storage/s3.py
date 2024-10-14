@@ -61,12 +61,13 @@ class S3StorageService(StorageService):
         """
         try:
             response = self.s3_client.list_objects_v2(Bucket=self.bucket, Prefix=folder)
-            files = [item["Key"] for item in response.get("Contents", []) if "/" not in item["Key"][len(folder) :]]
-            logger.info(f"{len(files)} files listed in folder {folder}.")
-            return files
         except ClientError:
             logger.exception(f"Error listing files in folder {folder}")
             raise
+
+        files = [item["Key"] for item in response.get("Contents", []) if "/" not in item["Key"][len(folder) :]]
+        logger.info(f"{len(files)} files listed in folder {folder}.")
+        return files
 
     async def delete_file(self, folder: str, file_name: str):
         """

@@ -75,9 +75,10 @@ def create_folder(
             session.exec(update_statement_flows)
             session.commit()
 
-        return new_folder
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return new_folder
 
 
 @router.get("/", response_model=list[FolderRead], status_code=200)
@@ -111,9 +112,15 @@ def read_folder(
 ):
     try:
         folder = session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
-        if not folder:
-            raise HTTPException(status_code=404, detail="Folder not found")
+    except Exception as e:
+        if "No result found" in str(e):
+            raise HTTPException(status_code=404, detail="Folder not found") from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+    try:
         stmt = select(Flow).where(Flow.folder_id == folder_id, Flow.user_id == current_user.id)
 
         if Flow.updated_at is not None:
@@ -128,8 +135,6 @@ def read_folder(
 
         return FolderWithPaginatedFlows(folder=FolderRead.model_validate(folder), flows=paginated_flows)
     except Exception as e:
-        if "No result found" in str(e):
-            raise HTTPException(status_code=404, detail="Folder not found") from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -145,8 +150,13 @@ def update_folder(
         existing_folder = session.exec(
             select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)
         ).first()
-        if not existing_folder:
-            raise HTTPException(status_code=404, detail="Folder not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    if not existing_folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+    try:
         if folder.name and folder.name != existing_folder.name:
             existing_folder.name = folder.name
             session.add(existing_folder)
@@ -183,10 +193,10 @@ def update_folder(
             session.exec(update_statement_components)
             session.commit()
 
-        return existing_folder
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return existing_folder
 
 
 @router.delete("/{folder_id}", status_code=204)
@@ -203,11 +213,15 @@ async def delete_folder(
                 await cascade_delete_flow(session, flow)
 
         folder = session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
-        if not folder:
-            raise HTTPException(status_code=404, detail="Folder not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+    try:
         session.delete(folder)
         session.commit()
-
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -222,11 +236,16 @@ async def download_file(
 ):
     """Download all flows from folder."""
     try:
-        return session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
+        folder = session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
     except Exception as e:
         if "No result found" in str(e):
             raise HTTPException(status_code=404, detail="Folder not found") from e
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+    return folder
 
 
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)

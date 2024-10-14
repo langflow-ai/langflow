@@ -36,14 +36,14 @@ def _get_version_info():
             __version__ = metadata.version(pkg_name)
             prerelease_version = __version__
             version = _compute_non_prerelease_version(prerelease_version)
-
+        except (ImportError, metadata.PackageNotFoundError):
+            pass
+        else:
             return {
                 "version": prerelease_version,
                 "main_version": version,
                 "package": display_name,
             }
-        except (ImportError, metadata.PackageNotFoundError):
-            pass
 
     if __version__ is None:
         msg = f"Package not found from options {package_options}"
