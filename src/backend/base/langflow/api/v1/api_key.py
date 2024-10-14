@@ -54,9 +54,9 @@ def delete_api_key_route(
 ):
     try:
         delete_api_key(db, api_key_id)
-        return {"detail": "API Key deleted"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    return {"detail": "API Key deleted"}
 
 
 @router.post("/store")
@@ -88,9 +88,10 @@ def save_store_api_key(
             domain=auth_settings.COOKIE_DOMAIN,
         )
 
-        return {"detail": "API Key saved"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return {"detail": "API Key saved"}
 
 
 @router.delete("/store")
@@ -101,6 +102,7 @@ def delete_store_api_key(
     try:
         current_user.store_api_key = None
         db.commit()
-        return {"detail": "API Key deleted"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return {"detail": "API Key deleted"}

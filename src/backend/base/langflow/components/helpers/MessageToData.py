@@ -26,18 +26,14 @@ class MessageToDataComponent(Component):
     ]
 
     def convert_message_to_data(self) -> Data:
-        try:
-            if not isinstance(self.message, Message):
-                msg = "Input must be a Message object"
-                raise TypeError(msg)
-
+        if isinstance(self.message, Message):
             # Convert Message to Data
             data = Data(data=self.message.data)
 
             self.status = "Successfully converted Message to Data"
             return data
-        except Exception as e:  # noqa: BLE001
-            error_message = f"Error converting Message to Data: {e}"
-            logger.opt(exception=True).debug(error_message)
-            self.status = error_message
-            return Data(data={"error": error_message})
+
+        msg = "Error converting Message to Data: Input must be a Message object"
+        logger.opt(exception=True).debug(msg)
+        self.status = msg
+        return Data(data={"error": msg})

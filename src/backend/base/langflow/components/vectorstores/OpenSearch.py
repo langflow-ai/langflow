@@ -229,14 +229,14 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 results = vector_store.max_marginal_relevance_search(query, **search_kwargs)
                 return [{"page_content": doc.page_content, "metadata": doc.metadata} for doc in results]
 
-            error_message = f"Invalid search type:: {self.search_type}"
-            logger.exception(error_message)
-            raise ValueError(error_message)
-
         except Exception as e:
             error_message = f"Error during search: {e}"
             logger.exception(error_message)
             raise RuntimeError(error_message) from e
+
+        error_message = f"Error during search. Invalid search type: {self.search_type}"
+        logger.error(error_message)
+        raise ValueError(error_message)
 
     def search_documents(self) -> list[Data]:
         """
@@ -253,9 +253,10 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 )
                 for result in results
             ]
-            self.status = retrieved_data
-            return retrieved_data
         except Exception as e:
             error_message = f"Error during document search: {e}"
             logger.exception(error_message)
             raise RuntimeError(error_message) from e
+
+        self.status = retrieved_data
+        return retrieved_data

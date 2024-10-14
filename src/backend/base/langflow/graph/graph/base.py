@@ -752,11 +752,12 @@ class Graph:
         try:
             # Attempt to get the running event loop; if none, an exception is raised
             loop = asyncio.get_running_loop()
-            if loop.is_closed():
-                msg = "The running event loop is closed."
-                raise RuntimeError(msg)
         except RuntimeError:
-            # If there's no running event loop or it's closed, use asyncio.run
+            # If there's no running event loop, use asyncio.run
+            return asyncio.run(coro)
+
+        # If the event loop is closed, use asyncio.run
+        if loop.is_closed():
             return asyncio.run(coro)
 
         # If there's an existing, open event loop, use it to run the async function
@@ -1031,7 +1032,6 @@ class Graph:
             edges = payload["edges"]
             graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id)
             graph.add_nodes_and_edges(vertices, edges)
-            return graph
         except KeyError as exc:
             logger.exception(exc)
             if "nodes" not in payload and "edges" not in payload:
@@ -1040,6 +1040,8 @@ class Graph:
 
             msg = f"Error while creating graph from payload: {exc}"
             raise ValueError(msg) from exc
+        else:
+            return graph
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Graph):
@@ -1399,22 +1401,23 @@ class Graph:
 
                     await set_cache(key=vertex.id, data=vertex_dict)
 
-            if vertex.result is not None:
-                params = f"{vertex._built_object_repr()}{params}"
-                valid = True
-                result_dict = vertex.result
-                artifacts = vertex.artifacts
-            else:
-                msg = f"No result found for vertex {vertex_id}"
-                raise ValueError(msg)
-
-            return VertexBuildResult(
-                result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
-            )
         except Exception as exc:
             if not isinstance(exc, ComponentBuildException):
                 logger.exception("Error building Component")
             raise
+
+        if vertex.result is not None:
+            params = f"{vertex._built_object_repr()}{params}"
+            valid = True
+            result_dict = vertex.result
+            artifacts = vertex.artifacts
+        else:
+            msg = f"Error building Component: no result found for vertex {vertex_id}"
+            raise ValueError(msg)
+
+        return VertexBuildResult(
+            result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
+        )
 
     def get_vertex_edges(
         self,

@@ -57,15 +57,16 @@ def add_messages(messages: Message | list[Message], flow_id: str | None = None):
     """
     Add a message to the monitor service.
     """
+
+    if not isinstance(messages, list):
+        messages = [messages]
+
+    if not all(isinstance(message, Message) for message in messages):
+        types = ", ".join([str(type(message)) for message in messages])
+        msg = f"The messages must be instances of Message. Found: {types}"
+        raise ValueError(msg)
+
     try:
-        if not isinstance(messages, list):
-            messages = [messages]
-
-        if not all(isinstance(message, Message) for message in messages):
-            types = ", ".join([str(type(message)) for message in messages])
-            msg = f"The messages must be instances of Message. Found: {types}"
-            raise ValueError(msg)
-
         messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
         with session_scope() as session:
             messages_models = add_messagetables(messages_models, session)
