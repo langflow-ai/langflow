@@ -173,6 +173,7 @@ class StoreService(Service):
     async def count_components(
         self,
         filter_conditions: list[dict[str, Any]],
+        *,
         api_key: str | None = None,
         use_api_key: bool | None = False,
     ) -> int:
@@ -198,6 +199,7 @@ class StoreService(Service):
 
     def build_filter_conditions(
         self,
+        *,
         component_id: str | None = None,
         search: str | None = None,
         private: bool | None = None,
@@ -257,6 +259,7 @@ class StoreService(Service):
 
     async def query_components(
         self,
+        *,
         api_key: str | None = None,
         sort: list[str] | None = None,
         page: int = 1,
@@ -501,6 +504,7 @@ class StoreService(Service):
 
     async def get_list_component_response_model(
         self,
+        *,
         component_id: str | None = None,
         search: str | None = None,
         private: bool | None = None,

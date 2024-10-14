@@ -583,7 +583,7 @@ class Component(CustomComponent):
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
         for key in self._inputs:
-            frontend_node.set_field_load_from_db_in_template(key, False)
+            frontend_node.set_field_load_from_db_in_template(key, value=False)
         self._map_parameters_on_frontend_node(frontend_node)
 
         frontend_node_dict = frontend_node.to_dict(keep_name=False)

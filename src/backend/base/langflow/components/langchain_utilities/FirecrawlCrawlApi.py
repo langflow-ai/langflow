@@ -69,13 +69,13 @@ class FirecrawlCrawlApi(CustomComponent):
         app = FirecrawlApp(api_key=api_key)
         crawl_result = app.crawl_url(
             url,
-            {
+            params={
                 "crawlerOptions": crawler_options_dict,
                 "pageOptions": page_options_dict,
             },
-            True,
-            int(timeout / 1000),
-            idempotency_key,
+            wait_until_done=True,
+            poll_interval=int(timeout / 1000),
+            idempotency_key=idempotency_key,
         )
 
         return Data(data={"results": crawl_result})

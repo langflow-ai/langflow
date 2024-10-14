@@ -39,7 +39,7 @@ class DirectoryReader:
     # the custom components from this directory.
     base_path = ""
 
-    def __init__(self, directory_path, compress_code_field=False):
+    def __init__(self, directory_path, *, compress_code_field=False):
         """Initialize DirectoryReader with a directory path and a flag indicating whether to compress the code."""
         self.directory_path = directory_path
         self.compress_code_field = compress_code_field
@@ -57,7 +57,7 @@ class DirectoryReader:
         """Check if the file content is empty."""
         return len(file_content.strip()) == 0
 
-    def filter_loaded_components(self, data: dict, with_errors: bool) -> dict:
+    def filter_loaded_components(self, data: dict, *, with_errors: bool) -> dict:
         from langflow.custom.utils import build_component
 
         items = []

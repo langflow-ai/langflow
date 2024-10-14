@@ -59,11 +59,13 @@ class LCModelComponent(Component):
         stream = self.stream
         system_message = self.system_message
         output = self.build_model()
-        result = self.get_chat_result(output, stream, input_value, system_message)
+        result = self.get_chat_result(
+            runnable=output, stream=stream, input_value=input_value, system_message=system_message
+        )
         self.status = result
         return result
 
-    def get_result(self, runnable: LLM, stream: bool, input_value: str):
+    def get_result(self, *, runnable: LLM, stream: bool, input_value: str):
         """Retrieves the result from the output of a Runnable object.
 
         Args:
@@ -139,6 +141,7 @@ class LCModelComponent(Component):
 
     def get_chat_result(
         self,
+        *,
         runnable: LanguageModel,
         stream: bool,
         input_value: str | Message,

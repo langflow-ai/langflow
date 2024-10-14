@@ -134,7 +134,7 @@ def build_sugiyama_layout(vertexes, edges):
     return sug
 
 
-def draw_graph(vertexes, edges, return_ascii=True):
+def draw_graph(vertexes, edges, *, return_ascii=True):
     """Build a DAG and draw it in ASCII."""
     sug = build_sugiyama_layout(vertexes, edges)
 

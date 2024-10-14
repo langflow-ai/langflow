@@ -627,6 +627,7 @@ class Graph:
 
     async def _run(
         self,
+        *,
         inputs: dict[str, str],
         input_components: list[str],
         input_type: InputType | None,
@@ -705,6 +706,7 @@ class Graph:
     def run(
         self,
         inputs: list[dict[str, str]],
+        *,
         input_components: list[list[str]] | None = None,
         types: list[InputType | None] | None = None,
         outputs: list[str] | None = None,
@@ -756,6 +758,7 @@ class Graph:
     async def arun(
         self,
         inputs: list[dict[str, str]],
+        *,
         inputs_components: list[list[str]] | None = None,
         types: list[InputType | None] | None = None,
         outputs: list[str] | None = None,
@@ -1307,6 +1310,7 @@ class Graph:
     async def build_vertex(
         self,
         vertex_id: str,
+        *,
         get_cache: GetCache | None = None,
         set_cache: SetCache | None = None,
         inputs_dict: dict[str, str] | None = None,
@@ -1434,7 +1438,7 @@ class Graph:
                 vertices.append(vertex)
         return vertices
 
-    async def process(self, fallback_to_env_vars: bool, start_component_id: str | None = None) -> Graph:
+    async def process(self, *, fallback_to_env_vars: bool, start_component_id: str | None = None) -> Graph:
         """Processes the graph with vertices in each layer run in parallel."""
         first_layer = self.sort_vertices(start_component_id=start_component_id)
         vertex_task_run_count: dict[str, int] = {}
@@ -1490,7 +1494,7 @@ class Graph:
 
         return list(next_runnable_vertices)
 
-    async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: Vertex, cache: bool = True) -> list[str]:
+    async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: Vertex, *, cache: bool = True) -> list[str]:
         v_id = vertex.id
         v_successors_ids = vertex.successors_ids
         async with lock:
@@ -1583,7 +1587,7 @@ class Graph:
         """Returns the predecessors of a vertex."""
         return [self.get_vertex(source_id) for source_id in self.predecessor_map.get(vertex.id, [])]
 
-    def get_all_successors(self, vertex: Vertex, recursive=True, flat=True, visited=None):
+    def get_all_successors(self, vertex: Vertex, *, recursive=True, flat=True, visited=None):
         if visited is None:
             visited = set()
 
@@ -1782,6 +1786,7 @@ class Graph:
     def layered_topological_sort(
         self,
         vertices: list[Vertex],
+        *,
         filter_graphs: bool = False,
     ) -> list[list[str]]:
         """Performs a layered topological sort of the vertices in the graph."""
@@ -1926,7 +1931,7 @@ class Graph:
             result |= {vertex_id: {"successors": sucessors, "predecessors": predecessors}}
         return result
 
-    def __filter_vertices(self, vertex_id: str, is_start: bool = False):
+    def __filter_vertices(self, vertex_id: str, *, is_start: bool = False):
         dictionaryized_graph = self.__to_dict()
         parent_node_map = {vertex.id: vertex.parent_node_id for vertex in self.vertices}
         vertex_ids = sort_up_to_vertex(
@@ -2002,7 +2007,7 @@ class Graph:
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
         is_active = self.get_vertex(vertex_id).is_active()
-        return self.run_manager.is_vertex_runnable(vertex_id, is_active)
+        return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active)
 
     def build_run_map(self):
         """Builds the run map for the graph.
@@ -2037,7 +2042,7 @@ class Graph:
                 return
             visited.add(predecessor_id)
             is_active = self.get_vertex(predecessor_id).is_active()
-            if self.run_manager.is_vertex_runnable(predecessor_id, is_active):
+            if self.run_manager.is_vertex_runnable(predecessor_id, is_active=is_active):
                 runnable_vertices.append(predecessor_id)
             else:
                 for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):

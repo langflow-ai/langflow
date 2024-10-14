@@ -235,7 +235,7 @@ class CustomComponent(BaseComponent):
         """
         return self.get_code_tree(self._code or "")
 
-    def to_data(self, data: Any, keys: list[str] | None = None, silent_errors: bool = False) -> list[Data]:
+    def to_data(self, data: Any, *, keys: list[str] | None = None, silent_errors: bool = False) -> list[Data]:
         """Converts input data into a list of Data objects.
 
         Args:
@@ -298,7 +298,7 @@ class CustomComponent(BaseComponent):
 
         return self._extract_return_type(return_type)
 
-    def create_references_from_data(self, data: list[Data], include_data: bool = False) -> str:
+    def create_references_from_data(self, data: list[Data], *, include_data: bool = False) -> str:
         """Create references from a list of data.
 
         Args:

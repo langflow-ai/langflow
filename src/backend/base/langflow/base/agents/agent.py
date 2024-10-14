@@ -75,7 +75,7 @@ class LCAgentComponent(Component):
                 msg = f"Method '{method_name}' must be defined."
                 raise ValueError(msg)
 
-    def get_agent_kwargs(self, flatten: bool = False) -> dict:
+    def get_agent_kwargs(self, *, flatten: bool = False) -> dict:
         base = {
             "handle_parsing_errors": self.handle_parsing_errors,
             "verbose": self.verbose,

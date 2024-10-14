@@ -54,7 +54,7 @@ class RetrievalQAComponent(LCChainComponent):
 
         result = runnable.invoke({"query": self.input_value}, config={"callbacks": self.get_langchain_callbacks()})
 
-        source_docs = self.to_data(result.get("source_documents", []))
+        source_docs = self.to_data(result.get("source_documents", keys=[]))
         result_str = str(result.get("result", ""))
         if self.return_source_documents and len(source_docs):
             references_str = self.create_references_from_data(source_docs)

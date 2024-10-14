@@ -59,6 +59,7 @@ router = APIRouter(tags=["Base"])
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all(
+    *,
     settings_service=Depends(get_settings_service),
 ):
     from langflow.interface.types import get_and_cache_all_types_dict
@@ -96,6 +97,7 @@ def validate_input_and_tweaks(input_request: SimplifiedAPIRequest):
 async def simple_run_flow(
     flow: Flow,
     input_request: SimplifiedAPIRequest,
+    *,
     stream: bool = False,
     api_key_user: User | None = None,
 ):
@@ -144,6 +146,7 @@ async def simple_run_flow(
 async def simple_run_flow_task(
     flow: Flow,
     input_request: SimplifiedAPIRequest,
+    *,
     stream: bool = False,
     api_key_user: User | None = None,
 ):
@@ -162,6 +165,7 @@ async def simple_run_flow_task(
 
 @router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)  # noqa: RUF100, FAST003
 async def simplified_run_flow(
+    *,
     background_tasks: BackgroundTasks,
     flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
     input_request: SimplifiedAPIRequest | None = None,
@@ -361,6 +365,7 @@ async def webhook_run_flow(
 
 @router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 async def experimental_run_flow(
+    *,
     session: Annotated[Session, Depends(get_session)],
     flow_id: UUID,
     inputs: list[InputValueRequest] | None = None,

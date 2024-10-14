@@ -121,7 +121,7 @@ def _check_input_variables(input_variables):
     return fixed_variables
 
 
-def validate_prompt(prompt_template: str, silent_errors: bool = False) -> list[str]:
+def validate_prompt(prompt_template: str, *, silent_errors: bool = False) -> list[str]:
     input_variables = extract_input_variables_from_prompt(prompt_template)
 
     # Check if there are invalid characters in the input_variables

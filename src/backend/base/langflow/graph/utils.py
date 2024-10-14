@@ -165,6 +165,7 @@ async def log_transaction(
 
 
 def log_vertex_build(
+    *,
     flow_id: str,
     vertex_id: str,
     valid: bool,

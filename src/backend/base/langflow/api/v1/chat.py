@@ -141,6 +141,7 @@ async def retrieve_vertices_order(
 
 @router.post("/build/{flow_id}/flow")
 async def build_flow(
+    *,
     background_tasks: BackgroundTasks,
     flow_id: uuid.UUID,
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,

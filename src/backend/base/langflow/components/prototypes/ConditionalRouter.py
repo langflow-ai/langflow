@@ -47,7 +47,7 @@ class ConditionalRouterComponent(Component):
         Output(display_name="False Route", name="false_result", method="false_response"),
     ]
 
-    def evaluate_condition(self, input_text: str, match_text: str, operator: str, case_sensitive: bool) -> bool:
+    def evaluate_condition(self, input_text: str, match_text: str, operator: str, *, case_sensitive: bool) -> bool:
         if not case_sensitive:
             input_text = input_text.lower()
             match_text = match_text.lower()
@@ -65,7 +65,9 @@ class ConditionalRouterComponent(Component):
         return False
 
     def true_response(self) -> Message:
-        result = self.evaluate_condition(self.input_text, self.match_text, self.operator, self.case_sensitive)
+        result = self.evaluate_condition(
+            self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
+        )
         if result:
             self.status = self.message
             return self.message
@@ -73,7 +75,9 @@ class ConditionalRouterComponent(Component):
         return None  # type: ignore[return-value]
 
     def false_response(self) -> Message:
-        result = self.evaluate_condition(self.input_text, self.match_text, self.operator, self.case_sensitive)
+        result = self.evaluate_condition(
+            self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
+        )
         if not result:
             self.status = self.message
             return self.message

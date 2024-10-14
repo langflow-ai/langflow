@@ -101,6 +101,7 @@ async def update_shared_component(
 
 @router.get("/components/", response_model=ListComponentResponseModel)
 async def get_components(
+    *,
     component_id: Annotated[str | None, Query()] = None,
     search: Annotated[str | None, Query()] = None,
     private: Annotated[bool | None, Query()] = None,

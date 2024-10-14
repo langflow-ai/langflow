@@ -25,7 +25,7 @@ def remove_ansi_escape_codes(text):
     return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
 
 
-def build_template_from_function(name: str, type_to_loader_dict: dict, add_function: bool = False):
+def build_template_from_function(name: str, type_to_loader_dict: dict, *, add_function: bool = False):
     classes = [item.__annotations__["return"].__name__ for item in type_to_loader_dict.values()]
 
     # Raise error if name is not in chains
@@ -76,6 +76,7 @@ def build_template_from_method(
     class_name: str,
     method_name: str,
     type_to_cls_dict: dict,
+    *,
     add_function: bool = False,
 ):
     classes = [item.__name__ for item in type_to_cls_dict.values()]
@@ -168,7 +169,7 @@ def get_default_factory(module: str, function: str):
     return None
 
 
-def update_verbose(d: dict, new_value: bool) -> dict:
+def update_verbose(d: dict, *, new_value: bool) -> dict:
     """Recursively updates the value of the 'verbose' key in a dictionary.
 
     Args:
@@ -180,7 +181,7 @@ def update_verbose(d: dict, new_value: bool) -> dict:
     """
     for k, v in d.items():
         if isinstance(v, dict):
-            update_verbose(v, new_value)
+            update_verbose(v, new_value=new_value)
         elif k == "verbose":
             d[k] = new_value
     return d
@@ -402,6 +403,7 @@ def build_loader_repr_from_data(data: list[Data]) -> str:
 
 
 def update_settings(
+    *,
     config: str | None = None,
     cache: str | None = None,
     dev: bool = False,

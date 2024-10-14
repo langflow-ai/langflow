@@ -136,6 +136,7 @@ def process_type(field_type: str):
 
 
 def add_new_custom_field(
+    *,
     frontend_node: CustomComponentFrontendNode,
     field_name: str,
     field_type: str,
@@ -215,12 +216,12 @@ def add_extra_fields(frontend_node, field_config, function_args):
         field_name, field_type, field_value, field_required = get_field_properties(extra_field)
         config = _field_config.pop(field_name, {})
         frontend_node = add_new_custom_field(
-            frontend_node,
-            field_name,
-            field_type,
-            field_value,
-            field_required,
-            config,
+            frontend_node=frontend_node,
+            field_name=field_name,
+            field_type=field_type,
+            field_value=field_value,
+            field_required=field_required,
+            field_config=config,
         )
     if "kwargs" in function_args_names and not all(key in function_args_names for key in field_config):
         for field_name, config in _field_config.items():
@@ -509,6 +510,7 @@ def update_field_dict(
     custom_component_instance: "CustomComponent",
     field_dict: dict,
     build_config: dict,
+    *,
     update_field: str | None = None,
     update_field_value: Any | None = None,
     call: bool = False,

@@ -46,6 +46,7 @@ def is_hidden(path: Path) -> bool:
 
 def retrieve_file_paths(
     path: str,
+    *,
     load_hidden: bool,
     recursive: bool,
     depth: int,
@@ -74,7 +75,7 @@ def retrieve_file_paths(
     return [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
 
-def partition_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
+def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
     # Use the partition function to load the file
     from unstructured.partition.auto import partition
 
@@ -122,7 +123,7 @@ def parse_pdf_to_text(file_path: str) -> str:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
-def parse_text_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
+def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
     try:
         if file_path.endswith(".pdf"):
             text = parse_pdf_to_text(file_path)
@@ -172,13 +173,14 @@ def parse_text_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
 
 def parallel_load_data(
     file_paths: list[str],
+    *,
     silent_errors: bool,
     max_concurrency: int,
     load_function: Callable = parse_text_file_to_data,
 ) -> list[Data | None]:
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
         loaded_files = executor.map(
-            lambda file_path: load_function(file_path, silent_errors),
+            lambda file_path: load_function(file_path, silent_errors=silent_errors),
             file_paths,
         )
     # loaded_files is an iterator, so we need to convert it to a list

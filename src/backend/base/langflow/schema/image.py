@@ -28,6 +28,7 @@ async def get_file_paths(files: list[str]):
 
 async def get_files(
     file_paths: list[str],
+    *,
     convert_to_base64: bool = False,
 ):
     storage_service = get_storage_service()
