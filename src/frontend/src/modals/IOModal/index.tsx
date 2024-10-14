@@ -67,7 +67,7 @@ export default function IOModal({
   const deleteSession = useMessagesStore((state) => state.deleteSession);
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
-  const [visibleSession, setvisibleSession] = useState<string|undefined>();
+  const [visibleSession, setvisibleSession] = useState<string | undefined>();
 
   function handleDeleteSession(session_id: string) {
     deleteSessionFunction(
@@ -82,7 +82,7 @@ export default function IOModal({
             title: "Session deleted successfully.",
           });
           deleteSession(session_id);
-          if(visibleSession === session_id){
+          if (visibleSession === session_id) {
             setvisibleSession(undefined);
           }
         },
@@ -263,9 +263,7 @@ export default function IOModal({
                     {outputs.length > 0 && (
                       <TabsTrigger value={"2"}>Outputs</TabsTrigger>
                     )}
-                    {haveChat && (
-                      <TabsTrigger value={"0"}>Chat</TabsTrigger>
-                    )}
+                    {haveChat && <TabsTrigger value={"0"}>Chat</TabsTrigger>}
                   </TabsList>
                 </div>
 
@@ -417,9 +415,7 @@ export default function IOModal({
                       }}
                       toggleVisibility={() => {
                         setvisibleSession((prev) =>
-                          prev === session
-                            ? undefined
-                            : session,
+                          prev === session ? undefined : session,
                         );
                       }}
                       isVisible={visibleSession === session}

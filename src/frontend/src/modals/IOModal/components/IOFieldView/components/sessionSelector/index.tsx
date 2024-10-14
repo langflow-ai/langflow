@@ -1,12 +1,17 @@
-import React, { useEffect, useRef, useState } from "react";
 import IconComponent from "@/components/genericIconComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select-custom";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import useFlowStore from "@/stores/flowStore";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select-custom";
 import { cn } from "@/utils/utils";
+import React, { useEffect, useRef, useState } from "react";
 
 export default function SessionSelector({
   deleteSession,
@@ -16,7 +21,7 @@ export default function SessionSelector({
   inspectSession,
   updateVisibleSession,
   selectedView,
-  setSelectedView
+  setSelectedView,
 }: {
   deleteSession: (session: string) => void;
   session: string;
@@ -24,7 +29,7 @@ export default function SessionSelector({
   isVisible: boolean;
   inspectSession: (session: string) => void;
   updateVisibleSession: (session: string) => void;
-  selectedView?:{ type: string; id: string }
+  selectedView?: { type: string; id: string };
   setSelectedView: (view: { type: string; id: string } | undefined) => void;
 }) {
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
@@ -33,11 +38,9 @@ export default function SessionSelector({
   const { mutate: updateSessionName } = useUpdateSessionName();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(()=>{
+  useEffect(() => {
     setEditedSession(session);
-  },[
-    session
-  ])
+  }, [session]);
 
   const handleEditClick = (e?: React.MouseEvent<HTMLDivElement>) => {
     e?.stopPropagation();
@@ -50,18 +53,21 @@ export default function SessionSelector({
 
   const handleConfirm = () => {
     setIsEditing(false);
-    if(editedSession.trim()!==session){
-    updateSessionName(
-      { old_session_id: session, new_session_id: editedSession.trim() },
-      {
-        onSuccess: () => {
-          if(isVisible){
-            updateVisibleSession(editedSession);
-          }
-          if(selectedView?.type==="Session" && selectedView?.id===session){
-            setSelectedView({type: "Session", id: editedSession})
-          }
-        },
+    if (editedSession.trim() !== session) {
+      updateSessionName(
+        { old_session_id: session, new_session_id: editedSession.trim() },
+        {
+          onSuccess: () => {
+            if (isVisible) {
+              updateVisibleSession(editedSession);
+            }
+            if (
+              selectedView?.type === "Session" &&
+              selectedView?.id === session
+            ) {
+              setSelectedView({ type: "Session", id: editedSession });
+            }
+          },
         },
       );
     }
@@ -87,7 +93,17 @@ export default function SessionSelector({
   };
 
   return (
-    <div data-testid="session-selector" onClick={(e)=>{if(isEditing)e.stopPropagation(); else toggleVisibility()}} className={cn("file-component-accordion-div cursor-pointer group hover:bg-muted-foreground/30 rounded-md",(isVisible) ? "bg-muted-foreground/15" : "")}>
+    <div
+      data-testid="session-selector"
+      onClick={(e) => {
+        if (isEditing) e.stopPropagation();
+        else toggleVisibility();
+      }}
+      className={cn(
+        "file-component-accordion-div group cursor-pointer rounded-md hover:bg-muted-foreground/30",
+        isVisible ? "bg-muted-foreground/15" : "",
+      )}
+    >
       <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3 align-middle">
         <div className="flex min-w-0 items-center gap-2">
           {isEditing ? (
@@ -104,7 +120,7 @@ export default function SessionSelector({
                 }}
                 onChange={handleInputChange}
                 onBlur={(e) => {
-                  console.log(e.relatedTarget)
+                  console.log(e.relatedTarget);
                   if (
                     !e.relatedTarget ||
                     e.relatedTarget.getAttribute("data-confirm") !== "true"
@@ -113,11 +129,11 @@ export default function SessionSelector({
                   }
                 }}
                 autoFocus
-                className="h-6 px-1 py-0 flex-grow"
+                className="h-6 flex-grow px-1 py-0"
               />
               <button
                 onClick={handleCancel}
-                className="ml-2 text-status-red hover:text-status-red-hover"
+                className="hover:text-status-red-hover ml-2 text-status-red"
               >
                 <IconComponent name="X" className="h-4 w-4" />
               </button>
@@ -144,31 +160,48 @@ export default function SessionSelector({
           )}
         </div>
         <Select value={""} onValueChange={handleSelectChange}>
-          <SelectTrigger onClick={(e)=>{
-            e.stopPropagation();
-          }} onFocusCapture={()=>{
-            inputRef.current?.focus();
-          }} data-confirm="true" className="w-8 h-8 p-0 border-none bg-transparent focus:ring-0">
+          <SelectTrigger
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            onFocusCapture={() => {
+              inputRef.current?.focus();
+            }}
+            data-confirm="true"
+            className="h-8 w-8 border-none bg-transparent p-0 focus:ring-0"
+          >
             <IconComponent name="MoreHorizontal" className="h-4 w-4" />
           </SelectTrigger>
           <SelectContent side="right" align="start" className="w-40 p-0">
-            <SelectItem value="rename" className="py-2 px-3 focus:bg-muted cursor-pointer">
+            <SelectItem
+              value="rename"
+              className="cursor-pointer px-3 py-2 focus:bg-muted"
+            >
               <div className="flex items-center">
                 <IconComponent name="Pencil" className="mr-2 h-4 w-4" />
                 Rename
               </div>
             </SelectItem>
-            <SelectItem value="messageLogs" className="py-2 px-3 focus:bg-muted cursor-pointer">
-              <div className="flex items-center justify-between w-full">
+            <SelectItem
+              value="messageLogs"
+              className="cursor-pointer px-3 py-2 focus:bg-muted"
+            >
+              <div className="flex w-full items-center justify-between">
                 <div className="flex items-center">
                   <IconComponent name="ScrollText" className="mr-2 h-4 w-4" />
                   Message logs
                 </div>
-                <IconComponent name="ExternalLink" className="h-4 w-4 absolute right-2" />
+                <IconComponent
+                  name="ExternalLink"
+                  className="absolute right-2 h-4 w-4"
+                />
               </div>
             </SelectItem>
-            <SelectItem value="delete" className="py-2 px-3 focus:bg-muted cursor-pointer">
-              <div className="flex items-center hover:text-status-red text-status-red">
+            <SelectItem
+              value="delete"
+              className="cursor-pointer px-3 py-2 focus:bg-muted"
+            >
+              <div className="flex items-center text-status-red hover:text-status-red">
                 <IconComponent name="Trash2" className="mr-2 h-4 w-4" />
                 Delete
               </div>

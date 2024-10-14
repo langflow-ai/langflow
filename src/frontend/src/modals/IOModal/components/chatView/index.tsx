@@ -51,7 +51,7 @@ export default function ChatView({
       .filter(
         (message) =>
           message.flow_id === currentFlowId &&
-          (visibleSession ===message.session_id ?? true),
+          (visibleSession === message.session_id ?? true),
       )
       .map((message) => {
         let files = message.files;
