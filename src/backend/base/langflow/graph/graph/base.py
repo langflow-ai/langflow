@@ -604,11 +604,15 @@ class Graph:
 
     def define_vertices_lists(self) -> None:
         """Defines the lists of vertices that are inputs, outputs, and have session_id."""
-        attributes = ["is_input", "is_output", "has_session_id", "is_state"]
         for vertex in self.vertices:
-            for attribute in attributes:
-                if getattr(vertex, attribute):
-                    getattr(self, f"_{attribute}_vertices").append(vertex.id)
+            if vertex.is_input:
+                self._is_input_vertices.append(vertex.id)
+            if vertex.is_output:
+                self._is_output_vertices.append(vertex.id)
+            if vertex.has_session_id:
+                self.has_session_id_vertices.append(vertex.id)
+            if vertex.is_state:
+                self._is_state_vertices.append(vertex.id)
 
     def _set_inputs(self, input_components: list[str], inputs: dict[str, str], input_type: InputType | None) -> None:
         for vertex_id in self._is_input_vertices:
