@@ -148,9 +148,6 @@ Note: Check 'Advanced' for all options.
             if include_images and search_results.get("images"):
                 data_results.append(Data(data={"images": search_results["images"]}))
 
-            self.status: Any = data_results
-            return data_results
-
         except httpx.HTTPStatusError as e:
             error_message = f"HTTP error: {e.response.status_code} - {e.response.text}"
             self.status = error_message
@@ -160,3 +157,6 @@ Note: Check 'Advanced' for all options.
             error_message = f"Unexpected error: {e}"
             self.status = error_message
             return [Data(data={"error": error_message})]
+
+        self.status: Any = data_results
+        return data_results

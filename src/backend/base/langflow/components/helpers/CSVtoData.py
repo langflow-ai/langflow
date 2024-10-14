@@ -38,46 +38,42 @@ class CSVToDataComponent(Component):
     ]
 
     def load_csv_to_data(self) -> list[Data]:
+        if sum(bool(field) for field in [self.csv_file, self.csv_path, self.csv_string]) != 1:
+            msg = "Please provide exactly one of: CSV file, file path, or CSV string."
+            raise ValueError(msg)
+
+        csv_data = None
         try:
-            if sum(bool(field) for field in [self.csv_file, self.csv_path, self.csv_string]) != 1:
-                msg = "Please provide exactly one of: CSV file, file path, or CSV string."
-                raise ValueError(msg)
-
-            csv_data = None
-
             if self.csv_file:
                 resolved_path = self.resolve_path(self.csv_file)
                 file_path = Path(resolved_path)
                 if file_path.suffix.lower() != ".csv":
-                    msg = "The provided file must be a CSV file."
-                    raise ValueError(msg)
-                with file_path.open(newline="", encoding="utf-8") as csvfile:
-                    csv_data = csvfile.read()
+                    self.status = "The provided file must be a CSV file."
+                else:
+                    with file_path.open(newline="", encoding="utf-8") as csvfile:
+                        csv_data = csvfile.read()
 
             elif self.csv_path:
                 file_path = Path(self.csv_path)
                 if file_path.suffix.lower() != ".csv":
-                    msg = "The provided file must be a CSV file."
-                    raise ValueError(msg)
-                with file_path.open(newline="", encoding="utf-8") as csvfile:
-                    csv_data = csvfile.read()
+                    self.status = "The provided file must be a CSV file."
+                else:
+                    with file_path.open(newline="", encoding="utf-8") as csvfile:
+                        csv_data = csvfile.read()
 
-            elif self.csv_string:
+            else:
                 csv_data = self.csv_string
 
-            if not csv_data:
-                msg = "No CSV data provided."
-                raise ValueError(msg)
+            if csv_data:
+                csv_reader = csv.DictReader(io.StringIO(csv_data))
+                result = [Data(data=row) for row in csv_reader]
 
-            csv_reader = csv.DictReader(io.StringIO(csv_data))
-            result = [Data(data=row) for row in csv_reader]
+                if not result:
+                    self.status = "The CSV data is empty."
+                    return []
 
-            if not result:
-                self.status = "The CSV data is empty."
-                return []
-
-            self.status = result
-            return result
+                self.status = result
+                return result
 
         except csv.Error as e:
             error_message = f"CSV parsing error: {e}"
@@ -88,3 +84,6 @@ class CSVToDataComponent(Component):
             error_message = f"An error occurred: {e}"
             self.status = error_message
             raise ValueError(error_message) from e
+
+        # An error occurred
+        raise ValueError(self.status)

@@ -96,7 +96,7 @@ class AddContentToPage(LCToolComponent):
                     heading_level = text.count("#", 0, 6)
                     heading_text = text[heading_level:].strip()
                     if heading_level in range(3):
-                        blocks.append(self.create_block(f"heading_{heading_level+1}", heading_text))
+                        blocks.append(self.create_block(f"heading_{heading_level + 1}", heading_text))
                 else:
                     blocks.append(self.create_block("paragraph", text))
         elif node.name == "h1":

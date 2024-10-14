@@ -28,10 +28,11 @@ class dotdict(dict):
             if isinstance(value, dict) and not isinstance(value, dotdict):
                 value = dotdict(value)
                 self[attr] = value  # Update self to nest dotdict for future accesses
-            return value
         except KeyError as e:
             msg = f"'dotdict' object has no attribute '{attr}'"
             raise AttributeError(msg) from e
+        else:
+            return value
 
     def __setattr__(self, key, value):
         """
