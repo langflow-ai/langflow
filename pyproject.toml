@@ -1,6 +1,6 @@
 [project]
-name = "langflow"
-version = "1.0.18"
+name = "langflow-nightly"
+version = "1.0.19.dev4"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 license = "MIT"
@@ -19,7 +19,7 @@ maintainers = [
 
 # Define your main dependencies here
 dependencies = [
-    "langflow-base==0.0.96",
+    "langflow-base-nightly==0.0.97.dev4",
     "beautifulsoup4>=4.12.2",
     "google-search-results>=2.4.1",
     "google-api-python-client>=2.130.0",
@@ -98,8 +98,8 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-langflow-base = { path = "src/backend/base" }
-langflow = { workspace = true }
+langflow-base-nightly = { path = "src/backend/base" }
+langflow-nightly = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
