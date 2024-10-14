@@ -6,9 +6,11 @@ import uuid
 from functools import partial
 
 from fastapi.encoders import jsonable_encoder
+from loguru import logger
 from typing_extensions import Protocol
 
 from langflow.schema.log import LoggableType
+from langflow.schema.playground_events import create_event_by_type
 
 
 class EventCallback(Protocol):
@@ -53,6 +55,13 @@ class EventManager:
         self.events[name] = _callback
 
     def send_event(self, *, event_type: str, data: LoggableType):
+        try:
+            playground_event = create_event_by_type(event_type, **data)
+            data = playground_event
+        except TypeError as e:
+            logger.debug(f"Error creating playground event: {e}")
+        except Exception:
+            raise
         jsonable_data = jsonable_encoder(data)
         json_data = {"event": event_type, "data": jsonable_data}
         event_id = uuid.uuid4()
