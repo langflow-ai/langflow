@@ -1,6 +1,9 @@
+from __future__ import annotations
+
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
-from langflow.services.database.models.user.crud import get_user_by_id
 from sqlmodel import Session
 
 from langflow.api.v1.schemas import Token
@@ -11,6 +14,7 @@ from langflow.services.auth.utils import (
     create_user_tokens,
 )
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
+from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_session, get_settings_service, get_variable_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.variable.service import VariableService
@@ -21,8 +25,8 @@ router = APIRouter(tags=["Login"])
 @router.post("/login", response_model=Token)
 async def login_to_get_access_token(
     response: Response,
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_session),
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: Annotated[Session, Depends(get_session)],
     # _: Session = Depends(get_current_active_user)
     settings_service=Depends(get_settings_service),
     variable_service: VariableService = Depends(get_variable_service),
@@ -32,7 +36,7 @@ async def login_to_get_access_token(
         user = authenticate_user(form_data.username, form_data.password, db)
     except Exception as exc:
         if isinstance(exc, HTTPException):
-            raise exc
+            raise
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
@@ -71,17 +75,16 @@ async def login_to_get_access_token(
         # Create default folder for user if it doesn't exist
         create_default_folder_if_it_doesnt_exist(db, user.id)
         return tokens
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect username or password",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 @router.get("/auto_login")
 async def auto_login(
-    response: Response, db: Session = Depends(get_session), settings_service=Depends(get_settings_service)
+    response: Response, db: Annotated[Session, Depends(get_session)], settings_service=Depends(get_settings_service)
 ):
     auth_settings = settings_service.auth_settings
 
@@ -128,8 +131,8 @@ async def auto_login(
 async def refresh_token(
     request: Request,
     response: Response,
-    settings_service: "SettingsService" = Depends(get_settings_service),
-    db: Session = Depends(get_session),
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+    db: Annotated[Session, Depends(get_session)],
 ):
     auth_settings = settings_service.auth_settings
 
@@ -156,12 +159,11 @@ async def refresh_token(
             domain=auth_settings.COOKIE_DOMAIN,
         )
         return tokens
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid refresh token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 @router.post("/logout")

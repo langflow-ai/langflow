@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import yaml
 from cachetools import TTLCache
@@ -10,11 +12,8 @@ from pydantic import BaseModel
 from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Data
-from langflow.schema.dotdict import dotdict
-from langflow.schema.schema import OutputValue
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
-from langflow.services.tracing.schema import Log
 from langflow.template.utils import update_frontend_node_with_template_values
 from langflow.type_extraction.type_extraction import post_process_type
 from langflow.utils import validate
@@ -24,13 +23,15 @@ if TYPE_CHECKING:
 
     from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
+    from langflow.schema.dotdict import dotdict
+    from langflow.schema.schema import OutputValue
     from langflow.services.storage.service import StorageService
+    from langflow.services.tracing.schema import Log
     from langflow.services.tracing.service import TracingService
 
 
 class CustomComponent(BaseComponent):
-    """
-    Represents a custom component in Langflow.
+    """Represents a custom component in Langflow.
 
     Attributes:
         name (Optional[str]): This attribute helps the frontend apply styles to known components.
@@ -69,7 +70,7 @@ class CustomComponent(BaseComponent):
     """The default frozen state of the component. Defaults to False."""
     build_parameters: dict | None = None
     """The build parameters of the component. Defaults to None."""
-    _vertex: Optional["Vertex"] = None
+    _vertex: Vertex | None = None
     """The edge target parameter of the component. Defaults to None."""
     _code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
@@ -81,12 +82,11 @@ class CustomComponent(BaseComponent):
     _outputs: list[OutputValue] = []
     _logs: list[Log] = []
     _output_logs: dict[str, Log] = {}
-    _tracing_service: Optional["TracingService"] = None
+    _tracing_service: TracingService | None = None
     _tree: dict | None = None
 
     def __init__(self, **data):
-        """
-        Initializes a new instance of the CustomComponent class.
+        """Initializes a new instance of the CustomComponent class.
 
         Args:
             **data: Additional keyword arguments to initialize the custom component.
@@ -110,39 +110,48 @@ class CustomComponent(BaseComponent):
 
     def update_state(self, name: str, value: Any):
         if not self._vertex:
-            raise ValueError("Vertex is not set")
+            msg = "Vertex is not set"
+            raise ValueError(msg)
         try:
             self._vertex.graph.update_state(name=name, record=value, caller=self._vertex.id)
         except Exception as e:
-            raise ValueError(f"Error updating state: {e}")
+            msg = f"Error updating state: {e}"
+            raise ValueError(msg) from e
 
     def stop(self, output_name: str | None = None):
         if not output_name and self._vertex and len(self._vertex.outputs) == 1:
             output_name = self._vertex.outputs[0]["name"]
         elif not output_name:
-            raise ValueError("You must specify an output name to call stop")
+            msg = "You must specify an output name to call stop"
+            raise ValueError(msg)
         if not self._vertex:
-            raise ValueError("Vertex is not set")
+            msg = "Vertex is not set"
+            raise ValueError(msg)
         try:
             self.graph.mark_branch(vertex_id=self._vertex.id, output_name=output_name, state="INACTIVE")
         except Exception as e:
-            raise ValueError(f"Error stopping {self.display_name}: {e}")
+            msg = f"Error stopping {self.display_name}: {e}"
+            raise ValueError(msg) from e
 
     def append_state(self, name: str, value: Any):
         if not self._vertex:
-            raise ValueError("Vertex is not set")
+            msg = "Vertex is not set"
+            raise ValueError(msg)
         try:
             self._vertex.graph.append_state(name=name, record=value, caller=self._vertex.id)
         except Exception as e:
-            raise ValueError(f"Error appending state: {e}")
+            msg = f"Error appending state: {e}"
+            raise ValueError(msg) from e
 
     def get_state(self, name: str):
         if not self._vertex:
-            raise ValueError("Vertex is not set")
+            msg = "Vertex is not set"
+            raise ValueError(msg)
         try:
             return self._vertex.graph.get_state(name=name)
         except Exception as e:
-            raise ValueError(f"Error getting state: {e}")
+            msg = f"Error getting state: {e}"
+            raise ValueError(msg) from e
 
     @staticmethod
     def resolve_path(path: str) -> str:
@@ -158,7 +167,7 @@ class CustomComponent(BaseComponent):
         return str(path_object)
 
     def get_full_path(self, path: str) -> str:
-        storage_svc: "StorageService" = get_storage_service()
+        storage_svc: StorageService = get_storage_service()
 
         flow_id, file_name = path.split("/", 1)
         return storage_svc.build_full_path(flow_id, file_name)
@@ -185,8 +194,7 @@ class CustomComponent(BaseComponent):
         return self.field_order or list(self.field_config.keys())
 
     def custom_repr(self):
-        """
-        Returns the custom representation of the custom component.
+        """Returns the custom representation of the custom component.
 
         Returns:
             str: The custom representation of the custom component.
@@ -202,8 +210,7 @@ class CustomComponent(BaseComponent):
         return self.repr_value
 
     def build_config(self):
-        """
-        Builds the configuration for the custom component.
+        """Builds the configuration for the custom component.
 
         Returns:
             dict: The configuration for the custom component.
@@ -221,25 +228,26 @@ class CustomComponent(BaseComponent):
 
     @property
     def tree(self):
-        """
-        Gets the code tree of the custom component.
+        """Gets the code tree of the custom component.
 
         Returns:
             dict: The code tree of the custom component.
         """
         return self.get_code_tree(self._code or "")
 
-    def to_data(self, data: Any, keys: list[str] | None = None, silent_errors: bool = False) -> list[Data]:
-        """
-        Converts input data into a list of Data objects.
+    def to_data(self, data: Any, *, keys: list[str] | None = None, silent_errors: bool = False) -> list[Data]:
+        """Converts input data into a list of Data objects.
 
         Args:
             data (Any): The input data to be converted. It can be a single item or a sequence of items.
-            If the input data is a Langchain Document, text_key and data_key are ignored.
+                If the input data is a Langchain Document, text_key and data_key are ignored.
 
             keys (List[str], optional): The keys to access the text and data values in each item.
-                It should be a list of strings where the first element is the text key and the second element is the data key.
+                It should be a list of strings where the first element is the text key and the second element
+                is the data key.
                 Defaults to None, in which case the default keys "text" and "data" are used.
+            silent_errors (bool, optional): Whether to suppress errors when the specified keys are not found
+                in the data.
 
         Returns:
             List[Data]: A list of Data objects.
@@ -266,15 +274,17 @@ class CustomComponent(BaseComponent):
                     else:
                         try:
                             data_dict[key] = model_dump[key]
-                        except KeyError:
-                            raise ValueError(f"Key {key} not found in {item}")
+                        except KeyError as e:
+                            msg = f"Key {key} not found in {item}"
+                            raise ValueError(msg) from e
 
             elif isinstance(item, str):
                 data_dict = {"text": item}
             elif isinstance(item, dict):
                 data_dict = item.copy()
             else:
-                raise ValueError(f"Invalid data type: {type(item)}")
+                msg = f"Invalid data type: {type(item)}"
+                raise TypeError(msg)
 
             data_objects.append(Data(data=data_dict))
 
@@ -288,9 +298,8 @@ class CustomComponent(BaseComponent):
 
         return self._extract_return_type(return_type)
 
-    def create_references_from_data(self, data: list[Data], include_data: bool = False) -> str:
-        """
-        Create references from a list of data.
+    def create_references_from_data(self, data: list[Data], *, include_data: bool = False) -> str:
+        """Create references from a list of data.
 
         Args:
             data (List[dict]): A list of data, where each record is a dictionary.
@@ -311,8 +320,7 @@ class CustomComponent(BaseComponent):
 
     @property
     def get_function_entrypoint_args(self) -> list:
-        """
-        Gets the arguments of the function entrypoint for the custom component.
+        """Gets the arguments of the function entrypoint for the custom component.
 
         Returns:
             list: The arguments of the function entrypoint.
@@ -329,8 +337,7 @@ class CustomComponent(BaseComponent):
         return args
 
     def get_method(self, method_name: str):
-        """
-        Gets the build method for the custom component.
+        """Gets the build method for the custom component.
 
         Returns:
             dict: The build method for the custom component.
@@ -352,8 +359,7 @@ class CustomComponent(BaseComponent):
 
     @property
     def get_function_entrypoint_return_type(self) -> list[Any]:
-        """
-        Gets the return type of the function entrypoint for the custom component.
+        """Gets the return type of the function entrypoint for the custom component.
 
         Returns:
             List[Any]: The return type of the function entrypoint.
@@ -365,8 +371,7 @@ class CustomComponent(BaseComponent):
 
     @property
     def get_main_class_name(self):
-        """
-        Gets the main class name of the custom component.
+        """Gets the main class name of the custom component.
 
         Returns:
             str: The main class name of the custom component.
@@ -389,8 +394,7 @@ class CustomComponent(BaseComponent):
 
     @property
     def template_config(self):
-        """
-        Gets the template configuration for the custom component.
+        """Gets the template configuration for the custom component.
 
         Returns:
             dict: The template configuration for the custom component.
@@ -401,8 +405,7 @@ class CustomComponent(BaseComponent):
 
     @property
     def variables(self):
-        """
-        Returns the variable for the current user with the specified name.
+        """Returns the variable for the current user with the specified name.
 
         Raises:
             ValueError: If the user id is not set.
@@ -413,7 +416,8 @@ class CustomComponent(BaseComponent):
 
         def get_variable(name: str, field: str):
             if hasattr(self, "_user_id") and not self.user_id:
-                raise ValueError(f"User id is not set for {self.__class__.__name__}")
+                msg = f"User id is not set for {self.__class__.__name__}"
+                raise ValueError(msg)
             variable_service = get_variable_service()  # Get service instance
             # Retrieve and decrypt the variable by name for the current user
             with session_scope() as session:
@@ -423,8 +427,7 @@ class CustomComponent(BaseComponent):
         return get_variable
 
     def list_key_names(self):
-        """
-        Lists the names of the variables for the current user.
+        """Lists the names of the variables for the current user.
 
         Raises:
             ValueError: If the user id is not set.
@@ -433,15 +436,15 @@ class CustomComponent(BaseComponent):
             List[str]: The names of the variables for the current user.
         """
         if hasattr(self, "_user_id") and not self.user_id:
-            raise ValueError(f"User id is not set for {self.__class__.__name__}")
+            msg = f"User id is not set for {self.__class__.__name__}"
+            raise ValueError(msg)
         variable_service = get_variable_service()
 
         with session_scope() as session:
             return variable_service.list_variables(user_id=self.user_id, session=session)
 
     def index(self, value: int = 0):
-        """
-        Returns a function that returns the value at the given index in the iterable.
+        """Returns a function that returns the value at the given index in the iterable.
 
         Args:
             value (int): The index value.
@@ -456,17 +459,17 @@ class CustomComponent(BaseComponent):
         return get_index
 
     def get_function(self):
-        """
-        Gets the function associated with the custom component.
+        """Gets the function associated with the custom component.
 
         Returns:
             Callable: The function associated with the custom component.
         """
         return validate.create_function(self._code, self._function_entrypoint_name)
 
-    async def load_flow(self, flow_id: str, tweaks: dict | None = None) -> "Graph":
+    async def load_flow(self, flow_id: str, tweaks: dict | None = None) -> Graph:
         if not self.user_id:
-            raise ValueError("Session is invalid")
+            msg = "Session is invalid"
+            raise ValueError(msg)
         return await load_flow(user_id=str(self._user_id), flow_id=flow_id, tweaks=tweaks)
 
     async def run_flow(
@@ -489,15 +492,16 @@ class CustomComponent(BaseComponent):
 
     def list_flows(self) -> list[Data]:
         if not self.user_id:
-            raise ValueError("Session is invalid")
+            msg = "Session is invalid"
+            raise ValueError(msg)
         try:
             return list_flows(user_id=str(self._user_id))
         except Exception as e:
-            raise ValueError(f"Error listing flows: {e}")
+            msg = f"Error listing flows: {e}"
+            raise ValueError(msg) from e
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
-        """
-        Builds the custom component.
+        """Builds the custom component.
 
         Args:
             *args: The positional arguments.
@@ -509,15 +513,12 @@ class CustomComponent(BaseComponent):
         raise NotImplementedError
 
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
-        """
-        This function is called after the code validation is done.
-        """
-        frontend_node = update_frontend_node_with_template_values(
+        """This function is called after the code validation is done."""
+        return update_frontend_node_with_template_values(
             frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node
         )
-        return frontend_node
 
-    def get_langchain_callbacks(self) -> list["BaseCallbackHandler"]:
+    def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
         if self._tracing_service:
             return self._tracing_service.get_langchain_callbacks()
         return []

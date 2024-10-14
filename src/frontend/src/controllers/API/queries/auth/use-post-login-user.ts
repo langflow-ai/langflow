@@ -7,7 +7,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 export const useLoginUser: useMutationFunctionType<undefined, LoginType> = (
   options?,
 ) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   async function loginUserFn({ password, username }: LoginType): Promise<any> {
     const res = await api.post(
@@ -28,7 +28,13 @@ export const useLoginUser: useMutationFunctionType<undefined, LoginType> = (
   const mutation: UseMutationResult<LoginType, any, LoginType> = mutate(
     ["useLoginUser"],
     loginUserFn,
-    options,
+    {
+      ...options,
+      onSettled: () => {
+        queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+        queryClient.refetchQueries({ queryKey: ["useGetTags"] });
+      },
+    },
   );
 
   return mutation;

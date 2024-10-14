@@ -1,23 +1,17 @@
 from copy import deepcopy
-from typing import TYPE_CHECKING
 
 from chromadb.config import Settings
-from langchain_chroma.vectorstores import Chroma
+from langchain_chroma import Chroma
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
-from langflow.io import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, StrInput, MultilineInput
+from langflow.io import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, MultilineInput, StrInput
 from langflow.schema import Data
-
-if TYPE_CHECKING:
-    from langchain_chroma import Chroma
 
 
 class ChromaVectorStoreComponent(LCVectorStoreComponent):
-    """
-    Chroma Vector Store with search capabilities
-    """
+    """Chroma Vector Store with search capabilities."""
 
     display_name: str = "Chroma DB"
     description: str = "Chroma Vector Store with search capabilities"
@@ -100,16 +94,13 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> Chroma:
-        """
-        Builds the Chroma object.
-        """
+        """Builds the Chroma object."""
         try:
             from chromadb import Client
             from langchain_chroma import Chroma
-        except ImportError:
-            raise ImportError(
-                "Could not import Chroma integration package. " "Please install it with `pip install langchain-chroma`."
-            )
+        except ImportError as e:
+            msg = "Could not import Chroma integration package. Please install it with `pip install langchain-chroma`."
+            raise ImportError(msg) from e
         # Chroma settings
         chroma_settings = None
         client = None
@@ -124,10 +115,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             client = Client(settings=chroma_settings)
 
         # Check persist_directory and expand it if it is a relative path
-        if self.persist_directory is not None:
-            persist_directory = self.resolve_path(self.persist_directory)
-        else:
-            persist_directory = None
+        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None
 
         chroma = Chroma(
             persist_directory=persist_directory,
@@ -141,9 +129,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         return chroma
 
     def _add_documents_to_vector_store(self, vector_store: "Chroma") -> None:
-        """
-        Adds documents to the Vector Store.
-        """
+        """Adds documents to the Vector Store."""
         if not self.ingest_data:
             self.status = ""
             return
@@ -163,7 +149,8 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                 if _input not in _stored_documents_without_id:
                     documents.append(_input.to_lc_document())
             else:
-                raise ValueError("Vector Store Inputs must be Data objects.")
+                msg = "Vector Store Inputs must be Data objects."
+                raise TypeError(msg)
 
         if documents and self.embedding is not None:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")

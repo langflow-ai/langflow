@@ -8,21 +8,21 @@ from .GoogleGenerativeAIModel import GoogleGenerativeAIComponent
 from .HuggingFaceModel import HuggingFaceEndpointsComponent
 from .OllamaModel import ChatOllamaComponent
 from .OpenAIModel import OpenAIModelComponent
-from .VertexAiModel import ChatVertexAIComponent
 from .PerplexityModel import PerplexityComponent
+from .VertexAiModel import ChatVertexAIComponent
 
 __all__ = [
     "AIMLModelComponent",
     "AmazonBedrockComponent",
     "AnthropicModelComponent",
     "AzureChatOpenAIComponent",
-    "QianfanChatEndpointComponent",
+    "ChatOllamaComponent",
+    "ChatVertexAIComponent",
     "CohereComponent",
     "GoogleGenerativeAIComponent",
     "HuggingFaceEndpointsComponent",
-    "ChatOllamaComponent",
     "OpenAIModelComponent",
-    "ChatVertexAIComponent",
     "PerplexityComponent",
+    "QianfanChatEndpointComponent",
     "base",
 ]

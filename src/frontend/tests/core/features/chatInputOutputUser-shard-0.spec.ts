@@ -33,6 +33,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
@@ -65,7 +66,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByTestId("edit-button-modal").click();
   await page.getByText("Close").last().click();
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   // Read the image file as a binary string
   const filePath = "tests/assets/chain.png";

@@ -1,5 +1,7 @@
-import warnings
-from typing import Any, List, Optional
+from typing import Any
+
+from loguru import logger
+from typing_extensions import override
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.base.tools.flow_tool import FlowTool
@@ -19,13 +21,12 @@ class FlowToolComponent(LCToolComponent):
     name = "FlowTool"
     beta = True
 
-    def get_flow_names(self) -> List[str]:
+    def get_flow_names(self) -> list[str]:
         flow_datas = self.list_flows()
         return [flow_data.data["name"] for flow_data in flow_datas]
 
-    def get_flow(self, flow_name: str) -> Optional[Data]:
-        """
-        Retrieves a flow by its name.
+    def get_flow(self, flow_name: str) -> Data | None:
+        """Retrieves a flow by its name.
 
         Args:
             flow_name (str): The name of the flow to retrieve.
@@ -39,6 +40,7 @@ class FlowToolComponent(LCToolComponent):
                 return flow_data
         return None
 
+    @override
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name":
             build_config["flow_name"]["options"] = self.get_flow_names()
@@ -50,12 +52,12 @@ class FlowToolComponent(LCToolComponent):
             name="flow_name", display_name="Flow Name", info="The name of the flow to run.", refresh_button=True
         ),
         StrInput(
-            name="name",
+            name="tool_name",
             display_name="Name",
             info="The name of the tool.",
         ),
         StrInput(
-            name="description",
+            name="tool_description",
             display_name="Description",
             info="The description of the tool.",
         ),
@@ -74,20 +76,22 @@ class FlowToolComponent(LCToolComponent):
     def build_tool(self) -> Tool:
         FlowTool.update_forward_refs()
         if "flow_name" not in self._attributes or not self._attributes["flow_name"]:
-            raise ValueError("Flow name is required")
+            msg = "Flow name is required"
+            raise ValueError(msg)
         flow_name = self._attributes["flow_name"]
         flow_data = self.get_flow(flow_name)
         if not flow_data:
-            raise ValueError("Flow not found.")
+            msg = "Flow not found."
+            raise ValueError(msg)
         graph = Graph.from_payload(flow_data.data["data"])
         try:
             graph.set_run_id(self.graph.run_id)
-        except Exception as e:
-            warnings.warn(f"Failed to set run_id: {e}")
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).warning("Failed to set run_id")
         inputs = get_flow_inputs(graph)
         tool = FlowTool(
-            name=self.name,
-            description=self.description,
+            name=self.tool_name,
+            description=self.tool_description,
             graph=graph,
             return_direct=self.return_direct,
             inputs=inputs,
@@ -97,4 +101,4 @@ class FlowToolComponent(LCToolComponent):
         description_repr = repr(tool.description).strip("'")
         args_str = "\n".join([f"- {arg_name}: {arg_data['description']}" for arg_name, arg_data in tool.args.items()])
         self.status = f"{description_repr}\nArguments:\n{args_str}"
-        return tool  # type: ignore
+        return tool

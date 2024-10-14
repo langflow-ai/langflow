@@ -1,4 +1,5 @@
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
@@ -36,11 +37,12 @@ export default function ChatInput({
   const [inputFocus, setInputFocus] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { validateFileSize } = useFileSizeValidator(setErrorData);
 
   useFocusOnUnlock(lockChat, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
 
-  const { mutate, isPending } = usePostUploadFile();
+  const { mutate } = usePostUploadFile();
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
@@ -62,9 +64,12 @@ export default function ChatInput({
       const fileInput = event.target as HTMLInputElement;
       file = fileInput.files?.[0] ?? null;
     }
-
     if (file) {
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+      if (!validateFileSize(file)) {
+        return;
+      }
 
       if (
         !fileExtension ||
@@ -99,13 +104,17 @@ export default function ChatInput({
               return newFiles;
             });
           },
-          onError: () => {
+          onError: (error) => {
             setFiles((prev) => {
               const newFiles = [...prev];
               const updatedIndex = newFiles.findIndex((file) => file.id === id);
               newFiles[updatedIndex].loading = false;
               newFiles[updatedIndex].error = true;
               return newFiles;
+            });
+            setErrorData({
+              title: "Error uploading file",
+              list: [error.response?.data?.detail],
             });
           },
         },

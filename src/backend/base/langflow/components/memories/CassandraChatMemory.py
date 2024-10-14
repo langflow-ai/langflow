@@ -1,6 +1,6 @@
 from langflow.base.memory.model import LCChatMemoryComponent
-from langflow.inputs import MessageTextInput, SecretStrInput, DictInput
 from langflow.field_typing import BaseChatMessageHistory
+from langflow.inputs import DictInput, MessageTextInput, SecretStrInput
 
 
 class CassandraChatMemory(LCChatMemoryComponent):
@@ -54,10 +54,9 @@ class CassandraChatMemory(LCChatMemoryComponent):
 
         try:
             import cassio
-        except ImportError:
-            raise ImportError(
-                "Could not import cassio integration package. " "Please install it with `pip install cassio`."
-            )
+        except ImportError as e:
+            msg = "Could not import cassio integration package. Please install it with `pip install cassio`."
+            raise ImportError(msg) from e
 
         from uuid import UUID
 

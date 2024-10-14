@@ -34,6 +34,7 @@ test("user must be able to send an image on chat using advanced tool on ChatInpu
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
@@ -90,7 +91,7 @@ test("user must be able to send an image on chat using advanced tool on ChatInpu
     timeout: 15000,
   });
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page.waitForTimeout(500);
 

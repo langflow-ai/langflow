@@ -1,15 +1,15 @@
 import asyncio
 import json
 import os
+import re
 import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlencode
 
-import nest_asyncio  # type: ignore
-from fastapi import FastAPI, HTTPException, Request, Response
+import nest_asyncio
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -29,11 +29,14 @@ from langflow.initial_setup.setup import (
 from langflow.interface.types import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
-from langflow.services.deps import get_cache_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+
+
+MAX_PORT = 65535
 
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
@@ -59,8 +62,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
 
         if cancel_task in done:
             return Response("Request was cancelled", status_code=499)
-        else:
-            return await handler_task
+        return await handler_task
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
@@ -69,18 +71,28 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         except Exception as exc:
             if isinstance(exc, PydanticSerializationError):
-                message = "Something went wrong while serializing the response. Please share this error on our GitHub repository."
+                message = (
+                    "Something went wrong while serializing the response. "
+                    "Please share this error on our GitHub repository."
+                )
                 error_messages = json.dumps([message, str(exc)])
                 raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages) from exc
-            raise exc
-        if "files/" not in request.url.path and request.url.path.endswith(".js") and response.status_code == 200:
+            raise
+        if (
+            "files/" not in request.url.path
+            and request.url.path.endswith(".js")
+            and response.status_code == HTTPStatus.OK
+        ):
             response.headers["Content-Type"] = "text/javascript"
         return response
 
 
-def get_lifespan(fix_migration=False, socketio_server=None, version=None):
+telemetry_service_tasks = set()
+
+
+def get_lifespan(*, fix_migration=False, version=None):
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
+    async def lifespan(_app: FastAPI):
         nest_asyncio.apply()
         # Startup message
         if version:
@@ -88,17 +100,19 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
         else:
             rprint("[bold green]Starting Langflow...[/bold green]")
         try:
-            initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
+            initialize_services(fix_migration=fix_migration)
             setup_llm_caching()
             initialize_super_user_if_needed()
-            task = asyncio.create_task(get_and_cache_all_types_dict(get_settings_service(), get_cache_service()))
+            task = asyncio.create_task(get_and_cache_all_types_dict(get_settings_service()))
             await create_or_update_starter_projects(task)
-            asyncio.create_task(get_telemetry_service().start())
+            telemetry_service_task = asyncio.create_task(get_telemetry_service().start())
+            telemetry_service_tasks.add(telemetry_service_task)
+            telemetry_service_task.add_done_callback(telemetry_service_tasks.discard)
             load_flows_from_directory()
             yield
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
-                logger.error(exc)
+                logger.exception(exc)
             raise
         # Shutdown message
         rprint("[bold red]Shutting down Langflow...[/bold red]")
@@ -129,6 +143,38 @@ def create_app():
     app.add_middleware(JavaScriptMIMETypeMiddleware)
 
     @app.middleware("http")
+    async def check_boundary(request: Request, call_next):
+        if "/api/v1/files/upload" in request.url.path:
+            content_type = request.headers.get("Content-Type")
+
+            if not content_type or "multipart/form-data" not in content_type or "boundary=" not in content_type:
+                return JSONResponse(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    content={"detail": "Content-Type header must be 'multipart/form-data' with a boundary parameter."},
+                )
+
+            boundary = content_type.split("boundary=")[-1].strip()
+
+            if not re.match(r"^[\w\-]{1,70}$", boundary):
+                return JSONResponse(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    content={"detail": "Invalid boundary format"},
+                )
+
+            body = await request.body()
+
+            boundary_start = f"--{boundary}".encode()
+            boundary_end = f"--{boundary}--\r\n".encode()
+
+            if not body.startswith(boundary_start) or not body.endswith(boundary_end):
+                return JSONResponse(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    content={"detail": "Invalid multipart formatting"},
+                )
+
+        return await call_next(request)
+
+    @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
@@ -142,15 +188,16 @@ def create_app():
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
-        if prome_port > 0 or prome_port < 65535:
+        if prome_port > 0 or prome_port < MAX_PORT:
             rprint(f"[bold green]Starting Prometheus server on port {prome_port}...[/bold green]")
             settings.prometheus_enabled = True
             settings.prometheus_port = prome_port
         else:
-            raise ValueError(f"Invalid port number {prome_port_str}")
+            msg = f"Invalid port number {prome_port_str}"
+            raise ValueError(msg)
 
     if settings.prometheus_enabled:
-        from prometheus_client import start_http_server  # type: ignore
+        from prometheus_client import start_http_server
 
         start_http_server(settings.prometheus_port)
 
@@ -159,19 +206,18 @@ def create_app():
     app.include_router(log_router)
 
     @app.exception_handler(Exception)
-    async def exception_handler(request: Request, exc: Exception):
+    async def exception_handler(_request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
-            logger.error(f"HTTPException: {exc.detail}")
+            logger.error(f"HTTPException: {exc}", exc_info=exc)
             return JSONResponse(
                 status_code=exc.status_code,
                 content={"message": str(exc.detail)},
             )
-        else:
-            logger.error(f"unhandled error: {exc}")
-            return JSONResponse(
-                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                content={"message": str(exc)},
-            )
+        logger.error(f"unhandled error: {exc}", exc_info=exc)
+        return JSONResponse(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            content={"message": str(exc)},
+        )
 
     FastAPIInstrumentor.instrument_app(app)
 
@@ -193,11 +239,11 @@ def setup_sentry(app: FastAPI):
 
 
 def setup_static_files(app: FastAPI, static_files_dir: Path):
-    """
-    Setup the static files directory.
+    """Setup the static files directory.
+
     Args:
         app (FastAPI): FastAPI app.
-        path (str): Path to the static files directory.
+        static_files_dir (str): Path to the static files directory.
     """
     app.mount(
         "/",
@@ -206,11 +252,12 @@ def setup_static_files(app: FastAPI, static_files_dir: Path):
     )
 
     @app.exception_handler(404)
-    async def custom_404_handler(request, __):
+    async def custom_404_handler(_request, _exc):
         path = static_files_dir / "index.html"
 
         if not path.exists():
-            raise RuntimeError(f"File at path {path} does not exist.")
+            msg = f"File at path {path} does not exist."
+            raise RuntimeError(msg)
         return FileResponse(path)
 
 
@@ -220,7 +267,7 @@ def get_static_files_dir():
     return frontend_path / "frontend"
 
 
-def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = False) -> FastAPI:
+def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = False) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     logger.info(f"Setting up app with static files directory {static_files_dir}")
@@ -228,7 +275,8 @@ def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = Fals
         static_files_dir = get_static_files_dir()
 
     if not backend_only and (not static_files_dir or not static_files_dir.exists()):
-        raise RuntimeError(f"Static files directory {static_files_dir} does not exist.")
+        msg = f"Static files directory {static_files_dir} does not exist."
+        raise RuntimeError(msg)
     app = create_app()
     if not backend_only and static_files_dir is not None:
         setup_static_files(app, static_files_dir)

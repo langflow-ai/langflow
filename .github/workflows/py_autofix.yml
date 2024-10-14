@@ -14,32 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: install-pinned/ruff@826c99bfba88282a5506ab737c92253a106c070e
+      - uses: install-pinned/ruff@f5afd2b0fca6556debe3e07025fc90e04fb3c44c
       - run: ruff check --fix-only .
       - run: ruff format .
       - uses: autofix-ci/action@dd55f44df8f7cdb7a6bf74c78677eb8acd40cd0a
-  lock:
-    name: Check Poetry lock
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python 3.12
-        uses: "./.github/actions/poetry_caching"
-        with:
-          python-version: "3.12"
-          poetry-version: ${{ env.POETRY_VERSION }}
-          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-      - name: Check poetry.lock
-        id: check
-        run: |
-          poetry check --lock
-        continue-on-error: true
-
-      - name: Run lock
-        if : steps.check.outcome == 'failure'
-        run: |
-          make lock
-      - uses: autofix-ci/action@dd55f44df8f7cdb7a6bf74c78677eb8acd40cd0a
-      - name: Diff poetry.lock
-        uses: nborrmann/diff-poetry-lock@main
-        continue-on-error: true

@@ -52,7 +52,14 @@ test("should like and add components and flows", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
-  await page.waitForTimeout(5000);
+
+  await page.waitForSelector('[data-testid="likes-Website Content QA"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("likes-Website Content QA").isVisible();
+
+  await page.waitForTimeout(1000);
 
   const likedValue = await page
     .getByTestId("likes-Website Content QA")
@@ -60,7 +67,12 @@ test("should like and add components and flows", async ({ page }) => {
 
   await page.getByTestId("like-Website Content QA").click();
 
-  await page.waitForTimeout(5000);
+  await page.waitForSelector('[data-testid="likes-Website Content QA"]', {
+    timeout: 100000,
+  });
+
+  await page.waitForTimeout(1000);
+
   const likedValueAfter = await page
     .getByTestId("likes-Website Content QA")
     .innerText();
@@ -69,14 +81,21 @@ test("should like and add components and flows", async ({ page }) => {
     expect(false).toBe(true);
   }
 
+  await page.waitForSelector('[data-testid="downloads-Website Content QA"]', {
+    timeout: 100000,
+  });
+
   const downloadValue = await page
     .getByTestId("downloads-Website Content QA")
     .innerText();
 
+  await page.waitForTimeout(1000);
+
   await page.getByTestId("install-Website Content QA").click();
   await page.waitForTimeout(1000);
+
   await page.getByText("Flow Installed Successfully").isVisible();
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(1000);
 
   const downloadValueAfter = await page
     .getByTestId("downloads-Website Content QA")
@@ -89,12 +108,19 @@ test("should like and add components and flows", async ({ page }) => {
   await page.getByTestId("install-Basic RAG").click();
   await page.waitForTimeout(1000);
   await page.getByText("Component Installed Successfully").isVisible();
-  await page.waitForTimeout(5000);
 
   await page.getByText("My Collection").click();
+  await page.waitForTimeout(1000);
+
+  await page.waitForSelector("text=Website Content QA", { timeout: 30000 });
+
   await page.getByText("Website Content QA").first().isVisible();
 
   await page.getByText("Components").first().click();
+  await page.waitForTimeout(1000);
+
+  await page.waitForSelector("text=Basic RAG", { timeout: 30000 });
+
   await page.getByText("Basic RAG").first().isVisible();
 });
 

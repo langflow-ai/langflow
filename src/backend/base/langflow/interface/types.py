@@ -1,25 +1,24 @@
-import asyncio
+from __future__ import annotations
+
 import json
 from typing import TYPE_CHECKING
 
 from loguru import logger
+
 from langflow.custom.utils import abuild_custom_components, build_custom_components
 
 if TYPE_CHECKING:
-    from langflow.services.cache.base import CacheService
     from langflow.services.settings.service import SettingsService
 
 
 async def aget_all_types_dict(components_paths):
     """Get all types dictionary combining native and custom components."""
-    custom_components_from_file = await abuild_custom_components(components_paths=components_paths)
-    return custom_components_from_file
+    return await abuild_custom_components(components_paths=components_paths)
 
 
 def get_all_types_dict(components_paths):
     """Get all types dictionary combining native and custom components."""
-    custom_components_from_file = build_custom_components(components_paths=components_paths)
-    return custom_components_from_file
+    return build_custom_components(components_paths=components_paths)
 
 
 # TypeError: unhashable type: 'list'
@@ -28,7 +27,7 @@ def key_func(*args, **kwargs):
     return json.dumps(args) + json.dumps(kwargs)
 
 
-async def aget_all_components(components_paths, as_dict=False):
+async def aget_all_components(components_paths, *, as_dict=False):
     """Get all components names combining native and custom components."""
     all_types_dict = await aget_all_types_dict(components_paths)
     components = {} if as_dict else []
@@ -42,7 +41,7 @@ async def aget_all_components(components_paths, as_dict=False):
     return components
 
 
-def get_all_components(components_paths, as_dict=False):
+def get_all_components(components_paths, *, as_dict=False):
     """Get all components names combining native and custom components."""
     all_types_dict = get_all_types_dict(components_paths)
     components = [] if not as_dict else {}
@@ -60,12 +59,9 @@ all_types_dict_cache = None
 
 
 async def get_and_cache_all_types_dict(
-    settings_service: "SettingsService",
-    cache_service: "CacheService",
-    force_refresh: bool = False,
-    lock: asyncio.Lock | None = None,
+    settings_service: SettingsService,
 ):
-    global all_types_dict_cache
+    global all_types_dict_cache  # noqa: PLW0603
     if all_types_dict_cache is None:
         logger.debug("Building langchain types dict")
         all_types_dict_cache = await aget_all_types_dict(settings_service.settings.components_path)

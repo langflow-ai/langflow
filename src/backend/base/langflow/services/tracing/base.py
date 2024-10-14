@@ -1,12 +1,16 @@
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, Optional
-from uuid import UUID
+from __future__ import annotations
 
-from langflow.services.tracing.schema import Log
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
+    from collections.abc import Sequence
+    from uuid import UUID
+
     from langchain.callbacks.base import BaseCallbackHandler
+
+    from langflow.graph.vertex.base import Vertex
+    from langflow.services.tracing.schema import Log
 
 
 class BaseTracer(ABC):
@@ -14,6 +18,7 @@ class BaseTracer(ABC):
     def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
         raise NotImplementedError
 
+    @property
     @abstractmethod
     def ready(self) -> bool:
         raise NotImplementedError
@@ -24,9 +29,9 @@ class BaseTracer(ABC):
         trace_id: str,
         trace_name: str,
         trace_type: str,
-        inputs: Dict[str, Any],
-        metadata: Dict[str, Any] | None = None,
-        vertex: Optional["Vertex"] = None,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+        vertex: Vertex | None = None,
     ):
         raise NotImplementedError
 
@@ -35,9 +40,9 @@ class BaseTracer(ABC):
         self,
         trace_id: str,
         trace_name: str,
-        outputs: Dict[str, Any] | None = None,
+        outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
-        logs: list[Log | dict] = [],
+        logs: Sequence[Log | dict] = (),
     ):
         raise NotImplementedError
 
@@ -45,12 +50,12 @@ class BaseTracer(ABC):
     def end(
         self,
         inputs: dict[str, Any],
-        outputs: Dict[str, Any],
+        outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):
         raise NotImplementedError
 
     @abstractmethod
-    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
+    def get_langchain_callback(self) -> BaseCallbackHandler | None:
         raise NotImplementedError

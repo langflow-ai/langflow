@@ -1,8 +1,9 @@
 import base64
 import random
 import warnings
+from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Coroutine, Optional, Union
+from typing import Annotated
 from uuid import UUID
 
 from cryptography.fernet import Fernet
@@ -26,15 +27,17 @@ API_KEY_NAME = "x-api-key"
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
+MINIMUM_KEY_LENGTH = 32
+
 
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
 async def api_key_security(
     query_param: str = Security(api_key_query),
     header_param: str = Security(api_key_header),
     db: Session = Depends(get_session),
-) -> Optional[UserRead]:
+) -> UserRead | None:
     settings_service = get_settings_service()
-    result: Optional[Union[ApiKey, User]] = None
+    result: ApiKey | User | None = None
     if settings_service.auth_settings.AUTO_LOGIN:
         # Get the first user
         if not settings_service.auth_settings.SUPERUSER:
@@ -64,9 +67,10 @@ async def api_key_security(
         )
     if isinstance(result, ApiKey):
         return UserRead.model_validate(result.user, from_attributes=True)
-    elif isinstance(result, User):
+    if isinstance(result, User):
         return UserRead.model_validate(result, from_attributes=True)
-    raise ValueError("Invalid result type")
+    msg = "Invalid result type"
+    raise ValueError(msg)
 
 
 async def get_current_user(
@@ -77,15 +81,14 @@ async def get_current_user(
 ) -> User:
     if token:
         return await get_current_user_by_jwt(token, db)
-    else:
-        user = await api_key_security(query_param, header_param, db)
-        if user:
-            return user
+    user = await api_key_security(query_param, header_param, db)
+    if user:
+        return user
 
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or missing API key",
-        )
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Invalid or missing API key",
+    )
 
 
 async def get_current_user_by_jwt(
@@ -111,8 +114,8 @@ async def get_current_user_by_jwt(
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             payload = jwt.decode(token, secret_key, algorithms=[settings_service.auth_settings.ALGORITHM])
-        user_id: UUID = payload.get("sub")  # type: ignore
-        token_type: str = payload.get("type")  # type: ignore
+        user_id: UUID = payload.get("sub")  # type: ignore[assignment]
+        token_type: str = payload.get("type")  # type: ignore[assignment]
         if expires := payload.get("exp", None):
             expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
             if datetime.now(timezone.utc) > expires_datetime:
@@ -131,8 +134,7 @@ async def get_current_user_by_jwt(
                 headers={"WWW-Authenticate": "Bearer"},
             )
     except JWTError as e:
-        logger.error(f"JWT decoding error: {e}")
-        logger.exception(e)
+        logger.exception("JWT decoding error")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -154,15 +156,14 @@ async def get_current_user_for_websocket(
     websocket: WebSocket,
     db: Session = Depends(get_session),
     query_param: str = Security(api_key_query),
-) -> Optional[User]:
+) -> User | None:
     token = websocket.query_params.get("token")
     api_key = websocket.query_params.get("x-api-key")
     if token:
         return await get_current_user_by_jwt(token, db)
-    elif api_key:
+    if api_key:
         return await api_key_security(api_key, query_param, db)
-    else:
-        return None
+    return None
 
 
 def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
@@ -266,7 +267,7 @@ def get_user_id_from_token(token: str) -> UUID:
         return UUID(int=0)
 
 
-def create_user_tokens(user_id: UUID, db: Session = Depends(get_session), update_last_login: bool = False) -> dict:
+def create_user_tokens(user_id: UUID, db: Session = Depends(get_session), *, update_last_login: bool = False) -> dict:
     settings_service = get_settings_service()
 
     access_token_expires = timedelta(seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
@@ -304,8 +305,8 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
                 settings_service.auth_settings.SECRET_KEY.get_secret_value(),
                 algorithms=[settings_service.auth_settings.ALGORITHM],
             )
-        user_id: UUID = payload.get("sub")  # type: ignore
-        token_type: str = payload.get("type")  # type: ignore
+        user_id: UUID = payload.get("sub")  # type: ignore[assignment]
+        token_type: str = payload.get("type")  # type: ignore[assignment]
 
         if user_id is None or token_type == "":
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
@@ -318,14 +319,14 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
         return create_user_tokens(user_id, db)
 
     except JWTError as e:
-        logger.error(f"JWT decoding error: {e}")
+        logger.exception("JWT decoding error")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
         ) from e
 
 
-def authenticate_user(username: str, password: str, db: Session = Depends(get_session)) -> Optional[User]:
+def authenticate_user(username: str, password: str, db: Session = Depends(get_session)) -> User | None:
     user = get_user_by_username(db, username)
 
     if not user:
@@ -347,7 +348,7 @@ def add_padding(s):
 
 def ensure_valid_key(s: str) -> bytes:
     # If the key is too short, we'll use it as a seed to generate a valid key
-    if len(s) < 32:
+    if len(s) < MINIMUM_KEY_LENGTH:
         # Use the input as a seed for the random number generator
         random.seed(s)
         # Generate 32 random bytes
@@ -361,8 +362,7 @@ def ensure_valid_key(s: str) -> bytes:
 def get_fernet(settings_service=Depends(get_settings_service)):
     SECRET_KEY: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
     valid_key = ensure_valid_key(SECRET_KEY)
-    fernet = Fernet(valid_key)
-    return fernet
+    return Fernet(valid_key)
 
 
 def encrypt_api_key(api_key: str, settings_service=Depends(get_settings_service)):
@@ -379,6 +379,7 @@ def decrypt_api_key(encrypted_api_key: str, settings_service=Depends(get_setting
     if isinstance(encrypted_api_key, str):
         try:
             decrypted_key = fernet.decrypt(encrypted_api_key.encode()).decode()
-        except Exception:
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Failed to decrypt API key")
             decrypted_key = fernet.decrypt(encrypted_api_key).decode()
     return decrypted_key

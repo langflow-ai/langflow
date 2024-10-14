@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { Page, test } from "@playwright/test";
 import path from "path";
 import uaParser from "ua-parser-js";
 
@@ -43,7 +43,8 @@ test("Vector Store RAG", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Vector Store RAG" }).click();
+  await page.getByTestId("side_nav_options_all-templates").click();
+  await page.getByRole("heading", { name: "Vector Store RAG" }).first().click();
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
   });
@@ -166,7 +167,7 @@ test("Vector Store RAG", async ({ page }) => {
     timeout: 30000,
   });
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,

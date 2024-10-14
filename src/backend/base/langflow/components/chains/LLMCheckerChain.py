@@ -2,7 +2,7 @@ from langchain.chains import LLMCheckerChain
 
 from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
-from langflow.inputs import MultilineInput, HandleInput
+from langflow.inputs import HandleInput, MultilineInput
 
 
 class LLMCheckerChainComponent(LCChainComponent):

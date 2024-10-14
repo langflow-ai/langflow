@@ -1,3 +1,4 @@
+import { useFolderStore } from "@/stores/foldersStore";
 import { useMutationFunctionType } from "@/types/api";
 import { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
@@ -13,12 +14,14 @@ export const useDeleteFolders: useMutationFunctionType<
   DeleteFoldersParams
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
+  const setFolders = useFolderStore((state) => state.setFolders);
+  const folders = useFolderStore((state) => state.folders);
 
   const deleteFolder = async ({
     folder_id,
   }: DeleteFoldersParams): Promise<any> => {
-    const res = await api.delete(`${getURL("FOLDERS")}/${folder_id}`);
-    // returning id to use it in onSuccess and delete the folder from the cache
+    await api.delete(`${getURL("FOLDERS")}/${folder_id}`);
+    setFolders(folders.filter((f) => f.id !== folder_id));
     return folder_id;
   };
 
@@ -28,14 +31,8 @@ export const useDeleteFolders: useMutationFunctionType<
     DeleteFoldersParams
   > = mutate(["useDeleteFolders"], deleteFolder, {
     ...options,
-    onSettled: () => {
-      queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
-    },
-    onSuccess: (id) => {
-      queryClient.removeQueries({
-        queryKey: ["useGetFolder", { id }],
-        exact: true,
-      });
+    onSettled: (id) => {
+      queryClient.refetchQueries({ queryKey: ["useGetFolders", id] });
     },
   });
 

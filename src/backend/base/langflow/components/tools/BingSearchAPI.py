@@ -1,4 +1,4 @@
-from typing import List, cast
+from typing import cast
 
 from langchain_community.tools.bing_search import BingSearchResults
 from langchain_community.utilities import BingSearchAPIWrapper
@@ -24,13 +24,13 @@ class BingSearchAPIComponent(LCToolComponent):
         IntInput(name="k", display_name="Number of results", value=4, required=True),
     ]
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         if self.bing_search_url:
             wrapper = BingSearchAPIWrapper(
                 bing_search_url=self.bing_search_url, bing_subscription_key=self.bing_subscription_key
             )
         else:
-            wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)  # type: ignore
+            wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)
         results = wrapper.results(query=self.input_value, num_results=self.k)
         data = [Data(data=result, text=result["snippet"]) for result in results]
         self.status = data
@@ -42,5 +42,5 @@ class BingSearchAPIComponent(LCToolComponent):
                 bing_search_url=self.bing_search_url, bing_subscription_key=self.bing_subscription_key
             )
         else:
-            wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)  # type: ignore
+            wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)
         return cast(Tool, BingSearchResults(api_wrapper=wrapper, num_results=self.k))

@@ -40,6 +40,7 @@ class SQLExecutorComponent(CustomComponent):
         self,
         query: str,
         database_url: str,
+        *,
         include_columns: bool = False,
         passthrough: bool = False,
         add_error: bool = False,
@@ -48,7 +49,8 @@ class SQLExecutorComponent(CustomComponent):
         try:
             database = SQLDatabase.from_uri(database_url)
         except Exception as e:
-            raise ValueError(f"An error occurred while connecting to the database: {e}")
+            msg = f"An error occurred while connecting to the database: {e}"
+            raise ValueError(msg) from e
         try:
             tool = QuerySQLDataBaseTool(db=database)
             result = tool.run(query, include_columns=include_columns)
@@ -57,7 +59,7 @@ class SQLExecutorComponent(CustomComponent):
             result = str(e)
             self.status = result
             if not passthrough:
-                raise e
+                raise
             error = repr(e)
 
         if add_error and error is not None:

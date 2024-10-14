@@ -1,10 +1,10 @@
 import json
 import warnings
 from abc import abstractmethod
-from typing import List, Optional, Union
 
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.output_parsers import BaseOutputParser
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.custom import Component
@@ -20,7 +20,10 @@ class LCModelComponent(Component):
     description: str = "Model Description"
     trace_type = "llm"
 
-    _base_inputs: List[InputTypes] = [
+    # Optional output parser to pass to the runnable. Subclasses may allow the user to input an `output_parser`
+    output_parser: BaseOutputParser | None = None
+
+    _base_inputs: list[InputTypes] = [
         MessageInput(name="input_value", display_name="Input"),
         MessageTextInput(
             name="system_message",
@@ -45,25 +48,28 @@ class LCModelComponent(Component):
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
-                raise ValueError(f"Output with name '{method_name}' must be defined.")
-            elif not hasattr(self, method_name):
-                raise ValueError(f"Method '{method_name}' must be defined.")
+                msg = f"Output with name '{method_name}' must be defined."
+                raise ValueError(msg)
+            if not hasattr(self, method_name):
+                msg = f"Method '{method_name}' must be defined."
+                raise ValueError(msg)
 
     def text_response(self) -> Message:
         input_value = self.input_value
         stream = self.stream
         system_message = self.system_message
         output = self.build_model()
-        result = self.get_chat_result(output, stream, input_value, system_message)
+        result = self.get_chat_result(
+            runnable=output, stream=stream, input_value=input_value, system_message=system_message
+        )
         self.status = result
         return result
 
-    def get_result(self, runnable: LLM, stream: bool, input_value: str):
-        """
-        Retrieves the result from the output of a Runnable object.
+    def get_result(self, *, runnable: LLM, stream: bool, input_value: str):
+        """Retrieves the result from the output of a Runnable object.
 
         Args:
-            output (Runnable): The output object to retrieve the result from.
+            runnable (Runnable): The runnable to retrieve the result from.
             stream (bool): Indicates whether to use streaming or invocation mode.
             input_value (str): The input value to pass to the output object.
 
@@ -77,15 +83,15 @@ class LCModelComponent(Component):
                 message = runnable.invoke(input_value)
                 result = message.content if hasattr(message, "content") else message
                 self.status = result
-            return result
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
-            raise e
+            raise
+
+        return result
 
     def build_status_message(self, message: AIMessage):
-        """
-        Builds a status message from an AIMessage object.
+        """Builds a status message from an AIMessage object.
 
         Args:
             message (AIMessage): The AIMessage object to build the status message from.
@@ -128,21 +134,23 @@ class LCModelComponent(Component):
                     }
                 }
             else:
-                status_message = f"Response: {content}"  # type: ignore
+                status_message = f"Response: {content}"  # type: ignore[assignment]
         else:
-            status_message = f"Response: {message.content}"  # type: ignore
+            status_message = f"Response: {message.content}"  # type: ignore[assignment]
         return status_message
 
     def get_chat_result(
         self,
+        *,
         runnable: LanguageModel,
         stream: bool,
         input_value: str | Message,
-        system_message: Optional[str] = None,
+        system_message: str | None = None,
     ):
-        messages: list[Union[BaseMessage]] = []
+        messages: list[BaseMessage] = []
         if not input_value and not system_message:
-            raise ValueError("The message you want to send to the model is empty.")
+            msg = "The message you want to send to the model is empty."
+            raise ValueError(msg)
         system_message_added = False
         if input_value:
             if isinstance(input_value, Message):
@@ -151,7 +159,10 @@ class LCModelComponent(Component):
                     if "prompt" in input_value:
                         prompt = input_value.load_lc_prompt()
                         if system_message:
-                            prompt.messages = [SystemMessage(content=system_message)] + prompt.messages
+                            prompt.messages = [
+                                SystemMessage(content=system_message),
+                                *prompt.messages,  # type: ignore[has-type]
+                            ]
                             system_message_added = True
                         runnable = prompt | runnable
                     else:
@@ -160,10 +171,13 @@ class LCModelComponent(Component):
                 messages.append(HumanMessage(content=input_value))
 
         if system_message and not system_message_added:
-            messages.append(SystemMessage(content=system_message))
-        inputs: Union[list, dict] = messages or {}
+            messages.insert(0, SystemMessage(content=system_message))
+        inputs: list | dict = messages or {}
         try:
-            runnable = runnable.with_config(  # type: ignore
+            if self.output_parser is not None:
+                runnable |= self.output_parser
+
+            runnable = runnable.with_config(
                 {
                     "run_name": self.display_name,
                     "project_name": self.get_project_name(),
@@ -171,26 +185,24 @@ class LCModelComponent(Component):
                 }
             )
             if stream:
-                return runnable.stream(inputs)  # type: ignore
+                return runnable.stream(inputs)
+            message = runnable.invoke(inputs)
+            result = message.content if hasattr(message, "content") else message
+            if isinstance(message, AIMessage):
+                status_message = self.build_status_message(message)
+                self.status = status_message
+            elif isinstance(result, dict):
+                result = json.dumps(message, indent=4)
+                self.status = result
             else:
-                message = runnable.invoke(inputs)  # type: ignore
-                result = message.content if hasattr(message, "content") else message
-                if isinstance(message, AIMessage):
-                    status_message = self.build_status_message(message)
-                    self.status = status_message
-                elif isinstance(result, dict):
-                    result = json.dumps(message, indent=4)
-                    self.status = result
-                else:
-                    self.status = result
-                return result
+                self.status = result
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
-            raise e
+            raise
+
+        return result
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        """
-        Implement this method to build the model.
-        """
+        """Implement this method to build the model."""

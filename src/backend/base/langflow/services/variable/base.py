@@ -1,5 +1,4 @@
 import abc
-from typing import Optional, Union
 from uuid import UUID
 
 from sqlmodel import Session
@@ -9,16 +8,13 @@ from langflow.services.database.models.variable.model import Variable
 
 
 class VariableService(Service):
-    """
-    Abstract base class for a variable service.
-    """
+    """Abstract base class for a variable service."""
 
     name = "variable_service"
 
     @abc.abstractmethod
-    def initialize_user_variables(self, user_id: Union[UUID, str], session: Session) -> None:
-        """
-        Initialize user variables.
+    def initialize_user_variables(self, user_id: UUID | str, session: Session) -> None:
+        """Initialize user variables.
 
         Args:
             user_id: The user ID.
@@ -26,9 +22,8 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def get_variable(self, user_id: Union[UUID, str], name: str, field: str, session: Session) -> str:
-        """
-        Get a variable value.
+    def get_variable(self, user_id: UUID | str, name: str, field: str, session: Session) -> str:
+        """Get a variable value.
 
         Args:
             user_id: The user ID.
@@ -41,9 +36,8 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def list_variables(self, user_id: Union[UUID, str], session: Session) -> list[Optional[str]]:
-        """
-        List all variables.
+    def list_variables(self, user_id: UUID | str, session: Session) -> list[str | None]:
+        """List all variables.
 
         Args:
             user_id: The user ID.
@@ -54,9 +48,8 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def update_variable(self, user_id: Union[UUID, str], name: str, value: str, session: Session) -> Variable:
-        """
-        Update a variable.
+    def update_variable(self, user_id: UUID | str, name: str, value: str, session: Session) -> Variable:
+        """Update a variable.
 
         Args:
             user_id: The user ID.
@@ -69,9 +62,8 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def delete_variable(self, user_id: Union[UUID, str], name: str, session: Session) -> None:
-        """
-        Delete a variable.
+    def delete_variable(self, user_id: UUID | str, name: str, session: Session) -> None:
+        """Delete a variable.
 
         Args:
             user_id: The user ID.
@@ -83,9 +75,8 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def delete_variable_by_id(self, user_id: Union[UUID, str], variable_id: UUID, session: Session) -> None:
-        """
-        Delete a variable by ID.
+    def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: Session) -> None:
+        """Delete a variable by ID.
 
         Args:
             user_id: The user ID.
@@ -96,15 +87,14 @@ class VariableService(Service):
     @abc.abstractmethod
     def create_variable(
         self,
-        user_id: Union[UUID, str],
+        user_id: UUID | str,
         name: str,
         value: str,
         default_fields: list[str],
         _type: str,
         session: Session,
     ) -> Variable:
-        """
-        Create a variable.
+        """Create a variable.
 
         Args:
             user_id: The user ID.

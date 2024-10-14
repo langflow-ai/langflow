@@ -3,6 +3,7 @@ import json
 import os
 import re
 from io import BytesIO
+from pathlib import Path
 
 import yaml
 from langchain_core.language_models import BaseLanguageModel
@@ -14,18 +15,21 @@ from langflow.services.deps import get_settings_service
 
 
 def load_file_into_dict(file_path: str) -> dict:
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
+    _file_path = Path(file_path)
+    if not _file_path.exists():
+        msg = f"File not found: {file_path}"
+        raise FileNotFoundError(msg)
 
     # Files names are UUID, so we can't find the extension
-    with open(file_path, "r") as file:
+    with _file_path.open() as file:
         try:
             data = json.load(file)
         except json.JSONDecodeError:
             file.seek(0)
             data = yaml.safe_load(file)
         except ValueError as exc:
-            raise ValueError("Invalid file type. Expected .json or .yaml.") from exc
+            msg = "Invalid file type. Expected .json or .yaml."
+            raise ValueError(msg) from exc
     return data
 
 
@@ -67,11 +71,9 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
         if not match:
             break
 
-        # Extract the variable name from either the single or double brace match
-        if match.group(1):  # Match found in double braces
-            variable_name = "{{" + match.group(1) + "}}"  # Re-add single braces for JSON strings
-        else:  # Match found in single braces
-            variable_name = match.group(2)
+        # Extract the variable name from either the single or double brace match.
+        # If match found in double braces, re-add single braces for JSON strings.
+        variable_name = "{{" + match.group(1) + "}}" if match.group(1) else match.group(2)
         if variable_name is not None:
             # This means there is a match
             # but there is nothing inside the braces
@@ -94,8 +96,8 @@ def setup_llm_caching():
         set_langchain_cache(settings_service.settings)
     except ImportError:
         logger.warning(f"Could not import {settings_service.settings.cache_type}. ")
-    except Exception as exc:
-        logger.warning(f"Could not setup LLM caching. Error: {exc}")
+    except Exception:  # noqa: BLE001
+        logger.opt(exception=True).warning("Could not setup LLM caching.")
 
 
 def set_langchain_cache(settings):

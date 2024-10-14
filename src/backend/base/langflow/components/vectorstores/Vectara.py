@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 from langchain_community.vectorstores import Vectara
 from loguru import logger
@@ -13,9 +13,7 @@ if TYPE_CHECKING:
 
 
 class VectaraVectorStoreComponent(LCVectorStoreComponent):
-    """
-    Vectara Vector Store with search capabilities
-    """
+    """Vectara Vector Store with search capabilities."""
 
     display_name: str = "Vectara"
     description: str = "Vectara Vector Store with search capabilities"
@@ -53,13 +51,12 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> "Vectara":
-        """
-        Builds the Vectara object.
-        """
+        """Builds the Vectara object."""
         try:
             from langchain_community.vectorstores import Vectara
-        except ImportError:
-            raise ImportError("Could not import Vectara. Please install it with `pip install langchain-community`.")
+        except ImportError as e:
+            msg = "Could not import Vectara. Please install it with `pip install langchain-community`."
+            raise ImportError(msg) from e
 
         vectara = Vectara(
             vectara_customer_id=self.vectara_customer_id,
@@ -71,9 +68,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
         return vectara
 
     def _add_documents_to_vector_store(self, vector_store: "Vectara") -> None:
-        """
-        Adds documents to the Vector Store.
-        """
+        """Adds documents to the Vector Store."""
         if not self.ingest_data:
             self.status = "No documents to add to Vectara"
             return
@@ -93,7 +88,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             logger.debug("No documents to add to Vectara.")
             self.status = "No valid documents to add to Vectara"
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
@@ -105,6 +100,5 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = f"Found {len(data)} results for the query: {self.search_query}"
             return data
-        else:
-            self.status = "No search query provided"
-            return []
+        self.status = "No search query provided"
+        return []

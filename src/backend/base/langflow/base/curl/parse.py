@@ -1,41 +1,50 @@
-"""
-This file contains a fix for the implementation of the `uncurl` library, which is available at https://github.com/spulec/uncurl.git.
+r"""This file contains a fix for the implementation of the `uncurl` library, which is available at https://github.com/spulec/uncurl.git.
 
-The `uncurl` library provides a way to parse and convert cURL commands into Python requests. However, there are some issues with the original implementation that this file aims to fix.
+The `uncurl` library provides a way to parse and convert cURL commands into Python requests.
+However, there are some issues with the original implementation that this file aims to fix.
 
-The `parse_context` function in this file takes a cURL command as input and returns a `ParsedContext` object, which contains the parsed information from the cURL command, such as the HTTP method, URL, headers, cookies, etc.
+The `parse_context` function in this file takes a cURL command as input and returns a `ParsedContext` object,
+which contains the parsed information from the cURL command, such as the HTTP method, URL, headers, cookies, etc.
 
-The `normalize_newlines` function is a helper function that replaces the line continuation character ("\") followed by a newline with a space.
+The `normalize_newlines` function is a helper function that replaces the line continuation character ("\")
+followed by a newline with a space.
 
 
 """
 
 import re
 import shlex
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from http.cookies import SimpleCookie
+from typing import NamedTuple
 
-ParsedArgs = namedtuple(
-    "ParsedArgs",
-    [
-        "command",
-        "url",
-        "data",
-        "data_binary",
-        "method",
-        "headers",
-        "compressed",
-        "insecure",
-        "user",
-        "include",
-        "silent",
-        "proxy",
-        "proxy_user",
-        "cookies",
-    ],
-)
 
-ParsedContext = namedtuple("ParsedContext", ["method", "url", "data", "headers", "cookies", "verify", "auth", "proxy"])
+class ParsedArgs(NamedTuple):
+    command: str | None
+    url: str | None
+    data: str | None
+    data_binary: str | None
+    method: str
+    headers: list[str]
+    compressed: bool
+    insecure: bool
+    user: tuple[str, str]
+    include: bool
+    silent: bool
+    proxy: str | None
+    proxy_user: str | None
+    cookies: dict[str, str]
+
+
+class ParsedContext(NamedTuple):
+    method: str
+    url: str
+    data: str | None
+    headers: dict[str, str]
+    cookies: dict[str, str]
+    verify: bool
+    auth: tuple[str, str] | None
+    proxy: dict[str, str] | None
 
 
 def normalize_newlines(multiline_text):
@@ -46,7 +55,8 @@ def parse_curl_command(curl_command):
     tokens = shlex.split(normalize_newlines(curl_command))
     tokens = [token for token in tokens if token and token != " "]
     if tokens and "curl" not in tokens[0]:
-        raise ValueError("Invalid curl command")
+        msg = "Invalid curl command"
+        raise ValueError(msg)
     args_template = {
         "command": None,
         "url": None,
@@ -72,30 +82,30 @@ def parse_curl_command(curl_command):
             i += 1
             args["method"] = tokens[i].lower()
             method_on_curl = tokens[i].lower()
-        elif token in ("-d", "--data"):
+        elif token in {"-d", "--data"}:
             i += 1
             args["data"] = tokens[i]
-        elif token in ("-b", "--data-binary", "--data-raw"):
+        elif token in {"-b", "--data-binary", "--data-raw"}:
             i += 1
             args["data_binary"] = tokens[i]
-        elif token in ("-H", "--header"):
+        elif token in {"-H", "--header"}:
             i += 1
             args["headers"].append(tokens[i])
         elif token == "--compressed":
             args["compressed"] = True
-        elif token in ("-k", "--insecure"):
+        elif token in {"-k", "--insecure"}:
             args["insecure"] = True
-        elif token in ("-u", "--user"):
+        elif token in {"-u", "--user"}:
             i += 1
             args["user"] = tuple(tokens[i].split(":"))
-        elif token in ("-I", "--include"):
+        elif token in {"-I", "--include"}:
             args["include"] = True
-        elif token in ("-s", "--silent"):
+        elif token in {"-s", "--silent"}:
             args["silent"] = True
-        elif token in ("-x", "--proxy"):
+        elif token in {"-x", "--proxy"}:
             i += 1
             args["proxy"] = tokens[i]
-        elif token in ("-U", "--proxy-user"):
+        elif token in {"-U", "--proxy-user"}:
             i += 1
             args["proxy_user"] = tokens[i]
         elif not token.startswith("-"):
@@ -153,13 +163,13 @@ def parse_context(curl_command):
     # proxy_auth = parsed_args.proxy_user
     if parsed_args.proxy and parsed_args.proxy_user:
         proxies = {
-            "http": "http://{}@{}/".format(parsed_args.proxy_user, parsed_args.proxy),
-            "https": "http://{}@{}/".format(parsed_args.proxy_user, parsed_args.proxy),
+            "http": f"http://{parsed_args.proxy_user}@{parsed_args.proxy}/",
+            "https": f"http://{parsed_args.proxy_user}@{parsed_args.proxy}/",
         }
     elif parsed_args.proxy:
         proxies = {
-            "http": "http://{}/".format(parsed_args.proxy),
-            "https": "http://{}/".format(parsed_args.proxy),
+            "http": f"http://{parsed_args.proxy}/",
+            "https": f"http://{parsed_args.proxy}/",
         }
 
     return ParsedContext(

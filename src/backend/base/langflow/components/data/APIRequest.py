@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import Any, List, Optional
+from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import httpx
@@ -34,7 +34,8 @@ class APIRequestComponent(Component):
         MessageTextInput(
             name="curl",
             display_name="Curl",
-            info="Paste a curl command to populate the fields. This will fill in the dictionary fields for headers and body.",
+            info="Paste a curl command to populate the fields. "
+            "This will fill in the dictionary fields for headers and body.",
             advanced=False,
             refresh_button=True,
         ),
@@ -54,7 +55,8 @@ class APIRequestComponent(Component):
         NestedDictInput(
             name="body",
             display_name="Body",
-            info="The body to send with the request as a dictionary (for POST, PATCH, PUT). This is populated when using the CURL field.",
+            info="The body to send with the request as a dictionary (for POST, PATCH, PUT). "
+            "This is populated when using the CURL field.",
             input_types=["Data"],
         ),
         DataInput(
@@ -85,13 +87,14 @@ class APIRequestComponent(Component):
                 try:
                     json_data = json.loads(parsed.data)
                     build_config["body"]["value"] = json_data
-                except json.JSONDecodeError as e:
-                    logger.error(f"Error decoding JSON data: {e}")
+                except json.JSONDecodeError:
+                    logger.exception("Error decoding JSON data")
             else:
                 build_config["body"]["value"] = {}
         except Exception as exc:
-            logger.error(f"Error parsing curl: {exc}")
-            raise ValueError(f"Error parsing curl: {exc}")
+            msg = f"Error parsing curl: {exc}"
+            logger.exception(msg)
+            raise ValueError(msg) from exc
         return build_config
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -104,29 +107,32 @@ class APIRequestComponent(Component):
         client: httpx.AsyncClient,
         method: str,
         url: str,
-        headers: Optional[dict] = None,
-        body: Optional[dict] = None,
+        headers: dict | None = None,
+        body: dict | None = None,
         timeout: int = 5,
     ) -> Data:
         method = method.upper()
-        if method not in ["GET", "POST", "PATCH", "PUT", "DELETE"]:
-            raise ValueError(f"Unsupported method: {method}")
+        if method not in {"GET", "POST", "PATCH", "PUT", "DELETE"}:
+            msg = f"Unsupported method: {method}"
+            raise ValueError(msg)
 
         if isinstance(body, str) and body:
             try:
                 body = json.loads(body)
             except Exception as e:
-                logger.error(f"Error decoding JSON data: {e}")
+                msg = f"Error decoding JSON data: {e}"
+                logger.exception(msg)
                 body = None
-                raise ValueError(f"Error decoding JSON data: {e}")
+                raise ValueError(msg) from e
 
-        data = body if body else None
+        data = body or None
 
         try:
             response = await client.request(method, url, headers=headers, json=data, timeout=timeout)
             try:
                 result = response.json()
-            except Exception:
+            except Exception:  # noqa: BLE001
+                logger.opt(exception=True).debug("Error decoding JSON response")
                 result = response.text
             return Data(
                 data={
@@ -145,7 +151,8 @@ class APIRequestComponent(Component):
                     "error": "Request timed out",
                 },
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
+            logger.opt(exception=True).debug(f"Error making request to {url}")
             return Data(
                 data={
                     "source": url,
@@ -162,7 +169,7 @@ class APIRequestComponent(Component):
         url_parts[4] = urlencode(query)
         return urlunparse(url_parts)
 
-    async def make_requests(self) -> List[Data]:
+    async def make_requests(self) -> list[Data]:
         method = self.method
         urls = [url.strip() for url in self.urls if url.strip()]
         curl = self.curl
@@ -186,7 +193,10 @@ class APIRequestComponent(Component):
 
         async with httpx.AsyncClient() as client:
             results = await asyncio.gather(
-                *[self.make_request(client, method, u, headers, rec, timeout) for u, rec in zip(urls, bodies)]
+                *[
+                    self.make_request(client, method, u, headers, rec, timeout)
+                    for u, rec in zip(urls, bodies, strict=True)
+                ]
             )
         self.status = results
         return results

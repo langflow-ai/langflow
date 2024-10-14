@@ -2,7 +2,7 @@ from langchain.chains import ConversationChain
 
 from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
-from langflow.inputs import MultilineInput, HandleInput
+from langflow.inputs import HandleInput, MultilineInput
 
 
 class ConversationChainComponent(LCChainComponent):
@@ -30,11 +30,9 @@ class ConversationChainComponent(LCChainComponent):
 
         result = chain.invoke({"input": self.input_value}, config={"callbacks": self.get_langchain_callbacks()})
         if isinstance(result, dict):
-            result = result.get(chain.output_key, "")  # type: ignore
+            result = result.get(chain.output_key, "")
 
-        elif isinstance(result, str):
-            result = result
-        else:
+        elif not isinstance(result, str):
             result = result.get("response")
         result = str(result)
         self.status = result

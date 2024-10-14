@@ -3,12 +3,14 @@ import json
 from typing import Any
 
 from langchain.agents import Tool
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs.inputs import MultilineInput, MessageTextInput, BoolInput, DropdownInput, HandleInput, FieldTypes
 from langchain_core.tools import StructuredTool
+from loguru import logger
 from pydantic.v1 import Field, create_model
 from pydantic.v1.fields import Undefined
+from typing_extensions import override
 
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.inputs.inputs import BoolInput, DropdownInput, FieldTypes, HandleInput, MessageTextInput, MultilineInput
 from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
@@ -82,11 +84,12 @@ class PythonCodeStructuredTool(LCToolComponent):
         Output(display_name="Tool", name="result_tool", method="build_tool"),
     ]
 
+    @override
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name is None:
             return build_config
 
-        if field_name != "tool_code" and field_name != "tool_function":
+        if field_name not in {"tool_code", "tool_function"}:
             return build_config
 
         try:
@@ -119,13 +122,14 @@ class PythonCodeStructuredTool(LCToolComponent):
             build_config["_functions"]["value"] = json.dumps(named_functions)
             build_config["_classes"]["value"] = json.dumps(classes)
             build_config["tool_function"]["options"] = names
-        except Exception as e:
-            self.status = f"Failed to extract names: {str(e)}"
+        except Exception as e:  # noqa: BLE001
+            self.status = f"Failed to extract names: {e}"
+            logger.opt(exception=True).debug(self.status)
             build_config["tool_function"]["options"] = ["Failed to parse", str(e)]
         return build_config
 
     async def build_tool(self) -> Tool:
-        _local_namespace = {}  # type: ignore
+        _local_namespace = {}  # type: ignore[var-annotated]
         modules = self._find_imports(self.tool_code)
         import_code = ""
         for module in modules["imports"]:
@@ -149,7 +153,7 @@ class PythonCodeStructuredTool(LCToolComponent):
                 return _local_namespace[self.tool_function](**PythonCodeToolFunc.params)
 
         _globals = globals()
-        _local = {}  # type: ignore
+        _local = {}
         _local[self.tool_function] = PythonCodeToolFunc
         _globals.update(_local)
 
@@ -175,7 +179,8 @@ class PythonCodeStructuredTool(LCToolComponent):
             field_name = attr.split("|")[1]
             func_arg = self._find_arg(named_functions, func_name, field_name)
             if func_arg is None:
-                raise Exception(f"Failed to find arg: {field_name}")
+                msg = f"Failed to find arg: {field_name}"
+                raise ValueError(msg)
 
             field_annotation = func_arg["annotation"]
             field_description = self._get_value(self._attributes[attr], str)
@@ -187,9 +192,7 @@ class PythonCodeStructuredTool(LCToolComponent):
                 schema_annotation = Any
             schema_fields[field_name] = (
                 schema_annotation,
-                Field(
-                    default=func_arg["default"] if "default" in func_arg else Undefined, description=field_description
-                ),
+                Field(default=func_arg.get("default", Undefined), description=field_description),
             )
 
         if "temp_annotation_type" in _globals:
@@ -197,21 +200,18 @@ class PythonCodeStructuredTool(LCToolComponent):
 
         PythonCodeToolSchema = None
         if schema_fields:
-            PythonCodeToolSchema = create_model("PythonCodeToolSchema", **schema_fields)  # type: ignore
+            PythonCodeToolSchema = create_model("PythonCodeToolSchema", **schema_fields)
 
-        tool = StructuredTool.from_function(
+        return StructuredTool.from_function(
             func=_local[self.tool_function].run,
             args_schema=PythonCodeToolSchema,
             name=self.tool_name,
             description=self.tool_description,
             return_direct=self.return_direct,
         )
-        return tool  # type: ignore
 
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
-        """
-        This function is called after the code validation is done.
-        """
+        """This function is called after the code validation is done."""
         frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
         frontend_node["template"] = self.update_build_config(
             frontend_node["template"], frontend_node["template"]["tool_code"]["value"], "tool_code"
@@ -250,7 +250,8 @@ class PythonCodeStructuredTool(LCToolComponent):
             func = {"name": node.name, "args": []}
             for arg in node.args.args:
                 if arg.lineno != arg.end_lineno:
-                    raise Exception("Multiline arguments are not supported")
+                    msg = "Multiline arguments are not supported"
+                    raise ValueError(msg)
 
                 func_arg = {
                     "name": arg.arg,
@@ -293,13 +294,12 @@ class PythonCodeStructuredTool(LCToolComponent):
         return classes, functions
 
     def _find_imports(self, code: str) -> dotdict:
-        imports = []
+        imports: list[str] = []
         from_imports = []
         parsed_code = ast.parse(code)
         for node in parsed_code.body:
             if isinstance(node, ast.Import):
-                for alias in node.names:
-                    imports.append(alias.name)
+                imports.extend(alias.name for alias in node.names)
             elif isinstance(node, ast.ImportFrom):
                 from_imports.append(node)
         return dotdict({"imports": imports, "from_imports": from_imports})

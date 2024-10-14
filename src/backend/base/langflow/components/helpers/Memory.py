@@ -62,7 +62,8 @@ class MemoryComponent(Component):
         MultilineInput(
             name="template",
             display_name="Template",
-            info="The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
+            info="The template to use for formatting the data. "
+            "It can contain the keys {text}, {sender} or any other key in the message data.",
             value="{sender_name}: {text}",
             advanced=True,
         ),
@@ -115,8 +116,5 @@ class MemoryComponent(Component):
         return Message(text=stored_text)
 
     def build_lc_memory(self) -> BaseChatMemory:
-        if self.memory:
-            chat_memory = self.memory
-        else:
-            chat_memory = LCBuiltinChatMemory(flow_id=self.flow_id, session_id=self.session_id)
+        chat_memory = self.memory or LCBuiltinChatMemory(flow_id=self.flow_id, session_id=self.session_id)
         return ConversationBufferMemory(chat_memory=chat_memory)

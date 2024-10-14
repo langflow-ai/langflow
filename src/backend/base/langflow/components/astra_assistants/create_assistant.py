@@ -1,16 +1,16 @@
-from astra_assistants import patch  # type: ignore
-from openai import OpenAI
-from langflow.custom import Component
-from langflow.inputs import StrInput, MultilineInput
-from langflow.template import Output
+from loguru import logger
+
+from langflow.base.astra_assistants.util import get_patched_openai_client
+from langflow.custom.custom_component.component_with_cache import ComponentWithCache
+from langflow.inputs import MultilineInput, StrInput
 from langflow.schema.message import Message
+from langflow.template import Output
 
 
-class AssistantsCreateAssistant(Component):
+class AssistantsCreateAssistant(ComponentWithCache):
     icon = "bot"
     display_name = "Create Assistant"
     description = "Creates an Assistant and returns it's id"
-    client = patch(OpenAI())
 
     inputs = [
         StrInput(
@@ -29,7 +29,8 @@ class AssistantsCreateAssistant(Component):
             info=(
                 "Model for the assistant.\n\n"
                 "Environment variables for provider credentials can be set with the Dotenv Component.\n\n"
-                "Models are supported via LiteLLM, see (https://docs.litellm.ai/docs/providers) for supported model names and env vars."
+                "Models are supported via LiteLLM, "
+                "see (https://docs.litellm.ai/docs/providers) for supported model names and env vars."
             ),
             # refresh_model=True
         ),
@@ -44,12 +45,15 @@ class AssistantsCreateAssistant(Component):
         Output(display_name="Assistant ID", name="assistant_id", method="process_inputs"),
     ]
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.client = get_patched_openai_client(self._shared_component_cache)
+
     def process_inputs(self) -> Message:
-        print(f"env_set is {self.env_set}")
+        logger.info(f"env_set is {self.env_set}")
         assistant = self.client.beta.assistants.create(
             name=self.assistant_name,
             instructions=self.instructions,
             model=self.model,
         )
-        message = Message(text=assistant.id)
-        return message
+        return Message(text=assistant.id)

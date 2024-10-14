@@ -11,18 +11,21 @@ class RangeSpec(BaseModel):
 
     @field_validator("max")
     @classmethod
-    def max_must_be_greater_than_min(cls, v, values, **kwargs):
+    def max_must_be_greater_than_min(cls, v, values):
         if "min" in values.data and v <= values.data["min"]:
-            raise ValueError("Max must be greater than min")
+            msg = "Max must be greater than min"
+            raise ValueError(msg)
         return v
 
     @field_validator("step")
     @classmethod
-    def step_must_be_positive(cls, v, values, **kwargs):
+    def step_must_be_positive(cls, v, values):
         if v <= 0:
-            raise ValueError("Step must be positive")
+            msg = "Step must be positive"
+            raise ValueError(msg)
         if values.data["step_type"] == "int" and isinstance(v, float) and not v.is_integer():
-            raise ValueError("When step_type is int, step must be an integer")
+            msg = "When step_type is int, step must be an integer"
+            raise ValueError(msg)
         return v
 
     @classmethod

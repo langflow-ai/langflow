@@ -1,6 +1,6 @@
-from typing import List, Optional
 from langchain.agents import create_xml_agent
-from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate
+
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MultilineInput
 from langflow.inputs.inputs import DataInput, HandleInput
@@ -13,7 +13,8 @@ class XMLAgentComponent(LCToolsAgentComponent):
     icon = "LangChain"
     beta = True
     name = "XMLAgent"
-    inputs = LCToolsAgentComponent._base_inputs + [
+    inputs = [
+        *LCToolsAgentComponent._base_inputs,
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         DataInput(name="chat_history", display_name="Chat History", is_list=True, advanced=True),
         MultilineInput(
@@ -43,19 +44,20 @@ Begin!
 Question: {input}
 
 {agent_scratchpad}
-            """,
+            """,  # noqa: E501
         ),
         MultilineInput(
             name="user_prompt", display_name="Prompt", info="This prompt must contain 'input' key.", value="{input}"
         ),
     ]
 
-    def get_chat_history_data(self) -> Optional[List[Data]]:
+    def get_chat_history_data(self) -> list[Data] | None:
         return self.chat_history
 
     def create_agent_runnable(self):
         if "input" not in self.user_prompt:
-            raise ValueError("Prompt must contain 'input' key.")
+            msg = "Prompt must contain 'input' key."
+            raise ValueError(msg)
         messages = [
             ("system", self.system_prompt),
             ("placeholder", "{chat_history}"),

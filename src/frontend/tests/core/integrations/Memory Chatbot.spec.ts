@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -37,6 +37,7 @@ test("Memory Chatbot", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Memory Chatbot" }).click();
   await page.waitForTimeout(1000);
 
@@ -71,7 +72,7 @@ test("Memory Chatbot", async ({ page }) => {
     timeout: 15000,
   });
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page
     .getByText("No input message provided.", { exact: true })

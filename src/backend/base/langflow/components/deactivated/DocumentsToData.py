@@ -1,5 +1,3 @@
-from typing import List
-
 from langchain_core.documents import Document
 
 from langflow.custom import CustomComponent
@@ -16,7 +14,7 @@ class DocumentsToDataComponent(CustomComponent):
         "documents": {"display_name": "Documents"},
     }
 
-    def build(self, documents: List[Document]) -> List[Data]:
+    def build(self, documents: list[Document]) -> list[Data]:
         if isinstance(documents, Document):
             documents = [documents]
         data = [Data.from_document(document) for document in documents]

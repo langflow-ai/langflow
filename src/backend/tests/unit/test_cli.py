@@ -1,7 +1,5 @@
-from pathlib import Path
-from tempfile import tempdir
-
 import pytest
+
 from langflow.__main__ import app
 from langflow.services import deps
 
@@ -14,13 +12,9 @@ def default_settings():
     ]
 
 
-def test_components_path(runner, client, default_settings):
-    # Create a foldr in the tmp directory
-
-    temp_dir = Path(tempdir)
+def test_components_path(runner, client, default_settings, tmp_path):
     # create a "components" folder
-    temp_dir = temp_dir / "components"
-    temp_dir.mkdir(exist_ok=True)
+    temp_dir = tmp_path / "components"
 
     result = runner.invoke(
         app,

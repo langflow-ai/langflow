@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -37,6 +37,7 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
   await page.waitForSelector('[title="fit view"]', {
@@ -72,7 +73,7 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
     timeout: 15000,
   });
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
   await page
     .getByText("No input message provided.", { exact: true })
     .last()

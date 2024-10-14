@@ -37,7 +37,8 @@ def hierarchical_tasks_agent_graph():
         template="""User's query:
 {query}
 
-Respond to the user with as much as information as you can about the topic. Delete if needed. If it is just a general query (e.g a greeting) you can respond them directly.""",
+Respond to the user with as much as information as you can about the topic. Delete if needed.
+If it is just a general query (e.g a greeting) you can respond them directly.""",
         query=chat_input.message_response,
     )
     manager_agent = CrewAIAgentComponent()
@@ -61,10 +62,9 @@ Respond to the user with as much as information as you can about the topic. Dele
     chat_output = ChatOutput()
     chat_output.set(input_value=crew_component.build_output)
 
-    graph = Graph(
+    return Graph(
         start=chat_input,
         end=chat_output,
         flow_name="Sequential Tasks Agent",
         description="This Agent runs tasks in a predefined sequence.",
     )
-    return graph

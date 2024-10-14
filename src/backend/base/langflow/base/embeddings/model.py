@@ -15,9 +15,12 @@ class LCEmbeddingsModel(Component):
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
-                raise ValueError(f"Output with name '{method_name}' must be defined.")
-            elif not hasattr(self, method_name):
-                raise ValueError(f"Method '{method_name}' must be defined.")
+                msg = f"Output with name '{method_name}' must be defined."
+                raise ValueError(msg)
+            if not hasattr(self, method_name):
+                msg = f"Method '{method_name}' must be defined."
+                raise ValueError(msg)
 
     def build_embeddings(self) -> Embeddings:
-        raise NotImplementedError("You must implement the build_embeddings method in your class.")
+        msg = "You must implement the build_embeddings method in your class."
+        raise NotImplementedError(msg)

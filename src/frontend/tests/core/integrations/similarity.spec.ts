@@ -27,7 +27,7 @@ test("user must be able to check similarity between embedding texts", async ({
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Blank Flow" }).click();
+  await page.getByTestId("blank-flow").click();
 
   //first component
 
@@ -46,7 +46,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-800, 300);
+      await page.mouse.move(-50, 50);
     });
 
   await page.mouse.up();
@@ -63,7 +63,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-800, 300);
+      await page.mouse.move(-50, 50);
     });
 
   await page.mouse.up();
@@ -85,7 +85,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-800, 300);
+      await page.mouse.move(-50, 50);
     });
 
   await page.mouse.up();
@@ -102,7 +102,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-800, 300);
+      await page.mouse.move(-50, 50);
     });
 
   await page.mouse.up();
@@ -124,7 +124,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-800, 300);
+      await page.mouse.move(-50, 50);
     });
 
   await page.mouse.up();
@@ -146,7 +146,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-800, 300);
+      await page.mouse.move(-50, 50);
     });
 
   await page.mouse.up();
@@ -168,7 +168,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-800, 300);
+      await page.mouse.move(-50, 50);
     });
 
   await page.mouse.up();
@@ -188,7 +188,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-800, 300);
+      await page.mouse.move(-50, 50);
     });
 
   await page.mouse.up();
@@ -232,6 +232,8 @@ test("user must be able to check similarity between embedding texts", async ({
     .nth(0)
     .fill("similarity_score");
 
+  await page.getByTitle("fit view").click();
+  await page.mouse.wheel(0, 500);
   //connection 1
   const openAiEmbeddingOutput_0 = await page
     .getByTestId("handle-openaiembeddings-shownode-embeddings-right")
@@ -322,7 +324,7 @@ test("user must be able to check similarity between embedding texts", async ({
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
   await page.waitForTimeout(1000);
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
   await page.waitForTimeout(1000);
 
   await page

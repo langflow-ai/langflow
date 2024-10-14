@@ -1,14 +1,17 @@
-from typing import TYPE_CHECKING, Any, Callable, Coroutine
+from __future__ import annotations
+
+from collections.abc import Callable, Coroutine
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
 from langflow.services.base import Service
 from langflow.services.task.backends.anyio import AnyIOBackend
-from langflow.services.task.backends.base import TaskBackend
 from langflow.services.task.utils import get_celery_worker_status
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
+    from langflow.services.task.backends.base import TaskBackend
 
 
 def check_celery_availability():
@@ -17,8 +20,8 @@ def check_celery_availability():
 
         status = get_celery_worker_status(celery_app)
         logger.debug(f"Celery status: {status}")
-    except Exception as exc:
-        logger.debug(f"Celery not available: {exc}")
+    except Exception:  # noqa: BLE001
+        logger.opt(exception=True).debug("Celery not available")
         status = {"availability": None}
     return status
 
@@ -26,7 +29,7 @@ def check_celery_availability():
 class TaskService(Service):
     name = "task_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         try:
             if self.settings_service.settings.celery_enabled:
@@ -65,7 +68,8 @@ class TaskService(Service):
         if not self.use_celery:
             return None, await task_func(*args, **kwargs)
         if not hasattr(task_func, "apply"):
-            raise ValueError(f"Task function {task_func} does not have an apply method")
+            msg = f"Task function {task_func} does not have an apply method"
+            raise ValueError(msg)
         task = task_func.apply(args=args, kwargs=kwargs)
 
         result = task.get()

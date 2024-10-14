@@ -1,12 +1,14 @@
 import ast
 import operator
-from typing import List
+
+from langchain.tools import StructuredTool
+from loguru import logger
 from pydantic import BaseModel, Field
+
 from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
 from langflow.inputs import MessageTextInput
 from langflow.schema import Data
-from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
 
 
 class CalculatorToolComponent(LCToolComponent):
@@ -26,7 +28,7 @@ class CalculatorToolComponent(LCToolComponent):
     class CalculatorToolSchema(BaseModel):
         expression: str = Field(..., description="The arithmetic expression to evaluate.")
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         return self._evaluate_expression(self.expression)
 
     def build_tool(self) -> Tool:
@@ -37,30 +39,28 @@ class CalculatorToolComponent(LCToolComponent):
             args_schema=self.CalculatorToolSchema,
         )
 
-    def _evaluate_expression(self, expression: str) -> List[Data]:
+    def _eval_expr(self, node):
+        # Define the allowed operators
+        operators = {
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.Pow: operator.pow,
+        }
+        if isinstance(node, ast.Num):
+            return node.n
+        if isinstance(node, ast.BinOp):
+            return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))
+        if isinstance(node, ast.UnaryOp):
+            return operators[type(node.op)](self._eval_expr(node.operand))
+        raise TypeError(node)
+
+    def _evaluate_expression(self, expression: str) -> list[Data]:
         try:
-            # Define the allowed operators
-            operators = {
-                ast.Add: operator.add,
-                ast.Sub: operator.sub,
-                ast.Mult: operator.mul,
-                ast.Div: operator.truediv,
-                ast.Pow: operator.pow,
-            }
-
-            def eval_expr(node):
-                if isinstance(node, ast.Num):
-                    return node.n
-                elif isinstance(node, ast.BinOp):
-                    return operators[type(node.op)](eval_expr(node.left), eval_expr(node.right))
-                elif isinstance(node, ast.UnaryOp):
-                    return operators[type(node.op)](eval_expr(node.operand))
-                else:
-                    raise TypeError(node)
-
             # Parse the expression and evaluate it
             tree = ast.parse(expression, mode="eval")
-            result = eval_expr(tree.body)
+            result = self._eval_expr(tree.body)
 
             # Format the result to a reasonable number of decimal places
             formatted_result = f"{result:.6f}".rstrip("0").rstrip(".")
@@ -69,14 +69,15 @@ class CalculatorToolComponent(LCToolComponent):
             return [Data(data={"result": formatted_result})]
 
         except (SyntaxError, TypeError, KeyError) as e:
-            error_message = f"Invalid expression: {str(e)}"
+            error_message = f"Invalid expression: {e}"
             self.status = error_message
             return [Data(data={"error": error_message})]
         except ZeroDivisionError:
             error_message = "Error: Division by zero"
             self.status = error_message
             return [Data(data={"error": error_message})]
-        except Exception as e:
-            error_message = f"Error: {str(e)}"
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error evaluating expression")
+            error_message = f"Error: {e}"
             self.status = error_message
             return [Data(data={"error": error_message})]

@@ -1,5 +1,3 @@
-from typing import List
-
 from langflow.custom import CustomComponent
 from langflow.schema import Data
 
@@ -16,7 +14,7 @@ class ListFlowsComponent(CustomComponent):
 
     def build(
         self,
-    ) -> List[Data]:
+    ) -> list[Data]:
         flows = self.list_flows()
         self.status = flows
         return flows

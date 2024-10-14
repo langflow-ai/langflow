@@ -1,20 +1,24 @@
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Tuple, Type, Union, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from fastapi import HTTPException
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
 
-from langflow.graph.schema import RunOutputs
-from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from langflow.graph.graph.base import Graph
+    from langflow.graph.schema import RunOutputs
     from langflow.graph.vertex.base import Vertex
+    from langflow.schema import Data
 
 INPUT_TYPE_MAP = {
     "ChatInput": {"type_hint": "Optional[str]", "default": '""'},
@@ -23,61 +27,65 @@ INPUT_TYPE_MAP = {
 }
 
 
-def list_flows(*, user_id: Optional[str] = None) -> List[Data]:
+def list_flows(*, user_id: str | None = None) -> list[Data]:
     if not user_id:
-        raise ValueError("Session is invalid")
+        msg = "Session is invalid"
+        raise ValueError(msg)
     try:
         with session_scope() as session:
             flows = session.exec(
-                select(Flow).where(Flow.user_id == user_id).where(Flow.is_component == False)  # noqa
+                select(Flow).where(Flow.user_id == user_id).where(Flow.is_component == False)  # noqa: E712
             ).all()
 
-            flows_data = [flow.to_data() for flow in flows]
-            return flows_data
+            return [flow.to_data() for flow in flows]
     except Exception as e:
-        raise ValueError(f"Error listing flows: {e}")
+        msg = f"Error listing flows: {e}"
+        raise ValueError(msg) from e
 
 
 async def load_flow(
-    user_id: str, flow_id: Optional[str] = None, flow_name: Optional[str] = None, tweaks: Optional[dict] = None
-) -> "Graph":
+    user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
+) -> Graph:
     from langflow.graph.graph.base import Graph
     from langflow.processing.process import process_tweaks
 
     if not flow_id and not flow_name:
-        raise ValueError("Flow ID or Flow Name is required")
+        msg = "Flow ID or Flow Name is required"
+        raise ValueError(msg)
     if not flow_id and flow_name:
         flow_id = find_flow(flow_name, user_id)
         if not flow_id:
-            raise ValueError(f"Flow {flow_name} not found")
+            msg = f"Flow {flow_name} not found"
+            raise ValueError(msg)
 
     with session_scope() as session:
         graph_data = flow.data if (flow := session.get(Flow, flow_id)) else None
     if not graph_data:
-        raise ValueError(f"Flow {flow_id} not found")
+        msg = f"Flow {flow_id} not found"
+        raise ValueError(msg)
     if tweaks:
         graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-    graph = Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
-    return graph
+    return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
 
 
-def find_flow(flow_name: str, user_id: str) -> Optional[str]:
+def find_flow(flow_name: str, user_id: str) -> str | None:
     with session_scope() as session:
         flow = session.exec(select(Flow).where(Flow.name == flow_name).where(Flow.user_id == user_id)).first()
         return flow.id if flow else None
 
 
 async def run_flow(
-    inputs: Optional[Union[dict, List[dict]]] = None,
-    tweaks: Optional[dict] = None,
-    flow_id: Optional[str] = None,
-    flow_name: Optional[str] = None,
-    output_type: Optional[str] = "chat",
-    user_id: Optional[str] = None,
-    run_id: Optional[str] = None,
-) -> List[RunOutputs]:
+    inputs: dict | list[dict] | None = None,
+    tweaks: dict | None = None,
+    flow_id: str | None = None,
+    flow_name: str | None = None,
+    output_type: str | None = "chat",
+    user_id: str | None = None,
+    run_id: str | None = None,
+) -> list[RunOutputs]:
     if user_id is None:
-        raise ValueError("Session is invalid")
+        msg = "Session is invalid"
+        raise ValueError(msg)
     graph = await load_flow(user_id, flow_id, flow_name, tweaks)
     if run_id:
         graph.set_run_id(UUID(run_id))
@@ -99,7 +107,7 @@ async def run_flow(
         for vertex in graph.vertices
         if output_type == "debug"
         or (
-            vertex.is_output and (output_type == "any" or output_type in vertex.id.lower())  # type: ignore
+            vertex.is_output and (output_type == "any" or output_type in vertex.id.lower())  # type: ignore[operator]
         )
     ]
 
@@ -115,14 +123,14 @@ async def run_flow(
 
 
 def generate_function_for_flow(
-    inputs: List["Vertex"], flow_id: str, user_id: str | UUID | None
+    inputs: list[Vertex], flow_id: str, user_id: str | UUID | None
 ) -> Callable[..., Awaitable[Any]]:
-    """
-    Generate a dynamic flow function based on the given inputs and flow ID.
+    """Generate a dynamic flow function based on the given inputs and flow ID.
 
     Args:
         inputs (List[Vertex]): The list of input vertices for the flow.
         flow_id (str): The ID of the flow.
+        user_id (str | UUID | None): The user ID associated with the flow.
 
     Returns:
         Coroutine: The dynamic flow function.
@@ -138,7 +146,10 @@ def generate_function_for_flow(
     """
     # Prepare function arguments with type hints and default values
     args = [
-        f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = {INPUT_TYPE_MAP[input_.base_name]['default']}"
+        (
+            f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = "
+            f"{INPUT_TYPE_MAP[input_.base_name]['default']}"
+        )
         for input_ in inputs
     ]
 
@@ -151,7 +162,7 @@ def generate_function_for_flow(
     # Map original argument names to their corresponding Pythonic variable names in the function
     arg_mappings = ", ".join(
         f'"{original_name}": {name}'
-        for original_name, name in zip(original_arg_names, [arg.split(":")[0] for arg in args])
+        for original_name, name in zip(original_arg_names, [arg.split(":")[0] for arg in args], strict=True)
     )
 
     func_body = f"""
@@ -175,7 +186,7 @@ async def flow_function({func_args}):
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    data.extend(build_data_from_result_data(output, get_final_results_only=True))
+                    data.extend(build_data_from_result_data(output))
         return format_flow_output_data(data)
     except Exception as e:
         raise ToolException(f'Error running flow: ' + e)
@@ -188,14 +199,14 @@ async def flow_function({func_args}):
 
 
 def build_function_and_schema(
-    flow_data: Data, graph: "Graph", user_id: str | UUID | None
-) -> Tuple[Callable[..., Awaitable[Any]], Type[BaseModel]]:
-    """
-    Builds a dynamic function and schema for a given flow.
+    flow_data: Data, graph: Graph, user_id: str | UUID | None
+) -> tuple[Callable[..., Awaitable[Any]], type[BaseModel]]:
+    """Builds a dynamic function and schema for a given flow.
 
     Args:
         flow_data (Data): The flow record containing information about the flow.
         graph (Graph): The graph representing the flow.
+        user_id (str): The user ID associated with the flow.
 
     Returns:
         Tuple[Callable, BaseModel]: A tuple containing the dynamic function and the schema.
@@ -207,9 +218,8 @@ def build_function_and_schema(
     return dynamic_flow_function, schema
 
 
-def get_flow_inputs(graph: "Graph") -> List["Vertex"]:
-    """
-    Retrieves the flow inputs from the given graph.
+def get_flow_inputs(graph: Graph) -> list[Vertex]:
+    """Retrieves the flow inputs from the given graph.
 
     Args:
         graph (Graph): The graph object representing the flow.
@@ -217,16 +227,11 @@ def get_flow_inputs(graph: "Graph") -> List["Vertex"]:
     Returns:
         List[Data]: A list of input data, where each record contains the ID, name, and description of the input vertex.
     """
-    inputs = []
-    for vertex in graph.vertices:
-        if vertex.is_input:
-            inputs.append(vertex)
-    return inputs
+    return [vertex for vertex in graph.vertices if vertex.is_input]
 
 
-def build_schema_from_inputs(name: str, inputs: List["Vertex"]) -> Type[BaseModel]:
-    """
-    Builds a schema from the given inputs.
+def build_schema_from_inputs(name: str, inputs: list[Vertex]) -> type[BaseModel]:
+    """Builds a schema from the given inputs.
 
     Args:
         name (str): The name of the schema.
@@ -242,18 +247,18 @@ def build_schema_from_inputs(name: str, inputs: List["Vertex"]) -> Type[BaseMode
         field_name = input_.display_name.lower().replace(" ", "_")
         description = input_.description
         fields[field_name] = (str, Field(default="", description=description))
-    return create_model(name, **fields)  # type: ignore
+    return create_model(name, **fields)
 
 
-def get_arg_names(inputs: List["Vertex"]) -> List[dict[str, str]]:
-    """
-    Returns a list of dictionaries containing the component name and its corresponding argument name.
+def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
+    """Returns a list of dictionaries containing the component name and its corresponding argument name.
 
     Args:
         inputs (List[Vertex]): A list of Vertex objects representing the inputs.
 
     Returns:
-        List[dict[str, str]]: A list of dictionaries, where each dictionary contains the component name and its argument name.
+        List[dict[str, str]]: A list of dictionaries, where each dictionary contains the component name and its
+            argument name.
     """
     return [
         {"component_name": input_.display_name, "arg_name": input_.display_name.lower().replace(" ", "_")}
@@ -261,8 +266,7 @@ def get_arg_names(inputs: List["Vertex"]) -> List[dict[str, str]]:
     ]
 
 
-def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: Optional[UUID] = None) -> FlowRead | None:
-    flow_read = None
+def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | None = None) -> FlowRead | None:
     with session_scope() as session:
         endpoint_name = None
         try:
@@ -276,8 +280,7 @@ def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: Optional[UUID
             flow = session.exec(stmt).first()
         if flow is None:
             raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
-        flow_read = FlowRead.model_validate(flow, from_attributes=True)
-    return flow_read
+        return FlowRead.model_validate(flow, from_attributes=True)
 
 
 def generate_unique_flow_name(flow_name, user_id, session):

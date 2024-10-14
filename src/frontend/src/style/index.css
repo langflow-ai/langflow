@@ -6,27 +6,34 @@
 
 @layer base {
   :root {
-    --node-selected: 243 75% 59%;
+    /* Zinc Theme Values from shadcn */
     --background: 0 0% 100%; /* hsl(0 0% 100%) */
-    --foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --muted: 210 40% 98%; /* hsl(210 40% 98%) */
-    --muted-foreground: 215.4 16.3% 46.9%; /* hsl(215 16% 46%) */
-    --popover: 0 0% 100%; /* hsl(0 0% 100%) */
-    --popover-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
+    --foreground: 240 10% 3.9%; /* hsl(240 10% 3.9%) */
     --card: 0 0% 100%; /* hsl(0 0% 100%) */
-    --card-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --border: 214.3 21.8% 91.4%; /* hsl(214 32% 91%) */
-    --input: 214.3 21.8% 91.4%; /* hsl(214 32% 91%) */
-    --primary: 222.2 27% 11.2%; /* hsl(222 27% 18%) */
-    --primary-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
-    --secondary: 210 40% 96.1%; /* hsl(210 40% 96%) */
-    --secondary-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --accent: 210 30% 96.1%; /* hsl(210 30% 96%) */
-    --accent-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --destructive: 0 60% 40%; /* hsl(0 60% 40%) */
-    --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
+    --card-foreground: 240 10% 3.9%; /* hsl(240 10% 3.9%) */
+    --popover: 0 0% 100%; /* hsl(0 0% 100%) */
+    --popover-foreground: 240 10% 3.9%; /* hsl(240 10% 3.9%) */
+    --primary: 240 5.9% 10%; /* hsl(240 5.9% 10%) */
+    --primary-foreground: 0 0% 98%; /* hsl(0 0% 98%) */
+    --secondary: 240 4.8% 95.9%; /* hsl(240 4.8% 95.9%) */
+    --secondary-foreground: 240 5.9% 10%; /* hsl(240 5.9% 10%) */
+    --muted: 240 4.8% 95.9%; /* hsl(240 4.8% 95.9%) */
+    --muted-foreground: 240 3.8% 46.1%; /* hsl(240 3.8% 46.1%) */
+    --accent: 240 4.8% 95.9%; /* hsl(240 4.8% 95.9%) */
+    --accent-foreground: 240 5.9% 10%; /* hsl(240 5.9% 10%) */
+    --destructive: 0 84.2% 60.2%; /* hsl(0 84.2% 60.2%) */
+    --destructive-foreground: 0 0% 98%; /* hsl(0 0% 98%) */
+    --border: 240 5.9% 90%; /* hsl(240 5.9% 90%) */
+    --input: 240 5.9% 90%; /* hsl(240 5.9% 90%) */
+    --ring: 240 5.9% 10%; /* hsl(240 5.9% 10%) */
     --radius: 0.5rem;
-    --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
+    --chart-1: 12 76% 61%; /* hsl(12 76% 61%) */
+    --chart-2: 173 58% 39%; /* hsl(173 58% 39%) */
+    --chart-3: 197 37% 24%; /* hsl(197 37% 24%) */
+    --chart-4: 43 74% 66%; /* hsl(43 74% 66%) */
+    --chart-5: 27 87% 67%; /* hsl(27 87% 67%) */
+
+    --node-selected: 243 75% 59%;
     --round-btn-shadow: #00000063;
     --ice: #31a3cc;
     --selected: #2196f3;
@@ -71,57 +78,68 @@
     --status-blue: #2563eb;
     --status-gray: #6b7280;
     --connection: #555;
+    --note-default: #f1f5f9;
     --note-indigo: #e0e7ff;
     --note-emerald: #d1fae5;
     --note-amber: #fef3c7;
     --note-red: #fee2e2;
+
+    --note-default-opacity: #f1f5f980;
+    --note-indigo-opacity: #312e8180;
+    --note-emerald-opacity: #064e3b80;
+    --note-amber-opacity: #78350f80;
+    --note-red-opacity: #7f1d1d80;
   }
 
   .dark {
+    /* Zinc Theme Values from shadcn */
+    --background: 240 10% 3.9%; /* hsl(240, 10%, 3.9%) */
+    --foreground: 0 0% 98%; /* hsl(0, 0%, 98%) */
+    --card: 240 10% 3.9%; /* hsl(240, 10%, 3.9%) */
+    --card-foreground: 0 0% 98%; /* hsl(0, 0%, 98%) */
+    --popover: 240 10% 3.9%; /* hsl(240, 10%, 3.9%) */
+    --popover-foreground: 0 0% 98%; /* hsl(0, 0%, 98%) */
+    --primary: 0 0% 98%; /* hsl(0, 0%, 98%) */
+    --primary-foreground: 240 5.9% 10%; /* hsl(240, 5.9%, 10%) */
+    --secondary: 240 3.7% 15.9%; /* hsl(240, 3.7%, 15.9%) */
+    --secondary-foreground: 0 0% 98%; /* hsl(0, 0%, 98%) */
+    --muted: 240 3.7% 15.9%; /* hsl(240, 3.7%, 15.9%) */
+    --muted-foreground: 240 5% 64.9%; /* hsl(240, 5%, 64.9%) */
+    --accent: 240 3.7% 15.9%; /* hsl(240, 3.7%, 15.9%) */
+    --accent-foreground: 0 0% 98%; /* hsl(0, 0%, 98%) */
+    --destructive: 0 62.8% 30.6%; /* hsl(0, 62.8%, 30.6%) */
+    --destructive-foreground: 0 0% 98%; /* hsl(0, 0%, 98%) */
+    --border: 240 3.7% 15.9%; /* hsl(240, 3.7%, 15.9%) */
+    --input: 240 3.7% 15.9%; /* hsl(240, 3.7%, 15.9%) */
+    --ring: 240 4.9% 83.9%; /* hsl(240, 4.9%, 83.9%) */
+    --chart-1: 220 70% 50%; /* hsl(220, 70%, 50%) */
+    --chart-2: 160 60% 45%; /* hsl(160, 60%, 45%) */
+    --chart-3: 30 80% 55%; /* hsl(30, 80%, 55%) */
+    --chart-4: 280 65% 60%; /* hsl(280, 65%, 60%) */
+    --chart-5: 340 75% 55%; /* hsl(340, 75%, 55%) */
+
+    --note-default: #0f172a;
     --note-indigo: #312e81;
     --note-emerald: #064e3b;
     --note-amber: #78350f;
     --note-red: #7f1d1d;
     --note-placeholder: 216 12% 84%; /* hsl(216 12% 84%) */
 
+    --note-default-opacity: #0f172a80;
+    --note-indigo-opacity: #312e8180;
+    --note-emerald-opacity: #064e3b80;
+    --note-amber-opacity: #78350f80;
+    --note-red-opacity: #7f1d1d80;
+
     --node-selected: 234 89% 74%;
-    --background: 224 28% 7.5%; /* hsl(224 10% 7.5%) */
-    --foreground: 213 31% 80%; /* hsl(213 31% 91%) */
+
     --ice: #60a5fa;
     --hover: #1a202e;
     --disabled-run: #6366f1;
     --selected: #0369a1;
 
-    --muted: 223 27% 11%; /* hsl(223 27% 11%) */
-    --muted-foreground: 215.4 16.3% 56.9%; /* hsl(215 16% 56%) */
-
-    --popover: 224 71% 4%; /* hsl(224 71% 4%) */
-    --popover-foreground: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
-
-    --card: 224 25% 15.5%; /* hsl(224 71% 4%) */
-    --card-foreground: 213 31% 80%; /* hsl(213 31% 91%) */
-
-    --border: 216 24% 17%; /* hsl(216 34% 17%) */
-    --input: 216 24% 17%; /* hsl(216 34% 17%) */
-
-    --primary: 210 20% 80%; /* hsl(210 20% 80%) */
-    --primary-foreground: 222.2 27.4% 1.2%; /* hsl(222 47% 1%) */
-
-    --secondary: 222.2 30.4% 7.2%; /* hsl(222 47% 11%) */
-    --secondary-foreground: 210 40% 80%; /* hsl(210 40% 80%) */
-
-    --accent: 216 24% 20%; /* hsl(216 34% 17%) */
-    --accent-foreground: 210 30% 98%; /* hsl(210 40% 98%) */
-
-    --destructive: 0 60% 25%; /* hsl(0 60% 25%) */
-    --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
-
     --filter-foreground: #eef2ff;
     --filter-background: #4e46e599;
-
-    --ring: 216 24% 30%; /* hsl(216 24% 30%) */
-
-    --radius: 0.5rem;
 
     --round-btn-shadow: #00000063;
 

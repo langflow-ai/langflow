@@ -1,4 +1,7 @@
+import { PAGINATION_PAGE, PAGINATION_SIZE } from "@/constants/constants";
 import { usePostDownloadMultipleFlows } from "@/controllers/API/queries/flows";
+import TemplatesModal from "@/modals/templatesModal";
+import { Pagination } from "@/types/utils/types";
 import { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useLocation, useParams } from "react-router-dom";
@@ -10,10 +13,8 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { FlowType } from "../../../../types/flow";
-import { FolderType } from "../../entities";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { getNameByType } from "../../utils/get-name-by-type";
-import { sortFlows } from "../../utils/sort-flows";
 import EmptyComponent from "../emptyComponent";
 import HeaderComponent from "../headerComponent";
 import CollectionCard from "./components/collectionCard";
@@ -27,15 +28,21 @@ import useSelectedFlows from "./hooks/use-selected-flows";
 export default function ComponentsComponent({
   type = "all",
   currentFolder,
+  pagination,
   isLoading,
   deleteFlow,
+  onPaginate,
 }: {
   type?: string;
-  currentFolder?: FolderType;
+  currentFolder?: FlowType[];
   isLoading: boolean;
+  pagination: Pagination;
   deleteFlow: ({ id }: { id: string[] }) => Promise<void>;
+  onPaginate: (pageIndex: number, pageSize: number) => void;
 }) {
   const { folderId } = useParams();
+
+  const [openModal, setOpenModal] = useState(false);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -53,18 +60,12 @@ export default function ComponentsComponent({
   );
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
-  const flowsFromFolder = currentFolder?.flows ?? [];
+  const flowsFromFolder = currentFolder ?? [];
 
   const [filteredFlows, setFilteredFlows] =
     useState<FlowType[]>(flowsFromFolder);
 
   const handleFileDrop = useFileDrop(type);
-  const [pageSize, setPageSize] = useState(20);
-  const [pageIndex, setPageIndex] = useState(1);
-  const all: FlowType[] = sortFlows(filteredFlows, type);
-  const start = (pageIndex - 1) * pageSize;
-  const end = start + pageSize;
-  const data: FlowType[] = all?.slice(start, end);
   const location = useLocation();
 
   const name = getNameByType(type);
@@ -90,8 +91,7 @@ export default function ComponentsComponent({
   useFilteredFlows(flowsFromFolder, searchFlowsComponents, setFilteredFlows);
 
   const resetFilter = () => {
-    setPageIndex(1);
-    setPageSize(20);
+    onPaginate(PAGINATION_PAGE, PAGINATION_SIZE);
   };
 
   const { getValues, control, setValue } = useForm();
@@ -203,13 +203,15 @@ export default function ComponentsComponent({
     type,
   );
 
-  const totalRowsCount = filteredFlows?.length;
+  const handleOpenModal = () => {
+    setOpenModal(true);
+  };
 
   return (
     <>
       <div className="flex w-full gap-4 pb-5">
         <HeaderComponent
-          disabled={isLoading || data?.length === 0}
+          disabled={isLoading || flowsFromFolder?.length === 0}
           shouldSelectAll={shouldSelectAll}
           setShouldSelectAll={setShouldSelectAll}
           handleDelete={() => handleSelectOptionsChange("delete")}
@@ -229,13 +231,13 @@ export default function ComponentsComponent({
           data-testid="cards-wrapper"
         >
           <div className="flex w-full flex-col gap-4">
-            {!isLoading && data?.length === 0 ? (
-              <EmptyComponent />
+            {!isLoading && flowsFromFolder?.length === 0 ? (
+              <EmptyComponent handleOpenModal={handleOpenModal} />
             ) : (
               <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
-                {data?.length > 0 ? (
+                {flowsFromFolder?.length > 0 ? (
                   <>
-                    {data?.map((item) => (
+                    {flowsFromFolder?.map((item) => (
                       <FormProvider {...methods} key={item.id}>
                         <form>
                           <CollectionCard
@@ -257,18 +259,16 @@ export default function ComponentsComponent({
               </div>
             )}
           </div>
-          {!isLoading && data?.length > 0 && (
+          {!isLoading && flowsFromFolder?.length > 0 && (
             <div className="relative py-6">
               <PaginatorComponent
                 storeComponent={true}
-                pageIndex={pageIndex}
-                pageSize={pageSize}
+                pageIndex={pagination.page}
+                pageSize={pagination.size}
                 rowsCount={[10, 20, 50, 100]}
-                totalRowsCount={totalRowsCount}
-                paginate={(pageSize, pageIndex) => {
-                  setPageIndex(pageIndex);
-                  setPageSize(pageSize);
-                }}
+                totalRowsCount={pagination.total ?? 0}
+                paginate={onPaginate}
+                pages={pagination.pages}
               ></PaginatorComponent>
             </div>
           )}
@@ -284,6 +284,7 @@ export default function ComponentsComponent({
           <></>
         </DeleteConfirmationModal>
       )}
+      <TemplatesModal open={openModal} setOpen={setOpenModal} />
     </>
   );
 }

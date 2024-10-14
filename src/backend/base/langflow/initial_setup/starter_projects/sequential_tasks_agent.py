@@ -49,7 +49,8 @@ Revise this document.""",
     editor_task_agent = SequentialTaskAgentComponent()
     editor_task_agent.set(
         role="Editor",
-        goal="You should edit the information provided by the Researcher to make it more palatable and to not contain misleading information.",
+        goal="You should edit the information provided by the Researcher to make it more palatable and to not contain "
+        "misleading information.",
         backstory="You are the editor of the most reputable journal in the world.",
         llm=llm.build_model,
         task_description=revision_prompt_component.build_prompt,
@@ -71,7 +72,8 @@ Build a fun blog post about this topic.""",
     comedian_task_agent.set(
         role="Comedian",
         goal="You write comedic content based on the information provided by the editor.",
-        backstory="Your formal occupation is Comedian-in-Chief. You write jokes, do standup comedy, and write funny articles.",
+        backstory="Your formal occupation is Comedian-in-Chief. "
+        "You write jokes, do standup comedy, and write funny articles.",
         llm=llm.build_model,
         task_description=blog_prompt_component.build_prompt,
         expected_output="A small blog about the topic.",
@@ -88,11 +90,9 @@ Build a fun blog post about this topic.""",
     chat_output.set(input_value=crew_component.build_output)
 
     # Create the graph
-    graph = Graph(
+    return Graph(
         start=text_input,
         end=chat_output,
         flow_name="Sequential Tasks Agent",
         description="This Agent runs tasks in a predefined sequence.",
     )
-
-    return graph

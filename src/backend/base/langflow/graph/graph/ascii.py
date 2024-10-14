@@ -1,5 +1,4 @@
-"""
-This code is adapted from the DVC project.
+"""This code is adapted from the DVC project.
 
 Original source:
 https://github.com/iterative/dvc/blob/c5bac1c8cfdb2c0f54d52ac61ff754e6f583822a/dvc/dagascii.py
@@ -57,7 +56,7 @@ class AsciiCanvas:
     def draw(self):
         """Draws ASCII canvas on the screen."""
         lines = self.get_lines()
-        print("\n".join(lines))
+        print("\n".join(lines))  # noqa: T201
 
     def point(self, x, y, char):
         """Create a point on ASCII canvas."""
@@ -118,7 +117,7 @@ def build_sugiyama_layout(vertexes, edges):
     for vertex in vertexes.values():
         vertex.view = VertexViewer(vertex.data)
 
-    minw = min([v.view.w for v in vertexes.values()])
+    minw = min(v.view.w for v in vertexes.values())
 
     for edge in edges:
         edge.view = EdgeViewer()
@@ -135,7 +134,7 @@ def build_sugiyama_layout(vertexes, edges):
     return sug
 
 
-def draw_graph(vertexes, edges, return_ascii=True):
+def draw_graph(vertexes, edges, *, return_ascii=True):
     """Build a DAG and draw it in ASCII."""
     sug = build_sugiyama_layout(vertexes, edges)
 
@@ -181,5 +180,5 @@ def draw_graph(vertexes, edges, return_ascii=True):
         canvas.text(int(round(x - minx)) + 1, int(round(y - miny)) + 1, vertex.data)
     if return_ascii:
         return canvas.draws()
-    else:
-        canvas.draw()
+    canvas.draw()
+    return None

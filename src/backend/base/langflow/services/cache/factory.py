@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
+from langflow.logging.logger import logger
 from langflow.services.cache.disk import AsyncDiskCache
 from langflow.services.cache.service import AsyncInMemoryCache, CacheService, RedisCache, ThreadingInMemoryCache
 from langflow.services.factory import ServiceFactory
-from langflow.logging.logger import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -13,7 +15,7 @@ class CacheServiceFactory(ServiceFactory):
     def __init__(self):
         super().__init__(CacheService)
 
-    def create(self, settings_service: "SettingsService"):
+    def create(self, settings_service: SettingsService):
         # Here you would have logic to create and configure a CacheService
         # based on the settings_service
 
@@ -29,16 +31,17 @@ class CacheServiceFactory(ServiceFactory):
             if redis_cache.is_connected():
                 logger.debug("Redis cache is connected")
                 return redis_cache
-            else:
-                # do not attempt to fallback to another cache type
-                raise ConnectionError("Failed to connect to Redis cache")
+            # do not attempt to fallback to another cache type
+            msg = "Failed to connect to Redis cache"
+            raise ConnectionError(msg)
 
-        elif settings_service.settings.cache_type == "memory":
+        if settings_service.settings.cache_type == "memory":
             return ThreadingInMemoryCache(expiration_time=settings_service.settings.cache_expire)
-        elif settings_service.settings.cache_type == "async":
+        if settings_service.settings.cache_type == "async":
             return AsyncInMemoryCache(expiration_time=settings_service.settings.cache_expire)
-        elif settings_service.settings.cache_type == "disk":
+        if settings_service.settings.cache_type == "disk":
             return AsyncDiskCache(
                 cache_dir=settings_service.settings.config_dir,
                 expiration_time=settings_service.settings.cache_expire,
             )
+        return None

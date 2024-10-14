@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import cast
 
 from langchain_community.retrievers import AmazonKendraRetriever
 
@@ -33,10 +33,10 @@ class AmazonKendraRetrieverComponent(CustomComponent):
         self,
         index_id: str,
         top_k: int = 3,
-        region_name: Optional[str] = None,
-        credentials_profile_name: Optional[str] = None,
-        attribute_filter: Optional[dict] = None,
-        user_context: Optional[dict] = None,
+        region_name: str | None = None,
+        credentials_profile_name: str | None = None,
+        attribute_filter: dict | None = None,
+        user_context: dict | None = None,
     ) -> Retriever:  # type: ignore[type-var]
         try:
             output = AmazonKendraRetriever(
@@ -46,7 +46,8 @@ class AmazonKendraRetrieverComponent(CustomComponent):
                 credentials_profile_name=credentials_profile_name,
                 attribute_filter=attribute_filter,
                 user_context=user_context,
-            )  # type: ignore
+            )
         except Exception as e:
-            raise ValueError("Could not connect to AmazonKendra API.") from e
+            msg = "Could not connect to AmazonKendra API."
+            raise ValueError(msg) from e
         return cast(Retriever, output)

@@ -1,6 +1,6 @@
 import importlib
 import inspect
-from typing import TYPE_CHECKING, Type, get_type_hints
+from typing import TYPE_CHECKING, get_type_hints
 
 from cachetools import LRUCache, cached
 from loguru import logger
@@ -23,7 +23,7 @@ class ServiceFactory:
         raise self.service_class(*args, **kwargs)
 
 
-def hash_factory(factory: Type[ServiceFactory]) -> str:
+def hash_factory(factory: type[ServiceFactory]) -> str:
     return factory.service_class.__name__
 
 
@@ -31,14 +31,14 @@ def hash_dict(d: dict) -> str:
     return str(d)
 
 
-def hash_infer_service_types_args(factory_class: Type[ServiceFactory], available_services=None) -> str:
+def hash_infer_service_types_args(factory_class: type[ServiceFactory], available_services=None) -> str:
     factory_hash = hash_factory(factory_class)
     services_hash = hash_dict(available_services)
     return f"{factory_hash}_{services_hash}"
 
 
 @cached(cache=LRUCache(maxsize=10), key=hash_infer_service_types_args)
-def infer_service_types(factory_class: Type[ServiceFactory], available_services=None) -> list["ServiceType"]:
+def infer_service_types(factory_class: type[ServiceFactory], available_services=None) -> list["ServiceType"]:
     create_method = factory_class.create
     type_hints = get_type_hints(create_method, globalns=available_services)
     service_types = []
@@ -54,8 +54,9 @@ def infer_service_types(factory_class: Type[ServiceFactory], available_services=
             # Attempt to find a matching enum value
             service_type = ServiceType[type_name]
             service_types.append(service_type)
-        except KeyError:
-            raise ValueError(f"No matching ServiceType for parameter type: {param_type.__name__}")
+        except KeyError as e:
+            msg = f"No matching ServiceType for parameter type: {param_type.__name__}"
+            raise ValueError(msg) from e
     return service_types
 
 
@@ -73,11 +74,15 @@ def import_all_services_into_a_dict():
             service_name = ServiceType(service_type).value.replace("_service", "")
             module_name = f"langflow.services.{service_name}.service"
             module = importlib.import_module(module_name)
-            for name, obj in inspect.getmembers(module, inspect.isclass):
-                if issubclass(obj, Service) and obj is not Service:
-                    services[name] = obj
-                    break
+            services.update(
+                {
+                    name: obj
+                    for name, obj in inspect.getmembers(module, inspect.isclass)
+                    if issubclass(obj, Service) and obj is not Service
+                }
+            )
         except Exception as exc:
             logger.exception(exc)
-            raise RuntimeError("Could not initialize services. Please check your settings.") from exc
+            msg = "Could not initialize services. Please check your settings."
+            raise RuntimeError(msg) from exc
     return services

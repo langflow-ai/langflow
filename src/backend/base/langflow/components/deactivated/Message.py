@@ -1,5 +1,3 @@
-from typing import Optional
-
 from langflow.custom import CustomComponent
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
@@ -28,8 +26,8 @@ class MessageComponent(CustomComponent):
     def build(
         self,
         sender: str = MESSAGE_SENDER_USER,
-        sender_name: Optional[str] = None,
-        session_id: Optional[str] = None,
+        sender_name: str | None = None,
+        session_id: str | None = None,
         text: str = "",
     ) -> Message:
         message = Message(

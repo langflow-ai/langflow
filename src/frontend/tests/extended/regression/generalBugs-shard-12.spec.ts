@@ -57,7 +57,7 @@ test("user should be able to connect RetrieverTool to another components", async
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-500, 500);
+      await page.mouse.move(-300, 300);
     });
 
   await page.mouse.up();
