@@ -4,6 +4,7 @@ from typing import Literal
 
 from loguru import logger
 from pydantic import BaseModel
+from pydantic.v1 import BaseModel as BaseModelV1
 from typing_extensions import TypedDict
 
 from langflow.schema import Data
@@ -116,11 +117,13 @@ def build_output_logs(vertex, result) -> dict:
 
 def recursive_serialize_or_str(obj):
     try:
+        if isinstance(obj, str):
+            return obj
         if isinstance(obj, dict):
             return {k: recursive_serialize_or_str(v) for k, v in obj.items()}
         if isinstance(obj, list):
             return [recursive_serialize_or_str(v) for v in obj]
-        if isinstance(obj, BaseModel):
+        if isinstance(obj, BaseModel | BaseModelV1):
             if hasattr(obj, "model_dump"):
                 obj_dict = obj.model_dump()
             elif hasattr(obj, "dict"):
@@ -138,10 +141,10 @@ def recursive_serialize_or_str(obj):
             return {k: recursive_serialize_or_str(v) for k, v in obj.dict().items()}
         if hasattr(obj, "model_dump"):
             return {k: recursive_serialize_or_str(v) for k, v in obj.model_dump().items()}
-        if issubclass(obj, BaseModel):
+        if isinstance(obj, type) and issubclass(obj, BaseModel):
             # This a type BaseModel and not an instance of it
             return repr(obj)
         return str(obj)
     except Exception:  # noqa: BLE001
-        logger.opt(exception=True).debug(f"Cannot serialize object {obj}")
+        logger.debug(f"Cannot serialize object {obj}")
         return str(obj)
