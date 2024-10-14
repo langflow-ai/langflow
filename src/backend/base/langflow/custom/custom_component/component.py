@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import ast
 import inspect
+from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, get_type_hints
 
 import nanoid
 import yaml
@@ -15,6 +16,7 @@ from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.field_typing import Tool  # noqa: TCH001 Needed by add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
+from langflow.memory import store_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
@@ -35,6 +37,7 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
     from langflow.schema.log import LoggableType
+    from langflow.schema.playground_events import ContentBlock
 
 
 _ComponentToolkit = None
@@ -831,3 +834,100 @@ class Component(CustomComponent):
     def _append_tool_output(self):
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
             self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
+
+    def send_message(
+        self,
+        message: Message,
+        background_color: str | None = None,
+        text_color: str | None = None,
+        allow_markdown: bool = True,
+        icon: str | None = None,
+        content_blocks: list[ContentBlock] | None = None,
+        format_type: Literal["default", "error", "warning", "info"] = "default",
+        id_: str | None = None,
+    ):
+        if self.graph.session_id and not message.session_id:
+            message.session_id = self.graph.session_id
+        stored_message = self._store_message(
+            message,
+            background_color=background_color,
+            text_color=text_color,
+            allow_markdown=allow_markdown,
+            icon=icon,
+            content_blocks=content_blocks,
+            format_type=format_type,
+            id_=id_,
+        )
+
+        if self._should_stream_message(stored_message, message):
+            complete_message = self._stream_message(message, stored_message.id)
+            stored_message = self._update_stored_message(stored_message.id, complete_message)
+
+        self.status = stored_message
+        return stored_message
+
+    def _store_message(self, message: Message, **kwargs) -> Message:
+        messages = store_message(message, flow_id=self.graph.flow_id)
+        if len(messages) != 1:
+            msg = "Only one message can be stored at a time."
+            raise ValueError(msg)
+
+        stored_message = messages[0]
+        self._send_message_event(stored_message, **kwargs)
+        return stored_message
+
+    def _send_message_event(self, message: Message, **kwargs):
+        if hasattr(self, "_event_manager") and self._event_manager:
+            data_dict = message.data
+            data_dict.update(kwargs)
+            self._event_manager.on_message(data=data_dict)
+
+    def _should_stream_message(self, stored_message: Message, original_message: Message) -> bool:
+        return bool(
+            hasattr(self, "_event_manager")
+            and self._event_manager
+            and stored_message.id
+            and not isinstance(original_message.text, str)
+        )
+
+    def _update_stored_message(self, message_id: str, complete_message: str) -> Message:
+        from langflow.services.database.models.message import update_message
+
+        message_table = update_message(message_id=message_id, message={"text": complete_message})
+        updated_message = Message(**message_table.model_dump())
+        self.vertex._added_message = updated_message
+        return updated_message
+
+    def _stream_message(self, message: Message, message_id: str) -> str:
+        iterator = message.text
+        if not isinstance(iterator, AsyncIterator | Iterator):
+            msg = "The message must be an iterator or an async iterator."
+            raise TypeError(msg)
+
+        if isinstance(iterator, AsyncIterator):
+            return run_until_complete(self._handle_async_iterator(iterator, message, message_id))
+
+        complete_message = ""
+        for chunk in iterator:
+            complete_message = self._process_chunk(chunk.content, complete_message, message, message_id)
+        return complete_message
+
+    async def _handle_async_iterator(self, iterator: AsyncIterator, message: Message, message_id: str) -> str:
+        complete_message = ""
+        async for chunk in iterator:
+            complete_message = self._process_chunk(chunk.content, complete_message, message, message_id)
+        return complete_message
+
+    def _process_chunk(self, chunk: str, complete_message: str, message: Message, message_id: str) -> str:
+        complete_message += chunk
+        if self._event_manager:
+            self._event_manager.on_token(
+                data={
+                    "text": complete_message,
+                    "chunk": chunk,
+                    "sender": message.sender,
+                    "sender_name": message.sender_name,
+                    "id": str(message_id),
+                }
+            )
+        return complete_message
