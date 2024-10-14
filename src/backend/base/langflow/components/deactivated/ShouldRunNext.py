@@ -31,7 +31,7 @@ class ShouldRunNextComponent(CustomComponent):
                 content = result.content
             elif isinstance(result, str):
                 content = result
-            if isinstance(content, str) and content.lower().strip() in ["yes", "no"]:
+            if isinstance(content, str) and content.lower().strip() in {"yes", "no"}:
                 break
         condition = str(content).lower().strip() == "yes"
         self.status = f"Should Run Next: {condition}"

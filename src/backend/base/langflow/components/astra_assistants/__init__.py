@@ -8,12 +8,12 @@ from .list_assistants import AssistantsListAssistants
 from .run import AssistantsRun
 
 __all__ = [
-    "AstraAssistantManager",
     "AssistantsCreateAssistant",
     "AssistantsCreateThread",
     "AssistantsGetAssistantName",
     "AssistantsListAssistants",
     "AssistantsRun",
+    "AstraAssistantManager",
     "Dotenv",
     "GetEnvVar",
 ]

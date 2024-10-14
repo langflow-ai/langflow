@@ -32,7 +32,7 @@ def find_class_ast_node(class_obj):
         return None, []
 
     # Read the source code from the file
-    with Path(source_file).open() as file:
+    with Path(source_file).open(encoding="utf-8") as file:
         source_code = file.read()
 
     # Parse the source code into an AST
@@ -333,7 +333,7 @@ class CodeParser:
         bases = self.get_base_classes()
         nodes = []
         for base in bases:
-            if base.__name__ == node.name or base.__name__ in ["CustomComponent", "Component", "BaseComponent"]:
+            if base.__name__ == node.name or base.__name__ in {"CustomComponent", "Component", "BaseComponent"}:
                 continue
             try:
                 class_node, import_nodes = find_class_ast_node(base)

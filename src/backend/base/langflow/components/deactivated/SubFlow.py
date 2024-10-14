@@ -41,7 +41,7 @@ class SubFlowComponent(CustomComponent):
             build_config["flow_name"]["options"] = self.get_flow_names()
         # Clean up the build config
         for key in list(build_config.keys()):
-            if key not in [*self.field_order, "code", "_type", "get_final_results_only"]:
+            if key not in {*self.field_order, "code", "_type", "get_final_results_only"}:
                 del build_config[key]
         if field_value is not None and field_name == "flow_name":
             try:

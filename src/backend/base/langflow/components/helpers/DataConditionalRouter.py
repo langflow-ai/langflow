@@ -62,7 +62,7 @@ class DataConditionalRouterComponent(Component):
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
-            return value.lower() in ["true", "1", "yes", "y", "on"]
+            return value.lower() in {"true", "1", "yes", "y", "on"}
         return bool(value)
 
     def validate_input(self, data_item: Data) -> bool:

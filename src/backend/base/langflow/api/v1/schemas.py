@@ -109,7 +109,7 @@ class ChatResponse(ChatMessage):
     @field_validator("type")
     @classmethod
     def validate_message_type(cls, v):
-        if v not in ["start", "stream", "end", "error", "info", "file"]:
+        if v not in {"start", "stream", "end", "error", "info", "file"}:
             msg = "type must be start, stream, end, error, info, or file"
             raise ValueError(msg)
         return v
@@ -134,7 +134,7 @@ class FileResponse(ChatMessage):
     @field_validator("data_type")
     @classmethod
     def validate_data_type(cls, v):
-        if v not in ["image", "csv"]:
+        if v not in {"image", "csv"}:
             msg = "data_type must be image or csv"
             raise ValueError(msg)
         return v

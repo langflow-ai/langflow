@@ -365,7 +365,7 @@ class Settings(BaseSettings):
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
-    with Path(file_path).open("w") as f:
+    with Path(file_path).open("w", encoding="utf-8") as f:
         settings_dict = settings.model_dump()
         yaml.dump(settings_dict, f)
 

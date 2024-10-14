@@ -216,7 +216,7 @@ class AddContentToPage(LCToolComponent):
             block_type: {},
         }
 
-        if block_type in [
+        if block_type in {
             "paragraph",
             "heading_1",
             "heading_2",
@@ -224,7 +224,7 @@ class AddContentToPage(LCToolComponent):
             "bulleted_list_item",
             "numbered_list_item",
             "quote",
-        ]:
+        }:
             block[block_type]["rich_text"] = [
                 {
                     "type": "text",

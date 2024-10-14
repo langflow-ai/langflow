@@ -9,7 +9,7 @@ def extract_inner_type_from_generic_alias(return_type: GenericAlias) -> Any:
     """
     Extracts the inner type from a type hint that is a list or a Optional.
     """
-    if return_type.__origin__ in [list, SequenceABC]:
+    if return_type.__origin__ in {list, SequenceABC}:
         return list(return_type.__args__)
     return return_type
 
@@ -59,7 +59,7 @@ def post_process_type(_type):
         Union[List[Any], Any]: The processed return type.
 
     """
-    if hasattr(_type, "__origin__") and _type.__origin__ in [list, list, SequenceABC]:
+    if hasattr(_type, "__origin__") and _type.__origin__ in {list, list, SequenceABC}:
         _type = extract_inner_type_from_generic_alias(_type)
 
     # If the return type is not a Union, then we just return it as a list

@@ -37,7 +37,7 @@ class PluginService(Service):
                         if (
                             inspect.isclass(attr)
                             and issubclass(attr, BasePlugin)
-                            and attr not in [CallbackPlugin, BasePlugin]
+                            and attr not in {CallbackPlugin, BasePlugin}
                         ):
                             self.register_plugin(plugin_name, attr())
                 except Exception:  # noqa: BLE001

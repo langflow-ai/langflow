@@ -116,7 +116,7 @@ class StoreService(Service):
 
             return "id" in user_data[0]
         except HTTPStatusError as exc:
-            if exc.response.status_code in [403, 401]:
+            if exc.response.status_code in {403, 401}:
                 return False
             msg = f"Unexpected status code: {exc.response.status_code}"
             raise ValueError(msg) from exc
