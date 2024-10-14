@@ -59,7 +59,9 @@ class MultiConditionalRouterComponent(Component):
         Output(display_name="Default Response", name="default_result", method="default_response"),
     ]
 
-    def evaluate_condition(self, input_text: str, match_text: str, operator: str, case_sensitive: bool) -> bool:
+    def evaluate_condition(
+        self, input_text: str, match_text: str, operator: str, case_sensitive: bool | None = None
+    ) -> bool:
         if not case_sensitive:
             input_text = input_text.lower()
             match_text = match_text.lower()
@@ -79,7 +81,7 @@ class MultiConditionalRouterComponent(Component):
             self.status = self.message
             return self.message
         self.stop(case_name)
-        return None  # type: ignore
+        return None  # type: ignore[return-value]
 
     def case_1_response(self) -> Message:
         return self.case_response(self.case_1_text, "case_1_result")
@@ -93,16 +95,15 @@ class MultiConditionalRouterComponent(Component):
     def case_4_response(self) -> Message:
         # Logic for case 4 can be added here if needed
         self.stop("case_4_result")
-        return None  # type: ignore
+        return None  # type: ignore[return-value]
 
     def default_response(self) -> Message:
         # Check if all cases are false
         case_1_result = self.evaluate_condition(self.input_text, self.case_1_text, self.operator, self.case_sensitive)
         case_2_result = self.evaluate_condition(self.input_text, self.case_2_text, self.operator, self.case_sensitive)
         case_3_result = self.evaluate_condition(self.input_text, self.case_3_text, self.operator, self.case_sensitive)
-        if not (case_1_result or case_2_result or case_3_result):
+        if not (case_1_result or case_2_result or case_3_result):  # All cases are false add any additional cases here
             self.status = self.message
             return self.message
         self.stop("default_result")
-        return None  # type: ignore
-        return None
+        return None  # type: ignore[return-value]
