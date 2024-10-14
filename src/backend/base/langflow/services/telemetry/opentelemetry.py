@@ -138,7 +138,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             labels={"flow_id": mandatory_label},
         )
 
-    def __init__(self, prometheus_enabled: bool = True):
+    def __init__(self, *, prometheus_enabled: bool = True):
         if not self._metrics_registry:
             self._register_metric()
 

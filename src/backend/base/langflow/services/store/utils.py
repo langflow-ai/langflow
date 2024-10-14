@@ -19,6 +19,7 @@ async def update_components_with_user_data(
     components: list["ListComponentResponse"],
     store_service: "StoreService",
     store_api_key: str,
+    *,
     liked: bool,
 ):
     """Updates the components with the user data (liked_by_user and in_users_collection)."""

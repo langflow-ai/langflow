@@ -149,7 +149,7 @@ def initialize_session_service():
     )
 
 
-def initialize_services(fix_migration: bool = False):
+def initialize_services(*, fix_migration: bool = False):
     """Initialize all the services needed."""
     # Test cache connection
     get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())

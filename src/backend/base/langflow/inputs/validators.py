@@ -3,7 +3,7 @@ from typing import Annotated
 from pydantic import PlainValidator
 
 
-def validate_boolean(value: bool) -> bool:
+def validate_boolean(value: bool) -> bool:  # noqa: FBT001
     valid_trues = ["True", "true", "1", "yes"]
     valid_falses = ["False", "false", "0", "no"]
     if value in valid_trues:

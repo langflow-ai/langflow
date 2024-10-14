@@ -22,7 +22,7 @@ class ExtractKeyFromDataComponent(CustomComponent):
         },
     }
 
-    def build(self, data: Data, keys: list[str], silent_error: bool = True) -> Data:
+    def build(self, data: Data, keys: list[str], *, silent_error: bool = True) -> Data:
         """Extracts the keys from a data.
 
         Args:

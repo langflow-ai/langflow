@@ -36,7 +36,7 @@ def __validate_method(method: Callable) -> None:
         raise ValueError(msg)
 
 
-def build_output_getter(method: Callable, validate: bool = True) -> Callable:
+def build_output_getter(method: Callable, *, validate: bool = True) -> Callable:
     """Builds an output getter function for a given method in a graph component.
 
     This function creates a new callable that, when invoked, retrieves the output
@@ -88,7 +88,7 @@ def build_output_getter(method: Callable, validate: bool = True) -> Callable:
     return output_getter
 
 
-def build_output_setter(method: Callable, validate: bool = True) -> Callable:
+def build_output_setter(method: Callable, *, validate: bool = True) -> Callable:
     """Build an output setter function for a given method in a graph component.
 
     This function creates a new callable that, when invoked, sets the output
@@ -136,7 +136,7 @@ def build_output_setter(method: Callable, validate: bool = True) -> Callable:
     return output_setter
 
 
-def create_state_model(model_name: str = "State", validate: bool = True, **kwargs) -> type:
+def create_state_model(model_name: str = "State", *, validate: bool = True, **kwargs) -> type:
     """Create a dynamic Pydantic state model based on the provided keyword arguments.
 
     This function generates a Pydantic model class with fields corresponding to the
@@ -206,8 +206,8 @@ def create_state_model(model_name: str = "State", validate: bool = True, **kwarg
             # Define the field with the return type
             try:
                 __validate_method(value)
-                getter = build_output_getter(value, validate)
-                setter = build_output_setter(value, validate)
+                getter = build_output_getter(value, validate=validate)
+                setter = build_output_setter(value, validate=validate)
                 property_method = property(getter, setter)
             except ValueError as e:
                 # If the method is not valid,assume it is already a getter
