@@ -94,8 +94,7 @@ class Message(Data):
     def to_lc_message(
         self,
     ) -> BaseMessage:
-        """
-        Converts the Data to a BaseMessage.
+        """Converts the Data to a BaseMessage.
 
         Returns:
             BaseMessage: The converted BaseMessage.
@@ -139,16 +138,14 @@ class Message(Data):
 
     @classmethod
     def from_data(cls, data: Data) -> Message:
-        """
-        Converts a BaseMessage to a Data.
+        """Converts Data to a Message.
 
         Args:
-            record (BaseMessage): The BaseMessage to convert.
+            data: The Data to convert.
 
         Returns:
-            Data: The converted Data.
+            The converted Message.
         """
-
         return cls(
             text=data.text,
             sender=data.sender,

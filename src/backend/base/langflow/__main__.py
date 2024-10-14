@@ -46,9 +46,7 @@ def get_number_of_workers(workers=None):
 
 
 def display_results(results):
-    """
-    Display the results of the migration.
-    """
+    """Display the results of the migration."""
     for table_results in results:
         table = Table(title=f"Migration {table_results.table_name}")
         table.add_column("Name")
@@ -97,12 +95,12 @@ def run(
     ),
     log_level: str | None = typer.Option(None, help="Logging level.", show_default=False),
     log_file: Path | None = typer.Option(None, help="Path to the log file.", show_default=False),
-    cache: str | None = typer.Option(
+    cache: str | None = typer.Option(  # noqa: ARG001
         None,
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
         show_default=False,
     ),
-    dev: bool | None = typer.Option(None, help="Run in development mode (may contain bugs)", show_default=False),
+    dev: bool | None = typer.Option(None, help="Run in development mode (may contain bugs)", show_default=False),  # noqa: ARG001
     frontend_path: str | None = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
@@ -113,7 +111,7 @@ def run(
         help="Open the browser after starting the server.",
         show_default=False,
     ),
-    remove_api_keys: bool | None = typer.Option(
+    remove_api_keys: bool | None = typer.Option(  # noqa: ARG001
         None,
         help="Remove API keys from the projects saved in the database.",
         show_default=False,
@@ -123,36 +121,33 @@ def run(
         help="Run only the backend server without the frontend.",
         show_default=False,
     ),
-    store: bool | None = typer.Option(
+    store: bool | None = typer.Option(  # noqa: ARG001
         None,
         help="Enables the store features.",
         show_default=False,
     ),
-    auto_saving: bool | None = typer.Option(
+    auto_saving: bool | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines if the auto save is enabled.",
         show_default=False,
     ),
-    auto_saving_interval: int | None = typer.Option(
+    auto_saving_interval: int | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines the debounce time for the auto save.",
         show_default=False,
     ),
-    health_check_max_retries: bool | None = typer.Option(
+    health_check_max_retries: bool | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines the number of retries for the health check.",
         show_default=False,
     ),
-    max_file_size_upload: int | None = typer.Option(
+    max_file_size_upload: int | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines the maximum file size for the upload in MB.",
         show_default=False,
     ),
 ):
-    """
-    Run Langflow.
-    """
-
+    """Run Langflow."""
     configure(log_level=log_level, log_file=log_file)
     set_var_for_macos_issue()
 
@@ -225,9 +220,7 @@ def run(
 
 
 def wait_for_server_ready(host, port):
-    """
-    Wait for the server to become ready by polling the health endpoint.
-    """
+    """Wait for the server to become ready by polling the health endpoint."""
     status_code = 0
     while status_code != httpx.codes.OK:
         try:
@@ -249,16 +242,13 @@ def run_on_mac_or_linux(host, port, log_level, options, app):
 
 
 def run_on_windows(host, port, log_level, options, app):
-    """
-    Run the Langflow server on Windows.
-    """
+    """Run the Langflow server on Windows."""
     print_banner(host, port)
     run_langflow(host, port, log_level, options, app)
 
 
 def is_port_in_use(port, host="localhost"):
-    """
-    Check if a port is in use.
+    """Check if a port is in use.
 
     Args:
         port (int): The port number to check.
@@ -272,8 +262,7 @@ def is_port_in_use(port, host="localhost"):
 
 
 def get_free_port(port):
-    """
-    Given a used port, find a free port.
+    """Given a used port, find a free port.
 
     Args:
         port (int): The port number to check.
@@ -287,9 +276,7 @@ def get_free_port(port):
 
 
 def get_letter_from_version(version: str):
-    """
-    Get the letter from a pre-release version.
-    """
+    """Get the letter from a pre-release version."""
     if "a" in version:
         return "a"
     if "b" in version:
@@ -308,9 +295,7 @@ def build_version_notice(current_version: str, package_name: str) -> str:
 
 
 def generate_pip_command(package_names, is_pre_release):
-    """
-    Generate the pip install command based on the packages and whether it's a pre-release.
-    """
+    """Generate the pip install command based on the packages and whether it's a pre-release."""
     base_command = "pip install"
     if is_pre_release:
         return f"{base_command} {' '.join(package_names)} -U --pre"
@@ -369,10 +354,7 @@ def print_banner(host: str, port: int):
 
 
 def run_langflow(host, port, log_level, options, app):
-    """
-    Run Langflow server on localhost
-    """
-
+    """Run Langflow server on localhost."""
     if platform.system() == "Windows":
         # Run using uvicorn on MacOS and Windows
         # Windows doesn't support gunicorn
@@ -398,9 +380,7 @@ def superuser(
     password: str = typer.Option(..., prompt=True, hide_input=True, help="Password for the superuser."),
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
 ):
-    """
-    Create a superuser.
-    """
+    """Create a superuser."""
     configure(log_level=log_level)
     initialize_services()
     db_service = get_db_service()
@@ -432,8 +412,7 @@ def superuser(
 # because now the database is stored per installation
 @app.command()
 def copy_db():
-    """
-    Copy the database files to the current directory.
+    """Copy the database files to the current directory.
 
     This function copies the 'langflow.db' and 'langflow-pre.db' files from the cache directory to the current
     directory.
@@ -472,9 +451,7 @@ def migration(
         help="Fix migrations. This is a destructive operation, and should only be used if you know what you are doing.",
     ),
 ):
-    """
-    Run or test migrations.
-    """
+    """Run or test migrations."""
     if fix and not typer.confirm(
         "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
     ):
@@ -492,8 +469,7 @@ def migration(
 def api_key(
     log_level: str = typer.Option("error", help="Logging level."),
 ):
-    """
-    Creates an API key for the default superuser if AUTO_LOGIN is enabled.
+    """Creates an API key for the default superuser if AUTO_LOGIN is enabled.
 
     Args:
         log_level (str, optional): Logging level. Defaults to "error".

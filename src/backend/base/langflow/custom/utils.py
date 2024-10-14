@@ -33,7 +33,7 @@ class UpdateBuildConfigError(Exception):
 
 
 def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: list[str]):
-    """Add output types to the frontend node"""
+    """Add output types to the frontend node."""
     for return_type in return_types:
         if return_type is None:
             raise HTTPException(
@@ -70,7 +70,7 @@ def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list
 
 
 def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: list[str]):
-    """Add base classes to the frontend node"""
+    """Add base classes to the frontend node."""
     for return_type_instance in return_types:
         if return_type_instance is None:
             raise HTTPException(
@@ -90,8 +90,7 @@ def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: l
 
 
 def extract_type_from_optional(field_type):
-    """
-    Extract the type from a string formatted as "Optional[<type>]".
+    """Extract the type from a string formatted as "Optional[<type>]".
 
     Parameters:
     field_type (str): The string from which to extract the type.
@@ -106,7 +105,7 @@ def extract_type_from_optional(field_type):
 
 
 def get_field_properties(extra_field):
-    """Get the properties of an extra field"""
+    """Get the properties of an extra field."""
     field_name = extra_field["name"]
     field_type = extra_field.get("type", "str")
     field_value = extra_field.get("default", "")
@@ -197,7 +196,7 @@ def add_new_custom_field(
 
 
 def add_extra_fields(frontend_node, field_config, function_args):
-    """Add extra fields to the frontend node"""
+    """Add extra fields to the frontend node."""
     if not function_args:
         return
     _field_config = field_config.copy()
@@ -240,7 +239,7 @@ def add_extra_fields(frontend_node, field_config, function_args):
 
 
 def get_field_dict(field: Input | dict):
-    """Get the field dictionary from a Input or a dict"""
+    """Get the field dictionary from a Input or a dict."""
     if isinstance(field, Input):
         return dotdict(field.model_dump(by_alias=True, exclude_none=True))
     return field
@@ -248,11 +247,10 @@ def get_field_dict(field: Input | dict):
 
 def run_build_inputs(
     custom_component: Component,
-    user_id: str | UUID | None = None,
 ):
     """Run the build inputs of a custom component."""
     try:
-        return custom_component.build_inputs(user_id=user_id)
+        return custom_component.build_inputs()
         # add_extra_fields(frontend_node, field_config, field_config.values())
     except Exception as exc:
         logger.exception("Error running build inputs")
@@ -298,8 +296,7 @@ def run_build_config(
     custom_component: CustomComponent,
     user_id: str | UUID | None = None,
 ) -> tuple[dict, CustomComponent]:
-    """Build the field configuration for a custom component"""
-
+    """Build the field configuration for a custom component."""
     if custom_component._code is None:
         error = "Code is None"
     elif not isinstance(custom_component._code, str):
@@ -392,7 +389,7 @@ def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: str | UUID | None = None,
 ) -> tuple[dict[str, Any], CustomComponent | Component]:
-    """Build a custom component template"""
+    """Build a custom component template."""
     try:
         has_template_config = hasattr(custom_component, "template_config")
     except Exception as exc:
@@ -516,7 +513,7 @@ def update_field_dict(
     update_field_value: Any | None = None,
     call: bool = False,
 ):
-    """Update the field dictionary by calling options() or value() if they are callable"""
+    """Update the field dictionary by calling options() or value() if they are callable."""
     if (
         ("real_time_refresh" in field_dict or "refresh_button" in field_dict)
         and any(
@@ -573,7 +570,7 @@ def build_component(component):
 
 
 def get_function(code):
-    """Get the function"""
+    """Get the function."""
     function_name = validate.extract_function_name(code)
 
     return validate.create_function(code, function_name)

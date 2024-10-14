@@ -7,7 +7,6 @@ class Service(ABC):
 
     def get_schema(self):
         """Build a dictionary listing all methods, their parameters, types, return types and documentation."""
-
         schema = {}
         ignore = ["teardown", "set_ready"]
         for method in dir(self):

@@ -6,8 +6,7 @@ from pydantic.fields import FieldInfo
 
 
 def __validate_method(method: Callable) -> None:
-    """
-    Validates a method by checking if it has the required attributes.
+    """Validates a method by checking if it has the required attributes.
 
     This function ensures that the given method belongs to a class with the necessary
     structure for output handling. It checks for the presence of a __self__ attribute
@@ -38,8 +37,7 @@ def __validate_method(method: Callable) -> None:
 
 
 def build_output_getter(method: Callable, validate: bool = True) -> Callable:
-    """
-    Builds an output getter function for a given method in a graph component.
+    """Builds an output getter function for a given method in a graph component.
 
     This function creates a new callable that, when invoked, retrieves the output
     of the specified method using the get_output_by_method of the method's class.
@@ -91,8 +89,7 @@ def build_output_getter(method: Callable, validate: bool = True) -> Callable:
 
 
 def build_output_setter(method: Callable, validate: bool = True) -> Callable:
-    """
-    Build an output setter function for a given method in a graph component.
+    """Build an output setter function for a given method in a graph component.
 
     This function creates a new callable that, when invoked, sets the output
     of the specified method using the get_output_by_method of the method's class.
@@ -129,7 +126,7 @@ def build_output_setter(method: Callable, validate: bool = True) -> Callable:
         >>> print(component.get_output_by_method(component.set_message).value)  # Prints "New message"
     """
 
-    def output_setter(self, value):
+    def output_setter(self, value):  # noqa: ARG001
         if validate:
             __validate_method(method)
         methods_class = method.__self__
@@ -140,8 +137,7 @@ def build_output_setter(method: Callable, validate: bool = True) -> Callable:
 
 
 def create_state_model(model_name: str = "State", validate: bool = True, **kwargs) -> type:
-    """
-    Create a dynamic Pydantic state model based on the provided keyword arguments.
+    """Create a dynamic Pydantic state model based on the provided keyword arguments.
 
     This function generates a Pydantic model class with fields corresponding to the
     provided keyword arguments. It can handle various types of field definitions,

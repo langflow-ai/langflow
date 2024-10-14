@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-from asyncio import Lock
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
@@ -41,7 +40,6 @@ from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
-    get_cache_service,
     get_session,
     get_session_service,
     get_settings_service,
@@ -49,13 +47,11 @@ from langflow.services.deps import (
     get_telemetry_service,
 )
 from langflow.services.session.service import SessionService
-from langflow.services.task.service import TaskService
 from langflow.services.telemetry.schema import RunPayload
 from langflow.services.telemetry.service import TelemetryService
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
-    from langflow.services.cache.base import CacheService
     from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
@@ -64,16 +60,11 @@ router = APIRouter(tags=["Base"])
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all(
     settings_service=Depends(get_settings_service),
-    cache_service: CacheService = Depends(dependency=get_cache_service),
-    force_refresh: bool = False,
 ):
     from langflow.interface.types import get_and_cache_all_types_dict
 
     try:
-        async with Lock() as lock:
-            return await get_and_cache_all_types_dict(
-                settings_service=settings_service, cache_service=cache_service, force_refresh=force_refresh, lock=lock
-            )
+        return await get_and_cache_all_types_dict(settings_service=settings_service)
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -156,9 +147,7 @@ async def simple_run_flow_task(
     stream: bool = False,
     api_key_user: User | None = None,
 ):
-    """
-    Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
-    """
+    """Run a flow task as a BackgroundTask, therefore it should not throw exceptions."""
     try:
         return await simple_run_flow(
             flow=flow,
@@ -180,9 +169,10 @@ async def simplified_run_flow(
     api_key_user: UserRead = Depends(api_key_security),
     telemetry_service: TelemetryService = Depends(get_telemetry_service),
 ):
-    """
-    Executes a specified flow by ID with input customization, performance enhancements through caching, and optional
-    data streaming.
+    """Executes a specified flow by ID.
+
+    Executes a specified flow by ID with input customization, performance enhancements through caching,
+    and optional data streaming.
 
     ### Parameters:
     - `db` (Session): Database session for executing queries.
@@ -301,15 +291,14 @@ async def webhook_run_flow(
     background_tasks: BackgroundTasks,
     telemetry_service: Annotated[TelemetryService, Depends(get_telemetry_service)],
 ):
-    """
-    Run a flow using a webhook request.
+    """Run a flow using a webhook request.
 
     Args:
-        db (Session): The database session.
+        flow (Flow, optional): The flow to be executed. Defaults to Depends(get_flow_by_id).
+        user (User): The flow user.
         request (Request): The incoming HTTP request.
         background_tasks (BackgroundTasks): The background tasks manager.
-        session_service (SessionService, optional): The session service. Defaults to Depends(get_session_service).
-        flow (Flow, optional): The flow to be executed. Defaults to Depends(get_flow_by_id).
+        telemetry_service (TelemetryService): The telemetry service.
 
     Returns:
         dict: A dictionary containing the status of the task.
@@ -382,8 +371,8 @@ async def experimental_run_flow(
     api_key_user: UserRead = Depends(api_key_security),
     session_service: SessionService = Depends(get_session_service),
 ):
-    """
-    Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
+    """Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
+
     This endpoint supports running flows with caching to enhance performance and efficiency.
 
     ### Parameters:
@@ -498,22 +487,10 @@ async def experimental_run_flow(
 @router.post(
     "/process/{flow_id}",
     response_model=ProcessResponse,
+    dependencies=[Depends(api_key_security)],
 )
-async def process(
-    session: Annotated[Session, Depends(get_session)],
-    flow_id: str,
-    inputs: list[dict] | dict | None = None,
-    tweaks: dict | None = None,
-    clear_cache: Annotated[bool, Body(embed=True)] = False,
-    session_id: Annotated[None | str, Body(embed=True)] = None,
-    task_service: TaskService = Depends(get_task_service),
-    api_key_user: UserRead = Depends(api_key_security),
-    sync: Annotated[bool, Body(embed=True)] = True,
-    session_service: SessionService = Depends(get_session_service),
-):
-    """
-    Endpoint to process an input with a given flow_id.
-    """
+async def process():
+    """Endpoint to process an input with a given flow_id."""
     # Raise a depreciation warning
     logger.warning(
         "The /process endpoint is deprecated and will be removed in a future version. Please use /run instead."
@@ -598,8 +575,7 @@ async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: Annotated[User, Depends(get_current_active_user)],
 ):
-    """
-    Update a custom component with the provided code request.
+    """Update a custom component with the provided code request.
 
     This endpoint generates the CustomComponentFrontendNode normally but then runs the `update_build_config` method
     on the latest version of the template.

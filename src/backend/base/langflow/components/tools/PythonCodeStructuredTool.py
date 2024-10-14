@@ -7,6 +7,7 @@ from langchain_core.tools import StructuredTool
 from loguru import logger
 from pydantic.v1 import Field, create_model
 from pydantic.v1.fields import Undefined
+from typing_extensions import override
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs.inputs import BoolInput, DropdownInput, FieldTypes, HandleInput, MessageTextInput, MultilineInput
@@ -83,6 +84,7 @@ class PythonCodeStructuredTool(LCToolComponent):
         Output(display_name="Tool", name="result_tool", method="build_tool"),
     ]
 
+    @override
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name is None:
             return build_config
@@ -209,9 +211,7 @@ class PythonCodeStructuredTool(LCToolComponent):
         )
 
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
-        """
-        This function is called after the code validation is done.
-        """
+        """This function is called after the code validation is done."""
         frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
         frontend_node["template"] = self.update_build_config(
             frontend_node["template"], frontend_node["template"]["tool_code"]["value"], "tool_code"

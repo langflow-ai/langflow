@@ -29,7 +29,7 @@ async def run_graph_internal(
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
 ) -> tuple[list[RunOutputs], str]:
-    """Run the graph and generate the result"""
+    """Run the graph and generate the result."""
     inputs = inputs or []
     session_id_str = flow_id if session_id is None else session_id
     components = []
@@ -66,8 +66,7 @@ def run_graph(
     fallback_to_env_vars: bool = False,
     output_component: str | None = None,
 ) -> list[RunOutputs]:
-    """
-    Runs the given Langflow Graph with the specified input and returns the outputs.
+    """Runs the given Langflow Graph with the specified input and returns the outputs.
 
     Args:
         graph (Graph): The graph to be executed.
@@ -75,6 +74,8 @@ def run_graph(
         input_type (str): The type of the input value.
         output_type (str): The type of the desired output.
         session_id (str | None, optional): The session ID to be used for the flow. Defaults to None.
+        fallback_to_env_vars (bool, optional): Whether to fallback to environment variables.
+            Defaults to False.
         output_component (Optional[str], optional): The specific output component to retrieve. Defaults to None.
 
     Returns:
@@ -157,8 +158,7 @@ def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: dict[str, Any]) -> None:
 def process_tweaks(
     graph_data: dict[str, Any], tweaks: Tweaks | dict[str, dict[str, Any]], stream: bool = False
 ) -> dict[str, Any]:
-    """
-    This function is used to tweak the graph data using the node id and the tweaks dict.
+    """This function is used to tweak the graph data using the node id and the tweaks dict.
 
     :param graph_data: The dictionary containing the graph data. It must contain a 'data' key with
                        'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.
