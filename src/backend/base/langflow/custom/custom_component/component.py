@@ -29,7 +29,6 @@ from .custom_component import CustomComponent
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from uuid import UUID
 
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.schema import EdgeData
@@ -775,11 +774,8 @@ class Component(CustomComponent):
             return str(self.repr_value)
         return self.repr_value
 
-    def build_inputs(self, user_id: str | UUID | None = None):
+    def build_inputs(self):
         """Builds the inputs for the custom component.
-
-        Args:
-            user_id (Optional[Union[str, UUID]], optional): The user ID. Defaults to None.
 
         Returns:
             List[Input]: The list of inputs.

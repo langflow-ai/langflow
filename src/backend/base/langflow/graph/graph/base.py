@@ -1041,7 +1041,7 @@ class Graph:
     # both graphs have the same vertices and edges
     # but the data of the vertices might be different
 
-    def update_edges_from_vertex(self, vertex: Vertex, other_vertex: Vertex) -> None:
+    def update_edges_from_vertex(self, other_vertex: Vertex) -> None:
         """Updates the edges of a vertex in the Graph."""
         new_edges = []
         for edge in self.edges:
@@ -1121,7 +1121,7 @@ class Graph:
         vertex._data = other_vertex._data
         vertex._parse_data()
         # Now we update the edges of the vertex
-        self.update_edges_from_vertex(vertex, other_vertex)
+        self.update_edges_from_vertex(other_vertex)
         vertex.params = {}
         vertex._build_params()
         vertex.graph = self
@@ -1208,7 +1208,7 @@ class Graph:
         # All vertices that do not have edges are invalid
         return len(self.get_vertex_edges(vertex.id)) > 0
 
-    def get_vertex(self, vertex_id: str, silent: bool = False) -> Vertex:
+    def get_vertex(self, vertex_id: str) -> Vertex:
         """Returns a vertex by id."""
         try:
             return self.vertex_map[vertex_id]
@@ -1289,7 +1289,7 @@ class Graph:
             }
         )
 
-    def _record_snapshot(self, vertex_id: str | None = None, start: bool = False):
+    def _record_snapshot(self, vertex_id: str | None = None):
         self._snapshots.append(self.get_snapshot())
         if vertex_id:
             self._call_order.append(vertex_id)
@@ -1480,7 +1480,7 @@ class Graph:
         logger.debug("Graph processing complete")
         return self
 
-    def find_next_runnable_vertices(self, vertex_id: str, vertex_successors_ids: list[str]) -> list[str]:
+    def find_next_runnable_vertices(self, vertex_successors_ids: list[str]) -> list[str]:
         next_runnable_vertices = set()
         for v_id in sorted(vertex_successors_ids):
             if not self.is_vertex_runnable(v_id):
@@ -1495,7 +1495,7 @@ class Graph:
         v_successors_ids = vertex.successors_ids
         async with lock:
             self.run_manager.remove_vertex_from_runnables(v_id)
-            next_runnable_vertices = self.find_next_runnable_vertices(v_id, v_successors_ids)
+            next_runnable_vertices = self.find_next_runnable_vertices(v_successors_ids)
 
             for next_v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
                 if next_v_id == v_id:

@@ -1,6 +1,7 @@
 from typing import Any
 
 from loguru import logger
+from typing_extensions import override
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.base.tools.flow_tool import FlowTool
@@ -39,6 +40,7 @@ class FlowToolComponent(LCToolComponent):
                 return flow_data
         return None
 
+    @override
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name":
             build_config["flow_name"]["options"] = self.get_flow_names()
