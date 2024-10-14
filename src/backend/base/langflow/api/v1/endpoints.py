@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-from asyncio import Lock
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
@@ -41,7 +40,6 @@ from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
-    get_cache_service,
     get_session,
     get_session_service,
     get_settings_service,
@@ -49,13 +47,11 @@ from langflow.services.deps import (
     get_telemetry_service,
 )
 from langflow.services.session.service import SessionService
-from langflow.services.task.service import TaskService
 from langflow.services.telemetry.schema import RunPayload
 from langflow.services.telemetry.service import TelemetryService
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
-    from langflow.services.cache.base import CacheService
     from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
@@ -64,16 +60,11 @@ router = APIRouter(tags=["Base"])
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all(
     settings_service=Depends(get_settings_service),
-    cache_service: CacheService = Depends(dependency=get_cache_service),
-    force_refresh: bool = False,
 ):
     from langflow.interface.types import get_and_cache_all_types_dict
 
     try:
-        async with Lock() as lock:
-            return await get_and_cache_all_types_dict(
-                settings_service=settings_service, cache_service=cache_service, force_refresh=force_refresh, lock=lock
-            )
+        return await get_and_cache_all_types_dict(settings_service=settings_service)
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -496,19 +487,9 @@ async def experimental_run_flow(
 @router.post(
     "/process/{flow_id}",
     response_model=ProcessResponse,
+    dependencies=[Depends(api_key_security)],
 )
-async def process(
-    session: Annotated[Session, Depends(get_session)],
-    flow_id: str,
-    inputs: list[dict] | dict | None = None,
-    tweaks: dict | None = None,
-    clear_cache: Annotated[bool, Body(embed=True)] = False,
-    session_id: Annotated[None | str, Body(embed=True)] = None,
-    task_service: TaskService = Depends(get_task_service),
-    api_key_user: UserRead = Depends(api_key_security),
-    sync: Annotated[bool, Body(embed=True)] = True,
-    session_service: SessionService = Depends(get_session_service),
-):
+async def process():
     """Endpoint to process an input with a given flow_id."""
     # Raise a depreciation warning
     logger.warning(

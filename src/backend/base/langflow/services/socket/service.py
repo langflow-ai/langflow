@@ -53,14 +53,12 @@ class SocketIOService(Service):
     async def on_get_vertices(self, sid, flow_id):
         await get_vertices(self.sio, sid, flow_id, get_chat_service())
 
-    async def on_build_vertex(self, sid, flow_id, vertex_id, tweaks, inputs):
+    async def on_build_vertex(self, sid, flow_id, vertex_id):
         await build_vertex(
             sio=self.sio,
             sid=sid,
             flow_id=flow_id,
             vertex_id=vertex_id,
-            tweaks=tweaks,
-            inputs=inputs,
             get_cache=self.get_cache,
             set_cache=self.set_cache,
         )

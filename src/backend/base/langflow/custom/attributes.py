@@ -4,7 +4,7 @@ import emoji
 from loguru import logger
 
 
-def validate_icon(value: str, *args, **kwargs):
+def validate_icon(value: str):
     # we are going to use the emoji library to validate the emoji
     # emojis can be defined using the :emoji_name: syntax
 

@@ -11,6 +11,7 @@ from loguru import logger
 from pydantic import field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+from typing_extensions import override
 
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 
@@ -352,7 +353,8 @@ class Settings(BaseSettings):
             logger.debug(f"{key}: {getattr(self, key)}")
 
     @classmethod
-    def settings_customise_sources(
+    @override
+    def settings_customise_sources(  # type: ignore[misc]
         cls,
         settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,

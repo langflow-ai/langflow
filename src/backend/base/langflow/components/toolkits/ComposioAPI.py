@@ -4,6 +4,7 @@ from typing import Any
 from composio_langchain import Action, App, ComposioToolSet
 from langchain_core.tools import Tool
 from loguru import logger
+from typing_extensions import override
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import DropdownInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput
@@ -142,6 +143,7 @@ class ComposioAPIComponent(LCToolComponent):
     def _get_normalized_app_name(self) -> str:
         return self.app_names.replace("_CONNECTED", "").replace("_connected", "")
 
+    @override
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         if field_name == "api_key":
             if hasattr(self, "api_key") and self.api_key != "":
