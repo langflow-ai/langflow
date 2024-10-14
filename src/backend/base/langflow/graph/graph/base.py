@@ -358,7 +358,7 @@ class Graph:
         nest_asyncio.apply()
         loop = asyncio.get_event_loop()
         async_gen = self.async_start(inputs, max_iterations, event_manager)
-        async_gen_task = asyncio.ensure_future(async_gen.__anext__())
+        async_gen_task = asyncio.ensure_future(anext(async_gen))
 
         while True:
             try:
@@ -366,7 +366,7 @@ class Graph:
                 yield result
                 if isinstance(result, Finish):
                     return
-                async_gen_task = asyncio.ensure_future(async_gen.__anext__())
+                async_gen_task = asyncio.ensure_future(anext(async_gen))
             except StopAsyncIteration:
                 break
 
@@ -1058,7 +1058,7 @@ class Graph:
         """Updates the edges of a vertex in the Graph."""
         new_edges = []
         for edge in self.edges:
-            if other_vertex.id in (edge.source_id, edge.target_id):
+            if other_vertex.id in {edge.source_id, edge.target_id}:
                 continue
             new_edges.append(edge)
         new_edges += other_vertex.edges
@@ -1210,7 +1210,7 @@ class Graph:
             return
         self.vertices.remove(vertex)
         self.vertex_map.pop(vertex_id)
-        self.edges = [edge for edge in self.edges if vertex_id not in (edge.source_id, edge.target_id)]
+        self.edges = [edge for edge in self.edges if vertex_id not in {edge.source_id, edge.target_id}]
 
     def _build_vertex_params(self) -> None:
         """Identifies and handles the LLM vertex within the graph."""
@@ -1707,7 +1707,7 @@ class Graph:
         node_name = node_id.split("-")[0]
         if node_name in InterfaceComponentTypes:
             return InterfaceVertex
-        if node_name in ["SharedState", "Notify", "Listen"]:
+        if node_name in {"SharedState", "Notify", "Listen"}:
             return StateVertex
         if node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]

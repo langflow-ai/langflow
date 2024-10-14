@@ -63,7 +63,7 @@ class SubFlowComponent(Component):
             new_vertex_inputs = []
             field_template = vertex.data["node"]["template"]
             for inp in field_template:
-                if inp not in ["code", "_type"]:
+                if inp not in {"code", "_type"}:
                     field_template[inp]["display_name"] = (
                         vertex.display_name + " - " + field_template[inp]["display_name"]
                     )
