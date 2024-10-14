@@ -1,6 +1,6 @@
 import { PAGINATION_PAGE, PAGINATION_SIZE } from "@/constants/constants";
 import { usePostDownloadMultipleFlows } from "@/controllers/API/queries/flows";
-import NewFlowModal from "@/modals/newFlowModal";
+import TemplatesModal from "@/modals/templatesModal";
 import { Pagination } from "@/types/utils/types";
 import { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
@@ -13,10 +13,8 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { FlowType } from "../../../../types/flow";
-import { FolderType } from "../../entities";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { getNameByType } from "../../utils/get-name-by-type";
-import { sortFlows } from "../../utils/sort-flows";
 import EmptyComponent from "../emptyComponent";
 import HeaderComponent from "../headerComponent";
 import CollectionCard from "./components/collectionCard";
@@ -286,7 +284,7 @@ export default function ComponentsComponent({
           <></>
         </DeleteConfirmationModal>
       )}
-      <NewFlowModal open={openModal} setOpen={setOpenModal} />
+      <TemplatesModal open={openModal} setOpen={setOpenModal} />
     </>
   );
 }

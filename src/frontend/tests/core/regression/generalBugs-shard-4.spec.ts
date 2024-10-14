@@ -32,7 +32,8 @@ test("should be able to move flow from folder, rename it and be displayed on cor
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Vector Store RAG" }).click();
+  await page.getByTestId("side_nav_options_all-templates").click();
+  await page.getByRole("heading", { name: "Vector Store RAG" }).first().click();
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
   });

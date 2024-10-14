@@ -121,6 +121,7 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
   await page.waitForSelector('[title="fit view"]', {
@@ -191,6 +192,7 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.getByText("New Project", { exact: true }).click();
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
   await page.waitForSelector('[title="fit view"]', {

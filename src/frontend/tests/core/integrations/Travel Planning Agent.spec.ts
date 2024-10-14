@@ -42,6 +42,7 @@ test("Travel Planning Agent", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Travel Planning Agents" }).click();
 
   await page.waitForSelector('[title="fit view"]', {

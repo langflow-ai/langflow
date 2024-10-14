@@ -42,6 +42,7 @@ test("Dynamic Agent", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Dynamic Agent" }).click();
 
   await page.waitForSelector('[title="fit view"]', {

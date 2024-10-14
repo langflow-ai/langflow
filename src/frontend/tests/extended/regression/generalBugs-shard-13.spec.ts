@@ -62,6 +62,7 @@ test("should be able to share a component on the store by clicking on the share 
 
   await page.getByText("New Project", { exact: true }).click();
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForSelector("text=share", { timeout: 10000 });
   await page.waitForSelector("text=playground", { timeout: 10000 });

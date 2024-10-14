@@ -25,6 +25,7 @@ test("select and delete all", async ({ page }) => {
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
@@ -67,6 +68,7 @@ test("select and delete a flow", async ({ page }) => {
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
@@ -108,6 +110,7 @@ test("search flows", async ({ page }) => {
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
@@ -118,6 +121,7 @@ test("search flows", async ({ page }) => {
 
   await page.getByText("Select All").isVisible();
   await page.getByText("New Project", { exact: true }).click();
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Memory Chatbot" }).click();
 
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
@@ -126,6 +130,7 @@ test("search flows", async ({ page }) => {
 
   await page.getByTestId("icon-ChevronLeft").first().click();
   await page.getByText("New Project", { exact: true }).click();
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Document QA" }).click();
 
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
@@ -164,6 +169,7 @@ test("search components", async ({ page }) => {
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
   await page.waitForSelector('[title="fit view"]', {

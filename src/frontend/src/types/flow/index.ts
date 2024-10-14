@@ -25,6 +25,8 @@ export type FlowType = {
   folder?: string;
   user_id?: string;
   icon?: string;
+  gradient?: string;
+  tags?: string[];
   icon_bg_color?: string;
   folder_id?: string;
   webhook?: boolean;
