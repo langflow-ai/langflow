@@ -1,12 +1,18 @@
-from typing import Any
-
-from astrapy import Collection, DataAPIClient, Database
+from astrapy import DataAPIClient, Collection, Database
+from langflow.schema import Data
+from langflow.helpers import docs_to_data
+from typing import Union, Dict, Tuple, Any, List
+from langflow.base.langchain_utilities.model import LCToolComponent
+from pydantic import BaseModel, Field
 from langchain.pydantic_v1 import BaseModel, Field, create_model
 from langchain_core.tools import StructuredTool
-
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.io import DictInput, IntInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.io import (
+    DictInput,
+    SecretStrInput,
+    StrInput,
+    IntInput
+)
+from typing import Optional
 
 
 class AstraDBToolComponent(LCToolComponent):
@@ -56,32 +62,21 @@ class AstraDBToolComponent(LCToolComponent):
             required=True,
         ),
         StrInput(
-            name="projection_attributes",
-            display_name="Projection Attributes",
+            name="projection",
+            display_name="Projection fields",
             info="Attributes to return separated by comma.",
             required=True,
             value="*",
-            advanced=True,
+            advanced=True
         ),
-        DictInput(
-            name="tool_params",
-            info="Attributes to filter and description to the model. Add ! for mandatory (e.g: !customerId)",
-            display_name="Tool params",
-            is_list=True,
-        ),
-        DictInput(
-            name="static_filters",
-            info="Attributes to filter and correspoding value",
-            display_name="Static filters",
-            is_list=True,
-        ),
-        IntInput(
-            name="number_of_results",
-            display_name="Number of Results",
-            info="Number of results to return.",
-            advanced=True,
-            value=5,
-        ),
+        DictInput(name="tool_params",
+                  info="Attributes to filter and description to the model. Mandatory arguments should start with an exclamation mark (e.g: !customerId)",
+                  display_name="Tool params", is_list=True),
+        DictInput(name="static_filters",
+                  info="Attributes to filter and correspoding value",
+                  display_name="Static filters", is_list=True),
+        IntInput(name="limit", display_name="Limit", value=5, advanced=True)
+
     ]
 
     _cached_client: DataAPIClient | None = None
@@ -93,24 +88,29 @@ class AstraDBToolComponent(LCToolComponent):
             return self._cached_collection
 
         _cached_client = DataAPIClient(self.token)
-        _cached_db = _cached_client.get_database(self.api_endpoint, namespace=self.namespace)
-        self._cached_collection = _cached_db.get_collection(self.collection_name)
+        _cached_db = _cached_client.get_database(
+            self.api_endpoint,  namespace=self.namespace)
+        self._cached_collection = _cached_db.get_collection(
+            self.collection_name)
         return self._cached_collection
 
-    def create_args_schema(self) -> dict[str, BaseModel]:
-        args: dict[str, tuple[Any, Field] | list[str]] = {}
+    def create_args_schema(self) -> Dict[str, BaseModel]:
+        args: Dict[str, Tuple[Any, Field] | List[str]] = {}
 
-        for key in self.tool_params:
-            if key.startswith("!"):  # Mandatory
-                args[key[1:]] = (str, Field(description=self.tool_params[key]))
+        for key in self.tool_params.keys():
+            if key.startswith('!'):  # Mandatory
+                args[key[1:]] = (str, Field(
+                    description=self.tool_params[key]))
             else:  # Optional
-                args[key] = (str | None, Field(description=self.tool_params[key], default=None))
+                args[key] = (Optional[str], Field(
+                    description=self.tool_params[key], default=None))
 
-        model = create_model("ToolInput", **args, __base__=BaseModel)
-        return {"ToolInput": model}
+        model = create_model('ToolInput', **args,  __base__=BaseModel)
+        return {'ToolInput': model}
 
     def build_tool(self) -> StructuredTool:
-        """Builds an Astra DB Collection tool.
+        """
+        Builds an Astra DB Collection tool.
 
         Args:
 
@@ -121,35 +121,35 @@ class AstraDBToolComponent(LCToolComponent):
 
         tool = StructuredTool.from_function(
             name=self.tool_name,
-            args_schema=schema_dict["ToolInput"],
+            args_schema=schema_dict['ToolInput'],
             description=self.tool_description,
             func=self.run_model,
-            return_direct=False,
+            return_direct=False
         )
         self.status = "Astra DB Tool created"
 
         return tool
 
     def projection_args(self, input_str: str) -> dict:
-        elements = input_str.split(",")
+        elements = input_str.split(',')
         result = {}
 
         for element in elements:
-            if element.startswith("!"):
+            if element.startswith('!'):
                 result[element[1:]] = False
             else:
                 result[element] = True
 
         return result
 
-    def run_model(self, **args) -> Data | list[Data]:
+    def run_model(self, **args) -> Union[Data, list[Data]]:
         collection = self._build_collection()
-        results = collection.find(
-            ({**args, **self.static_filters}),
-            projection=self.projection_args(self.projection_attributes),
-            limit=self.number_of_results,
-        )
+        results = collection.find(({**args, **self.static_filters} or {}),
+                                  projection=self.projection_args(
+                                      self.projection),
+                                  limit=self.limit)
 
-        data: list[Data] = [Data(data=doc) for doc in results]
+        data: Data = Data.from_document(
+            {"text": repr([{**doc} for doc in results])})
         self.status = data
         return data
