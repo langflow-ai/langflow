@@ -124,7 +124,7 @@ export default function NodeOutputField({
   ) : (
     <div
       ref={ref}
-      className="relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
+      className="relative mt-1 flex w-full flex-wrap items-center justify-between bg-primary-foreground px-5 py-2"
     >
       <>
         <div className="flex w-full items-center justify-end truncate text-sm">

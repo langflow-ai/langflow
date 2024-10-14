@@ -23,7 +23,7 @@ def log_transaction(db: Session, transaction: TransactionBase) -> TransactionTab
     db.add(table)
     try:
         db.commit()
-        return table
     except IntegrityError:
         db.rollback()
         raise
+    return table

@@ -10,8 +10,7 @@ class UploadError(Exception):
 
 
 def upload(file_path: str, host: str, flow_id: str):
-    """
-    Upload a file to Langflow and return the file path.
+    """Upload a file to Langflow and return the file path.
 
     Args:
         file_path (str): The path to the file to be uploaded.
@@ -22,25 +21,24 @@ def upload(file_path: str, host: str, flow_id: str):
         dict: A dictionary containing the file path.
 
     Raises:
-        Exception: If an error occurs during the upload process.
+        UploadError: If an error occurs during the upload process.
     """
     try:
         url = f"{host}/api/v1/upload/{flow_id}"
         with Path(file_path).open("rb") as file:
             response = httpx.post(url, files={"file": file})
-            if response.status_code in (httpx.codes.OK, httpx.codes.CREATED):
+            if response.status_code in {httpx.codes.OK, httpx.codes.CREATED}:
                 return response.json()
     except Exception as e:
         msg = f"Error uploading file: {e}"
         raise UploadError(msg) from e
-    else:
-        msg = f"Error uploading file: {response.status_code}"
-        raise UploadError(msg)
+
+    msg = f"Error uploading file: {response.status_code}"
+    raise UploadError(msg)
 
 
 def upload_file(file_path: str, host: str, flow_id: str, components: list[str], tweaks: dict | None = None):
-    """
-    Upload a file to Langflow and return the file path.
+    """Upload a file to Langflow and return the file path.
 
     Args:
         file_path (str): The path to the file to be uploaded.
@@ -54,26 +52,27 @@ def upload_file(file_path: str, host: str, flow_id: str, components: list[str], 
         dict: A dictionary containing the file path and any tweaks that were applied.
 
     Raises:
-        Exception: If an error occurs during the upload process.
+        UploadError: If an error occurs during the upload process.
     """
-    if not tweaks:
-        tweaks = {}
     try:
         response = upload(file_path, host, flow_id)
-        if response["file_path"]:
-            for component in components:
-                if isinstance(component, str):
-                    tweaks[component] = {"path": response["file_path"]}
-                else:
-                    msg = f"Component ID or name must be a string. Got {type(component)}"
-                    raise TypeError(msg)
-            return tweaks
     except Exception as e:
         msg = f"Error uploading file: {e}"
         raise UploadError(msg) from e
-    else:
-        msg = "Error uploading file"
-        raise UploadError(msg)
+
+    if not tweaks:
+        tweaks = {}
+    if response["file_path"]:
+        for component in components:
+            if isinstance(component, str):
+                tweaks[component] = {"path": response["file_path"]}
+            else:
+                msg = f"Error uploading file: component ID or name must be a string. Got {type(component)}"
+                raise UploadError(msg)
+        return tweaks
+
+    msg = "Error uploading file"
+    raise UploadError(msg)
 
 
 def get_flow(url: str, flow_id: str):
@@ -88,7 +87,7 @@ def get_flow(url: str, flow_id: str):
         dict: A dictionary containing the details of the flow.
 
     Raises:
-        Exception: If an error occurs during the retrieval process.
+        UploadError: If an error occurs during the retrieval process.
     """
     try:
         flow_url = f"{url}/api/v1/flows/{flow_id}"
@@ -99,6 +98,6 @@ def get_flow(url: str, flow_id: str):
     except Exception as e:
         msg = f"Error retrieving flow: {e}"
         raise UploadError(msg) from e
-    else:
-        msg = f"Error retrieving flow: {response.status_code}"
-        raise UploadError(msg)
+
+    msg = f"Error retrieving flow: {response.status_code}"
+    raise UploadError(msg)

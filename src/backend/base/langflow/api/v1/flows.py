@@ -102,7 +102,6 @@ def create_flow(
         session.add(db_flow)
         session.commit()
         session.refresh(db_flow)
-        return db_flow
     except Exception as e:
         # If it is a validation error, return the error message
         if hasattr(e, "errors"):
@@ -122,6 +121,8 @@ def create_flow(
             raise
         raise HTTPException(status_code=500, detail=str(e)) from e
 
+    return db_flow
+
 
 @router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
 def read_flows(
@@ -136,8 +137,7 @@ def read_flows(
     params: Params = Depends(),
     header_flows: bool = False,
 ):
-    """
-    Retrieve a list of flows with pagination support.
+    """Retrieve a list of flows with pagination support.
 
     Args:
         current_user (User): The current authenticated user.
@@ -148,10 +148,11 @@ def read_flows(
         folder_id (UUID, optional): The folder ID. Defaults to None.
         params (Params): Pagination parameters.
         remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
+        header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.
+
     Returns:
         Union[list[FlowRead], Page[FlowRead]]: A list of flows or a paginated response containing the list of flows.
     """
-
     try:
         auth_settings = settings_service.auth_settings
 
@@ -199,13 +200,11 @@ def read_flows(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/{flow_id}", response_model=FlowRead, status_code=200)
-def read_flow(
-    *,
-    session: Session = Depends(get_session),
+def _read_flow(
+    session: Session,
     flow_id: UUID,
-    current_user: User = Depends(get_current_active_user),
-    settings_service: SettingsService = Depends(get_settings_service),
+    current_user: User,
+    settings_service: SettingsService,
 ):
     """Read a flow."""
     auth_settings = settings_service.auth_settings
@@ -216,7 +215,19 @@ def read_flow(
         stmt = stmt.where(
             (Flow.user_id == current_user.id) | (Flow.user_id == None)  # noqa: E711
         )
-    if user_flow := session.exec(stmt).first():
+    return session.exec(stmt).first()
+
+
+@router.get("/{flow_id}", response_model=FlowRead, status_code=200)
+def read_flow(
+    *,
+    session: Session = Depends(get_session),
+    flow_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    settings_service: SettingsService = Depends(get_settings_service),
+):
+    """Read a flow."""
+    if user_flow := _read_flow(session, flow_id, current_user, settings_service):
         return user_flow
     raise HTTPException(status_code=404, detail="Flow not found")
 
@@ -232,14 +243,19 @@ def update_flow(
 ):
     """Update a flow."""
     try:
-        db_flow = read_flow(
+        db_flow = _read_flow(
             session=session,
             flow_id=flow_id,
             current_user=current_user,
             settings_service=settings_service,
         )
-        if not db_flow:
-            raise HTTPException(status_code=404, detail="Flow not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    if not db_flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
+    try:
         flow_data = flow.model_dump(exclude_unset=True)
         if settings_service.settings.remove_api_keys:
             flow_data = remove_api_keys(flow_data)
@@ -256,7 +272,6 @@ def update_flow(
         session.add(db_flow)
         session.commit()
         session.refresh(db_flow)
-        return db_flow
     except Exception as e:
         # If it is a validation error, return the error message
         if hasattr(e, "errors"):
@@ -272,9 +287,9 @@ def update_flow(
             raise HTTPException(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
-        if isinstance(e, HTTPException):
-            raise
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return db_flow
 
 
 @router.delete("/{flow_id}", status_code=200)
@@ -286,7 +301,7 @@ async def delete_flow(
     settings_service=Depends(get_settings_service),
 ):
     """Delete a flow."""
-    flow = read_flow(
+    flow = _read_flow(
         session=session,
         flow_id=flow_id,
         current_user=current_user,
@@ -349,12 +364,12 @@ async def delete_multiple_flows(
     user: Annotated[User, Depends(get_current_active_user)],
     db: Annotated[Session, Depends(get_session)],
 ):
-    """
-    Delete multiple flows by their IDs.
+    """Delete multiple flows by their IDs.
 
     Args:
         flow_ids (List[str]): The list of flow IDs to delete.
         user (User, optional): The user making the request. Defaults to the current active user.
+        db (Session, optional): The database session.
 
     Returns:
         dict: A dictionary containing the number of flows deleted.
@@ -426,8 +441,7 @@ def read_basic_examples(
     *,
     session: Session = Depends(get_session),
 ):
-    """
-    Retrieve a list of basic example flows.
+    """Retrieve a list of basic example flows.
 
     Args:
         session (Session): The database session.
@@ -435,7 +449,6 @@ def read_basic_examples(
     Returns:
         list[FlowRead]: A list of basic example flows.
     """
-
     try:
         # Get the starter folder
         starter_folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()

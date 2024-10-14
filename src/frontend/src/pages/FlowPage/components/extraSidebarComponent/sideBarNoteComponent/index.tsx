@@ -23,7 +23,7 @@ export default function NoteDraggableComponent() {
       <div
         data-testid={"note_component"}
         id={"note component"}
-        className="flex w-full items-center justify-between rounded-md border border-dashed border-ring bg-white px-3 py-1 text-sm"
+        className="flex w-full items-center justify-between rounded-md border border-dashed border-ring px-3 py-1 text-sm"
       >
         <IconComponent name="StickyNote" className="pr-2" />
         <span className="side-bar-components-text">Add Note</span>

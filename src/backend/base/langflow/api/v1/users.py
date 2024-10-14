@@ -28,9 +28,7 @@ def add_user(
     session: Annotated[Session, Depends(get_session)],
     settings_service=Depends(get_settings_service),
 ) -> User:
-    """
-    Add a new user to the database.
-    """
+    """Add a new user to the database."""
     new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_password_hash(user.password)
@@ -52,9 +50,7 @@ def add_user(
 def read_current_user(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> User:
-    """
-    Retrieve the current user's data.
-    """
+    """Retrieve the current user's data."""
     return current_user
 
 
@@ -65,9 +61,7 @@ def read_all_users(
     _: Session = Depends(get_current_active_superuser),
     session: Session = Depends(get_session),
 ) -> UsersResponse:
-    """
-    Retrieve a list of users from the database with pagination.
-    """
+    """Retrieve a list of users from the database with pagination."""
     query: SelectOfScalar = select(User).offset(skip).limit(limit)
     users = session.exec(query).fetchall()
 
@@ -87,10 +81,7 @@ def patch_user(
     user: Annotated[User, Depends(get_current_active_user)],
     session: Annotated[Session, Depends(get_session)],
 ) -> User:
-    """
-    Update an existing user's data.
-    """
-
+    """Update an existing user's data."""
     update_password = user_update.password is not None and user_update.password != ""
 
     if not user.is_superuser and user_update.is_superuser:
@@ -117,9 +108,7 @@ def reset_password(
     user: Annotated[User, Depends(get_current_active_user)],
     session: Annotated[Session, Depends(get_session)],
 ) -> User:
-    """
-    Reset a user's password.
-    """
+    """Reset a user's password."""
     if user_id != user.id:
         raise HTTPException(status_code=400, detail="You can't change another user's password")
 
@@ -141,9 +130,7 @@ def delete_user(
     current_user: Annotated[User, Depends(get_current_active_superuser)],
     session: Annotated[Session, Depends(get_session)],
 ) -> dict:
-    """
-    Delete a user from the database.
-    """
+    """Delete a user from the database."""
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="You can't delete your own user account")
     if not current_user.is_superuser:

@@ -33,6 +33,4 @@ class LCChatMemoryComponent(Component):
 
     @abstractmethod
     def build_message_history(self) -> BaseChatMessageHistory:
-        """
-        Builds the chat message history memory.
-        """
+        """Builds the chat message history memory."""

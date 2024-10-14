@@ -82,8 +82,9 @@ class ChatComponent(Component):
 
     def build_with_data(
         self,
-        sender: str = "User",
-        sender_name: str = "User",
+        *,
+        sender: str | None = "User",
+        sender_name: str | None = "User",
         input_value: str | Data | Message | None = None,
         files: list[str] | None = None,
         session_id: str | None = None,

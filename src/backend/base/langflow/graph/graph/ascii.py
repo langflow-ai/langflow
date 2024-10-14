@@ -1,5 +1,4 @@
-"""
-This code is adapted from the DVC project.
+"""This code is adapted from the DVC project.
 
 Original source:
 https://github.com/iterative/dvc/blob/c5bac1c8cfdb2c0f54d52ac61ff754e6f583822a/dvc/dagascii.py
@@ -135,7 +134,7 @@ def build_sugiyama_layout(vertexes, edges):
     return sug
 
 
-def draw_graph(vertexes, edges, return_ascii=True):
+def draw_graph(vertexes, edges, *, return_ascii=True):
     """Build a DAG and draw it in ASCII."""
     sug = build_sugiyama_layout(vertexes, edges)
 

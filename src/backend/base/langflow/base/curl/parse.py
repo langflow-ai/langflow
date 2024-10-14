@@ -1,5 +1,4 @@
-"""
-This file contains a fix for the implementation of the `uncurl` library, which is available at https://github.com/spulec/uncurl.git.
+r"""This file contains a fix for the implementation of the `uncurl` library, which is available at https://github.com/spulec/uncurl.git.
 
 The `uncurl` library provides a way to parse and convert cURL commands into Python requests.
 However, there are some issues with the original implementation that this file aims to fix.
@@ -83,30 +82,30 @@ def parse_curl_command(curl_command):
             i += 1
             args["method"] = tokens[i].lower()
             method_on_curl = tokens[i].lower()
-        elif token in ("-d", "--data"):
+        elif token in {"-d", "--data"}:
             i += 1
             args["data"] = tokens[i]
-        elif token in ("-b", "--data-binary", "--data-raw"):
+        elif token in {"-b", "--data-binary", "--data-raw"}:
             i += 1
             args["data_binary"] = tokens[i]
-        elif token in ("-H", "--header"):
+        elif token in {"-H", "--header"}:
             i += 1
             args["headers"].append(tokens[i])
         elif token == "--compressed":
             args["compressed"] = True
-        elif token in ("-k", "--insecure"):
+        elif token in {"-k", "--insecure"}:
             args["insecure"] = True
-        elif token in ("-u", "--user"):
+        elif token in {"-u", "--user"}:
             i += 1
             args["user"] = tuple(tokens[i].split(":"))
-        elif token in ("-I", "--include"):
+        elif token in {"-I", "--include"}:
             args["include"] = True
-        elif token in ("-s", "--silent"):
+        elif token in {"-s", "--silent"}:
             args["silent"] = True
-        elif token in ("-x", "--proxy"):
+        elif token in {"-x", "--proxy"}:
             i += 1
             args["proxy"] = tokens[i]
-        elif token in ("-U", "--proxy-user"):
+        elif token in {"-U", "--proxy-user"}:
             i += 1
             args["proxy_user"] = tokens[i]
         elif not token.startswith("-"):

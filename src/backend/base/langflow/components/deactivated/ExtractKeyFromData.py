@@ -22,9 +22,8 @@ class ExtractKeyFromDataComponent(CustomComponent):
         },
     }
 
-    def build(self, data: Data, keys: list[str], silent_error: bool = True) -> Data:
-        """
-        Extracts the keys from a data.
+    def build(self, data: Data, keys: list[str], *, silent_error: bool = True) -> Data:
+        """Extracts the keys from a data.
 
         Args:
             data (Data): The data from which to extract the keys.
