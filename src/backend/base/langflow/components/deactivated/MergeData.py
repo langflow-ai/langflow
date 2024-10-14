@@ -6,8 +6,8 @@ from langflow.schema import Data
 
 
 class MergeDataComponent(Component):
-    """
-    MergeDataComponent is responsible for combining multiple Data objects into a unified list of Data objects.
+    """MergeDataComponent is responsible for combining multiple Data objects into a unified list of Data objects.
+
     It ensures that all keys across the input Data objects are present in each merged Data object.
     Missing keys are filled with empty strings to maintain consistency.
     """
@@ -36,8 +36,8 @@ class MergeDataComponent(Component):
     ]
 
     def merge_data(self) -> list[Data]:
-        """
-        Merges multiple Data objects into a single list of Data objects.
+        """Merges multiple Data objects into a single list of Data objects.
+
         Ensures that all keys from the input Data objects are present in each merged Data object.
         Missing keys are filled with empty strings.
 

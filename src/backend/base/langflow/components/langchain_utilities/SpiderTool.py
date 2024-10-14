@@ -139,4 +139,4 @@ class SpiderTool(Component):
 
 
 class SpiderToolError(Exception):
-    """SpiderTool error"""
+    """SpiderTool error."""

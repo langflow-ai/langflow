@@ -27,12 +27,8 @@ class LCToolComponent(Component):
 
     @abstractmethod
     def run_model(self) -> Data | list[Data]:
-        """
-        Run model and return the output.
-        """
+        """Run model and return the output."""
 
     @abstractmethod
     def build_tool(self) -> Tool | Sequence[Tool]:
-        """
-        Build the tool.
-        """
+        """Build the tool."""

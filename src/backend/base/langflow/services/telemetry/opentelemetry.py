@@ -37,8 +37,8 @@ optional_label = False
 
 
 class ObservableGaugeWrapper:
-    """
-    Wrapper class for ObservableGauge
+    """Wrapper class for ObservableGauge.
+
     Since OpenTelemetry does not provide a way to set the value of an ObservableGauge,
     instead it uses a callback function to get the value, we need to create a wrapper class.
     """
@@ -77,9 +77,7 @@ class Metric:
         self.allowed_labels = list(labels.keys())
 
     def validate_labels(self, labels: Mapping[str, str]):
-        """
-        Validate if the labels provided are valid
-        """
+        """Validate if the labels provided are valid."""
         if labels is None or len(labels) == 0:
             msg = "Labels must be provided for the metric"
             raise ValueError(msg)
@@ -94,9 +92,7 @@ class Metric:
 
 
 class ThreadSafeSingletonMetaUsingWeakref(type):
-    """
-    Thread-safe Singleton metaclass using WeakValueDictionary
-    """
+    """Thread-safe Singleton metaclass using WeakValueDictionary."""
 
     _instances: WeakValueDictionary[Any, Any] = WeakValueDictionary()
     _lock: threading.Lock = threading.Lock()
@@ -123,9 +119,9 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             raise ValueError(msg)
 
     def _register_metric(self):
-        """
-        Define any custom metrics here
-        A thread safe singleton class to manage metrics
+        """Define any custom metrics here.
+
+        A thread safe singleton class to manage metrics.
         """
         self._add_metric(
             name="file_uploads",

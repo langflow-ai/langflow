@@ -36,8 +36,7 @@ class AgentSpec(BaseModel):
 
 
 def data_to_messages(data: list[Data]) -> list[BaseMessage]:
-    """
-    Convert a list of data to a list of messages.
+    """Convert a list of data to a list of messages.
 
     Args:
         data (List[Data]): The data to convert.

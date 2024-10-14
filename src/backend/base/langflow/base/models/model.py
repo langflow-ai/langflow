@@ -64,11 +64,10 @@ class LCModelComponent(Component):
         return result
 
     def get_result(self, runnable: LLM, stream: bool, input_value: str):
-        """
-        Retrieves the result from the output of a Runnable object.
+        """Retrieves the result from the output of a Runnable object.
 
         Args:
-            output (Runnable): The output object to retrieve the result from.
+            runnable (Runnable): The runnable to retrieve the result from.
             stream (bool): Indicates whether to use streaming or invocation mode.
             input_value (str): The input value to pass to the output object.
 
@@ -90,8 +89,7 @@ class LCModelComponent(Component):
         return result
 
     def build_status_message(self, message: AIMessage):
-        """
-        Builds a status message from an AIMessage object.
+        """Builds a status message from an AIMessage object.
 
         Args:
             message (AIMessage): The AIMessage object to build the status message from.
@@ -204,6 +202,4 @@ class LCModelComponent(Component):
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        """
-        Implement this method to build the model.
-        """
+        """Implement this method to build the model."""

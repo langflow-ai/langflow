@@ -42,7 +42,7 @@ def build_valid_menu(valid_components):
 
 
 def build_and_validate_all_files(reader: DirectoryReader, file_list):
-    """Build and validate all files"""
+    """Build and validate all files."""
     data = reader.build_component_menu_list(file_list)
 
     valid_components = reader.filter_loaded_components(data=data, with_errors=False)
@@ -52,7 +52,7 @@ def build_and_validate_all_files(reader: DirectoryReader, file_list):
 
 
 async def abuild_and_validate_all_files(reader: DirectoryReader, file_list):
-    """Build and validate all files"""
+    """Build and validate all files."""
     data = await reader.abuild_component_menu_list(file_list)
 
     valid_components = reader.filter_loaded_components(data=data, with_errors=False)
@@ -62,14 +62,14 @@ async def abuild_and_validate_all_files(reader: DirectoryReader, file_list):
 
 
 def load_files_from_path(path: str):
-    """Load all files from a given path"""
+    """Load all files from a given path."""
     reader = DirectoryReader(path, False)
 
     return reader.get_files()
 
 
 def build_custom_component_list_from_path(path: str):
-    """Build a list of custom components for the langchain from a given path"""
+    """Build a list of custom components for the langchain from a given path."""
     file_list = load_files_from_path(path)
     reader = DirectoryReader(path, False)
 
@@ -82,7 +82,7 @@ def build_custom_component_list_from_path(path: str):
 
 
 async def abuild_custom_component_list_from_path(path: str):
-    """Build a list of custom components for the langchain from a given path"""
+    """Build a list of custom components for the langchain from a given path."""
     file_list = load_files_from_path(path)
     reader = DirectoryReader(path, False)
 

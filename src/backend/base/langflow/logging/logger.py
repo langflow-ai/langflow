@@ -23,10 +23,10 @@ class SizedLogBuffer:
         self,
         max_readers: int = 20,  # max number of concurrent readers for the buffer
     ):
-        """
-        a buffer for storing log messages for the log retrieval API
-        the buffer can be overwritten by an env variable LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE
-        because the logger is initialized before the settings_service are loaded
+        """A buffer for storing log messages for the log retrieval API.
+
+        The buffer can be overwritten by an env variable LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE
+        because the logger is initialized before the settings_service are loaded.
         """
         self.max: int = 0
         env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
@@ -217,9 +217,9 @@ def setup_gunicorn_logger():
 
 
 class InterceptHandler(logging.Handler):
-    """
-    Default handler from examples in loguru documentaion.
-    See https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging
+    """Default handler from examples in loguru documentation.
+
+    See https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging.
     """
 
     def emit(self, record):
