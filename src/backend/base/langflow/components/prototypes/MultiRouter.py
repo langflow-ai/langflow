@@ -78,9 +78,8 @@ class MultiConditionalRouterComponent(Component):
         if result:
             self.status = self.message
             return self.message
-        else:
-            self.stop(case_name)
-            return None  # type: ignore
+        self.stop(case_name)
+        return None  # type: ignore
 
     def case_1_response(self) -> Message:
         return self.case_response(self.case_1_text, "case_1_result")
@@ -104,7 +103,6 @@ class MultiConditionalRouterComponent(Component):
         if not (case_1_result or case_2_result or case_3_result):
             self.status = self.message
             return self.message
-        else:
-            self.stop("default_result")
-            return None  # type: ignore
+        self.stop("default_result")
+        return None  # type: ignore
         return None
