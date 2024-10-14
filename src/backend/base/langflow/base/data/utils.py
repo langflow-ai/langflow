@@ -44,6 +44,18 @@ def is_hidden(path: Path) -> bool:
     return path.name.startswith(".")
 
 
+def format_directory_path(path: str) -> str:
+    """Format a directory path to ensure it's properly escaped and valid.
+
+    Args:
+    path (str): The input path string.
+
+    Returns:
+    str: A properly formatted path string.
+    """
+    return path.replace("\n", "\\n")
+
+
 def retrieve_file_paths(
     path: str,
     *,
@@ -52,6 +64,7 @@ def retrieve_file_paths(
     depth: int,
     types: list[str] = TEXT_FILE_TYPES,
 ) -> list[str]:
+    path = format_directory_path(path)
     path_obj = Path(path)
     if not path_obj.exists() or not path_obj.is_dir():
         msg = f"Path {path} must exist and be a directory."
