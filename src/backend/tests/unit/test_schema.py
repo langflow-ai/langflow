@@ -1,12 +1,14 @@
-from collections.abc import Sequence
+from types import NoneType
 from typing import Union
 
+from langflow.schema.data import Data
 import pytest
 from pydantic import ValidationError
 
 from langflow.template import Input, Output
 from langflow.template.field.base import UNDEFINED
 from langflow.type_extraction.type_extraction import post_process_type
+from collections.abc import Sequence as SequenceABC
 
 
 @pytest.fixture(name="client", autouse=True)
@@ -40,11 +42,43 @@ class TestInput:
         assert input_obj.field_type == "int"
 
     def test_post_process_type_function(self):
+        # Basic types
         assert set(post_process_type(int)) == {int}
+        assert set(post_process_type(float)) == {float}
+
+        # List and Sequence types
         assert set(post_process_type(list[int])) == {int}
+        assert set(post_process_type(SequenceABC[float])) == {float}
+
+        # Union types
         assert set(post_process_type(Union[int, str])) == {int, str}
-        assert set(post_process_type(Union[int, Sequence[str]])) == {int, str}
-        assert set(post_process_type(Union[int, Sequence[int]])) == {int}
+        assert set(post_process_type(Union[int, SequenceABC[str]])) == {int, str}
+        assert set(post_process_type(Union[int, SequenceABC[int]])) == {int}
+
+        # Nested Union with lists
+        assert set(post_process_type(Union[list[int], list[str]])) == {int, str}
+        assert set(post_process_type(Union[int, list[str], list[float]])) == {int, str, float}
+
+        # Custom data types
+        assert set(post_process_type(Data)) == {Data}
+        assert set(post_process_type(list[Data])) == {Data}
+
+        # Union with custom types
+        assert set(post_process_type(Union[Data, str])) == {Data, str}
+        assert set(post_process_type(Union[Data, int, list[str]])) == {Data, int, str}
+
+        # Empty lists and edge cases
+        assert set(post_process_type(list)) == {list}
+        assert set(post_process_type(Union[int, None])) == {int, NoneType}
+        assert set(post_process_type(Union[None, list[None]])) == {None, NoneType}
+
+        # Handling complex nested structures
+        assert set(post_process_type(Union[SequenceABC[Union[int, str]], list[float]])) == {int, str, float}
+        assert set(post_process_type(Union[Union[Union[int, list[str]], list[float]], str])) == {int, str, float}
+
+        # Non-generic types should return as is
+        assert set(post_process_type(dict)) == {dict}
+        assert set(post_process_type(tuple)) == {tuple}
 
     def test_input_to_dict(self):
         input_obj = Input(field_type="str")
