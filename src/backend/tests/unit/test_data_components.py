@@ -158,7 +158,9 @@ def test_directory_component_build_with_multithreading(
 
     # Assert
     mock_resolve_path.assert_called_once_with(path)
-    mock_retrieve_file_paths.assert_called_once_with(path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=ANY)
+    mock_retrieve_file_paths.assert_called_once_with(
+        path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=ANY
+    )
     mock_parallel_load_data.assert_called_once_with(
         mock_retrieve_file_paths.return_value, silent_errors=silent_errors, max_concurrency=max_concurrency
     )
