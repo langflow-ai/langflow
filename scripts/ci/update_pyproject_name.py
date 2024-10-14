@@ -32,8 +32,8 @@ def update_uv_dep(pyproject_path: str, new_project_name: str) -> None:
         pattern = re.compile(r"langflow = \{ workspace = true \}")
         replacement = "langflow-nightly = { workspace = true }"
     elif new_project_name == "langflow-base-nightly":
-        pattern = re.compile(r"langflow-base = \{ workspace = true \}")
-        replacement = "langflow-base-nightly = { workspace = true }"
+        pattern = re.compile(r"langflow-base = \{ path = \"src/backend/base\" \}")
+        replacement = "langflow-base-nightly = { path = \"src/backend/base\" }"
     else:
         raise ValueError(f"Invalid project name: {new_project_name}")
 
