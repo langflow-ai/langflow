@@ -13,11 +13,12 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
+from langflow.schema.utils import timestamp_to_str_validator  # noqa: TCH001
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
@@ -29,18 +30,6 @@ if TYPE_CHECKING:
     from langchain_core.prompt_values import ImagePromptValue
 
 
-def _timestamp_to_str(timestamp: datetime | str) -> str:
-    if isinstance(timestamp, str):
-        # Just check if the string is a valid datetime
-        try:
-            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
-        except ValueError as e:
-            msg = f"Invalid timestamp: {timestamp}"
-            raise ValueError(msg) from e
-        return timestamp
-    return timestamp.strftime("%Y-%m-%d %H:%M:%S")
-
-
 class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
@@ -50,7 +39,7 @@ class Message(Data):
     sender_name: str | None = None
     files: list[str | Image] | None = Field(default=[])
     session_id: str | None = Field(default="")
-    timestamp: Annotated[str, BeforeValidator(_timestamp_to_str)] = Field(
+    timestamp: Annotated[str, timestamp_to_str_validator] = Field(
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     )
     flow_id: str | UUID | None = None
