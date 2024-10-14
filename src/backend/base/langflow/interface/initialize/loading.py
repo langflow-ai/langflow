@@ -52,11 +52,12 @@ async def get_instance_results(
     custom_component,
     custom_params: dict,
     vertex: Vertex,
+    *,
     fallback_to_env_vars: bool = False,
     base_type: str = "component",
 ):
     custom_params = update_params_with_load_from_db_fields(
-        custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars
+        custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars=fallback_to_env_vars
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -105,6 +106,7 @@ def update_params_with_load_from_db_fields(
     custom_component: CustomComponent,
     params,
     load_from_db_fields,
+    *,
     fallback_to_env_vars=False,
 ):
     # For each field in load_from_db_fields, we will check if it's in the params

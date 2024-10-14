@@ -268,6 +268,7 @@ def get_root_of_group_node(
 def sort_up_to_vertex(
     graph: dict[str, dict[str, list[str]]],
     vertex_id: str,
+    *,
     parent_node_map: dict[str, str | None] | None = None,
     is_start: bool = False,
 ) -> list[str]:

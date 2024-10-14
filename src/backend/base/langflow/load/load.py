@@ -13,6 +13,7 @@ from langflow.utils.util import update_settings
 
 def load_flow_from_json(
     flow: Path | str | dict,
+    *,
     tweaks: dict | None = None,
     log_level: str | None = None,
     log_file: str | None = None,
@@ -71,6 +72,7 @@ def load_flow_from_json(
 def run_flow_from_json(
     flow: Path | str | dict,
     input_value: str,
+    *,
     session_id: str | None = None,
     tweaks: dict | None = None,
     input_type: str = "chat",

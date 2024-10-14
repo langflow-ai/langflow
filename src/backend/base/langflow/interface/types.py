@@ -27,7 +27,7 @@ def key_func(*args, **kwargs):
     return json.dumps(args) + json.dumps(kwargs)
 
 
-async def aget_all_components(components_paths, as_dict=False):
+async def aget_all_components(components_paths, *, as_dict=False):
     """Get all components names combining native and custom components."""
     all_types_dict = await aget_all_types_dict(components_paths)
     components = {} if as_dict else []
@@ -41,7 +41,7 @@ async def aget_all_components(components_paths, as_dict=False):
     return components
 
 
-def get_all_components(components_paths, as_dict=False):
+def get_all_components(components_paths, *, as_dict=False):
     """Get all components names combining native and custom components."""
     all_types_dict = get_all_types_dict(components_paths)
     components = [] if not as_dict else {}
