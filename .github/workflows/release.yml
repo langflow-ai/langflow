@@ -59,7 +59,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync --directory src/backend/base
       - name: Check Version
         id: check-version
         run: |
@@ -79,6 +79,7 @@ jobs:
       - name: Test CLI
         if: steps.check-version.outputs.skipped == 'false'
         run: |
+          uv venv
           uv pip install src/backend/base/dist/*.whl
           uv run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
