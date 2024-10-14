@@ -121,7 +121,7 @@ def read_folder(
         raise HTTPException(status_code=404, detail="Folder not found")
 
     try:
-        stmt = select(Flow).where(Flow.folder_id == folder_id, Flow.user_id == current_user.id)
+        stmt = select(Flow).where(Flow.folder_id == folder_id)
 
         if Flow.updated_at is not None:
             stmt = stmt.order_by(Flow.updated_at.desc())  # type: ignore[attr-defined]
