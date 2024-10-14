@@ -112,7 +112,7 @@ class APIRequestComponent(Component):
         timeout: int = 5,
     ) -> Data:
         method = method.upper()
-        if method not in ["GET", "POST", "PATCH", "PUT", "DELETE"]:
+        if method not in {"GET", "POST", "PATCH", "PUT", "DELETE"}:
             msg = f"Unsupported method: {method}"
             raise ValueError(msg)
 

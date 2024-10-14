@@ -76,7 +76,6 @@ async def get_all(
             )
 
     except Exception as exc:
-        logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
@@ -260,7 +259,6 @@ async def simplified_run_flow(
             telemetry_service.log_package_run,
             RunPayload(runIsWebhook=False, runSeconds=int(end_time - start_time), runSuccess=True, runErrorMessage=""),
         )
-        return result
 
     except ValueError as exc:
         background_tasks.add_task(
@@ -277,13 +275,10 @@ async def simplified_run_flow(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         if "not found" in str(exc):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        logger.exception(exc)
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
     except InvalidChatInputException as exc:
-        logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:
-        logger.exception(exc)
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
@@ -294,6 +289,8 @@ async def simplified_run_flow(
             ),
         )
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+
+    return result
 
 
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
@@ -320,59 +317,57 @@ async def webhook_run_flow(
     Raises:
         HTTPException: If the flow is not found or if there is an error processing the request.
     """
+    start_time = time.perf_counter()
+    logger.debug("Received webhook request")
+    error_msg = ""
     try:
-        start_time = time.perf_counter()
-        logger.debug("Received webhook request")
-        data = await request.body()
+        try:
+            data = await request.body()
+        except Exception as exc:
+            error_msg = str(exc)
+            raise HTTPException(status_code=500, detail=error_msg) from exc
+
         if not data:
-            logger.error("Request body is empty")
-            msg = "Request body is empty. You should provide a JSON payload containing the flow ID."
-            raise ValueError(
-                msg,
+            error_msg = "Request body is empty. You should provide a JSON payload containing the flow ID."
+            raise HTTPException(status_code=400, detail=error_msg)
+
+        try:
+            # get all webhook components in the flow
+            webhook_components = get_all_webhook_components_in_flow(flow.data)
+            tweaks = {}
+
+            for component in webhook_components:
+                tweaks[component["id"]] = {"data": data.decode() if isinstance(data, bytes) else data}
+            input_request = SimplifiedAPIRequest(
+                input_value="",
+                input_type="chat",
+                output_type="chat",
+                tweaks=tweaks,
+                session_id=None,
             )
 
-        # get all webhook components in the flow
-        webhook_components = get_all_webhook_components_in_flow(flow.data)
-        tweaks = {}
-
-        for component in webhook_components:
-            tweaks[component["id"]] = {"data": data.decode() if isinstance(data, bytes) else data}
-        input_request = SimplifiedAPIRequest(
-            input_value="",
-            input_type="chat",
-            output_type="chat",
-            tweaks=tweaks,
-            session_id=None,
-        )
-
-        logger.debug("Starting background task")
-        background_tasks.add_task(
-            simple_run_flow_task,
-            flow=flow,
-            input_request=input_request,
-            api_key_user=user,
-        )
-        background_tasks.add_task(
-            telemetry_service.log_package_run,
-            RunPayload(
-                runIsWebhook=True, runSeconds=int(time.perf_counter() - start_time), runSuccess=True, runErrorMessage=""
-            ),
-        )
-        return {"message": "Task started in the background", "status": "in progress"}
-    except Exception as exc:
+            logger.debug("Starting background task")
+            background_tasks.add_task(
+                simple_run_flow_task,
+                flow=flow,
+                input_request=input_request,
+                api_key_user=user,
+            )
+        except Exception as exc:
+            error_msg = str(exc)
+            raise HTTPException(status_code=500, detail=error_msg) from exc
+    finally:
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
                 runIsWebhook=True,
                 runSeconds=int(time.perf_counter() - start_time),
-                runSuccess=False,
-                runErrorMessage=str(exc),
+                runSuccess=error_msg == "",
+                runErrorMessage=error_msg,
             ),
         )
-        if "Flow ID is required" in str(exc) or "Request body is empty" in str(exc):
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        logger.exception(exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return {"message": "Task started in the background", "status": "in progress"}
 
 
 @router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
@@ -434,35 +429,53 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
     catering to diverse application requirements.
     """  # noqa: E501
-    try:
-        flow_id_str = str(flow_id)
-        if outputs is None:
-            outputs = []
-        if inputs is None:
-            inputs = [InputValueRequest(components=[], input_value="")]
+    flow_id_str = str(flow_id)
+    if outputs is None:
+        outputs = []
+    if inputs is None:
+        inputs = [InputValueRequest(components=[], input_value="")]
 
-        if session_id:
+    if session_id:
+        try:
             session_data = await session_service.load_session(session_id, flow_id=flow_id_str)
-            graph, _artifacts = session_data or (None, None)
-            if graph is None:
-                msg = f"Session {session_id} not found"
-                raise ValueError(msg)
-        else:
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        graph, _artifacts = session_data or (None, None)
+        if graph is None:
+            msg = f"Session {session_id} not found"
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+    else:
+        try:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
             flow = session.exec(
                 select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
             ).first()
-            if flow is None:
-                msg = f"Flow {flow_id_str} not found"
-                raise ValueError(msg)
+        except sa.exc.StatementError as exc:
+            # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
+            if "badly formed hexadecimal UUID string" in str(exc):
+                logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
+                # This means the Flow ID is not a valid UUID which means it can't find the flow
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
-            if flow.data is None:
-                msg = f"Flow {flow_id_str} has no data"
-                raise ValueError(msg)
+        if flow is None:
+            msg = f"Flow {flow_id_str} not found"
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+
+        if flow.data is None:
+            msg = f"Flow {flow_id_str} has no data"
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+        try:
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    try:
         task_result, session_id = await run_graph_internal(
             graph=graph,
             flow_id=flow_id_str,
@@ -471,26 +484,10 @@ async def experimental_run_flow(
             outputs=outputs,
             stream=stream,
         )
-
-        return RunResponse(outputs=task_result, session_id=session_id)
-    except sa.exc.StatementError as exc:
-        # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
-        if "badly formed hexadecimal UUID string" in str(exc):
-            logger.exception(f"Flow ID {flow_id_str} is not a valid UUID")
-            # This means the Flow ID is not a valid UUID which means it can't find the flow
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    except ValueError as exc:
-        if f"Flow {flow_id_str} not found" in str(exc):
-            logger.exception(f"Flow {flow_id_str} not found")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        if f"Session {session_id} not found" in str(exc):
-            logger.exception(f"Session {session_id} not found")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        logger.exception(exc)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     except Exception as exc:
-        logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    return RunResponse(outputs=task_result, session_id=session_id)
 
 
 @router.post(
@@ -646,12 +643,11 @@ async def custom_component_update(
             field_value=code_request.field_value,
             field_name=code_request.field,
         )
-        component_node["template"] = updated_build_config
-
-        return component_node
     except Exception as exc:
-        logger.exception(exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    component_node["template"] = updated_build_config
+    return component_node
 
 
 @router.get("/config", response_model=ConfigResponse)
@@ -662,5 +658,4 @@ def get_config():
         settings_service: SettingsService = get_settings_service()
         return settings_service.settings.model_dump()
     except Exception as exc:
-        logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc

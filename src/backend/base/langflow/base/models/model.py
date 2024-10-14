@@ -82,11 +82,12 @@ class LCModelComponent(Component):
                 message = runnable.invoke(input_value)
                 result = message.content if hasattr(message, "content") else message
                 self.status = result
-            return result
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
             raise
+
+        return result
 
     def build_status_message(self, message: AIMessage):
         """
@@ -173,7 +174,7 @@ class LCModelComponent(Component):
         inputs: list | dict = messages or {}
         try:
             if self.output_parser is not None:
-                runnable = runnable | self.output_parser
+                runnable |= self.output_parser
 
             runnable = runnable.with_config(
                 {
@@ -194,11 +195,12 @@ class LCModelComponent(Component):
                 self.status = result
             else:
                 self.status = result
-            return result
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
             raise
+
+        return result
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

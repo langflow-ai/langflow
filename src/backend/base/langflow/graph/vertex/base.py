@@ -380,7 +380,7 @@ class Vertex:
                     except Exception:  # noqa: BLE001
                         logger.debug(f"Error evaluating code for {field_name}")
                         params[field_name] = val
-                elif field.get("type") in ["dict", "NestedDict"]:
+                elif field.get("type") in {"dict", "NestedDict"}:
                     # When dict comes from the frontend it comes as a
                     # list of dicts, so we need to convert it to a dict
                     # before passing it to the build method
@@ -870,9 +870,10 @@ class Vertex:
             # self._data is a dict and we need to compare them
             # to check if they are equal
             data_are_equal = self.data == __o.data
-            return ids_are_equal and data_are_equal
         except AttributeError:
             return False
+        else:
+            return ids_are_equal and data_are_equal
 
     def __hash__(self) -> int:
         return id(self)

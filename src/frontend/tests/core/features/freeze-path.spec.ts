@@ -37,6 +37,7 @@ test("user must be able to freeze a path", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
   await page.waitForSelector('[title="fit view"]', {

@@ -358,7 +358,7 @@ class Graph:
         nest_asyncio.apply()
         loop = asyncio.get_event_loop()
         async_gen = self.async_start(inputs, max_iterations, event_manager)
-        async_gen_task = asyncio.ensure_future(async_gen.__anext__())
+        async_gen_task = asyncio.ensure_future(anext(async_gen))
 
         while True:
             try:
@@ -366,7 +366,7 @@ class Graph:
                 yield result
                 if isinstance(result, Finish):
                     return
-                async_gen_task = asyncio.ensure_future(async_gen.__anext__())
+                async_gen_task = asyncio.ensure_future(anext(async_gen))
             except StopAsyncIteration:
                 break
 
@@ -752,11 +752,12 @@ class Graph:
         try:
             # Attempt to get the running event loop; if none, an exception is raised
             loop = asyncio.get_running_loop()
-            if loop.is_closed():
-                msg = "The running event loop is closed."
-                raise RuntimeError(msg)
         except RuntimeError:
-            # If there's no running event loop or it's closed, use asyncio.run
+            # If there's no running event loop, use asyncio.run
+            return asyncio.run(coro)
+
+        # If the event loop is closed, use asyncio.run
+        if loop.is_closed():
             return asyncio.run(coro)
 
         # If there's an existing, open event loop, use it to run the async function
@@ -1031,16 +1032,16 @@ class Graph:
             edges = payload["edges"]
             graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id)
             graph.add_nodes_and_edges(vertices, edges)
-            return graph
         except KeyError as exc:
             logger.exception(exc)
             if "nodes" not in payload and "edges" not in payload:
-                logger.exception(exc)
                 msg = f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
                 raise ValueError(msg) from exc
 
             msg = f"Error while creating graph from payload: {exc}"
             raise ValueError(msg) from exc
+        else:
+            return graph
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Graph):
@@ -1057,7 +1058,7 @@ class Graph:
         """Updates the edges of a vertex in the Graph."""
         new_edges = []
         for edge in self.edges:
-            if other_vertex.id in (edge.source_id, edge.target_id):
+            if other_vertex.id in {edge.source_id, edge.target_id}:
                 continue
             new_edges.append(edge)
         new_edges += other_vertex.edges
@@ -1209,7 +1210,7 @@ class Graph:
             return
         self.vertices.remove(vertex)
         self.vertex_map.pop(vertex_id)
-        self.edges = [edge for edge in self.edges if vertex_id not in (edge.source_id, edge.target_id)]
+        self.edges = [edge for edge in self.edges if vertex_id not in {edge.source_id, edge.target_id}]
 
     def _build_vertex_params(self) -> None:
         """Identifies and handles the LLM vertex within the graph."""
@@ -1400,22 +1401,23 @@ class Graph:
 
                     await set_cache(key=vertex.id, data=vertex_dict)
 
-            if vertex.result is not None:
-                params = f"{vertex._built_object_repr()}{params}"
-                valid = True
-                result_dict = vertex.result
-                artifacts = vertex.artifacts
-            else:
-                msg = f"No result found for vertex {vertex_id}"
-                raise ValueError(msg)
-
-            return VertexBuildResult(
-                result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
-            )
         except Exception as exc:
             if not isinstance(exc, ComponentBuildException):
                 logger.exception("Error building Component")
             raise
+
+        if vertex.result is not None:
+            params = f"{vertex._built_object_repr()}{params}"
+            valid = True
+            result_dict = vertex.result
+            artifacts = vertex.artifacts
+        else:
+            msg = f"Error building Component: no result found for vertex {vertex_id}"
+            raise ValueError(msg)
+
+        return VertexBuildResult(
+            result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
+        )
 
     def get_vertex_edges(
         self,
@@ -1705,7 +1707,7 @@ class Graph:
         node_name = node_id.split("-")[0]
         if node_name in InterfaceComponentTypes:
             return InterfaceVertex
-        if node_name in ["SharedState", "Notify", "Listen"]:
+        if node_name in {"SharedState", "Notify", "Listen"}:
             return StateVertex
         if node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]

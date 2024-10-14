@@ -1,6 +1,4 @@
 import { expect, test } from "@playwright/test";
-import * as dotenv from "dotenv";
-import path from "path";
 
 test("user must be able to freeze a component", async ({ page }) => {
   await page.goto("/");
@@ -28,7 +26,7 @@ test("user must be able to freeze a component", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Blank Flow" }).click();
+  await page.getByTestId("blank-flow").click();
 
   //first component
 

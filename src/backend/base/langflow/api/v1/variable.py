@@ -25,19 +25,18 @@ def create_variable(
     variable_service: DatabaseVariableService = Depends(get_variable_service),
 ):
     """Create a new variable."""
+    if not variable.name and not variable.value:
+        raise HTTPException(status_code=400, detail="Variable name and value cannot be empty")
+
+    if not variable.name:
+        raise HTTPException(status_code=400, detail="Variable name cannot be empty")
+
+    if not variable.value:
+        raise HTTPException(status_code=400, detail="Variable value cannot be empty")
+
+    if variable.name in variable_service.list_variables(user_id=current_user.id, session=session):
+        raise HTTPException(status_code=400, detail="Variable name already exists")
     try:
-        if not variable.name and not variable.value:
-            raise HTTPException(status_code=400, detail="Variable name and value cannot be empty")
-
-        if not variable.name:
-            raise HTTPException(status_code=400, detail="Variable name cannot be empty")
-
-        if not variable.value:
-            raise HTTPException(status_code=400, detail="Variable value cannot be empty")
-
-        if variable.name in variable_service.list_variables(user_id=current_user.id, session=session):
-            raise HTTPException(status_code=400, detail="Variable name already exists")
-
         return variable_service.create_variable(
             user_id=current_user.id,
             name=variable.name,

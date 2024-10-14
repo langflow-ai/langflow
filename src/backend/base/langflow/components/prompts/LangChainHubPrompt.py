@@ -62,7 +62,7 @@ class LangChainHubPromptComponent(Component):
         for message in prompt_template:
             # Find all matches
             matches = re.findall(pattern, message.template)
-            custom_fields = custom_fields + matches
+            custom_fields += matches
 
             # Create a string version of the full template
             full_template = full_template + "\n" + message.template

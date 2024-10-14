@@ -36,14 +36,14 @@ def _get_version_info():
             __version__ = metadata.version(pkg_name)
             prerelease_version = __version__
             version = _compute_non_prerelease_version(prerelease_version)
-
+        except (ImportError, metadata.PackageNotFoundError):
+            pass
+        else:
             return {
                 "version": prerelease_version,
                 "main_version": version,
                 "package": display_name,
             }
-        except (ImportError, metadata.PackageNotFoundError):
-            pass
 
     if __version__ is None:
         msg = f"Package not found from options {package_options}"
@@ -80,7 +80,7 @@ def fetch_latest_version(package_name: str, include_prerelease: bool) -> str | N
         valid_versions = [v for v in versions if include_prerelease or not is_pre_release(v)]
         if not valid_versions:
             return None  # Handle case where no valid versions are found
-        return max(valid_versions, key=lambda v: pkg_version.parse(v))
+        return max(valid_versions, key=pkg_version.parse)
 
     except Exception:  # noqa: BLE001
         logger.exception("Error fetching latest version")

@@ -91,9 +91,9 @@ class DirectoryReader:
         """
         try:
             ast.parse(file_content)
-            return True
         except SyntaxError:
             return False
+        return True
 
     def validate_build(self, file_content):
         """
