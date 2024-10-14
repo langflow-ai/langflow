@@ -57,12 +57,12 @@ class JSONCleaner(Component):
         normalize_unicode = self.normalize_unicode
         validate_json = self.validate_json
 
+        start = json_str.find("{")
+        end = json_str.rfind("}")
+        if start == -1 or end == -1:
+            msg = "Invalid JSON string: Missing '{' or '}'"
+            raise ValueError(msg)
         try:
-            start = json_str.find("{")
-            end = json_str.rfind("}")
-            if start == -1 or end == -1:
-                msg = "Invalid JSON string: Missing '{' or '}'"
-                raise ValueError(msg)
             json_str = json_str[start : end + 1]
 
             if remove_control_chars:
@@ -93,7 +93,7 @@ class JSONCleaner(Component):
         """Validate the JSON string."""
         try:
             json.loads(s)
-            return s
         except json.JSONDecodeError as e:
             msg = f"Invalid JSON string: {e}"
             raise ValueError(msg) from e
+        return s

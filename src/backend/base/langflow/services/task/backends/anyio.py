@@ -68,13 +68,14 @@ class AnyIOBackend(TaskBackend):
             try:
                 task_result = AnyIOTaskResult(tg)
                 tg.start_soon(task_result.run, task_func, *args, **kwargs)
-                task_id = str(id(task_result))
-                self.tasks[task_id] = task_result
-                logger.info(f"Task {task_id} started.")
-                return task_id, task_result
             except Exception:  # noqa: BLE001
                 logger.exception("An error occurred while launching the task")
                 return None, None
+
+            task_id = str(id(task_result))
+            self.tasks[task_id] = task_result
+            logger.info(f"Task {task_id} started.")
+            return task_id, task_result
 
     def get_task(self, task_id: str) -> Any:
         return self.tasks.get(task_id)

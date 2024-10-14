@@ -173,14 +173,14 @@ class AssemblyAITranscriptionJobCreator(Component):
 
         try:
             transcript = aai.Transcriber().submit(audio, config=config)
-
-            if transcript.error:
-                self.status = transcript.error
-                return Data(data={"error": transcript.error})
-            result = Data(data={"transcript_id": transcript.id})
-            self.status = result
-            return result
         except Exception as e:  # noqa: BLE001
             logger.opt(exception=True).debug("Error submitting transcription job")
             self.status = f"An error occurred: {e}"
             return Data(data={"error": f"An error occurred: {e}"})
+
+        if transcript.error:
+            self.status = transcript.error
+            return Data(data={"error": transcript.error})
+        result = Data(data={"transcript_id": transcript.id})
+        self.status = result
+        return result

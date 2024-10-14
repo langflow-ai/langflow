@@ -189,14 +189,15 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
         if query:
             search_type = self.search_type.lower()
+            if search_type not in ["similarity", "mmr"]:
+                msg = f"Invalid search type: {self.search_type}"
+                logger.error(msg)
+                raise ValueError(msg)
             try:
                 if search_type == "similarity":
                     results = vector_store.similarity_search_with_score(query, **search_kwargs)
                 elif search_type == "mmr":
                     results = vector_store.max_marginal_relevance_search(query, **search_kwargs)
-                else:
-                    msg = f"Invalid search type: {self.search_type}"
-                    raise ValueError(msg)
             except Exception as e:
                 msg = (
                     "Error occurred while querying the Elasticsearch VectorStore,"

@@ -164,10 +164,7 @@ def initialize_services(fix_migration: bool = False, socketio_server=None):
     # Test cache connection
     get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
     # Setup the superuser
-    try:
-        initialize_database(fix_migration=fix_migration)
-    except Exception:
-        raise
+    initialize_database(fix_migration=fix_migration)
     setup_superuser(get_service(ServiceType.SETTINGS_SERVICE), next(get_session()))
     try:
         get_db_service().migrate_flows_if_auto_login()

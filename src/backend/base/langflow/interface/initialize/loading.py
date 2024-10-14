@@ -123,12 +123,12 @@ def update_params_with_load_from_db_fields(
                         raise
                     logger.debug(str(e))
                 if fallback_to_env_vars and key is None:
-                    var = os.getenv(params[field])
-                    if var is None:
+                    key = os.getenv(params[field])
+                    if key is None:
                         msg = f"Environment variable {params[field]} is not set."
-                        raise ValueError(msg)
-                    key = var
-                    logger.info(f"Using environment variable {params[field]} for {field}")
+                        logger.error(msg)
+                    else:
+                        logger.info(f"Using environment variable {params[field]} for {field}")
                 if key is None:
                     logger.warning(f"Could not get value for {field}. Setting it to None.")
 

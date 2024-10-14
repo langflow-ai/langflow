@@ -39,29 +39,28 @@ class CalculatorToolComponent(LCToolComponent):
             args_schema=self.CalculatorToolSchema,
         )
 
+    def _eval_expr(self, node):
+        # Define the allowed operators
+        operators = {
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.Pow: operator.pow,
+        }
+        if isinstance(node, ast.Num):
+            return node.n
+        if isinstance(node, ast.BinOp):
+            return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))
+        if isinstance(node, ast.UnaryOp):
+            return operators[type(node.op)](self._eval_expr(node.operand))
+        raise TypeError(node)
+
     def _evaluate_expression(self, expression: str) -> list[Data]:
         try:
-            # Define the allowed operators
-            operators = {
-                ast.Add: operator.add,
-                ast.Sub: operator.sub,
-                ast.Mult: operator.mul,
-                ast.Div: operator.truediv,
-                ast.Pow: operator.pow,
-            }
-
-            def eval_expr(node):
-                if isinstance(node, ast.Num):
-                    return node.n
-                if isinstance(node, ast.BinOp):
-                    return operators[type(node.op)](eval_expr(node.left), eval_expr(node.right))
-                if isinstance(node, ast.UnaryOp):
-                    return operators[type(node.op)](eval_expr(node.operand))
-                raise TypeError(node)
-
             # Parse the expression and evaluate it
             tree = ast.parse(expression, mode="eval")
-            result = eval_expr(tree.body)
+            result = self._eval_expr(tree.body)
 
             # Format the result to a reasonable number of decimal places
             formatted_result = f"{result:.6f}".rstrip("0").rstrip(".")

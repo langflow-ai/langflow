@@ -86,9 +86,10 @@ class SerpAPIComponent(LCToolComponent):
 
             data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]
 
-            self.status = data_list
-            return data_list
         except Exception as e:  # noqa: BLE001
             logger.opt(exception=True).debug("Error running SerpAPI")
             self.status = f"Error: {e}"
             return [Data(data={"error": str(e)}, text=str(e))]
+
+        self.status = data_list
+        return data_list

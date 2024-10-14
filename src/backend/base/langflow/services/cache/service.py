@@ -235,10 +235,10 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
 
         try:
             self._client.ping()
-            return True
         except redis.exceptions.ConnectionError:
             logger.exception("RedisCache could not connect to the Redis server")
             return False
+        return True
 
     async def get(self, key, lock=None):
         """

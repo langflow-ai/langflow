@@ -94,18 +94,22 @@ async def update_message(
 ):
     try:
         db_message = session.get(MessageTable, message_id)
-        if not db_message:
-            raise HTTPException(status_code=404, detail="Message not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    if not db_message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    try:
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
         db_message.sqlmodel_update(message_dict)
         session.add(db_message)
         session.commit()
         session.refresh(db_message)
-        return db_message
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return db_message
 
 
 @router.patch("/messages/session/{old_session_id}", response_model=list[MessageResponse])
@@ -119,10 +123,13 @@ async def update_session_id(
         # Get all messages with the old session ID
         stmt = select(MessageTable).where(MessageTable.session_id == old_session_id)
         messages = session.exec(stmt).all()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
-        if not messages:
-            raise HTTPException(status_code=404, detail="No messages found with the given session ID")
+    if not messages:
+        raise HTTPException(status_code=404, detail="No messages found with the given session ID")
 
+    try:
         # Update all messages with the new session ID
         for message in messages:
             message.session_id = new_session_id
@@ -134,11 +141,10 @@ async def update_session_id(
         for message in messages:
             session.refresh(message)
             message_responses.append(MessageResponse.model_validate(message, from_attributes=True))
-        return message_responses
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return message_responses
 
 
 @router.delete("/messages/session/{session_id}", status_code=204)
@@ -153,9 +159,10 @@ async def delete_messages_session(
             .execution_options(synchronize_session="fetch")
         )
         session.commit()
-        return {"message": "Messages deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return {"message": "Messages deleted successfully"}
 
 
 @router.get("/transactions", response_model=list[TransactionReadResponse])

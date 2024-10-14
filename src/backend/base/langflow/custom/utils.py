@@ -260,33 +260,38 @@ def run_build_inputs(
 
 
 def get_component_instance(custom_component: CustomComponent, user_id: str | UUID | None = None):
-    try:
-        if custom_component._code is None:
-            msg = "Code is None"
-            raise ValueError(msg)
-        if isinstance(custom_component._code, str):
+    if custom_component._code is None:
+        error = "Code is None"
+    elif not isinstance(custom_component._code, str):
+        error = "Invalid code type"
+    else:
+        try:
             custom_class = eval_custom_component_code(custom_component._code)
-        else:
-            msg = "Invalid code type"
-            raise TypeError(msg)
-    except Exception as exc:
-        logger.exception("Error while evaluating custom component code")
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": ("Invalid type convertion. Please check your code and try again."),
-                "traceback": traceback.format_exc(),
-            },
-        ) from exc
+        except Exception as exc:
+            logger.exception("Error while evaluating custom component code")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": ("Invalid type conversion. Please check your code and try again."),
+                    "traceback": traceback.format_exc(),
+                },
+            ) from exc
 
-    try:
-        return custom_class(_user_id=user_id, _code=custom_component._code)
-    except Exception as exc:
-        logger.exception("Error while instantiating custom component")
-        if hasattr(exc, "detail") and "traceback" in exc.detail:
-            logger.error(exc.detail["traceback"])
+        try:
+            return custom_class(_user_id=user_id, _code=custom_component._code)
+        except Exception as exc:
+            logger.exception("Error while instantiating custom component")
+            if hasattr(exc, "detail") and "traceback" in exc.detail:
+                logger.error(exc.detail["traceback"])
 
-        raise
+            raise
+
+    msg = f"Invalid type conversion: {error}. Please check your code and try again."
+    logger.error(msg)
+    raise HTTPException(
+        status_code=400,
+        detail={"error": msg},
+    )
 
 
 def run_build_config(
@@ -295,46 +300,49 @@ def run_build_config(
 ) -> tuple[dict, CustomComponent]:
     """Build the field configuration for a custom component"""
 
-    try:
-        if custom_component._code is None:
-            msg = "Code is None"
-            raise ValueError(msg)
-        if isinstance(custom_component._code, str):
+    if custom_component._code is None:
+        error = "Code is None"
+    elif not isinstance(custom_component._code, str):
+        error = "Invalid code type"
+    else:
+        try:
             custom_class = eval_custom_component_code(custom_component._code)
-        else:
-            msg = "Invalid code type"
-            raise TypeError(msg)
-    except Exception as exc:
-        logger.exception("Error while evaluating custom component code")
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": ("Invalid type convertion. Please check your code and try again."),
-                "traceback": traceback.format_exc(),
-            },
-        ) from exc
+        except Exception as exc:
+            logger.exception("Error while evaluating custom component code")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": ("Invalid type conversion. Please check your code and try again."),
+                    "traceback": traceback.format_exc(),
+                },
+            ) from exc
 
-    try:
-        custom_instance = custom_class(_user_id=user_id)
-        build_config: dict = custom_instance.build_config()
+        try:
+            custom_instance = custom_class(_user_id=user_id)
+            build_config: dict = custom_instance.build_config()
 
-        for field_name, field in build_config.copy().items():
-            # Allow user to build Input as well
-            # as a dict with the same keys as Input
-            field_dict = get_field_dict(field)
-            # Let's check if "rangeSpec" is a RangeSpec object
-            if "rangeSpec" in field_dict and isinstance(field_dict["rangeSpec"], RangeSpec):
-                field_dict["rangeSpec"] = field_dict["rangeSpec"].model_dump()
-            build_config[field_name] = field_dict
+            for field_name, field in build_config.copy().items():
+                # Allow user to build Input as well
+                # as a dict with the same keys as Input
+                field_dict = get_field_dict(field)
+                # Let's check if "rangeSpec" is a RangeSpec object
+                if "rangeSpec" in field_dict and isinstance(field_dict["rangeSpec"], RangeSpec):
+                    field_dict["rangeSpec"] = field_dict["rangeSpec"].model_dump()
+                build_config[field_name] = field_dict
 
+        except Exception as exc:
+            logger.exception("Error while building field config")
+            if hasattr(exc, "detail") and "traceback" in exc.detail:
+                logger.error(exc.detail["traceback"])
+            raise
         return build_config, custom_instance
 
-    except Exception as exc:
-        logger.exception("Error while building field config")
-        if hasattr(exc, "detail") and "traceback" in exc.detail:
-            logger.error(exc.detail["traceback"])
-
-        raise
+    msg = f"Invalid type conversion: {error}. Please check your code and try again."
+    logger.error(msg)
+    raise HTTPException(
+        status_code=400,
+        detail={"error": msg},
+    )
 
 
 def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code):
@@ -386,13 +394,23 @@ def build_custom_component_template(
 ) -> tuple[dict[str, Any], CustomComponent | Component]:
     """Build a custom component template"""
     try:
-        if not hasattr(custom_component, "template_config"):
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": ("Please check if you are importing Component correctly."),
-                },
-            )
+        has_template_config = hasattr(custom_component, "template_config")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": (f"Error building Component: {exc}"),
+                "traceback": traceback.format_exc(),
+            },
+        ) from exc
+    if not has_template_config:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": ("Error building Component. Please check if you are importing Component correctly."),
+            },
+        )
+    try:
         if "inputs" in custom_component.template_config:
             return build_custom_component_template_from_inputs(custom_component, user_id=user_id)
         frontend_node = CustomComponentFrontendNode(**custom_component.template_config)

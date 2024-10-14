@@ -94,10 +94,10 @@ class YfinanceToolComponent(LCToolComponent):
             else:
                 data_list = [Data(data={"result": result})]
 
-            return data_list
-
         except Exception as e:  # noqa: BLE001
             error_message = f"Error retrieving data: {e}"
             logger.opt(exception=True).debug(error_message)
             self.status = error_message
             return [Data(data={"error": error_message})]
+
+        return data_list

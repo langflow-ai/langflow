@@ -52,6 +52,7 @@ ignore = [
     "RUF012", # Pydantic models are currently not well detected. See https://github.com/astral-sh/ruff/issues/13630
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
+    "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
 
     # Rules that are TODOs
     "ANN",
@@ -62,7 +63,6 @@ ignore = [
     "N",
     "S",
     "SLF",
-    "TRY3",
 ]
 
 [tool.ruff.lint.per-file-ignores]
