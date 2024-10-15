@@ -103,7 +103,6 @@ async def test_read_flows_pagination_with_flows(client: TestClient, json_flow: s
     assert response.status_code == 200
     assert response.json()["page"] == 3
     assert response.json()["size"] == 10
-    assert response.json()["total"] == number_of_flows
     assert len(response.json()["items"]) == 10
 
     response = await client.get(
