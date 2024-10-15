@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator, Iterator
+from typing import cast
 
 from langflow.custom import Component
 from langflow.memory import store_message
@@ -33,7 +34,7 @@ class ChatComponent(Component):
             self._event_manager.on_message(data=message.data)
 
     def _should_stream_message(self, stored_message: Message, original_message: Message) -> bool:
-        return (
+        return bool(
             hasattr(self, "_event_manager")
             and self._event_manager
             and stored_message.id
@@ -99,7 +100,7 @@ class ChatComponent(Component):
             self.status = messages
             self._send_messages_events(messages)
 
-        return message_text
+        return cast(str | Message, message_text)
 
     def _create_message(self, input_value, sender, sender_name, files, session_id) -> Message:
         if isinstance(input_value, Data):
