@@ -1,17 +1,16 @@
-import os
 import sys
 import re
+from pathlib import Path
 
 import packaging.version
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+BASE_DIR = Path(__file__).parent.parent.parent
 
 
 def update_pyproject_version(pyproject_path: str, new_version: str) -> None:
     """Update the version in pyproject.toml."""
-    filepath = os.path.join(BASE_DIR, pyproject_path)
-    with open(filepath, "r") as file:
-        content = file.read()
+    filepath = BASE_DIR / pyproject_path
+    content = filepath.read_text()
 
     # Regex to match the version line under [tool.poetry]
     pattern = re.compile(r'(?<=^version = ")[^"]+(?=")', re.MULTILINE)
@@ -21,8 +20,7 @@ def update_pyproject_version(pyproject_path: str, new_version: str) -> None:
 
     content = pattern.sub(new_version, content)
 
-    with open(filepath, "w") as file:
-        file.write(content)
+    filepath.write_text(content)
 
 
 def verify_pep440(version):
