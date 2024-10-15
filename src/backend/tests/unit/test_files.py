@@ -1,4 +1,3 @@
-import os
 import re
 import shutil
 import tempfile
@@ -39,7 +38,7 @@ async def files_client_fixture(session: Session, monkeypatch, request, load_flow
         monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
         if "load_flows" in request.keywords:
             shutil.copyfile(
-                pytest.BASIC_EXAMPLE_PATH, os.path.join(load_flows_dir, "c54f9130-f2fa-4a3e-b22a-3856d946351b.json")
+                pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
             )
             monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")

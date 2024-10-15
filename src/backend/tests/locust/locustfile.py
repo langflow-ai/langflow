@@ -11,7 +11,7 @@ from rich import print
 class NameTest(FastHttpUser):
     wait_time = between(1, 5)
 
-    with open("names.txt", "r") as file:
+    with Path("names.txt").open() as file:
         names = [line.strip() for line in file.readlines()]
 
     headers: dict = {}
@@ -86,11 +86,7 @@ class NameTest(FastHttpUser):
         a_token = tokens["access_token"]
         logged_in_headers = {"Authorization": f"Bearer {a_token}"}
         print("Logged in")
-        with open(
-            Path(__file__).parent.parent / "data" / "BasicChatwithPromptandHistory.json",
-            "r",
-        ) as f:
-            json_flow = f.read()
+        json_flow = (Path(__file__).parent.parent / "data" / "BasicChatwithPromptandHistory.json").read_text()
         flow = orjson.loads(json_flow)
         data = flow["data"]
         # Create test data
