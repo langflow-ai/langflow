@@ -67,7 +67,6 @@ export default function IOModal({
   const deleteSession = useMessagesStore((state) => state.deleteSession);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
-
   const { mutate: deleteSessionFunction } = useDeleteMessages();
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
     currentFlowId,
