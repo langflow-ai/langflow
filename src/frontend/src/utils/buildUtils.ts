@@ -12,6 +12,7 @@ import { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import { VertexLayerElementType } from "../types/zustand/flow";
 import { tryParseJson } from "./utils";
+import { flushSync } from "react-dom";
 
 type BuildVerticesParams = {
   setLockChat?: (lock: boolean) => void;
@@ -285,10 +286,9 @@ export async function buildFlowVertices({
         return true;
       }
       case "token": {
-        // await one milisencond so we avoid react batched updates
-        await new Promise((resolve) => {
+        // flushSync is needed to avoid react batched updates
+        flushSync(() => {
           useMessagesStore.getState().updateMessagePartial(data);
-          setTimeout(resolve, 10);
         });
         return true;
       }
