@@ -202,10 +202,14 @@ export default function IOModal({
   useEffect(() => {
     if (!visibleSession) {
       setSessionId(
-        `Session ${new Date().toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true, second: "2-digit" })}`,
+        `Session ${new Date().toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true, second: "2-digit", timeZone: "UTC" })}`,
       );
     } else if (visibleSession) {
       setSessionId(visibleSession);
+      setSelectedViewField({
+        id: visibleSession,
+        type: "Session",
+      });
     }
   }, [visibleSession]);
 
