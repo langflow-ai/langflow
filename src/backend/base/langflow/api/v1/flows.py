@@ -132,7 +132,7 @@ def read_flows(
     settings_service: SettingsService = Depends(get_settings_service),
     remove_example_flows: bool = False,
     components_only: bool = False,
-    get_all: bool = False,
+    get_all: bool = True,
     folder_id: UUID | None = None,
     params: Params = Depends(),
     header_flows: bool = False,
@@ -162,6 +162,12 @@ def read_flows(
 
         starter_folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
         starter_folder_id = starter_folder.id if starter_folder else None
+
+        if not starter_folder and not default_folder:
+            raise HTTPException(
+                status_code=404,
+                detail="Starter folder and default folder not found. " "Please create a folder and add flows to it.",
+            )
 
         if not folder_id:
             folder_id = default_folder_id
