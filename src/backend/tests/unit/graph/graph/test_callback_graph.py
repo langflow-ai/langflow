@@ -30,7 +30,7 @@ class LogComponent(Component):
 def test_callback_graph():
     logs: list[tuple[str, dict]] = []
 
-    def mock_callback(manager, event_type: str, data: dict):
+    def mock_callback(manager, event_type: str, data: dict):  # noqa: ARG001
         logs.append((event_type, data))
 
     event_manager = EventManager(queue=asyncio.Queue())

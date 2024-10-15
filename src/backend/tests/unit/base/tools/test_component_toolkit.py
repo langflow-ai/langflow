@@ -87,7 +87,8 @@ def test_component_tool():
 
 
 @pytest.mark.api_key_required
-def test_component_tool_with_api_key(client, add_toolkit_output):
+@pytest.mark.usefixtures("add_toolkit_output")
+def test_component_tool_with_api_key():
     chat_output = ChatOutput()
     openai_llm = OpenAIModelComponent()
     openai_llm.set(api_key=os.environ["OPENAI_API_KEY"])
