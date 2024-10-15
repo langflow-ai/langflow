@@ -1,11 +1,10 @@
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi_pagination import Params
-from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy import or_, update
 from sqlmodel import Session, select
 
-from langflow.api.utils import cascade_delete_flow
+from langflow.api.utils import cascade_delete_flow, custom_params, paginate_list
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.schemas import FlowListCreate, FlowListReadWithFolderName
 from langflow.helpers.flow import generate_unique_flow_name
@@ -18,6 +17,7 @@ from langflow.services.database.models.folder.model import (
     Folder,
     FolderCreate,
     FolderRead,
+    FolderReadWithFlows,
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
@@ -99,13 +99,13 @@ def read_folders(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/{folder_id}", response_model=FolderWithPaginatedFlows, status_code=200)
+@router.get("/{folder_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
 def read_folder(
     *,
     session: Session = Depends(get_session),
     folder_id: str,
     current_user: User = Depends(get_current_active_user),
-    params: Params = Depends(),
+    params: Params | None = Depends(custom_params),
     is_component: bool = False,
     is_flow: bool = False,
     search: str = "",
@@ -121,19 +121,30 @@ def read_folder(
         raise HTTPException(status_code=404, detail="Folder not found")
 
     try:
-        stmt = select(Flow).where(Flow.folder_id == folder_id)
+        flows_from_current_user_in_folder = [flow for flow in folder.flows if flow.user_id == current_user.id]
+        if params and params.page and params.size:
+            # Apply filters
+            filtered_flows = flows_from_current_user_in_folder
 
-        if Flow.updated_at is not None:
-            stmt = stmt.order_by(Flow.updated_at.desc())  # type: ignore[attr-defined]
-        if is_component:
-            stmt = stmt.where(Flow.is_component == True)  # noqa: E712
-        if is_flow:
-            stmt = stmt.where(Flow.is_component == False)  # noqa: E712
-        if search:
-            stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore[attr-defined]
-        paginated_flows = paginate(session, stmt, params=params)
+            if is_component:
+                filtered_flows = [flow for flow in filtered_flows if flow.is_component]
+            if is_flow:
+                filtered_flows = [flow for flow in filtered_flows if not flow.is_component]
+            if search:
+                filtered_flows = [flow for flow in filtered_flows if search.lower() in flow.name.lower()]
 
-        return FolderWithPaginatedFlows(folder=FolderRead.model_validate(folder), flows=paginated_flows)
+            # Sort the flows
+            if hasattr(Flow, "updated_at"):
+                filtered_flows.sort(key=lambda x: x.updated_at, reverse=True)
+
+            # Paginate the filtered and sorted list
+            paginated_flows = paginate_list(filtered_flows, params)
+
+            return FolderWithPaginatedFlows(folder=FolderRead.model_validate(folder), flows=paginated_flows)
+
+        folder.flows = flows_from_current_user_in_folder
+        return folder  # noqa: TRY300
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

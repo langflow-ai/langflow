@@ -13,10 +13,9 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params, add_pagination
-from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlmodel import Session, and_, col, select
 
-from langflow.api.utils import cascade_delete_flow, remove_api_keys, validate_is_component
+from langflow.api.utils import cascade_delete_flow, paginate_list, remove_api_keys
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
@@ -132,7 +131,7 @@ def read_flows(
     settings_service: SettingsService = Depends(get_settings_service),
     remove_example_flows: bool = False,
     components_only: bool = False,
-    get_all: bool = False,
+    get_all: bool = True,
     folder_id: UUID | None = None,
     params: Params = Depends(),
     header_flows: bool = False,
@@ -163,29 +162,36 @@ def read_flows(
         starter_folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
         starter_folder_id = starter_folder.id if starter_folder else None
 
+        if not starter_folder and not default_folder:
+            raise HTTPException(
+                status_code=404,
+                detail="Starter folder and default folder not found. " "Please create a folder and add flows to it.",
+            )
+
         if not folder_id:
             folder_id = default_folder_id
 
-        if auth_settings.AUTO_LOGIN:
-            stmt = select(Flow).where(
-                (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa: E711
-            )
-        else:
-            stmt = select(Flow).where(Flow.user_id == current_user.id)
+        flows = current_user.flows
 
-        if remove_example_flows:
-            stmt = stmt.where(Flow.folder_id != starter_folder_id)
+        if auth_settings.AUTO_LOGIN:
+            flows = [flow for flow in flows if flow.user_id is None or flow.user_id == current_user.id]
+        else:
+            flows = [flow for flow in flows if flow.user_id == current_user.id]
+
+        if remove_example_flows and starter_folder_id:
+            flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
 
         if components_only:
-            stmt = stmt.where(Flow.is_component == True)  # noqa: E712
+            flows = [flow for flow in flows if flow.is_component]
+
+        if folder_id:
+            flows = [flow for flow in flows if flow.folder_id == folder_id]
+
+        # Sort the flows
+        if hasattr(Flow, "updated_at"):
+            flows.sort(key=lambda x: x.updated_at or datetime.min, reverse=True)
 
         if get_all:
-            flows = session.exec(stmt).all()
-            flows = validate_is_component(flows)
-            if components_only:
-                flows = [flow for flow in flows if flow.is_component]
-            if remove_example_flows and starter_folder_id:
-                flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
             if header_flows:
                 return [
                     {"id": flow.id, "name": flow.name, "folder_id": flow.folder_id, "is_component": flow.is_component}
@@ -193,8 +199,7 @@ def read_flows(
                 ]
             return flows
 
-        stmt = stmt.where(Flow.folder_id == folder_id)
-        return paginate(session, stmt, params=params)
+        return paginate_list(flows, params) if params else flows
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
