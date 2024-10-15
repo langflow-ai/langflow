@@ -31,7 +31,8 @@ def json_style():
     )
 
 
-async def test_create_flow(client: TestClient, json_flow: str, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_create_flow(client: TestClient, json_flow: str, logged_in_headers):
     flow = orjson.loads(json_flow)
     data = flow["data"]
     flow = FlowCreate(name=str(uuid4()), description="description", data=data)
@@ -47,7 +48,8 @@ async def test_create_flow(client: TestClient, json_flow: str, active_user, logg
     assert response.json()["data"] == flow.data
 
 
-async def test_read_flows(client: TestClient, json_flow: str, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_read_flows(client: TestClient, json_flow: str, logged_in_headers):
     flow_data = orjson.loads(json_flow)
     data = flow_data["data"]
     flow = FlowCreate(name=str(uuid4()), description="description", data=data)
@@ -66,8 +68,8 @@ async def test_read_flows(client: TestClient, json_flow: str, active_user, logge
     assert response.status_code == 200
     assert len(response.json()) > 0
 
-
-async def test_read_flows_pagination(client: TestClient, json_flow: str, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_read_flows_pagination(client: TestClient, logged_in_headers):
     response = await client.get("api/v1/flows/", headers=logged_in_headers)
     assert response.status_code == 200
     assert response.json()["page"] == 1
@@ -76,8 +78,8 @@ async def test_read_flows_pagination(client: TestClient, json_flow: str, active_
     assert response.json()["total"] == 0
     assert len(response.json()["items"]) == 0
 
-
-async def test_read_flows_pagination_with_params(client: TestClient, json_flow: str, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_read_flows_pagination_with_params(client: TestClient, logged_in_headers):
     response = await client.get("api/v1/flows/", headers=logged_in_headers, params={"page": 3, "size": 10})
     assert response.status_code == 200
     assert response.json()["page"] == 3
@@ -86,8 +88,8 @@ async def test_read_flows_pagination_with_params(client: TestClient, json_flow: 
     assert response.json()["total"] == 0
     assert len(response.json()["items"]) == 0
 
-
-async def test_read_flows_components_only(client: TestClient, flow_component: dict, logged_in_headers):
+@pytest.mark.usefixtures("flow_component")
+async def test_read_flows_components_only(client: TestClient, logged_in_headers):
     response = await client.get(
         "api/v1/flows/", headers=logged_in_headers, params={"components_only": True, "get_all": True}
     )
@@ -113,7 +115,8 @@ async def test_read_flow(client: TestClient, json_flow: str, logged_in_headers):
     assert response.json()["data"] == flow.data
 
 
-async def test_update_flow(client: TestClient, json_flow: str, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_update_flow(client: TestClient, json_flow: str, logged_in_headers):
     flow = orjson.loads(json_flow)
     data = flow["data"]
 
@@ -134,7 +137,8 @@ async def test_update_flow(client: TestClient, json_flow: str, active_user, logg
     # assert response.json()["data"] == updated_flow.data
 
 
-async def test_delete_flow(client: TestClient, json_flow: str, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_delete_flow(client: TestClient, json_flow: str, logged_in_headers):
     flow = orjson.loads(json_flow)
     data = flow["data"]
     flow = FlowCreate(name="Test Flow", description="description", data=data)
@@ -145,7 +149,8 @@ async def test_delete_flow(client: TestClient, json_flow: str, active_user, logg
     assert response.json()["message"] == "Flow deleted successfully"
 
 
-async def test_delete_flows(client: TestClient, json_flow: str, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_delete_flows(client: TestClient, logged_in_headers):
     # Create ten flows
     number_of_flows = 10
     flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
@@ -161,9 +166,8 @@ async def test_delete_flows(client: TestClient, json_flow: str, active_user, log
 
 
 @pytest.mark.asyncio
-async def test_delete_flows_with_transaction_and_build(
-    client: TestClient, json_flow: str, active_user, logged_in_headers
-):
+@pytest.mark.usefixtures("active_user")
+async def test_delete_flows_with_transaction_and_build(client: TestClient, logged_in_headers):
     # Create ten flows
     number_of_flows = 10
     flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
@@ -221,9 +225,8 @@ async def test_delete_flows_with_transaction_and_build(
 
 
 @pytest.mark.asyncio
-async def test_delete_folder_with_flows_with_transaction_and_build(
-    client: TestClient, json_flow: str, active_user, logged_in_headers
-):
+@pytest.mark.usefixtures("active_user")
+async def test_delete_folder_with_flows_with_transaction_and_build(client: TestClient, logged_in_headers):
     # Create a new folder
     folder_name = f"Test Folder {uuid4()}"
     folder = FolderCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
@@ -335,7 +338,8 @@ async def test_get_flows_from_folder_pagination_with_params(client: TestClient, 
     assert len(response.json()["flows"]["items"]) == 0
 
 
-async def test_create_flows(client: TestClient, session: Session, json_flow: str, logged_in_headers):
+@pytest.mark.usefixtures("session")
+async def test_create_flows(client: TestClient, json_flow: str, logged_in_headers):
     flow = orjson.loads(json_flow)
     data = flow["data"]
     # Create test data
@@ -362,7 +366,8 @@ async def test_create_flows(client: TestClient, session: Session, json_flow: str
     assert response_data[1]["data"] == data
 
 
-async def test_upload_file(client: TestClient, session: Session, json_flow: str, logged_in_headers):
+@pytest.mark.usefixtures("session")
+async def test_upload_file(client: TestClient, json_flow: str, logged_in_headers):
     flow = orjson.loads(json_flow)
     data = flow["data"]
     # Create test data
@@ -436,19 +441,22 @@ async def test_download_file(
     assert "attachment; filename=" in response.headers["Content-Disposition"]
 
 
-async def test_create_flow_with_invalid_data(client: TestClient, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_create_flow_with_invalid_data(client: TestClient, logged_in_headers):
     flow = {"name": "a" * 256, "data": "Invalid flow data"}
     response = await client.post("api/v1/flows/", json=flow, headers=logged_in_headers)
     assert response.status_code == 422
 
 
-async def test_get_nonexistent_flow(client: TestClient, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_get_nonexistent_flow(client: TestClient, logged_in_headers):
     uuid = uuid4()
     response = await client.get(f"api/v1/flows/{uuid}", headers=logged_in_headers)
     assert response.status_code == 404
 
 
-async def test_update_flow_idempotency(client: TestClient, json_flow: str, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_update_flow_idempotency(client: TestClient, json_flow: str, logged_in_headers):
     flow_data = orjson.loads(json_flow)
     data = flow_data["data"]
     flow_data = FlowCreate(name="Test Flow", description="description", data=data)
@@ -460,7 +468,8 @@ async def test_update_flow_idempotency(client: TestClient, json_flow: str, activ
     assert response1.json() == response2.json()
 
 
-async def test_update_nonexistent_flow(client: TestClient, json_flow: str, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_update_nonexistent_flow(client: TestClient, json_flow: str, logged_in_headers):
     flow_data = orjson.loads(json_flow)
     data = flow_data["data"]
     uuid = uuid4()
@@ -473,13 +482,15 @@ async def test_update_nonexistent_flow(client: TestClient, json_flow: str, activ
     assert response.status_code == 404, response.text
 
 
-async def test_delete_nonexistent_flow(client: TestClient, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_delete_nonexistent_flow(client: TestClient, logged_in_headers):
     uuid = uuid4()
     response = await client.delete(f"api/v1/flows/{uuid}", headers=logged_in_headers)
     assert response.status_code == 404
 
 
-async def test_read_only_starter_projects(client: TestClient, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_read_only_starter_projects(client: TestClient, logged_in_headers):
     response = await client.get("api/v1/flows/basic_examples/", headers=logged_in_headers)
     starter_projects = load_starter_projects()
     assert response.status_code == 200
@@ -487,7 +498,7 @@ async def test_read_only_starter_projects(client: TestClient, active_user, logge
 
 
 @pytest.mark.load_flows
-async def test_load_flows(client: TestClient, load_flows_dir):
+async def test_load_flows(client: TestClient):
     response = await client.get("api/v1/flows/c54f9130-f2fa-4a3e-b22a-3856d946351b")
     assert response.status_code == 200
     assert response.json()["name"] == "BasicExample"

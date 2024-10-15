@@ -99,7 +99,8 @@ async def test_deactivated_user_cannot_login(client: AsyncClient, deactivated_us
     assert response.json()["detail"] == "Inactive user", response.text
 
 
-async def test_deactivated_user_cannot_access(client: AsyncClient, deactivated_user, logged_in_headers):
+@pytest.mark.usefixtures("deactivated_user")
+async def test_deactivated_user_cannot_access(client: AsyncClient, logged_in_headers):
     # Assuming the headers for deactivated_user
     response = await client.get("api/v1/users/", headers=logged_in_headers)
     assert response.status_code == 403, response.status_code
@@ -152,7 +153,7 @@ async def test_inactive_user(client: AsyncClient):
 
 
 @pytest.mark.api_key_required
-async def test_add_user(client: AsyncClient, test_user):
+async def test_add_user(test_user):
     assert test_user["username"] == "testuser"
 
 
@@ -221,7 +222,8 @@ async def test_patch_reset_password(client: AsyncClient, active_user, logged_in_
 
 
 @pytest.mark.api_key_required
-async def test_patch_user_wrong_id(client: AsyncClient, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_patch_user_wrong_id(client: AsyncClient, logged_in_headers):
     user_id = "wrong_id"
     update_data = UserUpdate(
         username="newname",
@@ -245,7 +247,8 @@ async def test_delete_user(client: AsyncClient, test_user, super_user_headers):
 
 
 @pytest.mark.api_key_required
-async def test_delete_user_wrong_id(client: AsyncClient, test_user, super_user_headers):
+@pytest.mark.usefixtures("test_user")
+async def test_delete_user_wrong_id(client: AsyncClient, super_user_headers):
     user_id = "wrong_id"
     response = await client.delete(f"/api/v1/users/{user_id}", headers=super_user_headers)
     assert response.status_code == 422

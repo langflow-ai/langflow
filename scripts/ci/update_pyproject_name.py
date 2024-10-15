@@ -1,15 +1,14 @@
-import os
 import sys
 import re
+from pathlib import Path
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+BASE_DIR = Path(__file__).parent.parent.parent
 
 
 def update_pyproject_name(pyproject_path: str, new_project_name: str) -> None:
     """Update the project name in pyproject.toml."""
-    filepath = os.path.join(BASE_DIR, pyproject_path)
-    with open(filepath, "r") as file:
-        content = file.read()
+    filepath = BASE_DIR / pyproject_path
+    content = filepath.read_text()
 
     # Regex to match the version line under [tool.poetry]
     pattern = re.compile(r'(?<=^name = ")[^"]+(?=")', re.MULTILINE)
@@ -18,15 +17,13 @@ def update_pyproject_name(pyproject_path: str, new_project_name: str) -> None:
         raise Exception(f'Project name not found in "{filepath}"')
     content = pattern.sub(new_project_name, content)
 
-    with open(filepath, "w") as file:
-        file.write(content)
+    filepath.write_text(content)
 
 
 def update_uv_dep(pyproject_path: str, new_project_name: str) -> None:
     """Update the langflow-base dependency in pyproject.toml."""
-    filepath = os.path.join(BASE_DIR, pyproject_path)
-    with open(filepath, "r") as file:
-        content = file.read()
+    filepath = BASE_DIR / pyproject_path
+    content = filepath.read_text()
 
     if new_project_name == "langflow-nightly":
         pattern = re.compile(r"langflow = \{ workspace = true \}")
@@ -41,8 +38,7 @@ def update_uv_dep(pyproject_path: str, new_project_name: str) -> None:
     if not pattern.search(content):
         raise Exception(f"{replacement} uv dependency not found in {filepath}")
     content = pattern.sub(replacement, content)
-    with open(filepath, "w") as file:
-        file.write(content)
+    filepath.write_text(content)
 
 
 def main() -> None:
