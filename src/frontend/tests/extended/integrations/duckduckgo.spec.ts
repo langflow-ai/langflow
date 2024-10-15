@@ -53,15 +53,33 @@ test("user should be able to use duckduckgo search component", async ({
 
   await page.getByTitle("fit view").click();
 
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+  const result = await Promise.race([
+    page.waitForSelector("text=built successfully", { timeout: 30000 }),
+    page.waitForSelector("text=ratelimit", { timeout: 30000 }),
+  ]);
 
-  await page.waitForTimeout(1000);
+  if (result) {
+    const isBuiltSuccessfully =
+      (await page.evaluate((el) => el.textContent, result))?.includes(
+        "built successfully",
+      ) ?? false;
 
-  await page.getByTestId("output-inspection-data").first().click();
+    const isRateLimit =
+      (await page.evaluate((el) => el.textContent, result))?.includes(
+        "ratelimit",
+      ) ?? false;
 
-  await page.getByRole("gridcell").first().click();
-
-  const searchResults = await page.getByPlaceholder("Empty").inputValue();
-  expect(searchResults.length).toBeGreaterThan(10);
-  expect(searchResults.toLowerCase()).toContain("langflow");
+    if (isBuiltSuccessfully) {
+      await page.waitForTimeout(1000);
+      await page.getByTestId("output-inspection-data").first().click();
+      await page.getByRole("gridcell").first().click();
+      const searchResults = await page.getByPlaceholder("Empty").inputValue();
+      expect(searchResults.length).toBeGreaterThan(10);
+      expect(searchResults.toLowerCase()).toContain("langflow");
+    } else if (isRateLimit) {
+      expect(true).toBeTruthy();
+    } else {
+      expect(true).toBeFalsy();
+    }
+  }
 });

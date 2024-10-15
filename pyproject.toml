@@ -105,7 +105,7 @@ dependencies = [
     "jq>=1.8.0",
     "pydantic-settings==2.4.0",
     "ragstack-ai-knowledge-store>=0.2.1",
-    "duckduckgo-search>=6.3.0",
+    "duckduckgo-search>=6.3.1",
     "langchain-elasticsearch>=0.2.0",
     "opensearch-py>=2.7.1",
 ]

@@ -130,6 +130,7 @@ export type FlowStoreType = {
     files,
     silent,
     setLockChat,
+    session,
   }: {
     setLockChat?: (lock: boolean) => void;
     startNodeId?: string;
@@ -137,6 +138,7 @@ export type FlowStoreType = {
     input_value?: string;
     files?: string[];
     silent?: boolean;
+    session?: string;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
   updateVerticesBuild: (

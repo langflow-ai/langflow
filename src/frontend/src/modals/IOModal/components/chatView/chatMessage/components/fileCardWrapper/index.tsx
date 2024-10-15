@@ -5,16 +5,25 @@ import formatFileName from "../../../filePreviewChat/utils/format-file-name";
 
 export default function FileCardWrapper({
   index,
-  name,
-  type,
   path,
 }: {
   index: number;
-  name: string;
-  type: string;
-  path: string;
+  path: { path: string; type: string; name: string } | string;
 }) {
   const [show, setShow] = useState<boolean>(true);
+  let name: string = "";
+  let type: string = "";
+  let pathString: string = "";
+  if (typeof path === "string") {
+    name = path.split("/").pop() || "";
+    type = path.split(".").pop() || "";
+    pathString = path;
+  } else {
+    name = path.name;
+    type = path.type;
+    pathString = path.path;
+  }
+
   return (
     <div key={index} className="flex flex-col gap-2">
       <span
@@ -24,7 +33,12 @@ export default function FileCardWrapper({
         {formatFileName(name, 50)}
         <ForwardedIconComponent name={show ? "ChevronDown" : "ChevronRight"} />
       </span>
-      <FileCard showFile={show} fileName={name} fileType={type} path={path} />
+      <FileCard
+        showFile={show}
+        fileName={name}
+        fileType={type}
+        path={pathString}
+      />
     </div>
   );
 }

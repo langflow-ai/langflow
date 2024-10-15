@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator, Iterator
+from typing import cast
 
 from langflow.custom import Component
 from langflow.memory import store_message
@@ -12,43 +13,52 @@ class ChatComponent(Component):
     display_name = "Chat Component"
     description = "Use as base for chat components."
 
-    # Keep this method for backward compatibility
-    def store_message(
-        self,
-        message: Message,
-    ) -> Message:
-        messages = store_message(
-            message,
-            flow_id=self.graph.flow_id,
-        )
-        if len(messages) > 1:
+    def store_message(self, message: Message) -> Message:
+        messages = store_message(message, flow_id=self.graph.flow_id)
+        if len(messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
+
         stored_message = messages[0]
-        if (
-            hasattr(self, "_event_manager")
-            and self._event_manager
-            and stored_message.id
-            and not isinstance(message.text, str)
-        ):
+        self._send_message_event(stored_message)
+
+        if self._should_stream_message(stored_message, message):
             complete_message = self._stream_message(message, stored_message.id)
-            message_table = update_message(message_id=stored_message.id, message={"text": complete_message})
-            stored_message = Message(**message_table.model_dump())
-            self.vertex._added_message = stored_message
+            stored_message = self._update_stored_message(stored_message.id, complete_message)
+
         self.status = stored_message
         return stored_message
 
+    def _send_message_event(self, message: Message):
+        if hasattr(self, "_event_manager") and self._event_manager:
+            self._event_manager.on_message(data=message.data)
+
+    def _should_stream_message(self, stored_message: Message, original_message: Message) -> bool:
+        return bool(
+            hasattr(self, "_event_manager")
+            and self._event_manager
+            and stored_message.id
+            and not isinstance(original_message.text, str)
+        )
+
+    def _update_stored_message(self, message_id: str, complete_message: str) -> Message:
+        message_table = update_message(message_id=message_id, message={"text": complete_message})
+        updated_message = Message(**message_table.model_dump())
+        self.vertex._added_message = updated_message
+        return updated_message
+
     def _process_chunk(self, chunk: str, complete_message: str, message: Message, message_id: str) -> str:
         complete_message += chunk
-        data = {
-            "text": complete_message,
-            "chunk": chunk,
-            "sender": message.sender,
-            "sender_name": message.sender_name,
-            "id": str(message_id),
-        }
         if self._event_manager:
-            self._event_manager.on_token(data=data)
+            self._event_manager.on_token(
+                data={
+                    "text": complete_message,
+                    "chunk": chunk,
+                    "sender": message.sender,
+                    "sender_name": message.sender_name,
+                    "id": str(message_id),
+                }
+            )
         return complete_message
 
     async def _handle_async_iterator(self, iterator: AsyncIterator, message: Message, message_id: str) -> str:
@@ -69,7 +79,6 @@ class ChatComponent(Component):
         complete_message = ""
         for chunk in iterator:
             complete_message = self._process_chunk(chunk.content, complete_message, message, message_id)
-
         return complete_message
 
     def build_with_data(
@@ -80,22 +89,25 @@ class ChatComponent(Component):
         input_value: str | Data | Message | None = None,
         files: list[str] | None = None,
         session_id: str | None = None,
-        return_message: bool | None = False,
-    ) -> Message:
-        if isinstance(input_value, Data):
-            # Update the data of the record
-            message = Message.from_data(input_value)
-        else:
-            message = Message(
-                text=input_value, sender=sender, sender_name=sender_name, files=files, session_id=session_id
-            )
+        return_message: bool = False,
+    ) -> str | Message:
+        message = self._create_message(input_value, sender, sender_name, files, session_id)
         message_text = message.text if not return_message else message
 
         self.status = message_text
         if session_id and isinstance(message, Message) and isinstance(message.text, str):
-            messages = store_message(
-                message,
-                flow_id=self.graph.flow_id,
-            )
+            messages = store_message(message, flow_id=self.graph.flow_id)
             self.status = messages
-        return message_text  # type: ignore[return-value]
+            self._send_messages_events(messages)
+
+        return cast(str | Message, message_text)
+
+    def _create_message(self, input_value, sender, sender_name, files, session_id) -> Message:
+        if isinstance(input_value, Data):
+            return Message.from_data(input_value)
+        return Message(text=input_value, sender=sender, sender_name=sender_name, files=files, session_id=session_id)
+
+    def _send_messages_events(self, messages):
+        if hasattr(self, "_event_manager") and self._event_manager:
+            for stored_message in messages:
+                self._event_manager.on_message(data=stored_message.data)

@@ -54,6 +54,8 @@ class Message(Data):
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     )
     flow_id: str | UUID | None = None
+    error: bool = Field(default=False)
+    edit: bool = Field(default=False)
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -64,9 +66,13 @@ class Message(Data):
 
     @field_serializer("flow_id")
     def serialize_flow_id(value):
-        if isinstance(value, str):
-            return UUID(value)
+        if isinstance(value, UUID):
+            return str(value)
         return value
+
+    @field_serializer("timestamp")
+    def serialize_timestamp(value):
+        return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").astimezone(timezone.utc)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -154,6 +160,8 @@ class Message(Data):
             session_id=data.session_id,
             timestamp=data.timestamp,
             flow_id=data.flow_id,
+            error=data.error,
+            edit=data.edit,
         )
 
     @field_serializer("text", mode="plain")
