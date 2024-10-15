@@ -286,10 +286,12 @@ export async function buildFlowVertices({
         return true;
       }
       case "token": {
-        // flushSync is needed to avoid react batched updates
-        flushSync(() => {
-          useMessagesStore.getState().updateMessagePartial(data);
-        });
+        // flushSync and timeout is needed to avoid react batched updates
+        setTimeout(() => {
+          flushSync(() => {
+            useMessagesStore.getState().updateMessagePartial(data);
+          });
+        }, 10);
         return true;
       }
       case "end": {
