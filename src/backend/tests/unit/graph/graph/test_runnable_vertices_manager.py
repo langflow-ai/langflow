@@ -7,11 +7,6 @@ from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManag
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def data():
     run_map: defaultdict(list) = {"A": ["B", "C"], "B": ["D"], "C": ["D"], "D": []}
     run_predecessors: defaultdict(set) = {"A": set(), "B": {"A"}, "C": {"A"}, "D": {"B", "C"}}

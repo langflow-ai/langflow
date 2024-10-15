@@ -1,13 +1,6 @@
-import pytest
-
 from langflow.components.tools.PythonREPLTool import PythonREPLToolComponent
 from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 def test_python_repl_tool_template():

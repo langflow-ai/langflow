@@ -5,11 +5,6 @@ import pytest
 from langflow.schema.table import Column, FormatterType
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 class TestColumn:
     # Creating a Column instance without display_name sets it to the name
     def test_create_column_without_display_name(self):

@@ -4,12 +4,6 @@ from langflow.components import helpers
 from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Data
 from langflow.schema.message import Message
-import pytest
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 # def test_update_data_component():

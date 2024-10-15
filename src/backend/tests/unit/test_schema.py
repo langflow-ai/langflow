@@ -11,11 +11,6 @@ from langflow.type_extraction.type_extraction import post_process_type
 from collections.abc import Sequence as SequenceABC
 
 
-@pytest.fixture(name="client", autouse=True)
-def client_fixture():
-    pass
-
-
 class TestInput:
     def test_field_type_str(self):
         input_obj = Input(field_type="str")

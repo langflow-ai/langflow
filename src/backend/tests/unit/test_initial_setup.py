@@ -49,6 +49,7 @@ def test_get_project_data():
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("client")
 async def test_create_or_update_starter_projects():
     with session_scope() as session:
         # Get the number of projects returned by load_starter_projects

@@ -7,11 +7,6 @@ from requests.exceptions import MissingSchema
 from langflow.utils.validate import create_function, execute_function, extract_function_name, validate_code
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 def test_create_function():
     code = """
 from pathlib import Path

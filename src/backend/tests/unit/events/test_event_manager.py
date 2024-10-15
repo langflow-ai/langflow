@@ -9,11 +9,6 @@ from langflow.events.event_manager import EventManager
 from langflow.schema.log import LoggableType
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 class TestEventManager:
     # Registering an event with a valid name and callback using a mock callback function
     def test_register_event_with_valid_name_and_callback_with_mock_callback(self):

@@ -4,11 +4,6 @@ from langchain_core.documents import Document
 from langflow.schema import Data
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 def test_data_initialization():
     record = Data(text_key="msg", data={"msg": "Hello, World!", "extra": "value"})
     assert record.msg == "Hello, World!"

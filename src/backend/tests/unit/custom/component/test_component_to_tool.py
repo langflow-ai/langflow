@@ -1,13 +1,7 @@
 from collections.abc import Callable
 
-import pytest
 
 from langflow.components.inputs.ChatInput import ChatInput
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 def test_component_to_toolkit():

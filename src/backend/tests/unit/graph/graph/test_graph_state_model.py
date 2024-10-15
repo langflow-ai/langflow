@@ -11,11 +11,6 @@ from langflow.graph.graph.constants import Finish
 from langflow.graph.graph.state_model import create_state_model_from_graph
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 def test_graph_state_model():
     session_id = "test_session_id"
     template = """{context}

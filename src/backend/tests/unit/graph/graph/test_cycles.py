@@ -15,11 +15,6 @@ from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 class Concatenate(Component):
     display_name = "Concatenate"
     description = "Concatenates two strings"

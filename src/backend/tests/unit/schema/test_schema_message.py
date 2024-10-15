@@ -4,11 +4,6 @@ from langchain_core.prompts.chat import ChatPromptTemplate
 from langflow.schema.message import Message
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 @pytest.mark.asyncio
 async def test_message_async_prompt_serialization():
     template = "Hello, {name}!"

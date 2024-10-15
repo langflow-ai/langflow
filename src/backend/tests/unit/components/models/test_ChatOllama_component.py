@@ -8,11 +8,6 @@ from langflow.components.models.OllamaModel import ChatOllamaComponent
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def component():
     return ChatOllamaComponent()
 

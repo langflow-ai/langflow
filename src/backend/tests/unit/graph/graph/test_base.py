@@ -13,11 +13,6 @@ from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 @pytest.mark.asyncio
 async def test_graph_not_prepared():
     chat_input = ChatInput()

@@ -36,6 +36,7 @@ def created_messages(session):
         return messages_read
 
 
+@pytest.mark.usefixtures("client")
 def test_get_messages():
     add_messages(
         [
@@ -49,6 +50,7 @@ def test_get_messages():
     assert messages[1].text == "Test message 2"
 
 
+@pytest.mark.usefixtures("client")
 def test_add_messages():
     message = Message(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
     messages = add_messages(message)
@@ -56,6 +58,7 @@ def test_add_messages():
     assert messages[0].text == "New Test message"
 
 
+@pytest.mark.usefixtures("client")
 def test_add_messagetables(session):
     messages = [MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")]
     added_messages = add_messagetables(messages, session)
@@ -63,6 +66,7 @@ def test_add_messagetables(session):
     assert added_messages[0].text == "New Test message"
 
 
+@pytest.mark.usefixtures("client")
 def test_delete_messages(session):
     session_id = "session_id2"
     delete_messages(session_id)
@@ -70,6 +74,7 @@ def test_delete_messages(session):
     assert len(messages) == 0
 
 
+@pytest.mark.usefixtures("client")
 def test_store_message():
     message = Message(text="Stored message", sender="User", sender_name="User", session_id="stored_session_id")
     stored_messages = store_message(message)
