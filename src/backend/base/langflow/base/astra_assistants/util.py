@@ -7,7 +7,8 @@ import threading
 
 import astra_assistants.tools as astra_assistants_tools
 import requests
-from astra_assistants import OpenAI, patch
+from astra_assistants import OpenAI as AstraOpenAI
+from astra_assistants import patch
 from astra_assistants.tools.tool_interface import ToolInterface
 
 client_lock = threading.Lock()
@@ -18,7 +19,7 @@ def get_patched_openai_client(shared_component_cache):
     os.environ["ASTRA_ASSISTANTS_QUIET"] = "true"
     client = shared_component_cache.get("client")
     if client is None:
-        client = patch(OpenAI())
+        client = patch(AstraOpenAI())
         shared_component_cache.set("client", client)
     return client
 
