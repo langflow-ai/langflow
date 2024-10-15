@@ -1,4 +1,4 @@
-from crewai import Agent, Crew, Process, Task  # type: ignore
+from crewai import Agent, Crew, Process, Task
 
 from langflow.base.agents.crewai.crew import BaseCrewComponent
 from langflow.io import HandleInput
@@ -11,7 +11,8 @@ class SequentialCrewComponent(BaseCrewComponent):
     documentation: str = "https://docs.crewai.com/how-to/Sequential/"
     icon = "CrewAI"
 
-    inputs = BaseCrewComponent._base_inputs + [
+    inputs = [
+        *BaseCrewComponent._base_inputs,
         HandleInput(name="tasks", display_name="Tasks", input_types=["SequentialTask"], is_list=True),
     ]
 

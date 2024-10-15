@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING, Any, cast
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
@@ -14,6 +12,8 @@ from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
+    from langflow.graph.graph.base import Graph
+    from langflow.graph.schema import RunOutputs
 
 
 class Result(BaseModel):
@@ -24,12 +24,13 @@ class Result(BaseModel):
 async def run_graph_internal(
     graph: Graph,
     flow_id: str,
+    *,
     stream: bool = False,
     session_id: str | None = None,
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
 ) -> tuple[list[RunOutputs], str]:
-    """Run the graph and generate the result"""
+    """Run the graph and generate the result."""
     inputs = inputs or []
     session_id_str = flow_id if session_id is None else session_id
     components = []
@@ -62,12 +63,12 @@ def run_graph(
     input_value: str,
     input_type: str,
     output_type: str,
+    *,
     session_id: str | None = None,
     fallback_to_env_vars: bool = False,
     output_component: str | None = None,
 ) -> list[RunOutputs]:
-    """
-    Runs the given Langflow Graph with the specified input and returns the outputs.
+    """Runs the given Langflow Graph with the specified input and returns the outputs.
 
     Args:
         graph (Graph): The graph to be executed.
@@ -75,6 +76,8 @@ def run_graph(
         input_type (str): The type of the input value.
         output_type (str): The type of the desired output.
         session_id (str | None, optional): The session ID to be used for the flow. Defaults to None.
+        fallback_to_env_vars (bool, optional): Whether to fallback to environment variables.
+            Defaults to False.
         output_component (Optional[str], optional): The specific output component to retrieve. Defaults to None.
 
     Returns:
@@ -103,9 +106,9 @@ def run_graph(
         types.append(input_value_request.type)
     return graph.run(
         inputs_list,
-        components,
-        types,
-        outputs or [],
+        input_components=components,
+        types=types,
+        outputs=outputs or [],
         stream=False,
         session_id=session_id,
         fallback_to_env_vars=fallback_to_env_vars,
@@ -117,13 +120,13 @@ def validate_input(
 ) -> list[dict[str, Any]]:
     if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
         msg = "graph_data and tweaks should be dictionaries"
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     nodes = graph_data.get("data", {}).get("nodes") or graph_data.get("nodes")
 
     if not isinstance(nodes, list):
         msg = "graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key"
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     return nodes
 
@@ -141,8 +144,8 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
         if tweak_name in template_data:
             if isinstance(tweak_value, dict):
                 for k, v in tweak_value.items():
-                    k = "file_path" if template_data[tweak_name]["type"] == "file" else k
-                    template_data[tweak_name][k] = v
+                    _k = "file_path" if template_data[tweak_name]["type"] == "file" else k
+                    template_data[tweak_name][_k] = v
             else:
                 key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
                 template_data[tweak_name][key] = tweak_value
@@ -155,10 +158,9 @@ def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: dict[str, Any]) -> None:
 
 
 def process_tweaks(
-    graph_data: dict[str, Any], tweaks: Tweaks | dict[str, dict[str, Any]], stream: bool = False
+    graph_data: dict[str, Any], tweaks: Tweaks | dict[str, dict[str, Any]], *, stream: bool = False
 ) -> dict[str, Any]:
-    """
-    This function is used to tweak the graph data using the node id and the tweaks dict.
+    """This function is used to tweak the graph data using the node id and the tweaks dict.
 
     :param graph_data: The dictionary containing the graph data. It must contain a 'data' key with
                        'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.

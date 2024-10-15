@@ -1,8 +1,12 @@
+from typing import TYPE_CHECKING
+
 from langflow.custom import Component
-from langflow.field_typing import Embeddings
 from langflow.io import HandleInput, MessageInput, Output
 from langflow.schema import Data
-from langflow.schema.message import Message
+
+if TYPE_CHECKING:
+    from langflow.field_typing import Embeddings
+    from langflow.schema.message import Message
 
 
 class TextEmbedderComponent(Component):

@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.variable import Variable
 
 
-class User(SQLModel, table=True):  # type: ignore
+class User(SQLModel, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     username: str = Field(index=True, unique=True)
     password: str = Field()
@@ -46,6 +46,7 @@ class UserRead(SQLModel):
     id: UUID = Field(default_factory=uuid4)
     username: str = Field()
     profile_image: str | None = Field()
+    store_api_key: str | None = Field(nullable=True)
     is_active: bool = Field()
     is_superuser: bool = Field()
     create_at: datetime = Field()

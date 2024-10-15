@@ -2,6 +2,7 @@ from typing import Any
 
 from langchain.tools import StructuredTool
 from langchain_community.utilities.serpapi import SerpAPIWrapper
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -85,8 +86,10 @@ class SerpAPIComponent(LCToolComponent):
 
             data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]
 
-            self.status = data_list
-            return data_list
-        except Exception as e:
-            self.status = f"Error: {str(e)}"
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error running SerpAPI")
+            self.status = f"Error: {e}"
             return [Data(data={"error": str(e)}, text=str(e))]
+
+        self.status = data_list
+        return data_list

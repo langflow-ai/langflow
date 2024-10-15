@@ -23,10 +23,10 @@ class SizedLogBuffer:
         self,
         max_readers: int = 20,  # max number of concurrent readers for the buffer
     ):
-        """
-        a buffer for storing log messages for the log retrieval API
-        the buffer can be overwritten by an env variable LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE
-        because the logger is initialized before the settings_service are loaded
+        """A buffer for storing log messages for the log retrieval API.
+
+        The buffer can be overwritten by an env variable LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE
+        because the logger is initialized before the settings_service are loaded.
         """
         self.max: int = 0
         env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
@@ -98,10 +98,7 @@ class SizedLogBuffer:
         try:
             with self._wlock:
                 as_list = list(self.buffer)
-            rc = {}
-            for ts, msg in as_list[-last_idx:]:
-                rc[ts] = msg
-            return rc
+            return dict(as_list[-last_idx:])
         finally:
             self._rsemaphore.release()
 
@@ -140,6 +137,7 @@ class LogConfig(TypedDict):
 
 
 def configure(
+    *,
     log_level: str | None = None,
     log_file: Path | None = None,
     disable: bool | None = False,
@@ -195,8 +193,8 @@ def configure(
                 rotation="10 MB",  # Log rotation based on file size
                 serialize=True,
             )
-        except Exception as exc:
-            logger.error(f"Error setting up log file: {exc}")
+        except Exception:  # noqa: BLE001
+            logger.exception("Error setting up log file")
 
     if log_buffer.enabled():
         logger.add(sink=log_buffer.write, format="{time} {level} {message}", serialize=True)
@@ -220,9 +218,9 @@ def setup_gunicorn_logger():
 
 
 class InterceptHandler(logging.Handler):
-    """
-    Default handler from examples in loguru documentaion.
-    See https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging
+    """Default handler from examples in loguru documentation.
+
+    See https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging.
     """
 
     def emit(self, record):

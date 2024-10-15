@@ -855,6 +855,11 @@ export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to displa
 
 export const DEFAULT_TABLE_ALERT_TITLE = "No Data Available";
 
+export const NO_COLUMN_DEFINITION_ALERT_TITLE = "No Column Definitions";
+
+export const NO_COLUMN_DEFINITION_ALERT_DESCRIPTION =
+  "There are no column definitions available for this table.";
+
 export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];
 
 export const MAX_BATCH_SIZE = 50;
@@ -932,3 +937,13 @@ export const SHADOW_COLOR_OPTIONS = {
 
 export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes
 export const MAX_TEXT_LENGTH = 99999;
+
+export const SEARCH_TABS = ["All", "Flows", "Components"];
+export const PAGINATION_SIZE = 10;
+export const PAGINATION_PAGE = 1;
+
+export const STORE_PAGINATION_SIZE = 12;
+export const STORE_PAGINATION_PAGE = 1;
+
+export const PAGINATION_ROWS_COUNT = [10, 20, 50, 100];
+export const STORE_PAGINATION_ROWS_COUNT = [12, 24, 48, 96];

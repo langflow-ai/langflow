@@ -36,7 +36,7 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
         # Check if value is a list of dicts
         if not isinstance(v, list):
             msg = f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list."
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
 
         for item in v:
             if not isinstance(item, dict | Data):
@@ -44,13 +44,12 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
                     "TableInput value must be a list of dictionaries or Data. "
                     f"Item '{item}' is not a dictionary or Data."
                 )
-                raise ValueError(msg)
+                raise ValueError(msg)  # noqa: TRY004
         return v
 
 
 class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
-    """
-    Represents an Input that has a Handle to a specific type (e.g. BaseLanguageModel, BaseRetriever, etc.)
+    """Represents an Input that has a Handle to a specific type (e.g. BaseLanguageModel, BaseRetriever, etc.).
 
     This class inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
 
@@ -64,8 +63,7 @@ class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
 
 
 class DataInput(HandleInput, InputTraceMixin, ListableInputMixin):
-    """
-    Represents an Input that has a Handle that receives a Data object.
+    """Represents an Input that has a Handle that receives a Data object.
 
     Attributes:
         input_types (list[str]): A list of input types supported by this data input.
@@ -90,8 +88,7 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
 
     @staticmethod
     def _validate_value(v: Any, _info):
-        """
-        Validates the given value and returns the processed value.
+        """Validates the given value and returns the processed value.
 
         Args:
             v (Any): The value to be validated.
@@ -121,8 +118,7 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, _info):
-        """
-        Validates the given value and returns the processed value.
+        """Validates the given value and returns the processed value.
 
         Args:
             v (Any): The value to be validated.
@@ -155,8 +151,7 @@ class MessageInput(StrInput, InputTraceMixin):
 
 
 class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
-    """
-    Represents a text input component for the Langflow system.
+    """Represents a text input component for the Langflow system.
 
     This component is used to handle text inputs in the Langflow system.
     It provides methods for validating and processing text values.
@@ -170,8 +165,7 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
 
     @staticmethod
     def _validate_value(v: Any, _info):
-        """
-        Validates the given value and returns the processed value.
+        """Validates the given value and returns the processed value.
 
         Args:
             v (Any): The value to be validated.
@@ -206,13 +200,12 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
             value = v
         else:
             msg = f"Invalid value type {type(v)}"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
         return value
 
 
 class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin):
-    """
-    Represents a multiline input field.
+    """Represents a multiline input field.
 
     Attributes:
         field_type (SerializableFieldTypes): The type of the field. Defaults to FieldTypes.TEXT.
@@ -224,8 +217,7 @@ class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin):
 
 
 class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
-    """
-    Represents a multiline input field.
+    """Represents a multiline input field.
 
     Attributes:
         field_type (SerializableFieldTypes): The type of the field. Defaults to FieldTypes.TEXT.
@@ -238,8 +230,7 @@ class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
 
 
 class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
-    """
-    Represents a field with password field type.
+    """Represents a field with password field type.
 
     This class inherits from `BaseInputMixin` and `DatabaseLoadMixin`.
 
@@ -257,8 +248,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, _info):
-        """
-        Validates the given value and returns the processed value.
+        """Validates the given value and returns the processed value.
 
         Args:
             v (Any): The value to be validated.
@@ -298,8 +288,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
 
 
 class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin):
-    """
-    Represents an integer field.
+    """Represents an integer field.
 
     This class represents an integer input and provides functionality for handling integer values.
     It inherits from the `BaseInputMixin`, `ListableInputMixin`, and `RangeMixin` classes.
@@ -313,8 +302,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, _info):
-        """
-        Validates the given value and returns the processed value.
+        """Validates the given value and returns the processed value.
 
         Args:
             v (Any): The value to be validated.
@@ -326,7 +314,6 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
-
         if v and not isinstance(v, int | float):
             msg = f"Invalid value type {type(v)} for input {_info.data.get('name')}."
             raise ValueError(msg)
@@ -336,8 +323,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
 
 
 class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin):
-    """
-    Represents a float field.
+    """Represents a float field.
 
     This class represents a float input and provides functionality for handling float values.
     It inherits from the `BaseInputMixin`, `ListableInputMixin`, and `RangeMixin` classes.
@@ -351,8 +337,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, _info):
-        """
-        Validates the given value and returns the processed value.
+        """Validates the given value and returns the processed value.
 
         Args:
             v (Any): The value to be validated.
@@ -373,8 +358,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
 
 
 class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
-    """
-    Represents a boolean field.
+    """Represents a boolean field.
 
     This class represents a boolean input and provides functionality for handling boolean values.
     It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
@@ -389,8 +373,7 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
 
 
 class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, InputTraceMixin):
-    """
-    Represents a nested dictionary field.
+    """Represents a nested dictionary field.
 
     This class represents a nested dictionary input and provides functionality for handling dictionary values.
     It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
@@ -405,8 +388,7 @@ class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, In
 
 
 class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
-    """
-    Represents a dictionary field.
+    """Represents a dictionary field.
 
     This class represents a dictionary input and provides functionality for handling dictionary values.
     It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
@@ -421,8 +403,7 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
 
 
 class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
-    """
-    Represents a dropdown input field.
+    """Represents a dropdown input field.
 
     This class represents a dropdown input field and provides functionality for handling dropdown values.
     It inherits from the `BaseInputMixin` and `DropDownMixin` classes.
@@ -439,8 +420,7 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
 
 
 class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin):
-    """
-    Represents a multiselect input field.
+    """Represents a multiselect input field.
 
     This class represents a multiselect input field and provides functionality for handling multiselect values.
     It inherits from the `BaseInputMixin`, `ListableInputMixin` and `DropDownMixin` classes.
@@ -470,17 +450,16 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
         # Check if value is a list of dicts
         if not isinstance(v, list):
             msg = f"MultiselectInput value must be a list. Value: '{v}'"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
         for item in v:
             if not isinstance(item, str):
                 msg = f"MultiselectInput value must be a list of strings. Item: '{item}' is not a string"
-                raise ValueError(msg)
+                raise ValueError(msg)  # noqa: TRY004
         return v
 
 
 class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin):
-    """
-    Represents a file field.
+    """Represents a file field.
 
     This class represents a file input and provides functionality for handling file values.
     It inherits from the `BaseInputMixin`, `ListableInputMixin`, and `FileMixin` classes.

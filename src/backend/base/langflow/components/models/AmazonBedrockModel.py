@@ -11,7 +11,8 @@ class AmazonBedrockComponent(LCModelComponent):
     icon = "Amazon"
     name = "AmazonBedrockModel"
 
-    inputs = LCModelComponent._base_inputs + [
+    inputs = [
+        *LCModelComponent._base_inputs,
         DropdownInput(
             name="model_id",
             display_name="Model ID",
@@ -72,7 +73,7 @@ class AmazonBedrockComponent(LCModelComponent):
             msg = "langchain_aws is not installed. Please install it with `pip install langchain_aws`."
             raise ImportError(msg) from e
         if self.aws_access_key:
-            import boto3  # type: ignore
+            import boto3
 
             session = boto3.Session(
                 aws_access_key_id=self.aws_access_key,
@@ -95,7 +96,7 @@ class AmazonBedrockComponent(LCModelComponent):
 
         boto3_client = session.client("bedrock-runtime", **client_params)
         try:
-            output = ChatBedrock(  # type: ignore
+            output = ChatBedrock(
                 client=boto3_client,
                 model_id=self.model_id,
                 region_name=self.region_name,
@@ -106,4 +107,4 @@ class AmazonBedrockComponent(LCModelComponent):
         except Exception as e:
             msg = "Could not connect to AmazonBedrock API."
             raise ValueError(msg) from e
-        return output  # type: ignore
+        return output

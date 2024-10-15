@@ -10,10 +10,11 @@ from .run import AssistantsRun
 __all__ = [
     "AstraAssistantManager",
     "AssistantsCreateAssistant",
+    "AssistantsCreateThread",
     "AssistantsGetAssistantName",
     "AssistantsListAssistants",
-    "AssistantsCreateThread",
     "AssistantsRun",
-    "GetEnvVar",
+    "AstraAssistantManager",
     "Dotenv",
+    "GetEnvVar",
 ]

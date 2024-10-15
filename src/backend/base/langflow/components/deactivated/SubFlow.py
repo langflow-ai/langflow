@@ -1,16 +1,18 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
 from langflow.base.flow_processing.utils import build_data_from_result_data
 from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
+
+if TYPE_CHECKING:
+    from langflow.graph.schema import RunOutputs
 
 
 class SubFlowComponent(CustomComponent):
@@ -39,21 +41,26 @@ class SubFlowComponent(CustomComponent):
             build_config["flow_name"]["options"] = self.get_flow_names()
         # Clean up the build config
         for key in list(build_config.keys()):
-            if key not in self.field_order + ["code", "_type", "get_final_results_only"]:
+            if key not in {*self.field_order, "code", "_type", "get_final_results_only"}:
                 del build_config[key]
         if field_value is not None and field_name == "flow_name":
             try:
                 flow_data = self.get_flow(field_value)
+            except Exception:  # noqa: BLE001
+                logger.exception(f"Error getting flow {field_value}")
+            else:
                 if not flow_data:
                     msg = f"Flow {field_value} not found."
-                    raise ValueError(msg)
-                graph = Graph.from_payload(flow_data.data["data"])
-                # Get all inputs from the graph
-                inputs = get_flow_inputs(graph)
-                # Add inputs to the build config
-                build_config = self.add_inputs_to_build_config(inputs, build_config)
-            except Exception as e:
-                logger.error(f"Error getting flow {field_value}: {str(e)}")
+                    logger.error(msg)
+                else:
+                    try:
+                        graph = Graph.from_payload(flow_data.data["data"])
+                        # Get all inputs from the graph
+                        inputs = get_flow_inputs(graph)
+                        # Add inputs to the build config
+                        build_config = self.add_inputs_to_build_config(inputs, build_config)
+                    except Exception:  # noqa: BLE001
+                        logger.exception(f"Error building graph for flow {field_value}")
 
         return build_config
 
@@ -97,7 +104,7 @@ class SubFlowComponent(CustomComponent):
             },
         }
 
-    async def build(self, flow_name: str, get_final_results_only: bool = True, **kwargs) -> list[Data]:
+    async def build(self, flow_name: str, **kwargs) -> list[Data]:
         tweaks = {key: {"input_value": value} for key, value in kwargs.items()}
         run_outputs: list[RunOutputs | None] = await self.run_flow(
             tweaks=tweaks,
@@ -111,7 +118,7 @@ class SubFlowComponent(CustomComponent):
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    data.extend(build_data_from_result_data(output, get_final_results_only))
+                    data.extend(build_data_from_result_data(output))
 
         self.status = data
         logger.debug(data)

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from fastapi import Depends
 from loguru import logger
@@ -18,6 +16,9 @@ from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from uuid import UUID
+
     from langflow.services.settings.service import SettingsService
 
 
@@ -61,8 +62,8 @@ class DatabaseVariableService(VariableService, Service):
                                 _type=CREDENTIAL_TYPE,
                                 session=session,
                             )
-                        except Exception as e:
-                            logger.error(f"Error creating {var} variable: {e}")
+                        except Exception:  # noqa: BLE001
+                            logger.exception(f"Error creating {var} variable")
 
         else:
             logger.info("Skipping environment variable storage.")
@@ -82,7 +83,7 @@ class DatabaseVariableService(VariableService, Service):
             msg = f"{name} variable not found."
             raise ValueError(msg)
 
-        if variable.type == CREDENTIAL_TYPE and field == "session_id":  # type: ignore
+        if variable.type == CREDENTIAL_TYPE and field == "session_id":
             msg = (
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
                 "because its purpose is to prevent the exposure of values."
@@ -126,13 +127,15 @@ class DatabaseVariableService(VariableService, Service):
     ):
         query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
         db_variable = session.exec(query).one()
+        db_variable.updated_at = datetime.now(timezone.utc)
+
+        variable.value = variable.value or ""
+        encrypted = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
+        variable.value = encrypted
 
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():
             setattr(db_variable, key, value)
-        db_variable.updated_at = datetime.now(timezone.utc)
-        encrypted = auth_utils.encrypt_api_key(db_variable.value, settings_service=self.settings_service)
-        variable.value = encrypted
 
         session.add(db_variable)
         session.commit()

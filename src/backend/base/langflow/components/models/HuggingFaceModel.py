@@ -17,12 +17,9 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     icon = "HuggingFace"
     name = "HuggingFaceModel"
 
-    inputs = LCModelComponent._base_inputs + [
-        StrInput(
-            name="model_id",
-            display_name="Model ID",
-            value="openai-community/gpt2",
-        ),
+    inputs = [
+        *LCModelComponent._base_inputs,
+        StrInput(name="model_id", display_name="Model ID", value="openai-community/gpt2"),
         StrInput(
             name="inference_endpoint",
             display_name="Inference Endpoint",
@@ -55,7 +52,6 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
 
     def create_huggingface_endpoint(
         self,
-        model_id: str,
         task: str | None,
         huggingfacehub_api_token: str | None,
         model_kwargs: dict[str, Any],
@@ -79,7 +75,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
                 max_new_tokens=max_new_tokens,
                 top_k=top_k,
                 top_p=top_p,
-                typical_p=self.typical_p,
+                typical_p=typical_p,
                 temperature=temperature,
                 repetition_penalty=repetition_penalty,
             )
@@ -87,7 +83,6 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         return _attempt_create()
 
     def build_model(self) -> LanguageModel:
-        model_id = self.model_id
         task = self.task or None
         huggingfacehub_api_token = self.huggingfacehub_api_token
         model_kwargs = self.model_kwargs or {}
@@ -100,7 +95,6 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
 
         try:
             llm = self.create_huggingface_endpoint(
-                model_id=model_id,
                 task=task,
                 huggingfacehub_api_token=huggingfacehub_api_token,
                 model_kwargs=model_kwargs,

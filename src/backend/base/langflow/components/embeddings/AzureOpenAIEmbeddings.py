@@ -77,7 +77,7 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
                 dimensions=self.dimensions or None,
             )
         except Exception as e:
-            msg = f"Could not connect to AzureOpenAIEmbeddings API: {str(e)}"
+            msg = f"Could not connect to AzureOpenAIEmbeddings API: {e}"
             raise ValueError(msg) from e
 
         return embeddings

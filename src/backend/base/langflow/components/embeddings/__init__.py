@@ -15,9 +15,9 @@ __all__ = [
     "AstraVectorizeComponent",
     "AzureOpenAIEmbeddingsComponent",
     "CohereEmbeddingsComponent",
+    "GoogleGenerativeAIEmbeddingsComponent",
     "HuggingFaceInferenceAPIEmbeddingsComponent",
     "OllamaEmbeddingsComponent",
     "OpenAIEmbeddingsComponent",
     "VertexAIEmbeddingsComponent",
-    "GoogleGenerativeAIEmbeddingsComponent",
 ]

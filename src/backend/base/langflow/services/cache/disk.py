@@ -10,7 +10,7 @@ from langflow.services.cache.base import AsyncBaseCacheService, AsyncLockType
 from langflow.services.cache.utils import CACHE_MISS
 
 
-class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type: ignore
+class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):
     def __init__(self, cache_dir, max_size=None, expiration_time=3600):
         self.cache = Cache(cache_dir)
         # Let's clear the cache for now to maintain a similar

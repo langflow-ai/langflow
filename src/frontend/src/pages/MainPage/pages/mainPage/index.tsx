@@ -70,6 +70,13 @@ export default function HomePage(): JSX.Element {
     exact: false,
   });
 
+  const isFetchingFolder = !!useIsFetching({
+    queryKey: ["useGetFolder"],
+    exact: false,
+  });
+
+  const isLoadingFolder = isFetchingFolders || isFetchingFolder;
+
   return (
     <>
       <PageLayout
@@ -86,7 +93,7 @@ export default function HomePage(): JSX.Element {
               options={dropdownOptions}
               plusButton={true}
               dropdownOptions={false}
-              isFetchingFolders={isFetchingFolders}
+              isFetchingFolders={isLoadingFolder}
             />
           </div>
         }

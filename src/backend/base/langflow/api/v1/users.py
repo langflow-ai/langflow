@@ -1,3 +1,4 @@
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -24,12 +25,10 @@ router = APIRouter(tags=["Users"], prefix="/users")
 @router.post("/", response_model=UserRead, status_code=201)
 def add_user(
     user: UserCreate,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     settings_service=Depends(get_settings_service),
 ) -> User:
-    """
-    Add a new user to the database.
-    """
+    """Add a new user to the database."""
     new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_password_hash(user.password)
@@ -49,32 +48,28 @@ def add_user(
 
 @router.get("/whoami", response_model=UserRead)
 def read_current_user(
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> User:
-    """
-    Retrieve the current user's data.
-    """
+    """Retrieve the current user's data."""
     return current_user
 
 
-@router.get("/", response_model=UsersResponse)
+@router.get("/")
 def read_all_users(
     skip: int = 0,
     limit: int = 10,
     _: Session = Depends(get_current_active_superuser),
     session: Session = Depends(get_session),
 ) -> UsersResponse:
-    """
-    Retrieve a list of users from the database with pagination.
-    """
+    """Retrieve a list of users from the database with pagination."""
     query: SelectOfScalar = select(User).offset(skip).limit(limit)
     users = session.exec(query).fetchall()
 
-    count_query = select(func.count()).select_from(User)  # type: ignore
+    count_query = select(func.count()).select_from(User)
     total_count = session.exec(count_query).first()
 
     return UsersResponse(
-        total_count=total_count,  # type: ignore
+        total_count=total_count,
         users=[UserRead(**user.model_dump()) for user in users],
     )
 
@@ -83,13 +78,10 @@ def read_all_users(
 def patch_user(
     user_id: UUID,
     user_update: UserUpdate,
-    user: User = Depends(get_current_active_user),
-    session: Session = Depends(get_session),
+    user: Annotated[User, Depends(get_current_active_user)],
+    session: Annotated[Session, Depends(get_session)],
 ) -> User:
-    """
-    Update an existing user's data.
-    """
-
+    """Update an existing user's data."""
     update_password = user_update.password is not None and user_update.password != ""
 
     if not user.is_superuser and user_update.is_superuser:
@@ -113,12 +105,10 @@ def patch_user(
 def reset_password(
     user_id: UUID,
     user_update: UserUpdate,
-    user: User = Depends(get_current_active_user),
-    session: Session = Depends(get_session),
+    user: Annotated[User, Depends(get_current_active_user)],
+    session: Annotated[Session, Depends(get_session)],
 ) -> User:
-    """
-    Reset a user's password.
-    """
+    """Reset a user's password."""
     if user_id != user.id:
         raise HTTPException(status_code=400, detail="You can't change another user's password")
 
@@ -134,15 +124,13 @@ def reset_password(
     return user
 
 
-@router.delete("/{user_id}", response_model=dict)
+@router.delete("/{user_id}")
 def delete_user(
     user_id: UUID,
-    current_user: User = Depends(get_current_active_superuser),
-    session: Session = Depends(get_session),
+    current_user: Annotated[User, Depends(get_current_active_superuser)],
+    session: Annotated[Session, Depends(get_session)],
 ) -> dict:
-    """
-    Delete a user from the database.
-    """
+    """Delete a user from the database."""
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="You can't delete your own user account")
     if not current_user.is_superuser:

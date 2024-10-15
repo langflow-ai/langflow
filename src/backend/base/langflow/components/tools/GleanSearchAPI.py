@@ -31,9 +31,7 @@ class GleanSearchAPIComponent(LCToolComponent):
     ]
 
     class GleanAPIWrapper(BaseModel):
-        """
-        Wrapper around Glean API.
-        """
+        """Wrapper around Glean API."""
 
         glean_api_url: str
         glean_access_token: str
@@ -138,10 +136,7 @@ class GleanSearchAPIComponent(LCToolComponent):
         )
 
         # Build the data
-        data = []
-        for result in results:
-            data.append(Data(data=result, text=result["snippets"][0]["text"]))
-
+        data = [Data(data=result, text=result["snippets"][0]["text"]) for result in results]
         self.status = data
 
         return data

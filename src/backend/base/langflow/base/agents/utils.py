@@ -36,8 +36,7 @@ class AgentSpec(BaseModel):
 
 
 def data_to_messages(data: list[Data]) -> list[BaseMessage]:
-    """
-    Convert a list of data to a list of messages.
+    """Convert a list of data to a list of messages.
 
     Args:
         data (List[Data]): The data to convert.
@@ -69,9 +68,9 @@ def validate_and_create_openai_tools_agent(
     llm: BaseLanguageModel,
     tools: Sequence[BaseTool],
     prompt: ChatPromptTemplate,
-    tools_renderer: Callable[[list[BaseTool]], str] = render_text_description,
+    _tools_renderer: Callable[[list[BaseTool]], str] = render_text_description,
     *,
-    stop_sequence: bool | list[str] = True,
+    _stop_sequence: bool | list[str] = True,
 ):
     return create_openai_tools_agent(
         llm=llm,
@@ -84,9 +83,9 @@ def validate_and_create_tool_calling_agent(
     llm: BaseLanguageModel,
     tools: Sequence[BaseTool],
     prompt: ChatPromptTemplate,
-    tools_renderer: Callable[[list[BaseTool]], str] = render_text_description,
+    _tools_renderer: Callable[[list[BaseTool]], str] = render_text_description,
     *,
-    stop_sequence: bool | list[str] = True,
+    _stop_sequence: bool | list[str] = True,
 ):
     return create_tool_calling_agent(
         llm=llm,

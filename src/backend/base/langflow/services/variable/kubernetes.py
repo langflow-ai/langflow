@@ -1,18 +1,24 @@
 from __future__ import annotations
 
 import os
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from loguru import logger
-from sqlmodel import Session
+from typing_extensions import override
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate
-from langflow.services.settings.service import SettingsService
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.kubernetes_secrets import KubernetesSecretManager, encode_user_id
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlmodel import Session
+
+    from langflow.services.settings.service import SettingsService
 
 
 class KubernetesSecretService(VariableService, Service):
@@ -21,6 +27,7 @@ class KubernetesSecretService(VariableService, Service):
         # TODO: settings_service to set kubernetes namespace
         self.kubernetes_secrets = KubernetesSecretManager()
 
+    @override
     def initialize_user_variables(self, user_id: UUID | str, session: Session):
         # Check for environment variables that should be stored in the database
         should_or_should_not = "Should" if self.settings_service.settings.store_environment_variables else "Should not"
@@ -42,8 +49,8 @@ class KubernetesSecretService(VariableService, Service):
                     name=secret_name,
                     data=variables,
                 )
-            except Exception as e:
-                logger.error(f"Error creating {var} variable: {e}")
+            except Exception:  # noqa: BLE001
+                logger.exception(f"Error creating {var} variable")
 
         else:
             logger.info("Skipping environment variable storage.")
@@ -77,7 +84,7 @@ class KubernetesSecretService(VariableService, Service):
     ) -> str:
         secret_name = encode_user_id(user_id)
         key, value = self.resolve_variable(secret_name, user_id, name)
-        if key.startswith(CREDENTIAL_TYPE + "_") and field == "session_id":  # type: ignore
+        if key.startswith(CREDENTIAL_TYPE + "_") and field == "session_id":
             msg = (
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
                 "because its purpose is to prevent the exposure of values."
@@ -118,7 +125,6 @@ class KubernetesSecretService(VariableService, Service):
 
         secret_key, _ = self.resolve_variable(secret_name, user_id, name)
         self.kubernetes_secrets.delete_secret_key(name=secret_name, key=secret_key)
-        return
 
     def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID | str, _session: Session) -> None:
         self.delete_variable(user_id, _session, str(variable_id))

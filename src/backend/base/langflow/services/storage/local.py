@@ -20,8 +20,7 @@ class LocalStorageService(StorageService):
         return str(self.data_dir / flow_id / file_name)
 
     async def save_file(self, flow_id: str, file_name: str, data: bytes):
-        """
-        Save a file in the local storage.
+        """Save a file in the local storage.
 
         :param flow_id: The identifier for the flow.
         :param file_name: The name of the file to be saved.
@@ -35,19 +34,18 @@ class LocalStorageService(StorageService):
         file_path = folder_path / file_name
 
         def write_file(file_path: Path, data: bytes) -> None:
-            with open(file_path, "wb") as f:
+            with Path(file_path).open("wb") as f:
                 f.write(data)
 
         try:
             await asyncio.get_event_loop().run_in_executor(None, write_file, file_path, data)
             logger.info(f"File {file_name} saved successfully in flow {flow_id}.")
-        except Exception as e:
-            logger.error(f"Error saving file {file_name} in flow {flow_id}: {e}")
-            raise e
+        except Exception:
+            logger.exception(f"Error saving file {file_name} in flow {flow_id}")
+            raise
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
-        """
-        Retrieve a file from the local storage.
+        """Retrieve a file from the local storage.
 
         :param flow_id: The identifier for the flow.
         :param file_name: The name of the file to be retrieved.
@@ -61,7 +59,7 @@ class LocalStorageService(StorageService):
             raise FileNotFoundError(msg)
 
         def read_file(file_path: Path) -> bytes:
-            with open(file_path, "rb") as f:
+            with Path(file_path).open("rb") as f:
                 return f.read()
 
         content = await asyncio.get_event_loop().run_in_executor(None, read_file, file_path)
@@ -69,8 +67,7 @@ class LocalStorageService(StorageService):
         return content
 
     async def list_files(self, flow_id: str):
-        """
-        List all files in a specified flow.
+        """List all files in a specified flow.
 
         :param flow_id: The identifier for the flow.
         :return: A list of file names.
@@ -87,8 +84,7 @@ class LocalStorageService(StorageService):
         return files
 
     async def delete_file(self, flow_id: str, file_name: str):
-        """
-        Delete a file from the local storage.
+        """Delete a file from the local storage.
 
         :param flow_id: The identifier for the flow.
         :param file_name: The name of the file to be deleted.

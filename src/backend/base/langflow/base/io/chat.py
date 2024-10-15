@@ -61,7 +61,7 @@ class ChatComponent(Component):
         iterator = message.text
         if not isinstance(iterator, AsyncIterator | Iterator):
             msg = "The message must be an iterator or an async iterator."
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         if isinstance(iterator, AsyncIterator):
             return run_until_complete(self._handle_async_iterator(iterator, message, message_id))
@@ -74,6 +74,7 @@ class ChatComponent(Component):
 
     def build_with_data(
         self,
+        *,
         sender: str | None = "User",
         sender_name: str | None = "User",
         input_value: str | Data | Message | None = None,
@@ -97,4 +98,4 @@ class ChatComponent(Component):
                 flow_id=self.graph.flow_id,
             )
             self.status = messages
-        return message_text  # type: ignore
+        return message_text  # type: ignore[return-value]

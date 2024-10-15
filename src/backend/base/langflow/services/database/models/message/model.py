@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
+from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -15,7 +16,7 @@ class MessageBase(SQLModel):
     sender: str
     sender_name: str
     session_id: str
-    text: str
+    text: str = Field(sa_column=Column(Text))
     files: list[str] = Field(default_factory=list)
 
     @field_validator("files", mode="before")
@@ -41,7 +42,10 @@ class MessageBase(SQLModel):
                 message.files = image_paths
 
         if isinstance(message.timestamp, str):
-            timestamp = datetime.fromisoformat(message.timestamp)
+            # The message.timestamp is created using strftime("%Y-%m-%dT%H:%M:%S").
+            # This format is not fully ISO 8601 compliant because it lacks timezone information.
+            # Aadd timezone info (UTC) back to the timestamp here.
+            timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
         else:
             timestamp = message.timestamp
         if not flow_id and message.flow_id:
@@ -60,7 +64,7 @@ class MessageBase(SQLModel):
         )
 
 
-class MessageTable(MessageBase, table=True):  # type: ignore
+class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "message"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     flow_id: UUID | None = Field(default=None, foreign_key="flow.id")

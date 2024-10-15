@@ -87,13 +87,13 @@ class APIRequestComponent(Component):
                 try:
                     json_data = json.loads(parsed.data)
                     build_config["body"]["value"] = json_data
-                except json.JSONDecodeError as e:
-                    logger.error(f"Error decoding JSON data: {e}")
+                except json.JSONDecodeError:
+                    logger.exception("Error decoding JSON data")
             else:
                 build_config["body"]["value"] = {}
         except Exception as exc:
-            logger.error(f"Error parsing curl: {exc}")
             msg = f"Error parsing curl: {exc}"
+            logger.exception(msg)
             raise ValueError(msg) from exc
         return build_config
 
@@ -112,7 +112,7 @@ class APIRequestComponent(Component):
         timeout: int = 5,
     ) -> Data:
         method = method.upper()
-        if method not in ["GET", "POST", "PATCH", "PUT", "DELETE"]:
+        if method not in {"GET", "POST", "PATCH", "PUT", "DELETE"}:
             msg = f"Unsupported method: {method}"
             raise ValueError(msg)
 
@@ -120,18 +120,19 @@ class APIRequestComponent(Component):
             try:
                 body = json.loads(body)
             except Exception as e:
-                logger.error(f"Error decoding JSON data: {e}")
-                body = None
                 msg = f"Error decoding JSON data: {e}"
+                logger.exception(msg)
+                body = None
                 raise ValueError(msg) from e
 
-        data = body if body else None
+        data = body or None
 
         try:
             response = await client.request(method, url, headers=headers, json=data, timeout=timeout)
             try:
                 result = response.json()
-            except Exception:
+            except Exception:  # noqa: BLE001
+                logger.opt(exception=True).debug("Error decoding JSON response")
                 result = response.text
             return Data(
                 data={
@@ -150,7 +151,8 @@ class APIRequestComponent(Component):
                     "error": "Request timed out",
                 },
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
+            logger.opt(exception=True).debug(f"Error making request to {url}")
             return Data(
                 data={
                     "source": url,

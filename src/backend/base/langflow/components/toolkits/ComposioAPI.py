@@ -1,9 +1,10 @@
 from collections.abc import Sequence
 from typing import Any
 
-from composio_langchain import Action, App, ComposioToolSet  # type: ignore
+from composio_langchain import Action, App, ComposioToolSet
 from langchain_core.tools import Tool
 from loguru import logger
+from typing_extensions import override
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import DropdownInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput
@@ -51,8 +52,7 @@ class ComposioAPIComponent(LCToolComponent):
     ]
 
     def _check_for_authorization(self, app: str) -> str:
-        """
-        Checks if the app is authorized.
+        """Checks if the app is authorized.
 
         Args:
             app (str): The app name to check authorization for.
@@ -64,13 +64,14 @@ class ComposioAPIComponent(LCToolComponent):
         entity = toolset.client.get_entity(id=self.entity_id)
         try:
             entity.get_connection(app=app)
-            return f"{app} CONNECTED"
-        except Exception:
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Authorization error")
             return self._handle_authorization_failure(toolset, entity, app)
 
+        return f"{app} CONNECTED"
+
     def _handle_authorization_failure(self, toolset: ComposioToolSet, entity: Any, app: str) -> str:
-        """
-        Handles the authorization failure by attempting to process API key auth or initiate default connection.
+        """Handles the authorization failure by attempting to process API key auth or initiate default connection.
 
         Args:
             toolset (ComposioToolSet): The toolset instance.
@@ -85,13 +86,12 @@ class ComposioAPIComponent(LCToolComponent):
             if auth_schemes[0].auth_mode == "API_KEY":
                 return self._process_api_key_auth(entity, app)
             return self._initiate_default_connection(entity, app)
-        except Exception as exc:
-            logger.error(f"Authorization error: {str(exc)}")
+        except Exception:  # noqa: BLE001
+            logger.exception("Authorization error")
             return "Error"
 
     def _process_api_key_auth(self, entity: Any, app: str) -> str:
-        """
-        Processes the API key authentication.
+        """Processes the API key authentication.
 
         Args:
             entity (Any): The entity instance.
@@ -143,6 +143,7 @@ class ComposioAPIComponent(LCToolComponent):
     def _get_normalized_app_name(self) -> str:
         return self.app_names.replace("_CONNECTED", "").replace("_connected", "")
 
+    @override
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         if field_name == "api_key":
             if hasattr(self, "api_key") and self.api_key != "":

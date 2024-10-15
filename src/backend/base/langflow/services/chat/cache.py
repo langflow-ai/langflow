@@ -65,8 +65,7 @@ class CacheService(Subject, Service):
 
     @contextmanager
     def set_client_id(self, client_id: str):
-        """
-        Context manager to set the current client_id and associated cache.
+        """Context manager to set the current client_id and associated cache.
 
         Args:
             client_id (str): The client identifier.
@@ -81,13 +80,13 @@ class CacheService(Subject, Service):
             self.current_cache = self._cache.get(self.current_client_id, {})
 
     def add(self, name: str, obj: Any, obj_type: str, extension: str | None = None):
-        """
-        Add an object to the current client's cache.
+        """Add an object to the current client's cache.
 
         Args:
             name (str): The cache key.
             obj (Any): The object to cache.
             obj_type (str): The type of the object.
+            extension: The file extension of the object.
         """
         object_extensions = {
             "image": "png",
@@ -102,8 +101,7 @@ class CacheService(Subject, Service):
         self.notify()
 
     def add_pandas(self, name: str, obj: Any):
-        """
-        Add a pandas DataFrame or Series to the current client's cache.
+        """Add a pandas DataFrame or Series to the current client's cache.
 
         Args:
             name (str): The cache key.
@@ -113,25 +111,24 @@ class CacheService(Subject, Service):
             self.add(name, obj.to_csv(), "pandas", extension="csv")
         else:
             msg = "Object is not a pandas DataFrame or Series"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
     def add_image(self, name: str, obj: Any, extension: str = "png"):
-        """
-        Add a PIL Image to the current client's cache.
+        """Add a PIL Image to the current client's cache.
 
         Args:
             name (str): The cache key.
             obj (Any): The PIL Image object.
+            extension: The file extension of the image.
         """
         if isinstance(obj, Image.Image):
             self.add(name, obj, "image", extension=extension)
         else:
             msg = "Object is not a PIL Image"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
     def get(self, name: str):
-        """
-        Get an object from the current client's cache.
+        """Get an object from the current client's cache.
 
         Args:
             name (str): The cache key.
@@ -142,8 +139,7 @@ class CacheService(Subject, Service):
         return self.current_cache[name]
 
     def get_last(self):
-        """
-        Get the last added item in the current client's cache.
+        """Get the last added item in the current client's cache.
 
         Returns:
             The last added item in the cache.
