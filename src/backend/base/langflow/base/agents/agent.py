@@ -115,7 +115,9 @@ class LCAgentComponent(Component):
 class LCToolsAgentComponent(LCAgentComponent):
     _base_inputs = [
         *LCAgentComponent._base_inputs,
-        HandleInput(name="tools", display_name="Tools", input_types=["Tool", "BaseTool"], is_list=True),
+        HandleInput(
+            name="tools", display_name="Tools", input_types=["Tool", "BaseTool", "StructuredTool"], is_list=True
+        ),
     ]
 
     def build_agent(self) -> AgentExecutor:
