@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.inputs import HandleInput, MessageInput
+from langflow.inputs import HandleInput, MessageInput, StrInput
 from langflow.memory import get_messages, store_message
 from langflow.schema.message import Message
 from langflow.template import Output
@@ -20,20 +20,20 @@ class StoreMessageComponent(Component):
             input_types=["BaseChatMessageHistory"],
             info="The external memory to store the message. If empty, it will use the Langflow tables.",
         ),
-        MessageInput(
+        StrInput(
             name="sender",
             display_name="Sender",
             info="The sender of the message. Might be Machine or User. "
             "If empty, the current sender parameter will be used.",
             advanced=True,
         ),
-        MessageInput(
+        StrInput(
             name="sender_name",
             display_name="Sender Name",
             info="The name of the sender. Might be AI or User. If empty, the current sender parameter will be used.",
             advanced=True,
         ),
-        MessageInput(
+        StrInput(
             name="session_id",
             display_name="Session ID",
             info="The session ID of the chat. If empty, the current session ID parameter will be used.",
