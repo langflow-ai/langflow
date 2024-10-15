@@ -3,6 +3,7 @@ import { performStreamingRequest } from "@/controllers/API/api";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { AxiosError } from "axios";
 import { timeStamp } from "console";
+import { flushSync } from "react-dom";
 import { Edge, Node } from "reactflow";
 import { BuildStatus } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
@@ -12,7 +13,6 @@ import { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import { VertexLayerElementType } from "../types/zustand/flow";
 import { tryParseJson } from "./utils";
-import { flushSync } from "react-dom";
 
 type BuildVerticesParams = {
   setLockChat?: (lock: boolean) => void;
