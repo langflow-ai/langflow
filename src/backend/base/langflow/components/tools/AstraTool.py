@@ -104,15 +104,13 @@ class AstraToolComponent(LCToolComponent):
         return {"ToolInput": model}
 
     def build_tool(self) -> StructuredTool:
-        """
-        Builds an Astra DB Collection tool.
+        """Builds an Astra DB Collection tool.
 
         Args:
 
         Returns:
             Tool: The built Astra DB tool.
         """
-
         schema_dict = self.create_args_schema()
         tool = StructuredTool.from_function(
             name=self.tool_name,

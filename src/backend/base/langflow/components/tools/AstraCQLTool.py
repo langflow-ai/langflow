@@ -141,8 +141,7 @@ class AstraCQLToolComponent(LCToolComponent):
         return {"ToolInput": model}
 
     def build_tool(self) -> StructuredTool:
-        """
-        Builds a Astra DB CQL Table tool.
+        """Builds a Astra DB CQL Table tool.
 
         Args:
             name (str, optional): The name of the tool.

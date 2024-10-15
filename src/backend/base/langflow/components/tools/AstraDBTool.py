@@ -93,10 +93,8 @@ class AstraDBToolComponent(LCToolComponent):
             return self._cached_collection
 
         _cached_client = DataAPIClient(self.token)
-        _cached_db = _cached_client.get_database(
-            self.api_endpoint, namespace=self.namespace)
-        self._cached_collection = _cached_db.get_collection(
-            self.collection_name)
+        _cached_db = _cached_client.get_database(self.api_endpoint, namespace=self.namespace)
+        self._cached_collection = _cached_db.get_collection(self.collection_name)
         return self._cached_collection
 
     def create_args_schema(self) -> dict[str, BaseModel]:
@@ -106,22 +104,19 @@ class AstraDBToolComponent(LCToolComponent):
             if key.startswith("!"):  # Mandatory
                 args[key[1:]] = (str, Field(description=self.tool_params[key]))
             else:  # Optional
-                args[key] = (str | None, Field(
-                    description=self.tool_params[key], default=None))
+                args[key] = (str | None, Field(description=self.tool_params[key], default=None))
 
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}
 
     def build_tool(self) -> StructuredTool:
-        """
-        Builds an Astra DB Collection tool.
+        """Builds an Astra DB Collection tool.
 
         Args:
 
         Returns:
             Tool: The built Astra DB tool.
         """
-
         schema_dict = self.create_args_schema()
 
         tool = StructuredTool.from_function(
