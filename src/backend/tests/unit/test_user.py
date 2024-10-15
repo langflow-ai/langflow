@@ -39,7 +39,7 @@ async def super_user_headers(client: AsyncClient, super_user):
 
 
 @pytest.fixture
-def deactivated_user():
+def deactivated_user(client):
     with session_getter(get_db_service()) as session:
         user = User(
             username="deactivateduser",
