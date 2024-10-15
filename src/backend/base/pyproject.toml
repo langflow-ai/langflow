@@ -60,7 +60,7 @@ ignore = [
     "D1", # Missing docstrings
     "N",
     "S",
-    "SLF",
+    "SLF001",
 ]
 
 [tool.ruff.lint.per-file-ignores]
