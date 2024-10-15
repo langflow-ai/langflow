@@ -68,6 +68,7 @@ async def test_read_flows(client: TestClient, json_flow: str, logged_in_headers)
     assert response.status_code == 200
     assert len(response.json()) > 0
 
+
 @pytest.mark.usefixtures("active_user")
 async def test_read_flows_pagination(client: TestClient, logged_in_headers):
     response = await client.get("api/v1/flows/", headers=logged_in_headers)
@@ -78,6 +79,7 @@ async def test_read_flows_pagination(client: TestClient, logged_in_headers):
     assert response.json()["total"] == 0
     assert len(response.json()["items"]) == 0
 
+
 @pytest.mark.usefixtures("active_user")
 async def test_read_flows_pagination_with_params(client: TestClient, logged_in_headers):
     response = await client.get("api/v1/flows/", headers=logged_in_headers, params={"page": 3, "size": 10})
@@ -87,6 +89,7 @@ async def test_read_flows_pagination_with_params(client: TestClient, logged_in_h
     assert response.json()["pages"] == 0
     assert response.json()["total"] == 0
     assert len(response.json()["items"]) == 0
+
 
 @pytest.mark.usefixtures("flow_component")
 async def test_read_flows_components_only(client: TestClient, logged_in_headers):
