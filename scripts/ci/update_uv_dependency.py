@@ -1,18 +1,17 @@
-import os
 import sys
 import re
+from pathlib import Path
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+BASE_DIR = Path(__file__).parent.parent.parent
 
 
 def update_uv_dep(base_version: str) -> None:
     """Update the langflow-base dependency in pyproject.toml."""
 
-    pyproject_path = os.path.join(BASE_DIR, "pyproject.toml")
+    pyproject_path = BASE_DIR / "pyproject.toml"
 
     # Read the pyproject.toml file content
-    with open(pyproject_path, "r") as file:
-        content = file.read()
+    content = pyproject_path.read_text()
 
     # For the main project, update the langflow-base dependency in the UV section
     pattern = re.compile(r'(dependencies\s*=\s*\[\s*\n\s*)("langflow-base==[\d.]+")')
@@ -26,8 +25,7 @@ def update_uv_dep(base_version: str) -> None:
     content = pattern.sub(replacement, content)
 
     # Write the updated content back to the file
-    with open(pyproject_path, "w") as file:
-        file.write(content)
+    pyproject_path.write_text(content)
 
 
 def main() -> None:
