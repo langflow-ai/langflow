@@ -23,11 +23,6 @@ from langflow.initial_setup.setup import load_starter_projects
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def sample_template():
     return {
         "field1": {"proxy": {"field": "some_field", "id": "node1"}},
