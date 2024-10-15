@@ -27,46 +27,31 @@ class DatabaseVariableService(VariableService, Service):
         self.settings_service = settings_service
 
     def initialize_user_variables(self, user_id: UUID | str, session: Session = Depends(get_session)):
-        # Check for environment variables that should be stored in the database
-        should_or_should_not = "Should" if self.settings_service.settings.store_environment_variables else "Should not"
-        logger.info(f"{should_or_should_not} store environment variables in the database.")
-        if self.settings_service.settings.store_environment_variables:
-            for var in self.settings_service.settings.variables_to_get_from_environment:
-                if var in os.environ:
-                    logger.debug(f"Creating {var} variable from environment.")
-
-                    if found_variable := session.exec(
-                        select(Variable).where(Variable.user_id == user_id, Variable.name == var)
-                    ).first():
-                        # Update it
-                        value = os.environ[var]
-                        if isinstance(value, str):
-                            value = value.strip()
-                        # If the secret_key changes the stored value could be invalid
-                        # so we need to re-encrypt it
-                        encrypted = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
-                        found_variable.value = encrypted
-                        session.add(found_variable)
-                        session.commit()
-                    else:
-                        # Create it
-                        try:
-                            value = os.environ[var]
-                            if isinstance(value, str):
-                                value = value.strip()
-                            self.create_variable(
-                                user_id=user_id,
-                                name=var,
-                                value=value,
-                                default_fields=[],
-                                _type=CREDENTIAL_TYPE,
-                                session=session,
-                            )
-                        except Exception:  # noqa: BLE001
-                            logger.exception(f"Error creating {var} variable")
-
-        else:
+        if not self.settings_service.settings.store_environment_variables:
             logger.info("Skipping environment variable storage.")
+            return
+
+        logger.info("Storing environment variables in the database.")
+        for var_name in self.settings_service.settings.variables_to_get_from_environment:
+            if var_name in os.environ and os.environ[var_name].strip():
+                value = os.environ[var_name].strip()
+                query = select(Variable).where(Variable.user_id == user_id, Variable.name == var_name)
+                existing = session.exec(query).first()
+                try:
+                    if existing:
+                        self.update_variable(user_id, var_name, value, session)
+                    else:
+                        self.create_variable(
+                            user_id=user_id,
+                            name=var_name,
+                            value=value,
+                            default_fields=[],
+                            _type=CREDENTIAL_TYPE,
+                            session=session,
+                        )
+                    logger.info(f"Processed {var_name} variable from environment.")
+                except Exception as e:  # noqa: BLE001
+                    logger.exception(f"Error processing {var_name} variable: {e!s}")
 
     def get_variable(
         self,
