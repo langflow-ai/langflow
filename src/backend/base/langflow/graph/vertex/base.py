@@ -115,6 +115,21 @@ class Vertex:
         component_instance.set_vertex(self)
         self._custom_component = component_instance
 
+    def call_handle_save_method_if_exists(self):
+        if self._custom_component is not None:
+            if hasattr(self._custom_component, "save_action"):
+                try:
+                    return self._custom_component.save_action()
+                except Exception as e:
+                    logger.error(f"Error calling save_action for {self.display_name}: {str(e)}")
+                    return None
+            else:
+                logger.debug(f"No save_action method found for {self.display_name}")
+                return None
+        else:
+            logger.warning(f"Custom component not built yet for {self.display_name}")
+            return None
+
     def add_result(self, name: str, result: Any):
         self.results[name] = result
 

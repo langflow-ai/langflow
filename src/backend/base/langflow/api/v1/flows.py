@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import inspect
 import io
 import json
 import re
+import traceback
 import zipfile
 from datetime import datetime, timezone
 from uuid import UUID
 
+from langflow.custom.utils import build_component
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -16,6 +19,7 @@ from sqlmodel import Session, and_, col, select
 
 from langflow.api.utils import cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
+from langflow.graph import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
@@ -202,6 +206,50 @@ def read_flow(
     raise HTTPException(status_code=404, detail="Flow not found")
 
 
+def handle_save_action(flow, flow_id, name):
+    graph_data = flow.data.copy()
+    graph = Graph.from_payload(graph_data, flow_id=str(flow_id), flow_name=name)
+    for vertex in graph.vertices:
+        result = vertex.call_handle_save_method_if_exists()
+        if result:
+            updated_component, changes = result
+
+            # new_code = inspect.getsource(updated_component)
+
+            code = vertex.data["node"]["template"]["code"]["value"]
+            component_info = {
+                "name": f"{vertex.base_name}",
+                # TODO: fix this? Looks like it's almost always [] sometimes [Data] or [str]
+                "output_types": [],
+                "file": "",
+                "code": code,
+                "error": "",
+            }
+            component_tuple = (*build_component(component_info), component_info)
+
+            # flow.data['nodes'][5]['data']['node']
+            #  seems to match
+            # component_tuple[0]
+            vertex._custom_component = updated_component
+
+            new_frontend_node = updated_component.to_frontend_node()
+
+            vertex._data = new_frontend_node["data"]
+
+            for i, node in enumerate(graph._vertices):
+                if node.id == vertex.id:
+                    graph._vertices[i] = new_frontend_node
+
+            if changes:
+                # add new edges
+
+                # vertex.data.update(result)
+                flow.data = graph.dict()
+
+    # TODO: maybe return something
+    # return None
+
+
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
 def update_flow(
     *,
@@ -226,6 +274,7 @@ def update_flow(
             flow_data = remove_api_keys(flow_data)
         for key, value in flow_data.items():
             setattr(db_flow, key, value)
+
         webhook_component = get_webhook_component_in_flow(db_flow.data)
         db_flow.webhook = webhook_component is not None
         db_flow.updated_at = datetime.now(timezone.utc)
@@ -237,8 +286,14 @@ def update_flow(
         session.add(db_flow)
         session.commit()
         session.refresh(db_flow)
+
+        handle_save_action(flow, flow_id, flow.name)
+        # TODO: how do I save these changes to the db
+
         return db_flow
     except Exception as e:
+        trace = traceback.format_exc()
+        logger.error(f"Error updating flow: {e} \n {trace}")
         # If it is a validation error, return the error message
         if hasattr(e, "errors"):
             raise HTTPException(status_code=400, detail=str(e)) from e

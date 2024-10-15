@@ -9,6 +9,7 @@ from langflow.components.astra_assistants.util import (
     tools_and_names,
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
+from langflow.graph.graph.state_model import camel_to_snake
 from langflow.inputs import DropdownInput, MultilineInput, MultiselectInput, StrInput
 from langflow.schema.message import Message
 from langflow.template import Output
@@ -100,6 +101,49 @@ class AstraAssistantManager(ComponentWithCache):
             if not self.initialized:
                 await self.process_inputs()
                 self.initialized = True
+
+    def save_action(self):
+        print("puppies")
+        if self._vertex:
+            input_values = self._vertex.params
+            tool_names = input_values.get("tool_names")
+            print("got tool names")
+
+            new_outputs = []
+            if tool_names is not None:
+                for tool_name in tool_names:
+                    if tool_name is not None and tool_name != "":
+                        tool_name_snake = camel_to_snake(tool_name)
+                        # Check if there's an output with a name matching the tool_name
+                        if not any(output.name == f"{tool_name_snake}_response" for output in self.outputs):
+                            # If no matching output is found, add a new output
+                            new_output = Output(
+                                display_name=f"{tool_name} Output",
+                                name=f"{tool_name_snake}_response",
+                                method=f"get_{tool_name_snake}_response",
+                            )
+                            new_outputs.append(new_output)
+
+                            # Dynamically add a method to get this tool's output
+                            async def get_tool_output_method():
+                                await self.initialize()
+                                return self.tool_output
+
+                            setattr(self, f"get_{tool_name_snake}_response", get_tool_output_method)
+                            print(f"set {tool_name_snake}_response")
+
+                    # print(tool_name)
+                    # outgoing_edges = [edge for edge in self._vertex.edges if edge.source_id == self._vertex.id]
+                    # print(self._vertex.id)
+                    # print(self._vertex.edges)
+                    # print(outgoing_edges)
+                    # for edge in outgoing_edges:
+                    #    vertex_id =edge.target_id
+                    #    target_v = self._vertex.graph.get_vertex(vertex_id)
+                    #    print(target_v.base_name)
+
+            return self, new_outputs
+        return None
 
     async def process_inputs(self):
         print(f"env_set is {self.env_set}")
