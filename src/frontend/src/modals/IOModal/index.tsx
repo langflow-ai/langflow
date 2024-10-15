@@ -443,6 +443,7 @@ export default function IOModal({
                       <Button
                         onClick={(_) => {
                           setvisibleSession(undefined);
+                          setSelectedViewField(undefined);
                         }}
                       >
                         New Chat
