@@ -7,7 +7,7 @@ import threading
 
 import astra_assistants.tools as astra_assistants_tools
 import requests
-from astra_assistants import patch, OpenAIWithDefaultKey
+from astra_assistants import OpenAIWithDefaultKey, patch
 from astra_assistants.tools.tool_interface import ToolInterface
 
 client_lock = threading.Lock()
