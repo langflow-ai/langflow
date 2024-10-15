@@ -89,7 +89,7 @@ export default function HomePage(): JSX.Element {
               setFolderToEdit(item);
               setOpenDeleteFolderModal(true);
             }}
-            className="w-[20vw]"
+            className="w-[20vw] max-w-[288px]"
           />
         </aside>
         <PageLayout

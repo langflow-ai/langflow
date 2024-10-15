@@ -467,7 +467,7 @@ const SideBarFoldersButtonsComponent = ({
                       >
                         <IconComponent
                           name={"MoreHorizontal"}
-                          className="hidden w-4 stroke-[1.5] px-0 text-white hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                          className="hidden w-4 stroke-[1.5] px-0 text-primary group-hover:block"
                         />
                       </SelectTrigger>
                       <SelectContent
@@ -486,7 +486,7 @@ const SideBarFoldersButtonsComponent = ({
                         <SelectItem value="download">
                           <FolderSelectItem
                             name="Download Content"
-                            iconName="file-json"
+                            iconName="download"
                           />
                         </SelectItem>
                         {index > 0 && (
