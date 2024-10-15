@@ -108,8 +108,8 @@ test("Document QA", async ({ page }) => {
   await page.getByText("files", { exact: true }).last().isVisible();
 
   await page.getByRole("gridcell").last().isVisible();
-  await page.getByRole('combobox').click();
-  await page.getByLabel('Delete').click();
+  await page.getByRole("combobox").click();
+  await page.getByLabel("Delete").click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
   });
