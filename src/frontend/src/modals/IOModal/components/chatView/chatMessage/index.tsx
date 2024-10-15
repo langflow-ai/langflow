@@ -306,7 +306,11 @@ export default function ChatMessage({
                                     ...props
                                   }) => {
                                     let content = children as string;
-                                    if (Array.isArray(children) && children.length === 1 && typeof children[0] === "string") {
+                                    if (
+                                      Array.isArray(children) &&
+                                      children.length === 1 &&
+                                      typeof children[0] === "string"
+                                    ) {
                                       content = children[0] as string;
                                     }
                                     if (typeof content === "string") {
