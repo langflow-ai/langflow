@@ -34,8 +34,8 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
     // look for the message list backwards to find the message faster
     set((state) => {
       const updatedMessages = [...state.messages];
-      for (let i = get().messages.length - 1; i >= 0; i--) {
-        if (get().messages[i].id === message.id) {
+      for (let i = state.messages.length - 1; i >= 0; i--) {
+        if (state.messages[i].id === message.id) {
           updatedMessages[i] = { ...updatedMessages[i], ...message };
           break;
         }
