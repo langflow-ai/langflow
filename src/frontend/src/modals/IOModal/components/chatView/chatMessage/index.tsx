@@ -305,9 +305,13 @@ export default function ChatMessage({
                                     children,
                                     ...props
                                   }) => {
-                                    if (typeof children === "string") {
-                                      if ((children as string)!.length) {
-                                        if (children![0] === "▍") {
+                                    let content = children as string;
+                                    if (Array.isArray(children) && children.length === 1 && typeof children[0] === "string") {
+                                      content = children[0] as string;
+                                    }
+                                    if (typeof content === "string") {
+                                      if (content.length) {
+                                        if (content[0] === "▍") {
                                           return (
                                             <span className="form-modal-markdown-span">
                                               ▍
@@ -331,7 +335,7 @@ export default function ChatMessage({
                                                 "https://curl.se/logo/curl-symbol-transparent.png",
                                               language:
                                                 (match && match[1]) || "",
-                                              code: String(children).replace(
+                                              code: String(content).replace(
                                                 /\n$/,
                                                 "",
                                               ),
@@ -342,7 +346,7 @@ export default function ChatMessage({
                                         />
                                       ) : (
                                         <code className={className} {...props}>
-                                          {children}
+                                          {content}
                                         </code>
                                       );
                                     }
