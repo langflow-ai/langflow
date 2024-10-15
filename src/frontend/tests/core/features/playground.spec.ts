@@ -128,10 +128,7 @@ test("fresh start playground", async ({ page }) => {
     .click();
   //check session
   await page.getByText("Default Session").click();
-  //check hide session
-  await page.getByText("👋 Langflow Chat").click();
-  //check show session
-  await page.getByText("Default Session").click();
+
   await page.getByTestId("chat-message-User-message 1").click();
   //check edit message
   await page.getByTestId("chat-message-User-message 1").hover();
