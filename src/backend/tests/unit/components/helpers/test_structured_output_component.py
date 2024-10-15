@@ -97,7 +97,7 @@ class TestStructuredOutputComponent:
             {
                 "name": "multiple",
                 "display_name": "Multiple",
-                "type": "bool",
+                "type": "boolean",
                 "description": "Set to True if this output field should be a list of the specified type.",
             },
         ]
@@ -139,7 +139,7 @@ class TestStructuredOutputComponent:
             {
                 "name": "multiple",
                 "display_name": "Multiple",
-                "type": "bool",
+                "type": "boolean",
                 "description": "Set to True if this output field should be a list of the specified type.",
             },
         ]

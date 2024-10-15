@@ -23,6 +23,7 @@ def _get_type_annotation(type_str: str, multiple: bool) -> type:
         "int": int,
         "float": float,
         "bool": bool,
+        "boolean": bool,
         "list": list[Any],
         "dict": dict[str, Any],
         "number": float,
