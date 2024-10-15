@@ -206,10 +206,12 @@ export default function IOModal({
       );
     } else if (visibleSession) {
       setSessionId(visibleSession);
-      setSelectedViewField({
-        id: visibleSession,
-        type: "Session",
-      });
+      if (selectedViewField?.type === "Session") {
+        setSelectedViewField({
+          id: visibleSession,
+          type: "Session",
+        });
+      }
     }
   }, [visibleSession]);
 
