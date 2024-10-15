@@ -38,7 +38,7 @@ export default function SliderComponent({
   ],
   sliderInput = false,
   handleOnNewValue,
-}: InputProps<any[], SliderComponentType>): JSX.Element {
+}: InputProps<string[] | number[], SliderComponentType>): JSX.Element {
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
 
