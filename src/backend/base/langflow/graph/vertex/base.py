@@ -71,7 +71,7 @@ class Vertex:
         self.has_external_input = False
         self.has_external_output = False
         self.graph = graph
-        self.data = data.copy()
+        self.full_data = data.copy()
         self.base_type: str | None = base_type
         self.outputs: list[dict] = []
         self.parse_data()
@@ -87,7 +87,7 @@ class Vertex:
         self.task_id: str | None = None
         self.is_task = is_task
         self.params = params or {}
-        self.parent_node_id: str | None = self.data.get("parent_node_id")
+        self.parent_node_id: str | None = self.full_data.get("parent_node_id")
         self.load_from_db_fields: list[str] = []
         self.parent_is_top_level = False
         self.layer = None
@@ -113,7 +113,7 @@ class Vertex:
         self.custom_component._set_input_value(name, value)
 
     def to_data(self):
-        return self.data
+        return self.full_data
 
     def add_component_instance(self, component_instance: Component):
         component_instance.set_vertex(self)
@@ -216,7 +216,7 @@ class Vertex:
         self.parent_is_top_level = self.parent_node_id in top_level_vertices
 
     def parse_data(self) -> None:
-        self.data = self.data["data"]
+        self.data = self.full_data["data"]
         if self.data["node"]["template"]["_type"] == "Component":
             if "outputs" not in self.data["node"]:
                 msg = f"Outputs not found for {self.display_name}"
