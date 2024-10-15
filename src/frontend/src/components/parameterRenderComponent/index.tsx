@@ -171,6 +171,9 @@ export function ParameterRenderComponent({
             maxLabel={templateData?.max_label}
             minLabelIcon={templateData?.min_label_icon}
             maxLabelIcon={templateData?.max_label_icon}
+            sliderButtons={templateData?.slider_buttons}
+            sliderButtonsOptions={templateData?.slider_buttons_options}
+            sliderInput={templateData?.slider_input}
             id={`slider_${id}`}
           />
         );

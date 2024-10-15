@@ -169,10 +169,10 @@ class LinkMixin(BaseModel):
 
 
 class SliderMixin(BaseModel):
-    min_label: str = Field(default="Precise")
-    max_label: str = Field(default="Wild")
-    min_label_icon: str = Field(default="pencil-ruler")
-    max_label_icon: str = Field(default="palette")
+    min_label: str = Field(default="")
+    max_label: str = Field(default="")
+    min_label_icon: str = Field(default="")
+    max_label_icon: str = Field(default="")
     slider_buttons: bool = Field(default=False)
     slider_buttons_options: list[str] = Field(default=[])
     slider_input: bool = Field(default=False)
