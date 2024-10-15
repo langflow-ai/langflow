@@ -288,7 +288,7 @@ export async function buildFlowVertices({
         // await one milisencond so we avoid react batched updates
         await new Promise((resolve) => {
           useMessagesStore.getState().updateMessagePartial(data);
-          setTimeout(resolve, 10);
+          setTimeout(resolve, 100);
         });
         return true;
       }
