@@ -53,8 +53,7 @@ def build_model_from_schema(schema: list[SchemaField]) -> type[PydanticBaseModel
 
 
 def coalesce_bool(value: Any) -> bool:
-    """
-    Coalesces the given value into a boolean.
+    """Coalesces the given value into a boolean.
 
     Args:
         value (Any): The value to be coalesced.
