@@ -91,17 +91,23 @@ class Component(CustomComponent):
         self.__inputs = inputs
         self.__config = config
         self._reset_all_output_values()
-        if FEATURE_FLAGS.add_toolkit_output and hasattr(self, "_append_tool_output"):
-            self._append_tool_output()
         super().__init__(**config)
+        if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_toggle_output"):
+            self._append_tool_toggle_output()
+        if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_output") and self.is_tool:
+            self._append_tool_output()
+
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
             self.trace_type = "chain"
         if self.inputs is not None:
             self.map_inputs(self.inputs)
+            if any(input_.name == "set_as_tool" and input_.value for input_ in self.inputs):
+                self._append_tool_output()
         if self.outputs is not None:
             self.map_outputs(self.outputs)
+        #
         # Set output types
         self._set_output_types()
         self.set_class_code()
@@ -833,3 +839,16 @@ class Component(CustomComponent):
     def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
             self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
+
+    def _append_tool_toggle_output(self):
+        from langflow.inputs import BoolInput
+
+        self.inputs.append(
+            BoolInput(
+                name="set_as_tool",
+                value=False,
+                display_name="Component as Tool",
+                advanced=True,
+                info="If True, the component will be treated as a tool.",
+            )
+        )
