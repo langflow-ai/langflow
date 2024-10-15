@@ -17,7 +17,7 @@ class BaseModel(PydanticBaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-def _get_type_annotation(type_str: str, multiple: bool) -> type:
+def _get_type_annotation(type_str: str, *, multiple: bool) -> type:
     type_mapping = {
         "str": str,
         "int": int,
@@ -47,7 +47,7 @@ def build_model_from_schema(schema: list[SchemaField]) -> type[PydanticBaseModel
         description = field.get("description", "")
         multiple = field.get("multiple", False)
         multiple = coalesce_bool(multiple)
-        field_type_annotation = _get_type_annotation(field_type_str, multiple)
+        field_type_annotation = _get_type_annotation(field_type_str, multiple=multiple)
         fields[field_name] = (field_type_annotation, Field(description=description))
     return create_model("OutputModel", **fields)
 

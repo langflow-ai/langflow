@@ -40,9 +40,10 @@ def build_messages_and_runnable(
 def get_chat_result(
     runnable: LanguageModel,
     input_value: str | Message,
-    stream: bool = False,
     system_message: str | None = None,
     config: dict | None = None,
+    *,
+    stream: bool = False,
 ):
     if not input_value and not system_message:
         msg = "The message you want to send to the model is empty."
