@@ -36,7 +36,7 @@ def get_messages(
         List[Data]: A list of Data objects representing the retrieved messages.
     """
     with session_scope() as session:
-        stmt = select(MessageTable).where(MessageTable.error is False)  # Exclude error messages
+        stmt = select(MessageTable).where(MessageTable.error == False)  # noqa: E712
         if sender:
             stmt = stmt.where(MessageTable.sender == sender)
         if sender_name:
