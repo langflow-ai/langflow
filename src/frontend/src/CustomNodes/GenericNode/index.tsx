@@ -137,10 +137,15 @@ export default function GenericNode({
 
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
-  const renderOutputParameter = (output: OutputFieldType, idx: number) => {
+  const renderOutputParameter = (
+    output: OutputFieldType,
+    idx: number,
+    lastOutput: boolean,
+  ) => {
     return (
       <NodeOutputField
         index={idx}
+        lastOutput={lastOutput}
         selected={selected}
         key={
           scapedJSONStringfy({
@@ -260,7 +265,7 @@ export default function GenericNode({
       <div
         className={cn(
           borderColor,
-          showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full",
+          showNode ? "w-80 rounded-xl" : "w-26 h-26 rounded-full",
           "generic-node-div group/node",
         )}
       >
@@ -269,7 +274,7 @@ export default function GenericNode({
             <div className="beta-badge-content">BETA</div>
           </div>
         )}
-        <div>
+        <div className="grid gap-4 border-b p-4">
           <div
             data-testid={"div-generic-node"}
             className={
@@ -328,6 +333,7 @@ export default function GenericNode({
                       data.node!.outputs?.findIndex(
                         (out) => out.name === shownOutputs[0].name,
                       ) ?? 0,
+                      false,
                     )}
                 </>
               )}
@@ -344,16 +350,19 @@ export default function GenericNode({
               />
             )}
           </div>
-        </div>
-
-        {showNode && (
-          <div className="relative pb-8 pt-5">
-            {/* increase height!! */}
+          <div>
             <NodeDescription
               description={data.node?.description}
               nodeId={data.id}
               selected={selected}
             />
+          </div>
+        </div>
+
+        {showNode && (
+          <div className="relative">
+            {/* increase height!! */}
+
             <>
               {renderInputParameter}
               <div
@@ -372,6 +381,7 @@ export default function GenericNode({
                     data.node!.outputs?.findIndex(
                       (out) => out.name === output.name,
                     ) ?? idx,
+                    idx === shownOutputs.length - 1,
                   ),
                 )}
               <div
@@ -379,14 +389,15 @@ export default function GenericNode({
               >
                 <div className="block">
                   {data.node!.outputs &&
-                    data.node!.outputs.map((output, idx) =>
-                      renderOutputParameter(
+                    data.node!.outputs.map((output, idx) => {
+                      return renderOutputParameter(
                         output,
                         data.node!.outputs?.findIndex(
                           (out) => out.name === output.name,
                         ) ?? idx,
-                      ),
-                    )}
+                        idx === (data.node!.outputs?.length ?? 0) - 1,
+                      );
+                    })}
                 </div>
               </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (
