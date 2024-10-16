@@ -17,6 +17,7 @@ from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
+from langflow.schema.dotdict import dotdict  # noqa: TCH001
 from langflow.schema.message import Message
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.tracing.schema import Log
@@ -92,9 +93,9 @@ class Component(CustomComponent):
         self.__config = config
         self._reset_all_output_values()
         super().__init__(**config)
-        if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_toggle_output"):
+        if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_toggle_output") and self.add_tool_output:
             self._append_tool_toggle_output()
-        if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_output") and self.is_tool:
+        if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_output") and self.add_tool_output:
             self._append_tool_output()
 
         if hasattr(self, "_trace_type"):
@@ -838,7 +839,20 @@ class Component(CustomComponent):
 
     def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
-            self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
+            set_as_tool_input = self._inputs.get("set_as_tool")
+            hidden_value = not set_as_tool_input.value if set_as_tool_input is not None else False
+            self.outputs.append(
+                Output(
+                    name=TOOL_OUTPUT_NAME,
+                    display_name="Tool",
+                    method="to_toolkit",
+                    types=["Tool"],
+                    hidden=hidden_value,
+                )
+            )
+
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+        return super().update_build_config(build_config, field_value, field_name)
 
     def _append_tool_toggle_output(self):
         from langflow.inputs import BoolInput
@@ -850,5 +864,9 @@ class Component(CustomComponent):
                 display_name="Component as Tool",
                 advanced=True,
                 info="If True, the component will be treated as a tool.",
+                onChange=lambda value: self.update_build_config(
+                    build_config=self.build_config(), field_value=value, field_name="set_as_tool"
+                ),
             )
         )
+        # TODO: update Frontend outputs accoriding to the toggle may be by updating the build config
