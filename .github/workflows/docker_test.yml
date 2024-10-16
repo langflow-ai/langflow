@@ -9,6 +9,16 @@ on:
       tag_name:
         required: true
         type: string
+      nightly_tag_main:
+        description: "Tag for the nightly main build"
+        required: false
+        type: string
+        default: ''
+      build_type:
+        description: "Type of build to test"
+        required: true
+        type: string
+        default: "base"
   workflow_dispatch:
     inputs:
       image_name:
@@ -17,6 +27,16 @@ on:
       tag_name:
         required: true
         type: string
+      nightly_tag_main:
+        description: "Tag for the nightly main build"
+        required: false
+        type: string
+        default: ''
+      build_type:
+        description: "Type of build to test"
+        required: true
+        type: string
+        default: "base"
   push:
     branches: [main]
     paths:
@@ -42,7 +62,11 @@ jobs:
     runs-on: ubuntu-latest
     name: Test docker images
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the code at a specific ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
+          persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
@@ -52,33 +76,22 @@ jobs:
           docker build -t ${{ inputs.image_name }}:${{inputs.tag_name}} \
             -f docker/build_and_push.Dockerfile \
             .
+      - name: Validate build type
+        run: |
+          if [[ "${{ inputs.build_type }}" != "base" && "${{ inputs.build_type }}" != "main" ]]; then
+            echo "Error: build_type must be 'base' or 'main'."
+            exit 1
+          fi
       - name: Test image
         run: |
-          expected_version=$(cat pyproject.toml | grep version | head -n 1 | cut -d '"' -f 2)
+          if [ "$build_type" == "base" ]; then
+            expected_version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
+          elif [ "$build_type" == "main" ]; then
+            expected_version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          fi
           version=$(docker run --rm --platform linux/amd64 --entrypoint bash ${{ inputs.image_name }}:${{inputs.tag_name}} -c 'python -c "from langflow.utils.version import get_version_info;  print(get_version_info()[\"version\"])"')
           if [ "$expected_version" != "$version" ]; then
               echo "Expected version: $expected_version"
               echo "Actual version: $version"
               exit 1
           fi
-
-      - name: Build backend image
-        run: |
-          docker build -t langflowai/langflow-backend:latest \
-            --build-arg LANGFLOW_IMAGE=${{ inputs.image_name }}:${{inputs.tag_name}} \
-            -f docker/build_and_push_backend.Dockerfile \
-            .
-      - name: Test backend image
-        run: |
-          expected_version=$(cat pyproject.toml | grep version | head -n 1 | cut -d '"' -f 2)
-          version=$(docker run --rm --platform linux/amd64 --entrypoint bash langflowai/langflow-backend:latest -c 'python -c "from langflow.utils.version import get_version_info;  print(get_version_info()[\"version\"])"')
-          if [ "$expected_version" != "$version" ]; then
-              echo "Expected version: $expected_version"
-              echo "Actual version: $version"
-              exit 1
-          fi
-      - name: Build frontend image
-        run: |
-          docker build -t langflowai/langflow-frontend:latest \
-            -f docker/frontend/build_and_push_frontend.Dockerfile \
-            .

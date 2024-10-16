@@ -113,6 +113,7 @@ jobs:
         with:
           image_name: 'langflowai/langflow-base-nightly'
           tag_name: ${{ inputs.nightly_tag_base }}
+          build_type: base
 
       - name: Publish to PyPI
         env:
@@ -191,7 +192,7 @@ jobs:
         with:
           image_name: 'langflowai/langflow-nightly'
           tag_name: ${{ inputs.nightly_tag_main }}
-
+          build_type: main
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
