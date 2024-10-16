@@ -7,11 +7,7 @@ from langflow.components.prompts.Prompt import PromptComponent
 from langflow.graph.graph.base import Graph
 
 
-@pytest.fixture
-def client():
-    pass
-
-
+@pytest.mark.usefixtures("client")
 def test_edge_raises_error_on_invalid_target_handle():
     template = """Answer the user as if you were a pirate.
 

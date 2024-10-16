@@ -3,7 +3,9 @@ import {
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { someFlowTemplateFields } from "@/utils/reactflowUtils";
 import { useEffect, useState } from "react";
+import ShortUniqueId from "short-unique-id";
 import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
@@ -26,6 +28,7 @@ import { NodeType } from "../../types/flow";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
+import SessionSelector from "./components/IOFieldView/components/sessionSelector";
 import SessionView from "./components/SessionView";
 import ChatView from "./components/chatView";
 
@@ -59,10 +62,15 @@ export default function IOModal({
     inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
+  const [visibleSession, setvisibleSession] = useState<string | undefined>(
+    currentFlowId,
+  );
 
   function handleDeleteSession(session_id: string) {
     deleteSessionFunction(
@@ -77,6 +85,9 @@ export default function IOModal({
             title: "Session deleted successfully.",
           });
           deleteSession(session_id);
+          if (visibleSession === session_id) {
+            setvisibleSession(undefined);
+          }
         },
         onError: () => {
           setErrorData({
@@ -109,13 +120,20 @@ export default function IOModal({
   const setLockChat = useFlowStore((state) => state.setLockChat);
   const [chatValue, setChatValue] = useState("");
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setNode = useFlowStore((state) => state.setNode);
-  const [sessions, setSessions] = useState<string[]>([]);
   const messages = useMessagesStore((state) => state.messages);
+  const [sessions, setSessions] = useState<string[]>(
+    Array.from(
+      new Set(
+        messages
+          .filter((message) => message.flow_id === currentFlowId)
+          .map((message) => message.session_id),
+      ),
+    ),
+  );
   const flowPool = useFlowStore((state) => state.flowPool);
-
-  const { refetch } = useGetMessagesQuery(
+  const [sessionId, setSessionId] = useState<string>(currentFlowId);
+  useGetMessagesQuery(
     {
       mode: "union",
       id: currentFlowId,
@@ -140,13 +158,14 @@ export default function IOModal({
         startNodeId: chatInput?.id,
         files: files,
         silent: true,
+        session: sessionId,
         setLockChat,
       }).catch((err) => {
         console.error(err);
         setLockChat(false);
       });
     }
-    refetch();
+    // refetch();
     setLockChat(false);
     if (chatInput) {
       setNode(chatInput.id, (node: NodeType) => {
@@ -169,9 +188,32 @@ export default function IOModal({
       .forEach((row) => {
         sessions.add(row.session_id);
       });
-    setSessions(Array.from(sessions));
-    sessions;
+    setSessions((prev) => {
+      if (prev.length < Array.from(sessions).length) {
+        // set the new session as visible
+        setvisibleSession(
+          Array.from(sessions)[Array.from(sessions).length - 1],
+        );
+      }
+      return Array.from(sessions);
+    });
   }, [messages]);
+
+  useEffect(() => {
+    if (!visibleSession) {
+      setSessionId(
+        `Session ${new Date().toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, second: "2-digit", timeZone: "UTC" })}`,
+      );
+    } else if (visibleSession) {
+      setSessionId(visibleSession);
+      if (selectedViewField?.type === "Session") {
+        setSelectedViewField({
+          id: visibleSession,
+          type: "Session",
+        });
+      }
+    }
+  }, [visibleSession]);
 
   const setPlaygroundScrollBehaves = useUtilityStore(
     (state) => state.setPlaygroundScrollBehaves,
@@ -229,9 +271,7 @@ export default function IOModal({
                     {outputs.length > 0 && (
                       <TabsTrigger value={"2"}>Outputs</TabsTrigger>
                     )}
-                    {haveChat && (
-                      <TabsTrigger value={"0"}>Memories</TabsTrigger>
-                    )}
+                    {haveChat && <TabsTrigger value={"0"}>Chat</TabsTrigger>}
                   </TabsList>
                 </div>
 
@@ -366,91 +406,49 @@ export default function IOModal({
                     })}
                 </TabsContent>
                 <TabsContent value={"0"} className="api-modal-tabs-content">
-                  {sessions.map((session, index) => {
-                    return (
-                      <div
-                        key={index}
-                        className="file-component-accordion-div cursor-pointer"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedViewField({
-                            id: session,
-                            type: "Session",
-                          });
-                        }}
-                      >
-                        <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3.5 align-middle">
-                          <ShadTooltip styleClasses="z-50" content={session}>
-                            <div className="flex min-w-0">
-                              <Badge
-                                variant="gray"
-                                size="md"
-                                className="block truncate"
-                              >
-                                {session === currentFlowId
-                                  ? "Default Session"
-                                  : session}
-                              </Badge>
-                            </div>
-                          </ShadTooltip>
-                          <div className="flex shrink-0 items-center justify-center gap-2 align-middle">
-                            <Button
-                              unstyled
-                              size="icon"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleDeleteSession(session);
-                                if (selectedViewField?.id === session)
-                                  setSelectedViewField(undefined);
-                              }}
-                            >
-                              <ShadTooltip
-                                styleClasses="z-50"
-                                content={"Delete"}
-                              >
-                                <div>
-                                  <IconComponent
-                                    name="Trash2"
-                                    className="h-4 w-4"
-                                  ></IconComponent>
-                                </div>
-                              </ShadTooltip>
-                            </Button>
-                            {/* <div>
-                              <ShadTooltip
-                                styleClasses="z-50"
-                                content={
-                                  flow_sessions.some(
-                                    (f_session) =>
-                                      f_session?.session_id === session,
-                                  )
-                                    ? "Active Session"
-                                    : "Inactive Session"
-                                }
-                              >
-                                <div
-                                  className={cn(
-                                    "h-2 w-2 rounded-full",
-                                    flow_sessions.some(
-                                      (f_session) =>
-                                        f_session?.session_id === session,
-                                    )
-                                      ? "bg-status-green"
-                                      : "bg-slate-500",
-                                  )}
-                                ></div>
-                              </ShadTooltip>
-                            </div> */}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {sessions.map((session, index) => (
+                    <SessionSelector
+                      setSelectedView={setSelectedViewField}
+                      selectedView={selectedViewField}
+                      key={index}
+                      session={session}
+                      deleteSession={(session) => {
+                        handleDeleteSession(session);
+                        if (selectedViewField?.id === session) {
+                          setSelectedViewField(undefined);
+                        }
+                      }}
+                      updateVisibleSession={(session) => {
+                        setvisibleSession(session);
+                      }}
+                      toggleVisibility={() => {
+                        setvisibleSession(session);
+                      }}
+                      isVisible={visibleSession === session}
+                      inspectSession={(session) => {
+                        setSelectedViewField({
+                          id: session,
+                          type: "Session",
+                        });
+                      }}
+                    />
+                  ))}
                   {!sessions.length && (
                     <span className="text-sm text-muted-foreground">
                       No memories available.
                     </span>
+                  )}
+                  {sessions.length > 0 && (
+                    <div className="pt-6">
+                      <Button
+                        onClick={(_) => {
+                          setvisibleSession(undefined);
+                          setSelectedViewField(undefined);
+                        }}
+                      >
+                        New Chat
+                      </Button>
+                    </div>
                   )}
                 </TabsContent>
               </Tabs>
@@ -517,11 +515,13 @@ export default function IOModal({
               >
                 {haveChat ? (
                   <ChatView
+                    focusChat={sessionId}
                     sendMessage={sendMessage}
                     chatValue={chatValue}
                     setChatValue={setChatValue}
                     lockChat={lockChat}
                     setLockChat={setLockChat}
+                    visibleSession={visibleSession}
                   />
                 ) : (
                   <span className="flex h-full w-full items-center justify-center font-thin text-muted-foreground">

@@ -2,11 +2,11 @@ import { INVALID_FILE_SIZE_ALERT } from "@/constants/alerts_constants";
 import { useDeleteBuilds } from "@/controllers/API/queries/_builds";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { track } from "@/customization/utils/analytics";
+import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import IconComponent from "../../../../components/genericIconComponent";
-import { Button } from "../../../../components/ui/button";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
   CHAT_FIRST_INITIAL_TEXT,
@@ -17,10 +17,8 @@ import {
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { VertexBuildTypeAPI } from "../../../../types/api";
 import { ChatMessageType } from "../../../../types/chat";
 import { FilePreviewType, chatViewProps } from "../../../../types/components";
-import { classNames } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import ChatMessage from "./chatMessage";
@@ -31,16 +29,17 @@ export default function ChatView({
   setChatValue,
   lockChat,
   setLockChat,
+  visibleSession,
+  focusChat,
 }: chatViewProps): JSX.Element {
   const { flowPool, outputs, inputs, CleanFlowPool } = useFlowStore();
   const { setErrorData } = useAlertStore();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
+  const messages = useMessagesStore((state) => state.messages);
 
   const inputTypes = inputs.map((obj) => obj.type);
-  const inputIds = inputs.map((obj) => obj.id);
-  const outputIds = outputs.map((obj) => obj.id);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const [id, setId] = useState<string>("");
   const { mutate: mutateDeleteFlowPool } = useDeleteBuilds();
@@ -48,62 +47,35 @@ export default function ChatView({
 
   //build chat history
   useEffect(() => {
-    const chatOutputResponses: VertexBuildTypeAPI[] = [];
-    outputIds.forEach((outputId) => {
-      if (outputId.includes("ChatOutput")) {
-        if (flowPool[outputId] && flowPool[outputId].length > 0) {
-          chatOutputResponses.push(...flowPool[outputId]);
-        }
-      }
-    });
-    inputIds.forEach((inputId) => {
-      if (inputId.includes("ChatInput")) {
-        if (flowPool[inputId] && flowPool[inputId].length > 0) {
-          chatOutputResponses.push(...flowPool[inputId]);
-        }
-      }
-    });
-    const chatMessages: ChatMessageType[] = chatOutputResponses
-      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
-      //
+    const messagesFromMessagesStore: ChatMessageType[] = messages
       .filter(
-        (output) =>
-          output.data.message || (!output.data.message && output.artifacts),
+        (message) =>
+          message.flow_id === currentFlowId &&
+          (visibleSession === message.session_id ?? true),
       )
-      .map((output, index) => {
-        try {
-          const messageOutput = output.data.message;
-          const hasMessageValue =
-            messageOutput?.message ||
-            messageOutput?.message === "" ||
-            (messageOutput?.files ?? []).length > 0 ||
-            messageOutput?.stream_url;
-
-          const { sender, message, sender_name, stream_url, files } =
-            hasMessageValue ? output.data.message : output.artifacts;
-
-          const is_ai =
-            sender === "Machine" || sender === null || sender === undefined;
-          return {
-            isSend: !is_ai,
-            message,
-            sender_name,
-            componentId: output.id,
-            stream_url: stream_url,
-            files,
-          };
-        } catch (e) {
-          console.error(e);
-          return {
-            isSend: false,
-            message: "Error parsing message",
-            sender_name: "Error",
-            componentId: output.id,
-          };
+      .map((message) => {
+        let files = message.files;
+        //HANDLE THE "[]" case
+        if (typeof files === "string") {
+          files = JSON.parse(files);
         }
+        return {
+          isSend: message.sender === "User",
+          message: message.text,
+          sender_name: message.sender_name,
+          files: files,
+          id: message.id,
+          timestamp: message.timestamp,
+          session: message.session_id,
+          edit: message.edit,
+        };
       });
-    setChatHistory(chatMessages);
-  }, [flowPool]);
+    const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
+      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+    });
+
+    setChatHistory(finalChatHistory);
+  }, [flowPool, messages, visibleSession]);
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
@@ -116,7 +88,8 @@ export default function ChatView({
     if (ref.current) {
       ref.current.focus();
     }
-  }, []);
+    // trigger focus on chat when new session is set
+  }, [focusChat]);
 
   function clearChat(): void {
     setChatHistory([]);
@@ -150,11 +123,12 @@ export default function ChatView({
     stream_url?: string,
   ) {
     chat.message = message;
-    updateFlowPool(chat.componentId, {
-      message,
-      sender_name: chat.sender_name ?? "Bot",
-      sender: chat.isSend ? "User" : "Machine",
-    });
+    if (chat.componentId)
+      updateFlowPool(chat.componentId, {
+        message,
+        sender_name: chat.sender_name ?? "Bot",
+        sender: chat.isSend ? "User" : "Machine",
+      });
   }
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -245,20 +219,6 @@ export default function ChatView({
       onDrop={onDrop}
     >
       <div className="eraser-size">
-        <div className="eraser-position">
-          <Button
-            className="flex gap-1"
-            unstyled
-            disabled={lockChat}
-            onClick={() => handleSelectChange("builds")}
-          >
-            <IconComponent
-              name="Eraser"
-              className={classNames("h-5 w-5 text-primary")}
-              aria-hidden="true"
-            />
-          </Button>
-        </div>
         <div ref={messagesRef} className="chat-message-div">
           {chatHistory?.length > 0 ? (
             chatHistory.map((chat, index) => (
@@ -267,7 +227,7 @@ export default function ChatView({
                 lockChat={lockChat}
                 chat={chat}
                 lastMessage={chatHistory.length - 1 === index ? true : false}
-                key={`${chat.componentId}-${index}`}
+                key={`${chat.id}-${index}`}
                 updateChat={updateChat}
               />
             ))

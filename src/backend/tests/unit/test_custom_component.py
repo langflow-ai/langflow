@@ -13,11 +13,6 @@ from langflow.custom.utils import build_custom_component_template
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def code_component_with_multiple_outputs():
     code = Path("src/backend/tests/data/component_multiple_outputs.py").read_text()
     return Component(_code=code)

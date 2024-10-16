@@ -12,11 +12,6 @@ from langflow.services.variable.service import DatabaseVariableService
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def service():
     settings_service = get_settings_service()
     return DatabaseVariableService(settings_service)
