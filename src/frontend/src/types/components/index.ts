@@ -88,6 +88,7 @@ export type NodeOutputFieldComponentType = {
   type: string | undefined;
   outputName?: string;
   outputProxy?: OutputFieldProxyType;
+  lastOutput: boolean;
 };
 
 export type NodeInputFieldComponentType = {
