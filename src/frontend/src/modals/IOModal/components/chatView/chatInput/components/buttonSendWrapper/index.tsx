@@ -4,11 +4,12 @@ import { Button } from "../../../../../../../components/ui/button";
 import { Case } from "../../../../../../../shared/components/caseComponent";
 import { FilePreviewType } from "../../../../../../../types/components";
 import { classNames } from "../../../../../../../utils/utils";
+import Loading from "@/components/ui/loading";
 
 const BUTTON_STATES = {
   NO_INPUT: "bg-high-indigo text-background",
   HAS_CHAT_VALUE: "text-primary",
-  SHOW_STOP: "bg-error text-background cursor-pointer",
+  SHOW_STOP: "bg-zinc-400 text-white cursor-pointer",
   DEFAULT: "bg-chat-send text-background",
 };
 
@@ -61,11 +62,10 @@ const ButtonSendWrapper = ({
       unstyled
     >
       <Case condition={showStopButton}>
-        <IconComponent
-          name="Square"
-          className="form-modal-lock-icon"
-          aria-hidden="true"
-        />
+        <div className="flex items-center gap-2">
+          Stop
+          <Loading className="text-black"/>
+        </div>
       </Case>
 
       <Case condition={showPlayButton}>
