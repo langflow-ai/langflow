@@ -47,10 +47,6 @@ jobs:
         uses: ./.github/actions/setup-uv
       - name: Install the project
         run: uv sync --dev
-      - name: Debug Inputs
-        run: |
-          echo "Image Name: ${{ inputs.image_name }}"
-          echo "Tag Name: ${{ inputs.tag_name }}"
       - name: Build image
         run: |
           docker build -t ${{ inputs.image_name }}:${{inputs.tag_name}} \
