@@ -9,6 +9,7 @@ from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
+from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 
 
 @pytest.fixture
@@ -25,26 +26,32 @@ def session():
         yield session
 
 
-@pytest.mark.skip(reason="Temporarily disabled")
-def test_initialize_user_variables__donkey(service, session):
+def test_initialize_user_variables__create_and_update(service, session):
     user_id = uuid4()
-    name = "OPENAI_API_KEY"
-    value = "donkey"
-    service.initialize_user_variables(user_id, session=session)
-    result = service.create_variable(user_id, "OPENAI_API_KEY", "donkey", session=session)
-    new_service = DatabaseVariableService(get_settings_service())
-    new_service.initialize_user_variables(user_id, session=session)
+    field = ""
+    good_vars = {k: f"value{i}" for i, k in enumerate(VARIABLES_TO_GET_FROM_ENVIRONMENT)}
+    bad_vars = {"VAR1": "value1", "VAR2": "value2", "VAR3": "value3"}
+    env_vars = {**good_vars, **bad_vars}
 
-    result = new_service.get_variable(user_id, name, "", session=session)
+    service.create_variable(user_id, "OPENAI_API_KEY", "outdate", session=session)
+    env_vars["OPENAI_API_KEY"] = "updated_value"
 
-    assert result != value
+    with patch.dict("os.environ", env_vars, clear=True):
+        service.initialize_user_variables(user_id=user_id, session=session)
+
+    variables = service.list_variables(user_id, session=session)
+    for name in variables:
+        value = service.get_variable(user_id, name, field, session=session)
+        assert value == env_vars[name]
+
+    assert all([i in variables for i in good_vars.keys()])
+    assert all([i not in variables for i in bad_vars.keys()])
 
 
 def test_initialize_user_variables__not_found_variable(service, session):
     with patch("langflow.services.variable.service.DatabaseVariableService.create_variable") as m:
         m.side_effect = Exception()
         service.initialize_user_variables(uuid4(), session=session)
-
     assert True
 
 
