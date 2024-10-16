@@ -35,6 +35,7 @@ from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.logging.logger import LogConfig, configure
+from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.deps import get_chat_service, get_tracing_service
@@ -63,6 +64,7 @@ class Graph:
         description: str | None = None,
         user_id: str | None = None,
         log_config: LogConfig | None = None,
+        context: dict[str, Any] | None = None,
     ) -> None:
         """Initializes a new instance of the Graph class.
 
@@ -74,9 +76,11 @@ class Graph:
             description: The graph description.
             user_id: The user ID.
             log_config: The log configuration.
+            context: Additional context for the graph. Defaults to None.
         """
         if log_config:
             configure(**log_config)
+
         self._start = start
         self._state_model = None
         self._end = end
@@ -106,6 +110,7 @@ class Graph:
         self.state_manager = GraphStateManager()
         self._vertices: list[NodeData] = []
         self._edges: list[EdgeData] = []
+
         self.top_level_vertices: list[str] = []
         self.vertex_map: dict[str, Vertex] = {}
         self.predecessor_map: dict[str, list[str]] = defaultdict(list)
@@ -122,6 +127,11 @@ class Graph:
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
+
+        if context and not isinstance(context, dict):
+            msg = "Context must be a dictionary"
+            raise TypeError(msg)
+        self._context = dotdict(context or {})
         try:
             self.tracing_service: TracingService | None = get_tracing_service()
         except Exception:  # noqa: BLE001
@@ -133,6 +143,21 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             msg = "You must provide both input and output components"
             raise ValueError(msg)
+
+    @property
+    def context(self) -> dotdict:
+        if isinstance(self._context, dotdict):
+            return self._context
+        return dotdict(self._context)
+
+    @context.setter
+    def context(self, value: dict[str, Any]):
+        if not isinstance(value, dict):
+            msg = "Context must be a dictionary"
+            raise TypeError(msg)
+        if isinstance(value, dict):
+            value = dotdict(value)
+        self._context = value
 
     @property
     def state_model(self):
