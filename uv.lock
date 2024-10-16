@@ -3610,7 +3610,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "assemblyai", specifier = ">=0.33.0" },
-    { name = "astra-assistants", specifier = ">=2.2.2" },
+    { name = "astra-assistants", specifier = "~=2.2.2" },
     { name = "beautifulsoup4", specifier = ">=4.12.2" },
     { name = "boto3", specifier = "~=1.34.162" },
     { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
