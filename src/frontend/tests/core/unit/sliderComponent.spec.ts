@@ -65,8 +65,8 @@ test("user should be able to use slider input", async ({ page }) => {
   // Replace the import statement
   cleanCode = cleanCode.replace("FloatInput(", "SliderInput(");
   cleanCode = cleanCode.replace(
-    "from langflow.io import BoolInput, DictInput, DropdownInput, IntInput, StrInput",
-    "from langflow.io import BoolInput, DictInput, DropdownInput, SliderInput, IntInput, StrInput",
+    "from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput",
+    "from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput, SliderInput",
   );
 
   cleanCode = cleanCode.replace(
