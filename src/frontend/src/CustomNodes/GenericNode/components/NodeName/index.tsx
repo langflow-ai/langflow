@@ -67,7 +67,7 @@ export default function NodeName({
             event.preventDefault();
           }}
           data-testid={"title-" + display_name}
-          className="nodoubleclick w-full cursor-text truncate text-primary"
+          className="nodoubleclick w-full cursor-text truncate font-medium text-primary"
         >
           {display_name}
         </div>
