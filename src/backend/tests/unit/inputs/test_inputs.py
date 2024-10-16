@@ -26,11 +26,6 @@ from langflow.inputs.utils import instantiate_input
 from langflow.schema.message import Message
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 def test_table_input_valid():
     data = TableInput(name="valid_table", value=[{"key": "value"}, {"key2": "value2"}])
     assert data.value == [{"key": "value"}, {"key2": "value2"}]

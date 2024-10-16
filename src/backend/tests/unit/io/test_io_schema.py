@@ -6,11 +6,6 @@ from pydantic.fields import FieldInfo
 from langflow.components.inputs.ChatInput import ChatInput
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 def test_create_input_schema():
     from langflow.io.schema import create_input_schema
 

@@ -289,7 +289,7 @@ export const nodeColors: { [char: string]: string } = {
   chains: "#FE7500",
   list: "#9AAE42",
   agents: "#903BBE",
-  tools: "#FF3434",
+  tools: "#00fbfc",
   memories: "#F5B85A",
   saved_components: "#a5B85A",
   advanced: "#000000",

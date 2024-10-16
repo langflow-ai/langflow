@@ -81,7 +81,8 @@ async def test_delete_messages_session(client: AsyncClient, created_messages, lo
 
 
 # Successfully update session ID for all messages with the old session ID
-async def test_successfully_update_session_id(client, session, logged_in_headers, created_messages):
+@pytest.mark.usefixtures("session")
+async def test_successfully_update_session_id(client, logged_in_headers, created_messages):
     old_session_id = "session_id2"
     new_session_id = "new_session_id"
 
@@ -107,7 +108,8 @@ async def test_successfully_update_session_id(client, session, logged_in_headers
 
 
 # No messages found with the given session ID
-async def test_no_messages_found_with_given_session_id(client, session, logged_in_headers):
+@pytest.mark.usefixtures("session")
+async def test_no_messages_found_with_given_session_id(client, logged_in_headers):
     old_session_id = "non_existent_session_id"
     new_session_id = "new_session_id"
 
