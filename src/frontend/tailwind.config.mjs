@@ -117,6 +117,7 @@ const config = {
         "node-selected": "hsl(var(--node-selected))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        "emerald-success": "hsl(var(--emerald-success))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -145,6 +146,7 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+
       },
       borderRadius: {
         lg: `var(--radius)`,

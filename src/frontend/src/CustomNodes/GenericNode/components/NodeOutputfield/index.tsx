@@ -132,25 +132,36 @@ export default function NodeOutputField({
     >
       <>
         <div className="flex w-full items-center justify-end truncate text-sm">
-          <div className="flex flex-1">
-            <Button
-              disabled={disabledOutput}
-              unstyled
-              onClick={() => handleUpdateOutputHide()}
-              data-testid={`input-inspection-${title.toLowerCase()}`}
-            >
-              <IconComponent
-                className={cn(
-                  "h-4 w-4",
-                  disabledOutput
-                    ? "text-muted-foreground opacity-60"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                strokeWidth={1.5}
-                name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
-              />
-            </Button>
-          </div>
+          <ShadTooltip
+            content={
+              disabledOutput
+                ? null
+                : data.node?.outputs![index].hidden
+                  ? "Show output"
+                  : "Hide output"
+            }
+            darkTooltip
+          >
+            <div className="flex flex-1">
+              <Button
+                disabled={disabledOutput}
+                unstyled
+                onClick={() => handleUpdateOutputHide()}
+                data-testid={`input-inspection-${title.toLowerCase()}`}
+              >
+                <IconComponent
+                  className={cn(
+                    "h-4 w-4",
+                    disabledOutput
+                      ? "text-muted-foreground opacity-60"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                  strokeWidth={1.5}
+                  name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
+                />
+              </Button>
+            </div>
+          </ShadTooltip>
 
           {data.node?.frozen && (
             <div className="pr-1">
@@ -174,11 +185,12 @@ export default function NodeOutputField({
               />
             </span>
             <ShadTooltip
+              darkTooltip
               content={
                 displayOutputPreview
                   ? unknownOutput
                     ? "Output can't be displayed"
-                    : "Inspect Output"
+                    : "Inspect output"
                   : "Please build the component first"
               }
             >

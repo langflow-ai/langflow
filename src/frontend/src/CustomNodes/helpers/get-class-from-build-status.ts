@@ -5,15 +5,15 @@ export const getSpecificClassFromBuildStatus = (
   buildStatus: BuildStatus | undefined,
   validationStatus: VertexBuildTypeAPI | null,
   isDark: boolean,
-) => {
+  selected: boolean,
+): string => {
   let isInvalid = validationStatus && !validationStatus.valid;
-  if (
-    (buildStatus === BuildStatus.BUILT && isInvalid) ||
-    buildStatus === BuildStatus.ERROR
-  ) {
+  if ((isInvalid || buildStatus === BuildStatus.ERROR) && !selected) {
     return isDark ? "built-invalid-status-dark" : "built-invalid-status";
   } else if (buildStatus === BuildStatus.BUILDING) {
     return "building-status";
+  } else if (buildStatus === BuildStatus.BUILT && !selected) {
+    return "border-emerald-success";
   } else {
     return "";
   }

@@ -19,7 +19,7 @@ import { VertexBuildTypeAPI } from "@/types/api";
 import { NodeDataType } from "@/types/flow";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames } from "@/utils/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IconComponent from "../../../../components/genericIconComponent";
 
@@ -72,7 +72,7 @@ export default function NodeStatus({
   const lastRunTime = useFlowStore(
     (state) => state.flowBuildStatus[nodeId_]?.timestamp,
   );
-  const iconStatus = useIconStatus(buildStatus, validationStatus);
+  const iconStatus = useIconStatus(buildStatus, validationStatus, selected);
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setNode = useFlowStore((state) => state.setNode);
@@ -93,8 +93,8 @@ export default function NodeStatus({
 
   const getBaseBorderClass = (selected) => {
     let className = selected
-      ? "border ring ring-[0.5px] ring-foreground border-foreground hover:shadow-node"
-      : "border hover:shadow-node";
+      ? " border-[2px] border-foreground hover:shadow-node"
+      : "border-[2px] hover:shadow-node";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     return frozen ? frozenClass : className;
   };
@@ -109,6 +109,7 @@ export default function NodeStatus({
       buildStatus,
       validationStatus,
       isDark,
+      selected,
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
@@ -143,6 +144,18 @@ export default function NodeStatus({
     }
   }, [buildStatus, isBuilding]);
 
+  const divRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const runClass = "justify-left flex font-normal text-muted-foreground";
+
+  const handleClickRun = () => {
+    if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
+    setValidationStatus(null);
+    buildFlow({ stopNodeId: nodeId });
+    track("Flow Build - Clicked", { stopNodeId: nodeId });
+  };
+
   return (
     <>
       <div className="flex flex-shrink-0 items-center gap-1">
@@ -163,13 +176,13 @@ export default function NodeStatus({
                     </div>
                   )}
                   {lastRunTime && (
-                    <div className="justify-left flex font-normal text-muted-foreground">
+                    <div className={runClass}>
                       <div>{RUN_TIMESTAMP_PREFIX}</div>
                       <div className="ml-1 text-status-blue">{lastRunTime}</div>
                     </div>
                   )}
                 </div>
-                <div className="justify-left flex font-normal text-muted-foreground">
+                <div className={runClass}>
                   <div>Duration:</div>
                   <div className="ml-1 text-status-blue">
                     {validationStatus?.data.duration}
@@ -182,27 +195,28 @@ export default function NodeStatus({
         >
           <div className="cursor-help">{iconStatus}</div>
         </ShadTooltip>
-        {showNode && (
-          <Button
-            onClick={() => {
-              if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
-              setValidationStatus(null);
-              buildFlow({ stopNodeId: nodeId });
-              track("Flow Build - Clicked", { stopNodeId: nodeId });
-            }}
-            unstyled
-            className="group p-1"
+        <ShadTooltip content={"Run component"} darkTooltip>
+          <div
+            ref={divRef}
+            className="button-run-bg"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onClick={handleClickRun}
           >
-            <div data-testid={`button_run_` + display_name.toLowerCase()}>
-              <IconComponent
-                name="Play"
-                className={
-                  "h-4 w-4 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-foreground group-hover/node:opacity-100"
-                }
-              />
-            </div>
-          </Button>
-        )}
+            {showNode && (
+              <Button unstyled className="group">
+                <div data-testid={`button_run_` + display_name.toLowerCase()}>
+                  <IconComponent
+                    name="Play"
+                    className={`play-button-icon ${
+                      isHovered ? "text-foreground" : "text-muted-foreground"
+                    }`}
+                  />
+                </div>
+              </Button>
+            )}
+          </div>
+        </ShadTooltip>
       </div>
     </>
   );

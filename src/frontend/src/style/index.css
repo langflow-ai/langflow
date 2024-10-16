@@ -89,6 +89,8 @@
     --note-emerald-opacity: #064e3b80;
     --note-amber-opacity: #78350f80;
     --note-red-opacity: #7f1d1d80;
+
+    --emerald-success: 160.1 84.1% 39.4%;
   }
 
   .dark {
@@ -178,5 +180,8 @@
 
     --chat-bot-icon: #235d70;
     --chat-user-icon: #4f3d6e;
+
+    --emerald-success: 160.1 84.1% 39.4%;
+
   }
 }

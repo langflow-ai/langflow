@@ -1,3 +1,4 @@
+import { BuildStatus } from "@/constants/enums";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -17,7 +18,6 @@ import { useTypesStore } from "../../stores/typesStore";
 import { OutputFieldType } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
-import { nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
 import { getNodeInputColors } from "../helpers/get-node-input-colors";
 import { getNodeOutputColors } from "../helpers/get-node-output-colors";
@@ -61,8 +61,6 @@ export default function GenericNode({
     setIsUserEdited,
     updateNodeInternals,
   );
-
-  const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
 
   if (!data.node!.template) {
     setErrorData({
@@ -274,7 +272,7 @@ export default function GenericNode({
             <div className="beta-badge-content">BETA</div>
           </div>
         )}
-        <div className="grid gap-4 border-b p-4">
+        <div className="grid gap-3 border-b p-4">
           <div
             data-testid={"div-generic-node"}
             className={

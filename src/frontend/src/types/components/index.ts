@@ -214,6 +214,7 @@ export type ShadToolTipType = {
   children?: ReactElement;
   delayDuration?: number;
   styleClasses?: string;
+  darkTooltip?: boolean;
 };
 
 export type TextHighlightType = {

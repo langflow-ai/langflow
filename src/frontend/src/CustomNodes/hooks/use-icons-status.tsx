@@ -8,6 +8,7 @@ import { VertexBuildTypeAPI } from "../../types/api";
 const useIconStatus = (
   buildStatus: BuildStatus | undefined,
   validationStatus: VertexBuildTypeAPI | null,
+  selected: boolean,
 ) => {
   const conditionSuccess =
     buildStatus === BuildStatus.BUILT ||
@@ -16,7 +17,6 @@ const useIconStatus = (
       validationStatus.valid);
   const conditionError = buildStatus === BuildStatus.ERROR;
   const conditionInactive = buildStatus === BuildStatus.INACTIVE;
-
   const renderIconStatus = () => {
     if (buildStatus === BuildStatus.BUILDING) {
       return (
@@ -26,30 +26,44 @@ const useIconStatus = (
           size={20}
         />
       );
-    } else {
-      return (
-        <>
-          {conditionSuccess ? (
-            <Checkmark
-              className="h-4 w-4 stroke-2 text-status-green transition-all"
-              isVisible={true}
-            />
-          ) : conditionError ? (
-            <Xmark
-              isVisible={true}
-              className="h-4 w-4 fill-current stroke-2 text-status-red"
-            />
-          ) : conditionInactive ? (
-            <ForwardedIconComponent
-              name="CircleOff"
-              className="h-4 w-4 text-muted-foreground"
-            />
-          ) : (
-            <></>
-          )}
-        </>
-      );
     }
+
+    if (selected) {
+      return null;
+    }
+
+    const iconConditions = [
+      {
+        condition: conditionSuccess,
+        icon: (
+          <Checkmark
+            className="text-emerald-success h-4 w-4 stroke-2 transition-all"
+            isVisible={true}
+          />
+        ),
+      },
+      {
+        condition: conditionError,
+        icon: (
+          <Xmark
+            isVisible={true}
+            className="h-4 w-4 fill-current stroke-2 text-status-red"
+          />
+        ),
+      },
+      {
+        condition: conditionInactive,
+        icon: (
+          <ForwardedIconComponent
+            name="CircleOff"
+            className="h-4 w-4 text-muted-foreground"
+          />
+        ),
+      },
+    ];
+
+    const activeIcon = iconConditions.find(({ condition }) => condition)?.icon;
+    return activeIcon || null;
   };
 
   return renderIconStatus();
