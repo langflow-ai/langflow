@@ -1,17 +1,11 @@
 import pytest
-from pydantic import Field
-
 from langflow.components.inputs import ChatInput
 from langflow.components.outputs.ChatOutput import ChatOutput
 from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.graph.state.model import create_state_model
 from langflow.template.field.base import UNDEFINED
-
-
-@pytest.fixture
-def client():
-    pass
+from pydantic import Field
 
 
 @pytest.fixture
