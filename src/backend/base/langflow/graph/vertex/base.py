@@ -125,7 +125,7 @@ class Vertex:
                 try:
                     return self._custom_component.save_action()
                 except Exception as e:
-                    logger.error(f"Error calling save_action for {self.display_name}: {str(e)}")
+                    logger.error(f"Error calling save_action for {self.display_name}: {e!s}")
                     return None
             else:
                 logger.debug(f"No save_action method found for {self.display_name}")

@@ -211,8 +211,7 @@ def get_shared_component_cache_service() -> CacheService:
 
 
 def get_shared_component_cache_service() -> CacheService:
-    """
-    Retrieves the cache service from the service manager.
+    """Retrieves the cache service from the service manager.
 
     Returns:
         The cache service instance.

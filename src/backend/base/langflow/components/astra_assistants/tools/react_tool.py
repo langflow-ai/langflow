@@ -4,17 +4,14 @@ from pydantic import Field
 
 
 class ReActCompletionDecider(BaseModel):
-    """
-    This tool evaluates whether the task is complete and provides logic to explain why the task is done or not.
-    """
+    """This tool evaluates whether the task is complete and provides logic to explain why the task is done or not."""
 
     logic: str = Field(..., description="Explanation of why the task is considered complete or incomplete.")
     is_complete: bool = Field(..., description="Boolean indicating whether the task is complete (True) or not (False).")
 
     @classmethod
     def check_completion(cls, logic: str) -> bool:
-        """
-        Determines whether the task is complete based on the provided logic.
+        """Determines whether the task is complete based on the provided logic.
         Returns True if the task is complete, otherwise False.
         """
         return "final answer" in logic.lower() or "no further actions" in logic.lower()
@@ -46,8 +43,7 @@ class ReActCompletionDecider(BaseModel):
 
 
 class ReActThoughtGenerator(BaseModel):
-    """
-    ReAct Chain of Thought Tool / Function, this function provides some additional context  to help answer questions.
+    """ReAct Chain of Thought Tool / Function, this function provides some additional context  to help answer questions.
     It can be called multiple times to get better context. Continue to call it until the thought process is complete.
     Then use the context to answer the question.
     """

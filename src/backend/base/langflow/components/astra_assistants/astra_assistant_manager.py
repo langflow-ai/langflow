@@ -1,7 +1,6 @@
 import asyncio
 
 from astra_assistants.astra_assistants_manager import AssistantManager
-from loguru import logger
 
 from langflow.base.astra_assistants.util import (
     get_patched_openai_client,
@@ -10,7 +9,6 @@ from langflow.base.astra_assistants.util import (
     tools_and_names,
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
-from langflow.inputs import DropdownInput, MultilineInput, StrInput
 from langflow.graph.graph.state_model import camel_to_snake
 from langflow.inputs import DropdownInput, MultilineInput, MultiselectInput, StrInput
 from langflow.schema.message import Message

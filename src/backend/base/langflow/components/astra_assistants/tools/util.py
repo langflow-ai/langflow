@@ -91,8 +91,7 @@ def typed_dict_to_basemodel(name: str, typed_dict: type[TypedDict], created_mode
 
 
 def tool_interface_to_component(tool_cls: type[ToolInterface]) -> str:
-    """
-    Generates Python code for a Langflow Component class based on a ToolInterface subclass.
+    """Generates Python code for a Langflow Component class based on a ToolInterface subclass.
 
     Args:
         tool_cls (Type[ToolInterface]): The ToolInterface subclass to transform.
@@ -100,7 +99,6 @@ def tool_interface_to_component(tool_cls: type[ToolInterface]) -> str:
     Returns:
         str: The generated Python code for the Component class.
     """
-
     # Ensure the tool_cls is indeed a subclass of ToolInterface
     if not issubclass(tool_cls, ToolInterface):
         msg = f"The provided class must extend ToolInterface. Provided class: {tool_cls.__name__}"
