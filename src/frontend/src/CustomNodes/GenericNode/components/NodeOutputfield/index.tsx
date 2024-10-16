@@ -34,6 +34,7 @@ export default function NodeOutputField({
   type,
   outputName,
   outputProxy,
+  lastOutput,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const nodes = useFlowStore((state) => state.nodes);
@@ -124,7 +125,10 @@ export default function NodeOutputField({
   ) : (
     <div
       ref={ref}
-      className="relative mt-1 flex w-full flex-wrap items-center justify-between bg-primary-foreground px-5 py-2"
+      className={cn(
+        "relative mt-1 flex h-11 w-full flex-wrap items-center justify-between bg-secondary px-5 py-2",
+        lastOutput ? "rounded-b-xl" : "",
+      )}
     >
       <>
         <div className="flex w-full items-center justify-end truncate text-sm">
@@ -138,7 +142,9 @@ export default function NodeOutputField({
               <IconComponent
                 className={cn(
                   "h-4 w-4",
-                  disabledOutput ? "text-muted-foreground" : "",
+                  disabledOutput
+                    ? "text-muted-foreground opacity-60"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
                 strokeWidth={1.5}
                 name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
@@ -199,10 +205,11 @@ export default function NodeOutputField({
                         className={classNames(
                           "h-5 w-5 rounded-md",
                           displayOutputPreview && !unknownOutput
-                            ? "hover:text-medium-indigo"
-                            : "cursor-not-allowed text-muted-foreground",
+                            ? "hover:text-foreground"
+                            : "cursor-not-allowed text-muted-foreground opacity-60",
                         )}
                         name={"ScanEye"}
+                        strokeWidth={2}
                       />
                     )}
                   </Button>
