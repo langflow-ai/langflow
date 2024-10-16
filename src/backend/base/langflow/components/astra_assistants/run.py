@@ -63,7 +63,6 @@ class AssistantsRun(ComponentWithCache):
     outputs = [Output(display_name="Assistant Response", name="assistant_response", method="process_inputs")]
 
     def process_inputs(self) -> Message:
-        patch(OpenAI())
 
         text = ""
 
