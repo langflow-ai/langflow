@@ -23,7 +23,7 @@ async def test_csv_output_parser_openai():
     prompt_handler = ComponentInputHandle(
         clazz=PromptComponent,
         inputs={
-            "template": "List the first five positive integers.\n\n{format_instructions}",  # noqa: RUF027
+            "template": "List the first five positive integers.\n\n{format_instructions}",
             "format_instructions": format_instructions,
         },
         output_name="prompt",
