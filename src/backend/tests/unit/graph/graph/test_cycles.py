@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from langflow.components.inputs.ChatInput import ChatInput
 from langflow.components.models.OpenAIModel import OpenAIModelComponent
 from langflow.components.outputs.ChatOutput import ChatOutput
@@ -203,5 +202,3 @@ def test_updated_graph_with_prompts():
     # Extract the vertex IDs for analysis
     results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
     assert "chat_output_1" in results_ids, f"Expected outputs not in results: {results_ids}"
-
-    print(f"Execution completed with results: {results_ids}")

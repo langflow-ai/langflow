@@ -3,13 +3,12 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
-
 from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
+from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
-from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+from sqlmodel import Session, SQLModel, create_engine
 
 
 @pytest.fixture
@@ -44,8 +43,8 @@ def test_initialize_user_variables__create_and_update(service, session):
         value = service.get_variable(user_id, name, field, session=session)
         assert value == env_vars[name]
 
-    assert all([i in variables for i in good_vars.keys()])
-    assert all([i not in variables for i in bad_vars.keys()])
+    assert all(i in variables for i in good_vars)
+    assert all(i not in variables for i in bad_vars)
 
 
 def test_initialize_user_variables__not_found_variable(service, session):

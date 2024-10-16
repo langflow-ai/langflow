@@ -1,9 +1,8 @@
+import pytest
 from langflow.components.outputs import ChatOutput
 from langflow.memory import get_messages
 from langflow.schema.message import Message
 from tests.integration.utils import run_single_component
-
-import pytest
 
 
 @pytest.mark.asyncio
