@@ -29,6 +29,7 @@ class FieldTypes(str, Enum):
     OTHER = "other"
     TABLE = "table"
     LINK = "link"
+    SLIDER = "slider"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -165,6 +166,16 @@ class LinkMixin(BaseModel):
     """Icon to be displayed in the link."""
     text: str | None = None
     """Text to be displayed in the link."""
+
+
+class SliderMixin(BaseModel):
+    min_label: str = Field(default="")
+    max_label: str = Field(default="")
+    min_label_icon: str = Field(default="")
+    max_label_icon: str = Field(default="")
+    slider_buttons: bool = Field(default=False)
+    slider_buttons_options: list[str] = Field(default=[])
+    slider_input: bool = Field(default=False)
 
 
 class TableMixin(BaseModel):
