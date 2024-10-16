@@ -31,18 +31,18 @@ const useIconStatus = (
         <>
           {conditionSuccess ? (
             <Checkmark
-              className="h-6 w-6 stroke-2 text-status-green transition-all"
+              className="h-4 w-4 stroke-2 text-status-green transition-all"
               isVisible={true}
             />
           ) : conditionError ? (
             <Xmark
               isVisible={true}
-              className="h-6 w-6 fill-current stroke-2 text-status-red"
+              className="h-4 w-4 fill-current stroke-2 text-status-red"
             />
           ) : conditionInactive ? (
             <ForwardedIconComponent
               name="CircleOff"
-              className="h-5 w-5 text-muted-foreground"
+              className="h-4 w-4 text-muted-foreground"
             />
           ) : (
             <></>
