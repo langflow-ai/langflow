@@ -1,0 +1,608 @@
+[33m6fb585b5f[m[33m ([m[1;36mHEAD -> [m[1;32mcz/ui-uplift[m[33m)[m HEAD@{0}: reset: moving to HEAD~1
+[33mb7b44174b[m[33m ([m[1;31morigin/cz/ui-uplift[m[33m)[m HEAD@{1}: reset: moving to HEAD~1
+[33md28837b63[m HEAD@{2}: reset: moving to HEAD
+[33md28837b63[m HEAD@{3}: commit: updating basic examples icon name
+[33mb7b44174b[m[33m ([m[1;31morigin/cz/ui-uplift[m[33m)[m HEAD@{4}: commit: ✨ (ChatOutput.py): update icon property value to "messages-square" for better representation in the Playground
+[33m6fb585b5f[m[33m ([m[1;36mHEAD -> [m[1;32mcz/ui-uplift[m[33m)[m HEAD@{5}: commit: ✨ (ChatInput.py): update icon property value to "messages-square" for better representation of the component
+[33mdeac680f6[m HEAD@{6}: commit: 📝 (CustomComponent.py): update icon attribute value from "custom_components" to "code" for better representation
+[33m6485b36f0[m HEAD@{7}: commit: ✨ (getenvvar.py): update icon property value to "code" for better representation in the UI
+[33mf409b523c[m HEAD@{8}: checkout: moving from main to cz/ui-uplift
+[33mab77ca752[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{9}: checkout: moving from cz/slider-component to main
+[33m2f36edd18[m[33m ([m[1;31morigin/cz/slider-component[m[33m, [m[1;32mcz/slider-component[m[33m)[m HEAD@{10}: commit: 🐛 (sliderComponent.spec.ts): fix incorrect import statement for SliderInput in the test file
+[33m0393c8434[m HEAD@{11}: pull -p: Fast-forward
+[33m17ddd0c72[m HEAD@{12}: checkout: moving from main to cz/slider-component
+[33mab77ca752[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{13}: pull origin main: Fast-forward
+[33m908c141d9[m HEAD@{14}: checkout: moving from cz/ui-uplift to main
+[33mf409b523c[m HEAD@{15}: commit: 🔧 (frontend/package-lock.json): remove tinycolor2 package from package-lock.json as it is no longer used in the project
+[33m12e8a55f0[m HEAD@{16}: commit: 🔧 (GenericNode/index.tsx): Refactor renderOutputParameter function to accept an additional parameter 'lastOutput' to handle styling based on the last output field
+[33m39de549c5[m HEAD@{17}: commit: 🔧 (NodeDescription/index.tsx): Remove unused CSS class "generic-node-desc" to clean up code
+[33m8fffd710a[m HEAD@{18}: commit: ✨ (NodeName/index.tsx): update NodeName component to use a font-medium class for better text styling
+[33m203fcc059[m HEAD@{19}: commit: ✨ (NodeOutputField/index.tsx): Add support for displaying last output field in a different style by adding a conditional class based on the lastOutput prop
+[33mc3568e69b[m HEAD@{20}: commit: 🔧 (NodeStatus/index.tsx): Update CSS classes for border and icon sizes to improve styling and consistency
+[33m1e51a2d38[m HEAD@{21}: commit: 🔧 (use-icons-status.tsx): Update icon sizes and classes for better UI consistency and readability
+[33m438ce2227[m HEAD@{22}: commit: ♻️ (applies.css): refactor styles for generic-node-div-title and generic-node-icon classes to improve consistency and readability
+[33m88f3d5623[m HEAD@{23}: commit: ✨ (frontend): introduce lastOutput property to NodeOutputFieldComponentType to indicate if it is the last output field
+[33m908c141d9[m HEAD@{24}: checkout: moving from main to cz/ui-uplift
+[33m908c141d9[m HEAD@{25}: checkout: moving from cz/pagination-improvements to main
+[33m2b32565e6[m[33m ([m[1;31morigin/cz/pagination-improvements[m[33m, [m[1;32mcz/pagination-improvements[m[33m)[m HEAD@{26}: commit: 📝 (utils.py): Add Query import and custom_params function to handle custom pagination parameters
+[33m908c141d9[m HEAD@{27}: checkout: moving from main to cz/pagination-improvements
+[33m908c141d9[m HEAD@{28}: pull -p: Fast-forward
+[33me04d6b9d2[m HEAD@{29}: checkout: moving from cz/pagination-code-review to main
+[33ma58c7c0ce[m[33m ([m[1;31morigin/cz/pagination-code-review[m[33m, [m[1;32mcz/pagination-code-review[m[33m)[m HEAD@{30}: reset: moving to HEAD
+[33ma58c7c0ce[m[33m ([m[1;31morigin/cz/pagination-code-review[m[33m, [m[1;32mcz/pagination-code-review[m[33m)[m HEAD@{31}: commit (merge): merge fix
+[33mebed7d79c[m HEAD@{32}: pull origin cz/pagination-code-review: Fast-forward
+[33mca40cdc53[m HEAD@{33}: checkout: moving from main to cz/pagination-code-review
+[33me04d6b9d2[m HEAD@{34}: pull -p: Fast-forward
+[33meb53f6664[m HEAD@{35}: checkout: moving from cz/rollback-store-message to main
+[33mcaf5e8779[m[33m ([m[1;32mcz/rollback-store-message[m[33m)[m HEAD@{36}: commit: 📝 (StoreMessage.py): Update imports to use the correct MessageTextInput class from langflow.inputs.inputs module for sender, sender_name, and session_id inputs in StoreMessageComponent class. This change ensures consistency and improves code readability.
+[33mf7fbee687[m HEAD@{37}: commit: 📝 (StoreMessage.py): Update input types in StoreMessageComponent to include StrInput for sender, sender_name, and session_id to improve data handling and consistency.
+[33meb53f6664[m HEAD@{38}: checkout: moving from main to cz/rollback-store-message
+[33meb53f6664[m HEAD@{39}: pull -p: Fast-forward
+[33m9e278835c[m HEAD@{40}: checkout: moving from cz/pagination-code-review to main
+[33mca40cdc53[m HEAD@{41}: commit: ✅ (test_database.py): add assertions for 'pages' and 'total' in pagination response to ensure correct pagination data is returned
+[33m6e69c73e8[m HEAD@{42}: commit: 🐛 (test_database.py): remove assertion for "total" key in response.json() as it is not relevant for this test case
+[33m6198e0a0c[m HEAD@{43}: commit (merge): merge fix
+[33m13dc0a546[m HEAD@{44}: checkout: moving from main to cz/pagination-code-review
+[33m9e278835c[m HEAD@{45}: pull -p: Fast-forward
+[33mdb2c12183[m HEAD@{46}: checkout: moving from cz/pagination-code-review to main
+[33m13dc0a546[m HEAD@{47}: checkout: moving from UpdateChatDataSource to cz/pagination-code-review
+[33m68a9678f5[m[33m ([m[1;32mUpdateChatDataSource[m[33m)[m HEAD@{48}: commit: ⬆️ (pyproject.toml): upgrade duckduckgo-search dependency to version 6.3.1 for bug fixes or new features
+[33m9624b55e5[m HEAD@{49}: checkout: moving from cz/pagination-code-review to UpdateChatDataSource
+[33m13dc0a546[m HEAD@{50}: commit: 📝 (utils.py): import Query and Params from fastapi to use in custom_params function
+[33mc26cda40e[m HEAD@{51}: checkout: moving from cz/code-review-2 to cz/pagination-code-review
+[33mba35b103d[m[33m ([m[1;31morigin/cz/code-review-2[m[33m, [m[1;32mcz/code-review-2[m[33m)[m HEAD@{52}: commit: ✨ (utils.py): add pagination functionality to paginate a list of items based on given parameters
+[33mc26cda40e[m HEAD@{53}: checkout: moving from cz/pagination-code-review to cz/code-review-2
+[33mc26cda40e[m HEAD@{54}: checkout: moving from cz/slider-component to cz/pagination-code-review
+[33m17ddd0c72[m HEAD@{55}: pull origin cz/slider-component: Merge made by the 'ort' strategy.
+[33m5f5f2fd86[m HEAD@{56}: commit: ♻️ (sliderComponent/index.tsx): refactor InputProps type to accept either string[] or number[] for better type safety and clarity
+[33m6b3637c03[m HEAD@{57}: checkout: moving from main to cz/slider-component
+[33mdb2c12183[m HEAD@{58}: rebase: checkout main
+[33mdb2c12183[m HEAD@{59}: rebase: checkout main
+[33mdb2c12183[m HEAD@{60}: pull -p: Fast-forward
+[33m376e4cfdd[m HEAD@{61}: checkout: moving from cz/vertex-fix to main
+[33m4b851bf56[m[33m ([m[1;31morigin/cz/vertex-fix[m[33m, [m[1;32mcz/vertex-fix[m[33m)[m HEAD@{62}: commit: 📝 (schema.py): Update recursive_serialize_or_str function to handle lists and dictionaries for better serialization
+[33m376e4cfdd[m HEAD@{63}: checkout: moving from main to cz/vertex-fix
+[33m376e4cfdd[m HEAD@{64}: pull origin main: Fast-forward
+[33m5540da0c9[m HEAD@{65}: checkout: moving from cz/slider-component to main
+[33m6b3637c03[m HEAD@{66}: commit: ✨ (constants.ts): introduce new constant "slider" to the list of supported types in LANGFLOW_SUPPORTED_TYPES for frontend functionality.
+[33m1c8fd3016[m HEAD@{67}: checkout: moving from main to cz/slider-component
+[33m5540da0c9[m HEAD@{68}: pull origin main: Fast-forward
+[33mb5e504b4d[m HEAD@{69}: checkout: moving from cz/change-data-handle to main
+[33mc193fc21c[m[33m ([m[1;31morigin/cz/change-data-handle[m[33m, [m[1;32mcz/change-data-handle[m[33m)[m HEAD@{70}: commit: 🐛 (styleUtils.ts): fix incorrect color code for Data in nodeColors to match design specifications
+[33mb5e504b4d[m HEAD@{71}: checkout: moving from main to cz/change-data-handle
+[33mb5e504b4d[m HEAD@{72}: pull -p: Fast-forward
+[33mf74b58f22[m HEAD@{73}: checkout: moving from cz/slider-component to main
+[33m1c8fd3016[m HEAD@{74}: commit: 📝 (sliderComponent/index.tsx): add new constants PERCENTAGES, DARK_COLOR_BACKGROUND, DARK_COLOR_TEXT, LIGHT_COLOR_BACKGROUND, and LIGHT_COLOR_TEXT for better readability and maintainability
+[33m1e5c7dab0[m HEAD@{75}: checkout: moving from theme-change to cz/slider-component
+[33m39919034a[m[33m ([m[1;32mtheme-change[m[33m)[m HEAD@{76}: checkout: moving from cz/3997 to theme-change
+[33m98dccabc2[m[33m ([m[1;32mcz/3997[m[33m)[m HEAD@{77}: commit: ✨ (test_format_directory_path.py): add unit tests for the format_directory_path function to ensure correct formatting of directory paths
+[33m72ab82122[m HEAD@{78}: checkout: moving from cz/slider-component to cz/3997
+[33m1e5c7dab0[m HEAD@{79}: commit: ♻️ (input_mixin.py): refactor slider_buttons_options field to use a list of strings instead of a list of dictionaries to simplify the data structure and improve readability
+[33m23ba670c4[m HEAD@{80}: commit: 📝 (sliderComponent/index.tsx): Add utility function to calculate min or max value based on input value, min, and max to improve code readability and maintainability
+[33m6d5eaab40[m HEAD@{81}: commit: ✨ (get-min-max-value.ts): introduce new utility function getMinOrMaxValue to ensure value falls within specified min and max range
+[33m232b6d082[m HEAD@{82}: commit: ✨ (sliderComponent.spec.ts): Add ua-parser-js library to parse user agent string for better browser compatibility handling
+[33m5b1e2b56e[m HEAD@{83}: merge main: Merge made by the 'ort' strategy.
+[33mc12009295[m HEAD@{84}: checkout: moving from main to cz/slider-component
+[33mf74b58f22[m HEAD@{85}: pull origin main: Fast-forward
+[33m4a745aae5[m HEAD@{86}: checkout: moving from cz/slider-component to main
+[33mc12009295[m HEAD@{87}: commit (merge): merge fix
+[33md93331d35[m HEAD@{88}: checkout: moving from main to cz/slider-component
+[33m4a745aae5[m HEAD@{89}: pull origin main: Fast-forward
+[33m90b2c9d57[m HEAD@{90}: checkout: moving from cz/slider-component to main
+[33md93331d35[m HEAD@{91}: commit: ✨ (langflow/io/__init__.py): introduce SliderInput class to langflow.io module for handling slider input fields.
+[33m173642ea5[m HEAD@{92}: commit: ✨ (inputs.py): Introduce SliderInput class to handle input fields with slider functionality in language flow inputs.
+[33mc8e2daa7a[m HEAD@{93}: commit: ✨ (inputs/__init__.py): Add SliderInput class to the list of available input classes
+[33mcf21be345[m HEAD@{94}: checkout: moving from main to cz/slider-component
+[33m90b2c9d57[m HEAD@{95}: pull origin main: Fast-forward
+[33m09fbcb2a1[m HEAD@{96}: pull -p: Fast-forward
+[33md0bfac3e7[m HEAD@{97}: checkout: moving from cz/slider-component to main
+[33mcf21be345[m HEAD@{98}: commit: ✅ (sliderComponent.spec.ts): Add unit test for slider component functionality to ensure users can interact with the slider input and perform various actions on the page.
+[33m0721b4a4a[m HEAD@{99}: commit: ✨ (frontend): introduce SliderComponentType to handle slider input with value, disabled state, onChange function, and range specification. Add sliderInput flag to FloatComponentType to indicate the presence of a slider input.
+[33mab187f935[m HEAD@{100}: commit: ✨ (sliderComponent/index.tsx): Refactor SliderComponent to improve code readability and add support for different slider input configurations.
+[33m16653bd8e[m HEAD@{101}: checkout: moving from feat/add-default-table-input to cz/slider-component
+[33mb3df40e32[m[33m ([m[1;32mfeat/add-default-table-input[m[33m)[m HEAD@{102}: pull -p: Fast-forward
+[33maa8c64f89[m HEAD@{103}: checkout: moving from main to feat/add-default-table-input
+[33md0bfac3e7[m HEAD@{104}: checkout: moving from feat/add-default-table-input to main
+[33maa8c64f89[m HEAD@{105}: merge main: Merge made by the 'ort' strategy.
+[33m7f934d6ac[m HEAD@{106}: checkout: moving from main to feat/add-default-table-input
+[33md0bfac3e7[m HEAD@{107}: pull origin main: Fast-forward
+[33m04fa6351a[m HEAD@{108}: checkout: moving from feat/add-default-table-input to main
+[33m7f934d6ac[m HEAD@{109}: checkout: moving from cz/truncate-cols to feat/add-default-table-input
+[33m5e7cd3f0b[m[33m ([m[1;32mcz/truncate-cols[m[33m)[m HEAD@{110}: checkout: moving from hideIntegrations to cz/truncate-cols
+[33mfaa5e7f3c[m[33m ([m[1;32mhideIntegrations[m[33m)[m HEAD@{111}: commit: 🐛 (generalBugs-shard-12.spec.ts): fix incorrect test selector for RetrieverTool component to ensure proper testing of user interaction with the component
+[33m1defa9bc9[m HEAD@{112}: checkout: moving from main to hideIntegrations
+[33m04fa6351a[m HEAD@{113}: checkout: moving from cz/truncate-cols to main
+[33m5e7cd3f0b[m[33m ([m[1;32mcz/truncate-cols[m[33m)[m HEAD@{114}: commit: 📝 (model.py): Add field serializers to truncate long strings in outputs, data, and artifacts fields for better data handling and readability.
+[33m04fa6351a[m HEAD@{115}: checkout: moving from main to cz/truncate-cols
+[33m04fa6351a[m HEAD@{116}: reset: moving to HEAD
+[33m04fa6351a[m HEAD@{117}: checkout: moving from cz/pagination-refactor to main
+[33ma9dea512c[m[33m ([m[1;32mcz/pagination-refactor[m[33m)[m HEAD@{118}: commit (merge): merge fix
+[33mb07ec2f27[m HEAD@{119}: pull origin cz/pagination-refactor: Fast-forward
+[33m2f7a0a1a2[m HEAD@{120}: checkout: moving from main to cz/pagination-refactor
+[33m04fa6351a[m HEAD@{121}: pull origin main: Fast-forward
+[33m94a647f60[m HEAD@{122}: checkout: moving from cz/bundles-integration to main
+[33m37496dc51[m[33m ([m[1;32mcz/bundles-integration[m[33m)[m HEAD@{123}: commit: bundles integration sidebar
+[33m94a647f60[m HEAD@{124}: checkout: moving from main to cz/bundles-integration
+[33m94a647f60[m HEAD@{125}: pull -p: Fast-forward
+[33m32b5da8d1[m HEAD@{126}: checkout: moving from cz/pagination-refactor to main
+[33m2f7a0a1a2[m HEAD@{127}: commit: ✨ (use-on-file-drop.tsx): add support for checking flow names in a specific collection to prevent duplicates
+[33m9c01d2f67[m HEAD@{128}: checkout: moving from main to cz/pagination-refactor
+[33m32b5da8d1[m HEAD@{129}: checkout: moving from cz/pagination-refactor to main
+[33m9c01d2f67[m HEAD@{130}: commit: ✅ (folders.spec.ts): update selectors to target specific elements correctly for testing purposes
+[33m4aea9402a[m HEAD@{131}: commit: ✨ (use-save-flow.ts): add support for fetching flow data before saving if not already present to ensure data consistency and accuracy
+[33m387a13e9a[m HEAD@{132}: commit: 🐛 (use-patch-update-flow.ts): fix issue with missing closing parenthesis in queryClient.refetchQueries() method
+[33ma64dfbd36[m HEAD@{133}: commit: 🐛 (index.tsx): fix variable name typo in isLoadingFolder assignment to correctly reference isFetchingFolder
+[33mc25c27850[m HEAD@{134}: commit: ♻️ (index.tsx): refactor isUpdatingFolder logic to include isFetchingFolder variable for better accuracy and readability
+[33m958903bb4[m HEAD@{135}: commit: 📝 (model.py): update model fields to set default values for folder_id, is_component, endpoint_name, and description to None for consistency and clarity
+[33m53dd6e308[m HEAD@{136}: commit: ✅ (auto-save-off.spec.ts): update test to match changes in UI for auto-save feature and improve test coverage for hover functionality.
+[33m8aa7be33c[m HEAD@{137}: checkout: moving from main to cz/pagination-refactor
+[33m32b5da8d1[m HEAD@{138}: checkout: moving from cz/pagination-refactor to main
+[33m8aa7be33c[m HEAD@{139}: pull origin cz/pagination-refactor: Merge made by the 'ort' strategy.
+[33m4b2b85186[m HEAD@{140}: commit: ✨ (folders.spec.ts): update selectors to target specific elements by using the first() method to improve test reliability
+[33m80a16b41a[m HEAD@{141}: pull origin cz/pagination-refactor: Fast-forward
+[33m774e907c2[m HEAD@{142}: commit (merge): merge fix
+[33m7351af9fb[m HEAD@{143}: pull origin cz/pagination-refactor: Fast-forward
+[33m53a9a9e88[m HEAD@{144}: checkout: moving from main to cz/pagination-refactor
+[33m32b5da8d1[m HEAD@{145}: pull origin main: Fast-forward
+[33me710b457c[m HEAD@{146}: checkout: moving from cz/pagination-refactor to main
+[33m53a9a9e88[m HEAD@{147}: commit: ✨ (headerTabsSearchComponent/index.tsx): add support for changing tabs and searching functionality in headerTabsSearchComponent
+[33ma6a170eb9[m HEAD@{148}: commit: ✨ (entities/index.tsx): introduce PaginatedFolderType to represent a folder with pagination information for better organization and handling of paginated data.
+[33m3e8c8f997[m HEAD@{149}: commit: ✨ (Playground/index.tsx): Update refreshFlows function call to include a parameter to get all flows at once for better performance.
+[33mc75aa02f5[m HEAD@{150}: commit: ✨ (myCollectionComponent/index.tsx): introduce pagination and search functionality to improve user experience and data handling in the MyCollectionComponent component
+[33ma78520c61[m HEAD@{151}: commit: ✨ (componentsComponent/index.tsx): Add support for pagination feature in ComponentsComponent to improve user experience and performance.
+[33m28972df8a[m HEAD@{152}: commit: 📝 (StorePage/index.tsx): update constants import to include new pagination constants for better organization
+[33m33d43b811[m HEAD@{153}: commit: ✨ (ViewPage/index.tsx): update refreshFlows function call to include a parameter to get all flows at once, improving efficiency and reducing unnecessary calls to the backend.
+[33m598f2c2c3[m HEAD@{154}: commit: ✨ (foldersStore.tsx): introduce new state 'folders' and setter function 'setFolders' to manage folder data in the store
+[33m2c7806094[m HEAD@{155}: commit: ✨ (utilityStore.ts): introduce flowsPagination object with default values for page and size to manage pagination in the utility store
+[33mb501f2c3c[m HEAD@{156}: commit: ✨ (frontend): add optional 'pages' property to PaginatorComponentType to allow customization of the number of pages displayed in the paginator
+[33m07cdd591d[m HEAD@{157}: commit: ✨ (frontend): introduce PaginatedFlowsType to represent paginated flow data structure in the application.
+[33m65ccfa7b6[m HEAD@{158}: commit: ✨ (types.ts): introduce Pagination type to define structure for pagination data in frontend application
+[33mf9a0f75b8[m HEAD@{159}: commit: ✨ (frontend): introduce new 'folders' and 'setFolders' properties to FoldersStoreType to manage folder data efficiently
+[33m2beacc37f[m HEAD@{160}: commit: ✨ (frontend): introduce flowsPagination and setFlowsPagination functions to manage pagination for flows in the UtilityStoreType
+[33m7e0d1b874[m HEAD@{161}: commit: ✨ (FlowPage/index.tsx): update refreshFlows function call to include a parameter to get all flows at once for better performance.
+[33md9cb2fdf8[m HEAD@{162}: commit: ✨ (AppInitPage/index.tsx): introduce new queries to fetch basic examples and folders data for improved functionality and user experience
+[33m6f3ad78a9[m HEAD@{163}: commit: 📝 (AdminPage/index.tsx): Update initial page size and index values to use constants for better maintainability
+[33m78a8620c4[m HEAD@{164}: commit: 🔧 (codeAreaModal/index.tsx): remove unused import postCustomComponent to clean up code and improve readability
+[33me1eb04d0c[m HEAD@{165}: commit: ✨ (use-upload-flow.ts): update refreshFlows function call to include an object with get_all property set to true to fetch all flows when refreshing
+[33m9df2a2ec3[m HEAD@{166}: commit: 🔧 (use-get-folders.ts): Remove unused code related to refreshFlows and setStarterProjectId to improve code readability and maintainability
+[33m957567d24[m HEAD@{167}: commit: ✨ (use-get-folder.ts): Add support for pagination and filtering options in the useGetFolderQuery function to enhance flexibility and customization for fetching folder data.
+[33m793c6d61e[m HEAD@{168}: commit: ✨ (use-get-refresh-flows.ts): introduce new functionality to fetch and process flows with query parameters for components_only, get_all, folder_id, remove_example_flows, page, and size. This allows for more flexible and specific retrieval of flow data.
+[33mc35336529[m HEAD@{169}: commit: ✨ (use-get-basic-examples.ts): introduce a new query function to fetch basic examples of flows from the API and update the state with the fetched data.
+[33m2102c3927[m HEAD@{170}: commit: ✨ (use-post-login-user.ts): add queryClient to UseRequestProcessor to enable refetching queries on mutation settled state
+[33m8f8a239c5[m HEAD@{171}: commit: ✨ (constants.ts): introduce new constants for search tabs, pagination settings, and store pagination settings to enhance user experience and improve functionality
+[33m3e2b98b1d[m HEAD@{172}: commit: 🐛 (storeCardComponent): fix height of store card component to prevent overflow and improve layout aesthetics
+[33m47c3340d4[m HEAD@{173}: commit: 📝 (paginatorComponent/index.tsx): refactor PaginatorComponent to use constants for default values and improve code readability
+[33ma436a587e[m HEAD@{174}: commit: packages changes
+[33m274135dd5[m HEAD@{175}: commit: packages changes
+[33m87e52337a[m HEAD@{176}: commit: ✨ (test_database.py): add support for fetching all flows by adding "get_all" parameter to the request
+[33m6aecb37ab[m HEAD@{177}: commit: ✨ (model.py): add PaginatedFlowResponse class to handle paginated flow responses in API calls
+[33m1ef65b48f[m HEAD@{178}: commit: ✨ (flows.py): Add pagination support for retrieving a list of flows to improve performance and user experience
+[33mb24d1dc6a[m HEAD@{179}: commit: ⬆️ (uv.lock): Update authlib version from 1.3.2 to 1.3.1
+[33me710b457c[m HEAD@{180}: reset: moving to HEAD
+[33me710b457c[m HEAD@{181}: checkout: moving from main to cz/pagination-refactor
+[33me710b457c[m HEAD@{182}: reset: moving to HEAD
+[33me710b457c[m HEAD@{183}: pull --tags origin main: Fast-forward
+[33m7b7e5cd1b[m HEAD@{184}: checkout: moving from cz/fix-img-play to main
+[33mc10a1431c[m[33m ([m[1;32mcz/fix-img-play[m[33m)[m HEAD@{185}: pull origin cz/fix-img-play: Merge made by the 'ort' strategy.
+[33m60b79345f[m HEAD@{186}: commit: ✨ (Simple Agent.spec.ts): add ua-parser-js library to parse user agent string for better browser compatibility handling
+[33mcd71e800b[m HEAD@{187}: checkout: moving from main to cz/fix-img-play
+[33m7b7e5cd1b[m HEAD@{188}: reset: moving to HEAD
+[33m7b7e5cd1b[m HEAD@{189}: pull origin main: Fast-forward
+[33ma5bd76662[m HEAD@{190}: checkout: moving from cz/fix-img-play to main
+[33mcd71e800b[m HEAD@{191}: commit (merge): merge fix
+[33mfd585058b[m HEAD@{192}: commit: 🔧 (OutputParser.py): refactor error message handling for unsupported or missing parser to improve readability and maintainability
+[33md8ab73950[m HEAD@{193}: pull origin cz/fix-img-play: Merge made by the 'ort' strategy.
+[33mc7e9ffe1e[m HEAD@{194}: commit: 🐛 (model.py): simplify condition for checking if image_paths is not empty to improve readability and maintainability
+[33m824b9b82e[m HEAD@{195}: checkout: moving from main to cz/fix-img-play
+[33ma5bd76662[m HEAD@{196}: checkout: moving from 059fd9403aed6012b428ba747dfceae58e810a75 to main
+[33m059fd9403[m HEAD@{197}: checkout: moving from main to 059fd9403
+[33ma5bd76662[m HEAD@{198}: reset: moving to HEAD
+[33ma5bd76662[m HEAD@{199}: checkout: moving from 059fd9403aed6012b428ba747dfceae58e810a75 to main
+[33m059fd9403[m HEAD@{200}: checkout: moving from main to 059fd9403
+[33ma5bd76662[m HEAD@{201}: pull -p: Fast-forward
+[33md19c16462[m HEAD@{202}: checkout: moving from docs-add-notes to main
+[33m8db438c86[m[33m ([m[1;32mdocs-add-notes[m[33m)[m HEAD@{203}: pull origin docs-add-notes: Merge made by the 'ort' strategy.
+[33m80f99a77f[m HEAD@{204}: commit: ✨ (generalBugs-shard-9.spec.ts): add click action on the last element with test id "title-Prompt" to improve test coverage and interaction with the page
+[33m6681e12cf[m HEAD@{205}: checkout: moving from cz/fix-img-play to docs-add-notes
+[33m824b9b82e[m HEAD@{206}: commit: 🐛 (model.py): fix issue where message.files was not being updated correctly when image_paths is empty in MessageBase class
+[33md19c16462[m HEAD@{207}: checkout: moving from main to cz/fix-img-play
+[33md19c16462[m HEAD@{208}: checkout: moving from cz/fix-img-path to main
+[33mcc14962c9[m[33m ([m[1;32mcz/fix-img-path[m[33m)[m HEAD@{209}: checkout: moving from main to cz/fix-img-path
+[33md19c16462[m HEAD@{210}: checkout: moving from bf9ded5063e7fe21f55b535286719990ac38b3bb to main
+[33mbf9ded506[m HEAD@{211}: checkout: moving from ab2df9ef3d3bf611ca5ee1754a9cbcaf88015656 to bf9ded5063e7fe21f55b535286719990ac38b3bb
+[33mab2df9ef3[m HEAD@{212}: checkout: moving from main to ab2df9ef3d3bf611ca5ee1754a9cbcaf88015656
+[33md19c16462[m HEAD@{213}: checkout: moving from aa2578370b3e75729099f6aa6b01346d5d65f3f7 to main
+[33maa2578370[m HEAD@{214}: checkout: moving from 1bf6781dc42e20748887a0516963f13912919abd to aa2578370b3e75729099f6aa6b01346d5d65f3f7
+[33m1bf6781dc[m HEAD@{215}: checkout: moving from cz/fix-img-path to 1bf6781dc42e20748887a0516963f13912919abd
+[33mcc14962c9[m[33m ([m[1;32mcz/fix-img-path[m[33m)[m HEAD@{216}: checkout: moving from main to cz/fix-img-path
+[33md19c16462[m HEAD@{217}: checkout: moving from cz/fix-img-path to main
+[33mcc14962c9[m[33m ([m[1;32mcz/fix-img-path[m[33m)[m HEAD@{218}: checkout: moving from docs-add-notes to cz/fix-img-path
+[33m6681e12cf[m HEAD@{219}: commit: 🐛 (Vector Store.spec.ts): fix clicking on "Playground" element by selecting the last one to avoid ambiguity
+[33m0fc0a814c[m HEAD@{220}: commit: ✨ (Travel Planning Agent.spec.ts): Update the selector for the "Playground" text to ensure the correct element is clicked on the page.
+[33m684ff7da4[m HEAD@{221}: commit: ✨ (textInputOutput.spec.ts): update test script to target the last occurrence of the "Playground" text element to ensure correct interaction with the UI.
+[33m28d66da9b[m HEAD@{222}: commit: 🐛 (Simple Agent.spec.ts): fix clicking on "Playground" button by selecting the last element with the text to avoid ambiguity
+[33m7dda29aeb[m HEAD@{223}: commit: ✨ (similarity.spec.ts): update click method to target the last occurrence of "Playground" text to ensure correct element is clicked
+[33m650205270[m HEAD@{224}: commit: 🐛 (Document QA.spec.ts): fix clicking on "Playground" element by selecting the last occurrence to ensure correct element is clicked
+[33mafe20db42[m HEAD@{225}: commit: 🐛 (generalBugs-shard-9.spec.ts): fix clicking on "Playground" element by selecting the last occurrence to prevent flakiness in tests
+[33mae24105d5[m HEAD@{226}: commit: ✨ (chatInputOutput.spec.ts): update test to click on the last occurrence of the "Playground" text to ensure correct element is clicked
+[33m15d636c9b[m HEAD@{227}: commit: ✨ (fileUploadComponent.spec.ts): update test to click on the last element with text "Playground" to ensure correct element is clicked on the page
+[33m79ce365f0[m HEAD@{228}: commit: 🐛 (limit-file-size-upload.spec.ts): fix selector to click on the last element with text "Playground" instead of the first one
+[33mf7a3d4daf[m HEAD@{229}: commit: ✨ (stop-button-playground.spec.ts): update test to click on the last occurrence of the text "Playground" to ensure correct element is clicked
+[33m6a06eb9ee[m HEAD@{230}: commit: ✨ (chatInputOutputUser-shard-2.spec.ts): update test to click on the last element with text "Playground" to ensure correct interaction with chat input/output feature
+[33mc8870740d[m HEAD@{231}: commit: 🐛 (general-bugs-shard-3836.spec.ts): fix clicking on "Playground" button by selecting the last element with the text "Playground" to ensure correct element is clicked
+[33mffa5600c7[m HEAD@{232}: commit: 🐛 (generalBugs-shard-0.spec.ts): fix clicking on "Playground" button by selecting the last element with the text "Playground" to ensure correct element is clicked
+[33m7c96ed093[m HEAD@{233}: commit: 🐛 (generalBugs-shard-3.spec.ts): fix clicking on "Playground" button by selecting the last occurrence to prevent ambiguity
+[33m4400bd138[m HEAD@{234}: commit: 🐛 (decisionFlow.spec.ts): fix clicking on "Playground" button by selecting the last element with the text "Playground" to ensure correct element is clicked
+[33m1f65892d2[m HEAD@{235}: commit: ✨ (Dynamic Agent.spec.ts): update test to click on the last element with text "Playground" to ensure correct element is clicked on the page
+[33ma521dc7fe[m HEAD@{236}: commit: ✨ (Blog Writer.spec.ts): update test to click on the last element with text "Playground" to ensure correct element is clicked on the page
+[33m54d957b1f[m HEAD@{237}: commit: 🐛 (Basic Prompting.spec.ts): fix clicking on "Playground" element by selecting the last occurrence to ensure correct element is clicked
+[33m8a5e30c80[m HEAD@{238}: commit: ✨ (chatInputOutputUser-shard-0.spec.ts): update the test to click on the last element with the text "Playground" to ensure correct element is clicked
+[33m39b0f0336[m HEAD@{239}: checkout: moving from main to docs-add-notes
+[33md19c16462[m HEAD@{240}: pull -p: Fast-forward
+[33md92b3cb12[m HEAD@{241}: checkout: moving from cz/fix-img-path to main
+[33mcc14962c9[m[33m ([m[1;32mcz/fix-img-path[m[33m)[m HEAD@{242}: commit: 📝 (image.py): Remove unnecessary import and variable assignment to improve code readability
+[33m6ea65f52c[m HEAD@{243}: pull origin cz/fix-img-path: Fast-forward
+[33mcc96e4a55[m HEAD@{244}: checkout: moving from main to cz/fix-img-path
+[33md92b3cb12[m HEAD@{245}: pull -p: Fast-forward
+[33m855694208[m HEAD@{246}: checkout: moving from fix/security_file_upload to main
+[33mbb1ab2cd3[m[33m ([m[1;32mfix/security_file_upload[m[33m)[m HEAD@{247}: checkout: moving from cz/3918 to fix/security_file_upload
+[33m36df0df0d[m[33m ([m[1;32mcz/3918[m[33m)[m HEAD@{248}: commit: 🐛 (flows.py): fix logic to remove example flows based on condition to improve data consistency and prevent errors
+[33m855694208[m HEAD@{249}: checkout: moving from main to cz/3918
+[33m855694208[m HEAD@{250}: pull origin main: Fast-forward
+[33m059fd9403[m HEAD@{251}: checkout: moving from fix/security_file_upload to main
+[33mbb1ab2cd3[m[33m ([m[1;32mfix/security_file_upload[m[33m)[m HEAD@{252}: commit: ✅ (tableInputComponent.spec.ts): update test to ensure the last occurrence of text is visible instead of the first one
+[33m3b31fc47a[m HEAD@{253}: checkout: moving from main to fix/security_file_upload
+[33m059fd9403[m HEAD@{254}: pull origin main: Fast-forward
+[33m44a78bd7c[m HEAD@{255}: checkout: moving from cz/limitCsvView to main
+[33ma3c384f63[m[33m ([m[1;32mcz/limitCsvView[m[33m)[m HEAD@{256}: pull origin cz/limitCsvView: Merge made by the 'ort' strategy.
+[33mdb3b89bc5[m HEAD@{257}: commit: 📝 (switchOutputView/index.tsx): import MAX_TEXT_LENGTH constant from shared constants file to improve code organization and reusability
+[33mcbc733b96[m HEAD@{258}: commit: 📝 (constants.ts): update maxSizeFilesInBytes constant to use process.env.MAX_FILE_SIZE environment variable for configurable file size limit
+[33m8063c296b[m HEAD@{259}: commit: 📝 (vite.config.mts): update environment variable MAX_FILE_SIZE to be defined in vite config for frontend to use in the application.
+[33maafad0a40[m HEAD@{260}: pull origin cz/limitCsvView: Merge made by the 'ort' strategy.
+[33m7e37170f7[m HEAD@{261}: commit: 📝 (util_strings.py): Update util_strings.py to improve string truncation function for dictionaries and lists
+[33m654877aab[m HEAD@{262}: commit: 📝 (schemas.py): refactor serialize_data method to handle both BaseModel and non-BaseModel data inputs in VertexBuildResponse class
+[33m52c35bec6[m HEAD@{263}: commit: 📝 (model.py): Update import path for util_strings module to fix module import error
+[33m673755c79[m HEAD@{264}: commit: ♻️ (schemas.py): refactor import statement to use the updated module name util_strings instead of util for better clarity and consistency.
+[33mb8c42adfa[m HEAD@{265}: commit (merge): 📝 (schemas.py): Remove unused import and variable to clean up code
+[33m57499d0b0[m HEAD@{266}: reset: moving to HEAD
+[33m57499d0b0[m HEAD@{267}: commit: ✨ (test_truncate_long_strings_on_objects.py): Update import path for truncate_long_strings function
+[33mfbc327332[m HEAD@{268}: checkout: moving from main to cz/limitCsvView
+[33m44a78bd7c[m HEAD@{269}: checkout: moving from cz/limitCsvView to main
+[33mfbc327332[m HEAD@{270}: merge main: Merge made by the 'ort' strategy.
+[33m108eba2d3[m HEAD@{271}: checkout: moving from main to cz/limitCsvView
+[33m44a78bd7c[m HEAD@{272}: pull -p: Fast-forward
+[33mf403c17d1[m HEAD@{273}: checkout: moving from cz/limitCsvView to main
+[33m108eba2d3[m HEAD@{274}: commit: ✨ (test_truncate_long_strings_on_objects.py): Add unit tests for the function truncate_long_strings to ensure correct behavior when truncating long strings in various data structures
+[33m5a624cf01[m HEAD@{275}: commit: 📝 (model.py): update import path for truncate_long_strings function to match new location in util module
+[33m02e06ba3d[m HEAD@{276}: commit: 📝 (constants.py): add constant MAX_TEXT_LENGTH with value 99999 for defining maximum text length allowed in the application
+[33me8343b4b0[m HEAD@{277}: commit: 📝 (util.py): add function truncate_long_strings to recursively truncate long strings in dictionaries and lists to prevent exceeding the maximum text length.
+[33mf2494e106[m HEAD@{278}: commit: 🔧 (schemas.py): Move the `truncate_long_strings` function to a separate module to improve code organization and reusability
+[33m9c2223451[m HEAD@{279}: pull origin cz/limitCsvView: Fast-forward
+[33m11815cbd3[m HEAD@{280}: commit: 📝 (schemas.py): refactor serialize_data method in VertexBuildResponse class to use a new helper function truncate_long_strings for better code readability and maintainability
+[33m81a6421e0[m HEAD@{281}: commit: 📝 (model.py): refactor truncate_text function to truncate_long_strings for better clarity and consistency
+[33m741942134[m HEAD@{282}: checkout: moving from cz/fixEmptyBtn to cz/limitCsvView
+[33mbea5076fa[m[33m ([m[1;32mcz/fixEmptyBtn[m[33m)[m HEAD@{283}: commit: ✨ (componentsComponent/index.tsx): refactor handleOpenModal function to improve code readability and maintainability
+[33mc07f6bb25[m HEAD@{284}: commit: ✨ (emptyComponent/index.tsx): refactor EmptyComponent to use useIsFetching hook from @tanstack/react-query for loading state and pass handleOpenModal as a prop to improve code readability and maintainability
+[33m6eaabca31[m HEAD@{285}: commit: ✨ (componentsComponent/index.tsx): Add NewFlowModal component to allow users to create a new flow
+[33m2f763712c[m HEAD@{286}: commit: ✅ (general-bugs-shard-3909.spec.ts): add test case to ensure user can create a new flow by clicking on "Start Here" button
+[33mf403c17d1[m HEAD@{287}: checkout: moving from main to cz/fixEmptyBtn
+[33mf403c17d1[m HEAD@{288}: pull -p: Fast-forward
+[33m0f97d359f[m HEAD@{289}: checkout: moving from cz/limitCsvView to main
+[33m741942134[m HEAD@{290}: reset: moving to HEAD
+[33m741942134[m HEAD@{291}: reset: moving to HEAD
+[33m741942134[m HEAD@{292}: checkout: moving from main to cz/limitCsvView
+[33m0f97d359f[m HEAD@{293}: checkout: moving from bad009c0fab91dfdde20872995f65da9b551d994 to main
+[33mbad009c0f[m HEAD@{294}: checkout: moving from main to bad009c0fab91dfdde20872995f65da9b551d994
+[33m0f97d359f[m HEAD@{295}: checkout: moving from 3e11d8a64da458cf657bfd293d83486edbfa4760 to main
+[33m3e11d8a64[m HEAD@{296}: checkout: moving from d4bed03f9cade97ccfec0a41e28434409ae6c2d3 to 3e11d8a64da458cf657bfd293d83486edbfa4760
+[33md4bed03f9[m HEAD@{297}: checkout: moving from 3e617acf2f0d42b5e9a9f0778c744aa924755ce0 to d4bed03f9cade97ccfec0a41e28434409ae6c2d3
+[33m3e617acf2[m HEAD@{298}: checkout: moving from main to 3e617acf2f0d42b5e9a9f0778c744aa924755ce0
+[33m0f97d359f[m HEAD@{299}: checkout: moving from 3e11d8a64da458cf657bfd293d83486edbfa4760 to main
+[33m3e11d8a64[m HEAD@{300}: checkout: moving from bad009c0fab91dfdde20872995f65da9b551d994 to 3e11d8a64da458cf657bfd293d83486edbfa4760
+[33mbad009c0f[m HEAD@{301}: checkout: moving from f6d93fc472568f13ae90b7c70c8d5cc6ae727eb5 to bad009c0fab91dfdde20872995f65da9b551d994
+[33mf6d93fc47[m HEAD@{302}: checkout: moving from main to f6d93fc472568f13ae90b7c70c8d5cc6ae727eb5
+[33m0f97d359f[m HEAD@{303}: checkout: moving from eb3bf824a3979deb8273c743be5d9268f0e0402e to main
+[33meb3bf824a[m HEAD@{304}: checkout: moving from 323d5142b8cab212fe915a0135469c86c017778c to eb3bf824a3979deb8273c743be5d9268f0e0402e
+[33m323d5142b[m HEAD@{305}: checkout: moving from main to 323d5142b8cab212fe915a0135469c86c017778c
+[33m0f97d359f[m HEAD@{306}: checkout: moving from cz/limitCsvView to main
+[33m741942134[m HEAD@{307}: commit: 🐛 (model.py): Fix typo in the path for 'base_retriever' data field
+[33m74d0dfae0[m HEAD@{308}: pull origin cz/limitCsvView: Fast-forward
+[33m476bb70c7[m HEAD@{309}: commit: 🐛 (schemas.py): fix truncation length of text fields to 10 characters instead of 99999
+[33mf5583a682[m HEAD@{310}: checkout: moving from main to cz/limitCsvView
+[33m0f97d359f[m HEAD@{311}: pull -p: Fast-forward
+[33mab2df9ef3[m HEAD@{312}: checkout: moving from cz/fix-img-chatinput-flow to main
+[33m779eb317a[m[33m ([m[1;32mcz/fix-img-chatinput-flow[m[33m)[m HEAD@{313}: commit: ♻️ (utils.py): refactor file_path function to handle both forward and backward slashes and extract file path after drive letter if present
+[33m51a42c484[m HEAD@{314}: commit: ✅ (test_rewrite_file_path.py): add unit tests for the rewrite_file_path function to ensure correct behavior with various file path scenarios
+[33m285197edf[m HEAD@{315}: commit: ✨ (general-bugs-shard-3836.spec.ts): update test description to be more specific about the tool used for sending images on chat
+[33m6638317a5[m HEAD@{316}: checkout: moving from main to cz/fix-img-chatinput-flow
+[33mab2df9ef3[m HEAD@{317}: pull -p: Fast-forward
+[33m14b6157b1[m HEAD@{318}: checkout: moving from cz/fixFoldersDelete to main
+[33me240fbf0e[m[33m ([m[1;32mcz/fixFoldersDelete[m[33m)[m HEAD@{319}: checkout: moving from main to cz/fixFoldersDelete
+[33m14b6157b1[m HEAD@{320}: pull -p: Fast-forward
+[33m3e617acf2[m HEAD@{321}: checkout: moving from cz/fixFoldersDelete to main
+[33me240fbf0e[m[33m ([m[1;32mcz/fixFoldersDelete[m[33m)[m HEAD@{322}: commit: refactor: Add cascade delete functionality for flows and folders
+[33md48eff9e7[m HEAD@{323}: commit: refactor: Remove unused delete_flow_by_id function
+[33m89c13292c[m HEAD@{324}: commit: refactor: Add cascade delete functionality for flows and folders
+[33m246010a14[m HEAD@{325}: commit: refactor: Add cascade delete functionality for flows
+[33m2460aea91[m HEAD@{326}: commit: refactor: Add cascade delete functionality for flows
+[33m3e617acf2[m HEAD@{327}: checkout: moving from main to cz/fixFoldersDelete
+[33m3e617acf2[m HEAD@{328}: checkout: moving from cz/loopRenameFolder to main
+[33mf040d395f[m[33m ([m[1;32mcz/loopRenameFolder[m[33m)[m HEAD@{329}: commit: refactor: Remove unused import and variable in DropdownButtonComponent
+[33m69f02b491[m HEAD@{330}: commit: refactor: Remove unused import and variable in DropdownButtonComponent
+[33m4c45a0dc3[m HEAD@{331}: commit: refactor: Remove unused import and variable in DropdownButtonComponent
+[33m3174b5a6e[m HEAD@{332}: commit: refactor: Improve folder sidebar buttons component
+[33mce38bd0fc[m HEAD@{333}: commit: refactor: Add useIsFetching hook for folder fetching in DropdownButtonComponent
+[33m3e617acf2[m HEAD@{334}: checkout: moving from main to cz/loopRenameFolder
+[33m3e617acf2[m HEAD@{335}: checkout: moving from cz/duckduckgo to main
+[33m1ac06243a[m[33m ([m[1;32mcz/duckduckgo[m[33m)[m HEAD@{336}: commit: rollback lock file
+[33ma62b08ef9[m HEAD@{337}: commit: 📝 (frontend): mark is-unicode-supported package as extraneous in package-lock.json
+[33mfa0dbb9c7[m HEAD@{338}: commit: 🐛 (linkComponent.spec.ts): fix an issue where the key combination for selecting all text was not working correctly on Mac devices. Updated the key combination to use the correct modifier key based on the user's operating system.
+[33ma541342d9[m HEAD@{339}: pull -p: Fast-forward
+[33me67b8b9ca[m HEAD@{340}: checkout: moving from main to cz/duckduckgo
+[33m3e617acf2[m HEAD@{341}: reset: moving to HEAD
+[33m3e617acf2[m HEAD@{342}: pull origin main: Fast-forward
+[33m2f1f1808b[m HEAD@{343}: checkout: moving from cz/duckduckgo to main
+[33me67b8b9ca[m HEAD@{344}: commit: ✨ (duckduckgo.spec.ts): update test selectors for duckduckgo search component to match changes in the frontend code and improve test reliability
+[33mbaece6885[m HEAD@{345}: pull origin cz/duckduckgo: Fast-forward
+[33m3227d708c[m HEAD@{346}: commit: 🔧 (DuckDuckGoSearchRun.py): Remove unnecessary import and update status message for DuckDuckGo Search Tool to improve clarity
+[33mc00a4554a[m HEAD@{347}: pull origin cz/duckduckgo: Fast-forward
+[33m47e4bbb95[m HEAD@{348}: checkout: moving from main to cz/duckduckgo
+[33m2f1f1808b[m HEAD@{349}: checkout: moving from cz/fixXML to main
+[33mcd7675c0b[m[33m ([m[1;32mcz/fixXML[m[33m)[m HEAD@{350}: commit: 📝 (XMLAgent.py): Add support for chat history data input in XMLAgentComponent to enhance agent functionality and interaction with Language Model.
+[33m2f1f1808b[m HEAD@{351}: checkout: moving from main to cz/fixXML
+[33m2f1f1808b[m HEAD@{352}: rebase: checkout main
+[33m2f1f1808b[m HEAD@{353}: rebase: checkout main
+[33m2f1f1808b[m HEAD@{354}: pull -p: Fast-forward
+[33m7273a6e78[m HEAD@{355}: checkout: moving from fix/langchain_await_error to main
+[33mbdc4d3c0f[m[33m ([m[1;32mfix/langchain_await_error[m[33m)[m HEAD@{356}: commit: 🔧 (generalBugs-shard-1.spec.ts): remove unnecessary empty line to improve code readability
+[33md3d1a9895[m HEAD@{357}: checkout: moving from main to fix/langchain_await_error
+[33m7273a6e78[m HEAD@{358}: checkout: moving from feat-tavily-search to main
+[33m8929259f9[m[33m ([m[1;32mfeat-tavily-search[m[33m)[m HEAD@{359}: commit: add tavily icon
+[33m843fc7a31[m HEAD@{360}: merge cz/addTavilyIcon: Merge made by the 'ort' strategy.
+[33mb8391ef01[m HEAD@{361}: checkout: moving from cz/addTavilyIcon to feat-tavily-search
+[33m31078778c[m[33m ([m[1;32mcz/addTavilyIcon[m[33m)[m HEAD@{362}: commit: add tavily new icon
+[33m7273a6e78[m HEAD@{363}: checkout: moving from main to cz/addTavilyIcon
+[33m7273a6e78[m HEAD@{364}: checkout: moving from cz/changeinputvalue-simpleagent to main
+[33m486317265[m[33m ([m[1;32mcz/changeinputvalue-simpleagent[m[33m)[m HEAD@{365}: commit: changing the example default input value
+[33m7273a6e78[m HEAD@{366}: checkout: moving from main to cz/changeinputvalue-simpleagent
+[33m7273a6e78[m HEAD@{367}: pull -p: Fast-forward
+[33m810cf7248[m HEAD@{368}: checkout: moving from cz/fix-import-share-store to main
+[33me5731cd7d[m[33m ([m[1;32mcz/fix-import-share-store[m[33m)[m HEAD@{369}: commit: 🔧 (utils.py): refactor import statement to get version info from utils module instead of version module
+[33m810cf7248[m HEAD@{370}: checkout: moving from main to cz/fix-import-share-store
+[33m810cf7248[m HEAD@{371}: pull -p: Fast-forward
+[33m9b5c16a0e[m HEAD@{372}: checkout: moving from fixExamples to main
+[33m67969f93b[m[33m ([m[1;32mfixExamples[m[33m)[m HEAD@{373}: checkout: moving from main to fixExamples
+[33m9b5c16a0e[m HEAD@{374}: checkout: moving from cz/updateAstraTest to main
+[33m3942f0015[m[33m ([m[1;32mcz/updateAstraTest[m[33m)[m HEAD@{375}: checkout: moving from fixExamples to cz/updateAstraTest
+[33m67969f93b[m[33m ([m[1;32mfixExamples[m[33m)[m HEAD@{376}: checkout: moving from cz/updateSimpleAgentTest to fixExamples
+[33mce9010161[m[33m ([m[1;31morigin/cz/updateSimpleAgentTest[m[33m, [m[1;32mcz/updateSimpleAgentTest[m[33m)[m HEAD@{377}: checkout: moving from main to cz/updateSimpleAgentTest
+[33m9b5c16a0e[m HEAD@{378}: checkout: moving from fixExamples to main
+[33m67969f93b[m[33m ([m[1;32mfixExamples[m[33m)[m HEAD@{379}: checkout: moving from main to fixExamples
+[33m9b5c16a0e[m HEAD@{380}: checkout: moving from fixExamples to main
+[33m67969f93b[m[33m ([m[1;32mfixExamples[m[33m)[m HEAD@{381}: pull origin fixExamples: Merge made by the 'ort' strategy.
+[33m38b182f4c[m HEAD@{382}: commit: 📝 (Travel Planning Agent.spec.ts): remove unnecessary empty line to improve code readability and consistency
+[33m4da454712[m HEAD@{383}: pull -p: Merge made by the 'ort' strategy.
+[33m344ebd8bb[m HEAD@{384}: commit: change examples
+[33m791b6bf49[m HEAD@{385}: checkout: moving from main to fixExamples
+[33m9b5c16a0e[m HEAD@{386}: checkout: moving from fixExamples to main
+[33m791b6bf49[m HEAD@{387}: checkout: moving from main to fixExamples
+[33m9b5c16a0e[m HEAD@{388}: checkout: moving from fixExamples to main
+[33m791b6bf49[m HEAD@{389}: commit: updating search tools
+[33m8a61bd40c[m HEAD@{390}: checkout: moving from cz/searchs to fixExamples
+[33m8a591cbe4[m[33m ([m[1;31morigin/cz/searchs[m[33m, [m[1;32mcz/searchs[m[33m)[m HEAD@{391}: checkout: moving from fixExamples to cz/searchs
+[33m8a61bd40c[m HEAD@{392}: reset: moving to HEAD
+[33m8a61bd40c[m HEAD@{393}: commit: ✅ (Simple Agent.spec.ts): update expected count of python words to 3 for accurate test validation
+[33m67072961d[m HEAD@{394}: commit: 🔧 (.github/workflows/typescript_test.yml): update environment variable name from BRAVE_SEARCH_API_KEY to SEARCH_API_KEY for consistency
+[33m6d4303c02[m HEAD@{395}: checkout: moving from cz/searchs to fixExamples
+[33m8a591cbe4[m[33m ([m[1;31morigin/cz/searchs[m[33m, [m[1;32mcz/searchs[m[33m)[m HEAD@{396}: checkout: moving from cz/fixvectorStoreTest to cz/searchs
+[33m492e13a0c[m[33m ([m[1;32mcz/fixvectorStoreTest[m[33m)[m HEAD@{397}: checkout: moving from cz/updateAstraTest to cz/fixvectorStoreTest
+[33m3942f0015[m[33m ([m[1;32mcz/updateAstraTest[m[33m)[m HEAD@{398}: checkout: moving from fixExamples to cz/updateAstraTest
+[33m6d4303c02[m HEAD@{399}: merge main: Merge made by the 'ort' strategy.
+[33m10e57d518[m HEAD@{400}: checkout: moving from cz/updateSimpleAgentTest to fixExamples
+[33mce9010161[m[33m ([m[1;31morigin/cz/updateSimpleAgentTest[m[33m, [m[1;32mcz/updateSimpleAgentTest[m[33m)[m HEAD@{401}: checkout: moving from main to cz/updateSimpleAgentTest
+[33m9b5c16a0e[m HEAD@{402}: checkout: moving from fixExamples to main
+[33m10e57d518[m HEAD@{403}: reset: moving to HEAD
+[33m10e57d518[m HEAD@{404}: pull origin fixExamples: Merge made by the 'ort' strategy.
+[33maa560f486[m HEAD@{405}: commit: 🐛 (Dynamic Agent.spec.ts): fix environment variable name from BRAVE_SEARCH_API_KEY to SEARCH_API_KEY for consistency and clarity
+[33mc4392eb4b[m HEAD@{406}: pull origin fixExamples: Merge made by the 'ort' strategy.
+[33m48b1f543e[m HEAD@{407}: commit: ✨ (Simple Agent.spec.ts): Add test case to fill textarea with specific text for testing purposes
+[33ma04052238[m HEAD@{408}: checkout: moving from cz/updateSimpleAgentTest to fixExamples
+[33mce9010161[m[33m ([m[1;31morigin/cz/updateSimpleAgentTest[m[33m, [m[1;32mcz/updateSimpleAgentTest[m[33m)[m HEAD@{409}: commit: ✨ (Simple Agent.spec.ts): add test case to fill textarea with specific text before running the chat output button to simulate user input
+[33m9b5c16a0e[m HEAD@{410}: checkout: moving from main to cz/updateSimpleAgentTest
+[33m9b5c16a0e[m HEAD@{411}: checkout: moving from cz/searchs to main
+[33m8a591cbe4[m[33m ([m[1;31morigin/cz/searchs[m[33m, [m[1;32mcz/searchs[m[33m)[m HEAD@{412}: checkout: moving from main to cz/searchs
+[33m9b5c16a0e[m HEAD@{413}: pull -p: Fast-forward
+[33mb6df370fc[m HEAD@{414}: checkout: moving from cz/updateAstraTest to main
+[33m3942f0015[m[33m ([m[1;32mcz/updateAstraTest[m[33m)[m HEAD@{415}: commit: 🐛 (Vector Store.spec.ts): fix incorrect check for Astra DB API endpoint to include "astra-dev" instead of "dev" for proper environment detection
+[33mf79fc7030[m HEAD@{416}: commit: 📝 (Vector Store.spec.ts): Remove unnecessary code block related to AstraVectorStoreComponent class and its methods
+[33mb6df370fc[m HEAD@{417}: checkout: moving from main to cz/updateAstraTest
+[33mb6df370fc[m HEAD@{418}: pull -p: Fast-forward
+[33md668424ef[m HEAD@{419}: checkout: moving from cz/fixvectorStoreTest to main
+[33m492e13a0c[m[33m ([m[1;32mcz/fixvectorStoreTest[m[33m)[m HEAD@{420}: reset: moving to HEAD
+[33m492e13a0c[m[33m ([m[1;32mcz/fixvectorStoreTest[m[33m)[m HEAD@{421}: commit: ✨ (Vector Store.spec.ts): Add AstraVectorStoreComponent to support Astra DB integration for vector storage and search capabilities.
+[33md668424ef[m HEAD@{422}: checkout: moving from main to cz/fixvectorStoreTest
+[33md668424ef[m HEAD@{423}: checkout: moving from cz/searchs to main
+[33m8a591cbe4[m[33m ([m[1;31morigin/cz/searchs[m[33m, [m[1;32mcz/searchs[m[33m)[m HEAD@{424}: commit: ✨ (SearchAPI.py): Add support for result limiting in SearchAPIComponent and refactor code for better readability and maintainability
+[33md668424ef[m HEAD@{425}: checkout: moving from main to cz/searchs
+[33md668424ef[m HEAD@{426}: checkout: moving from fix-yf-tool to main
+[33m0245f2b62[m[33m ([m[1;32mfix-yf-tool[m[33m)[m HEAD@{427}: reset: moving to HEAD
+[33m0245f2b62[m[33m ([m[1;32mfix-yf-tool[m[33m)[m HEAD@{428}: checkout: moving from main to fix-yf-tool
+[33md668424ef[m HEAD@{429}: reset: moving to HEAD
+[33md668424ef[m HEAD@{430}: pull -p: Fast-forward
+[33m0088b46aa[m HEAD@{431}: pull -p: Fast-forward
+[33mbee466e52[m HEAD@{432}: pull -p: Fast-forward
+[33mde1fdff74[m HEAD@{433}: checkout: moving from cz/tests-folders to main
+[33mb35561e6b[m[33m ([m[1;32mcz/tests-folders[m[33m)[m HEAD@{434}: commit: changing e2e to integrations folder
+[33md998a1d6e[m HEAD@{435}: checkout: moving from cz/ux-playground-chat to cz/tests-folders
+[33m61f975d32[m[33m ([m[1;32mcz/ux-playground-chat[m[33m)[m HEAD@{436}: commit: feat: Refactor chatMessage component for improved readability and performance
+[33mde1fdff74[m HEAD@{437}: checkout: moving from main to cz/ux-playground-chat
+[33mde1fdff74[m HEAD@{438}: checkout: moving from cz/fix-getallLoad to main
+[33mf6b4698f1[m[33m ([m[1;32mcz/fix-getallLoad[m[33m)[m HEAD@{439}: checkout: moving from main to cz/fix-getallLoad
+[33mde1fdff74[m HEAD@{440}: checkout: moving from cz/fix-getallLoad to main
+[33mf6b4698f1[m[33m ([m[1;32mcz/fix-getallLoad[m[33m)[m HEAD@{441}: commit: feat: Update getTypes function to always force refresh
+[33mec7564dbf[m HEAD@{442}: checkout: moving from main to cz/fix-getallLoad
+[33mde1fdff74[m HEAD@{443}: checkout: moving from cz/fix-getallLoad to main
+[33mec7564dbf[m HEAD@{444}: commit: ✨ (use-get-folders.ts): Update useGetFoldersQuery to check if types are empty before calling getTypes to avoid unnecessary API calls
+[33mde1fdff74[m HEAD@{445}: checkout: moving from main to cz/fix-getallLoad
+[33mde1fdff74[m HEAD@{446}: checkout: moving from cz/ux-playground-scroll to main
+[33m5dbe6ff84[m[33m ([m[1;32mcz/ux-playground-scroll[m[33m)[m HEAD@{447}: commit: refactor: Remove unused 'open' prop from CodeTabsComponent
+[33m0e9a60a78[m HEAD@{448}: commit: feat: Add `playgroundScrollBehaves` and `setPlaygroundScrollBehaves` to `UtilityStoreType`
+[33m1f37f952e[m HEAD@{449}: commit: feat: Update codeTabsPropsType to allow undefined for the 'open' property
+[33m1d9947643[m HEAD@{450}: commit: feat: Add setPlaygroundScrollBehaves function to useUtilityStore hook
+[33m17f6dbf8d[m HEAD@{451}: commit: feat: Add useUtilityStore hook to IOModal for setting playground scroll behavior
+[33m26bce9ff0[m HEAD@{452}: commit: feat: Add useUtilityStore hook to IOModal for setting playground scroll behavior
+[33mde1fdff74[m HEAD@{453}: reset: moving to HEAD
+[33mde1fdff74[m HEAD@{454}: checkout: moving from main to cz/ux-playground-scroll
+[33mde1fdff74[m HEAD@{455}: pull -p: Fast-forward
+[33mb2f5a43d0[m HEAD@{456}: checkout: moving from fix/autosave_exit to main
+[33ma52fa21e9[m[33m ([m[1;32mfix/autosave_exit[m[33m)[m HEAD@{457}: checkout: moving from embed_component to fix/autosave_exit
+[33m4bf82f5ad[m[33m ([m[1;32membed_component[m[33m)[m HEAD@{458}: commit: ✨ (similarity.spec.ts): Add end-to-end test for checking similarity between embedding texts in the frontend application.
+[33m2be2869dd[m HEAD@{459}: pull -p: Fast-forward
+[33m51d15dc18[m HEAD@{460}: checkout: moving from cz/langchainhub to embed_component
+[33m1996c4df0[m[33m ([m[1;32mcz/langchainhub[m[33m)[m HEAD@{461}: commit: 📝 (LangChainHubPrompt.py): update display name to "LangChain Hub" for better clarity and consistency with the component's purpose
+[33mb2f5a43d0[m HEAD@{462}: checkout: moving from main to cz/langchainhub
+[33mb2f5a43d0[m HEAD@{463}: checkout: moving from embed_component to main
+[33m51d15dc18[m HEAD@{464}: checkout: moving from main to embed_component
+[33mb2f5a43d0[m HEAD@{465}: pull -p: Fast-forward
+[33ma71375c6f[m HEAD@{466}: pull -p: Fast-forward
+[33m387ea3294[m HEAD@{467}: pull -p: Fast-forward
+[33m922fd5f64[m HEAD@{468}: checkout: moving from cz/test-tableComponent to main
+[33mbcef952d6[m[33m ([m[1;32mcz/test-tableComponent[m[33m)[m HEAD@{469}: commit: refactor: Remove duplicate ID in filterSidebar.spec.ts and remove commented code in tableInputComponent.spec.ts
+[33mefca9c9b0[m HEAD@{470}: commit: refactor: add end-to-end test for interacting with table input component
+[33m5786cba85[m HEAD@{471}: commit: refactor: modularized categories and fixed Discover More not appearing
+[33m16527b5a7[m HEAD@{472}: commit: refactor: modularized categories and fixed Discover More not appearing
+[33m2ad588f2d[m HEAD@{473}: commit: refactor: modularized categories and fixed Discover More not appearing
+[33m922fd5f64[m HEAD@{474}: checkout: moving from main to cz/test-tableComponent
+[33m922fd5f64[m HEAD@{475}: pull -p: Fast-forward
+[33m32d51b69e[m HEAD@{476}: checkout: moving from starterprojects/agent to main
+[33mb3886aac5[m[33m ([m[1;32mstarterprojects/agent[m[33m)[m HEAD@{477}: commit: ✨ (Travel Planning Agent.spec.ts): Update end-to-end test for Travel Planning Agent to include new interactions and connections for improved test coverage and functionality.
+[33ma3f8cec25[m HEAD@{478}: commit: ✨ (Dynamic Agent.spec.ts): Add end-to-end test for Dynamic Agent functionality
+[33m72c5594ff[m HEAD@{479}: checkout: moving from main to starterprojects/agent
+[33m32d51b69e[m HEAD@{480}: pull --tags origin main: Fast-forward
+[33m10d03360c[m HEAD@{481}: checkout: moving from cz/improve-suspend to main
+[33mabff38145[m[33m ([m[1;31morigin/cz/improve-suspend[m[33m, [m[1;32mcz/improve-suspend[m[33m)[m HEAD@{482}: commit (merge): merge fix
+[33m45b418493[m HEAD@{483}: commit (merge): merge fix
+[33mee003b1dd[m HEAD@{484}: checkout: moving from main to cz/improve-suspend
+[33m10d03360c[m HEAD@{485}: pull origin main: Fast-forward
+[33maf052285e[m HEAD@{486}: reset: moving to HEAD
+[33maf052285e[m HEAD@{487}: checkout: moving from cz/improve-suspend to main
+[33mee003b1dd[m HEAD@{488}: reset: moving to HEAD
+[33mee003b1dd[m HEAD@{489}: checkout: moving from starterprojects/agent to cz/improve-suspend
+[33m72c5594ff[m HEAD@{490}: checkout: moving from refactor/modularization to starterprojects/agent
+[33ma3de0f9e0[m[33m ([m[1;32mrefactor/modularization[m[33m)[m HEAD@{491}: checkout: moving from main to refactor/modularization
+[33maf052285e[m HEAD@{492}: checkout: moving from cz/improve-suspend to main
+[33mee003b1dd[m HEAD@{493}: checkout: moving from refactor/modularization to cz/improve-suspend
+[33ma3de0f9e0[m[33m ([m[1;32mrefactor/modularization[m[33m)[m HEAD@{494}: checkout: moving from starterprojects/agent to refactor/modularization
+[33m72c5594ff[m HEAD@{495}: pull -p: Fast-forward
+[33m576e10dca[m HEAD@{496}: checkout: moving from main to starterprojects/agent
+[33maf052285e[m HEAD@{497}: pull -p: Fast-forward
+[33m48fb846a4[m HEAD@{498}: checkout: moving from cz/improve-suspend to main
+[33mee003b1dd[m HEAD@{499}: commit: removing is Loading from block requests
+[33m8ca206ccd[m HEAD@{500}: checkout: moving from refactor/loading_order to cz/improve-suspend
+[33m8ea3e7035[m[33m ([m[1;32mrefactor/loading_order[m[33m)[m HEAD@{501}: pull --tags origin refactor/loading_order: Merge made by the 'ort' strategy.
+[33m820a436b6[m HEAD@{502}: commit: feat: add replace button functionality to main page
+[33m1f7e9ecaa[m HEAD@{503}: commit: test: improve timeout for page.waitForSelector in auto-save-off.spec.ts
+[33m2143fd04c[m HEAD@{504}: checkout: moving from cz/improve-suspend to refactor/loading_order
+[33m8ca206ccd[m HEAD@{505}: commit: 📝 (api.tsx): Add isLoading state to prevent API calls during loading state
+[33md426b9d4d[m HEAD@{506}: commit: 📝 (constants.ts): improve error message for TIMEOUT_ERROR_MESSAGE for better user understanding
+[33mb80d6b084[m HEAD@{507}: checkout: moving from refactor/loading_order to cz/improve-suspend
+[33m2143fd04c[m HEAD@{508}: checkout: moving from cz/improve-suspend to refactor/loading_order
+[33mb80d6b084[m HEAD@{509}: checkout: moving from refactor/loading_order to cz/improve-suspend
+[33m2143fd04c[m HEAD@{510}: commit: ✅ (folders.spec.ts): update test description to be more descriptive and accurate
+[33m68323df5a[m HEAD@{511}: commit: ✨ (folders.spec.ts): add test for adding folder by drag and drop functionality
+[33m270d398a2[m HEAD@{512}: pull origin refactor/loading_order: Fast-forward
+[33m6d61ca247[m HEAD@{513}: commit: 📝 (folders.spec.ts): remove unused test for adding folder by drag and drop to improve test suite cleanliness and maintainability.
+[33m219234c31[m HEAD@{514}: checkout: moving from main to refactor/loading_order
+[33m48fb846a4[m HEAD@{515}: checkout: moving from refactor/loading_order to main
+[33m219234c31[m HEAD@{516}: checkout: moving from cz/improve-suspend to refactor/loading_order
+[33mb80d6b084[m HEAD@{517}: commit: 🐛 (api.tsx): Fix issue where requests were not being aborted during a build process
+[33m48fb846a4[m HEAD@{518}: checkout: moving from main to cz/improve-suspend
+[33m48fb846a4[m HEAD@{519}: pull -p: Fast-forward
+[33md6537b724[m HEAD@{520}: checkout: moving from refactor/loading_order to main
+[33m219234c31[m HEAD@{521}: checkout: moving from cz/retriever-input-type to refactor/loading_order
+[33mda2f3d603[m[33m ([m[1;32mcz/retriever-input-type[m[33m)[m HEAD@{522}: commit: ✅ (generalBugs-shard-12.spec.ts): add end-to-end test for connecting RetrieverTool to other components in the application.
+[33m58a222273[m HEAD@{523}: commit: ✨ (RetrieverTool.py): add "input_types" field to the configuration of the RetrieverToolComponent class
+[33md6537b724[m HEAD@{524}: checkout: moving from main to cz/retriever-input-type
+[33md6537b724[m HEAD@{525}: pull origin main: Fast-forward
+[33mffff5720d[m HEAD@{526}: checkout: moving from refactor/routes to main
+[33m2f5c094df[m[33m ([m[1;32mrefactor/routes[m[33m)[m HEAD@{527}: pull origin main: Merge made by the 'ort' strategy.
+[33m8eb33240d[m HEAD@{528}: checkout: moving from main to refactor/routes
+[33mffff5720d[m HEAD@{529}: pull -p: Fast-forward
+[33m322215393[m HEAD@{530}: checkout: moving from cz/starter-projects-tests to main
+[33m0e0c96194[m[33m ([m[1;32mcz/starter-projects-tests[m[33m)[m HEAD@{531}: commit: 🔧 (App.tsx): remove unused import useGetStarterProjectsQuery to clean up code and improve readability
+[33mb4c733693[m HEAD@{532}: commit: ♻️ (App.tsx): remove unused useGetStarterProjectsQuery hook to clean up code and improve readability
+[33m4a08ed79f[m HEAD@{533}: checkout: moving from cz/improveDeletRowsTableTest to cz/starter-projects-tests
+[33mb965bd7cb[m[33m ([m[1;32mcz/improveDeletRowsTableTest[m[33m)[m HEAD@{534}: commit: 🐛 (generalBugs-shard-1.spec.ts): Fix timing issues in end-to-end test by adding explicit waits for elements to be visible before interacting with them
+[33m322215393[m HEAD@{535}: checkout: moving from main to cz/improveDeletRowsTableTest
+[33m322215393[m HEAD@{536}: checkout: moving from cz/starter-projects-tests to main
+[33m4a08ed79f[m HEAD@{537}: commit: ✨ (starter-projects.spec.ts): update test description to be more descriptive and specific about the test scenario
+[33m75df3c3cc[m HEAD@{538}: checkout: moving from cz/fix-chatinput-losing-focus to cz/starter-projects-tests
+[33m99d4572be[m[33m ([m[1;32mcz/fix-chatinput-losing-focus[m[33m)[m HEAD@{539}: checkout: moving from feature/flowNotes to cz/fix-chatinput-losing-focus
+[33m3eda53b9b[m[33m ([m[1;32mfeature/flowNotes[m[33m)[m HEAD@{540}: commit: ✨ (NoteNode/index.tsx): Wrap IconComponent in a div with data-testid "note_icon" for better accessibility and testing
+[33md8a2ff364[m HEAD@{541}: checkout: moving from cz/fix-chatinput-losing-focus to feature/flowNotes
+[33m99d4572be[m[33m ([m[1;32mcz/fix-chatinput-losing-focus[m[33m)[m HEAD@{542}: commit: ✨ (textAreaWrapper/index.tsx): add useEffect hook to focus on input when conditions are met
+[33m322215393[m HEAD@{543}: checkout: moving from main to cz/fix-chatinput-losing-focus
+[33m322215393[m HEAD@{544}: checkout: moving from feature/flowNotes to main
+[33me8c88863f[m HEAD@{545}: reset: moving to HEAD
+[33me8c88863f[m HEAD@{546}: checkout: moving from main to feature/flowNotes
+[33m322215393[m HEAD@{547}: rebase: checkout main
+[33m322215393[m HEAD@{548}: rebase: checkout main
+[33m322215393[m HEAD@{549}: pull origin main: Fast-forward
+[33m8e9ba9cca[m HEAD@{550}: checkout: moving from cz/starter-projects-tests to main
+[33m75df3c3cc[m HEAD@{551}: commit: ✨ (App.tsx): Add useGetStarterProjectsQuery hook to fetch starter projects data
+[33m8e9ba9cca[m HEAD@{552}: checkout: moving from main to cz/starter-projects-tests
+[33m8e9ba9cca[m HEAD@{553}: pull -p: Fast-forward
+[33m0818d8807[m HEAD@{554}: checkout: moving from cz/timeoutHandle to main
+[33md37f0bb5b[m[33m ([m[1;32mcz/timeoutHandle[m[33m)[m HEAD@{555}: pull -p: Fast-forward
+[33mf55943260[m HEAD@{556}: commit: 🔧 (utilityStore.ts): remove unused retriesApiRequest and setRetriesApiRequest functions to clean up code and improve maintainability
+[33m7abcf458a[m HEAD@{557}: commit: 📝 (api.tsx): Add utilityStore import to improve code organization
+[33m76debc730[m HEAD@{558}: checkout: moving from main to cz/timeoutHandle
+[33m0818d8807[m HEAD@{559}: pull -p: Fast-forward
+[33ma700ea003[m HEAD@{560}: pull -p: Fast-forward
+[33m8dd85d98b[m HEAD@{561}: checkout: moving from cz/auto-save-interval to main
+[33m542b6c289[m[33m ([m[1;32mcz/auto-save-interval[m[33m)[m HEAD@{562}: commit (merge): merge fix
+[33m124b65e47[m HEAD@{563}: checkout: moving from main to cz/auto-save-interval
+[33m8dd85d98b[m HEAD@{564}: pull origin main: Fast-forward
+[33m767a1a68b[m HEAD@{565}: checkout: moving from cz/auto-save-interval to main
+[33m124b65e47[m HEAD@{566}: checkout: moving from cz/fix-login-docker to cz/auto-save-interval
+[33m0a3bfbae3[m[33m ([m[1;32mcz/fix-login-docker[m[33m)[m HEAD@{567}: pull origin cz/fix-login-docker: Merge made by the 'ort' strategy.
+[33m62ee2594a[m HEAD@{568}: commit: 🐛 (auto-login-off.spec.ts): fix response object structure and status code to properly mock API response
+[33m9ad4ece25[m HEAD@{569}: checkout: moving from cz/auto-save-interval to cz/fix-login-docker
+[33m124b65e47[m HEAD@{570}: checkout: moving from refactor-refresh-flows to cz/auto-save-interval
+[33m0f4b1c4f0[m[33m ([m[1;32mrefactor-refresh-flows[m[33m)[m HEAD@{571}: checkout: moving from refactor-validate-prompt to refactor-refresh-flows
+[33mdda07dd6b[m[33m ([m[1;32mrefactor-validate-prompt[m[33m)[m HEAD@{572}: checkout: moving from cz/auto-save-interval to refactor-validate-prompt
+[33m124b65e47[m HEAD@{573}: commit: 📝 (util.py): add support for setting auto_saving_interval in update_settings function to allow customization of auto-saving interval
+[33ma99d049b6[m HEAD@{574}: commit: 📝 (langflow): Add support for configuring auto saving interval for Langflow
+[33m767a1a68b[m HEAD@{575}: checkout: moving from main to cz/auto-save-interval
+[33m767a1a68b[m HEAD@{576}: pull origin main: Fast-forward
+[33mf328179d8[m HEAD@{577}: checkout: moving from cz/fix-login-docker to main
+[33m9ad4ece25[m HEAD@{578}: commit: 🐛 (users.py): fix comparison of password to check for None using 'is not None' instead of '!= None' for better accuracy
+[33mf25089236[m HEAD@{579}: checkout: moving from main to cz/fix-login-docker
+[33mf328179d8[m HEAD@{580}: reset: moving to HEAD
+[33mf328179d8[m HEAD@{581}: pull origin main: Fast-forward
+[33mbf650ecec[m HEAD@{582}: checkout: moving from cz/fix-login-docker to main
+[33mf25089236[m HEAD@{583}: pull origin cz/fix-login-docker: Merge made by the 'ort' strategy.
+[33m6f265d4d3[m HEAD@{584}: commit: ✨ (auto-login-off.spec.ts): improve test description for better clarity and understanding
+[33m594bc1fe2[m HEAD@{585}: checkout: moving from refactor-post-custom-component to cz/fix-login-docker
+[33me63918d34[m[33m ([m[1;32mrefactor-post-custom-component[m[33m)[m HEAD@{586}: checkout: moving from cz/fix-login-docker to refactor-post-custom-component
+[33m594bc1fe2[m HEAD@{587}: commit: 🐛 (users.py): Fix issue where user password was not being updated correctly
+[33mbf650ecec[m HEAD@{588}: checkout: moving from main to cz/fix-login-docker
+[33mbf650ecec[m HEAD@{589}: pull origin main: Fast-forward
+[33mc267cd60c[m HEAD@{590}: checkout: moving from refactor-validate_code to main
+[33me4ce8dbae[m[33m ([m[1;32mrefactor-validate_code[m[33m)[m HEAD@{591}: checkout: moving from main to refactor-validate_code
+[33mc267cd60c[m HEAD@{592}: reset: moving to HEAD
+[33mc267cd60c[m HEAD@{593}: pull origin main: Fast-forward
+[33ma5cdab68b[m HEAD@{594}: checkout: moving from cz/freezeTest to main
+[33mddd5960ed[m[33m ([m[1;32mcz/freezeTest[m[33m)[m HEAD@{595}: commit: 📝 (freeze.spec.ts): add delays before certain actions to improve stability and reliability of end-to-end tests
+[33mff38fab27[m HEAD@{596}: pull origin cz/freezeTest: Fast-forward
+[33m64ba23614[m HEAD@{597}: checkout: moving from main to cz/freezeTest
+[33ma5cdab68b[m HEAD@{598}: pull -p: Fast-forward
+[33mbb923cf9e[m HEAD@{599}: checkout: moving from refactorGetFile to main
+[33m9bffff762[m[33m ([m[1;32mrefactorGetFile[m[33m)[m HEAD@{600}: checkout: moving from cz/testStopBuilding to refactorGetFile
+[33mf2bfce262[m[33m ([m[1;32mcz/testStopBuilding[m[33m)[m HEAD@{601}: commit: ✨ (use-icons-status.tsx): Add data-testid attribute to Loading component for testing purposes
+[33mbb923cf9e[m HEAD@{602}: checkout: moving from main to cz/testStopBuilding
+[33mbb923cf9e[m HEAD@{603}: checkout: moving from cz/freezeTest to main
+[33m64ba23614[m HEAD@{604}: commit: ✨ (freeze.spec.ts): Add end-to-end test for freezing a component to ensure the functionality works as expected.
+[33mbb923cf9e[m HEAD@{605}: checkout: moving from main to cz/freezeTest
+[33mbb923cf9e[m HEAD@{606}: rebase (finish): returning to refs/heads/main
+[33m74a855e0b[m[33m ([m[1;32mcz/fix-string-url[m[33m)[m HEAD@{607}: commit: 📝 (pgvector.py): add support for parsing and transforming connection string in PGVectorStoreComponent to improve security and maintainability
