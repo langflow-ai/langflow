@@ -21,11 +21,11 @@ async def test_create_variable(client: AsyncClient, body, logged_in_headers):
     response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
     result = response.json()
 
-    assert status.HTTP_201_CREATED == response.status_code
+    assert response.status_code == status.HTTP_201_CREATED
     assert body["name"] == result["name"]
     assert body["type"] == result["type"]
     assert body["default_fields"] == result["default_fields"]
-    assert "id" in result.keys()
+    assert "id" in result
     assert body["value"] != result["value"]
 
 
@@ -36,7 +36,7 @@ async def test_create_variable__variable_name_already_exists(client: AsyncClient
     response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
     result = response.json()
 
-    assert status.HTTP_400_BAD_REQUEST == response.status_code
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Variable name already exists" in result["detail"]
 
 
@@ -48,7 +48,7 @@ async def test_create_variable__variable_name_and_value_cannot_be_empty(client: 
     response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
     result = response.json()
 
-    assert status.HTTP_400_BAD_REQUEST == response.status_code
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Variable name and value cannot be empty" in result["detail"]
 
 
@@ -59,7 +59,7 @@ async def test_create_variable__variable_name_cannot_be_empty(client: AsyncClien
     response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
     result = response.json()
 
-    assert status.HTTP_400_BAD_REQUEST == response.status_code
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Variable name cannot be empty" in result["detail"]
 
 
@@ -70,7 +70,7 @@ async def test_create_variable__variable_value_cannot_be_empty(client: AsyncClie
     response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
     result = response.json()
 
-    assert status.HTTP_400_BAD_REQUEST == response.status_code
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Variable value cannot be empty" in result["detail"]
 
 
@@ -84,7 +84,7 @@ async def test_create_variable__HTTPException(client: AsyncClient, body, logged_
         response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
         result = response.json()
 
-        assert status.HTTP_418_IM_A_TEAPOT == response.status_code
+        assert response.status_code == status.HTTP_418_IM_A_TEAPOT
         assert generic_message in result["detail"]
 
 
@@ -97,7 +97,7 @@ async def test_create_variable__Exception(client: AsyncClient, body, logged_in_h
         response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
         result = response.json()
 
-        assert status.HTTP_500_INTERNAL_SERVER_ERROR == response.status_code
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         assert generic_message in result["detail"]
 
 
@@ -111,7 +111,7 @@ async def test_read_variables(client: AsyncClient, body, logged_in_headers):
     response = await client.get("api/v1/variables/", headers=logged_in_headers)
     result = response.json()
 
-    assert status.HTTP_200_OK == response.status_code
+    assert response.status_code == status.HTTP_200_OK
     assert all(name in [r["name"] for r in result] for name in names)
 
 
@@ -125,23 +125,22 @@ async def test_read_variables__empty(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/variables/", headers=logged_in_headers)
     result = response.json()
 
-    assert status.HTTP_200_OK == response.status_code
-    assert [] == result
+    assert response.status_code == status.HTTP_200_OK
+    assert result == []
 
 
 @pytest.mark.usefixtures("active_user")
 async def test_read_variables__(client: AsyncClient, logged_in_headers):
     generic_message = "Generic error message"
 
-    with pytest.raises(Exception) as exc:
-        with mock.patch("sqlmodel.Session.exec") as m:
-            m.side_effect = Exception(generic_message)
+    with pytest.raises(Exception) as exc, mock.patch("sqlmodel.Session.exec") as m:
+        m.side_effect = Exception(generic_message)
 
-            response = await client.get("api/v1/variables/", headers=logged_in_headers)
-            result = response.json()
+        response = await client.get("api/v1/variables/", headers=logged_in_headers)
+        result = response.json()
 
-            assert status.HTTP_500_INTERNAL_SERVER_ERROR == response.status_code
-            assert generic_message in result["detail"]
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert generic_message in result["detail"]
 
     assert generic_message in str(exc.value)
 
@@ -159,7 +158,7 @@ async def test_update_variable(client: AsyncClient, body, logged_in_headers):
     response = await client.patch(f"api/v1/variables/{saved.get('id')}", json=body, headers=logged_in_headers)
     result = response.json()
 
-    assert status.HTTP_200_OK == response.status_code
+    assert response.status_code == status.HTTP_200_OK
     assert saved["id"] == result["id"]
     assert saved["name"] != result["name"]
     assert saved["default_fields"] != result["default_fields"]
@@ -173,7 +172,7 @@ async def test_update_variable__Exception(client: AsyncClient, body, logged_in_h
     response = await client.patch(f"api/v1/variables/{wrong_id}", json=body, headers=logged_in_headers)
     result = response.json()
 
-    assert status.HTTP_404_NOT_FOUND == response.status_code
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     assert "Variable not found" in result["detail"]
 
 
@@ -183,7 +182,7 @@ async def test_delete_variable(client: AsyncClient, body, logged_in_headers):
     saved = response.json()
     response = await client.delete(f"api/v1/variables/{saved.get('id')}", headers=logged_in_headers)
 
-    assert status.HTTP_204_NO_CONTENT == response.status_code
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
 
 @pytest.mark.usefixtures("active_user")
@@ -192,4 +191,4 @@ async def test_delete_variable__Exception(client: AsyncClient, logged_in_headers
 
     response = await client.delete(f"api/v1/variables/{wrong_id}", headers=logged_in_headers)
 
-    assert status.HTTP_500_INTERNAL_SERVER_ERROR == response.status_code
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR

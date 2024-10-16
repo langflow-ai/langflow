@@ -1,6 +1,5 @@
 from collections.abc import Callable
 
-
 from langflow.components.inputs.ChatInput import ChatInput
 
 

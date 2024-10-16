@@ -1,6 +1,5 @@
 import pytest
 from httpx import AsyncClient
-
 from langflow.services.database.models.api_key import ApiKeyCreate
 
 
@@ -30,7 +29,8 @@ async def test_create_api_key(client: AsyncClient, logged_in_headers):
     response = await client.post("api/v1/api_key/", json={"name": api_key_name}, headers=logged_in_headers)
     assert response.status_code == 200
     data = response.json()
-    assert "name" in data and data["name"] == api_key_name
+    assert "name" in data
+    assert data["name"] == api_key_name
     assert "api_key" in data
     assert "**" not in data["api_key"]
 

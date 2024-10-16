@@ -2,7 +2,6 @@ import copy
 import json
 
 import pytest
-
 from langflow.graph import Graph
 from langflow.graph.graph.utils import (
     find_last_node,
@@ -59,7 +58,7 @@ def sample_nodes():
 
 
 def get_node_by_type(graph, node_type: type[Vertex]) -> Vertex | None:
-    """Get a node by type"""
+    """Get a node by type."""
     return next((node for node in graph.vertices if isinstance(node, node_type)), None)
 
 
@@ -131,10 +130,10 @@ def test_process_flow_one_group(one_grouped_chat_json_flow):
     node_data = group_node["data"]["node"]
     assert node_data.get("flow") is not None
     template_data = node_data["template"]
-    assert any("openai_api_key" in key for key in template_data.keys())
+    assert any("openai_api_key" in key for key in template_data)
     # Get the openai_api_key dict
     openai_api_key = next(
-        (template_data[key] for key in template_data.keys() if "openai_api_key" in key),
+        (template_data[key] for key in template_data if "openai_api_key" in key),
         None,
     )
     assert openai_api_key is not None
