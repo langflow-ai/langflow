@@ -239,12 +239,12 @@ export default function IOModal({
                 <div className="flex-max-width h-full flex-col">
                     <div className="flex text-lg items-center w-full">
                         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                            <IconComponent name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"} className="h-6 w-6 text-ring mr-1" />
+                            <IconComponent name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"} className="h-6 w-6 text-ring" />
                         </Button>
-                        <div className="font-semibold">
+                        <div className={cn("font-semibold pl-1 transition-all duration-300", sidebarOpen ? "" : "hidden")}>
                             Playground
                         </div>
-                        <div className="font-semibold w-4/5 ml-auto">Build a new tool</div>
+                        <div className={cn("font-semibold w-4/5", sidebarOpen ? "ml-auto" : "pl-1")}>Build a new tool</div>
                     </div>
                     <div className="flex max-w-full h-full">
                         <div
@@ -253,7 +253,7 @@ export default function IOModal({
                                 sidebarOpen ? "w-1/5" : "w-0",
                             )}
                         >
-                            <div className="flex h-full flex-col pt-8 overflow-y-auto bg-background text-center custom-scroll pr-4">
+                            <div className={cn("flex h-full flex-col pt-8 overflow-y-auto bg-background text-center custom-scroll pr-4", sidebarOpen ? "" : "hidden")}>
                                 <div className="flex flex-col pl-3">
                                     <div className="flex flex-col gap-2 pb-2">
                                         <div className="flex items-center justify-between">
