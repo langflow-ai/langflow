@@ -8,7 +8,11 @@ import IconComponent, {
 } from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
-import { TOOLTIP_OUTDATED_NODE } from "../../constants/constants";
+import {
+  TOOLTIP_HIDDEN_OUTPUTS,
+  TOOLTIP_OPEN_HIDDEN_OUTPUTS,
+  TOOLTIP_OUTDATED_NODE,
+} from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
@@ -399,30 +403,36 @@ export default function GenericNode({
                 </div>
               </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (
-                <div
-                  className={cn(
-                    "absolute left-0 right-0 flex justify-center",
-                    (shownOutputs && shownOutputs.length > 0) ||
-                      showHiddenOutputs
-                      ? "bottom-5"
-                      : "bottom-1.5",
-                  )}
+                <ShadTooltip
+                  content={
+                    showHiddenOutputs
+                      ? TOOLTIP_HIDDEN_OUTPUTS
+                      : TOOLTIP_OPEN_HIDDEN_OUTPUTS
+                  }
+                  darkTooltip
                 >
-                  <Button
-                    unstyled
-                    className="left-0 right-0 rounded-full border bg-background"
-                    onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
+                  <div
+                    className={cn(
+                      "absolute left-0 right-0 flex justify-center",
+                      (shownOutputs && shownOutputs.length > 0) ||
+                        showHiddenOutputs
+                        ? "bottom-[-0.8rem]"
+                        : "bottom-1.5",
+                    )}
                   >
-                    <ForwardedIconComponent
-                      name={"ChevronDown"}
-                      strokeWidth={1.5}
-                      className={cn(
-                        "h-5 w-5 pt-px text-muted-foreground group-hover:text-medium-indigo group-hover/node:opacity-100",
-                        showHiddenOutputs ? "rotate-180 transform" : "",
-                      )}
-                    />
-                  </Button>
-                </div>
+                    <Button
+                      unstyled
+                      className="flex h-6 w-6 items-center justify-center rounded-full border bg-background"
+                      onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
+                    >
+                      <ForwardedIconComponent
+                        name={showHiddenOutputs ? "EyeOff" : "Eye"}
+                        strokeWidth={1.5}
+                        className="h-4 w-4 text-muted-foreground opacity-60"
+                      />
+                    </Button>
+                  </div>
+                </ShadTooltip>
               )}
             </>
           </div>
