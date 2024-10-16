@@ -3479,7 +3479,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.0.19"
+version = "1.0.19.post1"
 source = { editable = "." }
 dependencies = [
     { name = "assemblyai" },
@@ -3742,7 +3742,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.0.97"
+version = "0.0.98"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofiles" },
