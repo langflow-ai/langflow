@@ -20,10 +20,11 @@
       "@/*": ["*"],
       "@queries/*": ["controllers/API/queries/*"]
     },
-    "baseUrl": "src"
+    "baseUrl": "src",
   },
   "include": [
     "src",
+    "additional.d.ts",
     "tests/core/saveComponents.spec.ts",
     "tests/extended/actionsMainPage-shard-1.spec.ts",
     "tests/core/auto_login.spec.ts",
