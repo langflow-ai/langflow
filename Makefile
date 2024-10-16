@@ -44,10 +44,7 @@ check_tools:
 # check if Python version is compatible
 check_env: ## check if Python version is compatible
 	@chmod +x scripts/setup/check_env.sh
-	@PYTHON_INSTALLED=$$(scripts/setup/check_env.sh python --version 2>&1 | awk '{print $$2}'); \
-	if ! scripts/setup/check_env.sh python -c "import sys; from packaging.specifiers import SpecifierSet; from packaging.version import Version; sys.exit(not SpecifierSet('$(PYTHON_REQUIRED)').contains(Version('$$PYTHON_INSTALLED')))" 2>/dev/null; then \
-		echo "$(RED)Error: Python version $$PYTHON_INSTALLED is not compatible with the required version $(PYTHON_REQUIRED). Aborting.$(NC)"; exit 1; \
-	fi
+	@scripts/setup/check_env.sh "$(PYTHON_REQUIRED)"
 
 help: ## show this help message
 	@echo '----'
