@@ -18,13 +18,13 @@ const UploadFileButton = ({
       />
       <Button
         disabled={lockChat}
-        className={`font-bold transition-all dark:text-white ${
+        className={`font-bold transition-all p-1 rounded-md bg-zinc-500 ${
           lockChat ? "cursor-not-allowed" : "hover:text-muted-foreground"
         }`}
         onClick={handleButtonClick}
         unstyled
       >
-        <ForwardedIconComponent name="PaperclipIcon" />
+        <ForwardedIconComponent name="Image" />
       </Button>
     </div>
   );
