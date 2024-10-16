@@ -93,7 +93,7 @@ export default function NodeStatus({
 
   const getBaseBorderClass = (selected) => {
     let className = selected
-      ? "border ring ring-[0.5px] ring-selected border-selected hover:shadow-node"
+      ? "border ring ring-[0.5px] ring-foreground border-foreground hover:shadow-node"
       : "border hover:shadow-node";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     return frozen ? frozenClass : className;
@@ -145,7 +145,7 @@ export default function NodeStatus({
 
   return (
     <>
-      <div className="flex flex-shrink-0 items-center gap-2">
+      <div className="flex flex-shrink-0 items-center gap-1">
         <ShadTooltip
           content={
             buildStatus === BuildStatus.BUILDING ? (
@@ -197,7 +197,7 @@ export default function NodeStatus({
               <IconComponent
                 name="Play"
                 className={
-                  "h-5 w-5 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100"
+                  "h-4 w-4 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-foreground group-hover/node:opacity-100"
                 }
               />
             </div>
