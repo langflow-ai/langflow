@@ -97,7 +97,7 @@ dependencies = [
     "yfinance>=0.2.40",
     "langchain-google-community==1.0.7",
     "wolframalpha>=5.1.3",
-    "astra-assistants>=2.1.4",
+    "astra-assistants>=2.2.2",
     "composio-langchain==0.5.9",
     "spider-client>=0.0.27",
     "nltk>=3.9.1",
