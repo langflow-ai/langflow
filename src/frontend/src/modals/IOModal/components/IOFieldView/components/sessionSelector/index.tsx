@@ -104,7 +104,7 @@ export default function SessionSelector({
         isVisible ? "bg-muted-foreground/15" : "",
       )}
     >
-      <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3 align-middle">
+      <div className="flex w-full items-center justify-between gap-2 overflow-hidden px-2 py-1 align-middle">
         <div className="flex min-w-0 items-center gap-2">
           {isEditing ? (
             <div className="flex items-center">
@@ -148,13 +148,7 @@ export default function SessionSelector({
           ) : (
             <ShadTooltip styleClasses="z-50" content={session}>
               <div>
-                <Badge
-                  variant="gray"
-                  size="md"
-                  className="block cursor-pointer truncate"
-                >
                   {session === currentFlowId ? "Default Session" : session}
-                </Badge>
               </div>
             </ShadTooltip>
           )}
@@ -168,17 +162,17 @@ export default function SessionSelector({
               inputRef.current?.focus();
             }}
             data-confirm="true"
-            className="h-8 w-8 border-none bg-transparent p-0 focus:ring-0"
+            className="h-8 w-fit border-none bg-transparent p-2 focus:ring-0"
           >
             <IconComponent name="MoreHorizontal" className="h-4 w-4" />
           </SelectTrigger>
-          <SelectContent side="right" align="start" className="w-40 p-0">
+          <SelectContent side="right" align="start" className="p-0">
             <SelectItem
               value="rename"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >
               <div className="flex items-center">
-                <IconComponent name="Pencil" className="mr-2 h-4 w-4" />
+                <IconComponent name="SquarePen" className="mr-2 h-4 w-4" />
                 Rename
               </div>
             </SelectItem>
@@ -188,11 +182,11 @@ export default function SessionSelector({
             >
               <div className="flex w-full items-center justify-between">
                 <div className="flex items-center">
-                  <IconComponent name="ScrollText" className="mr-2 h-4 w-4" />
+                  <IconComponent name="Scroll" className="mr-2 h-4 w-4" />
                   Message logs
                 </div>
                 <IconComponent
-                  name="ExternalLink"
+                  name="ArrowUpRight"
                   className="absolute right-2 h-4 w-4"
                 />
               </div>
