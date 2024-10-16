@@ -205,25 +205,19 @@ export default function NodeOutputField({
                     disabled={!displayOutputPreview || unknownOutput}
                     data-testid={`output-inspection-${title.toLowerCase()}`}
                   >
-                    {errorOutput ? (
+                    {
                       <IconComponent
-                        className={classNames(
-                          "h-5 w-5 rounded-md text-status-red",
-                        )}
-                        name={"X"}
-                      />
-                    ) : (
-                      <IconComponent
-                        className={classNames(
+                        className={cn(
                           "h-5 w-5 rounded-md",
                           displayOutputPreview && !unknownOutput
                             ? "hover:text-foreground"
                             : "cursor-not-allowed text-muted-foreground opacity-60",
+                          errorOutput ? "text-destructive" : "",
                         )}
                         name={"ScanEye"}
                         strokeWidth={2}
                       />
-                    )}
+                    }
                   </Button>
                 </OutputModal>
               </div>
