@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.processing.process import process_tweaks
 from langflow.services.deps import get_session_service
 
@@ -264,7 +263,7 @@ def test_tweak_not_in_template():
 
 
 @pytest.mark.asyncio
-async def test_load_langchain_object_with_cached_session(client, basic_graph_data):
+async def test_load_langchain_object_with_cached_session(basic_graph_data):
     # Provide a non-existent session_id
     session_service = get_session_service()
     session_id1 = "non-existent-session-id"

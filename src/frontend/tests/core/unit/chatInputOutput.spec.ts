@@ -111,7 +111,7 @@ test("chat_io_teste", async ({ page }) => {
   });
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("teste");
-  await page.getByRole("button").nth(1).click();
+  await page.getByTestId("icon-LucideSend").first().click();
   const chat_output = page.getByTestId("chat-message-AI-teste");
   const chat_input = page.getByTestId("chat-message-User-teste");
   await expect(chat_output).toHaveText("teste");

@@ -153,6 +153,37 @@ export type IntComponentType = {
   id?: string;
 };
 
+export type FloatComponentType = {
+  value: string;
+  disabled?: boolean;
+  onChange: (
+    value: string | number,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => void;
+  rangeSpec: RangeSpecType;
+  editNode?: boolean;
+  id?: string;
+};
+
+export type SliderComponentType = {
+  value: string;
+  disabled?: boolean;
+  rangeSpec: RangeSpecType;
+  editNode?: boolean;
+  id?: string;
+  minLabel?: string;
+  maxLabel?: string;
+  minLabelIcon?: string;
+  maxLabelIcon?: string;
+  sliderButtons?: boolean;
+  sliderButtonsOptions?: {
+    label: string;
+    id: number;
+  }[];
+  sliderInput?: boolean;
+};
+
 export type FilePreviewType = {
   loading: boolean;
   file: File;
@@ -298,6 +329,7 @@ export type PaginatorComponentType = {
   totalRowsCount: number;
   paginate: (pageIndex: number, pageSize: number) => void;
   storeComponent?: boolean;
+  pages?: number;
 };
 
 export type ConfirmationModalType = {
@@ -718,6 +750,8 @@ export type chatViewProps = {
   setChatValue: (value: string) => void;
   lockChat: boolean;
   setLockChat: (lock: boolean) => void;
+  visibleSession?: string;
+  focusChat?: string;
 };
 
 export type IOFileInputProps = {

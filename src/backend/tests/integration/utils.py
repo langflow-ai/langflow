@@ -1,21 +1,19 @@
 import dataclasses
 import os
 import uuid
-from typing import Optional, Any
+from typing import Any
 
+import requests
 from astrapy.admin import parse_api_endpoint
-
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.custom import Component
 from langflow.field_typing import Embeddings
 from langflow.graph import Graph
 from langflow.processing.process import run_graph_internal
-import requests
 
 
 def check_env_vars(*vars):
-    """
-    Check if all specified environment variables are set.
+    """Check if all specified environment variables are set.
 
     Args:
     *vars (str): The environment variables to check.
@@ -27,8 +25,7 @@ def check_env_vars(*vars):
 
 
 def valid_nvidia_vectorize_region(api_endpoint: str) -> bool:
-    """
-    Check if the specified region is valid.
+    """Check if the specified region is valid.
 
     Args:
     region (str): The region to check.
@@ -38,8 +35,9 @@ def valid_nvidia_vectorize_region(api_endpoint: str) -> bool:
     """
     parsed_endpoint = parse_api_endpoint(api_endpoint)
     if not parsed_endpoint:
-        raise ValueError("Invalid ASTRA_DB_API_ENDPOINT")
-    return parsed_endpoint.region in ["us-east-2"]
+        msg = "Invalid ASTRA_DB_API_ENDPOINT"
+        raise ValueError(msg)
+    return parsed_endpoint.region == "us-east-2"
 
 
 class MockEmbeddings(Embeddings):
@@ -70,15 +68,15 @@ class JSONFlow:
             if node["data"]["type"] == component_type:
                 result.append(node["id"])
         if not result:
-            raise ValueError(
-                f"Component of type {component_type} not found, available types: {', '.join(set(node['data']['type'] for node in self.json['data']['nodes']))}"
-            )
+            msg = f"Component of type {component_type} not found, available types: {', '.join({node['data']['type'] for node in self.json['data']['nodes']})}"
+            raise ValueError(msg)
         return result
 
     def get_component_by_type(self, component_type):
         components = self.get_components_by_type(component_type)
         if len(components) > 1:
-            raise ValueError(f"Multiple components of type {component_type} found")
+            msg = f"Multiple components of type {component_type} found"
+            raise ValueError(msg)
         return components[0]
 
     def set_value(self, component_id, key, value):
@@ -86,13 +84,15 @@ class JSONFlow:
         for node in self.json["data"]["nodes"]:
             if node["id"] == component_id:
                 if key not in node["data"]["node"]["template"]:
-                    raise ValueError(f"Component {component_id} does not have input {key}")
+                    msg = f"Component {component_id} does not have input {key}"
+                    raise ValueError(msg)
                 node["data"]["node"]["template"][key]["value"] = value
                 node["data"]["node"]["template"][key]["load_from_db"] = False
                 done = True
                 break
         if not done:
-            raise ValueError(f"Component {component_id} not found")
+            msg = f"Component {component_id} not found"
+            raise ValueError(msg)
 
 
 def download_flow_from_github(name: str, version: str) -> JSONFlow:
@@ -105,18 +105,15 @@ def download_flow_from_github(name: str, version: str) -> JSONFlow:
 
 
 async def run_json_flow(
-    json_flow: JSONFlow, run_input: Optional[Any] = None, session_id: Optional[str] = None
+    json_flow: JSONFlow, run_input: Any | None = None, session_id: str | None = None
 ) -> dict[str, Any]:
     graph = Graph.from_payload(json_flow.json)
     return await run_flow(graph, run_input, session_id)
 
 
-async def run_flow(graph: Graph, run_input: Optional[Any] = None, session_id: Optional[str] = None) -> dict[str, Any]:
+async def run_flow(graph: Graph, run_input: Any | None = None, session_id: str | None = None) -> dict[str, Any]:
     graph.prepare()
-    if run_input:
-        graph_run_inputs = [InputValueRequest(input_value=run_input, type="chat")]
-    else:
-        graph_run_inputs = []
+    graph_run_inputs = [InputValueRequest(input_value=run_input, type="chat")] if run_input else []
 
     flow_id = str(uuid.uuid4())
 
@@ -137,23 +134,24 @@ class ComponentInputHandle:
 
 async def run_single_component(
     clazz: type,
-    inputs: dict = None,
-    run_input: Optional[Any] = None,
-    session_id: Optional[str] = None,
-    input_type: Optional[str] = "chat",
+    inputs: dict | None = None,
+    run_input: Any | None = None,
+    session_id: str | None = None,
+    input_type: str | None = "chat",
 ) -> dict[str, Any]:
     user_id = str(uuid.uuid4())
     flow_id = str(uuid.uuid4())
     graph = Graph(user_id=user_id, flow_id=flow_id)
 
-    def _add_component(clazz: type, inputs: Optional[dict] = None) -> str:
+    def _add_component(clazz: type, inputs: dict | None = None) -> str:
         raw_inputs = {}
         if inputs:
             for key, value in inputs.items():
                 if not isinstance(value, ComponentInputHandle):
                     raw_inputs[key] = value
                 if isinstance(value, Component):
-                    raise ValueError("Component inputs must be wrapped in ComponentInputHandle")
+                    msg = "Component inputs must be wrapped in ComponentInputHandle"
+                    raise ValueError(msg)
         component = clazz(**raw_inputs, _user_id=user_id)
         component_id = graph.add_component(component)
         if inputs:
@@ -165,10 +163,7 @@ async def run_single_component(
 
     component_id = _add_component(clazz, inputs)
     graph.prepare()
-    if run_input:
-        graph_run_inputs = [InputValueRequest(input_value=run_input, type=input_type)]
-    else:
-        graph_run_inputs = []
+    graph_run_inputs = [InputValueRequest(input_value=run_input, type=input_type)] if run_input else []
 
     _, _ = await run_graph_internal(
         graph, flow_id, session_id=session_id, inputs=graph_run_inputs, outputs=[component_id]

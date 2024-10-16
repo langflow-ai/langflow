@@ -80,7 +80,7 @@
     @apply w-full truncate pr-1 text-xs text-foreground;
   }
   .side-bar-components-div-form {
-    @apply flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-ring bg-white px-3 py-1 text-sm;
+    @apply flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-ring px-3 py-1 text-sm;
   }
   .side-bar-components-border {
     @apply cursor-grab rounded-l-md border-l-8;
@@ -231,14 +231,14 @@
     @apply fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1;
   }
   .parent-disclosure-arrangement {
-    @apply flex w-full select-none items-center justify-between bg-background pl-5 pr-3 py-3;
+    @apply flex w-full select-none items-center justify-between bg-background py-3 pl-5 pr-3;
   }
   .components-disclosure-arrangement {
-    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-primary-foreground px-3 py-2;
   }
   .components-disclosure-arrangement-child {
     /* different color than the non child */
-    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-primary-foreground px-3 py-2;
   }
   .components-disclosure-title {
     @apply flex items-center text-sm text-primary;
@@ -324,7 +324,7 @@
     @apply relative flex flex-col justify-center bg-background transition-all;
   }
   .generic-node-div-title {
-    @apply flex w-full items-center gap-2 border-b bg-muted p-5;
+    @apply flex w-full items-center gap-2 border-b p-5;
   }
   .generic-node-title-arrangement {
     @apply flex-max-width items-center truncate;
@@ -939,7 +939,7 @@
     @apply bg-input text-center text-primary dark:bg-gray-700 dark:text-gray-300;
   }
   .form-modal-lock-false {
-    @apply bg-white text-primary;
+    @apply text-primary;
   }
   .code-highlight {
     @apply block w-full overflow-auto border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
@@ -949,7 +949,7 @@
     @apply block w-full overflow-auto border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
   }
   .form-modal-lockchat {
-    @apply form-input block w-full rounded-md border-border p-4 pr-16 custom-scroll focus:border-ring focus:ring-ring sm:text-sm;
+    @apply form-input block w-full rounded-md border border-border p-4 pr-16 custom-scroll focus:border-ring focus:ring-0 sm:text-sm;
   }
   .form-modal-send-icon-position {
     @apply absolute bottom-2 right-4;

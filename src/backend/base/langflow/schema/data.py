@@ -15,8 +15,7 @@ if TYPE_CHECKING:
 
 
 class Data(BaseModel):
-    """
-    Represents a record with text and optional data.
+    """Represents a record with text and optional data.
 
     Attributes:
         data (dict, optional): Additional data associated with the record.
@@ -45,8 +44,7 @@ class Data(BaseModel):
         return {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
 
     def get_text(self):
-        """
-        Retrieves the text value from the data dictionary.
+        """Retrieves the text value from the data dictionary.
 
         If the text key is present in the data dictionary, the corresponding value is returned.
         Otherwise, the default value is returned.
@@ -58,8 +56,7 @@ class Data(BaseModel):
 
     @classmethod
     def from_document(cls, document: Document) -> "Data":
-        """
-        Converts a Document to a Data.
+        """Converts a Document to a Data.
 
         Args:
             document (Document): The Document to convert.
@@ -73,8 +70,7 @@ class Data(BaseModel):
 
     @classmethod
     def from_lc_message(cls, message: BaseMessage) -> "Data":
-        """
-        Converts a BaseMessage to a Data.
+        """Converts a BaseMessage to a Data.
 
         Args:
             message (BaseMessage): The BaseMessage to convert.
@@ -87,7 +83,8 @@ class Data(BaseModel):
         return cls(data=data, text_key="text")
 
     def __add__(self, other: "Data") -> "Data":
-        """
+        """Combines the data of two data by attempting to add values for overlapping keys.
+
         Combines the data of two data by attempting to add values for overlapping keys
         for all types that support the addition operation. Falls back to the value from 'other'
         record when addition is not supported.
@@ -108,8 +105,7 @@ class Data(BaseModel):
         return Data(data=combined_data)
 
     def to_lc_document(self) -> Document:
-        """
-        Converts the Data to a Document.
+        """Converts the Data to a Document.
 
         Returns:
             Document: The converted Document.
@@ -121,8 +117,7 @@ class Data(BaseModel):
     def to_lc_message(
         self,
     ) -> BaseMessage:
-        """
-        Converts the Data to a BaseMessage.
+        """Converts the Data to a BaseMessage.
 
         Returns:
             BaseMessage: The converted BaseMessage.
@@ -158,9 +153,7 @@ class Data(BaseModel):
         return AIMessage(content=text)
 
     def __getattr__(self, key):
-        """
-        Allows attribute-like access to the data dictionary.
-        """
+        """Allows attribute-like access to the data dictionary."""
         try:
             if key.startswith("__"):
                 return self.__getattribute__(key)
@@ -173,8 +166,9 @@ class Data(BaseModel):
             raise AttributeError(msg) from e
 
     def __setattr__(self, key, value):
-        """
-        Allows attribute-like setting of values in the data dictionary,
+        """Set attribute-like values in the data dictionary.
+
+        Allows attribute-like setting of values in the data dictionary.
         while still allowing direct assignment to class attributes.
         """
         if key in {"data", "text_key"} or key.startswith("_"):
@@ -186,18 +180,14 @@ class Data(BaseModel):
             self.data[key] = value
 
     def __delattr__(self, key):
-        """
-        Allows attribute-like deletion from the data dictionary.
-        """
+        """Allows attribute-like deletion from the data dictionary."""
         if key in {"data", "text_key"} or key.startswith("_"):
             super().__delattr__(key)
         else:
             del self.data[key]
 
     def __deepcopy__(self, memo):
-        """
-        Custom deepcopy implementation to handle copying of the Data object.
-        """
+        """Custom deepcopy implementation to handle copying of the Data object."""
         # Create a new Data object with a deep copy of the data dictionary
         return Data(data=copy.deepcopy(self.data, memo), text_key=self.text_key, default_value=self.default_value)
 

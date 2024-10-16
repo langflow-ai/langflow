@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from langflow.base.tools.component_tool import ComponentToolkit
 from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
 from langflow.components.inputs.ChatInput import ChatInput
@@ -10,11 +9,6 @@ from langflow.components.outputs import ChatOutput
 from langflow.graph.graph.base import Graph
 from langflow.schema.message import Message
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 @pytest.fixture
@@ -81,13 +75,14 @@ def test_component_tool():
     }
     assert component_toolkit.component == chat_input
 
-    result = component_tool.invoke(input=dict(input_value="test"))
+    result = component_tool.invoke(input={"input_value": "test"})
     assert isinstance(result, Message)
     assert result.get_text() == "test"
 
 
 @pytest.mark.api_key_required
-def test_component_tool_with_api_key(client, add_toolkit_output):
+@pytest.mark.usefixtures("add_toolkit_output", "client")
+def test_component_tool_with_api_key():
     chat_output = ChatOutput()
     openai_llm = OpenAIModelComponent()
     openai_llm.set(api_key=os.environ["OPENAI_API_KEY"])

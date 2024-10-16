@@ -651,6 +651,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "NestedDict",
   "table",
   "link",
+  "slider",
 ]);
 
 export const priorityFields = new Set(["code", "template"]);
@@ -937,3 +938,13 @@ export const SHADOW_COLOR_OPTIONS = {
 
 export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes
 export const MAX_TEXT_LENGTH = 99999;
+
+export const SEARCH_TABS = ["All", "Flows", "Components"];
+export const PAGINATION_SIZE = 10;
+export const PAGINATION_PAGE = 1;
+
+export const STORE_PAGINATION_SIZE = 12;
+export const STORE_PAGINATION_PAGE = 1;
+
+export const PAGINATION_ROWS_COUNT = [10, 20, 50, 100];
+export const STORE_PAGINATION_ROWS_COUNT = [12, 24, 48, 96];

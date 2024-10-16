@@ -78,17 +78,19 @@ Note: Check 'Advanced' for all options.
         search_depth: str = Field("basic", description="The depth of the search.")
         topic: str = Field("general", description="The category of the search.")
         max_results: int = Field(5, description="The maximum number of search results to return.")
-        include_images: bool = Field(False, description="Include a list of query-related images in the response.")
-        include_answer: bool = Field(False, description="Include a short answer to original query.")
+        include_images: bool = Field(
+            default=False, description="Include a list of query-related images in the response."
+        )
+        include_answer: bool = Field(default=False, description="Include a short answer to original query.")
 
     def run_model(self) -> list[Data]:
         return self._tavily_search(
             self.query,
-            self.search_depth,
-            self.topic,
-            self.max_results,
-            self.include_images,
-            self.include_answer,
+            search_depth=self.search_depth,
+            topic=self.topic,
+            max_results=self.max_results,
+            include_images=self.include_images,
+            include_answer=self.include_answer,
         )
 
     def build_tool(self) -> Tool:
@@ -102,6 +104,7 @@ Note: Check 'Advanced' for all options.
     def _tavily_search(
         self,
         query: str,
+        *,
         search_depth: str = "basic",
         topic: str = "general",
         max_results: int = 5,
@@ -148,9 +151,6 @@ Note: Check 'Advanced' for all options.
             if include_images and search_results.get("images"):
                 data_results.append(Data(data={"images": search_results["images"]}))
 
-            self.status: Any = data_results
-            return data_results
-
         except httpx.HTTPStatusError as e:
             error_message = f"HTTP error: {e.response.status_code} - {e.response.text}"
             self.status = error_message
@@ -160,3 +160,6 @@ Note: Check 'Advanced' for all options.
             error_message = f"Unexpected error: {e}"
             self.status = error_message
             return [Data(data={"error": error_message})]
+
+        self.status: Any = data_results
+        return data_results

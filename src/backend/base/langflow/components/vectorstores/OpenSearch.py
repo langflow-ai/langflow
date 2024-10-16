@@ -20,9 +20,7 @@ from langflow.schema import Data
 
 
 class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
-    """
-    OpenSearch Vector Store with advanced, customizable search capabilities.
-    """
+    """OpenSearch Vector Store with advanced, customizable search capabilities."""
 
     display_name: str = "OpenSearch"
     description: str = "OpenSearch Vector Store with advanced, customizable search capabilities."
@@ -117,9 +115,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> OpenSearchVectorSearch:
-        """
-        Builds the OpenSearch Vector Store object.
-        """
+        """Builds the OpenSearch Vector Store object."""
         try:
             from langchain_community.vectorstores import OpenSearchVectorSearch
         except ImportError as e:
@@ -149,9 +145,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         return opensearch
 
     def _add_documents_to_vector_store(self, vector_store: "OpenSearchVectorSearch") -> None:
-        """
-        Adds documents to the Vector Store.
-        """
+        """Adds documents to the Vector Store."""
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
@@ -173,9 +167,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             logger.debug("No documents to add to the Vector Store.")
 
     def search(self, query: str | None = None) -> list[dict[str, Any]]:
-        """
-        Search for similar documents in the vector store or retrieve all documents if no query is provided.
-        """
+        """Search for similar documents in the vector store or retrieve all documents if no query is provided."""
         try:
             vector_store = self.build_vector_store()
 
@@ -229,18 +221,18 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 results = vector_store.max_marginal_relevance_search(query, **search_kwargs)
                 return [{"page_content": doc.page_content, "metadata": doc.metadata} for doc in results]
 
-            error_message = f"Invalid search type:: {self.search_type}"
-            logger.exception(error_message)
-            raise ValueError(error_message)
-
         except Exception as e:
             error_message = f"Error during search: {e}"
             logger.exception(error_message)
             raise RuntimeError(error_message) from e
 
+        error_message = f"Error during search. Invalid search type: {self.search_type}"
+        logger.error(error_message)
+        raise ValueError(error_message)
+
     def search_documents(self) -> list[Data]:
-        """
-        Search for documents in the vector store based on the search input.
+        """Search for documents in the vector store based on the search input.
+
         If no search input is provided, retrieve all documents.
         """
         try:
@@ -253,9 +245,10 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 )
                 for result in results
             ]
-            self.status = retrieved_data
-            return retrieved_data
         except Exception as e:
             error_message = f"Error during document search: {e}"
             logger.exception(error_message)
             raise RuntimeError(error_message) from e
+
+        self.status = retrieved_data
+        return retrieved_data

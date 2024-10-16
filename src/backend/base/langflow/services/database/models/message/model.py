@@ -18,6 +18,8 @@ class MessageBase(SQLModel):
     session_id: str
     text: str = Field(sa_column=Column(Text))
     files: list[str] = Field(default_factory=list)
+    error: bool = Field(default=False)
+    edit: bool = Field(default=False)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -42,7 +44,10 @@ class MessageBase(SQLModel):
                 message.files = image_paths
 
         if isinstance(message.timestamp, str):
-            timestamp = datetime.fromisoformat(message.timestamp)
+            # The message.timestamp is created using strftime("%Y-%m-%dT%H:%M:%S").
+            # This format is not fully ISO 8601 compliant because it lacks timezone information.
+            # Aadd timezone info (UTC) back to the timestamp here.
+            timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
         else:
             timestamp = message.timestamp
         if not flow_id and message.flow_id:
@@ -97,3 +102,5 @@ class MessageUpdate(SQLModel):
     sender_name: str | None = None
     session_id: str | None = None
     files: list[str] | None = None
+    edit: bool | None = None
+    error: bool | None = None

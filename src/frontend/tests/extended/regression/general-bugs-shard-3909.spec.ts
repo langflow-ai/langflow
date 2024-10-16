@@ -54,6 +54,7 @@ test("user must be able to create a new flow clicking on Start Here button", asy
 
   await page.getByText("Start Here", { exact: true }).click();
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForSelector("text=playground", { timeout: 30000 });
   await page.waitForSelector("text=api", { timeout: 30000 });

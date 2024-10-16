@@ -23,7 +23,7 @@ We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-p
 
 ---
 
-- [Langflow installed and running](http://localhost:3000/getting-started/install-langflow)
+- [Langflow installed and running](https://docs.langflow.org/getting-started-installation)
 - [OpenAI API key](https://platform.openai.com/)
 - [An Astra DB vector database created](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
 	- Application Token

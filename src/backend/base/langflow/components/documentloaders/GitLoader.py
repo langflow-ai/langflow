@@ -59,8 +59,8 @@ class GitLoaderComponent(Component):
 
     @staticmethod
     def is_binary(file_path: str) -> bool:
-        """
-        Check if a file is binary by looking for null bytes.
+        """Check if a file is binary by looking for null bytes.
+
         This is necessary because when searches are performed using
         the content_filter, binary files need to be ignored.
         """

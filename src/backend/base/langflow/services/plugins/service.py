@@ -3,23 +3,18 @@ from __future__ import annotations
 import importlib
 import inspect
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from loguru import logger
 
 from langflow.services.base import Service
 from langflow.services.plugins.base import BasePlugin, CallbackPlugin
 
-if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
-
 
 class PluginService(Service):
     name = "plugin_service"
 
-    def __init__(self, settings_service: SettingsService):
+    def __init__(self):
         self.plugins: dict[str, BasePlugin] = {}
-        # plugin_dir = settings_service.settings.PLUGIN_DIR
         self.plugin_dir = Path(__file__).parent
         self.plugins_base_module = "langflow.services.plugins"
         self.load_plugins()
@@ -37,7 +32,7 @@ class PluginService(Service):
                         if (
                             inspect.isclass(attr)
                             and issubclass(attr, BasePlugin)
-                            and attr not in [CallbackPlugin, BasePlugin]
+                            and attr not in {CallbackPlugin, BasePlugin}
                         ):
                             self.register_plugin(plugin_name, attr())
                 except Exception:  # noqa: BLE001

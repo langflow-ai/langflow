@@ -10,9 +10,7 @@ from langflow.schema import Data
 
 
 class RedisVectorStoreComponent(LCVectorStoreComponent):
-    """
-    A custom component for implementing a Vector Store using Redis.
-    """
+    """A custom component for implementing a Vector Store using Redis."""
 
     display_name: str = "Redis"
     description: str = "Implementation of Vector Store using Redis"
@@ -55,7 +53,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
-        with Path("docuemnts.txt").open("w") as f:
+        with Path("docuemnts.txt").open("w", encoding="utf-8") as f:
             f.write(str(documents))
 
         if not documents:
