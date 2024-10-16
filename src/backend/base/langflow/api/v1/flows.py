@@ -261,13 +261,12 @@ def handle_save_action(flow, flow_id, name):
             # component_tuple[1]
             vertex._custom_component = updated_component
 
-            vertex._data['data']['node'] = component_tuple[1]
+            vertex._data["data"]["node"] = component_tuple[1]
 
             for i, node in enumerate(graph._vertices):
-                if node['id'] == vertex.id:
-                    graph._vertices[i] = vertex 
-                    assert vertex._data['data']['node'] == graph.data['nodes'][i]['data']['node']
-
+                if node["id"] == vertex.id:
+                    graph._vertices[i] = vertex
+                    assert vertex._data["data"]["node"] == graph.data["nodes"][i]["data"]["node"]
 
             if changes:
                 # add new edges
