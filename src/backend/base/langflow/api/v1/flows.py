@@ -258,16 +258,16 @@ def handle_save_action(flow, flow_id, name):
 
             # flow.data['nodes'][5]['data']['node']
             #  seems to match
-            # component_tuple[0]
+            # component_tuple[1]
             vertex._custom_component = updated_component
 
-            new_frontend_node = updated_component.to_frontend_node()
-
-            vertex._data = new_frontend_node["data"]
+            vertex._data['data']['node'] = component_tuple[1]
 
             for i, node in enumerate(graph._vertices):
-                if node.id == vertex.id:
-                    graph._vertices[i] = new_frontend_node
+                if node['id'] == vertex.id:
+                    graph._vertices[i] = vertex 
+                    assert vertex._data['data']['node'] == graph.data['nodes'][i]['data']['node']
+
 
             if changes:
                 # add new edges
@@ -326,6 +326,7 @@ def update_flow(
         return db_flow
     except Exception as e:
         trace = traceback.format_exc()
+        print(trace)
         # If it is a validation error, return the error message
         if hasattr(e, "errors"):
             raise HTTPException(status_code=400, detail=str(e)) from e

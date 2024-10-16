@@ -3,7 +3,7 @@ from collections.abc import AsyncIterator, Iterator
 from typing import Any, get_args
 
 from pandas import DataFrame
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
