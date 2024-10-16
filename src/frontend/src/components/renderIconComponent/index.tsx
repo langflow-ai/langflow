@@ -3,7 +3,7 @@ import { addPlusSignes, cn, sortShortcuts } from "@/utils/utils";
 import RenderKey from "./components/renderKey";
 
 export default function RenderIcons({
-  filteredShortcut,
+  filteredShortcut = [],
   tableRender = false,
 }: {
   filteredShortcut: string[];

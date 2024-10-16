@@ -6,11 +6,6 @@ from langflow.template.template.base import Template
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def sample_template_field() -> Input:
     return Input(name="test_field", field_type="str")
 
@@ -44,7 +39,7 @@ def test_template_field_defaults(sample_template_field: Input):
     assert sample_template_field.password is None
 
 
-def test_template_to_dict(sample_template: Template, sample_template_field: Input):
+def test_template_to_dict(sample_template: Template):
     template_dict = sample_template.to_dict()
     assert template_dict["_type"] == "test_template"
     assert len(template_dict) == 2  # _type and test_field

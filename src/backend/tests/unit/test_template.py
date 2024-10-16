@@ -5,11 +5,6 @@ from langflow.utils.util import build_template_from_function, get_base_classes, 
 from pydantic import BaseModel
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 # Dummy classes for testing purposes
 class Parent(BaseModel):
     """Parent Class"""

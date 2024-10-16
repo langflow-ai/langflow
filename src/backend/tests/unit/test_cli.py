@@ -12,7 +12,8 @@ def default_settings():
     ]
 
 
-def test_components_path(runner, client, default_settings, tmp_path):
+@pytest.mark.usefixtures("client")
+def test_components_path(runner, default_settings, tmp_path):
     # create a "components" folder
     temp_dir = tmp_path / "components"
 
@@ -25,7 +26,8 @@ def test_components_path(runner, client, default_settings, tmp_path):
     assert str(temp_dir) in settings_service.settings.components_path
 
 
-def test_superuser(runner, client, session):
+@pytest.mark.usefixtures("session")
+def test_superuser(runner):
     result = runner.invoke(app, ["superuser"], input="admin\nadmin\n")
     assert result.exit_code == 0, result.stdout
     assert "Superuser created successfully." in result.stdout

@@ -8,12 +8,16 @@
             "dataType": "ToolCallingAgent",
             "id": "ToolCallingAgent-mf0BN",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-Ag9YG",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -30,12 +34,16 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-1ioeW",
             "name": "model_output",
-            "output_types": ["LanguageModel"]
+            "output_types": [
+              "LanguageModel"
+            ]
           },
           "targetHandle": {
             "fieldName": "llm",
             "id": "ToolCallingAgent-mf0BN",
-            "inputTypes": ["LanguageModel"],
+            "inputTypes": [
+              "LanguageModel"
+            ],
             "type": "other"
           }
         },
@@ -52,12 +60,17 @@
             "dataType": "CalculatorTool",
             "id": "CalculatorTool-Nb4P5",
             "name": "api_build_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "ToolCallingAgent-mf0BN",
-            "inputTypes": ["Tool", "BaseTool"],
+            "inputTypes": [
+              "Tool",
+              "BaseTool"
+            ],
             "type": "other"
           }
         },
@@ -74,12 +87,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-X3ARP",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ToolCallingAgent-mf0BN",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -95,12 +112,17 @@
             "dataType": "PythonREPLTool",
             "id": "PythonREPLTool-i922a",
             "name": "api_build_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "ToolCallingAgent-mf0BN",
-            "inputTypes": ["Tool", "BaseTool"],
+            "inputTypes": [
+              "Tool",
+              "BaseTool"
+            ],
             "type": "other"
           }
         },
@@ -116,7 +138,9 @@
         "data": {
           "id": "ChatInput-X3ARP",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -144,7 +168,9 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -167,7 +193,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output\nfrom langflow.memory import store_message\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n    name = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n        )\n\n        if (\n            self.session_id\n            and isinstance(message, Message)\n            and isinstance(message.text, str)\n            and self.should_store_message\n        ):\n            store_message(\n                message,\n                flow_id=self.graph.flow_id,\n            )\n            self.message.value = message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n    name = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = self.store_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -217,7 +243,9 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -239,7 +267,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -254,7 +285,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -273,7 +306,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -325,7 +360,9 @@
         "data": {
           "id": "ChatOutput-Ag9YG",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -353,7 +390,9 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -376,7 +415,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.memory import store_message\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n    name = \"ChatOutput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if (\n            self.session_id\n            and isinstance(message, Message)\n            and isinstance(message.text, str)\n            and self.should_store_message\n        ):\n            store_message(\n                message,\n                flow_id=self.graph.flow_id,\n            )\n            self.message.value = message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n    name = \"ChatOutput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = self.store_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "data_template": {
                 "_input_type": "MessageTextInput",
@@ -384,7 +423,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -403,7 +444,9 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -424,7 +467,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -439,7 +485,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -458,7 +506,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -512,7 +562,10 @@
           "display_name": "OpenAI",
           "id": "OpenAIModel-1ioeW",
           "node": {
-            "base_classes": ["LanguageModel", "Message"],
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -545,9 +598,15 @@
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": ["input_value", "stream", "system_message"],
+                "required_inputs": [
+                  "input_value",
+                  "stream",
+                  "system_message"
+                ],
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -567,7 +626,9 @@
                   "temperature"
                 ],
                 "selected": "LanguageModel",
-                "types": ["LanguageModel"],
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -580,7 +641,9 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -607,7 +670,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import operator\nfrom functools import reduce\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.inputs.inputs import HandleInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. \"\n            \"You must pass the word JSON in the prompt. \"\n            \"If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n        HandleInput(\n            name=\"output_parser\",\n            display_name=\"Output Parser\",\n            info=\"The parser to use to parse the output of the model\",\n            advanced=True,\n            input_types=[\"OutputParser\"],\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        # self.output_schema is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n\n        api_key = SecretStr(openai_api_key) if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n"
+                "value": "import operator\nfrom functools import reduce\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput\nfrom langflow.inputs.inputs import HandleInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. \"\n            \"You must pass the word JSON in the prompt. \"\n            \"If left blank, JSON mode will be disabled. [DEPRECATED]\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n        HandleInput(\n            name=\"output_parser\",\n            display_name=\"Output Parser\",\n            info=\"The parser to use to parse the output of the model\",\n            advanced=True,\n            input_types=[\"OutputParser\"],\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        # self.output_schema is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n\n        api_key = SecretStr(openai_api_key) if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -615,7 +678,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -731,7 +796,9 @@
                 "display_name": "Output Parser",
                 "dynamic": false,
                 "info": "The parser to use to parse the output of the model",
-                "input_types": ["OutputParser"],
+                "input_types": [
+                  "OutputParser"
+                ],
                 "list": false,
                 "name": "output_parser",
                 "placeholder": "",
@@ -747,7 +814,7 @@
                 "advanced": true,
                 "display_name": "Schema",
                 "dynamic": false,
-                "info": "The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
+                "info": "The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled. [DEPRECATED]",
                 "list": true,
                 "name": "output_schema",
                 "placeholder": "",
@@ -796,7 +863,9 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "system_message",
@@ -848,7 +917,10 @@
         "data": {
           "id": "ToolCallingAgent-mf0BN",
           "node": {
-            "base_classes": ["AgentExecutor", "Message"],
+            "base_classes": [
+              "AgentExecutor",
+              "Message"
+            ],
             "beta": true,
             "conditional_paths": [],
             "custom_fields": {},
@@ -879,7 +951,9 @@
                 "method": "build_agent",
                 "name": "agent",
                 "selected": "AgentExecutor",
-                "types": ["AgentExecutor"],
+                "types": [
+                  "AgentExecutor"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -888,7 +962,9 @@
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -901,7 +977,9 @@
                 "display_name": "Chat History",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Data"],
+                "input_types": [
+                  "Data"
+                ],
                 "list": true,
                 "name": "chat_history",
                 "placeholder": "",
@@ -953,7 +1031,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -972,7 +1052,9 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["LanguageModel"],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "name": "llm",
                 "placeholder": "",
@@ -1005,7 +1087,9 @@
                 "display_name": "System Prompt",
                 "dynamic": false,
                 "info": "System prompt for the agent.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1025,7 +1109,10 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Tool", "BaseTool"],
+                "input_types": [
+                  "Tool",
+                  "BaseTool"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "name": "tools",
@@ -1043,7 +1130,9 @@
                 "display_name": "Prompt",
                 "dynamic": false,
                 "info": "This prompt must contain 'input' key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1096,7 +1185,12 @@
         "data": {
           "id": "CalculatorTool-Nb4P5",
           "node": {
-            "base_classes": ["Data", "list", "Sequence", "Tool"],
+            "base_classes": [
+              "Data",
+              "list",
+              "Sequence",
+              "Tool"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1104,7 +1198,9 @@
             "display_name": "Calculator",
             "documentation": "",
             "edited": false,
-            "field_order": ["expression"],
+            "field_order": [
+              "expression"
+            ],
             "frozen": false,
             "icon": "calculator",
             "lf_version": "1.0.16",
@@ -1117,9 +1213,13 @@
                 "display_name": "Data",
                 "method": "run_model",
                 "name": "api_run_model",
-                "required_inputs": ["expression"],
+                "required_inputs": [
+                  "expression"
+                ],
                 "selected": "Data",
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1127,9 +1227,13 @@
                 "display_name": "Tool",
                 "method": "build_tool",
                 "name": "api_build_tool",
-                "required_inputs": ["expression"],
+                "required_inputs": [
+                  "expression"
+                ],
                 "selected": "Tool",
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1152,7 +1256,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import ast\nimport operator\n\nfrom langchain.tools import StructuredTool\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import MessageTextInput\nfrom langflow.schema import Data\n\n\nclass CalculatorToolComponent(LCToolComponent):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n    name = \"CalculatorTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n        ),\n    ]\n\n    class CalculatorToolSchema(BaseModel):\n        expression: str = Field(..., description=\"The arithmetic expression to evaluate.\")\n\n    def run_model(self) -> list[Data]:\n        return self._evaluate_expression(self.expression)\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"calculator\",\n            description=\"Evaluate basic arithmetic expressions. Input should be a string containing the expression.\",\n            func=self._evaluate_expression,\n            args_schema=self.CalculatorToolSchema,\n        )\n\n    def _evaluate_expression(self, expression: str) -> list[Data]:\n        try:\n            # Define the allowed operators\n            operators = {\n                ast.Add: operator.add,\n                ast.Sub: operator.sub,\n                ast.Mult: operator.mul,\n                ast.Div: operator.truediv,\n                ast.Pow: operator.pow,\n            }\n\n            def eval_expr(node):\n                if isinstance(node, ast.Num):\n                    return node.n\n                if isinstance(node, ast.BinOp):\n                    return operators[type(node.op)](eval_expr(node.left), eval_expr(node.right))\n                if isinstance(node, ast.UnaryOp):\n                    return operators[type(node.op)](eval_expr(node.operand))\n                raise TypeError(node)\n\n            # Parse the expression and evaluate it\n            tree = ast.parse(expression, mode=\"eval\")\n            result = eval_expr(tree.body)\n\n            # Format the result to a reasonable number of decimal places\n            formatted_result = f\"{result:.6f}\".rstrip(\"0\").rstrip(\".\")\n\n            self.status = formatted_result\n            return [Data(data={\"result\": formatted_result})]\n\n        except (SyntaxError, TypeError, KeyError) as e:\n            error_message = f\"Invalid expression: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message})]\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message})]\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error evaluating expression\")\n            error_message = f\"Error: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message})]\n"
+                "value": "import ast\nimport operator\n\nfrom langchain.tools import StructuredTool\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import MessageTextInput\nfrom langflow.schema import Data\n\n\nclass CalculatorToolComponent(LCToolComponent):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n    name = \"CalculatorTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n        ),\n    ]\n\n    class CalculatorToolSchema(BaseModel):\n        expression: str = Field(..., description=\"The arithmetic expression to evaluate.\")\n\n    def run_model(self) -> list[Data]:\n        return self._evaluate_expression(self.expression)\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"calculator\",\n            description=\"Evaluate basic arithmetic expressions. Input should be a string containing the expression.\",\n            func=self._evaluate_expression,\n            args_schema=self.CalculatorToolSchema,\n        )\n\n    def _eval_expr(self, node):\n        # Define the allowed operators\n        operators = {\n            ast.Add: operator.add,\n            ast.Sub: operator.sub,\n            ast.Mult: operator.mul,\n            ast.Div: operator.truediv,\n            ast.Pow: operator.pow,\n        }\n        if isinstance(node, ast.Num):\n            return node.n\n        if isinstance(node, ast.BinOp):\n            return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))\n        if isinstance(node, ast.UnaryOp):\n            return operators[type(node.op)](self._eval_expr(node.operand))\n        raise TypeError(node)\n\n    def _evaluate_expression(self, expression: str) -> list[Data]:\n        try:\n            # Parse the expression and evaluate it\n            tree = ast.parse(expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            # Format the result to a reasonable number of decimal places\n            formatted_result = f\"{result:.6f}\".rstrip(\"0\").rstrip(\".\")\n\n            self.status = formatted_result\n            return [Data(data={\"result\": formatted_result})]\n\n        except (SyntaxError, TypeError, KeyError) as e:\n            error_message = f\"Invalid expression: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message})]\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message})]\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error evaluating expression\")\n            error_message = f\"Error: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message})]\n"
               },
               "expression": {
                 "_input_type": "MessageTextInput",
@@ -1160,7 +1264,9 @@
                 "display_name": "Expression",
                 "dynamic": false,
                 "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "expression",
@@ -1198,7 +1304,10 @@
           "display_name": "Python REPL Tool",
           "id": "PythonREPLTool-i922a",
           "node": {
-            "base_classes": ["Data", "Tool"],
+            "base_classes": [
+              "Data",
+              "Tool"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1206,7 +1315,12 @@
             "display_name": "Python REPL Tool",
             "documentation": "",
             "edited": false,
-            "field_order": ["name", "description", "global_imports", "code"],
+            "field_order": [
+              "name",
+              "description",
+              "global_imports",
+              "code"
+            ],
             "frozen": false,
             "metadata": {},
             "output_types": [],
@@ -1223,7 +1337,9 @@
                   "name"
                 ],
                 "selected": "Data",
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1238,7 +1354,9 @@
                   "name"
                 ],
                 "selected": "Tool",
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1347,5 +1465,9 @@
   "is_component": false,
   "last_tested_version": "1.0.17",
   "name": "Simple Agent",
-  "tags": ["agents", "openai", "chatbots"]
+  "tags": [
+    "agents",
+    "openai",
+    "chatbots"
+  ]
 }
