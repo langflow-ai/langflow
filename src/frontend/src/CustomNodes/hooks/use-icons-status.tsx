@@ -8,7 +8,6 @@ import { VertexBuildTypeAPI } from "../../types/api";
 const useIconStatus = (
   buildStatus: BuildStatus | undefined,
   validationStatus: VertexBuildTypeAPI | null,
-  selected: boolean,
 ) => {
   const conditionSuccess =
     buildStatus === BuildStatus.BUILT ||
@@ -28,10 +27,6 @@ const useIconStatus = (
       );
     }
 
-    if (selected) {
-      return null;
-    }
-
     const iconConditions = [
       {
         condition: conditionSuccess,
@@ -47,7 +42,7 @@ const useIconStatus = (
         icon: (
           <Xmark
             isVisible={true}
-            className="h-4 w-4 fill-current stroke-2 text-status-red"
+            className="h-4 w-4 fill-current stroke-2 text-destructive"
           />
         ),
       },
