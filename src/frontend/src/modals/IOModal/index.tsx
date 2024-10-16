@@ -30,7 +30,7 @@ import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
 import SessionSelector from "./components/IOFieldView/components/sessionSelector";
 import SessionView from "./components/SessionView";
-import ChatView from "./components/chatView/newChatView";
+import ChatView from "./components/chatView";
 
 export default function IOModal({
   children,
