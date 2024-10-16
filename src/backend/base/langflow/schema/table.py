@@ -2,7 +2,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-VALID_TYPES = ["date", "number", "text", "json", "integer", "int", "float", "str", "string"]
+VALID_TYPES = ["date", "number", "text", "json", "integer", "int", "float", "str", "string", "boolean"]
 
 
 class FormatterType(str, Enum):
@@ -10,6 +10,7 @@ class FormatterType(str, Enum):
     text = "text"
     number = "number"
     json = "json"
+    boolean = "boolean"
 
 
 class Column(BaseModel):

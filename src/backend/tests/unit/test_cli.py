@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.__main__ import app
 from langflow.services import deps
 
@@ -12,6 +11,7 @@ def default_settings():
     ]
 
 
+@pytest.mark.usefixtures("client")
 def test_components_path(runner, default_settings, tmp_path):
     # create a "components" folder
     temp_dir = tmp_path / "components"
