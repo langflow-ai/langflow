@@ -158,7 +158,7 @@ export default function ChatInput({
 
   return (
     <div className="flex w-full flex-col-reverse">
-      <div className="relative w-full">
+      <div className="w-full flex flex-col border border-border rounded-md p-4">
         <TextAreaWrapper
           checkSendingOk={checkSendingOk}
           send={send}
@@ -173,27 +173,26 @@ export default function ChatInput({
           files={files}
           isDragging={isDragging}
         />
-        <div className="form-modal-send-icon-position">
-          <ButtonSendWrapper
-            send={send}
-            lockChat={lockChat}
-            noInput={noInput}
-            chatValue={chatValue}
-            files={files}
-          />
-        </div>
-
-        <div
-          className={`absolute bottom-2 left-4 ${
-            lockChat ? "cursor-not-allowed" : ""
-          }`}
-        >
-          <UploadFileButton
-            lockChat={lockChat}
-            fileInputRef={fileInputRef}
-            handleFileChange={handleFileChange}
-            handleButtonClick={handleButtonClick}
-          />
+        <div className="flex w-full justify-between">
+          <div
+            className={lockChat ? "cursor-not-allowed" : ""}
+          >
+            <UploadFileButton
+              lockChat={lockChat}
+              fileInputRef={fileInputRef}
+              handleFileChange={handleFileChange}
+              handleButtonClick={handleButtonClick}
+            />
+          </div>
+          <div className="">
+            <ButtonSendWrapper
+              send={send}
+              lockChat={lockChat}
+              noInput={noInput}
+              chatValue={chatValue}
+              files={files}
+            />
+          </div>
         </div>
       </div>
       {files.length > 0 && (
