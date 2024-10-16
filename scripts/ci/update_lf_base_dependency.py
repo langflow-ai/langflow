@@ -1,17 +1,16 @@
-import os
 import sys
 import re
+from pathlib import Path
 
 import packaging.version
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+BASE_DIR = Path(__file__).parent.parent.parent
 
 
 def update_base_dep(pyproject_path: str, new_version: str) -> None:
     """Update the langflow-base dependency in pyproject.toml."""
-    filepath = os.path.join(BASE_DIR, pyproject_path)
-    with open(filepath, "r") as file:
-        content = file.read()
+    filepath = BASE_DIR / pyproject_path
+    content = filepath.read_text()
 
     replacement = f'langflow-base-nightly = "{new_version}"'
 
@@ -20,8 +19,7 @@ def update_base_dep(pyproject_path: str, new_version: str) -> None:
     if not pattern.search(content):
         raise Exception(f'langflow-base poetry dependency not found in "{filepath}"')
     content = pattern.sub(replacement, content)
-    with open(filepath, "w") as file:
-        file.write(content)
+    filepath.write_text(content)
 
 
 def verify_pep440(version):

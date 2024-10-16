@@ -10,11 +10,6 @@ from langflow.template.field.base import UNDEFINED
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def chat_input_component():
     return ChatInput()
 

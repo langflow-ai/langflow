@@ -1,13 +1,6 @@
-import pytest
-
 from langflow.components.tools.YfinanceTool import YfinanceToolComponent
 from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 def test_yfinance_tool_template():

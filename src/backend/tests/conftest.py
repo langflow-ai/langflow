@@ -1,5 +1,4 @@
 import json
-import os.path
 import shutil
 
 # we need to import tmpdir
@@ -198,7 +197,7 @@ def get_graph(_type="basic"):
     elif _type == "openapi":
         path = pytest.OPENAPI_EXAMPLE_PATH
 
-    with open(path) as f:
+    with path.open() as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
@@ -210,7 +209,7 @@ def get_graph(_type="basic"):
 
 @pytest.fixture
 def basic_graph_data():
-    with open(pytest.BASIC_EXAMPLE_PATH) as f:
+    with pytest.BASIC_EXAMPLE_PATH.open() as f:
         return json.load(f)
 
 
@@ -231,59 +230,50 @@ def openapi_graph():
 
 @pytest.fixture
 def json_flow():
-    with open(pytest.BASIC_EXAMPLE_PATH) as f:
-        return f.read()
+    return pytest.BASIC_EXAMPLE_PATH.read_text()
 
 
 @pytest.fixture
 def grouped_chat_json_flow():
-    with open(pytest.GROUPED_CHAT_EXAMPLE_PATH) as f:
-        return f.read()
+    return pytest.GROUPED_CHAT_EXAMPLE_PATH.read_text()
 
 
 @pytest.fixture
 def one_grouped_chat_json_flow():
-    with open(pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH) as f:
-        return f.read()
+    return pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH.read_text()
 
 
 @pytest.fixture
 def vector_store_grouped_json_flow():
-    with open(pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH) as f:
-        return f.read()
+    return pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH.read_text()
 
 
 @pytest.fixture
 def json_flow_with_prompt_and_history():
-    with open(pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY) as f:
-        return f.read()
+    return pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY.read_text()
 
 
 @pytest.fixture
 def json_simple_api_test():
-    with open(pytest.SIMPLE_API_TEST) as f:
-        return f.read()
+    return pytest.SIMPLE_API_TEST.read_text()
 
 
 @pytest.fixture
 def json_vector_store():
-    with open(pytest.VECTOR_STORE_PATH) as f:
-        return f.read()
+    return pytest.VECTOR_STORE_PATH.read_text()
 
 
 @pytest.fixture
 def json_webhook_test():
-    with open(pytest.WEBHOOK_TEST) as f:
-        return f.read()
+    return pytest.WEBHOOK_TEST.read_text()
 
 
 @pytest.fixture
 def json_memory_chatbot_no_llm():
-    with open(pytest.MEMORY_CHATBOT_NO_LLM) as f:
-        return f.read()
+    return pytest.MEMORY_CHATBOT_NO_LLM.read_text()
 
 
-@pytest.fixture(name="client", autouse=True)
+@pytest.fixture(name="client")
 async def client_fixture(session: Session, monkeypatch, request, load_flows_dir):
     # Set the database url to a test database
     if "noclient" in request.keywords:
@@ -295,7 +285,7 @@ async def client_fixture(session: Session, monkeypatch, request, load_flows_dir)
         monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
         if "load_flows" in request.keywords:
             shutil.copyfile(
-                pytest.BASIC_EXAMPLE_PATH, os.path.join(load_flows_dir, "c54f9130-f2fa-4a3e-b22a-3856d946351b.json")
+                pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
             )
             monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
@@ -405,14 +395,12 @@ def flow(client, json_flow: str, active_user):
 
 @pytest.fixture
 def json_chat_input():
-    with open(pytest.CHAT_INPUT) as f:
-        yield f.read()
+    return pytest.CHAT_INPUT.read_text()
 
 
 @pytest.fixture
 def json_two_outputs():
-    with open(pytest.TWO_OUTPUTS) as f:
-        yield f.read()
+    return pytest.TWO_OUTPUTS.read_text()
 
 
 @pytest.fixture

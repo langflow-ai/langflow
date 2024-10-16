@@ -2,7 +2,8 @@ import warnings
 from collections.abc import AsyncIterator, Iterator
 from typing import Any, get_args
 
-from pydantic import Field, field_validator, model_validator
+from pandas import DataFrame
+from pydantic import Field, field_validator
 
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
@@ -22,6 +23,7 @@ from .input_mixin import (
     MultilineMixin,
     RangeMixin,
     SerializableFieldTypes,
+    SliderMixin,
     TableMixin,
 )
 
@@ -34,6 +36,8 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
     @classmethod
     def validate_value(cls, v: Any, _info):
         # Check if value is a list of dicts
+        if isinstance(v, DataFrame):
+            v = v.to_dict(orient="records")
         if not isinstance(v, list):
             msg = f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list."
             raise ValueError(msg)  # noqa: TRY004
@@ -475,6 +479,10 @@ class LinkInput(BaseInputMixin, LinkMixin):
     field_type: SerializableFieldTypes = FieldTypes.LINK
 
 
+class SliderInput(BaseInputMixin, RangeMixin, SliderMixin):
+    field_type: SerializableFieldTypes = FieldTypes.SLIDER
+
+
 DEFAULT_PROMPT_INTUT_TYPES = ["Message", "Text"]
 
 
@@ -511,6 +519,7 @@ InputTypes = (
     | MessageInput
     | TableInput
     | LinkInput
+    | SliderInput
 )
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}

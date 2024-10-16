@@ -1,6 +1,9 @@
 import { BASE_URL_API } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
+import { useMessagesStore } from "@/stores/messagesStore";
 import { AxiosError } from "axios";
+import { timeStamp } from "console";
+import { flushSync } from "react-dom";
 import { Edge, Node } from "reactflow";
 import { BuildStatus } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
@@ -32,6 +35,7 @@ type BuildVerticesParams = {
   nodes?: Node[];
   edges?: Edge[];
   logBuilds?: boolean;
+  session?: string;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -152,7 +156,9 @@ export async function buildFlowVertices({
   edges,
   logBuilds,
   setLockChat,
+  session,
 }: BuildVerticesParams) {
+  const inputs = {};
   let url = `${BASE_URL_API}build/${flowId}/flow?`;
   if (startNodeId) {
     url = `${url}&start_component_id=${startNodeId}`;
@@ -164,9 +170,6 @@ export async function buildFlowVertices({
     url = `${url}&log_builds=${logBuilds}`;
   }
   const postData = {};
-  if (typeof input_value !== "undefined") {
-    postData["inputs"] = { input_value: input_value };
-  }
   if (files) {
     postData["files"] = files;
   }
@@ -175,6 +178,15 @@ export async function buildFlowVertices({
       nodes,
       edges,
     };
+  }
+  if (typeof input_value !== "undefined") {
+    inputs["input_value"] = input_value;
+  }
+  if (session) {
+    inputs["session"] = session;
+  }
+  if (Object.keys(inputs).length > 0) {
+    postData["inputs"] = inputs;
   }
 
   const buildResults: Array<boolean> = [];
@@ -188,6 +200,8 @@ export async function buildFlowVertices({
         onBuildStart(ids.map((id) => ({ id: id, reference: id })));
       ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
     };
+    console.log("type", type);
+    console.log("data", data);
     switch (type) {
       case "vertices_sorted": {
         const verticesToRun = data.to_run;
@@ -264,6 +278,20 @@ export async function buildFlowVertices({
         if (buildData.next_vertices_ids) {
           onStartVertices(buildData.next_vertices_ids);
         }
+        return true;
+      }
+      case "message": {
+        //adds a message to the messsage table
+        useMessagesStore.getState().addMessage(data);
+        return true;
+      }
+      case "token": {
+        // flushSync and timeout is needed to avoid react batched updates
+        setTimeout(() => {
+          flushSync(() => {
+            useMessagesStore.getState().updateMessagePartial(data);
+          });
+        }, 10);
         return true;
       }
       case "end": {

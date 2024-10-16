@@ -1,3 +1,5 @@
+from .AstraDBCQLTool import AstraDBCQLToolComponent
+from .AstraDBTool import AstraDBToolComponent
 from .BingSearchAPI import BingSearchAPIComponent
 from .Calculator import CalculatorToolComponent
 from .GleanSearchAPI import GleanSearchAPIComponent
@@ -26,4 +28,7 @@ __all__ = [
     "SerpAPIComponent",
     "WikipediaAPIComponent",
     "WolframAlphaAPIComponent",
+    "CalculatorToolComponent",
+    "AstraDBToolComponent",
+    "AstraDBCQLToolComponent",
 ]
