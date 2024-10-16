@@ -4,7 +4,6 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-
 from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 
@@ -377,7 +376,7 @@ async def test_invalid_prompt(client: AsyncClient):
 
 
 @pytest.mark.parametrize(
-    "prompt,expected_input_variables",
+    ("prompt", "expected_input_variables"),
     [
         ("{color} is my favorite color.", ["color"]),
         ("The weather is {weather} today.", ["weather"]),
@@ -442,13 +441,13 @@ async def test_successful_run_no_payload(client, simple_api_test, created_api_ke
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
-    assert all(["ChatOutput" in _id for _id in ids])
+    assert all("ChatOutput" in _id for _id in ids)
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
-    assert all([name in display_names for name in ["Chat Output"]])
+    assert all(name in display_names for name in ["Chat Output"])
     output_results_has_results = all("results" in output.get("results") for output in outputs_dict.get("outputs"))
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
 
-    assert all([result is not None for result in inner_results]), (outputs_dict, output_results_has_results)
+    assert all(result is not None for result in inner_results), (outputs_dict, output_results_has_results)
 
 
 async def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):
@@ -473,12 +472,12 @@ async def test_successful_run_with_output_type_text(client, simple_api_test, cre
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
-    assert all(["ChatOutput" in _id for _id in ids]), ids
+    assert all("ChatOutput" in _id for _id in ids), ids
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
-    assert all([name in display_names for name in ["Chat Output"]]), display_names
+    assert all(name in display_names for name in ["Chat Output"]), display_names
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
     expected_keys = ["message"]
-    assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
+    assert all(key in result for result in inner_results for key in expected_keys), outputs_dict
 
 
 async def test_successful_run_with_output_type_any(client, simple_api_test, created_api_key):
@@ -504,12 +503,12 @@ async def test_successful_run_with_output_type_any(client, simple_api_test, crea
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
-    assert all(["ChatOutput" in _id or "TextOutput" in _id for _id in ids]), ids
+    assert all("ChatOutput" in _id or "TextOutput" in _id for _id in ids), ids
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
-    assert all([name in display_names for name in ["Chat Output"]]), display_names
+    assert all(name in display_names for name in ["Chat Output"]), display_names
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
     expected_keys = ["message"]
-    assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
+    assert all(key in result for result in inner_results for key in expected_keys), outputs_dict
 
 
 async def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key):
@@ -566,7 +565,7 @@ async def test_successful_run_with_input_type_text(client, simple_api_test, crea
     # Now we check if the input_value is correct
     # We get text key twice because the output is now a Message
     assert all(
-        [output.get("results").get("text").get("text") == "value1" for output in text_input_outputs]
+        output.get("results").get("text").get("text") == "value1" for output in text_input_outputs
     ), text_input_outputs
 
 
@@ -599,7 +598,7 @@ async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_a
     assert len(chat_input_outputs) == 1
     # Now we check if the input_value is correct
     assert all(
-        [output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs]
+        output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs
     ), chat_input_outputs
 
 
@@ -653,7 +652,7 @@ async def test_successful_run_with_input_type_any(client, simple_api_test, creat
         result_dict.get("message", result_dict.get("text")) for result_dict in all_result_dicts
     ]
     assert all(
-        [message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts]
+        message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts
     ), any_input_outputs
 
 

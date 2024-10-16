@@ -3,10 +3,9 @@
 from typing import Any
 
 import pytest
+from langflow.helpers.base_model import build_model_from_schema
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
-
-from langflow.helpers.base_model import build_model_from_schema
 
 
 class TestBuildModelFromSchema:
@@ -115,9 +114,9 @@ class TestBuildModelFromSchema:
             {"name": "field3", "type": "list", "default": None, "description": "Field 3 description", "multiple": True},
         ]
         model = build_model_from_schema(schema)
-        assert model.model_fields["field1"].default == PydanticUndefined  # noqa: E711
-        assert model.model_fields["field2"].default == PydanticUndefined  # noqa: E711
-        assert model.model_fields["field3"].default == PydanticUndefined  # noqa: E711
+        assert model.model_fields["field1"].default == PydanticUndefined
+        assert model.model_fields["field2"].default == PydanticUndefined
+        assert model.model_fields["field3"].default == PydanticUndefined
 
     # Checks for proper handling of nested list and dict types
     def test_nested_list_and_dict_types_handling(self):

@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from langflow.base.tools.component_tool import ComponentToolkit
 from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
 from langflow.components.inputs.ChatInput import ChatInput
@@ -76,7 +75,7 @@ def test_component_tool():
     }
     assert component_toolkit.component == chat_input
 
-    result = component_tool.invoke(input=dict(input_value="test"))
+    result = component_tool.invoke(input={"input_value": "test"})
     assert isinstance(result, Message)
     assert result.get_text() == "test"
 

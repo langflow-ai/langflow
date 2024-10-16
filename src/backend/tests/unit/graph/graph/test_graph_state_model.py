@@ -1,6 +1,6 @@
-import pytest
-from pydantic import BaseModel
+from typing import TYPE_CHECKING
 
+import pytest
 from langflow.components.helpers.Memory import MemoryComponent
 from langflow.components.inputs.ChatInput import ChatInput
 from langflow.components.models.OpenAIModel import OpenAIModelComponent
@@ -9,6 +9,9 @@ from langflow.components.prompts.Prompt import PromptComponent
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.graph.graph.state_model import create_state_model_from_graph
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 
 def test_graph_state_model():

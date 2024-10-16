@@ -2,8 +2,6 @@ import logging
 from collections import deque
 
 import pytest
-from pytest import LogCaptureFixture
-
 from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
 from langflow.components.inputs.ChatInput import ChatInput
 from langflow.components.outputs.ChatOutput import ChatOutput
@@ -11,6 +9,7 @@ from langflow.components.outputs.TextOutput import TextOutputComponent
 from langflow.components.tools.YfinanceTool import YfinanceToolComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
+from pytest import LogCaptureFixture
 
 
 @pytest.mark.asyncio

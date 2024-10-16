@@ -2,9 +2,8 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-from requests.exceptions import MissingSchema
-
 from langflow.utils.validate import create_function, execute_function, extract_function_name, validate_code
+from requests.exceptions import MissingSchema
 
 
 def test_create_function():
@@ -99,6 +98,5 @@ import requests
 def my_function(x):
     return requests.get(x).text
     """
-    with mock.patch("requests.get", side_effect=MissingSchema):
-        with pytest.raises(MissingSchema):
-            execute_function(code, "my_function", "invalid_url")
+    with mock.patch("requests.get", side_effect=MissingSchema), pytest.raises(MissingSchema):
+        execute_function(code, "my_function", "invalid_url")

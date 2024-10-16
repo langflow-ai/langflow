@@ -5,8 +5,6 @@ from uuid import UUID, uuid4
 import orjson
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
-
 from langflow.api.v1.schemas import FlowListCreate, ResultDataResponse
 from langflow.graph.utils import log_transaction, log_vertex_build
 from langflow.initial_setup.setup import load_flows_from_directory, load_starter_projects
@@ -15,6 +13,7 @@ from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlmodel import Session
 
 
 @pytest.fixture(scope="module")
@@ -520,5 +519,5 @@ def test_sqlite_pragmas():
     with db_service.with_session() as session:
         from sqlalchemy import text
 
-        assert "wal" == session.exec(text("PRAGMA journal_mode;")).scalar()
-        assert 1 == session.exec(text("PRAGMA synchronous;")).scalar()
+        assert session.exec(text("PRAGMA journal_mode;")).scalar() == "wal"
+        assert session.exec(text("PRAGMA synchronous;")).scalar() == 1

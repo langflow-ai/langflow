@@ -1,10 +1,9 @@
 import json
 from uuid import UUID
 
-from orjson import orjson
-
 from langflow.memory import get_messages
 from langflow.services.database.models.flow import FlowCreate, FlowUpdate
+from orjson import orjson
 
 
 async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
@@ -82,7 +81,8 @@ async def consume_and_assert_stream(r):
         elif count == 5:
             assert parsed["event"] == "end"
         else:
-            raise ValueError(f"Unexpected line: {line}")
+            msg = f"Unexpected line: {line}"
+            raise ValueError(msg)
         count += 1
 
 
@@ -92,5 +92,4 @@ async def _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
     vector_store = FlowCreate(name="Flow", description="description", data=data, endpoint_name="f")
     response = await client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
     response.raise_for_status()
-    flow_id = response.json()["id"]
-    return flow_id
+    return response.json()["id"]

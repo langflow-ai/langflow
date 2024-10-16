@@ -1,9 +1,10 @@
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import pytest
-from pydantic.fields import FieldInfo
-
 from langflow.components.inputs.ChatInput import ChatInput
+
+if TYPE_CHECKING:
+    from pydantic.fields import FieldInfo
 
 
 def test_create_input_schema():

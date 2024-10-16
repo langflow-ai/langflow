@@ -16,13 +16,6 @@ from base.langflow.components.inputs.ChatInput import ChatInput
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from loguru import logger
-from pytest import LogCaptureFixture
-from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
-from tests.api_keys import get_openai_api_key
-from typer.testing import CliRunner
-
 from langflow.graph.graph.base import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
@@ -34,6 +27,13 @@ from langflow.services.database.models.user.model import User, UserCreate, UserR
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from loguru import logger
+from pytest import LogCaptureFixture
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
+
+from tests.api_keys import get_openai_api_key
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -114,7 +114,7 @@ def caplog(caplog: LogCaptureFixture):
     logger.remove(handler_id)
 
 
-@pytest.fixture()
+@pytest.fixture
 async def async_client() -> AsyncGenerator:
     from langflow.main import create_app
 
@@ -188,8 +188,7 @@ def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
 
 
 def get_graph(_type="basic"):
-    """Get a graph from a json file"""
-
+    """Get a graph from a json file."""
     if _type == "basic":
         path = pytest.BASIC_EXAMPLE_PATH
     elif _type == "complex":
@@ -197,7 +196,7 @@ def get_graph(_type="basic"):
     elif _type == "openapi":
         path = pytest.OPENAPI_EXAMPLE_PATH
 
-    with path.open() as f:
+    with path.open(encoding="utf-8") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
@@ -209,13 +208,13 @@ def get_graph(_type="basic"):
 
 @pytest.fixture
 def basic_graph_data():
-    with pytest.BASIC_EXAMPLE_PATH.open() as f:
+    with pytest.BASIC_EXAMPLE_PATH.open(encoding="utf-8") as f:
         return json.load(f)
 
 
 @pytest.fixture
 def basic_graph():
-    yield get_graph()
+    return get_graph()
 
 
 @pytest.fixture
@@ -230,47 +229,47 @@ def openapi_graph():
 
 @pytest.fixture
 def json_flow():
-    return pytest.BASIC_EXAMPLE_PATH.read_text()
+    return pytest.BASIC_EXAMPLE_PATH.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def grouped_chat_json_flow():
-    return pytest.GROUPED_CHAT_EXAMPLE_PATH.read_text()
+    return pytest.GROUPED_CHAT_EXAMPLE_PATH.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def one_grouped_chat_json_flow():
-    return pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH.read_text()
+    return pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def vector_store_grouped_json_flow():
-    return pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH.read_text()
+    return pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def json_flow_with_prompt_and_history():
-    return pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY.read_text()
+    return pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def json_simple_api_test():
-    return pytest.SIMPLE_API_TEST.read_text()
+    return pytest.SIMPLE_API_TEST.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def json_vector_store():
-    return pytest.VECTOR_STORE_PATH.read_text()
+    return pytest.VECTOR_STORE_PATH.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def json_webhook_test():
-    return pytest.WEBHOOK_TEST.read_text()
+    return pytest.WEBHOOK_TEST.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def json_memory_chatbot_no_llm():
-    return pytest.MEMORY_CHATBOT_NO_LLM.read_text()
+    return pytest.MEMORY_CHATBOT_NO_LLM.read_text(encoding="utf-8")
 
 
 @pytest.fixture(name="client")
@@ -315,12 +314,12 @@ def session_getter_fixture(client):
         with Session(db_service.engine) as session:
             yield session
 
-    yield blank_session_getter
+    return blank_session_getter
 
 
 @pytest.fixture
 def runner():
-    yield CliRunner()
+    return CliRunner()
 
 
 @pytest.fixture
@@ -337,7 +336,7 @@ async def test_user(client):
     await client.delete(f"/api/v1/users/{user['id']}")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def active_user(client):
     db_manager = get_db_service()
     with db_manager.with_session() as session:
@@ -372,7 +371,7 @@ async def logged_in_headers(client, active_user):
     assert response.status_code == 200
     tokens = response.json()
     a_token = tokens["access_token"]
-    yield {"Authorization": f"Bearer {a_token}"}
+    return {"Authorization": f"Bearer {a_token}"}
 
 
 @pytest.fixture
@@ -395,12 +394,12 @@ def flow(client, json_flow: str, active_user):
 
 @pytest.fixture
 def json_chat_input():
-    return pytest.CHAT_INPUT.read_text()
+    return pytest.CHAT_INPUT.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def json_two_outputs():
-    return pytest.TWO_OUTPUTS.read_text()
+    return pytest.TWO_OUTPUTS.read_text(encoding="utf-8")
 
 
 @pytest.fixture
@@ -528,7 +527,8 @@ def get_starter_project(active_user):
             .where(Flow.name == "Basic Prompting (Hello, World)")
         ).first()
         if not flow:
-            raise ValueError("No starter project found")
+            msg = "No starter project found"
+            raise ValueError(msg)
 
         # ensure openai api key is set
         get_openai_api_key()

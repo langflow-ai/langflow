@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.inputs import ChatInput
 from langflow.components.outputs import ChatOutput
 from langflow.components.prompts import PromptComponent

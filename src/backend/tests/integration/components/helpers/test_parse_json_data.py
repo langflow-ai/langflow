@@ -1,10 +1,9 @@
 import pytest
-
 from langflow.components.helpers.ParseJSONData import ParseJSONDataComponent
 from langflow.components.inputs import ChatInput
 from langflow.schema import Data
 from tests.integration.components.mock_components import TextToData
-from tests.integration.utils import run_single_component, ComponentInputHandle
+from tests.integration.utils import ComponentInputHandle, run_single_component
 
 
 @pytest.mark.asyncio

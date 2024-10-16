@@ -1,10 +1,9 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
-
 from langflow.components.helpers.structured_output import StructuredOutputComponent
 from langflow.schema.data import Data
+from pydantic import BaseModel
 
 
 @pytest.fixture

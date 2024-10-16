@@ -6,6 +6,7 @@
 # ]
 # ///
 import argparse
+import sys
 
 from huggingface_hub import HfApi, list_models
 from rich import print
@@ -23,11 +24,11 @@ space = parsed_args.space
 
 if not space:
     print("Please provide a space to restart.")
-    exit()
+    sys.exit()
 
 if not parsed_args.token:
     print("Please provide an API token.")
-    exit()
+    sys.exit()
 
 # Or configure a HfApi client
 hf_api = HfApi(

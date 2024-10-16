@@ -1,14 +1,13 @@
+from collections.abc import Sequence as SequenceABC
 from types import NoneType
 from typing import Union
 
-from langflow.schema.data import Data
 import pytest
-from pydantic import ValidationError
-
+from langflow.schema.data import Data
 from langflow.template import Input, Output
 from langflow.template.field.base import UNDEFINED
 from langflow.type_extraction.type_extraction import post_process_type
-from collections.abc import Sequence as SequenceABC
+from pydantic import ValidationError
 
 
 class TestInput:
@@ -68,8 +67,8 @@ class TestInput:
         assert set(post_process_type(Union[None, list[None]])) == {None, NoneType}
 
         # Handling complex nested structures
-        assert set(post_process_type(Union[SequenceABC[Union[int, str]], list[float]])) == {int, str, float}
-        assert set(post_process_type(Union[Union[Union[int, list[str]], list[float]], str])) == {int, str, float}
+        assert set(post_process_type(Union[SequenceABC[int | str], list[float]])) == {int, str, float}
+        assert set(post_process_type(Union[int | list[str] | list[float], str])) == {int, str, float}
 
         # Non-generic types should return as is
         assert set(post_process_type(dict)) == {dict}
@@ -87,12 +86,12 @@ class TestInput:
         assert set(post_process_type(Data | Union[float, None])) == {Data, float, type(None)}
 
         # Multiple Data types combined
-        assert set(post_process_type(Union[Data, Union[str, float]])) == {Data, str, float}
+        assert set(post_process_type(Union[Data, str | float])) == {Data, str, float}
         assert set(post_process_type(Union[Data | float | str, int])) == {Data, int, float, str}
 
         # Testing with nested unions and lists
-        assert set(post_process_type(Union[list[Data], list[Union[int, str]]])) == {Data, int, str}
-        assert set(post_process_type(Data | list[Union[float, str]])) == {Data, float, str}
+        assert set(post_process_type(Union[list[Data], list[int | str]])) == {Data, int, str}
+        assert set(post_process_type(Data | list[float | str])) == {Data, float, str}
 
     def test_input_to_dict(self):
         input_obj = Input(field_type="str")
