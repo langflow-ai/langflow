@@ -69,9 +69,11 @@ def flatten_list(list_of_lists: list[list | Any]) -> list:
 
 
 def serialize_field(value):
-    """Unified serialization function for handling both BaseModel and Document types,
-    including handling lists of these types."""
+    """Serialize field.
 
+    Unified serialization function for handling both BaseModel and Document types,
+    including handling lists of these types.
+    """
     if isinstance(value, list | tuple):
         return [serialize_field(v) for v in value]
     if isinstance(value, Document):
@@ -121,9 +123,7 @@ def post_process_raw(raw, artifact_type: str):
 
 
 def _vertex_to_primitive_dict(target: Vertex) -> dict:
-    """
-    Cleans the parameters of the target vertex.
-    """
+    """Cleans the parameters of the target vertex."""
     # Removes all keys that the values aren't python types like str, int, bool, etc.
     params = {
         key: value for key, value in target.params.items() if isinstance(value, str | int | bool | float | list | dict)
@@ -141,6 +141,11 @@ async def log_transaction(
     try:
         if not get_settings_service().settings.transactions_storage_enabled:
             return
+        if not flow_id:
+            if source.graph.flow_id:
+                flow_id = source.graph.flow_id
+            else:
+                return
         inputs = _vertex_to_primitive_dict(source)
         transaction = TransactionBase(
             vertex_id=source.id,
@@ -160,6 +165,7 @@ async def log_transaction(
 
 
 def log_vertex_build(
+    *,
     flow_id: str,
     vertex_id: str,
     valid: bool,

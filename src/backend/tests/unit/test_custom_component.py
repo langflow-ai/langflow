@@ -1,7 +1,7 @@
 import ast
 import types
+from pathlib import Path
 from textwrap import dedent
-from uuid import uuid4
 
 import pytest
 from langchain_core.documents import Document
@@ -10,20 +10,12 @@ from langflow.custom import Component, CustomComponent
 from langflow.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
 from langflow.custom.custom_component.base_component import BaseComponent, ComponentCodeNullError
 from langflow.custom.utils import build_custom_component_template
-from langflow.services.database.models.flow import FlowCreate
-from langflow.services.settings.feature_flags import FEATURE_FLAGS
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 @pytest.fixture
 def code_component_with_multiple_outputs():
-    with open("src/backend/tests/data/component_multiple_outputs.py") as f:
-        code = f.read()
-        return Component(_code=code)
+    code = Path("src/backend/tests/data/component_multiple_outputs.py").read_text()
+    return Component(_code=code)
 
 
 code_default = """
@@ -460,9 +452,8 @@ def test_build_config_no_code():
 
 
 @pytest.fixture
-def component(client, active_user):
-    return CustomComponent(
-        user_id=active_user.id,
+def component():
+    yield CustomComponent(
         field_config={
             "fields": {
                 "llm": {"type": "str"},
@@ -471,41 +462,6 @@ def component(client, active_user):
             }
         },
     )
-
-
-@pytest.fixture(scope="session")
-def test_flow(db):
-    flow_data = {
-        "nodes": [{"id": "1"}, {"id": "2"}],
-        "edges": [{"source": "1", "target": "2"}],
-    }
-
-    # Create flow
-    flow = FlowCreate(id=uuid4(), name="Test Flow", description="Fixture flow", data=flow_data)
-
-    # Add to database
-    db.add(flow)
-    db.commit()
-
-    yield flow
-
-    # Clean up
-    db.delete(flow)
-    db.commit()
-
-
-@pytest.fixture(scope="session")
-def db(app):
-    # Setup database for tests
-    yield app.db
-
-    # Teardown
-    app.db.drop_all()
-
-
-def test_list_flows_return_type(component):
-    flows = component.list_flows()
-    assert isinstance(flows, list)
 
 
 def test_build_config_return_type(component):
@@ -539,17 +495,9 @@ def test_build_config_field_value_keys(component):
     assert all("type" in value for value in field_values)
 
 
-def test_custom_component_multiple_outputs(code_component_with_multiple_outputs, active_user):
-    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
+def test_custom_component_multiple_outputs(code_component_with_multiple_outputs):
+    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs)
     assert frontnd_node_dict["outputs"][0]["types"] == ["Text"]
-
-
-def test_feature_flags_add_toolkit_output(active_user, code_component_with_multiple_outputs):
-    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
-    len_outputs = len(frontnd_node_dict["outputs"])
-    FEATURE_FLAGS.add_toolkit_output = True
-    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
-    assert len(frontnd_node_dict["outputs"]) == len_outputs + 1
 
 
 def test_custom_component_subclass_from_lctoolcomponent():

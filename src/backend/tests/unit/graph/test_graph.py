@@ -23,11 +23,6 @@ from langflow.initial_setup.setup import load_starter_projects
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def sample_template():
     return {
         "field1": {"proxy": {"field": "some_field", "id": "node1"}},
@@ -224,8 +219,7 @@ def test_update_target_handle_proxy():
         }
     }
     g_nodes = [{"id": "some_id", "data": {"node": {"flow": None}}}]
-    group_node_id = "group_id"
-    updated_edge = update_target_handle(new_edge, g_nodes, group_node_id)
+    updated_edge = update_target_handle(new_edge, g_nodes)
     assert updated_edge["data"]["targetHandle"] == new_edge["data"]["targetHandle"]
 
 

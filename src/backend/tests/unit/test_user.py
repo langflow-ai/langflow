@@ -2,6 +2,7 @@ from datetime import datetime
 
 import pytest
 from httpx import AsyncClient
+from sqlmodel import select
 
 from langflow.services.auth.utils import create_super_user, get_password_hash
 from langflow.services.database.models.user import UserUpdate
@@ -38,7 +39,7 @@ async def super_user_headers(client: AsyncClient, super_user):
 
 
 @pytest.fixture
-def deactivated_user():
+def deactivated_user(client):
     with session_getter(get_db_service()) as session:
         user = User(
             username="deactivateduser",
@@ -53,13 +54,23 @@ def deactivated_user():
     return user
 
 
-@pytest.mark.api_key_required
-async def test_user_waiting_for_approval(client: AsyncClient):
+async def test_user_waiting_for_approval(client):
+    username = "waitingforapproval"
+    password = "testpassword"
+
+    # Debug: Check if the user already exists
+    with session_getter(get_db_service()) as session:
+        existing_user = session.exec(select(User).where(User.username == username)).first()
+        if existing_user:
+            pytest.fail(
+                f"User {username} already exists before the test. Database URL: {get_db_service().database_url}"
+            )
+
     # Create a user that is not active and has never logged in
     with session_getter(get_db_service()) as session:
         user = User(
-            username="waitingforapproval",
-            password=get_password_hash("testpassword"),
+            username=username,
+            password=get_password_hash(password),
             is_active=False,
             last_login_at=None,
         )
@@ -71,6 +82,14 @@ async def test_user_waiting_for_approval(client: AsyncClient):
     assert response.status_code == 400
     assert response.json()["detail"] == "Waiting for approval"
 
+    # Debug: Check if the user still exists after the test
+    with session_getter(get_db_service()) as session:
+        existing_user = session.exec(select(User).where(User.username == username)).first()
+        if existing_user:
+            print(f"User {username} still exists after the test. This is expected.")
+        else:
+            pytest.fail(f"User {username} does not exist after the test. This is unexpected.")
+
 
 @pytest.mark.api_key_required
 async def test_deactivated_user_cannot_login(client: AsyncClient, deactivated_user):
@@ -80,7 +99,8 @@ async def test_deactivated_user_cannot_login(client: AsyncClient, deactivated_us
     assert response.json()["detail"] == "Inactive user", response.text
 
 
-async def test_deactivated_user_cannot_access(client: AsyncClient, deactivated_user, logged_in_headers):
+@pytest.mark.usefixtures("deactivated_user")
+async def test_deactivated_user_cannot_access(client: AsyncClient, logged_in_headers):
     # Assuming the headers for deactivated_user
     response = await client.get("api/v1/users/", headers=logged_in_headers)
     assert response.status_code == 403, response.status_code
@@ -133,7 +153,7 @@ async def test_inactive_user(client: AsyncClient):
 
 
 @pytest.mark.api_key_required
-async def test_add_user(client: AsyncClient, test_user):
+async def test_add_user(test_user):
     assert test_user["username"] == "testuser"
 
 
@@ -202,7 +222,8 @@ async def test_patch_reset_password(client: AsyncClient, active_user, logged_in_
 
 
 @pytest.mark.api_key_required
-async def test_patch_user_wrong_id(client: AsyncClient, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_patch_user_wrong_id(client: AsyncClient, logged_in_headers):
     user_id = "wrong_id"
     update_data = UserUpdate(
         username="newname",
@@ -226,7 +247,8 @@ async def test_delete_user(client: AsyncClient, test_user, super_user_headers):
 
 
 @pytest.mark.api_key_required
-async def test_delete_user_wrong_id(client: AsyncClient, test_user, super_user_headers):
+@pytest.mark.usefixtures("test_user")
+async def test_delete_user_wrong_id(client: AsyncClient, super_user_headers):
     user_id = "wrong_id"
     response = await client.delete(f"/api/v1/users/{user_id}", headers=super_user_headers)
     assert response.status_code == 422

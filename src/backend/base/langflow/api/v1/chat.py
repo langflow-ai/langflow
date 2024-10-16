@@ -40,13 +40,12 @@ from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
-from langflow.services.deps import get_chat_service, get_session, get_session_service, get_telemetry_service
+from langflow.services.deps import get_chat_service, get_session, get_telemetry_service
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 from langflow.services.telemetry.service import TelemetryService
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.types import InterfaceVertex
-    from langflow.services.session.service import SessionService
 
 router = APIRouter(tags=["Chat"])
 
@@ -78,16 +77,17 @@ async def retrieve_vertices_order(
     session=Depends(get_session),
     telemetry_service: TelemetryService = Depends(get_telemetry_service),
 ):
-    """
-    Retrieve the vertices order for a given flow.
+    """Retrieve the vertices order for a given flow.
 
     Args:
         flow_id (str): The ID of the flow.
+        background_tasks (BackgroundTasks): The background tasks.
         data (Optional[FlowDataRequest], optional): The flow data. Defaults to None.
         stop_component_id (str, optional): The ID of the stop component. Defaults to None.
         start_component_id (str, optional): The ID of the start component. Defaults to None.
         chat_service (ChatService, optional): The chat service dependency. Defaults to Depends(get_chat_service).
         session (Session, optional): The session dependency. Defaults to Depends(get_session).
+        telemetry_service (TelemetryService, optional): The telemetry service.
 
     Returns:
         VerticesOrderResponse: The response containing the ordered vertex IDs and the run ID.
@@ -141,6 +141,7 @@ async def retrieve_vertices_order(
 
 @router.post("/build/{flow_id}/flow")
 async def build_flow(
+    *,
     background_tasks: BackgroundTasks,
     flow_id: uuid.UUID,
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
@@ -154,6 +155,9 @@ async def build_flow(
     telemetry_service: TelemetryService = Depends(get_telemetry_service),
     session=Depends(get_session),
 ):
+    if not inputs:
+        inputs = InputValueRequest(session=str(flow_id))
+
     async def build_graph_and_get_order() -> tuple[list[str], list[str], Graph]:
         start_time = time.perf_counter()
         components_count = None
@@ -189,7 +193,6 @@ async def build_flow(
                     playgroundSuccess=True,
                 ),
             )
-            return first_layer, vertices_to_run, graph
         except Exception as exc:
             background_tasks.add_task(
                 telemetry_service.log_package_playground,
@@ -204,6 +207,8 @@ async def build_flow(
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             logger.exception("Error checking build status")
             raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+        return first_layer, vertices_to_run, graph
 
     async def _build_vertex(vertex_id: str, graph: Graph, event_manager: EventManager) -> VertexBuildResponse:
         flow_id_str = str(flow_id)
@@ -302,7 +307,6 @@ async def build_flow(
                     componentErrorMessage=error_message,
                 ),
             )
-            return build_response
         except Exception as exc:
             background_tasks.add_task(
                 telemetry_service.log_package_component,
@@ -316,6 +320,8 @@ async def build_flow(
             logger.exception("Error building Component")
             message = parse_exception(exc)
             raise HTTPException(status_code=500, detail=message) from exc
+
+        return build_response
 
     async def build_vertices(
         vertex_id: str,
@@ -469,8 +475,10 @@ async def build_vertex(
         vertex_id (str): The ID of the vertex to build.
         background_tasks (BackgroundTasks): The background tasks dependency.
         inputs (Optional[InputValueRequest], optional): The input values for the vertex. Defaults to None.
+        files (List[str], optional): The files to use. Defaults to None.
         chat_service (ChatService, optional): The chat service dependency. Defaults to Depends(get_chat_service).
         current_user (Any, optional): The current user dependency. Defaults to Depends(get_current_active_user).
+        telemetry_service (TelemetryService, optional): The telemetry service.
 
     Returns:
         VertexBuildResponse: The response containing the built vertex information.
@@ -588,7 +596,6 @@ async def build_vertex(
                 componentErrorMessage=error_message,
             ),
         )
-        return build_response
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_component,
@@ -603,14 +610,96 @@ async def build_vertex(
         message = parse_exception(exc)
         raise HTTPException(status_code=500, detail=message) from exc
 
+    return build_response
+
+
+async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService):
+    graph = None
+    try:
+        try:
+            cache = await chat_service.get_cache(flow_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Error building Component")
+            yield str(StreamData(event="error", data={"error": str(exc)}))
+            return
+
+        if not cache:
+            # If there's no cache
+            msg = f"No cache found for {flow_id}."
+            logger.error(msg)
+            yield str(StreamData(event="error", data={"error": msg}))
+            return
+        else:
+            graph = cache.get("result")
+
+        try:
+            vertex: InterfaceVertex = graph.get_vertex(vertex_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Error building Component")
+            yield str(StreamData(event="error", data={"error": str(exc)}))
+            return
+
+        if not hasattr(vertex, "stream"):
+            msg = f"Vertex {vertex_id} does not support streaming"
+            logger.error(msg)
+            yield str(StreamData(event="error", data={"error": msg}))
+            return
+
+        if isinstance(vertex._built_result, str) and vertex._built_result:
+            stream_data = StreamData(
+                event="message",
+                data={"message": f"Streaming vertex {vertex_id}"},
+            )
+            yield str(stream_data)
+            stream_data = StreamData(
+                event="message",
+                data={"chunk": vertex._built_result},
+            )
+            yield str(stream_data)
+
+        elif not vertex.frozen or not vertex._built:
+            logger.debug(f"Streaming vertex {vertex_id}")
+            stream_data = StreamData(
+                event="message",
+                data={"message": f"Streaming vertex {vertex_id}"},
+            )
+            yield str(stream_data)
+            try:
+                async for chunk in vertex.stream():
+                    stream_data = StreamData(
+                        event="message",
+                        data={"chunk": chunk},
+                    )
+                    yield str(stream_data)
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("Error building Component")
+                exc_message = parse_exception(exc)
+                if exc_message == "The message must be an iterator or an async iterator.":
+                    exc_message = "This stream has already been closed."
+                yield str(StreamData(event="error", data={"error": exc_message}))
+        elif vertex.result is not None:
+            stream_data = StreamData(
+                event="message",
+                data={"chunk": vertex._built_result},
+            )
+            yield str(stream_data)
+        else:
+            msg = f"No result found for vertex {vertex_id}"
+            logger.error(msg)
+            yield str(StreamData(event="error", data={"error": msg}))
+            return
+    finally:
+        logger.debug("Closing stream")
+        if graph:
+            await chat_service.set_cache(flow_id, graph)
+        yield str(StreamData(event="close", data={"message": "Stream closed"}))
+
 
 @router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse)
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
-    session_id: str | None = None,
     chat_service: ChatService = Depends(get_chat_service),
-    session_service: SessionService = Depends(get_session_service),
 ):
     """Build a vertex instead of the entire graph.
 
@@ -638,70 +727,6 @@ async def build_vertex_stream(
         HTTPException: If an error occurs while building the vertex.
     """
     try:
-        flow_id_str = str(flow_id)
-
-        async def stream_vertex():
-            graph = None
-            try:
-                cache = await chat_service.get_cache(flow_id_str)
-                if not cache:
-                    # If there's no cache
-                    msg = f"No cache found for {flow_id_str}."
-                    raise ValueError(msg)
-                else:
-                    graph = cache.get("result")
-
-                vertex: InterfaceVertex = graph.get_vertex(vertex_id)
-                if not hasattr(vertex, "stream"):
-                    msg = f"Vertex {vertex_id} does not support streaming"
-                    raise ValueError(msg)
-                if isinstance(vertex._built_result, str) and vertex._built_result:
-                    stream_data = StreamData(
-                        event="message",
-                        data={"message": f"Streaming vertex {vertex_id}"},
-                    )
-                    yield str(stream_data)
-                    stream_data = StreamData(
-                        event="message",
-                        data={"chunk": vertex._built_result},
-                    )
-                    yield str(stream_data)
-
-                elif not vertex.frozen or not vertex._built:
-                    logger.debug(f"Streaming vertex {vertex_id}")
-                    stream_data = StreamData(
-                        event="message",
-                        data={"message": f"Streaming vertex {vertex_id}"},
-                    )
-                    yield str(stream_data)
-                    async for chunk in vertex.stream():
-                        stream_data = StreamData(
-                            event="message",
-                            data={"chunk": chunk},
-                        )
-                        yield str(stream_data)
-                elif vertex.result is not None:
-                    stream_data = StreamData(
-                        event="message",
-                        data={"chunk": vertex._built_result},
-                    )
-                    yield str(stream_data)
-                else:
-                    msg = f"No result found for vertex {vertex_id}"
-                    raise ValueError(msg)
-
-            except Exception as exc:  # noqa: BLE001
-                logger.exception("Error building Component")
-                exc_message = parse_exception(exc)
-                if exc_message == "The message must be an iterator or an async iterator.":
-                    exc_message = "This stream has already been closed."
-                yield str(StreamData(event="error", data={"error": exc_message}))
-            finally:
-                logger.debug("Closing stream")
-                if graph:
-                    await chat_service.set_cache(flow_id_str, graph)
-                yield str(StreamData(event="close", data={"message": "Stream closed"}))
-
-        return StreamingResponse(stream_vertex(), media_type="text/event-stream")
+        return StreamingResponse(_stream_vertex(str(flow_id), vertex_id, chat_service), media_type="text/event-stream")
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Error building Component") from exc

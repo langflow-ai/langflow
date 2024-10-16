@@ -37,6 +37,7 @@ test("Blog Writer", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Blog Writer" }).click();
   await page.waitForTimeout(1000);
 

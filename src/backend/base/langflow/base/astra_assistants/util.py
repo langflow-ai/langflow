@@ -28,7 +28,7 @@ response = requests.get(url)
 data = json.loads(response.text)
 
 # Extract the model names into a Python list
-litellm_model_names = [model for model, _ in data.items() if model != "sample_spec"]
+litellm_model_names = [model for model in data if model != "sample_spec"]
 
 
 # To store the class names that extend ToolInterface

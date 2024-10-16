@@ -10,7 +10,6 @@ from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
 from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
 from langflow.services.database.models.transactions.model import TransactionReadResponse
-from langflow.services.database.models.user.model import User
 from langflow.services.database.models.vertex_builds.crud import (
     delete_vertex_builds_by_flow_id,
     get_vertex_builds_by_flow_id,
@@ -72,11 +71,10 @@ async def get_messages(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.delete("/messages", status_code=204)
+@router.delete("/messages", status_code=204, dependencies=[Depends(get_current_active_user)])
 async def delete_messages(
     message_ids: list[UUID],
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     try:
         session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]
@@ -85,44 +83,54 @@ async def delete_messages(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.put("/messages/{message_id}", response_model=MessageRead)
+@router.put("/messages/{message_id}", dependencies=[Depends(get_current_active_user)], response_model=MessageRead)
 async def update_message(
     message_id: UUID,
     message: MessageUpdate,
     session: Annotated[Session, Depends(get_session)],
-    user: Annotated[User, Depends(get_current_active_user)],
 ):
     try:
         db_message = session.get(MessageTable, message_id)
-        if not db_message:
-            raise HTTPException(status_code=404, detail="Message not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    if not db_message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    try:
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
+        message_dict["edit"] = True
         db_message.sqlmodel_update(message_dict)
         session.add(db_message)
         session.commit()
         session.refresh(db_message)
-        return db_message
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
+    return db_message
 
-@router.patch("/messages/session/{old_session_id}", response_model=list[MessageResponse])
+
+@router.patch(
+    "/messages/session/{old_session_id}",
+    dependencies=[Depends(get_current_active_user)],
+    response_model=list[MessageResponse],
+)
 async def update_session_id(
     old_session_id: str,
     new_session_id: Annotated[str, Query(..., description="The new session ID to update to")],
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     try:
         # Get all messages with the old session ID
         stmt = select(MessageTable).where(MessageTable.session_id == old_session_id)
         messages = session.exec(stmt).all()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
-        if not messages:
-            raise HTTPException(status_code=404, detail="No messages found with the given session ID")
+    if not messages:
+        raise HTTPException(status_code=404, detail="No messages found with the given session ID")
 
+    try:
         # Update all messages with the new session ID
         for message in messages:
             message.session_id = new_session_id
@@ -134,11 +142,10 @@ async def update_session_id(
         for message in messages:
             session.refresh(message)
             message_responses.append(MessageResponse.model_validate(message, from_attributes=True))
-        return message_responses
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return message_responses
 
 
 @router.delete("/messages/session/{session_id}", status_code=204)
@@ -153,9 +160,10 @@ async def delete_messages_session(
             .execution_options(synchronize_session="fetch")
         )
         session.commit()
-        return {"message": "Messages deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return {"message": "Messages deleted successfully"}
 
 
 @router.get("/transactions", response_model=list[TransactionReadResponse])

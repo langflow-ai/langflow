@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import json
 from collections.abc import AsyncIterator, Generator, Iterator
@@ -11,7 +10,7 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, log_transaction, log_vertex_build, rewrite_file_path, serialize_field
+from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.exceptions import NoComponentInstance
 from langflow.schema import Data
@@ -59,9 +58,7 @@ class ComponentVertex(Vertex):
         return None
 
     def _update_built_object_and_artifacts(self, result):
-        """
-        Updates the built object and its artifacts.
-        """
+        """Updates the built object and its artifacts."""
         if isinstance(result, tuple):
             if len(result) == 2:  # noqa: PLR2004
                 self._built_object, self.artifacts = result
@@ -78,8 +75,7 @@ class ComponentVertex(Vertex):
             self.add_result(key, value)
 
     def get_edge_with_target(self, target_id: str) -> Generator[CycleEdge, None, None]:
-        """
-        Get the edge with the target id.
+        """Get the edge with the target id.
 
         Args:
             target_id: The target id of the edge.
@@ -92,8 +88,7 @@ class ComponentVertex(Vertex):
                 yield edge
 
     async def _get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
-        """
-        Retrieves the result of the built component.
+        """Retrieves the result of the built component.
 
         If the component has not been built yet, a ValueError is raised.
 
@@ -109,9 +104,7 @@ class ComponentVertex(Vertex):
                     default_value = requester.get_value_from_template_dict(edge.target_param)
 
             if flow_id:
-                asyncio.create_task(
-                    log_transaction(source=self, target=requester, flow_id=str(flow_id), status="error")
-                )
+                self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="error")
             if default_value is not UNDEFINED:
                 return default_value
             msg = f"Component {self.display_name} has not been built yet"
@@ -150,12 +143,11 @@ class ComponentVertex(Vertex):
             msg = f"Result not found for {edge.source_handle.name} in {edge}"
             raise ValueError(msg)
         if flow_id:
-            asyncio.create_task(log_transaction(source=self, target=requester, flow_id=str(flow_id), status="success"))
+            self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="success")
         return result
 
     def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:
-        """
-        Extracts messages from the artifacts.
+        """Extracts messages from the artifacts.
 
         Args:
             artifacts (Dict[str, Any]): The artifacts to extract messages from.
@@ -239,8 +231,7 @@ class InterfaceVertex(ComponentVertex):
         return super()._built_object_repr()
 
     def _process_chat_component(self):
-        """
-        Process the chat component and return the message.
+        """Process the chat component and return the message.
 
         This method processes the chat component by extracting the necessary parameters
         such as sender, sender_name, and message from the `params` dictionary. It then
@@ -327,8 +318,7 @@ class InterfaceVertex(ComponentVertex):
         return message
 
     def _process_data_component(self):
-        """
-        Process the record component of the vertex.
+        """Process the record component of the vertex.
 
         If the built object is an instance of `Data`, it calls the `model_dump` method
         and assigns the result to the `artifacts` attribute.

@@ -34,7 +34,11 @@ def test_get_project_data():
             project_data,
             project_icon,
             project_icon_bg_color,
+            project_gradient,
+            project_tags,
         ) = get_project_data(project)
+        assert isinstance(project_gradient, str) or project_gradient is None
+        assert isinstance(project_tags, list)
         assert isinstance(project_name, str)
         assert isinstance(project_description, str)
         assert isinstance(project_is_component, bool)
@@ -45,6 +49,7 @@ def test_get_project_data():
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("client")
 async def test_create_or_update_starter_projects():
     with session_scope() as session:
         # Get the number of projects returned by load_starter_projects

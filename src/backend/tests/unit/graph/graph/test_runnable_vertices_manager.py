@@ -7,11 +7,6 @@ from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManag
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def data():
     run_map: defaultdict(list) = {"A": ["B", "C"], "B": ["D"], "C": ["D"], "D": []}
     run_predecessors: defaultdict(set) = {"A": set(), "B": {"A"}, "C": {"A"}, "D": {"B", "C"}}
@@ -94,7 +89,7 @@ def test_is_vertex_runnable(data):
     vertex_id = "A"
     is_active = True
 
-    result = manager.is_vertex_runnable(vertex_id, is_active)
+    result = manager.is_vertex_runnable(vertex_id, is_active=is_active)
 
     assert result is False
 
@@ -104,7 +99,7 @@ def test_is_vertex_runnable__wrong_is_active(data):
     vertex_id = "A"
     is_active = False
 
-    result = manager.is_vertex_runnable(vertex_id, is_active)
+    result = manager.is_vertex_runnable(vertex_id, is_active=is_active)
 
     assert result is False
 
@@ -114,7 +109,7 @@ def test_is_vertex_runnable__wrong_vertices_to_run(data):
     vertex_id = "D"
     is_active = True
 
-    result = manager.is_vertex_runnable(vertex_id, is_active)
+    result = manager.is_vertex_runnable(vertex_id, is_active=is_active)
 
     assert result is False
 
@@ -124,7 +119,7 @@ def test_is_vertex_runnable__wrong_run_predecessors(data):
     vertex_id = "C"
     is_active = True
 
-    result = manager.is_vertex_runnable(vertex_id, is_active)
+    result = manager.is_vertex_runnable(vertex_id, is_active=is_active)
 
     assert result is False
 
@@ -172,7 +167,7 @@ def test_update_vertex_run_state(data):
     vertex_id = "C"
     is_runnable = True
 
-    manager.update_vertex_run_state(vertex_id, is_runnable)
+    manager.update_vertex_run_state(vertex_id, is_runnable=is_runnable)
 
     assert vertex_id in manager.vertices_to_run
 
@@ -182,7 +177,7 @@ def test_update_vertex_run_state__bad_case(data):
     vertex_id = "C"
     is_runnable = False
 
-    manager.update_vertex_run_state(vertex_id, is_runnable)
+    manager.update_vertex_run_state(vertex_id, is_runnable=is_runnable)
 
     assert vertex_id not in manager.vertices_being_run
 

@@ -45,6 +45,9 @@ class DatabaseService(Service):
         self.alembic_cfg_path = langflow_dir / "alembic.ini"
         self.engine = self._create_engine()
 
+    def reload_engine(self):
+        self.engine = self._create_engine()
+
     def _create_engine(self) -> Engine:
         """Create the engine for the database."""
         if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
@@ -79,7 +82,7 @@ class DatabaseService(Service):
             msg = "Error creating database engine"
             raise RuntimeError(msg) from exc
 
-    def on_connection(self, dbapi_connection, connection_record):
+    def on_connection(self, dbapi_connection, _connection_record):
         from sqlite3 import Connection as sqliteConnection
 
         if isinstance(dbapi_connection, sqliteConnection):
@@ -165,7 +168,7 @@ class DatabaseService(Service):
         command.upgrade(alembic_cfg, "head")
         logger.info("Alembic initialized")
 
-    def run_migrations(self, fix=False):
+    def run_migrations(self, *, fix=False):
         # First we need to check if alembic has been initialized
         # If not, we need to initialize it
         # if not self.script_location.exists(): # this is not the correct way to check if alembic has been initialized

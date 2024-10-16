@@ -63,13 +63,11 @@ class FrontendNode(BaseModel):
     @field_serializer("base_classes")
     def process_base_classes(self, base_classes: list[str]) -> list[str]:
         """Removes unwanted base classes from the list of base classes."""
-
         return sorted(set(base_classes), key=lambda x: x.lower())
 
     @field_serializer("display_name")
     def process_display_name(self, display_name: str) -> str:
         """Sets the display name of the frontend node."""
-
         return display_name or self.name
 
     @model_serializer(mode="wrap")
@@ -96,7 +94,7 @@ class FrontendNode(BaseModel):
         return cls(**data)
 
     # For backwards compatibility
-    def to_dict(self, keep_name=True) -> dict:
+    def to_dict(self, *, keep_name=True) -> dict:
         """Returns a dict representation of the frontend node."""
         dump = self.model_dump(by_alias=True, exclude_none=True)
         if not keep_name:

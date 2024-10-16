@@ -7,7 +7,7 @@ from sqlmodel import Session
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable import VariableCreate, VariableRead, VariableUpdate
-from langflow.services.deps import get_session, get_settings_service, get_variable_service
+from langflow.services.deps import get_session, get_variable_service
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
@@ -21,23 +21,21 @@ def create_variable(
     session: Session = Depends(get_session),
     variable: VariableCreate,
     current_user: User = Depends(get_current_active_user),
-    settings_service=Depends(get_settings_service),
     variable_service: DatabaseVariableService = Depends(get_variable_service),
 ):
     """Create a new variable."""
+    if not variable.name and not variable.value:
+        raise HTTPException(status_code=400, detail="Variable name and value cannot be empty")
+
+    if not variable.name:
+        raise HTTPException(status_code=400, detail="Variable name cannot be empty")
+
+    if not variable.value:
+        raise HTTPException(status_code=400, detail="Variable value cannot be empty")
+
+    if variable.name in variable_service.list_variables(user_id=current_user.id, session=session):
+        raise HTTPException(status_code=400, detail="Variable name already exists")
     try:
-        if not variable.name and not variable.value:
-            raise HTTPException(status_code=400, detail="Variable name and value cannot be empty")
-
-        if not variable.name:
-            raise HTTPException(status_code=400, detail="Variable name cannot be empty")
-
-        if not variable.value:
-            raise HTTPException(status_code=400, detail="Variable value cannot be empty")
-
-        if variable.name in variable_service.list_variables(user_id=current_user.id, session=session):
-            raise HTTPException(status_code=400, detail="Variable name already exists")
-
         return variable_service.create_variable(
             user_id=current_user.id,
             name=variable.name,

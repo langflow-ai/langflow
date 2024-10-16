@@ -25,8 +25,7 @@ async def instantiate_class(
     user_id=None,
     event_manager: EventManager | None = None,
 ) -> Any:
-    """Instantiate class from module type and key, and params"""
-
+    """Instantiate class from module type and key, and params."""
     vertex_type = vertex.vertex_type
     base_type = vertex.base_type
     logger.debug(f"Instantiating {vertex_type} of type {base_type}")
@@ -53,11 +52,12 @@ async def get_instance_results(
     custom_component,
     custom_params: dict,
     vertex: Vertex,
+    *,
     fallback_to_env_vars: bool = False,
     base_type: str = "component",
 ):
     custom_params = update_params_with_load_from_db_fields(
-        custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars
+        custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars=fallback_to_env_vars
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -77,7 +77,7 @@ def get_params(vertex_params):
 
 
 def convert_params_to_sets(params):
-    """Convert certain params to sets"""
+    """Convert certain params to sets."""
     if "allowed_special" in params:
         params["allowed_special"] = set(params["allowed_special"])
     if "disallowed_special" in params:
@@ -106,6 +106,7 @@ def update_params_with_load_from_db_fields(
     custom_component: CustomComponent,
     params,
     load_from_db_fields,
+    *,
     fallback_to_env_vars=False,
 ):
     # For each field in load_from_db_fields, we will check if it's in the params
@@ -123,12 +124,12 @@ def update_params_with_load_from_db_fields(
                         raise
                     logger.debug(str(e))
                 if fallback_to_env_vars and key is None:
-                    var = os.getenv(params[field])
-                    if var is None:
+                    key = os.getenv(params[field])
+                    if key is None:
                         msg = f"Environment variable {params[field]} is not set."
-                        raise ValueError(msg)
-                    key = var
-                    logger.info(f"Using environment variable {params[field]} for {field}")
+                        logger.error(msg)
+                    else:
+                        logger.info(f"Using environment variable {params[field]} for {field}")
                 if key is None:
                     logger.warning(f"Could not get value for {field}. Setting it to None.")
 

@@ -18,11 +18,6 @@ from langflow.schema.data import Data
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent(_id="file-123")

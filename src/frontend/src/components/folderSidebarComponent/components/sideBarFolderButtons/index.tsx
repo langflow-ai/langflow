@@ -10,7 +10,7 @@ import { track } from "@/customization/utils/analytics";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { useIsFetching } from "@tanstack/react-query";
+import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
@@ -19,9 +19,7 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { handleKeyDown } from "../../../../utils/reactflowUtils";
 import { cn } from "../../../../utils/utils";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../genericIconComponent";
+import IconComponent from "../../../genericIconComponent";
 import { Button, buttonVariants } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import useFileDrop from "../../hooks/use-on-file-drop";
@@ -230,7 +228,21 @@ const SideBarFoldersButtonsComponent = ({
     exact: false,
   });
 
-  const isUpdatingFolder = isFetchingFolders || isPending || loading;
+  const isFetchingFolder = !!useIsFetching({
+    queryKey: ["useGetFolder"],
+    exact: false,
+  });
+
+  const isDeletingFolder = !!useIsMutating({
+    mutationKey: ["useDeleteFolders"],
+  });
+
+  const isUpdatingFolder =
+    isFetchingFolders ||
+    isFetchingFolder ||
+    isPending ||
+    loading ||
+    isDeletingFolder;
 
   const HeaderButtons = () => (
     <div className="flex shrink-0 items-center justify-between gap-2">
@@ -401,7 +413,7 @@ const SideBarFoldersButtonsComponent = ({
                     {index > 0 && (
                       <Button
                         data-testid="btn-delete-folder"
-                        className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                        className="hidden p-0 hover:bg-primary group-hover:block"
                         onClick={(e) => {
                           handleDeleteFolder!(item);
                           e.stopPropagation();
@@ -418,7 +430,7 @@ const SideBarFoldersButtonsComponent = ({
                       </Button>
                     )}
                     <Button
-                      className="hidden px-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                      className="hidden px-0 hover:bg-primary group-hover:block"
                       onClick={(e) => {
                         handleDownloadFolder(item.id!);
                         e.stopPropagation();
@@ -431,7 +443,7 @@ const SideBarFoldersButtonsComponent = ({
                     >
                       <IconComponent
                         name={"Download"}
-                        className="w-4 stroke-[1.5] text-white"
+                        className="w-4 stroke-[1.5] text-primary"
                       />
                     </Button>
                   </div>

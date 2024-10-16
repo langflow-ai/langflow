@@ -8,15 +8,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import (
-    BoolInput,
-    DictInput,
-    DropdownInput,
-    FloatInput,
-    IntInput,
-    SecretStrInput,
-    StrInput,
-)
+from langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 from langflow.inputs.inputs import HandleInput
 
 
@@ -49,7 +41,7 @@ class OpenAIModelComponent(LCModelComponent):
             advanced=True,
             info="The schema for the Output of the model. "
             "You must pass the word JSON in the prompt. "
-            "If left blank, JSON mode will be disabled.",
+            "If left blank, JSON mode will be disabled. [DEPRECATED]",
         ),
         DropdownInput(
             name="model_name",
@@ -122,16 +114,14 @@ class OpenAIModelComponent(LCModelComponent):
         return output
 
     def _get_exception_message(self, e: Exception):
-        """
-        Get a message from an OpenAI exception.
+        """Get a message from an OpenAI exception.
 
         Args:
-            exception (Exception): The exception to get the message from.
+            e (Exception): The exception to get the message from.
 
         Returns:
             str: The message from the exception.
         """
-
         try:
             from openai import BadRequestError
         except ImportError:

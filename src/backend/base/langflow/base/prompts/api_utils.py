@@ -121,7 +121,7 @@ def _check_input_variables(input_variables):
     return fixed_variables
 
 
-def validate_prompt(prompt_template: str, silent_errors: bool = False) -> list[str]:
+def validate_prompt(prompt_template: str, *, silent_errors: bool = False) -> list[str]:
     input_variables = extract_input_variables_from_prompt(prompt_template)
 
     # Check if there are invalid characters in the input_variables
@@ -174,7 +174,6 @@ def add_new_variables_to_template(input_variables, custom_fields, template, name
                 custom_fields[name].append(variable)
 
         except Exception as exc:
-            logger.exception(exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
@@ -190,7 +189,6 @@ def remove_old_variables_from_template(old_custom_fields, input_variables, custo
                 template.pop(variable, None)
 
             except Exception as exc:
-                logger.exception(exc)
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
