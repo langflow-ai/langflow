@@ -273,7 +273,7 @@ def json_memory_chatbot_no_llm():
     return pytest.MEMORY_CHATBOT_NO_LLM.read_text()
 
 
-@pytest.fixture(name="client", autouse=True)
+@pytest.fixture(name="client")
 async def client_fixture(session: Session, monkeypatch, request, load_flows_dir):
     # Set the database url to a test database
     if "noclient" in request.keywords:

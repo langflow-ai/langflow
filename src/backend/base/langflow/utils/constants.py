@@ -52,17 +52,7 @@ def python_function(text: str) -> str:
 
 
 PYTHON_BASIC_TYPES = [str, bool, int, float, tuple, list, dict, set]
-DIRECT_TYPES = [
-    "str",
-    "bool",
-    "dict",
-    "int",
-    "float",
-    "Any",
-    "prompt",
-    "code",
-    "NestedDict",
-]
+DIRECT_TYPES = ["str", "bool", "dict", "int", "float", "Any", "prompt", "code", "NestedDict", "table"]
 
 
 LOADERS_INFO: list[dict[str, Any]] = [

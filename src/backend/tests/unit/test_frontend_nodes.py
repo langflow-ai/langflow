@@ -6,11 +6,6 @@ from langflow.template.template.base import Template
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def sample_template_field() -> Input:
     return Input(name="test_field", field_type="str")
 

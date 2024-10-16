@@ -133,7 +133,7 @@ export default function ChatMessage({
         }, 200);
       }
     }
-  }, [lastMessage]);
+  }, [lastMessage, chat]);
 
   let decodedMessage = chatMessage ?? "";
   try {

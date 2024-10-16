@@ -6,11 +6,6 @@ from langflow.graph.graph import utils
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def graph():
     return {
         "A": {"successors": ["B"], "predecessors": []},

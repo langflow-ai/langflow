@@ -1,6 +1,5 @@
 import asyncio
 
-import pytest
 
 from langflow.components.outputs.ChatOutput import ChatOutput
 from langflow.custom.custom_component.component import Component
@@ -9,11 +8,6 @@ from langflow.graph.graph.base import Graph
 from langflow.inputs.inputs import IntInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 class LogComponent(Component):

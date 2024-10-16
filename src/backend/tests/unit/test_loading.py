@@ -1,13 +1,6 @@
-import pytest
-
 from langflow.graph import Graph
 from langflow.initial_setup.setup import load_starter_projects
 from langflow.load import load_flow_from_json
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 # TODO: UPDATE BASIC EXAMPLE
