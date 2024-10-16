@@ -12,7 +12,7 @@
   --ag-selected-row-background-color: hsl(var(--accent));
   --ag-menu-background-color: hsl(var(--accent));
   --ag-panel-background-color: hsl(var(--accent));
-  --ag-row-hover-color: hsl(var(--accent));
+  --ag-row-hover-color: hsl(var(--primary-foreground));
   --ag-header-height: 2.5rem;
 }
 
