@@ -158,7 +158,7 @@ export default function ChatInput({
 
   return (
     <div className="flex w-full flex-col-reverse">
-      <div className="w-full">
+      <div className="relative w-full">
         <TextAreaWrapper
           checkSendingOk={checkSendingOk}
           send={send}

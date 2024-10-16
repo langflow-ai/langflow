@@ -237,7 +237,7 @@ export default function IOModal({
             {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
             <BaseModal.Content overflowHidden>
                 <div className="flex-max-width h-full flex-col">
-                    <div className="flex text-lg items-center w-full">
+                    <div className="flex text-lg items-center w-full h-fit">
                         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
                             <IconComponent name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"} className="h-6 w-6 text-ring" />
                         </Button>

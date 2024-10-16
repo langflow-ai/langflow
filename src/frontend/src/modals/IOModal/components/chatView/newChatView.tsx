@@ -9,8 +9,6 @@ import ShortUniqueId from "short-unique-id";
 import IconComponent from "../../../../components/genericIconComponent";
 import {
     ALLOWED_IMAGE_INPUT_EXTENSIONS,
-    CHAT_FIRST_INITIAL_TEXT,
-    CHAT_SECOND_INITIAL_TEXT,
     FS_ERROR_TEXT,
     SN_ERROR_TEXT,
 } from "../../../../constants/constants";
@@ -19,7 +17,7 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { ChatMessageType } from "../../../../types/chat";
 import { FilePreviewType, chatViewProps } from "../../../../types/components";
-import ChatInput from "./chatInput";
+import ChatInput from "./chatInput/newChatInput";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import ChatMessage from "./chatMessage";
 
@@ -201,7 +199,7 @@ export default function ChatView({
 
     return (
 
-        <div className="relative flex h-full w-full flex-col rounded-md background"
+        <div className="flex w-full flex-col rounded-md background"
             onDragOver={dragOver}
             onDragEnter={dragEnter}
             onDragLeave={dragLeave}
@@ -229,8 +227,7 @@ export default function ChatView({
                 )}
                 <div ref={ref}></div>
             </div>
-            <div className="langflow-chat-input-div">
-                <div className="langflow-chat-input">
+            <div className="w-4/6 m-auto">
                     <ChatInput
                         chatValue={chatValue}
                         noInput={!inputTypes.includes("ChatInput")}
@@ -247,7 +244,6 @@ export default function ChatView({
                         setFiles={setFiles}
                         isDragging={isDragging}
                     />
-                </div>
             </div>
         </div>
     );
