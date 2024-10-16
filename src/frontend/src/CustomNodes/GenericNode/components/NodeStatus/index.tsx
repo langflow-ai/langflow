@@ -72,7 +72,7 @@ export default function NodeStatus({
   const lastRunTime = useFlowStore(
     (state) => state.flowBuildStatus[nodeId_]?.timestamp,
   );
-  const iconStatus = useIconStatus(buildStatus, validationStatus, selected);
+  const iconStatus = useIconStatus(buildStatus, validationStatus);
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setNode = useFlowStore((state) => state.setNode);
@@ -109,7 +109,6 @@ export default function NodeStatus({
       buildStatus,
       validationStatus,
       isDark,
-      selected,
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
