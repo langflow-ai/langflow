@@ -75,7 +75,7 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync --directory src/backend/base
 
       - name: Verify Nightly Name and Version
         id: verify
@@ -99,9 +99,7 @@ jobs:
 
       - name: Test CLI
         run: |
-          # TODO: Unsure why the whl is not built in src/backend/base/dist
-          mkdir src/backend/base/dist
-          mv dist/*.whl src/backend/base/dist/
+          uv venv
           uv pip install src/backend/base/dist/*.whl
           uv run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
@@ -149,7 +147,7 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync --no-editable
 
       - name: Verify Nightly Name and Version
         id: verify

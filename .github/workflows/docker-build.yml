@@ -212,13 +212,6 @@ jobs:
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-      - name: Install the project
-        run: |
-          if [[ "${{ inputs.release_type }}" == "base" ]]; then
-            uv sync --directory src/backend/base --no-dev --no-sources
-          else
-            uv sync --no-dev --no-sources
-          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
