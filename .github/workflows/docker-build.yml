@@ -5,6 +5,7 @@ on:
       version:
         required: false
         type: string
+        description: "Main version to build. Does not support base version."
       release_type:
         required: true
         type: string
@@ -26,7 +27,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to build"
+        description: "Main version to build. Does not support base version."
         required: false
         type: string
       release_type:
@@ -106,6 +107,20 @@ jobs:
         if: ${{ inputs.version != '' }}
         id: get-version-input
         run: |
+          # Base version cannot have a version input, since you have to specify a valid main tag to checkout. 
+          if [[ "${{ inputs.release_type }}" == "base" && "${{ inputs.version }}" != '' ]]; then
+            echo "Cannot specify version for base release."
+            echo "Build type is 'base' and version is non-empty. Exiting the workflow."
+            exit 1
+          fi
+
+          # If doing a nightly release, just specify the nightly tag.
+          if [[ "${{ inputs.version }}" != '' && "${{ steps.resolve-nightly-tag.outputs.nightly-tag }}" != '' ]]; then
+            echo "Cannot specify both version and nightly version."
+            echo "Version is specified and nightly tag is non-empty. Exiting the workflow."
+            exit 1
+          fi
+
           version=${{ inputs.version }}
           # strip leading v if present
           version=${version#v}
@@ -171,21 +186,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: [get-version, setup]
     steps:
-      # TODO: Should be inputs.version iff not base version
-      # if it's not main, you still kind of have to supply a main tag. it's weird, since we don't have a base tag without a main.  
-
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }}
+          ref: ${{ inputs.nightly_tag_main || needs.get-version.outputs.version || github.ref }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-
       - name: Install the project
         run: |
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
-            cd src/backend/base && uv sync --no-dev --no-sources
+            uv sync --directory src/backend/base --no-dev --no-sources
           else
             uv sync --no-dev --no-sources
           fi
@@ -254,7 +265,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }}
+          ref: ${{ inputs.nightly_tag_main || needs.get-version.outputs.version || github.ref }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -302,7 +313,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }}
+          ref: ${{ inputs.nightly_tag_main || needs.get-version.outputs.version || github.ref }}
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
 
