@@ -158,7 +158,7 @@ export default function ChatInput({
 
   return (
     <div className="flex w-full flex-col-reverse">
-      <div className="w-full flex flex-col border border-border rounded-md p-4">
+      <div className="flex w-full flex-col rounded-md border border-border p-4">
         <TextAreaWrapper
           checkSendingOk={checkSendingOk}
           send={send}
@@ -189,10 +189,8 @@ export default function ChatInput({
             />
           ))}
         </div>
-        <div className="flex w-full justify-between items-end">
-          <div
-            className={lockChat ? "cursor-not-allowed" : ""}
-          >
+        <div className="flex w-full items-end justify-between">
+          <div className={lockChat ? "cursor-not-allowed" : ""}>
             <UploadFileButton
               lockChat={lockChat}
               fileInputRef={fileInputRef}

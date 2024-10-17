@@ -21,9 +21,8 @@ export default function FilePreview({
   const fileType = file.type.toLowerCase();
   const isImage = supImgFiles.some((type) => fileType.includes(type));
 
-
   return (
-    <div className="relative group pb-2">
+    <div className="group relative pb-2">
       {loading ? (
         isImage ? (
           <div className="flex h-20 w-20 items-center justify-center rounded-md border border-ring bg-background">
@@ -65,7 +64,8 @@ export default function FilePreview({
         <div
           className={`relative mt-2 ${
             isImage ? "h-20 w-32" : "h-20 w-32"
-          } cursor-pointer rounded-lg border border-border bg-background transition duration-300 group-hover:shadow-md`}        >
+          } cursor-pointer rounded-lg border border-border bg-background transition duration-300 group-hover:shadow-md`}
+        >
           {isImage ? (
             <img
               src={URL.createObjectURL(file)}
@@ -82,10 +82,10 @@ export default function FilePreview({
             </div>
           )}
           <div
-            className={`absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center opacity-100 transition-opacity`}
+            className={`absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center opacity-100 transition-opacity`}
           >
             <div
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 p-2 transition-all"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-zinc-800 p-2 transition-all hover:bg-zinc-700"
               onClick={onDelete}
             >
               <IconComponent name="X" className="stroke-zinc-100 stroke-2" />

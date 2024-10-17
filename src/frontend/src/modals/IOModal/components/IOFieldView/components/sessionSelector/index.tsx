@@ -148,7 +148,7 @@ export default function SessionSelector({
           ) : (
             <ShadTooltip styleClasses="z-50" content={session}>
               <div>
-                  {session === currentFlowId ? "Default Session" : session}
+                {session === currentFlowId ? "Default Session" : session}
               </div>
             </ShadTooltip>
           )}

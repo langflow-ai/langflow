@@ -1,10 +1,10 @@
+import Loading from "@/components/ui/loading";
 import useFlowStore from "@/stores/flowStore";
 import IconComponent from "../../../../../../../components/genericIconComponent";
 import { Button } from "../../../../../../../components/ui/button";
 import { Case } from "../../../../../../../shared/components/caseComponent";
 import { FilePreviewType } from "../../../../../../../types/components";
 import { classNames } from "../../../../../../../utils/utils";
-import Loading from "@/components/ui/loading";
 
 const BUTTON_STATES = {
   NO_INPUT: "bg-high-indigo text-background",
@@ -64,7 +64,7 @@ const ButtonSendWrapper = ({
       <Case condition={showStopButton}>
         <div className="flex items-center gap-2">
           Stop
-          <Loading className="text-black"/>
+          <Loading className="text-black" />
         </div>
       </Case>
 
@@ -77,9 +77,7 @@ const ButtonSendWrapper = ({
       </Case>
 
       <Case condition={showSendButton}>
-        <div className="flex items-center gap-2">
-          Send
-        </div>
+        <div className="flex items-center gap-2">Send</div>
       </Case>
     </Button>
   );
