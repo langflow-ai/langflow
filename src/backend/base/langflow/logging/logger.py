@@ -150,6 +150,9 @@ def configure(
     if log_level is None:
         log_level = "ERROR"
 
+    if log_file is None:
+        log_file = os.getenv("LANGFLOW_LOG_FILE", "")
+
     if log_env is None:
         log_env = os.getenv("LANGFLOW_LOG_ENV", "")
 
