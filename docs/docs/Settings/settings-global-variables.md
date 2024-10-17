@@ -90,7 +90,7 @@ If you installed Langflow locally, you must define the `LANGFLOW_VARIABLES_TO_GE
     ```
 
     Replace `VARIABLE1,VARIABLE2` with a comma-separated list (no spaces) of variables that you want Langflow to source from the environment.
-    For example, `openai_api_key,some_string`.
+    For example, `my_key,some_string`.
 
 3. Save and close the file.
 
