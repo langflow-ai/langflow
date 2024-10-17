@@ -175,3 +175,139 @@ MESSAGE_SENDER_NAME_AI = "AI"
 MESSAGE_SENDER_NAME_USER = "User"
 
 MAX_TEXT_LENGTH = 99999
+
+
+SIDEBAR_CATEGORIES = [
+    {
+        "display_name": "Saved",
+        "name": "saved_components",
+        "icon": "GradientSave",
+        "beta": False,
+    },
+    {
+        "display_name": "Inputs",
+        "name": "inputs",
+        "icon": "Download",
+        "beta": False,
+    },
+    {
+        "display_name": "Outputs",
+        "name": "outputs",
+        "icon": "Upload",
+        "beta": False,
+    },
+    {
+        "display_name": "Prompts",
+        "name": "prompts",
+        "icon": "TerminalSquare",
+        "beta": False,
+    },
+    {
+        "display_name": "Data",
+        "name": "data",
+        "icon": "Database",
+        "beta": False,
+    },
+    {
+        "display_name": "Models",
+        "name": "models",
+        "icon": "BrainCircuit",
+        "beta": False,
+    },
+    {
+        "display_name": "Helpers",
+        "name": "helpers",
+        "icon": "Wand2",
+        "beta": False,
+    },
+    {
+        "display_name": "Vector Stores",
+        "name": "vectorstores",
+        "icon": "Layers",
+        "beta": False,
+    },
+    {
+        "display_name": "Embeddings",
+        "name": "embeddings",
+        "icon": "Binary",
+        "beta": False,
+    },
+    {
+        "display_name": "Agents",
+        "name": "agents",
+        "icon": "Bot",
+        "beta": True,
+    },
+    {
+        "display_name": "Astra Assistants",
+        "name": "astra_assistants",
+        "icon": "Sparkles",
+        "beta": True,
+    },
+    {
+        "display_name": "Chains",
+        "name": "chains",
+        "icon": "Link",
+        "beta": True,
+    },
+    {
+        "display_name": "Loaders",
+        "name": "documentloaders",
+        "icon": "Paperclip",
+        "beta": True,
+    },
+    {
+        "display_name": "Utilities",
+        "name": "langchain_utilities",
+        "icon": "PocketKnife",
+        "beta": True,
+    },
+    {
+        "display_name": "Link Extractors",
+        "name": "link_extractors",
+        "icon": "Link2",
+        "beta": True,
+    },
+    {
+        "display_name": "Memories",
+        "name": "memories",
+        "icon": "Cpu",
+        "beta": True,
+    },
+    {
+        "display_name": "Output Parsers",
+        "name": "output_parsers",
+        "icon": "Compass",
+        "beta": True,
+    },
+    {
+        "display_name": "Prototypes",
+        "name": "prototypes",
+        "icon": "FlaskConical",
+        "beta": True,
+    },
+    {
+        "display_name": "Retrievers",
+        "name": "retrievers",
+        "icon": "FileSearch",
+        "beta": True,
+    },
+    {
+        "display_name": "Text Splitters",
+        "name": "textsplitters",
+        "icon": "Scissors",
+        "beta": True,
+    },
+    {
+        "display_name": "Toolkits",
+        "name": "toolkits",
+        "icon": "Package2",
+        "beta": True,
+    },
+    {
+        "display_name": "Tools",
+        "name": "tools",
+        "icon": "Hammer",
+        "beta": True,
+    },
+]
