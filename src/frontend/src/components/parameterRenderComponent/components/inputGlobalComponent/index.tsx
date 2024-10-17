@@ -68,6 +68,7 @@ export default function InputGlobalComponent({
   }
   return (
     <InputComponent
+      nodeStyle
       id={id}
       editNode={editNode}
       disabled={disabled}
