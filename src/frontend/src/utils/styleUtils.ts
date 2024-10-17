@@ -5,6 +5,7 @@ import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
+import { GlobeOkIcon } from "@/icons/globe-ok";
 import {
   AlertCircle,
   AlertTriangle,
@@ -132,6 +133,7 @@ import {
   RotateCcw,
   Save,
   SaveAll,
+  Scan,
   ScanEye,
   Scissors,
   ScreenShare,
@@ -684,4 +686,6 @@ export const nodeIconsLucide: iconsType = {
   Option: OptionIcon,
   FreezeAll: freezeAllIcon,
   Table,
+  Scan,
+  GlobeOkIcon,
 };
