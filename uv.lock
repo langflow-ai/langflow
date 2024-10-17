@@ -1700,16 +1700,16 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.115.0"
+version = "0.115.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "starlette" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7b/5e/bf0471f14bf6ebfbee8208148a3396d1a23298531a6cc10776c59f4c0f87/fastapi-0.115.0.tar.gz", hash = "sha256:f93b4ca3529a8ebc6fc3fcf710e5efa8de3df9b41570958abf1d97d843138004", size = 302295 }
+sdist = { url = "https://files.pythonhosted.org/packages/22/fa/19e3c7c9b31ac291987c82e959f36f88840bea183fa3dc3bb654669f19c1/fastapi-0.115.2.tar.gz", hash = "sha256:3995739e0b09fa12f984bce8fa9ae197b35d433750d3d312422d846e283697ee", size = 299968 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/ab/a1f7eed031aeb1c406a6e9d45ca04bff401c8a25a30dd0e4fd2caae767c3/fastapi-0.115.0-py3-none-any.whl", hash = "sha256:17ea427674467486e997206a5ab25760f6b09e069f099b96f5b55a32fb6f1631", size = 94625 },
+    { url = "https://files.pythonhosted.org/packages/c9/14/bbe7776356ef01f830f8085ca3ac2aea59c73727b6ffaa757abeb7d2900b/fastapi-0.115.2-py3-none-any.whl", hash = "sha256:61704c71286579cc5a598763905928f24ee98bfcc07aabe84cfefb98812bbc86", size = 94650 },
 ]
 
 [[package]]
@@ -3778,7 +3778,7 @@ dependencies = [
     { name = "firecrawl-py" },
     { name = "grandalf" },
     { name = "gunicorn" },
-    { name = "httpx" },
+    { name = "httpx", extra = ["http2"] },
     { name = "jq", marker = "sys_platform != 'win32'" },
     { name = "langchain" },
     { name = "langchain-core" },
@@ -3832,7 +3832,7 @@ deploy = [
 dev = [
     { name = "devtools" },
     { name = "dictdiffer" },
-    { name = "httpx" },
+    { name = "httpx", extra = ["http2"] },
     { name = "ipykernel" },
     { name = "mypy" },
     { name = "pandas-stubs" },
@@ -3894,7 +3894,7 @@ requires-dist = [
     { name = "docstring-parser", specifier = ">=0.16" },
     { name = "duckdb", specifier = ">=1.0.0" },
     { name = "emoji", specifier = ">=2.12.0" },
-    { name = "fastapi", specifier = ">=0.111.0" },
+    { name = "fastapi", specifier = ">=0.115.2" },
     { name = "fastapi-pagination", specifier = ">=0.12.29" },
     { name = "filelock", specifier = ">=3.15.4" },
     { name = "firecrawl-py", specifier = ">=0.0.16" },
@@ -3902,8 +3902,8 @@ requires-dist = [
     { name = "flower", marker = "extra == 'deploy'", specifier = ">=1.0.0" },
     { name = "grandalf", specifier = ">=0.8.0" },
     { name = "gunicorn", specifier = ">=22.0.0" },
-    { name = "httpx", specifier = ">=0.27" },
-    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
+    { name = "httpx", extras = ["http2"], specifier = ">=0.27" },
+    { name = "httpx", extras = ["http2"], marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.0" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0" },
     { name = "langchain", specifier = "~=0.2.0" },
@@ -3945,7 +3945,7 @@ requires-dist = [
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.6.0" },
     { name = "python-docx", specifier = ">=1.1.0" },
     { name = "python-jose", specifier = ">=3.3.0" },
-    { name = "python-multipart", specifier = ">=0.0.7" },
+    { name = "python-multipart", specifier = ">=0.0.12" },
     { name = "redis", marker = "extra == 'all'", specifier = ">=4.6.0" },
     { name = "redis", marker = "extra == 'deploy'", specifier = ">=4.6.0" },
     { name = "requests", marker = "extra == 'dev'", specifier = ">=2.32.0" },
