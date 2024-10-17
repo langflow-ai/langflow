@@ -20,15 +20,15 @@ async def created_message():
 
 
 @pytest.fixture
-def created_messages(session):
-    with session_scope() as session:
+def created_messages(session):  # noqa: ARG001
+    with session_scope() as _session:
         messages = [
             MessageCreate(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             MessageCreate(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
             MessageCreate(text="Test message 3", sender="User", sender_name="User", session_id="session_id2"),
         ]
         messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
-        return add_messagetables(messagetables, session)
+        return add_messagetables(messagetables, _session)
 
 
 @pytest.mark.api_key_required

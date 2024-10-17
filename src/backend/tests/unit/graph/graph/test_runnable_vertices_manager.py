@@ -66,7 +66,7 @@ def test_pickle(data):
     manager = RunnableVerticesManager.from_dict(data)
 
     binary = pickle.dumps(manager)
-    result = pickle.loads(binary)
+    result = pickle.loads(binary)  # noqa: S301
 
     assert result.run_map == manager.run_map
     assert result.run_predecessors == manager.run_predecessors

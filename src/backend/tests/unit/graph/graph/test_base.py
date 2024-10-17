@@ -9,7 +9,6 @@ from langflow.components.outputs.TextOutput import TextOutputComponent
 from langflow.components.tools.YfinanceTool import YfinanceToolComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
-from pytest import LogCaptureFixture
 
 
 @pytest.mark.asyncio
@@ -19,12 +18,12 @@ async def test_graph_not_prepared():
     graph = Graph()
     graph.add_component(chat_input)
     graph.add_component(chat_output)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Graph not prepared"):
         await graph.astep()
 
 
 @pytest.mark.asyncio
-async def test_graph(caplog: LogCaptureFixture):
+async def test_graph(caplog: pytest.LogCaptureFixture):
     chat_input = ChatInput()
     chat_output = ChatOutput()
     graph = Graph()
@@ -83,9 +82,7 @@ async def test_graph_functional_async_start():
     # and check that the graph is running
     # correctly
     ids = ["chat_input", "chat_output"]
-    results = []
-    async for result in graph.async_start():
-        results.append(result)
+    results = [result async for result in graph.async_start()]
 
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
@@ -102,9 +99,7 @@ def test_graph_functional_start():
     # and check that the graph is running
     # correctly
     ids = ["chat_input", "chat_output"]
-    results = []
-    for result in graph.start():
-        results.append(result)
+    results = list(graph.start())
 
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
@@ -123,9 +118,7 @@ def test_graph_functional_start_end():
     # and check that the graph is running
     # correctly
     ids = ["chat_input", "text_output"]
-    results = []
-    for result in graph.start():
-        results.append(result)
+    results = list(graph.start())
 
     assert len(results) == len(ids) + 1
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))

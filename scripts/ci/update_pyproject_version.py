@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import re
 import sys
 from pathlib import Path
@@ -5,6 +7,7 @@ from pathlib import Path
 import packaging.version
 
 BASE_DIR = Path(__file__).parent.parent.parent
+ARGUMENT_NUMBER = 3
 
 
 def update_pyproject_version(pyproject_path: str, new_version: str) -> None:
@@ -17,7 +20,7 @@ def update_pyproject_version(pyproject_path: str, new_version: str) -> None:
 
     if not pattern.search(content):
         msg = f'Project version not found in "{filepath}"'
-        raise Exception(msg)
+        raise ValueError(msg)
 
     content = pattern.sub(new_version, content)
 
@@ -29,16 +32,13 @@ def verify_pep440(version):
 
     https://github.com/pypa/packaging/blob/16.7/packaging/version.py#L191
     """
-    try:
-        return packaging.version.Version(version)
-    except packaging.version.InvalidVersion:
-        raise
+    return packaging.version.Version(version)
 
 
 def main() -> None:
-    if len(sys.argv) != 3:
+    if len(sys.argv) != ARGUMENT_NUMBER:
         msg = "New version not specified"
-        raise Exception(msg)
+        raise ValueError(msg)
     new_version = sys.argv[1]
 
     # Strip "v" prefix from version if present

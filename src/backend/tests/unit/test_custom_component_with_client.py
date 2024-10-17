@@ -15,7 +15,10 @@ def code_component_with_multiple_outputs():
 
 
 @pytest.fixture
-def component(client, active_user):
+def component(
+    client,  # noqa: ARG001
+    active_user,
+):
     return CustomComponent(
         user_id=active_user.id,
         field_config={

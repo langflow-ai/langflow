@@ -1,4 +1,4 @@
-import time
+import asyncio
 from uuid import UUID, uuid4
 
 import pytest
@@ -27,7 +27,7 @@ async def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1)
         )
         if task_status_response.status_code == 200 and task_status_response.json()["status"] == "SUCCESS":
             return task_status_response.json()
-        time.sleep(sleep_time)
+        await asyncio.sleep(sleep_time)
     return None  # Return None if task did not complete in time
 
 

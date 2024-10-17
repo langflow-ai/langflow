@@ -1,8 +1,11 @@
+"""Module for package versioning."""
+
 import contextlib
 
 
 def get_version() -> str:
     """Retrieves the version of the package from a possible list of package names.
+
     This accounts for after package names are updated for -nightly builds.
 
     Returns:
@@ -32,7 +35,9 @@ def get_version() -> str:
 
 
 def is_pre_release(v: str) -> bool:
-    """Returns a boolean indicating whether the version is a pre-release version,
+    """Returns a boolean indicating whether the version is a pre-release version.
+
+    Returns a boolean indicating whether the version is a pre-release version,
     as per the definition of a pre-release segment from PEP 440.
     """
     return any(label in v for label in ["a", "b", "rc"])

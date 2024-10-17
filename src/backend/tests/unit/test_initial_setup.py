@@ -59,7 +59,8 @@ async def test_create_or_update_starter_projects():
         assert folder is not None
         num_db_projects = len(folder.flows)
 
-        # Check that the number of projects in the database is the same as the number of projects returned by load_starter_projects
+        # Check that the number of projects in the database is the same as the number of projects returned by
+        # load_starter_projects
         assert num_db_projects == num_projects
 
 
@@ -76,7 +77,8 @@ async def test_create_or_update_starter_projects():
 #         # Get the number of projects in the database
 #         num_db_projects = session.exec(select(func.count(Flow.id)).where(Flow.folder == STARTER_FOLDER_NAME)).one()
 
-#         # Check that the number of projects in the database is the same as the number of projects returned by load_starter_projects
+#         # Check that the number of projects in the database is the same as the number of projects returned by
+#         # load_starter_projects
 #         assert num_db_projects == num_projects
 
 #         # Get all the starter projects
@@ -99,7 +101,7 @@ async def test_create_or_update_starter_projects():
 #         delete_messages(session_id="test")
 
 
-def find_componeny_by_name(components, name):
+def find_component_by_name(components, name):
     for children in components.values():
         if name in children:
             return children[name]
@@ -111,17 +113,17 @@ def set_value(component, input_name, value):
     component["template"][input_name]["value"] = value
 
 
-def component_to_node(id, type, component):
-    return {"id": type + id, "data": {"node": component, "type": type, "id": id}}
+def component_to_node(node_id, node_type, component):
+    return {"id": node_type + node_id, "data": {"node": component, "type": node_type, "id": node_id}}
 
 
-def add_edge(input, output, from_output, to_input):
+def add_edge(source, target, from_output, to_input):
     return {
-        "source": input,
-        "target": output,
+        "source": source,
+        "target": target,
         "data": {
-            "sourceHandle": {"dataType": "ChatInput", "id": input, "name": from_output, "output_types": ["Message"]},
-            "targetHandle": {"fieldName": to_input, "id": output, "inputTypes": ["Message"], "type": "str"},
+            "sourceHandle": {"dataType": "ChatInput", "id": source, "name": from_output, "output_types": ["Message"]},
+            "targetHandle": {"fieldName": to_input, "id": target, "inputTypes": ["Message"], "type": "str"},
         },
     }
 
@@ -131,8 +133,8 @@ async def test_refresh_starter_projects():
     data_path = str(Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
     components = build_custom_component_list_from_path(data_path)
 
-    chat_input = find_componeny_by_name(components, "ChatInput")
-    chat_output = find_componeny_by_name(components, "ChatOutput")
+    chat_input = find_component_by_name(components, "ChatInput")
+    chat_output = find_component_by_name(components, "ChatOutput")
     chat_output["template"]["code"]["value"] = "changed !"
     del chat_output["template"]["should_store_message"]
     graph_data = {
