@@ -103,7 +103,6 @@ class AstraAssistantManager(ComponentWithCache):
                 self.initialized = True
 
     def save_action(self):
-        print("puppies")
         if self._vertex:
             input_values = self._vertex.params
             tool_names = input_values.get("tool_names")

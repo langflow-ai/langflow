@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import io
 import json
 import re
@@ -235,6 +236,38 @@ def read_flow(
     raise HTTPException(status_code=404, detail="Flow not found")
 
 
+def simple_code_from_component(component, old_code):
+    output_method_code = ""
+    for output in component.outputs:
+        method = getattr(component, output.method)
+        method_code = inspect.getsource(method)
+        output_method_code += method_code + "\n"
+
+    component_class_name = component.__class__.__name__
+
+    # extract imports from old_code as text 
+    imports = [f"from {module} import {name}" for module, name in imports]
+    imports = "\n".join(imports)
+    
+    component_code = f"""
+    {imports}
+
+    class {component_class_name}(Component):
+        display_name = "{component.display_name} Component"
+        description = "{component.description}"
+        icon = "tool_icon"
+        name = "{component_class_name}"
+        inputs = [{', '.join(inputs_code)}]
+        outputs = [{', '.join(outputs_code)}]
+
+        {output_method_code}
+    """
+
+
+    return component._code
+
+
+
 def handle_save_action(flow, flow_id, name):
     graph_data = flow.data.copy()
     graph = Graph.from_payload(graph_data, flow_id=str(flow_id), flow_name=name)
@@ -245,7 +278,8 @@ def handle_save_action(flow, flow_id, name):
 
             # new_code = inspect.getsource(updated_component)
 
-            code = vertex.data["node"]["template"]["code"]["value"]
+            old_code = vertex.data["node"]["template"]["code"]["value"]
+            code = simple_code_from_component(updated_component, old_code)
             component_info = {
                 "name": f"{vertex.base_name}",
                 # TODO: fix this? Looks like it's almost always [] sometimes [Data] or [str]
@@ -261,18 +295,24 @@ def handle_save_action(flow, flow_id, name):
             # component_tuple[1]
             vertex._custom_component = updated_component
 
+            node_candidate = component_tuple[1]
+
+            # take template from flow.data["nodes"][i]["data"]["node"] and replace the template in node_candidate excluding template["code"]
+            node_candidate["template"] = vertex._data["data"]["node"]["template"]
+            node_candidate["template"]["code"] = component_tuple[1]["template"]["code"]
+
             vertex._data["data"]["node"] = component_tuple[1]
 
             for i, node in enumerate(graph._vertices):
                 if node["id"] == vertex.id:
                     graph._vertices[i] = vertex
-                    assert vertex._data["data"]["node"] == graph.data["nodes"][i]["data"]["node"]
+                    assert vertex._data["data"]["node"] == flow.data["nodes"][i]["data"]["node"]
 
             if changes:
+                pass
                 # add new edges
 
                 # vertex.data.update(result)
-                flow.data = graph.dict()
 
     # TODO: maybe return something
     # return None
