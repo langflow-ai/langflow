@@ -363,6 +363,7 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const categoryIcons = {
+  saved_components: GradientSave,
   inputs: Download,
   outputs: Upload,
   prompts: TerminalSquare,
@@ -412,7 +413,8 @@ export const nodeIconsLucide: iconsType = {
   toolkits: Package2,
   tools: Hammer,
   custom_components: GradientInfinity,
-
+  ChatInput: MessagesSquare,
+  ChatOutput: MessagesSquare,
   //Integration Icons
   Notify: Bell,
   ListFlows: Group,
