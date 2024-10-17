@@ -1,4 +1,5 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
+import { useEffect, useRef, useState } from "react";
 import useAlertStore from "../../../../stores/alertStore";
 import { classNames, cn } from "../../../../utils/utils";
 import ForwardedIconComponent from "../../../genericIconComponent";
@@ -15,6 +16,8 @@ import {
   PopoverContent,
   PopoverContentWithoutPortal,
 } from "../../../ui/popover";
+import { getInputClassName } from "../helpers/get-input-class-name";
+
 const CustomInputPopover = ({
   id,
   refInput,
@@ -41,6 +44,7 @@ const CustomInputPopover = ({
   optionsButton,
   handleKeyDown,
   showOptions,
+  nodeStyle,
 }) => {
   const setErrorData = useAlertStore.getState().setErrorData;
   const PopoverContentInput = editNode
@@ -63,6 +67,17 @@ const CustomInputPopover = ({
     }
     onChange && onChange(e.target.value);
   };
+
+  const isSelected = (selectedOption !== "" || !onChange) && setSelectedOption;
+  const areOptionsSelected =
+    (selectedOptions?.length !== 0 || !onChange) && setSelectedOptions;
+
+  const [inputWidth, setInputWidth] = useState(25);
+
+  useEffect(() => {
+    setInputWidth(selectedOption?.length * 8.5 + 30);
+  }, [selectedOption]);
+
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
@@ -72,39 +87,32 @@ const CustomInputPopover = ({
           type="text"
           onBlur={onInputLostFocus}
           value={
-            (selectedOption !== "" || !onChange) && setSelectedOption
+            isSelected
               ? selectedOption
-              : (selectedOptions?.length !== 0 || !onChange) &&
-                  setSelectedOptions
+              : areOptionsSelected
                 ? selectedOptions?.join(", ")
                 : value
           }
           autoFocus={autoFocus}
-          disabled={disabled}
           onClick={() => {
-            (((selectedOption !== "" || !onChange) && setSelectedOption) ||
-              ((selectedOptions?.length !== 0 || !onChange) &&
-                setSelectedOptions)) &&
-              setShowOptions(true);
+            (isSelected || areOptionsSelected) && setShowOptions(true);
           }}
+          readOnly={disabled}
           required={required}
-          className={classNames(
-            password &&
-              (!setSelectedOption || selectedOption === "") &&
-              !pwdVisible &&
-              value !== ""
-              ? "text-clip password"
-              : "",
-            editNode ? "input-edit-node" : "",
-            password && (setSelectedOption || setSelectedOptions)
-              ? "pr-[62.9px]"
-              : "",
-            (!password && (setSelectedOption || setSelectedOptions)) ||
-              (password && !(setSelectedOption || setSelectedOptions))
-              ? "pr-8"
-              : "",
-            className!,
-          )}
+          className={getInputClassName({
+            disabled,
+            password,
+            setSelectedOption,
+            selectedOption,
+            pwdVisible,
+            value,
+            editNode,
+            setSelectedOptions,
+            isSelected,
+            areOptionsSelected,
+            nodeStyle,
+            className,
+          })}
           placeholder={password && editNode ? "Key" : placeholder}
           onChange={handleInputChange}
           onKeyDown={(e) => {
@@ -113,6 +121,12 @@ const CustomInputPopover = ({
           }}
           data-testid={editNode ? id + "-edit" : id}
         />
+        {value && selectedOption !== "" && (
+          <div
+            className="bg-emerald-smooth pointer-events-none absolute left-2 top-1 h-[calc(100%-9px)] rounded-sm opacity-30"
+            style={{ width: `${inputWidth}px` }}
+          />
+        )}
       </PopoverAnchor>
       <PopoverContentInput
         className="noflow nowheel nopan nodelete nodrag p-0"
