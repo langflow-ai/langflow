@@ -68,8 +68,7 @@
             "fieldName": "tools",
             "id": "ToolCallingAgent-mf0BN",
             "inputTypes": [
-              "Tool",
-              "BaseTool"
+              "Tool"
             ],
             "type": "other"
           }
@@ -78,7 +77,7 @@
         "source": "CalculatorTool-Nb4P5",
         "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-Nb4P5œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "ToolCallingAgent-mf0BN",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-mf0BNœ, œinputTypesœ: [œToolœ, œBaseToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-mf0BNœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -120,8 +119,7 @@
             "fieldName": "tools",
             "id": "ToolCallingAgent-mf0BN",
             "inputTypes": [
-              "Tool",
-              "BaseTool"
+              "Tool"
             ],
             "type": "other"
           }
@@ -130,7 +128,7 @@
         "source": "PythonREPLTool-i922a",
         "sourceHandle": "{œdataTypeœ: œPythonREPLToolœ, œidœ: œPythonREPLTool-i922aœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "ToolCallingAgent-mf0BN",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-mf0BNœ, œinputTypesœ: [œToolœ, œBaseToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œToolCallingAgent-mf0BNœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -921,13 +919,13 @@
               "AgentExecutor",
               "Message"
             ],
-            "beta": true,
+            "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Agent that uses tools to perform the given task.",
             "display_name": "Agent",
             "documentation": "",
-            "edited": true,
+            "edited": false,
             "field_order": [
               "input_value",
               "handle_parsing_errors",
@@ -942,24 +940,13 @@
             "frozen": false,
             "icon": "bot-message-square",
             "lf_version": "1.0.16",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
                 "cache": true,
-                "display_name": "Agent",
-                "hidden": true,
-                "method": "build_agent",
-                "name": "agent",
-                "selected": "AgentExecutor",
-                "types": [
-                  "AgentExecutor"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
                 "display_name": "Response",
-                "method": "message_response",
+                "method": "get_response",
                 "name": "response",
                 "selected": "Message",
                 "types": [
@@ -971,26 +958,6 @@
             "pinned": false,
             "template": {
               "_type": "Component",
-              "chat_history": {
-                "_input_type": "DataInput",
-                "advanced": true,
-                "display_name": "Chat History",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Data"
-                ],
-                "list": true,
-                "name": "chat_history",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1007,28 +974,12 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Optional, List\n\nfrom langchain.agents import create_tool_calling_agent\nfrom langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMessagePromptTemplate\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.inputs import MultilineInput\nfrom langflow.inputs.inputs import HandleInput, DataInput\nfrom langflow.schema import Data\n\n\nclass ToolCallingAgentComponent(LCToolsAgentComponent):\n    display_name: str = \"Tool Calling Agent\"\n    description: str = \"Agent that uses tools\"\n    icon = \"bot-message-square\"\n    beta = True\n    name = \"ToolCallingAgent\"\n\n    inputs = LCToolsAgentComponent._base_inputs + [\n        HandleInput(name=\"llm\", display_name=\"Language Model\", input_types=[\"LanguageModel\"], required=True),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"System Prompt\",\n            info=\"System prompt for the agent.\",\n            value=\"You are a helpful assistant\",\n        ),\n        MultilineInput(\n            name=\"user_prompt\", display_name=\"Prompt\", info=\"This prompt must contain 'input' key.\", value=\"{input}\"\n        ),\n        DataInput(name=\"chat_history\", display_name=\"Chat History\", is_list=True, advanced=True),\n    ]\n\n    def get_chat_history_data(self) -> Optional[List[Data]]:\n        return self.chat_history\n\n    def create_agent_runnable(self):\n        if \"input\" not in self.user_prompt:\n            raise ValueError(\"Prompt must contain 'input' key.\")\n        messages = [\n            (\"system\", self.system_prompt),\n            (\"placeholder\", \"{chat_history}\"),\n            HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=[\"input\"], template=self.user_prompt)),\n            (\"placeholder\", \"{agent_scratchpad}\"),\n        ]\n        prompt = ChatPromptTemplate.from_messages(messages)\n        return create_tool_calling_agent(self.llm, self.tools, prompt)\n"
+                "value": "from loguru import logger\n\nfrom langflow.components.agents import (\n    AgentActionRouter,\n    AgentContextBuilder,\n    DecideActionComponent,\n    ExecuteActionComponent,\n    GenerateThoughtComponent,\n    ProvideFinalAnswerComponent,\n)\nfrom langflow.components.inputs.ChatInput import ChatInput\nfrom langflow.components.outputs import ChatOutput\nfrom langflow.components.prompts import PromptComponent\nfrom langflow.custom import Component\nfrom langflow.graph.graph.base import Graph\nfrom langflow.graph.state.model import create_state_model\nfrom langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput, MultilineInput, Output\nfrom langflow.schema.message import Message\n\n\nclass Agent(Component):\n    display_name = \"Agent\"\n    description = \"Customizable Agent component\"\n\n    inputs = [\n        HandleInput(name=\"llm\", display_name=\"Language Model\", input_types=[\"LanguageModel\"], required=True),\n        HandleInput(name=\"tools\", display_name=\"Tools\", input_types=[\"Tool\"], is_list=True, required=True),\n        IntInput(name=\"max_iterations\", display_name=\"Max Iterations\", value=5),\n        BoolInput(name=\"verbose\", display_name=\"Verbose\", value=False),\n        MultilineInput(name=\"system_prompt\", display_name=\"System Prompt\", value=\"You are a helpful assistant.\"),\n        MultilineInput(name=\"user_prompt\", display_name=\"User Prompt\", value=\"{input}\"),\n        MultilineInput(\n            name=\"loop_prompt\",\n            display_name=\"Loop Prompt\",\n            value=\"Last Action Result: {last_action_result}\\nBased on the actions taken, here's the final answer:\",\n        ),\n        MessageTextInput(\n            name=\"decide_action_prompt\",\n            display_name=\"Decide Action Prompt\",\n            value=\"Based on your thought, decide the best action to take next.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"final_answer_prompt\",\n            display_name=\"Final Answer Prompt\",\n            value=\"Considering all observations, provide the final answer to the user's query.\",\n            advanced=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"get_response\")]\n\n    async def get_response(self) -> Message:\n        # Chat input initialization\n        chat_input = ChatInput().set(input_value=self.user_prompt)\n\n        # Agent Context Builder\n        agent_context = AgentContextBuilder().set(\n            initial_context=chat_input.message_response,\n            tools=self.tools,\n            llm=self.llm,\n            max_iterations=self.max_iterations,\n        )\n\n        # Generate Thought\n        generate_thought = GenerateThoughtComponent().set(\n            agent_context=agent_context.build_context,\n        )\n\n        # Decide Action\n        decide_action = DecideActionComponent().set(\n            agent_context=generate_thought.generate_thought,\n            prompt=self.decide_action_prompt,\n        )\n\n        # Agent Action Router\n        action_router = AgentActionRouter().set(\n            agent_context=decide_action.decide_action,\n            max_iterations=self.max_iterations,\n        )\n\n        # Execute Action\n        execute_action = ExecuteActionComponent().set(agent_context=action_router.route_to_execute_tool)\n        # Loop Prompt\n        loop_prompt = PromptComponent().set(\n            template=self.loop_prompt,\n            answer=execute_action.execute_action,\n        )\n\n        generate_thought.set(prompt=loop_prompt.build_prompt)\n\n        # Final Answer\n        final_answer = ProvideFinalAnswerComponent().set(\n            agent_context=action_router.route_to_final_answer,\n            prompt=self.final_answer_prompt,\n        )\n\n        # Chat output\n        chat_output = ChatOutput().set(input_value=final_answer.get_final_answer)\n        output_model = create_state_model(\"AgentOutput\", output=chat_output.message_response)\n\n        # Build the graph\n        graph = Graph(chat_input, chat_output)\n        async for result in graph.async_start(max_iterations=self.max_iterations):\n            if self.verbose:\n                logger.info(result)\n\n        return output_model.output\n"
               },
-              "handle_parsing_errors": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Handle Parse Errors",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "handle_parsing_errors",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "input_value": {
+              "decide_action_prompt": {
                 "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Input",
+                "advanced": true,
+                "display_name": "Decide Action Prompt",
                 "dynamic": false,
                 "info": "",
                 "input_types": [
@@ -1036,7 +987,7 @@
                 ],
                 "list": false,
                 "load_from_db": false,
-                "name": "input_value",
+                "name": "decide_action_prompt",
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1044,7 +995,28 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "Based on your thought, decide the best action to take next."
+              },
+              "final_answer_prompt": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Final Answer Prompt",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "final_answer_prompt",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Considering all observations, provide the final answer to the user's query."
               },
               "llm": {
                 "_input_type": "HandleInput",
@@ -1065,9 +1037,31 @@
                 "type": "other",
                 "value": ""
               },
+              "loop_prompt": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Loop Prompt",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "loop_prompt",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Last Action Result: {last_action_result}\nBased on the actions taken, here's the final answer:"
+              },
               "max_iterations": {
                 "_input_type": "IntInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Max Iterations",
                 "dynamic": false,
                 "info": "",
@@ -1086,7 +1080,7 @@
                 "advanced": false,
                 "display_name": "System Prompt",
                 "dynamic": false,
-                "info": "System prompt for the agent.",
+                "info": "",
                 "input_types": [
                   "Message"
                 ],
@@ -1110,14 +1104,13 @@
                 "dynamic": false,
                 "info": "",
                 "input_types": [
-                  "Tool",
-                  "BaseTool"
+                  "Tool"
                 ],
                 "list": true,
                 "load_from_db": false,
                 "name": "tools",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "trace_as_metadata": true,
@@ -1127,9 +1120,9 @@
               "user_prompt": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
-                "display_name": "Prompt",
+                "display_name": "User Prompt",
                 "dynamic": false,
-                "info": "This prompt must contain 'input' key.",
+                "info": "",
                 "input_types": [
                   "Message"
                 ],
@@ -1148,7 +1141,7 @@
               },
               "verbose": {
                 "_input_type": "BoolInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Verbose",
                 "dynamic": false,
                 "info": "",
