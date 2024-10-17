@@ -8,6 +8,7 @@ from langflow.components.agents import (
     DecideActionComponent,
     GenerateThoughtComponent,
 )
+from langflow.components.agents.agent import Agent
 from langflow.components.agents.execute_action import ExecuteActionComponent
 from langflow.components.agents.write_final_answer import ProvideFinalAnswerComponent
 from langflow.components.inputs import ChatInput
@@ -308,3 +309,39 @@ def test_complex_agent_flow():
     assert results_ids[-1] == "chat_output", "Last executed component should be chat_output"
 
     print(f"Execution completed with results: {results_ids}")
+
+
+async def test_agent_component():
+    chat_input = ChatInput(_id="chat_input").set(input_value="What is 19423 times 12345?")
+    openai_component = OpenAIModelComponent(_id="openai").set(api_key=os.getenv("OPENAI_API_KEY"))
+    calculator_tool = CalculatorToolComponent(_id="calculator_tool")
+    agent_context = AgentContextBuilder(_id="agent_context").set(
+        initial_context=chat_input.message_response,
+        tools=[calculator_tool.build_tool],
+        llm=openai_component.build_model,
+    )
+    agent_component = Agent(_id="agent").set(
+        agent_context=agent_context.build_context,
+        llm=openai_component.build_model,
+        tools=[calculator_tool.build_tool],
+        max_iterations=10,
+        verbose=True,
+        system_prompt="You are a helpful assistant.",
+        user_prompt="What is 19423 times 12345?",
+        loop_prompt="Last Action Result: {last_action_result}\nBased on the actions taken, here's the final answer:",
+    )
+
+    graph = Graph(chat_input, agent_component)
+    assert graph.is_cyclic is True
+
+    # Run and validate the execution of the graph
+    results = []
+    max_iterations = 10
+    snapshots = [graph.get_snapshot()]
+
+    async for result in graph.async_start(max_iterations=max_iterations):
+        snapshots.append(graph.get_snapshot())
+        results.append(result)
+
+    assert len(snapshots) > 2, "Graph should have more than one snapshot"
+    assert len(results) > 0, "Graph should have more than one result"
