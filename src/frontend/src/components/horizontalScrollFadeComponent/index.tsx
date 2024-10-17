@@ -53,7 +53,7 @@ export default function HorizontalScrollFadeComponent({
   }, [divWidth, children]); // Depend on divWidth
 
   return isFolder ? (
-    <div className="hidden w-full flex-col gap-2 lg:flex">{children}</div>
+    <div className="flex w-full flex-col gap-2">{children}</div>
   ) : (
     <div ref={fadeContainerRef} className="fade-container flex">
       <div ref={scrollContainerRef} className="scroll-container flex gap-2">
