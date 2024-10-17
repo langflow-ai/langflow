@@ -5,6 +5,7 @@ import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
+import { getIconName } from "./components/helpers/get-icon-name";
 import CustomInputPopover from "./components/popover";
 import CustomInputPopoverObject from "./components/popoverObject";
 
@@ -35,6 +36,7 @@ export default function InputComponent({
   isObjectOption = false,
   name,
   onChangeFolderName,
+  nodeStyle = false,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -120,6 +122,7 @@ export default function InputComponent({
             />
           ) : (
             <CustomInputPopover
+              nodeStyle={nodeStyle}
               refInput={refInput}
               handleKeyDown={handleKeyDown}
               optionButton={optionButton}
@@ -159,20 +162,24 @@ export default function InputComponent({
         >
           <button
             onClick={(e) => {
+              if (disabled) return;
               setShowOptions(!showOptions);
               e.preventDefault();
               e.stopPropagation();
             }}
             className={cn(
               onChange && setSelectedOption && selectedOption !== ""
-                ? "text-medium-indigo"
+                ? "text-emerald-icon"
                 : "text-muted-foreground",
-              "hover:text-accent-foreground",
+              !disabled && "hover:text-foreground",
             )}
           >
             <ForwardedIconComponent
-              name={optionsIcon}
-              className={"h-4 w-4"}
+              name={getIconName(disabled!, selectedOption!, optionsIcon)}
+              className={cn(
+                disabled ? "cursor-grab" : "cursor-pointer",
+                "h-5 w-5",
+              )}
               aria-hidden="true"
             />
           </button>
