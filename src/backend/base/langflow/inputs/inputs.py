@@ -1,9 +1,10 @@
+import copy
 import warnings
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from typing import Any, get_args
 
 from pandas import DataFrame
-from pydantic import Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
@@ -361,7 +362,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
         return v
 
 
-class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
+class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, BaseModel):
     """Represents a boolean field.
 
     This class represents a boolean input and provides functionality for handling boolean values.
@@ -370,10 +371,34 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     Attributes:
         field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.BOOLEAN.
         value (CoalesceBool): The value of the boolean input.
+        onChange (Optional[Callable[[CoalesceBool], None]]): The callback function to be called when the value changes.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.BOOLEAN
-    value: CoalesceBool = False
+    value: CoalesceBool = Field(default=False)
+    onChange: Callable[[CoalesceBool], None] | None = Field(default=None, exclude=True, repr=False)
+
+    _previous_value: CoalesceBool = PrivateAttr(default=False)
+
+    model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
+
+    @model_validator(mode="after")
+    def check_value_change(self):
+        if callable(self.onChange) and self._previous_value != self.value:
+            self.onChange(self.value)
+        self._previous_value = self.value
+        return self
+
+    def __deepcopy__(self, memo):
+        # Create a new instance of BoolInput
+        new_instance = self.model_copy(deep=False)  # Shallow copy of the model
+
+        # Manually copy mutable attributes
+        new_instance.onChange = copy.deepcopy(self.onChange, memo)
+        new_instance._previous_value = copy.deepcopy(self._previous_value, memo)
+        new_instance.value = copy.deepcopy(self.value, memo)
+
+        return new_instance
 
 
 class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, InputTraceMixin):
