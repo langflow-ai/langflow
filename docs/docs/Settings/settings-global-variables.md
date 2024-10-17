@@ -112,8 +112,6 @@ If you installed Langflow locally, you must define the `LANGFLOW_VARIABLES_TO_GE
 
    2. Click **Global Variables**.
 
-   <!-- 3. If you used the previous code examples from this procedure, then `VARIABLE1` and `VARIABLE2` appear in the list of **Global Variables**. -->
-
     The environment variables appear in the list of **Global Variables**.
 
 </TabItem>
