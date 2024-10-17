@@ -39,7 +39,7 @@ const ButtonSendWrapper = ({
   const getButtonState = () => {
     if (showStopButton) return BUTTON_STATES.SHOW_STOP;
     if (noInput) return BUTTON_STATES.NO_INPUT;
-    if (chatValue) return BUTTON_STATES.HAS_CHAT_VALUE;
+    if (chatValue) return BUTTON_STATES.DEFAULT;
 
     return BUTTON_STATES.DEFAULT;
   };
@@ -77,11 +77,9 @@ const ButtonSendWrapper = ({
       </Case>
 
       <Case condition={showSendButton}>
-        <IconComponent
-          name="LucideSend"
-          className="form-modal-send-icon"
-          aria-hidden="true"
-        />
+        <div className="flex items-center gap-2">
+          Send
+        </div>
       </Case>
     </Button>
   );

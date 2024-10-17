@@ -37,7 +37,7 @@ const TextAreaWrapper = ({
 
   const fileClass = files.length > 0 ? "!rounded-t-none border-t-0" : "";
 
-  const additionalClassNames = "form-modal-lockchat pl-14";
+  const additionalClassNames = "form-input block w-full border-0 custom-scroll focus:border-ring focus:ring-0 sm:text-sm";
 
   useEffect(() => {
     if (!lockChat && !noInput) {

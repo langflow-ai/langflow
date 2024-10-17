@@ -17,7 +17,7 @@ import {
 } from "../../../../../types/components";
 import FilePreview from "../filePreviewChat";
 import ButtonSendWrapper from "./components/buttonSendWrapper";
-import TextAreaWrapper from "./components/textAreaWrapper";
+import TextAreaWrapper from "./components/textAreaWrapper/newTextAreaWrapper";
 import UploadFileButton from "./components/uploadFileButton";
 import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
@@ -173,7 +173,7 @@ export default function ChatInput({
           files={files}
           isDragging={isDragging}
         />
-        <div className="flex w-full justify-between">
+        <div className="flex w-full justify-between items-end">
           <div
             className={lockChat ? "cursor-not-allowed" : ""}
           >
