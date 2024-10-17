@@ -4,7 +4,11 @@ from langflow.services.database.models.api_key import ApiKeyCreate
 
 
 @pytest.fixture
-async def api_key(client, logged_in_headers, active_user):
+async def api_key(
+    client,
+    logged_in_headers,
+    active_user,  # noqa: ARG001
+):
     api_key = ApiKeyCreate(name="test-api-key")
 
     response = await client.post("api/v1/api_key/", data=api_key.model_dump_json(), headers=logged_in_headers)

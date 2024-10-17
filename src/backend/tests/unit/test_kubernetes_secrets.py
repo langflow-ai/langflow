@@ -8,13 +8,13 @@ from langflow.services.variable.kubernetes_secrets import KubernetesSecretManage
 
 
 @pytest.fixture
-def mock_kube_config(mocker):
+def _mock_kube_config(mocker):
     mocker.patch("kubernetes.config.load_kube_config")
     mocker.patch("kubernetes.config.load_incluster_config")
 
 
 @pytest.fixture
-def secret_manager(mock_kube_config):
+def secret_manager(_mock_kube_config):
     return KubernetesSecretManager(namespace="test-namespace")
 
 

@@ -12,7 +12,7 @@ from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 
 @pytest.fixture
-def add_toolkit_output():
+def _add_toolkit_output():
     FEATURE_FLAGS.add_toolkit_output = True
     yield
     FEATURE_FLAGS.add_toolkit_output = False
@@ -81,7 +81,7 @@ def test_component_tool():
 
 
 @pytest.mark.api_key_required
-@pytest.mark.usefixtures("add_toolkit_output", "client")
+@pytest.mark.usefixtures("_add_toolkit_output", "client")
 def test_component_tool_with_api_key():
     chat_output = ChatOutput()
     openai_llm = OpenAIModelComponent()

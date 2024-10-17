@@ -27,7 +27,7 @@ ALL_COLLECTIONS = [
 
 
 @pytest.fixture
-def astradb_client(request):
+def astradb_client():
     client = AstraDB(api_endpoint=get_astradb_api_endpoint(), token=get_astradb_application_token())
     yield client
     for collection in ALL_COLLECTIONS:

@@ -17,7 +17,10 @@ def test_get_suggestion_message():
 
     # Test case 3: Multiple outdated components
     outdated_components = ["component1", "component2", "component3"]
-    expected_message = "The flow contains 3 outdated components. We recommend updating the following components: component1, component2, component3."
+    expected_message = (
+        "The flow contains 3 outdated components. "
+        "We recommend updating the following components: component1, component2, component3."
+    )
     assert get_suggestion_message(outdated_components) == expected_message
 
 
