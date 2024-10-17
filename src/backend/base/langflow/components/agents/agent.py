@@ -23,7 +23,6 @@ class Agent(Component):
     description = "Customizable Agent component"
 
     inputs = [
-        HandleInput(name="agent_context", display_name="Agent Context", input_types=["AgentContext"], required=True),
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         HandleInput(name="tools", display_name="Tools", input_types=["Tool"], is_list=True, required=True),
         IntInput(name="max_iterations", display_name="Max Iterations", value=5),
@@ -50,7 +49,7 @@ class Agent(Component):
     ]
     outputs = [Output(name="response", display_name="Response", method="get_response")]
 
-    def get_response(self) -> Message:
+    async def get_response(self) -> Message:
         # Chat input initialization
         chat_input = ChatInput().set(input_value=self.user_prompt)
 
@@ -101,7 +100,7 @@ class Agent(Component):
 
         # Build the graph
         graph = Graph(chat_input, chat_output)
-        for result in graph.start():
+        async for result in graph.async_start(max_iterations=self.max_iterations):
             if self.verbose:
                 logger.info(result)
 
