@@ -22,7 +22,12 @@ class KubernetesSecretManager:
         # initialize the Kubernetes API client
         self.core_api = client.CoreV1Api()
 
-    def create_secret(self, name: str, data: dict, secret_type: str = "Opaque"):
+    def create_secret(
+        self,
+        name: str,
+        data: dict,
+        secret_type: str = "Opaque",  # noqa: S107
+    ):
         """Create a new secret in the specified namespace.
 
         Args:

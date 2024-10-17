@@ -34,7 +34,9 @@ class EmbeddingSimilarityComponent(Component):
         embedding_vectors: list[Data] = self.embedding_vectors
 
         # Assert that the list contains exactly two Data objects
-        assert len(embedding_vectors) == 2, "Exactly two embedding vectors are required."  # noqa: PLR2004
+        if len(embedding_vectors) != 2:  # noqa: PLR2004
+            msg = "Exactly two embedding vectors are required."
+            raise ValueError(msg)
 
         embedding_1 = np.array(embedding_vectors[0].data["embeddings"])
         embedding_2 = np.array(embedding_vectors[1].data["embeddings"])
