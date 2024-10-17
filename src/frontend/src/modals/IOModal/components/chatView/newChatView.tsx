@@ -225,9 +225,18 @@ export default function ChatView({
                         </div>
                     </div>
                 )}
-                <div ref={ref}></div>
+                <div className={lockChat ? "form-modal-chat-position" : ""} ref={ref}>
+                {lockChat && (
+                    <div className="flex w-full px-8">
+                        <div className="flex items-center space-x-2 text-muted-foreground">
+                            <span className="text-4xl">⛓️</span>
+                            <span className="animate-pulse">Flow running...</span>
+                        </div>
+                    </div>
+                )}
+                </div>
             </div>
-            <div className="w-4/6 m-auto">
+            <div className="w-5/6 m-auto">
                     <ChatInput
                         chatValue={chatValue}
                         noInput={!inputTypes.includes("ChatInput")}
