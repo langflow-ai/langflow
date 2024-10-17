@@ -73,7 +73,7 @@
     --chat-trigger-disabled: #b4c3da;
     --status-red: #ef4444;
     --status-yellow: #eab308;
-    --chat-send: #059669;
+    --chat-send: #000000;
     --status-green: #4ade80;
     --status-blue: #2563eb;
     --status-gray: #6b7280;
@@ -167,7 +167,7 @@
     --chat-trigger-disabled: #2d3b54;
     --status-red: #ef4444;
     --status-yellow: #eab308;
-    --chat-send: #059669;
+    --chat-send: #ffffff;
     --status-green: #4ade80;
     --status-blue: #2563eb;
     --connection: #6d6c6c;
