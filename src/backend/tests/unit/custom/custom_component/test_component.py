@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.agents.CrewAIAgent import CrewAIAgentComponent
 from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
 from langflow.components.helpers.SequentialTask import SequentialTaskComponent
@@ -7,11 +6,6 @@ from langflow.components.inputs.ChatInput import ChatInput
 from langflow.components.models.OpenAIModel import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
 from langflow.template.field.base import Output
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 def test_set_invalid_output():

@@ -1,4 +1,3 @@
-import os
 import re
 import shutil
 import tempfile
@@ -9,10 +8,9 @@ from unittest.mock import MagicMock
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
-from sqlmodel import Session
-
 from langflow.services.deps import get_storage_service
 from langflow.services.storage.service import StorageService
+from sqlmodel import Session
 
 
 @pytest.fixture
@@ -27,7 +25,7 @@ def mock_storage_service():
     return service
 
 
-@pytest.fixture(name="files_client", scope="function")
+@pytest.fixture(name="files_client")
 async def files_client_fixture(session: Session, monkeypatch, request, load_flows_dir, mock_storage_service):
     # Set the database url to a test database
     if "noclient" in request.keywords:
@@ -39,7 +37,7 @@ async def files_client_fixture(session: Session, monkeypatch, request, load_flow
         monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
         if "load_flows" in request.keywords:
             shutil.copyfile(
-                pytest.BASIC_EXAMPLE_PATH, os.path.join(load_flows_dir, "c54f9130-f2fa-4a3e-b22a-3856d946351b.json")
+                pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
             )
             monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")

@@ -297,6 +297,7 @@ class VerticesBuiltResponse(BaseModel):
 class InputValueRequest(BaseModel):
     components: list[str] | None = []
     input_value: str | None = None
+    session: str | None = None
     type: InputType | None = Field(
         "any",
         description="Defines on which components the input value should be applied. "
@@ -310,9 +311,12 @@ class InputValueRequest(BaseModel):
                 {
                     "components": ["components_id", "Component Name"],
                     "input_value": "input_value",
+                    "session": "session_id",
                 },
                 {"components": ["Component Name"], "input_value": "input_value"},
                 {"input_value": "input_value"},
+                {"components": ["Component Name"], "input_value": "input_value", "session": "session_id"},
+                {"input_value": "input_value", "session": "session_id"},
                 {"type": "chat", "input_value": "input_value"},
                 {"type": "json", "input_value": '{"key": "value"}'},
             ]
@@ -351,3 +355,14 @@ class ConfigResponse(BaseModel):
     auto_saving_interval: int
     health_check_max_retries: int
     max_file_size_upload: int
+
+
+class SidebarCategory(BaseModel):
+    display_name: str
+    name: str
+    icon: str
+    beta: bool
+
+
+class SidebarCategoriesResponse(BaseModel):
+    categories: list[SidebarCategory]

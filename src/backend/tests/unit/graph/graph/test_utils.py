@@ -1,13 +1,7 @@
 import copy
 
 import pytest
-
 from langflow.graph.graph import utils
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 @pytest.fixture

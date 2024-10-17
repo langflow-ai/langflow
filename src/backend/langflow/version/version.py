@@ -1,6 +1,8 @@
+import contextlib
+
+
 def get_version() -> str:
-    """
-    Retrieves the version of the package from a possible list of package names.
+    """Retrieves the version of the package from a possible list of package names.
     This accounts for after package names are updated for -nightly builds.
 
     Returns:
@@ -19,20 +21,18 @@ def get_version() -> str:
     ]
     _version = None
     for pkg_name in pkg_names:
-        try:
+        with contextlib.suppress(ImportError, metadata.PackageNotFoundError):
             _version = metadata.version(pkg_name)
-        except (ImportError, metadata.PackageNotFoundError):
-            pass
 
     if _version is None:
-        raise ValueError(f"Package not found from options {pkg_names}")
+        msg = f"Package not found from options {pkg_names}"
+        raise ValueError(msg)
 
     return _version
 
 
 def is_pre_release(v: str) -> bool:
-    """
-    Returns a boolean indicating whether the version is a pre-release version,
+    """Returns a boolean indicating whether the version is a pre-release version,
     as per the definition of a pre-release segment from PEP 440.
     """
     return any(label in v for label in ["a", "b", "rc"])
