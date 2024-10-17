@@ -8,9 +8,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from sqlmodel import Session
 
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.auth.utils import get_current_active_user
+from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_session, get_storage_service
 from langflow.services.storage.service import StorageService
@@ -41,9 +43,9 @@ def get_flow_id(
 async def upload_file(
     file: UploadFile,
     flow_id: Annotated[UUID, Depends(get_flow_id)],
-    current_user=Depends(get_current_active_user),
-    session=Depends(get_session),
-    storage_service: StorageService = Depends(get_storage_service),
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    session: Annotated[Session, Depends(get_session)],
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
         max_file_size_upload = get_storage_service().settings_service.settings.max_file_size_upload
