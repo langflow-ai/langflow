@@ -8,6 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from sqlmodel import Session
 
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.auth.utils import get_current_active_user
@@ -43,7 +44,7 @@ async def upload_file(
     file: UploadFile,
     flow_id: Annotated[UUID, Depends(get_flow_id)],
     current_user=Depends(get_current_active_user),
-    session=Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> UploadFileResponse:
     try:

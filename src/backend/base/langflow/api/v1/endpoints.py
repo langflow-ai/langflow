@@ -352,7 +352,7 @@ async def webhook_run_flow(
             RunPayload(
                 run_is_webhook=True,
                 run_seconds=int(time.perf_counter() - start_time),
-                run_success=error_msg == "",
+                run_success=not error_msg,
                 run_error_message=error_msg,
             ),
         )

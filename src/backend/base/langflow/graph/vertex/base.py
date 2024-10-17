@@ -413,7 +413,7 @@ class Vertex:
                     if isinstance(val, bool):
                         params[field_name] = val
                     elif isinstance(val, str):
-                        params[field_name] = val != ""
+                        params[field_name] = bool(val)
                 elif field.get("type") == "table" and val is not None:
                     # check if the value is a list of dicts
                     # if it is, create a pandas dataframe from it

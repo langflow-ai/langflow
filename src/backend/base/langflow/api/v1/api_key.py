@@ -49,7 +49,7 @@ def create_api_key_route(
 @router.delete("/{api_key_id}", dependencies=[Depends(auth_utils.get_current_active_user)])
 def delete_api_key_route(
     api_key_id: UUID,
-    db: Session = Depends(get_session),
+    db: Annotated[Session, Depends(get_session)],
 ):
     try:
         delete_api_key(db, api_key_id)
@@ -64,8 +64,8 @@ def save_store_api_key(
     response: Response,
     current_user: Annotated[User, Depends(auth_utils.get_current_active_user)],
     db: Annotated[Session, Depends(get_session)],
-    settings_service=Depends(get_settings_service),
 ):
+    settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
 
     try:
