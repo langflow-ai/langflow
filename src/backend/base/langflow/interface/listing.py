@@ -6,10 +6,6 @@ class AllTypesDict(LazyLoadDictBase):
     def __init__(self):
         self._all_types_dict = None
 
-    @property
-    def ALL_TYPES_DICT(self):
-        return self.all_types_dict
-
     def _build_dict(self):
         langchain_types_dict = self.get_type_dict()
         return {

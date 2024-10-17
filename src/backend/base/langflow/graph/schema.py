@@ -48,22 +48,12 @@ class ResultData(BaseModel):
 
 
 class InterfaceComponentTypes(str, Enum, metaclass=ContainsEnumMeta):
-    # ChatInput and ChatOutput are the only ones that are
-    # power components
     ChatInput = "ChatInput"
     ChatOutput = "ChatOutput"
     TextInput = "TextInput"
     TextOutput = "TextOutput"
     DataOutput = "DataOutput"
     WebhookInput = "Webhook"
-
-    def __contains__(cls, item):
-        try:
-            cls(item)
-        except ValueError:
-            return False
-        else:
-            return True
 
 
 CHAT_COMPONENTS = [InterfaceComponentTypes.ChatInput, InterfaceComponentTypes.ChatOutput]
