@@ -104,8 +104,7 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
     file_path = cache_path / file_name
 
     # Save the binary content to the file
-    with file_path.open("wb") as file:
-        file.write(decoded_bytes)
+    file_path.write_bytes(decoded_bytes)
 
     return str(file_path)
 
