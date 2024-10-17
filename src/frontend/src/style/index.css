@@ -5,6 +5,7 @@
 /* TODO: Confirm that all colors here are found in tailwind config */
 
 @layer base {
+
   :root {
     /* Zinc Theme Values from shadcn */
     --background: 0 0% 100%; /* hsl(0 0% 100%) */
@@ -91,6 +92,11 @@
     --note-red-opacity: #7f1d1d80;
 
     --emerald-success: 160.1 84.1% 39.4%;
+    --emerald-icon: 161.4 93.5% 30.4%;
+    --emaral-smooth: 149.3 80.4% 90%;
+    --emeral-hard: 162.9 93.5% 24.3%;
+
+
   }
 
   .dark {
@@ -182,6 +188,9 @@
     --chat-user-icon: #4f3d6e;
 
     --emerald-success: 160.1 84.1% 39.4%;
+    --emerald-icon: 161.4 93.5% 30.4%;
+    --emaral-smooth: 149.3 80.4% 90%;
+    --emeral-hard: 162.9 93.5% 24.3%;
 
   }
 }
