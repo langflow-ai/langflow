@@ -7,7 +7,7 @@ class MultiConditionalRouterComponent(Component):
     display_name = "Multi Conditional Router"
     description = "Routes an input message to a corresponding output based on text comparison."
     icon = "equal"
-    name = "ConditionalRouter"
+    name = "MultiConditionalRouter"
 
     inputs = [
         MessageTextInput(
