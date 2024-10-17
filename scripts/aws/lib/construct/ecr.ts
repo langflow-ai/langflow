@@ -2,7 +2,6 @@ import { RemovalPolicy } from 'aws-cdk-lib'
 import * as ecr from 'aws-cdk-lib/aws-ecr'
 import * as ecrdeploy from 'cdk-ecr-deployment'
 import * as ecs from 'aws-cdk-lib/aws-ecs'
-import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery'
 import { DockerImageAsset, Platform } from 'aws-cdk-lib/aws-ecr-assets'
 import * as path from "path";
 import { Construct } from 'constructs'
@@ -39,7 +38,7 @@ export class EcrRepository extends Construct {
     // Create Docker Image Asset
     const dockerBackEndImageAsset = new DockerImageAsset(this, "DockerBackEndImageAsset", {
       directory: backendPath,
-      file:"cdk.Dockerfile",
+      file:"docker/cdk.Dockerfile",
       exclude: excludeDir,
       platform: imagePlatform,
     });
