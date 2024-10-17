@@ -15,7 +15,7 @@ import {
   ChatInputType,
   FilePreviewType,
 } from "../../../../../types/components";
-import FilePreview from "../filePreviewChat";
+import FilePreview from "../filePreviewChat/newFilePreview";
 import ButtonSendWrapper from "./components/buttonSendWrapper";
 import TextAreaWrapper from "./components/textAreaWrapper/newTextAreaWrapper";
 import UploadFileButton from "./components/uploadFileButton";
@@ -150,7 +150,7 @@ export default function ChatInput({
     );
   };
 
-  const classNameFilePreview = getClassNamesFilePreview(inputFocus);
+  const classNameFilePreview = `flex w-full items-center gap-2 bg-background py-2 overflow-auto custom-scroll`;
 
   const handleButtonClick = () => {
     fileInputRef.current!.click();
@@ -173,6 +173,22 @@ export default function ChatInput({
           files={files}
           isDragging={isDragging}
         />
+        <div className={classNameFilePreview}>
+          {files.map((file) => (
+            <FilePreview
+              error={file.error}
+              file={file.file}
+              loading={file.loading}
+              key={file.id}
+              onDelete={() => {
+                setFiles((prev: FilePreviewType[]) =>
+                  prev.filter((f) => f.id !== file.id),
+                );
+                // TODO: delete file on backend
+              }}
+            />
+          ))}
+        </div>
         <div className="flex w-full justify-between items-end">
           <div
             className={lockChat ? "cursor-not-allowed" : ""}
@@ -195,24 +211,6 @@ export default function ChatInput({
           </div>
         </div>
       </div>
-      {files.length > 0 && (
-        <div className={classNameFilePreview}>
-          {files.map((file) => (
-            <FilePreview
-              error={file.error}
-              file={file.file}
-              loading={file.loading}
-              key={file.id}
-              onDelete={() => {
-                setFiles((prev: FilePreviewType[]) =>
-                  prev.filter((f) => f.id !== file.id),
-                );
-                // TODO: delete file on backend
-              }}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
