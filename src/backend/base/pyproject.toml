@@ -111,7 +111,7 @@ dependencies = [
     "sqlmodel==0.0.18",
     "loguru>=0.7.1",
     "rich>=13.7.0",
-    "langchain-experimental>=0.0.61",
+    "langchain-experimental==0.0.61",
     "pydantic>=2.7.0",
     "pydantic-settings>=2.2.0",
     "typer>=0.12.0",
