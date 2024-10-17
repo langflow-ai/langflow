@@ -3914,7 +3914,7 @@ requires-dist = [
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.0" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0" },
     { name = "langchain", specifier = "~=0.2.0" },
-    { name = "langchain-core", specifier = ">=0.2.32" },
+    { name = "langchain-core", specifier = "==0.2.41" },
     { name = "langchain-experimental", specifier = ">=0.0.61" },
     { name = "langchainhub", specifier = "~=0.1.15" },
     { name = "llama-cpp-python", marker = "extra == 'all'", specifier = ">=0.2.0" },
