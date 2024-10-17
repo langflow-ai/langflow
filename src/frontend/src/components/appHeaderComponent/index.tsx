@@ -49,7 +49,7 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Middle Section */}
-      <div className="mx-auto flex min-w-[420px] flex-shrink-0 items-center px-5">
+      <div className="mx-auto flex items-center px-5">
         <FlowMenu />
       </div>
 
