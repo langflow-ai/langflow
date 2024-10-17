@@ -1,6 +1,6 @@
+from langflow.base.embeddings.aiml_embeddings import AIMLEmbeddingsImpl
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.aiml_constants import AIML_EMBEDDING_MODELS
-from langflow.components.embeddings.util.AIMLEmbeddingsImpl import AIMLEmbeddingsImpl
 from langflow.field_typing import Embeddings
 from langflow.inputs.inputs import DropdownInput
 from langflow.io import SecretStrInput
