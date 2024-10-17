@@ -801,8 +801,8 @@ class Component(CustomComponent):
         return Input(**kwargs)
 
     def to_toolkit(self) -> list[Tool]:
-        ComponentToolkit = _get_component_toolkit()
-        return ComponentToolkit(component=self).get_tools()
+        component_toolkit = _get_component_toolkit()
+        return component_toolkit(component=self).get_tools()
 
     def get_project_name(self):
         if hasattr(self, "_tracing_service") and self._tracing_service:

@@ -89,7 +89,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
 
     def astra_rest(self, args):
         headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}"}
-        ASTRA_URL = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.table_name}/"
+        astra_url = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.table_name}/"
         key = []
         # Partition keys are mandatory
         for k in self.partition_keys:
@@ -108,7 +108,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
             elif self.static_filters[k] is not None:
                 key.append(self.static_filters[k])
 
-        url = f'{ASTRA_URL}{"/".join(key)}?page-size={self.number_of_results}'
+        url = f'{astra_url}{"/".join(key)}?page-size={self.number_of_results}'
 
         if self.projection_fields != "*":
             url += f'&fields={urllib.parse.quote(self.projection_fields.replace(" ","")) }'
