@@ -199,7 +199,7 @@ export default function ChatView({
 
     return (
 
-        <div className="flex w-full flex-col rounded-md background"
+        <div className="flex w-full flex-col rounded-md background h-full"
             onDragOver={dragOver}
             onDragEnter={dragEnter}
             onDragLeave={dragLeave}

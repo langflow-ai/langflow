@@ -237,7 +237,7 @@ export default function IOModal({
             {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
             <BaseModal.Content overflowHidden>
                 <div className="flex-max-width h-full flex-col">
-                    <div className="flex text-lg items-center w-full h-fit">
+                    <div className="flex text-lg items-center w-full h-[3%]">
                         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
                             <IconComponent name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"} className="h-6 w-6 text-ring" />
                         </Button>
@@ -246,7 +246,7 @@ export default function IOModal({
                         </div>
                         <div className={cn("font-semibold w-4/5", sidebarOpen ? "ml-auto" : "pl-1")}>Build a new tool</div>
                     </div>
-                    <div className="flex max-w-full h-full">
+                    <div className="flex maxw-full h-[97%]">
                         <div
                             className={cn(
                                 "flex h-full flex-shrink-0 flex-col justify-start transition-all duration-300",
