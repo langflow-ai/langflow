@@ -17,7 +17,9 @@ class AgentContextBuilder(Component):
     outputs = [Output(name="agent_context", display_name="Agent Context", method="build_context")]
 
     def build_context(self) -> AgentContext:
-        tools_dict = {tool.name: tool for tool in self.tools}
+        tools = [self.tools] if self.tools and not isinstance(self.tools, list) else self.tools
+
+        tools_dict = {tool.name: tool for tool in tools}
         context = AgentContext(tools=tools_dict, llm=self.llm, context=self.initial_context or "", iteration=0)
         if self.max_iterations is not None:
             context.max_iterations = self.max_iterations
