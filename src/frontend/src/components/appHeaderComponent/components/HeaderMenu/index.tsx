@@ -13,7 +13,7 @@ export const HeaderMenu = ({ children }) => (
 );
 
 export const HeaderMenuToggle = ({ children }) => (
-  <Menu.Button className="inline-flex w-full items-center justify-center gap-1 rounded-md px-2 py-2 text-sm font-medium text-white hover:bg-accent hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75 active:bg-black/20">
+  <Menu.Button className="inline-flex w-full items-center justify-center gap-1 rounded-md px-2 py-2 text-sm font-medium text-white hover:bg-accent hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75">
     {children}
     <ChevronsUpDown
       className="text-zinc-500"
@@ -37,7 +37,7 @@ export const HeaderMenuSelector = ({
   loading?: boolean;
   Preview?: boolean;
 }>) => (
-  <Menu.Button className="group inline-flex h-8 w-full items-center justify-center gap-2 rounded-md border border-solid border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75 active:bg-gray-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
+  <Menu.Button className="group inline-flex h-8 w-full items-center justify-center gap-2 rounded-md border border-solid border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75 dark:border-zinc-700 dark:hover:bg-zinc-800">
     {Icon ? <Icon className="h-4 w-4 fill-black dark:fill-zinc-400" /> : null}
     {loading ? (
       <Skeleton className="min-w-28 bg-gray-100 text-left">&nbsp;</Skeleton>
@@ -54,7 +54,7 @@ export const HeaderMenuSelector = ({
 );
 
 const BASE_ITEM_STYLES =
-  "group flex w-full items-center justify-between h-[46px] rounded-md pl-2 py-2 text-sm text-gray-900 active:bg-gray-200 dark:text-[white] dark:hover:bg-zinc-800";
+  "group flex w-full items-center justify-between h-[46px] rounded-md pl-2 py-2 text-sm text-gray-900 dark:text-[white] dark:hover:bg-zinc-800";
 
 export const HeaderMenuItemLink = ({
   href = "#",
@@ -65,9 +65,7 @@ export const HeaderMenuItemLink = ({
   <Menu.Item>
     {({ active }) => (
       <a
-        className={`${selected ? "bg-gray-50" : ""} ${
-          active ? "bg-gray-100" : ""
-        } ${BASE_ITEM_STYLES}`}
+        className={`${selected ? "bg-gray-50" : ""} ${BASE_ITEM_STYLES}`}
         href={href}
         {...(newPage ? { rel: "noreferrer", target: "_blank" } : {})}
       >
@@ -85,9 +83,7 @@ export const HeaderMenuItemButton = ({
   <Menu.Item>
     {({ active }) => (
       <button
-        className={`${selected ? "bg-gray-50 dark:bg-zinc-800" : ""} ${
-          active ? "bg-gray-100 dark:hover:bg-zinc-900" : ""
-        } ${BASE_ITEM_STYLES}`}
+        className={`${selected ? "bg-gray-50 dark:bg-zinc-800" : ""} ${BASE_ITEM_STYLES}`}
         onClick={onClick}
       >
         {children}
