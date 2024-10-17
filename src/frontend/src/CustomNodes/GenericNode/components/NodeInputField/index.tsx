@@ -104,7 +104,7 @@ export default function NodeInputField({
       }
     >
       {displayHandle && Handle}
-      <div className="flex w-full flex-col gap-2">
+      <div className="flex w-full flex-col gap-2.5">
         <div className="flex w-full items-center justify-between text-sm">
           <div className="flex w-full items-center truncate">
             {proxy ? (
@@ -119,24 +119,23 @@ export default function NodeInputField({
               <div className="flex gap-2">
                 <span>
                   {
-                    <span>
+                    <span className="text-sm font-medium">
                       {getCustomParameterTitle({ title, nodeId: data.id })}
                     </span>
                   }
                 </span>
               </div>
             )}
-            <span className={(required ? "ml-2 " : "") + "text-status-red"}>
-              {required ? "*" : ""}
-            </span>
-            <div className="">
+            <span className={"text-status-red"}>{required ? "*" : ""}</span>
+            <div>
               {info !== "" && (
                 <ShadTooltip content={<NodeInputInfo info={info} />}>
                   {/* put div to avoid bug that does not display tooltip */}
                   <div className="cursor-help">
                     <IconComponent
                       name="Info"
-                      className="relative bottom-px ml-1.5 h-3 w-4"
+                      strokeWidth={2}
+                      className="relative bottom-px top-[1px] ml-1 h-3 w-3 text-muted-foreground"
                     />
                   </div>
                 </ShadTooltip>
