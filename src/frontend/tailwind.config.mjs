@@ -36,9 +36,6 @@ const config = {
       }
     },
     extend: {
-            fontFamily: {
-              sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'],
-            },
       keyframes: {
         wiggle: {
           "0%, 100%": { transform: "scale(100%)" },
@@ -121,6 +118,9 @@ const config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         "emerald-success": "hsl(var(--emerald-success))",
+        "emerald-icon": "hsl(var(--emerald-icon))",
+        "emerald-smooth": "hsl(var(--emaral-smooth))",
+        "emerald-hard": "hsl(var(--emeral-hard))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -157,7 +157,8 @@ const config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", ...fontFamily.sans],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'],
+        jetbrains: ["JetBrains Mono", "monospace"],
       },
       boxShadow: {
         "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.5)",
