@@ -208,7 +208,7 @@ jobs:
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 
-  call_docker_build_ep:
+  call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: inputs.build_docker_ep == true
     uses: ./.github/workflows/docker-build.yml
