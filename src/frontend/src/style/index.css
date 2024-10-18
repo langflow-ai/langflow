@@ -96,6 +96,7 @@
     --emaral-smooth: 149.3 80.4% 90%;
     --emeral-hard: 162.9 93.5% 24.3%;
     --smooth-zinc: 240 5% 64.9%;
+    --hard-zinc: 240 5.2% 33.9%;
 
   }
 
@@ -192,5 +193,7 @@
     --emaral-smooth: 149.3 80.4% 90%;
     --emeral-hard: 162.9 93.5% 24.3%;
     --smooth-zinc: 240 5% 64.9%;
+    --hard-zinc: 240 5.2% 33.9%
+
   }
 }
