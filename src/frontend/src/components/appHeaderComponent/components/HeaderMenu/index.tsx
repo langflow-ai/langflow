@@ -54,7 +54,7 @@ export const HeaderMenuSelector = ({
 );
 
 const BASE_ITEM_STYLES =
-  "group flex w-full items-center justify-between h-[46px] rounded-md pl-2 py-2 text-sm text-gray-900 dark:text-[white] dark:hover:bg-zinc-800";
+  "group flex w-full items-center justify-between h-[46px] rounded-md pl-2 py-2 text-sm text-gray-900 dark:text-[white] dark:hover:bg-zinc-800 hover:bg-gray-100";
 
 export const HeaderMenuItemLink = ({
   href = "#",

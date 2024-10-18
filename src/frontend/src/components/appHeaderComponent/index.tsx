@@ -24,13 +24,14 @@ export default function AppHeader(): JSX.Element {
   useTheme();
 
   return (
-    <div className="relative flex h-[62px] items-center border-b px-4 dark:bg-black">
+    <div className="relative flex items-center border-b px-4 py-1.5 dark:bg-black">
       {/* Left Section */}
       <div className="flex w-full items-center gap-2 lg:max-w-[475px]">
         <Button
           unstyled
           onClick={() => navigate("/")}
           className="flex h-8 w-8 items-center"
+          data-testid="icon-ChevronLeft"
         >
           {ENABLE_DATASTAX_LANGFLOW ? (
             <ShortDataStaxLogo className="fill-black dark:fill-[white]" />

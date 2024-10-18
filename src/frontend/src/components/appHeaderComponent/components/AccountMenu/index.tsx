@@ -1,8 +1,10 @@
+import { useLogout } from "@/controllers/API/queries/auth";
 import { CustomFeedbackDialog } from "@/customization/components/custom-feedback-dialog";
 import { CustomHeaderMenuItemsTitle } from "@/customization/components/custom-header-menu-items-title";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
@@ -13,7 +15,6 @@ import {
   HeaderMenuItemLink,
   HeaderMenuItems,
   HeaderMenuItemsSection,
-  HeaderMenuItemsTitle,
   HeaderMenuToggle,
 } from "../HeaderMenu";
 import { ProfileIcon } from "../ProfileIcon";
@@ -24,12 +25,25 @@ export const AccountMenu = () => {
   const { customParam: id } = useParams();
   const version = useDarkStore((state) => state.version);
   const navigate = useCustomNavigate();
+  const { mutate: mutationLogout } = useLogout();
+
+  const { isAdmin, autoLogin } = useAuthStore((state) => ({
+    isAdmin: state.isAdmin,
+    autoLogin: state.autoLogin,
+  }));
+
+  const handleLogout = () => {
+    mutationLogout();
+  };
 
   return (
     <>
       <HeaderMenu>
         <HeaderMenuToggle>
-          <div className="h-7 w-7 rounded-full focus-visible:outline-0">
+          <div
+            className="h-7 w-7 rounded-full focus-visible:outline-0"
+            data-testid="user-profile-settings"
+          >
             {ENABLE_DATASTAX_LANGFLOW ? <CustomProfileIcon /> : <ProfileIcon />}
           </div>
         </HeaderMenuToggle>
@@ -48,6 +62,15 @@ export const AccountMenu = () => {
               <HeaderMenuItemButton onClick={() => navigate("/settings")}>
                 Settings
               </HeaderMenuItemButton>
+            )}
+            {!ENABLE_DATASTAX_LANGFLOW && (
+              <>
+                {isAdmin && !autoLogin && (
+                  <HeaderMenuItemButton onClick={() => navigate("/admin")}>
+                    Admin Page
+                  </HeaderMenuItemButton>
+                )}
+              </>
             )}
             {ENABLE_DATASTAX_LANGFLOW ? (
               <HeaderMenuItemButton onClick={() => setIsFeedbackOpen(true)}>
@@ -85,13 +108,17 @@ export const AccountMenu = () => {
               Join our Discord
             </HeaderMenuItemLink>
           </HeaderMenuItemsSection>
-          {ENABLE_DATASTAX_LANGFLOW && (
-            <HeaderMenuItemsSection>
+          <HeaderMenuItemsSection>
+            {ENABLE_DATASTAX_LANGFLOW ? (
               <HeaderMenuItemLink href="/session/logout">
                 Logout
               </HeaderMenuItemLink>
-            </HeaderMenuItemsSection>
-          )}
+            ) : (
+              <HeaderMenuItemButton onClick={handleLogout}>
+                Logout
+              </HeaderMenuItemButton>
+            )}
+          </HeaderMenuItemsSection>
         </HeaderMenuItems>
       </HeaderMenu>
       <CustomFeedbackDialog
