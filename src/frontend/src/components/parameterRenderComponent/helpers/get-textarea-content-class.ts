@@ -10,8 +10,7 @@ export const getTextAreaContentClasses = ({
   return cn(
     textAreaContentClasses.base,
     editNode ? textAreaContentClasses.editNode : textAreaContentClasses.normal,
-    disabled && !editNode && textAreaContentClasses.disabled,
-    disabled && editNode && textAreaContentClasses.disabledEditNode,
+    disabled && textAreaContentClasses.disabled,
     password !== undefined &&
       password &&
       value !== "" &&
