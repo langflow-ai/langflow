@@ -98,7 +98,7 @@ const CustomInputPopover = ({
           onClick={() => {
             (isSelected || areOptionsSelected) && setShowOptions(true);
           }}
-          disabled={disabled}
+          readOnly={disabled}
           required={required}
           className={getInputClassName({
             disabled,
