@@ -612,6 +612,7 @@ export default function NodeToolbarComponent({
                 override: true,
               });
               setSuccessData({ title: "New component successfully saved!" });
+              setShowOverrideModal(false);
             }}
           >
             <ConfirmationModal.Content>
