@@ -6,6 +6,7 @@ from .IDGenerator import IDGeneratorComponent
 from .Memory import MemoryComponent
 from .MergeData import MergeDataComponent
 from .ParseData import ParseDataComponent
+from .ParseExcelData import ParseExcelDataComponent
 from .SplitText import SplitTextComponent
 from .StoreMessage import StoreMessageComponent
 
@@ -21,4 +22,5 @@ __all__ = [
     "ParseDataComponent",
     "SplitTextComponent",
     "StoreMessageComponent",
+    "ParseExcelDataComponent",
 ]
