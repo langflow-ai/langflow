@@ -477,21 +477,31 @@ const SideBarFoldersButtonsComponent = ({
                         position="popper"
                       >
                         {item.name !== "My Projects" && (
-                          <SelectItem id="rename-button" value="rename" data-testid="btn-rename-folder">
+                          <SelectItem
+                            id="rename-button"
+                            value="rename"
+                            data-testid="btn-rename-folder"
+                          >
                             <FolderSelectItem
                               name="Rename"
                               iconName="square-pen"
                             />
                           </SelectItem>
                         )}
-                        <SelectItem value="download" data-testid="btn-download-folder">
+                        <SelectItem
+                          value="download"
+                          data-testid="btn-download-folder"
+                        >
                           <FolderSelectItem
                             name="Download Content"
                             iconName="download"
                           />
                         </SelectItem>
                         {index > 0 && (
-                          <SelectItem value="delete" data-testid="btn-delete-folder">
+                          <SelectItem
+                            value="delete"
+                            data-testid="btn-delete-folder"
+                          >
                             <FolderSelectItem name="Delete" iconName="trash" />
                           </SelectItem>
                         )}
