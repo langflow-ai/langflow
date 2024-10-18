@@ -224,188 +224,203 @@ export default function IOModal({
     }
   }, [open]);
 
-    return (
-        <BaseModal
-            open={open}
-            setOpen={setOpen}
-            disable={disable}
-            type={isPlayground ? "modal" : undefined}
-            onSubmit={() => sendMessage({ repeat: 1 })}
-            size="x-large"
-            className="p-0"
-        >
-            <BaseModal.Trigger>{children}</BaseModal.Trigger>
-            {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
-            <BaseModal.Content overflowHidden>
-                <div className="flex-max-width h-full">
-                    <div
-                        className={cn(
-                            "flex h-full flex-shrink-0 flex-col justify-start transition-all duration-300",
-                            sidebarOpen ? "w-1/5" : "w-16",
-                        )}
-                    >
-                        <div className="flex h-full flex-col overflow-y-auto bg-zinc-950 text-center custom-scroll p-6 border-r border-border">
-                            <div className="flex items-center gap-2 pb-8">
-                                <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                                    <IconComponent name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"} className="h-6 w-6 text-ring" />
-                                </Button>
-                                {sidebarOpen && <div className="font-semibold">
-                                    Playground
-                                </div>}
-                            </div>
-                            {sidebarOpen && <div className="flex flex-col pl-3">
-                                <div className="flex flex-col gap-2 pb-2">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <IconComponent name="MessagesSquare" className="h-6 w-6 text-ring" />
-                                            <div className="font-semibold">
-                                                Chat
-                                            </div>
-                                        </div>
-                                        <Button variant="ghost" size="icon" onClick={(_) => {
-                                            setvisibleSession(undefined);
-                                            setSelectedViewField(undefined);
-                                        }}>
-                                            <IconComponent name="Plus" className="h-6 w-6 text-ring" />
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col">
-                                    {sessions.map((session, index) => (
-                                        <SessionSelector
-                                            setSelectedView={setSelectedViewField}
-                                            selectedView={selectedViewField}
-                                            key={index}
-                                            session={session}
-                                            deleteSession={(session) => {
-                                                handleDeleteSession(session);
-                                                if (selectedViewField?.id === session) {
-                                                    setSelectedViewField(undefined);
-                                                }
-                                            }}
-                                            updateVisibleSession={(session) => {
-                                                setvisibleSession(session);
-                                            }}
-                                            toggleVisibility={() => {
-                                                setvisibleSession(session);
-                                            }}
-                                            isVisible={visibleSession === session}
-                                            inspectSession={(session) => {
-                                                setSelectedViewField({
-                                                    id: session,
-                                                    type: "Session",
-                                                });
-                                            }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>}
-                        </div>
-                    </div>
-                    <div className="flex h-full min-w-96 flex-grow">
-                        {selectedViewField && (
-                            <div
-                                className={cn(
-                                    "flex h-full w-full flex-col items-start gap-4 pt-4",
-                                    !selectedViewField ? "hidden" : "",
-                                )}
-                            >
-                                <div className="font-xl flex items-center justify-center gap-3 font-semibold">
-                                    {haveChat && (
-                                        <button onClick={() => setSelectedViewField(undefined)}>
-                                            <IconComponent
-                                                name={"ArrowLeft"}
-                                                className="h-6 w-6"
-                                            ></IconComponent>
-                                        </button>
-                                    )}
-                                    {
-                                        nodes.find((node) => node.id === selectedViewField.id)
-                                            ?.data.node.display_name
-                                    }
-                                </div>
-                                <div className="h-full w-full">
-                                    {inputs.some(
-                                        (input) => input.id === selectedViewField.id,
-                                    ) && (
-                                            <IOFieldView
-                                                type={InputOutput.INPUT}
-                                                left={false}
-                                                fieldType={selectedViewField.type!}
-                                                fieldId={selectedViewField.id!}
-                                            />
-                                        )}
-                                    {outputs.some(
-                                        (output) => output.id === selectedViewField.id,
-                                    ) && (
-                                            <IOFieldView
-                                                type={InputOutput.OUTPUT}
-                                                left={false}
-                                                fieldType={selectedViewField.type!}
-                                                fieldId={selectedViewField.id!}
-                                            />
-                                        )}
-                                    {sessions.some(
-                                        (session) => session === selectedViewField.id,
-                                    ) && (
-                                            <SessionView
-                                                session={selectedViewField.id}
-                                                id={currentFlowId}
-                                            />
-                                        )}
-                                </div>
-                            </div>
-                        )}
-                        <div
-                            className={cn(
-                                "flex flex-col h-full w-full p-6",
-                                selectedViewField ? "hidden" : "",
-                            )}
-                        >
-                            {visibleSession && (
-                                <div className="mb-4 font-semibold text-xl h-[5%]">
-                                    {visibleSession}
-                                </div>
-                            )}
-                            {haveChat ? (
-                                <ChatView
-                                    focusChat={sessionId}
-                                    sendMessage={sendMessage}
-                                    chatValue={chatValue}
-                                    setChatValue={setChatValue}
-                                    lockChat={lockChat}
-                                    setLockChat={setLockChat}
-                                    visibleSession={visibleSession}
-                                />
-                            ) : (
-                                <span className="flex h-full w-full items-center justify-center font-thin text-muted-foreground">
-                                    Select an IO component to view
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </BaseModal.Content>
-            {!haveChat ? (
-                <BaseModal.Footer
-                    submit={{
-                        label: "Run Flow",
-                        icon: (
-                            <IconComponent
-                                name={isBuilding ? "Loader2" : "Zap"}
-                                className={cn(
-                                    "h-4 w-4",
-                                    isBuilding
-                                        ? "animate-spin"
-                                        : "fill-current text-medium-indigo",
-                                )}
-                            />
-                        ),
-                    }}
-                />
-            ) : (
-                <></>
+  return (
+    <BaseModal
+      open={open}
+      setOpen={setOpen}
+      disable={disable}
+      type={isPlayground ? "modal" : undefined}
+      onSubmit={() => sendMessage({ repeat: 1 })}
+      size="x-large"
+      className="p-0"
+    >
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
+      <BaseModal.Content overflowHidden>
+        <div className="flex-max-width h-full">
+          <div
+            className={cn(
+              "flex h-full flex-shrink-0 flex-col justify-start transition-all duration-300",
+              sidebarOpen ? "w-1/5" : "w-16",
             )}
-        </BaseModal>
-    );
+          >
+            <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-zinc-950 p-6 text-center custom-scroll">
+              <div className="flex items-center gap-2 pb-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                >
+                  <IconComponent
+                    name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
+                    className="h-6 w-6 text-ring"
+                  />
+                </Button>
+                {sidebarOpen && <div className="font-semibold">Playground</div>}
+              </div>
+              {sidebarOpen && (
+                <div className="flex flex-col pl-3">
+                  <div className="flex flex-col gap-2 pb-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <IconComponent
+                          name="MessagesSquare"
+                          className="h-6 w-6 text-ring"
+                        />
+                        <div className="font-semibold">Chat</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(_) => {
+                          setvisibleSession(undefined);
+                          setSelectedViewField(undefined);
+                        }}
+                      >
+                        <IconComponent
+                          name="Plus"
+                          className="h-6 w-6 text-ring"
+                        />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col">
+                    {sessions.map((session, index) => (
+                      <SessionSelector
+                        setSelectedView={setSelectedViewField}
+                        selectedView={selectedViewField}
+                        key={index}
+                        session={session}
+                        deleteSession={(session) => {
+                          handleDeleteSession(session);
+                          if (selectedViewField?.id === session) {
+                            setSelectedViewField(undefined);
+                          }
+                        }}
+                        updateVisibleSession={(session) => {
+                          setvisibleSession(session);
+                        }}
+                        toggleVisibility={() => {
+                          setvisibleSession(session);
+                        }}
+                        isVisible={visibleSession === session}
+                        inspectSession={(session) => {
+                          setSelectedViewField({
+                            id: session,
+                            type: "Session",
+                          });
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex h-full min-w-96 flex-grow">
+            {selectedViewField && (
+              <div
+                className={cn(
+                  "flex h-full w-full flex-col items-start gap-4 pt-4",
+                  !selectedViewField ? "hidden" : "",
+                )}
+              >
+                <div className="font-xl flex items-center justify-center gap-3 font-semibold">
+                  {haveChat && (
+                    <button onClick={() => setSelectedViewField(undefined)}>
+                      <IconComponent
+                        name={"ArrowLeft"}
+                        className="h-6 w-6"
+                      ></IconComponent>
+                    </button>
+                  )}
+                  {
+                    nodes.find((node) => node.id === selectedViewField.id)?.data
+                      .node.display_name
+                  }
+                </div>
+                <div className="h-full w-full">
+                  {inputs.some(
+                    (input) => input.id === selectedViewField.id,
+                  ) && (
+                    <IOFieldView
+                      type={InputOutput.INPUT}
+                      left={false}
+                      fieldType={selectedViewField.type!}
+                      fieldId={selectedViewField.id!}
+                    />
+                  )}
+                  {outputs.some(
+                    (output) => output.id === selectedViewField.id,
+                  ) && (
+                    <IOFieldView
+                      type={InputOutput.OUTPUT}
+                      left={false}
+                      fieldType={selectedViewField.type!}
+                      fieldId={selectedViewField.id!}
+                    />
+                  )}
+                  {sessions.some(
+                    (session) => session === selectedViewField.id,
+                  ) && (
+                    <SessionView
+                      session={selectedViewField.id}
+                      id={currentFlowId}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+            <div
+              className={cn(
+                "flex h-full w-full flex-col p-6",
+                selectedViewField ? "hidden" : "",
+              )}
+            >
+              {visibleSession && (
+                <div className="mb-4 h-[5%] text-xl font-semibold">
+                  {visibleSession}
+                </div>
+              )}
+              {haveChat ? (
+                <ChatView
+                  focusChat={sessionId}
+                  sendMessage={sendMessage}
+                  chatValue={chatValue}
+                  setChatValue={setChatValue}
+                  lockChat={lockChat}
+                  setLockChat={setLockChat}
+                  visibleSession={visibleSession}
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center font-thin text-muted-foreground">
+                  Select an IO component to view
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </BaseModal.Content>
+      {!haveChat ? (
+        <BaseModal.Footer
+          submit={{
+            label: "Run Flow",
+            icon: (
+              <IconComponent
+                name={isBuilding ? "Loader2" : "Zap"}
+                className={cn(
+                  "h-4 w-4",
+                  isBuilding
+                    ? "animate-spin"
+                    : "fill-current text-medium-indigo",
+                )}
+              />
+            ),
+          }}
+        />
+      ) : (
+        <></>
+      )}
+    </BaseModal>
+  );
 }
