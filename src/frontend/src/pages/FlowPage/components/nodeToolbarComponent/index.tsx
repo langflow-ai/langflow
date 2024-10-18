@@ -603,6 +603,7 @@ export default function NodeToolbarComponent({
                 override: true,
               });
               setSuccessData({ title: `${data.id} successfully overridden!` });
+              setShowOverrideModal(false);
             }}
             onClose={() => setShowOverrideModal(false)}
             onCancel={() => {
@@ -611,6 +612,7 @@ export default function NodeToolbarComponent({
                 override: true,
               });
               setSuccessData({ title: "New component successfully saved!" });
+              setShowOverrideModal(false);
             }}
           >
             <ConfirmationModal.Content>
