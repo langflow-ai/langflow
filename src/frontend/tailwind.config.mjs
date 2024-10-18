@@ -123,6 +123,7 @@ const config = {
         "emerald-hard": "hsl(var(--emeral-hard))",
         "smooth-zinc": "hsl(var(--smooth-zinc))",
         "hard-zinc": "hsl(var(--hard-zinc))",
+        "smooth-red": "hsl(var(--smooth-red))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
