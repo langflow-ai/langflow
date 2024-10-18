@@ -218,6 +218,7 @@ import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
 import { CouchbaseIcon } from "../icons/Couchbase";
 import { CrewAiIcon } from "../icons/CrewAI";
+import { DSEIcon } from "../icons/DSE";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
@@ -560,6 +561,7 @@ export const nodeIconsLucide: iconsType = {
   Cohere: CohereIcon,
   ChevronsUpDownIcon,
   CohereEmbeddings: CohereIcon,
+  DSE: DSEIcon,
   EverNoteLoader: EvernoteIcon,
   FacebookChatLoader: FBIcon,
   FirecrawlCrawlApi: FirecrawlIcon,
