@@ -25,7 +25,7 @@ const TextAreaWrapper = ({
     } else if (noInput) {
       return CHAT_INPUT_PLACEHOLDER;
     } else {
-      return CHAT_INPUT_PLACEHOLDER_SEND;
+      return "Enter a prompt or a trigger";
     }
   };
 
@@ -38,7 +38,7 @@ const TextAreaWrapper = ({
   const fileClass = files.length > 0 ? "!rounded-t-none border-t-0" : "";
 
   const additionalClassNames =
-    "form-input block w-full border-0 custom-scroll focus:border-ring focus:ring-0 sm:text-sm";
+    "form-input block w-full border-0 custom-scroll focus:border-ring focus:ring-0 p-0 sm:text-sm";
 
   useEffect(() => {
     if (!lockChat && !noInput) {
