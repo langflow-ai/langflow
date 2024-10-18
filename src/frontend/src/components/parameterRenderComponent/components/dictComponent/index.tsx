@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import DictAreaModal from "../../../../modals/dictAreaModal";
-import { classNames, cn } from "../../../../utils/utils";
+import { classNames, cn, toTitleCase } from "../../../../utils/utils";
 import ForwardedIconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 import { InputProps } from "../../types";
@@ -12,13 +12,16 @@ export default function DictComponent({
   disabled,
   editNode = false,
   id = "",
-}: InputProps<object | object[] | string>): JSX.Element {
+  name = "",
+}: InputProps<object | object[] | string, { name: string }>): JSX.Element {
   useEffect(() => {
     if (disabled) {
       handleOnNewValue({ value: {} }, { skipSnapshot: true });
     }
   }, [disabled]);
+  const placeholderName = `Edit ${toTitleCase(name)}`;
 
+  console.log(placeholderName);
   return (
     <div
       className={classNames(
@@ -44,8 +47,12 @@ export default function DictComponent({
               )}
               data-testid="dict-input"
             >
-              <ForwardedIconComponent name="BookMarked" className="h-4 w-4" />
-              Edit Dictionary
+              <ForwardedIconComponent
+                strokeWidth={2}
+                name="Code"
+                className="h-4 w-4"
+              />
+              {placeholderName}
             </Button>
           </DictAreaModal>
         </div>
