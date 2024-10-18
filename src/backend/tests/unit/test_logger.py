@@ -6,11 +6,6 @@ from langflow.logging.logger import SizedLogBuffer
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
 def sized_log_buffer():
     return SizedLogBuffer()
 

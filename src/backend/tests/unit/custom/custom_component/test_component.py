@@ -9,11 +9,6 @@ from langflow.components.outputs import ChatOutput
 from langflow.template.field.base import Output
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 def test_set_invalid_output():
     chatinput = ChatInput()
     chatoutput = ChatOutput()
