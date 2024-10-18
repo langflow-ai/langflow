@@ -54,12 +54,11 @@ def read_current_user(
     return current_user
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(get_current_active_superuser)])
 def read_all_users(
+    session: Annotated[Session, Depends(get_session)],
     skip: int = 0,
     limit: int = 10,
-    _: Session = Depends(get_current_active_superuser),
-    session: Session = Depends(get_session),
 ) -> UsersResponse:
     """Retrieve a list of users from the database with pagination."""
     query: SelectOfScalar = select(User).offset(skip).limit(limit)
@@ -82,7 +81,7 @@ def patch_user(
     session: Annotated[Session, Depends(get_session)],
 ) -> User:
     """Update an existing user's data."""
-    update_password = user_update.password is not None and user_update.password != ""
+    update_password = bool(user_update.password)
 
     if not user.is_superuser and user_update.is_superuser:
         raise HTTPException(status_code=403, detail="Permission denied")

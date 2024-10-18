@@ -28,8 +28,8 @@ async def login_to_get_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Annotated[Session, Depends(get_session)],
     # _: Session = Depends(get_current_active_user)
-    settings_service=Depends(get_settings_service),
-    variable_service: VariableService = Depends(get_variable_service),
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+    variable_service: Annotated[VariableService, Depends(get_variable_service)],
 ):
     auth_settings = settings_service.auth_settings
     try:
