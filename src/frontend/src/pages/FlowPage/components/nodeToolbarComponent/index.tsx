@@ -412,7 +412,7 @@ export default function NodeToolbarComponent({
                 </div>
               </SelectTrigger>
             </ShadTooltip>
-            <SelectContent>
+            <SelectContent className="min-w-[14rem]">
               {hasCode && (
                 <SelectItem value={"code"}>
                   <ToolbarSelectItem

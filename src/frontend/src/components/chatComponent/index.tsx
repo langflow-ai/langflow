@@ -3,7 +3,7 @@ import { track } from "@/customization/utils/analytics";
 import { Transition } from "@headlessui/react";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import IOModal from "../../modals/IOModal";
+import IOModal from "../../modals/IOModal/newModal";
 import ApiModal from "../../modals/apiModal";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";

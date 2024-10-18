@@ -15,9 +15,9 @@ import {
   ChatInputType,
   FilePreviewType,
 } from "../../../../../types/components";
-import FilePreview from "../filePreviewChat";
+import FilePreview from "../filePreviewChat/newFilePreview";
 import ButtonSendWrapper from "./components/buttonSendWrapper";
-import TextAreaWrapper from "./components/textAreaWrapper";
+import TextAreaWrapper from "./components/textAreaWrapper/newTextAreaWrapper";
 import UploadFileButton from "./components/uploadFileButton";
 import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
@@ -150,7 +150,7 @@ export default function ChatInput({
     );
   };
 
-  const classNameFilePreview = getClassNamesFilePreview(inputFocus);
+  const classNameFilePreview = `flex w-full items-center gap-2 bg-background py-2 overflow-auto custom-scroll`;
 
   const handleButtonClick = () => {
     fileInputRef.current!.click();
@@ -158,7 +158,7 @@ export default function ChatInput({
 
   return (
     <div className="flex w-full flex-col-reverse">
-      <div className="w-full">
+      <div className="flex w-full flex-col rounded-md border border-border p-4">
         <TextAreaWrapper
           checkSendingOk={checkSendingOk}
           send={send}
@@ -173,30 +173,6 @@ export default function ChatInput({
           files={files}
           isDragging={isDragging}
         />
-        <div className="form-modal-send-icon-position">
-          <ButtonSendWrapper
-            send={send}
-            lockChat={lockChat}
-            noInput={noInput}
-            chatValue={chatValue}
-            files={files}
-          />
-        </div>
-
-        <div
-          className={`absolute bottom-2 left-4 ${
-            lockChat ? "cursor-not-allowed" : ""
-          }`}
-        >
-          <UploadFileButton
-            lockChat={lockChat}
-            fileInputRef={fileInputRef}
-            handleFileChange={handleFileChange}
-            handleButtonClick={handleButtonClick}
-          />
-        </div>
-      </div>
-      {files.length > 0 && (
         <div className={classNameFilePreview}>
           {files.map((file) => (
             <FilePreview
@@ -213,7 +189,26 @@ export default function ChatInput({
             />
           ))}
         </div>
-      )}
+        <div className="flex w-full items-end justify-between">
+          <div className={lockChat ? "cursor-not-allowed" : ""}>
+            <UploadFileButton
+              lockChat={lockChat}
+              fileInputRef={fileInputRef}
+              handleFileChange={handleFileChange}
+              handleButtonClick={handleButtonClick}
+            />
+          </div>
+          <div className="">
+            <ButtonSendWrapper
+              send={send}
+              lockChat={lockChat}
+              noInput={noInput}
+              chatValue={chatValue}
+              files={files}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
