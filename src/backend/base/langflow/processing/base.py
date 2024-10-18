@@ -8,11 +8,11 @@ from langflow.services.deps import get_plugins_service
 
 if TYPE_CHECKING:
     from langchain_core.callbacks import BaseCallbackHandler
-    from langfuse.callback import CallbackHandler  # type: ignore
+    from langfuse.callback import CallbackHandler
 
 
-def setup_callbacks(sync, trace_id, **kwargs):
-    """Setup callbacks for langchain object"""
+def setup_callbacks(trace_id):
+    """Setup callbacks for langchain object."""
     callbacks = []
     plugin_service = get_plugins_service()
     plugin_callbacks = plugin_service.get_callbacks(_id=trace_id)
@@ -30,16 +30,14 @@ def get_langfuse_callback(trace_id):
         try:
             trace = langfuse.trace(name="langflow-" + trace_id, id=trace_id)
             return trace.getNewHandler()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error initializing langfuse callback")
 
     return None
 
 
 def flush_langfuse_callback_if_present(callbacks: list[BaseCallbackHandler | CallbackHandler]):
-    """
-    If langfuse callback is present, run callback.langfuse.flush()
-    """
+    """If langfuse callback is present, run callback.langfuse.flush()."""
     for callback in callbacks:
         if hasattr(callback, "langfuse") and hasattr(callback.langfuse, "flush"):
             callback.langfuse.flush()

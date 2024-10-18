@@ -25,6 +25,4 @@ class LCTextSplitterComponent(LCDocumentTransformerComponent):
 
     @abstractmethod
     def build_text_splitter(self) -> TextSplitter:
-        """
-        Build the text splitter.
-        """
+        """Build the text splitter."""

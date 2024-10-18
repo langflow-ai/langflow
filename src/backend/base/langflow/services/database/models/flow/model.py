@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 import emoji
-from emoji import purely_emoji  # type: ignore
+from emoji import purely_emoji
 from fastapi import HTTPException, status
 from loguru import logger
-from pydantic import field_serializer, field_validator
+from pydantic import BaseModel, field_serializer, field_validator
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -116,7 +116,7 @@ class FlowBase(SQLModel):
             return v
         if not isinstance(v, dict):
             msg = "Flow must be a valid JSON"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
 
         # data must contain nodes and edges
         if "nodes" not in v:
@@ -150,11 +150,12 @@ class FlowBase(SQLModel):
         return datetime.fromisoformat(v)
 
 
-class Flow(FlowBase, table=True):  # type: ignore
+class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     user_id: UUID | None = Field(index=True, foreign_key="user.id", nullable=True)
     user: "User" = Relationship(back_populates="flows")
+    icon: str | None = Field(default=None, nullable=True)
     tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
@@ -188,6 +189,22 @@ class FlowRead(FlowBase):
     id: UUID
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()
+
+
+class FlowHeader(BaseModel):
+    id: UUID
+    name: str
+    folder_id: UUID | None = None
+    is_component: bool | None = None
+    endpoint_name: str | None = None
+    description: str | None = None
+
+
+class PaginatedFlowResponse(BaseModel):
+    flows: list[FlowRead]
+    total: int
+    page_size: int
+    page_index: int
 
 
 class FlowUpdate(SQLModel):

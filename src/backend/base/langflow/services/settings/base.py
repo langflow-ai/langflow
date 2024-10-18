@@ -11,6 +11,7 @@ from loguru import logger
 from pydantic import field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+from typing_extensions import override
 
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 
@@ -19,8 +20,7 @@ BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
 
 
 def is_list_of_any(field: FieldInfo) -> bool:
-    """
-    Check if the given field is a list or an optional list of any type.
+    """Check if the given field is a list or an optional list of any type.
 
     Args:
         field (FieldInfo): The field to be checked.
@@ -41,7 +41,8 @@ def is_list_of_any(field: FieldInfo) -> bool:
 
 
 class MyCustomSource(EnvSettingsSource):
-    def prepare_field_value(self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool) -> Any:
+    @override
+    def prepare_field_value(self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool) -> Any:  # type: ignore[misc]
         # allow comma-separated list parsing
 
         # fieldInfo contains the annotation of the field
@@ -272,14 +273,14 @@ class Settings(BaseSettings):
                 elif Path(new_path).exists():
                     logger.debug(f"Database already exists at {new_path}, using it")
                     final_path = new_path
-                elif Path("./{db_file_name}").exists():
+                elif Path(f"./{db_file_name}").exists():
                     try:
                         logger.debug("Copying existing database to new location")
-                        copy2("./{db_file_name}", new_path)
+                        copy2(f"./{db_file_name}", new_path)
                         logger.debug(f"Copied existing database to {new_path}")
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         logger.exception("Failed to copy database, using default path")
-                        new_path = "./{db_file_name}"
+                        new_path = f"./{db_file_name}"
                 else:
                     final_path = new_path
 
@@ -317,7 +318,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
-    def update_from_yaml(self, file_path: str, dev: bool = False):
+    def update_from_yaml(self, file_path: str, *, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
         self.components_path = new_settings.components_path or []
         self.dev = dev
@@ -353,7 +354,8 @@ class Settings(BaseSettings):
             logger.debug(f"{key}: {getattr(self, key)}")
 
     @classmethod
-    def settings_customise_sources(
+    @override
+    def settings_customise_sources(  # type: ignore[misc]
         cls,
         settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
@@ -365,7 +367,7 @@ class Settings(BaseSettings):
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
-    with Path(file_path).open("w") as f:
+    with Path(file_path).open("w", encoding="utf-8") as f:
         settings_dict = settings.model_dump()
         yaml.dump(settings_dict, f)
 

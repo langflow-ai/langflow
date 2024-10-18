@@ -20,6 +20,7 @@ test.describe("group node test", () => {
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
+    await page.getByTestId("side_nav_options_all-templates").click();
     await page
       .getByRole("heading", { name: "Basic Prompting" })
       .first()

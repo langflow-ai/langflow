@@ -62,7 +62,7 @@ class LangChainHubPromptComponent(Component):
         for message in prompt_template:
             # Find all matches
             matches = re.findall(pattern, message.template)
-            custom_fields = custom_fields + matches
+            custom_fields += matches
 
             # Create a string version of the full template
             full_template = full_template + "\n" + message.template
@@ -99,7 +99,7 @@ class LangChainHubPromptComponent(Component):
         template = self._fetch_langchain_hub_template()
 
         # Get the parameters from the attributes
-        original_params = {k[6:] if k.startswith("param_") else k: v for k, v in self._attributes.items()}
+        original_params = {k.removeprefix("param_"): v for k, v in self._attributes.items()}
         prompt_value = template.invoke(original_params)
 
         original_params["template"] = prompt_value.to_string()

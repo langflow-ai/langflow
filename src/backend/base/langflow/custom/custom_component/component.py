@@ -6,7 +6,7 @@ from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
 
-import nanoid  # type: ignore
+import nanoid
 import yaml
 from pydantic import BaseModel
 
@@ -29,7 +29,6 @@ from .custom_component import CustomComponent
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from uuid import UUID
 
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.schema import EdgeData
@@ -170,8 +169,7 @@ class Component(CustomComponent):
             raise ValueError(msg) from e
 
     def set(self, **kwargs):
-        """
-        Connects the component to other components or sets parameters and attributes.
+        """Connects the component to other components or sets parameters and attributes.
 
         Args:
             **kwargs: Keyword arguments representing the connections, parameters, and attributes.
@@ -187,20 +185,15 @@ class Component(CustomComponent):
         return self
 
     def list_inputs(self):
-        """
-        Returns a list of input names.
-        """
+        """Returns a list of input names."""
         return [_input.name for _input in self.inputs]
 
     def list_outputs(self):
-        """
-        Returns a list of output names.
-        """
+        """Returns a list of output names."""
         return [_output.name for _output in self._outputs_map.values()]
 
     async def run(self):
-        """
-        Executes the component's logic and returns the result.
+        """Executes the component's logic and returns the result.
 
         Returns:
             The result of executing the component's logic.
@@ -208,8 +201,7 @@ class Component(CustomComponent):
         return await self._run()
 
     def set_vertex(self, vertex: Vertex):
-        """
-        Sets the vertex for the component.
+        """Sets the vertex for the component.
 
         Args:
             vertex (Vertex): The vertex to set.
@@ -220,8 +212,7 @@ class Component(CustomComponent):
         self._vertex = vertex
 
     def get_input(self, name: str) -> Any:
-        """
-        Retrieves the value of the input with the specified name.
+        """Retrieves the value of the input with the specified name.
 
         Args:
             name (str): The name of the input.
@@ -238,8 +229,7 @@ class Component(CustomComponent):
         raise ValueError(msg)
 
     def get_output(self, name: str) -> Any:
-        """
-        Retrieves the output with the specified name.
+        """Retrieves the output with the specified name.
 
         Args:
             name (str): The name of the output to retrieve.
@@ -271,8 +261,7 @@ class Component(CustomComponent):
             raise ValueError(msg)
 
     def map_outputs(self, outputs: list[Output]):
-        """
-        Maps the given list of outputs to the component.
+        """Maps the given list of outputs to the component.
 
         Args:
             outputs (List[Output]): The list of outputs to be mapped.
@@ -292,8 +281,7 @@ class Component(CustomComponent):
             self._outputs_map[output.name] = deepcopy(output)
 
     def map_inputs(self, inputs: list[InputTypes]):
-        """
-        Maps the given inputs to the component.
+        """Maps the given inputs to the component.
 
         Args:
             inputs (List[InputTypes]): A list of InputTypes objects representing the inputs.
@@ -309,8 +297,7 @@ class Component(CustomComponent):
             self._inputs[input_.name] = deepcopy(input_)
 
     def validate(self, params: dict):
-        """
-        Validates the component parameters.
+        """Validates the component parameters.
 
         Args:
             params (dict): A dictionary containing the component parameters.
@@ -338,7 +325,7 @@ class Component(CustomComponent):
             try:
                 source_code = inspect.getsource(method)
                 ast_tree = ast.parse(dedent(source_code))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 source_code = self._code
                 ast_tree = ast.parse(dedent(source_code))
 
@@ -377,10 +364,10 @@ class Component(CustomComponent):
         return text
 
     def _find_matching_output_method(self, input_name: str, value: Component):
-        """
+        """Find the output method from the given component and input name.
+
         Find the output method from the given component (`value`) that matches the specified input (`input_name`)
         in the current component.
-
         This method searches through all outputs of the provided component to find outputs whose types match
         the input types of the specified input in the current component. If exactly one matching output is found,
         it returns the corresponding method. If multiple matching outputs are found, it raises an error indicating
@@ -430,7 +417,7 @@ class Component(CustomComponent):
         # Ensure that the output method is a valid method name (string)
         if not isinstance(output.method, str):
             msg = f"Method {output.method} is not a valid output of {value.__class__.__name__}"
-            raise ValueError(msg)
+            raise TypeError(msg)
         return getattr(value, output.method)
 
     def _process_connection_or_parameter(self, key, value):
@@ -503,7 +490,7 @@ class Component(CustomComponent):
                 f"You set {value.display_name} as value for `{key}`. "
                 f"You should pass one of the following: {methods}"
             )
-            raise ValueError(msg)
+            raise TypeError(msg)
         self._set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
@@ -590,13 +577,13 @@ class Component(CustomComponent):
         return frontend_node
 
     def to_frontend_node(self):
-        #! This part here is clunky but we need it like this for
-        #! backwards compatibility. We can change how prompt component
-        #! works and then update this later
+        # ! This part here is clunky but we need it like this for
+        # ! backwards compatibility. We can change how prompt component
+        # ! works and then update this later
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
         for key in self._inputs:
-            frontend_node.set_field_load_from_db_in_template(key, False)
+            frontend_node.set_field_load_from_db_in_template(key, value=False)
         self._map_parameters_on_frontend_node(frontend_node)
 
         frontend_node_dict = frontend_node.to_dict(keep_name=False)
@@ -787,12 +774,8 @@ class Component(CustomComponent):
             return str(self.repr_value)
         return self.repr_value
 
-    def build_inputs(self, user_id: str | UUID | None = None):
-        """
-        Builds the inputs for the custom component.
-
-        Args:
-            user_id (Optional[Union[str, UUID]], optional): The user ID. Defaults to None.
+    def build_inputs(self):
+        """Builds the inputs for the custom component.
 
         Returns:
             List[Input]: The list of inputs.
@@ -827,11 +810,11 @@ class Component(CustomComponent):
         return "Langflow"
 
     def log(self, message: LoggableType | list[LoggableType], name: str | None = None):
-        """
-        Logs a message.
+        """Logs a message.
 
         Args:
             message (LoggableType | list[LoggableType]): The message to log.
+            name (str, optional): The name of the log. Defaults to None.
         """
         if name is None:
             name = f"Log {len(self._logs) + 1}"

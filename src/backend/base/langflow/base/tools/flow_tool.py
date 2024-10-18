@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_core.tools import BaseTool, ToolException
 from loguru import logger
+from typing_extensions import override
 
 from langflow.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
 from langflow.graph.graph.base import Graph  # cannot be a part of TYPE_CHECKING   # noqa: TCH001
@@ -30,7 +31,10 @@ class FlowTool(BaseTool):
         schema = self.get_input_schema()
         return schema.schema()["properties"]
 
-    def get_input_schema(self, config: RunnableConfig | None = None) -> type[BaseModel]:
+    @override
+    def get_input_schema(  # type: ignore[misc]
+        self, config: RunnableConfig | None = None
+    ) -> type[BaseModel]:
         """The tool's input schema."""
         if self.args_schema is not None:
             return self.args_schema
@@ -68,12 +72,11 @@ class FlowTool(BaseTool):
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    data.extend(build_data_from_result_data(output, get_final_results_only=self.get_final_results_only))
+                    data.extend(build_data_from_result_data(output))
         return format_flow_output_data(data)
 
     def validate_inputs(self, args_names: list[dict[str, str]], args: Any, kwargs: Any):
         """Validate the inputs."""
-
         if len(args) > 0 and len(args) != len(args_names):
             msg = "Number of positional arguments does not match the number of inputs. Pass keyword arguments instead."
             raise ToolException(msg)
@@ -102,7 +105,7 @@ class FlowTool(BaseTool):
         tweaks = self.build_tweaks_dict(args, kwargs)
         try:
             run_id = self.graph.run_id if self.graph else None
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.opt(exception=True).warning("Failed to set run_id")
             run_id = None
         run_outputs = await run_flow(
@@ -119,5 +122,5 @@ class FlowTool(BaseTool):
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    data.extend(build_data_from_result_data(output, get_final_results_only=self.get_final_results_only))
+                    data.extend(build_data_from_result_data(output))
         return format_flow_output_data(data)

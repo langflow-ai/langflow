@@ -75,7 +75,7 @@ class LCAgentComponent(Component):
                 msg = f"Method '{method_name}' must be defined."
                 raise ValueError(msg)
 
-    def get_agent_kwargs(self, flatten: bool = False) -> dict:
+    def get_agent_kwargs(self, *, flatten: bool = False) -> dict:
         base = {
             "handle_parsing_errors": self.handle_parsing_errors,
             "verbose": self.verbose,
@@ -115,7 +115,9 @@ class LCAgentComponent(Component):
 class LCToolsAgentComponent(LCAgentComponent):
     _base_inputs = [
         *LCAgentComponent._base_inputs,
-        HandleInput(name="tools", display_name="Tools", input_types=["Tool", "BaseTool"], is_list=True),
+        HandleInput(
+            name="tools", display_name="Tools", input_types=["Tool", "BaseTool", "StructuredTool"], is_list=True
+        ),
     ]
 
     def build_agent(self) -> AgentExecutor:
@@ -134,7 +136,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             runnable = agent
         else:
             runnable = AgentExecutor.from_agent_and_tools(
-                agent=agent,  # type: ignore
+                agent=agent,
                 tools=self.tools,
                 handle_parsing_errors=self.handle_parsing_errors,
                 verbose=self.verbose,

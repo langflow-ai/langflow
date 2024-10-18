@@ -1,8 +1,8 @@
 // Modals.tsx
+import TemplatesModal from "@/modals/templatesModal";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
-import NewFlowModal from "../../../../modals/newFlowModal";
 import { cn } from "../../../../utils/utils";
 
 interface ModalsProps {
@@ -21,7 +21,7 @@ const ModalsComponent = ({
   handleDeleteFolder,
 }: ModalsProps) => (
   <>
-    {openModal && <NewFlowModal open={openModal} setOpen={setOpenModal} />}
+    {openModal && <TemplatesModal open={openModal} setOpen={setOpenModal} />}
     {openDeleteFolderModal && (
       <DeleteConfirmationModal
         open={openDeleteFolderModal}

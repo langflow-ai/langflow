@@ -48,8 +48,9 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 titles: list[str] | None = None,
                 output_dimensionality: int | None = 1536,
             ) -> list[list[float]]:
-                """Embed a list of strings. Google Generative AI currently
-                sets a max batch size of 100 strings.
+                """Embed a list of strings.
+
+                Google Generative AI currently sets a max batch size of 100 strings.
 
                 Args:
                     texts: List[str] The list of strings to embed.
@@ -76,7 +77,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                             text=text,
                             task_type=task_type,
                             title=title,
-                            output_dimensionality=1536,
+                            output_dimensionality=output_dimensionality,
                         )
                         for text, title in zip(batch, titles_batch, strict=True)
                     ]
@@ -111,12 +112,12 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 Returns:
                     Embedding for the text.
                 """
-                task_type = self.task_type or "RETRIEVAL_QUERY"
+                task_type = task_type or "RETRIEVAL_QUERY"
                 return self.embed_documents(
                     [text],
                     task_type=task_type,
                     titles=[title] if title else None,
-                    output_dimensionality=1536,
+                    output_dimensionality=output_dimensionality,
                 )[0]
 
         return HotaGoogleGenerativeAIEmbeddings(model=self.model_name, google_api_key=self.api_key)

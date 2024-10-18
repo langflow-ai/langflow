@@ -112,7 +112,7 @@ class APIRequestComponent(Component):
         timeout: int = 5,
     ) -> Data:
         method = method.upper()
-        if method not in ["GET", "POST", "PATCH", "PUT", "DELETE"]:
+        if method not in {"GET", "POST", "PATCH", "PUT", "DELETE"}:
             msg = f"Unsupported method: {method}"
             raise ValueError(msg)
 
@@ -125,13 +125,14 @@ class APIRequestComponent(Component):
                 body = None
                 raise ValueError(msg) from e
 
-        data = body if body else None
+        data = body or None
 
         try:
             response = await client.request(method, url, headers=headers, json=data, timeout=timeout)
             try:
                 result = response.json()
-            except Exception:
+            except Exception:  # noqa: BLE001
+                logger.opt(exception=True).debug("Error decoding JSON response")
                 result = response.text
             return Data(
                 data={
@@ -150,7 +151,8 @@ class APIRequestComponent(Component):
                     "error": "Request timed out",
                 },
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
+            logger.opt(exception=True).debug(f"Error making request to {url}")
             return Data(
                 data={
                     "source": url,

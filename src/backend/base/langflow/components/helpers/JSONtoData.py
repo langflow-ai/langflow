@@ -41,53 +41,50 @@ class JSONToDataComponent(Component):
     ]
 
     def convert_json_to_data(self) -> Data | list[Data]:
+        if sum(bool(field) for field in [self.json_file, self.json_path, self.json_string]) != 1:
+            msg = "Please provide exactly one of: JSON file, file path, or JSON string."
+            self.status = msg
+            raise ValueError(msg)
+
+        json_data = None
+
         try:
-            if sum(bool(field) for field in [self.json_file, self.json_path, self.json_string]) != 1:
-                msg = "Please provide exactly one of: JSON file, file path, or JSON string."
-                raise ValueError(msg)
-
-            json_data = None
-
             if self.json_file:
                 resolved_path = self.resolve_path(self.json_file)
                 file_path = Path(resolved_path)
                 if file_path.suffix.lower() != ".json":
-                    msg = "The provided file must be a JSON file."
-                    raise ValueError(msg)
-                with file_path.open(encoding="utf-8") as jsonfile:
-                    json_data = jsonfile.read()
+                    self.status = "The provided file must be a JSON file."
+                else:
+                    with file_path.open(encoding="utf-8") as jsonfile:
+                        json_data = jsonfile.read()
 
             elif self.json_path:
                 file_path = Path(self.json_path)
                 if file_path.suffix.lower() != ".json":
-                    msg = "The provided file must be a JSON file."
-                    raise ValueError(msg)
-                with file_path.open(encoding="utf-8") as jsonfile:
-                    json_data = jsonfile.read()
+                    self.status = "The provided file must be a JSON file."
+                else:
+                    with file_path.open(encoding="utf-8") as jsonfile:
+                        json_data = jsonfile.read()
 
-            elif self.json_string:
+            else:
                 json_data = self.json_string
 
-            if not json_data:
-                msg = "No JSON data provided."
-                raise ValueError(msg)
+            if json_data:
+                # Try to parse the JSON string
+                try:
+                    parsed_data = json.loads(json_data)
+                except json.JSONDecodeError:
+                    # If JSON parsing fails, try to repair the JSON string
+                    repaired_json_string = repair_json(json_data)
+                    parsed_data = json.loads(repaired_json_string)
 
-            # Try to parse the JSON string
-            try:
-                parsed_data = json.loads(json_data)
-            except json.JSONDecodeError:
-                # If JSON parsing fails, try to repair the JSON string
-                repaired_json_string = repair_json(json_data)
-                parsed_data = json.loads(repaired_json_string)
-
-            # Check if the parsed data is a list
-            if isinstance(parsed_data, list):
-                result = [Data(data=item) for item in parsed_data]
-            else:
-                result = Data(data=parsed_data)
-
-            self.status = result
-            return result
+                # Check if the parsed data is a list
+                if isinstance(parsed_data, list):
+                    result = [Data(data=item) for item in parsed_data]
+                else:
+                    result = Data(data=parsed_data)
+                self.status = result
+                return result
 
         except (json.JSONDecodeError, SyntaxError, ValueError) as e:
             error_message = f"Invalid JSON or Python literal: {e}"
@@ -98,3 +95,6 @@ class JSONToDataComponent(Component):
             error_message = f"An error occurred: {e}"
             self.status = error_message
             raise ValueError(error_message) from e
+
+        # An error occurred
+        raise ValueError(self.status)

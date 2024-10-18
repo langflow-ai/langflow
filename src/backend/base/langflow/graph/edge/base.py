@@ -42,7 +42,7 @@ class Edge:
                             "might not be a valid input."
                         )
                         raise ValueError(msg) from e
-                    raise e
+                    raise
 
             else:
                 msg = "Target handle is not a dictionary"
@@ -53,8 +53,8 @@ class Edge:
         else:
             # Logging here because this is a breaking change
             logger.error("Edge data is empty")
-            self._source_handle = edge.get("sourceHandle", "")  # type: ignore
-            self._target_handle = edge.get("targetHandle", "")  # type: ignore
+            self._source_handle = edge.get("sourceHandle", "")  # type: ignore[assignment]
+            self._target_handle = edge.get("targetHandle", "")  # type: ignore[assignment]
             # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
             # target_param is documents
             if isinstance(self._target_handle, str):
@@ -218,8 +218,8 @@ class CycleEdge(Edge):
         target._has_cycle_edges = True
 
     async def honor(self, source: Vertex, target: Vertex) -> None:
-        """
-        Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
+        """Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
+
         If the edge is runnable, the source vertex is run with the message text and the target vertex's
         root_field param is set to the
         result. If the edge is not runnable, the target vertex's parameter is set to the result.

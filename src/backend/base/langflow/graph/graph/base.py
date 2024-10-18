@@ -65,13 +65,16 @@ class Graph:
         user_id: str | None = None,
         log_config: LogConfig | None = None,
     ) -> None:
-        """
-        Initializes a new instance of the Graph class.
+        """Initializes a new instance of the Graph class.
 
         Args:
-            nodes (List[Dict]): A list of dictionaries representing the vertices of the graph.
-            edges (List[Dict[str, str]]): A list of dictionaries representing the edges of the graph.
-            flow_id (Optional[str], optional): The ID of the flow. Defaults to None.
+            start: The start component.
+            end: The end component.
+            flow_id: The ID of the flow. Defaults to None.
+            flow_name: The flow name.
+            description: The graph description.
+            user_id: The user ID.
+            log_config: The log configuration.
         """
         if log_config:
             configure(**log_config)
@@ -119,9 +122,10 @@ class Graph:
         self._cycle_vertices: set[str] | None = None
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
+        self._end_trace_tasks: set[asyncio.Task] = set()
         try:
             self.tracing_service: TracingService | None = get_tracing_service()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error getting tracing service")
             self.tracing_service = None
         if start is not None and end is not None:
@@ -248,11 +252,11 @@ class Graph:
         source_vertex = self.get_vertex(source_id)
         if not isinstance(source_vertex, ComponentVertex):
             msg = f"Source vertex {source_id} is not a component vertex."
-            raise ValueError(msg)
+            raise TypeError(msg)
         target_vertex = self.get_vertex(target_id)
         if not isinstance(target_vertex, ComponentVertex):
             msg = f"Target vertex {target_id} is not a component vertex."
-            raise ValueError(msg)
+            raise TypeError(msg)
         output_name, input_name = output_input_tuple
         if source_vertex._custom_component is None:
             msg = f"Source vertex {source_id} does not have a custom component."
@@ -353,11 +357,11 @@ class Graph:
             raise ValueError(msg)
         if config is not None:
             self.__apply_config(config)
-        #! Change this ASAP
+        # ! Change this ASAP
         nest_asyncio.apply()
         loop = asyncio.get_event_loop()
         async_gen = self.async_start(inputs, max_iterations, event_manager)
-        async_gen_task = asyncio.ensure_future(async_gen.__anext__())
+        async_gen_task = asyncio.ensure_future(anext(async_gen))
 
         while True:
             try:
@@ -365,7 +369,7 @@ class Graph:
                 yield result
                 if isinstance(result, Finish):
                     return
-                async_gen_task = asyncio.ensure_future(async_gen.__anext__())
+                async_gen_task = asyncio.ensure_future(anext(async_gen))
             except StopAsyncIteration:
                 break
 
@@ -393,8 +397,7 @@ class Graph:
         self.define_vertices_lists()
 
     def get_state(self, name: str) -> Data | None:
-        """
-        Returns the state of the graph with the given name.
+        """Returns the state of the graph with the given name.
 
         Args:
             name (str): The name of the state.
@@ -405,8 +408,7 @@ class Graph:
         return self.state_manager.get_state(name, run_id=self._run_id)
 
     def update_state(self, name: str, record: str | Data, caller: str | None = None) -> None:
-        """
-        Updates the state of the graph with the given name.
+        """Updates the state of the graph with the given name.
 
         Args:
             name (str): The name of the state.
@@ -423,8 +425,7 @@ class Graph:
         self.state_manager.update_state(name, record, run_id=self._run_id)
 
     def activate_state_vertices(self, name: str, caller: str):
-        """
-        Activates the state vertices in the graph with the given name and caller.
+        """Activates the state vertices in the graph with the given name and caller.
 
         Args:
             name (str): The name of the state.
@@ -473,14 +474,11 @@ class Graph:
         )
 
     def reset_activated_vertices(self):
-        """
-        Resets the activated vertices in the graph.
-        """
+        """Resets the activated vertices in the graph."""
         self.activated_vertices = []
 
     def append_state(self, name: str, record: str | Data, caller: str | None = None) -> None:
-        """
-        Appends the state of the graph with the given name.
+        """Appends the state of the graph with the given name.
 
         Args:
             name (str): The name of the state.
@@ -493,8 +491,7 @@ class Graph:
         self.state_manager.append_state(name, record, run_id=self._run_id)
 
     def validate_stream(self):
-        """
-        Validates the stream configuration of the graph.
+        """Validates the stream configuration of the graph.
 
         If there are two vertices in the same graph (connected by edges)
         that have `stream=True` or `streaming=True`, raises a `ValueError`.
@@ -522,8 +519,7 @@ class Graph:
 
     @property
     def is_cyclic(self):
-        """
-        Check if the graph has any cycles.
+        """Check if the graph has any cycles.
 
         Returns:
             bool: True if the graph has any cycles, False otherwise.
@@ -539,8 +535,7 @@ class Graph:
 
     @property
     def run_id(self):
-        """
-        The ID of the current run.
+        """The ID of the current run.
 
         Returns:
             str: The run ID.
@@ -554,8 +549,7 @@ class Graph:
         return self._run_id
 
     def set_run_id(self, run_id: uuid.UUID | None = None):
-        """
-        Sets the ID of the current run.
+        """Sets the ID of the current run.
 
         Args:
             run_id (str): The run ID.
@@ -583,6 +577,11 @@ class Graph:
         if self.tracing_service:
             await self.tracing_service.initialize_tracers()
 
+    def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None):
+        task = asyncio.create_task(self.end_all_traces(outputs, error))
+        self._end_trace_tasks.add(task)
+        task.add_done_callback(self._end_trace_tasks.discard)
+
     async def end_all_traces(self, outputs: dict[str, Any] | None = None, error: Exception | None = None):
         if not self.tracing_service:
             return
@@ -594,8 +593,7 @@ class Graph:
 
     @property
     def sorted_vertices_layers(self) -> list[list[str]]:
-        """
-        The sorted layers of vertices in the graph.
+        """The sorted layers of vertices in the graph.
 
         Returns:
             List[List[str]]: The sorted layers of vertices.
@@ -605,9 +603,7 @@ class Graph:
         return self._sorted_vertices_layers
 
     def define_vertices_lists(self):
-        """
-        Defines the lists of vertices that are inputs, outputs, and have session_id.
-        """
+        """Defines the lists of vertices that are inputs, outputs, and have session_id."""
         attributes = ["is_input", "is_output", "has_session_id", "is_state"]
         for vertex in self.vertices:
             for attribute in attributes:
@@ -631,6 +627,7 @@ class Graph:
 
     async def _run(
         self,
+        *,
         inputs: dict[str, str],
         input_components: list[str],
         input_type: InputType | None,
@@ -639,20 +636,20 @@ class Graph:
         session_id: str,
         fallback_to_env_vars: bool,
     ) -> list[ResultData | None]:
-        """
-        Runs the graph with the given inputs.
+        """Runs the graph with the given inputs.
 
         Args:
             inputs (Dict[str, str]): The input values for the graph.
             input_components (list[str]): The components to run for the inputs.
+            input_type: (Optional[InputType]): The input type.
             outputs (list[str]): The outputs to retrieve from the graph.
             stream (bool): Whether to stream the results or not.
             session_id (str): The session ID for the graph.
+            fallback_to_env_vars (bool): Whether to fallback to environment variables.
 
         Returns:
             List[Optional["ResultData"]]: The outputs of the graph.
         """
-
         if input_components and not isinstance(input_components, list):
             msg = f"Invalid components value: {input_components}. Expected list"
             raise ValueError(msg)
@@ -661,7 +658,7 @@ class Graph:
 
         if not isinstance(inputs.get(INPUT_FIELD_NAME, ""), str):
             msg = f"Invalid input value: {inputs.get(INPUT_FIELD_NAME)}. Expected string"
-            raise ValueError(msg)
+            raise TypeError(msg)
         if inputs:
             self._set_inputs(input_components, inputs, input_type)
         # Update all the vertices with the session_id
@@ -676,8 +673,8 @@ class Graph:
             cache_service = get_chat_service()
             if self.flow_id:
                 await cache_service.set_cache(self.flow_id, self)
-        except Exception as exc:
-            logger.exception(exc)
+        except Exception:  # noqa: BLE001
+            logger.exception("Error setting cache")
 
         try:
             # Prioritize the webhook component if it exists
@@ -685,11 +682,11 @@ class Graph:
             await self.process(start_component_id=start_component_id, fallback_to_env_vars=fallback_to_env_vars)
             self.increment_run_count()
         except Exception as exc:
-            asyncio.create_task(self.end_all_traces(error=exc))
+            self._end_all_traces_async(error=exc)
             msg = f"Error running graph: {exc}"
             raise ValueError(msg) from exc
-        finally:
-            asyncio.create_task(self.end_all_traces())
+
+        self._end_all_traces_async()
         # Get the outputs
         vertex_outputs = []
         for vertex in self.vertices:
@@ -709,6 +706,7 @@ class Graph:
     def run(
         self,
         inputs: list[dict[str, str]],
+        *,
         input_components: list[list[str]] | None = None,
         types: list[InputType | None] | None = None,
         outputs: list[str] | None = None,
@@ -716,8 +714,7 @@ class Graph:
         stream: bool = False,
         fallback_to_env_vars: bool = False,
     ) -> list[RunOutputs]:
-        """
-        Run the graph with the given inputs and return the outputs.
+        """Run the graph with the given inputs and return the outputs.
 
         Args:
             inputs (Dict[str, str]): A dictionary of input values.
@@ -726,6 +723,7 @@ class Graph:
             outputs (Optional[list[str]]): A list of output components.
             session_id (Optional[str]): The session ID.
             stream (bool): Whether to stream the outputs.
+            fallback_to_env_vars (bool): Whether to fallback to environment variables.
 
         Returns:
             List[RunOutputs]: A list of RunOutputs objects representing the outputs.
@@ -746,11 +744,12 @@ class Graph:
         try:
             # Attempt to get the running event loop; if none, an exception is raised
             loop = asyncio.get_running_loop()
-            if loop.is_closed():
-                msg = "The running event loop is closed."
-                raise RuntimeError(msg)
         except RuntimeError:
-            # If there's no running event loop or it's closed, use asyncio.run
+            # If there's no running event loop, use asyncio.run
+            return asyncio.run(coro)
+
+        # If the event loop is closed, use asyncio.run
+        if loop.is_closed():
             return asyncio.run(coro)
 
         # If there's an existing, open event loop, use it to run the async function
@@ -759,6 +758,7 @@ class Graph:
     async def arun(
         self,
         inputs: list[dict[str, str]],
+        *,
         inputs_components: list[list[str]] | None = None,
         types: list[InputType | None] | None = None,
         outputs: list[str] | None = None,
@@ -766,15 +766,16 @@ class Graph:
         stream: bool = False,
         fallback_to_env_vars: bool = False,
     ) -> list[RunOutputs]:
-        """
-        Runs the graph with the given inputs.
+        """Runs the graph with the given inputs.
 
         Args:
             inputs (list[Dict[str, str]]): The input values for the graph.
             inputs_components (Optional[list[list[str]]], optional): Components to run for the inputs. Defaults to None.
+            types (Optional[list[Optional[InputType]]], optional): The types of the inputs. Defaults to None.
             outputs (Optional[list[str]], optional): The outputs to retrieve from the graph. Defaults to None.
             session_id (Optional[str], optional): The session ID for the graph. Defaults to None.
             stream (bool, optional): Whether to stream the results or not. Defaults to False.
+            fallback_to_env_vars (bool, optional): Whether to fallback to environment variables. Defaults to False.
 
         Returns:
             List[RunOutputs]: The outputs of the graph.
@@ -814,8 +815,7 @@ class Graph:
         return vertex_outputs
 
     def next_vertex_to_build(self):
-        """
-        Returns the next vertex to be built.
+        """Returns the next vertex to be built.
 
         Yields:
             str: The ID of the next vertex to be built.
@@ -824,8 +824,7 @@ class Graph:
 
     @property
     def metadata(self):
-        """
-        The metadata of the graph.
+        """The metadata of the graph.
 
         Returns:
             dict: The metadata of the graph.
@@ -840,9 +839,7 @@ class Graph:
         }
 
     def build_graph_maps(self, edges: list[CycleEdge] | None = None, vertices: list[Vertex] | None = None):
-        """
-        Builds the adjacency maps for the graph.
-        """
+        """Builds the adjacency maps for the graph."""
         if edges is None:
             edges = self.edges
 
@@ -855,9 +852,7 @@ class Graph:
         self.parent_child_map = self.build_parent_child_map(vertices)
 
     def reset_inactivated_vertices(self):
-        """
-        Resets the inactivated vertices in the graph.
-        """
+        """Resets the inactivated vertices in the graph."""
         for vertex_id in self.inactivated_vertices.copy():
             self.mark_vertex(vertex_id, "ACTIVE")
         self.inactivated_vertices = []
@@ -1009,11 +1004,13 @@ class Graph:
         flow_name: str | None = None,
         user_id: str | None = None,
     ) -> Graph:
-        """
-        Creates a graph from a payload.
+        """Creates a graph from a payload.
 
         Args:
-            payload (Dict): The payload to create the graph from.`
+            payload: The payload to create the graph from.
+            flow_id: The ID of the flow.
+            flow_name: The flow name.
+            user_id: The user ID.
 
         Returns:
             Graph: The created graph.
@@ -1025,16 +1022,16 @@ class Graph:
             edges = payload["edges"]
             graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id)
             graph.add_nodes_and_edges(vertices, edges)
-            return graph
         except KeyError as exc:
             logger.exception(exc)
             if "nodes" not in payload and "edges" not in payload:
-                logger.exception(exc)
                 msg = f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
                 raise ValueError(msg) from exc
 
             msg = f"Error while creating graph from payload: {exc}"
             raise ValueError(msg) from exc
+        else:
+            return graph
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Graph):
@@ -1047,11 +1044,11 @@ class Graph:
     # both graphs have the same vertices and edges
     # but the data of the vertices might be different
 
-    def update_edges_from_vertex(self, vertex: Vertex, other_vertex: Vertex) -> None:
+    def update_edges_from_vertex(self, other_vertex: Vertex) -> None:
         """Updates the edges of a vertex in the Graph."""
         new_edges = []
         for edge in self.edges:
-            if other_vertex.id in (edge.source_id, edge.target_id):
+            if other_vertex.id in {edge.source_id, edge.target_id}:
                 continue
             new_edges.append(edge)
         new_edges += other_vertex.edges
@@ -1118,8 +1115,7 @@ class Graph:
         return self
 
     def update_vertex_from_another(self, vertex: Vertex, other_vertex: Vertex) -> None:
-        """
-        Updates a vertex from another vertex.
+        """Updates a vertex from another vertex.
 
         Args:
             vertex (Vertex): The vertex to be updated.
@@ -1128,7 +1124,7 @@ class Graph:
         vertex._data = other_vertex._data
         vertex._parse_data()
         # Now we update the edges of the vertex
-        self.update_edges_from_vertex(vertex, other_vertex)
+        self.update_edges_from_vertex(other_vertex)
         vertex.params = {}
         vertex._build_params()
         vertex.graph = self
@@ -1203,7 +1199,7 @@ class Graph:
             return
         self.vertices.remove(vertex)
         self.vertex_map.pop(vertex_id)
-        self.edges = [edge for edge in self.edges if vertex_id not in (edge.source_id, edge.target_id)]
+        self.edges = [edge for edge in self.edges if vertex_id not in {edge.source_id, edge.target_id}]
 
     def _build_vertex_params(self) -> None:
         """Identifies and handles the LLM vertex within the graph."""
@@ -1215,7 +1211,7 @@ class Graph:
         # All vertices that do not have edges are invalid
         return len(self.get_vertex_edges(vertex.id)) > 0
 
-    def get_vertex(self, vertex_id: str, silent: bool = False) -> Vertex:
+    def get_vertex(self, vertex_id: str) -> Vertex:
         """Returns a vertex by id."""
         try:
             return self.vertex_map[vertex_id]
@@ -1257,7 +1253,7 @@ class Graph:
             msg = "Graph not prepared. Call prepare() first."
             raise ValueError(msg)
         if not self._run_queue:
-            asyncio.create_task(self.end_all_traces())
+            self._end_all_traces_async()
             return Finish()
         vertex_id = self.get_next_in_queue()
         chat_service = get_chat_service()
@@ -1296,7 +1292,7 @@ class Graph:
             }
         )
 
-    def _record_snapshot(self, vertex_id: str | None = None, start: bool = False):
+    def _record_snapshot(self, vertex_id: str | None = None):
         self._snapshots.append(self.get_snapshot())
         if vertex_id:
             self._call_order.append(vertex_id)
@@ -1314,6 +1310,7 @@ class Graph:
     async def build_vertex(
         self,
         vertex_id: str,
+        *,
         get_cache: GetCache | None = None,
         set_cache: SetCache | None = None,
         inputs_dict: dict[str, str] | None = None,
@@ -1322,15 +1319,17 @@ class Graph:
         fallback_to_env_vars: bool = False,
         event_manager: EventManager | None = None,
     ) -> VertexBuildResult:
-        """
-        Builds a vertex in the graph.
+        """Builds a vertex in the graph.
 
         Args:
-            lock (asyncio.Lock): A lock to synchronize access to the graph.
-            set_cache_coro (Coroutine): A coroutine to set the cache.
             vertex_id (str): The ID of the vertex to build.
-            inputs (Optional[Dict[str, str]]): Optional dictionary of inputs for the vertex. Defaults to None.
+            get_cache (GetCache): A coroutine to get the cache.
+            set_cache (SetCache): A coroutine to set the cache.
+            inputs_dict (Optional[Dict[str, str]]): Optional dictionary of inputs for the vertex. Defaults to None.
+            files: (Optional[List[str]]): Optional list of files. Defaults to None.
             user_id (Optional[str]): Optional user ID. Defaults to None.
+            fallback_to_env_vars (bool): Whether to fallback to environment variables. Defaults to False.
+            event_manager (Optional[EventManager]): Optional event manager. Defaults to None.
 
         Returns:
             Tuple: A tuple containing the next runnable vertices, top level vertices, result dictionary,
@@ -1368,7 +1367,8 @@ class Graph:
                             vertex._finalize_build()
                             if vertex.result is not None:
                                 vertex.result.used_frozen_result = True
-                        except Exception:
+                        except Exception:  # noqa: BLE001
+                            logger.opt(exception=True).debug("Error finalizing build")
                             should_build = True
                     except KeyError:
                         should_build = True
@@ -1393,22 +1393,23 @@ class Graph:
 
                     await set_cache(key=vertex.id, data=vertex_dict)
 
-            if vertex.result is not None:
-                params = f"{vertex._built_object_repr()}{params}"
-                valid = True
-                result_dict = vertex.result
-                artifacts = vertex.artifacts
-            else:
-                msg = f"No result found for vertex {vertex_id}"
-                raise ValueError(msg)
-
-            return VertexBuildResult(
-                result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
-            )
         except Exception as exc:
             if not isinstance(exc, ComponentBuildException):
                 logger.exception("Error building Component")
             raise
+
+        if vertex.result is not None:
+            params = f"{vertex._built_object_repr()}{params}"
+            valid = True
+            result_dict = vertex.result
+            artifacts = vertex.artifacts
+        else:
+            msg = f"Error building Component: no result found for vertex {vertex_id}"
+            raise ValueError(msg)
+
+        return VertexBuildResult(
+            result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
+        )
 
     def get_vertex_edges(
         self,
@@ -1437,9 +1438,8 @@ class Graph:
                 vertices.append(vertex)
         return vertices
 
-    async def process(self, fallback_to_env_vars: bool, start_component_id: str | None = None) -> Graph:
+    async def process(self, *, fallback_to_env_vars: bool, start_component_id: str | None = None) -> Graph:
         """Processes the graph with vertices in each layer run in parallel."""
-
         first_layer = self.sort_vertices(start_component_id=start_component_id)
         vertex_task_run_count: dict[str, int] = {}
         to_process = deque(first_layer)
@@ -1484,7 +1484,7 @@ class Graph:
         logger.debug("Graph processing complete")
         return self
 
-    def find_next_runnable_vertices(self, vertex_id: str, vertex_successors_ids: list[str]) -> list[str]:
+    def find_next_runnable_vertices(self, vertex_successors_ids: list[str]) -> list[str]:
         next_runnable_vertices = set()
         for v_id in sorted(vertex_successors_ids):
             if not self.is_vertex_runnable(v_id):
@@ -1494,12 +1494,12 @@ class Graph:
 
         return list(next_runnable_vertices)
 
-    async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: Vertex, cache: bool = True) -> list[str]:
+    async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: Vertex, *, cache: bool = True) -> list[str]:
         v_id = vertex.id
         v_successors_ids = vertex.successors_ids
         async with lock:
             self.run_manager.remove_vertex_from_runnables(v_id)
-            next_runnable_vertices = self.find_next_runnable_vertices(v_id, v_successors_ids)
+            next_runnable_vertices = self.find_next_runnable_vertices(v_successors_ids)
 
             for next_v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
                 if next_v_id == v_id:
@@ -1529,7 +1529,7 @@ class Graph:
                 vertices.append(result.vertex)
             else:
                 msg = f"Invalid result from task {task_name}: {result}"
-                raise ValueError(msg)
+                raise TypeError(msg)
 
         for v in vertices:
             # set all executed vertices as non-runnable to not run them again.
@@ -1545,8 +1545,7 @@ class Graph:
         return list(set(results))
 
     def topological_sort(self) -> list[Vertex]:
-        """
-        Performs a topological sort of the vertices in the graph.
+        """Performs a topological sort of the vertices in the graph.
 
         Returns:
             List[Vertex]: A list of vertices in topological order.
@@ -1555,7 +1554,7 @@ class Graph:
             ValueError: If the graph contains a cycle.
         """
         # States: 0 = unvisited, 1 = visiting, 2 = visited
-        state = {vertex: 0 for vertex in self.vertices}
+        state = dict.fromkeys(self.vertices, 0)
         sorted_vertices = []
 
         def dfs(vertex):
@@ -1588,7 +1587,7 @@ class Graph:
         """Returns the predecessors of a vertex."""
         return [self.get_vertex(source_id) for source_id in self.predecessor_map.get(vertex.id, [])]
 
-    def get_all_successors(self, vertex: Vertex, recursive=True, flat=True, visited=None):
+    def get_all_successors(self, vertex: Vertex, *, recursive=True, flat=True, visited=None):
         if visited is None:
             visited = set()
 
@@ -1698,7 +1697,7 @@ class Graph:
         node_name = node_id.split("-")[0]
         if node_name in InterfaceComponentTypes:
             return InterfaceVertex
-        if node_name in ["SharedState", "Notify", "Listen"]:
+        if node_name in {"SharedState", "Notify", "Listen"}:
             return StateVertex
         if node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]
@@ -1725,8 +1724,8 @@ class Graph:
 
     def _create_vertex(self, frontend_data: NodeData):
         vertex_data = frontend_data["data"]
-        vertex_type: str = vertex_data["type"]  # type: ignore
-        vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
+        vertex_type: str = vertex_data["type"]
+        vertex_base_type: str = vertex_data["node"]["template"]["_type"]
         if "id" not in vertex_data:
             msg = f"Vertex data for {vertex_data['display_name']} does not contain an id"
             raise ValueError(msg)
@@ -1747,8 +1746,8 @@ class Graph:
         if stop_component_id or start_component_id:
             try:
                 first_layer = self.sort_vertices(stop_component_id, start_component_id)
-            except Exception as exc:
-                logger.exception(exc)
+            except Exception:  # noqa: BLE001
+                logger.exception("Error sorting vertices")
                 first_layer = self.sort_vertices()
         else:
             first_layer = self.sort_vertices()
@@ -1787,6 +1786,7 @@ class Graph:
     def layered_topological_sort(
         self,
         vertices: list[Vertex],
+        *,
         filter_graphs: bool = False,
     ) -> list[list[str]]:
         """Performs a layered topological sort of the vertices in the graph."""
@@ -1931,7 +1931,7 @@ class Graph:
             result |= {vertex_id: {"successors": sucessors, "predecessors": predecessors}}
         return result
 
-    def __filter_vertices(self, vertex_id: str, is_start: bool = False):
+    def __filter_vertices(self, vertex_id: str, *, is_start: bool = False):
         dictionaryized_graph = self.__to_dict()
         parent_node_map = {vertex.id: vertex.parent_node_id for vertex in self.vertices}
         vertex_ids = sort_up_to_vertex(
@@ -2007,11 +2007,10 @@ class Graph:
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
         is_active = self.get_vertex(vertex_id).is_active()
-        return self.run_manager.is_vertex_runnable(vertex_id, is_active)
+        return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active)
 
     def build_run_map(self):
-        """
-        Builds the run map for the graph.
+        """Builds the run map for the graph.
 
         This method is responsible for building the run map for the graph,
         which maps each node in the graph to its corresponding run function.
@@ -2022,8 +2021,8 @@ class Graph:
         self.run_manager.build_run_map(predecessor_map=self.predecessor_map, vertices_to_run=self.vertices_to_run)
 
     def find_runnable_predecessors_for_successors(self, vertex_id: str) -> list[str]:
-        """
-        For each successor of the current vertex, find runnable predecessors if any.
+        """For each successor of the current vertex, find runnable predecessors if any.
+
         This checks the direct predecessors of each successor to identify any that are
         immediately runnable, expanding the search to ensure progress can be made.
         """
@@ -2043,7 +2042,7 @@ class Graph:
                 return
             visited.add(predecessor_id)
             is_active = self.get_vertex(predecessor_id).is_active()
-            if self.run_manager.is_vertex_runnable(predecessor_id, is_active):
+            if self.run_manager.is_vertex_runnable(predecessor_id, is_active=is_active):
                 runnable_vertices.append(predecessor_id)
             else:
                 for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):
@@ -2060,8 +2059,7 @@ class Graph:
         self.run_manager.remove_vertex_from_runnables(vertex_id)
 
     def get_top_level_vertices(self, vertices_ids):
-        """
-        Retrieves the top-level vertices from the given graph based on the provided vertex IDs.
+        """Retrieves the top-level vertices from the given graph based on the provided vertex IDs.
 
         Args:
             vertices_ids (list): A list of vertex IDs.

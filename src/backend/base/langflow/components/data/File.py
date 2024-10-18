@@ -47,6 +47,6 @@ class FileComponent(Component):
             msg = f"Unsupported file type: {extension}"
             raise ValueError(msg)
 
-        data = parse_text_file_to_data(resolved_path, silent_errors)
-        self.status = data if data else "No data"
+        data = parse_text_file_to_data(resolved_path, silent_errors=silent_errors)
+        self.status = data or "No data"
         return data or Data()

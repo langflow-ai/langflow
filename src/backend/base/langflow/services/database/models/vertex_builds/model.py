@@ -9,6 +9,8 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
 
+from langflow.utils.util_strings import truncate_long_strings
+
 
 class VertexBuildBase(SQLModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -39,8 +41,20 @@ class VertexBuildBase(SQLModel):
             value = value.replace(tzinfo=timezone.utc)
         return value
 
+    @field_serializer("data")
+    def serialize_data(self, data: dict) -> dict:
+        return truncate_long_strings(data)
 
-class VertexBuildTable(VertexBuildBase, table=True):  # type: ignore
+    @field_serializer("artifacts")
+    def serialize_artifacts(self, data) -> dict:
+        return truncate_long_strings(data)
+
+    @field_serializer("params")
+    def serialize_params(self, data) -> dict:
+        return truncate_long_strings(data)
+
+
+class VertexBuildTable(VertexBuildBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "vertex_build"
     build_id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     flow: "Flow" = Relationship(back_populates="vertex_builds")

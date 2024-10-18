@@ -14,8 +14,8 @@ class ShouldRunNextComponent(CustomComponent):
         template = (
             "Given the following question and the context below, answer with a yes or no.\n\n"
             "{error_message}\n\n"
-            "Question: {question}\n\n"
-            "Context: {context}\n\n"
+            "Question: {question}\n\n"  # noqa: RUF100, RUF027
+            "Context: {context}\n\n"  # noqa: RUF100, RUF027
             "Answer:"
         )
 
@@ -31,7 +31,7 @@ class ShouldRunNextComponent(CustomComponent):
                 content = result.content
             elif isinstance(result, str):
                 content = result
-            if isinstance(content, str) and content.lower().strip() in ["yes", "no"]:
+            if isinstance(content, str) and content.lower().strip() in {"yes", "no"}:
                 break
         condition = str(content).lower().strip() == "yes"
         self.status = f"Should Run Next: {condition}"

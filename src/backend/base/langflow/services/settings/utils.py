@@ -5,14 +5,14 @@ from loguru import logger
 
 
 def set_secure_permissions(file_path: Path):
-    if platform.system() in ["Linux", "Darwin"]:  # Unix/Linux/Mac
+    if platform.system() in {"Linux", "Darwin"}:  # Unix/Linux/Mac
         file_path.chmod(0o600)
     elif platform.system() == "Windows":
         import win32api
         import win32con
         import win32security
 
-        user, domain, _ = win32security.LookupAccountName("", win32api.GetUserName())
+        user, _, _ = win32security.LookupAccountName("", win32api.GetUserName())
         sd = win32security.GetFileSecurity(str(file_path), win32security.DACL_SECURITY_INFORMATION)
         dacl = win32security.ACL()
 
@@ -25,7 +25,7 @@ def set_secure_permissions(file_path: Path):
         sd.SetSecurityDescriptorDacl(1, dacl, 0)
         win32security.SetFileSecurity(str(file_path), win32security.DACL_SECURITY_INFORMATION, sd)
     else:
-        print("Unsupported OS")
+        logger.error("Unsupported OS")
 
 
 def write_secret_to_file(path: Path, value: str) -> None:
@@ -33,7 +33,7 @@ def write_secret_to_file(path: Path, value: str) -> None:
         f.write(value.encode("utf-8"))
     try:
         set_secure_permissions(path)
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Failed to set secure permissions on secret key")
 
 

@@ -28,6 +28,8 @@ from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async, unescape_string
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from langflow.custom import Component
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.base import CycleEdge, Edge
@@ -49,6 +51,7 @@ class Vertex:
         self,
         data: NodeData,
         graph: Graph,
+        *,
         base_type: str | None = None,
         is_task: bool = False,
         params: dict | None = None,
@@ -101,6 +104,7 @@ class Vertex:
         self.use_result = False
         self.build_times: list[float] = []
         self.state = VertexStates.ACTIVE
+        self.log_transaction_tasks: set[asyncio.Task] = set()
 
     def set_input_value(self, name: str, value: Any):
         if self._custom_component is None:
@@ -118,7 +122,7 @@ class Vertex:
     def add_result(self, name: str, result: Any):
         self.results[name] = result
 
-    def update_graph_state(self, key, new_state, append: bool):
+    def update_graph_state(self, key, new_state, *, append: bool):
         if append:
             self.graph.append_state(key, new_state, caller=self.id)
         else:
@@ -267,7 +271,7 @@ class Vertex:
     def get_task(self):
         # using the task_id, get the task from celery
         # and return it
-        from celery.result import AsyncResult  # type: ignore
+        from celery.result import AsyncResult
 
         return AsyncResult(self.task_id)
 
@@ -352,7 +356,7 @@ class Vertex:
                         if "too many values to unpack" in str(e):
                             full_path = file_path
                         else:
-                            raise e
+                            raise
                     params[field_name] = full_path
                 elif field.get("required"):
                     field_display_name = field.get("display_name")
@@ -370,10 +374,14 @@ class Vertex:
                 val = field.get("value")
                 if field.get("type") == "code":
                     try:
-                        params[field_name] = ast.literal_eval(val) if val else None
-                    except Exception:
+                        if field_name == "code":
+                            params[field_name] = val
+                        else:
+                            params[field_name] = ast.literal_eval(val) if val else None
+                    except Exception:  # noqa: BLE001
+                        logger.debug(f"Error evaluating code for {field_name}")
                         params[field_name] = val
-                elif field.get("type") in ["dict", "NestedDict"]:
+                elif field.get("type") in {"dict", "NestedDict"}:
                     # When dict comes from the frontend it comes as a
                     # list of dicts, so we need to convert it to a dict
                     # before passing it to the build method
@@ -430,12 +438,13 @@ class Vertex:
         self.load_from_db_fields = load_from_db_fields
         self._raw_params = params.copy()
 
-    def update_raw_params(self, new_params: Mapping[str, str | list[str]], overwrite: bool = False):
-        """
-        Update the raw parameters of the vertex with the given new parameters.
+    def update_raw_params(self, new_params: Mapping[str, str | list[str]], *, overwrite: bool = False):
+        """Update the raw parameters of the vertex with the given new parameters.
 
         Args:
             new_params (Dict[str, Any]): The new parameters to update.
+            overwrite (bool, optional): Whether to overwrite the existing parameters.
+                Defaults to False.
 
         Raises:
             ValueError: If any key in new_params is not found in self._raw_params.
@@ -446,17 +455,15 @@ class Vertex:
         if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
             return
         if not overwrite:
-            for key in new_params.copy():  # type: ignore
+            for key in new_params.copy():  # type: ignore[attr-defined]
                 if key not in self._raw_params:
-                    new_params.pop(key)  # type: ignore
+                    new_params.pop(key)  # type: ignore[attr-defined]
         self._raw_params.update(new_params)
         self.params = self._raw_params.copy()
         self.updated_raw_params = True
 
     def has_cycle_edges(self):
-        """
-        Checks if the vertex has any cycle edges.
-        """
+        """Checks if the vertex has any cycle edges."""
         return self._has_cycle_edges
 
     async def instantiate_component(self, user_id=None):
@@ -472,11 +479,9 @@ class Vertex:
         user_id=None,
         event_manager: EventManager | None = None,
     ):
-        """
-        Initiate the build process.
-        """
+        """Initiate the build process."""
         logger.debug(f"Building {self.display_name}")
-        await self._build_each_vertex_in_params_dict(user_id)
+        await self._build_each_vertex_in_params_dict()
 
         if self.base_type is None:
             msg = f"Base type for vertex {self.display_name} not found"
@@ -502,8 +507,7 @@ class Vertex:
         self._built = True
 
     def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:
-        """
-        Extracts messages from the artifacts.
+        """Extracts messages from the artifacts.
 
         Args:
             artifacts (Dict[str, Any]): The artifacts to extract messages from.
@@ -559,10 +563,8 @@ class Vertex:
         )
         self.set_result(result_dict)
 
-    async def _build_each_vertex_in_params_dict(self, user_id=None):
-        """
-        Iterates over each vertex in the params dictionary and builds it.
-        """
+    async def _build_each_vertex_in_params_dict(self):
+        """Iterates over each vertex in the params dictionary and builds it."""
         for key, value in self._raw_params.items():
             if self._is_vertex(value):
                 if value == self:
@@ -587,9 +589,7 @@ class Vertex:
         key,
         vertices_dict: dict[str, Vertex],
     ):
-        """
-        Iterates over a dictionary of vertices, builds each and updates the params dictionary.
-        """
+        """Iterates over a dictionary of vertices, builds each and updates the params dictionary."""
         for sub_key, value in vertices_dict.items():
             if not self._is_vertex(value):
                 self.params[key][sub_key] = value
@@ -598,20 +598,15 @@ class Vertex:
                 self.params[key][sub_key] = result
 
     def _is_vertex(self, value):
-        """
-        Checks if the provided value is an instance of Vertex.
-        """
+        """Checks if the provided value is an instance of Vertex."""
         return isinstance(value, Vertex)
 
     def _is_list_of_vertices(self, value):
-        """
-        Checks if the provided value is a list of Vertex instances.
-        """
+        """Checks if the provided value is a list of Vertex instances."""
         return all(self._is_vertex(vertex) for vertex in value)
 
     async def get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
-        """
-        Retrieves the result of the vertex.
+        """Retrieves the result of the vertex.
 
         This is a read-only method so it raises an error if the vertex has not been built yet.
 
@@ -621,9 +616,19 @@ class Vertex:
         async with self._lock:
             return await self._get_result(requester, target_handle_name)
 
-    async def _get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
-        """
-        Retrieves the result of the built component.
+    def _log_transaction_async(
+        self, flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
+    ) -> None:
+        task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
+        self.log_transaction_tasks.add(task)
+        task.add_done_callback(self.log_transaction_tasks.discard)
+
+    async def _get_result(
+        self,
+        requester: Vertex,
+        target_handle_name: str | None = None,  # noqa: ARG002
+    ) -> Any:
+        """Retrieves the result of the built component.
 
         If the component has not been built yet, a ValueError is raised.
 
@@ -633,20 +638,17 @@ class Vertex:
         flow_id = self.graph.flow_id
         if not self._built:
             if flow_id:
-                asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="error"))
+                self._log_transaction_async(str(flow_id), source=self, target=requester, status="error")
             msg = f"Component {self.display_name} has not been built yet"
             raise ValueError(msg)
 
         result = self._built_result if self.use_result else self._built_object
         if flow_id:
-            asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="success"))
+            self._log_transaction_async(str(flow_id), source=self, target=requester, status="success")
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: Vertex):
-        """
-        Builds a given vertex and updates the params dictionary accordingly.
-        """
-
+        """Builds a given vertex and updates the params dictionary accordingly."""
         result = await vertex.get_result(self, target_handle_name=key)
         self._handle_func(key, result)
         if isinstance(result, list):
@@ -658,9 +660,7 @@ class Vertex:
         key,
         vertices: list[Vertex],
     ):
-        """
-        Iterates over a list of vertices, builds each and updates the params dictionary.
-        """
+        """Iterates over a list of vertices, builds each and updates the params dictionary."""
         self.params[key] = []
         for vertex in vertices:
             result = await vertex.get_result(self, target_handle_name=key)
@@ -686,28 +686,24 @@ class Vertex:
                     raise ValueError(msg) from e
 
     def _handle_func(self, key, result):
-        """
-        Handles 'func' key by checking if the result is a function and setting it as coroutine.
-        """
+        """Handles 'func' key by checking if the result is a function and setting it as coroutine."""
         if key == "func":
             if not isinstance(result, types.FunctionType):
                 if hasattr(result, "run"):
-                    result = result.run  # type: ignore
+                    result = result.run
                 elif hasattr(result, "get_function"):
-                    result = result.get_function()  # type: ignore
+                    result = result.get_function()
             elif inspect.iscoroutinefunction(result):
                 self.params["coroutine"] = result
             else:
                 self.params["coroutine"] = sync_to_async(result)
 
     def _extend_params_list_with_result(self, key, result):
-        """
-        Extends a list in the params dictionary with the given result if it exists.
-        """
+        """Extends a list in the params dictionary with the given result if it exists."""
         if isinstance(self.params[key], list):
             self.params[key].extend(result)
 
-    async def _build_results(self, custom_component, custom_params, fallback_to_env_vars=False):
+    async def _build_results(self, custom_component, custom_params, *, fallback_to_env_vars=False):
         try:
             result = await initialize.loading.get_instance_results(
                 custom_component=custom_component,
@@ -727,9 +723,7 @@ class Vertex:
             raise ComponentBuildException(msg, tb) from exc
 
     def _update_built_object_and_artifacts(self, result: Any | tuple[Any, dict] | tuple[Component, Any, dict]):
-        """
-        Updates the built object and its artifacts.
-        """
+        """Updates the built object and its artifacts."""
         if isinstance(result, tuple):
             if len(result) == 2:  # noqa: PLR2004
                 self._built_object, self.artifacts = result
@@ -745,12 +739,10 @@ class Vertex:
             self._built_object = result
 
     def _validate_built_object(self):
-        """
-        Checks if the built object is None and raises a ValueError if so.
-        """
+        """Checks if the built object is None and raises a ValueError if so."""
         if isinstance(self._built_object, UnbuiltObject):
             msg = f"{self.display_name}: {self._built_object_repr()}"
-            raise ValueError(msg)
+            raise TypeError(msg)
         if self._built_object is None:
             message = f"{self.display_name} returned None."
             if self.base_type == "custom_components":
@@ -758,11 +750,11 @@ class Vertex:
 
             logger.warning(message)
         elif isinstance(self._built_object, Iterator | AsyncIterator):
-            if self.display_name in ["Text Output"]:
+            if self.display_name == "Text Output":
                 msg = f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
                 raise ValueError(msg)
 
-    def _reset(self, params_update: dict[str, Any] | None = None):
+    def _reset(self):
         self._built = False
         self._built_object = UnbuiltObject()
         self._built_result = UnbuiltResult()
@@ -801,11 +793,20 @@ class Vertex:
                 # and we are just getting the result for the requester
                 return await self.get_requester_result(requester)
             self._reset()
-
+            # inject session_id if it is not None
+            if inputs is not None and "session" in inputs and inputs["session"] is not None and self.has_session_id:
+                session_id_value = self.get_value_from_template_dict("session_id")
+                if session_id_value == "":
+                    self.update_raw_params({"session_id": inputs["session"]}, overwrite=True)
             if self._is_chat_input() and (inputs or files):
                 chat_input = {}
-                if inputs:
-                    chat_input.update({"input_value": inputs.get(INPUT_FIELD_NAME, "")})
+                if (
+                    inputs
+                    and isinstance(inputs, dict)
+                    and "input_value" in inputs
+                    and inputs["input_value"] is not None
+                ):
+                    chat_input.update({"input_value": inputs[INPUT_FIELD_NAME]})
                 if files:
                     chat_input.update({"files": files})
 
@@ -856,9 +857,10 @@ class Vertex:
             # self._data is a dict and we need to compare them
             # to check if they are equal
             data_are_equal = self.data == __o.data
-            return ids_are_equal and data_are_equal
         except AttributeError:
             return False
+        else:
+            return ids_are_equal and data_are_equal
 
     def __hash__(self) -> int:
         return id(self)

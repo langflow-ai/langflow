@@ -20,8 +20,7 @@ class LocalStorageService(StorageService):
         return str(self.data_dir / flow_id / file_name)
 
     async def save_file(self, flow_id: str, file_name: str, data: bytes):
-        """
-        Save a file in the local storage.
+        """Save a file in the local storage.
 
         :param flow_id: The identifier for the flow.
         :param file_name: The name of the file to be saved.
@@ -46,8 +45,7 @@ class LocalStorageService(StorageService):
             raise
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
-        """
-        Retrieve a file from the local storage.
+        """Retrieve a file from the local storage.
 
         :param flow_id: The identifier for the flow.
         :param file_name: The name of the file to be retrieved.
@@ -69,8 +67,7 @@ class LocalStorageService(StorageService):
         return content
 
     async def list_files(self, flow_id: str):
-        """
-        List all files in a specified flow.
+        """List all files in a specified flow.
 
         :param flow_id: The identifier for the flow.
         :return: A list of file names.
@@ -87,8 +84,7 @@ class LocalStorageService(StorageService):
         return files
 
     async def delete_file(self, flow_id: str, file_name: str):
-        """
-        Delete a file from the local storage.
+        """Delete a file from the local storage.
 
         :param flow_id: The identifier for the flow.
         :param file_name: The name of the file to be deleted.

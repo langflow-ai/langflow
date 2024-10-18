@@ -93,11 +93,10 @@ class AIMLModelComponent(LCModelComponent):
         )
 
     def _get_exception_message(self, e: Exception):
-        """
-        Get a message from an OpenAI exception.
+        """Get a message from an OpenAI exception.
 
         Args:
-            exception (Exception): The exception to get the message from.
+            e (Exception): The exception to get the message from.
 
         Returns:
             str: The message from the exception.
@@ -107,7 +106,7 @@ class AIMLModelComponent(LCModelComponent):
         except ImportError:
             return None
         if isinstance(e, BadRequestError):
-            message = e.json_body.get("error", {}).get("message", "")  # type: ignore
+            message = e.json_body.get("error", {}).get("message", "")
             if message:
                 return message
         return None

@@ -40,6 +40,7 @@ class SQLExecutorComponent(CustomComponent):
         self,
         query: str,
         database_url: str,
+        *,
         include_columns: bool = False,
         passthrough: bool = False,
         add_error: bool = False,
@@ -58,7 +59,7 @@ class SQLExecutorComponent(CustomComponent):
             result = str(e)
             self.status = result
             if not passthrough:
-                raise e
+                raise
             error = repr(e)
 
         if add_error and error is not None:

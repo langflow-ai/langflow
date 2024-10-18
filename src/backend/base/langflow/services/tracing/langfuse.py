@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
+from typing_extensions import override
 
 from langflow.services.tracing.base import BaseTracer
 
@@ -57,12 +58,13 @@ class LangFuseTracer(BaseTracer):
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
             return False
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Error setting up LangSmith tracer")
             return False
 
         return True
 
+    @override
     def add_trace(
         self,
         trace_id: str,
@@ -78,7 +80,7 @@ class LangFuseTracer(BaseTracer):
 
         _metadata: dict = {}
         _metadata |= {"trace_type": trace_type} if trace_type else {}
-        _metadata |= metadata if metadata else {}
+        _metadata |= metadata or {}
 
         _name = trace_name.removesuffix(f" ({trace_id})")
         content_span = {
@@ -93,6 +95,7 @@ class LangFuseTracer(BaseTracer):
         self.last_span = span
         self.spans[trace_id] = span
 
+    @override
     def end_trace(
         self,
         trace_id: str,
@@ -108,12 +111,13 @@ class LangFuseTracer(BaseTracer):
         span = self.spans.get(trace_id, None)
         if span:
             _output: dict = {}
-            _output |= outputs if outputs else {}
+            _output |= outputs or {}
             _output |= {"error": str(error)} if error else {}
             _output |= {"logs": list(logs)} if logs else {}
             content = {"output": _output, "end_time": end_time}
             span.update(**content)
 
+    @override
     def end(
         self,
         inputs: dict[str, Any],

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -37,6 +37,7 @@ test("Document QA", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Document QA" }).click();
   await page.waitForTimeout(1000);
 
@@ -107,8 +108,8 @@ test("Document QA", async ({ page }) => {
   await page.getByText("files", { exact: true }).last().isVisible();
 
   await page.getByRole("gridcell").last().isVisible();
-  await page.getByTestId("icon-Trash2").first().click();
-
+  await page.getByRole("combobox").click();
+  await page.getByLabel("Delete").click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
   });

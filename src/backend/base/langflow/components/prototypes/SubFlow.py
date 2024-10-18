@@ -38,16 +38,21 @@ class SubFlowComponent(Component):
         if field_value is not None and field_name == "flow_name":
             try:
                 flow_data = self.get_flow(field_value)
+            except Exception:  # noqa: BLE001
+                logger.exception(f"Error getting flow {field_value}")
+            else:
                 if not flow_data:
                     msg = f"Flow {field_value} not found."
-                    raise ValueError(msg)
-                graph = Graph.from_payload(flow_data.data["data"])
-                # Get all inputs from the graph
-                inputs = get_flow_inputs(graph)
-                # Add inputs to the build config
-                build_config = self.add_inputs_to_build_config(inputs, build_config)
-            except Exception:
-                logger.exception(f"Error getting flow {field_value}")
+                    logger.error(msg)
+                else:
+                    try:
+                        graph = Graph.from_payload(flow_data.data["data"])
+                        # Get all inputs from the graph
+                        inputs = get_flow_inputs(graph)
+                        # Add inputs to the build config
+                        build_config = self.add_inputs_to_build_config(inputs, build_config)
+                    except Exception:  # noqa: BLE001
+                        logger.exception(f"Error building graph for flow {field_value}")
 
         return build_config
 
@@ -58,7 +63,7 @@ class SubFlowComponent(Component):
             new_vertex_inputs = []
             field_template = vertex.data["node"]["template"]
             for inp in field_template:
-                if inp not in ["code", "_type"]:
+                if inp not in {"code", "_type"}:
                     field_template[inp]["display_name"] = (
                         vertex.display_name + " - " + field_template[inp]["display_name"]
                     )

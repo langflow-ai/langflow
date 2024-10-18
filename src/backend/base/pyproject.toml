@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.0.96"
+version = "0.0.97"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 license = "MIT"
@@ -71,7 +71,8 @@ dependencies = [
     "spider-client>=0.0.27",
     "diskcache>=5.6.3",
     "clickhouse-connect==0.7.19",
-    "assemblyai>=0.33.0"
+    "assemblyai>=0.33.0",
+    "fastapi-pagination>=0.12.29",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -113,6 +114,7 @@ flake8-type-checking.runtime-evaluated-base-classes = [
     "typing.TypedDict", # Needed by fastapi
     "typing_extensions.TypedDict", # Needed by fastapi
 ]
+pydocstyle.convention = "google"
 select = ["ALL"]
 ignore = [
     "C90", # McCabe complexity
@@ -126,22 +128,14 @@ ignore = [
     "RUF012", # Pydantic models are currently not well detected. See https://github.com/astral-sh/ruff/issues/13630
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
+    "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
 
     # Rules that are TODOs
     "ANN",
-    "ARG",
-    "BLE",
-    "D",
-    "DOC",
-    "EXE",
-    "FBT",
+    "D1", # Missing docstrings
     "N",
-    "RUF006", # Store a reference to the return value of `asyncio.create_task`
     "S",
     "SLF",
-    "T201",
-    "TRY",
-    "PGH",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -188,7 +182,7 @@ dev = [
     "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
-    "ruff>=0.4.5",
+    "ruff>=0.6.2",
     "httpx>=0.27",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",

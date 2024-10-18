@@ -1,7 +1,7 @@
 import asyncio
 import json
 from http import HTTPStatus
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -41,7 +41,7 @@ async def event_generator(request: Request):
                         last_read_item = item
         if to_write:
             for ts, msg in to_write:
-                yield f"{json.dumps({ts:msg})}\n\n"
+                yield f"{json.dumps({ts: msg})}\n\n"
         else:
             current_not_sent += 1
             if current_not_sent == NUMBER_OF_NOT_SENT_BEFORE_KEEPALIVE:
@@ -55,10 +55,10 @@ async def event_generator(request: Request):
 async def stream_logs(
     request: Request,
 ):
-    """
-    HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs
-    it establishes a long-lived connection to the server and receives log messages in real-time
-    the client should use the head "Accept: text/event-stream"
+    """HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs.
+
+    It establishes a long-lived connection to the server and receives log messages in real-time.
+    The client should use the header "Accept: text/event-stream".
     """
     global log_buffer  # noqa: PLW0602
     if log_buffer.enabled() is False:
@@ -72,9 +72,9 @@ async def stream_logs(
 
 @log_router.get("/logs")
 async def logs(
-    lines_before: int = Query(0, description="The number of logs before the timestamp or the last log"),
-    lines_after: int = Query(0, description="The number of logs after the timestamp"),
-    timestamp: int = Query(0, description="The timestamp to start getting logs from"),
+    lines_before: Annotated[int, Query(description="The number of logs before the timestamp or the last log")] = 0,
+    lines_after: Annotated[int, Query(description="The number of logs after the timestamp")] = 0,
+    timestamp: Annotated[int, Query(description="The timestamp to start getting logs from")] = 0,
 ):
     global log_buffer  # noqa: PLW0602
     if log_buffer.enabled() is False:

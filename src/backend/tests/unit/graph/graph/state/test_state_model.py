@@ -1,17 +1,11 @@
 import pytest
-from pydantic import Field
-
 from langflow.components.inputs import ChatInput
 from langflow.components.outputs.ChatOutput import ChatOutput
 from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.graph.state.model import create_state_model
 from langflow.template.field.base import UNDEFINED
-
-
-@pytest.fixture
-def client():
-    pass
+from pydantic import Field
 
 
 @pytest.fixture
@@ -76,8 +70,8 @@ class TestCreateStateModel:
         assert state_instance.field_two == 123
 
     # Raises ValueError for invalid field type in tuple-based definitions
-    def test_raise_valueerror_for_invalid_field_type_in_tuple(self):
-        with pytest.raises(ValueError, match="Invalid type for field invalid_field"):
+    def test_raise_typeerror_for_invalid_field_type_in_tuple(self):
+        with pytest.raises(TypeError, match="Invalid type for field invalid_field"):
             create_state_model(invalid_field=("not_a_type", "default"))
 
     # Raises ValueError for unsupported value types in keyword arguments
