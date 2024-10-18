@@ -64,9 +64,10 @@ test("CRUD folders", async ({ page }) => {
     .last()
     .hover()
     .then(async () => {
-      await page.getByTestId("btn-delete-folder").last().click();
+      await page.getByTestId("more-options-button").last().click();
     });
 
+  await page.getByTestId("btn-delete-folder").click();
   await page.getByText("Delete").last().click();
   await page.waitForTimeout(1000);
   await page.getByText("Folder deleted successfully").isVisible();

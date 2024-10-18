@@ -53,7 +53,8 @@ test("should be able to move flow from folder, rename it and be displayed on cor
   while (countFolders > 1) {
     await page.getByText("New Folder").first().hover();
 
-    await page.getByTestId("btn-delete-folder").first().click();
+    await page.getByTestId("more-options-button").first().click();
+    await page.getByTestId("btn-delete-folder").click();
     await page.getByText("Delete").last().click();
     countFolders--;
     await page.waitForTimeout(1000);
