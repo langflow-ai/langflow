@@ -138,8 +138,8 @@ class Component(CustomComponent):
     def __deepcopy__(self, memo):
         if id(self) in memo:
             return memo[id(self)]
-        kwargs = deepcopy(self.__config)
-        kwargs["inputs"] = deepcopy(self.__inputs)
+        kwargs = deepcopy(self.__config, memo)
+        kwargs["inputs"] = deepcopy(self.__inputs, memo)
         new_component = type(self)(**kwargs)
         new_component._code = self._code
         new_component._outputs_map = self._outputs_map
