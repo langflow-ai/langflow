@@ -12,13 +12,13 @@ const promptContentClasses = {
   base: "overflow-hidden text-clip whitespace-nowrap",
   editNode: "input-edit-node input-dialog",
   normal: "primary-input text-muted-foreground",
-  disabled: "bg-border text-smooth-zinc ",
+  disabled: "disabled-state",
 };
 
 const externalLinkIconClasses = {
   gradient: "absolute right-7 h-5 w-10",
   background: "absolute right-[0.5px] h-5 w-9 rounded-l-xl",
-  icon: "icons-parameters-comp absolute right-3 h-5 w-5 shrink-0",
+  icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
   editNodeTop: "top-1",
   normalTop: "top-2.5",
 };
