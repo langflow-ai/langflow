@@ -21,7 +21,6 @@ export default function DictComponent({
   }, [disabled]);
   const placeholderName = `Edit ${toTitleCase(name)}`;
 
-  console.log(placeholderName);
   return (
     <div
       className={classNames(
