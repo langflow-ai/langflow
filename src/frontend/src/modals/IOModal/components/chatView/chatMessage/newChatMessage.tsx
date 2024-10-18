@@ -219,14 +219,14 @@ export default function ChatMessage({
                         </div>
                         <div className="flex flex-col">
                             <div>
-                                <span
-                                    className="max-w-24 truncate font-semibold"
+                                <div
+                                    className="max-w-full truncate font-semibold pb-2"
                                     data-testid={
                                         "sender_name_" + chat.sender_name?.toLocaleLowerCase()
                                     }
                                 >
                                     {chat.sender_name}
-                                </span>
+                                </div>
                                 {/* TODO: ADD MODEL RELATED NAME */}
                             </div>
                             {!chat.isSend ? (
@@ -280,13 +280,13 @@ export default function ChatMessage({
                                                                 />
                                                             ) : (
                                                                 <>
-                                                                    <div className="flex gap-2">
+                                                                    <div className="flex gap-2 w-full">
                                                                         <Markdown
                                                                             remarkPlugins={[remarkGfm]}
                                                                             linkTarget="_blank"
                                                                             rehypePlugins={[rehypeMathjax]}
                                                                             className={cn(
-                                                                                "markdown prose flex flex-col word-break-break-word dark:prose-invert",
+                                                                                "markdown prose flex w-full flex-col word-break-break-word max-w-[92%] dark:prose-invert",
                                                                                 isEmpty
                                                                                     ? "text-chat-trigger-disabled"
                                                                                     : "text-primary",
