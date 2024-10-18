@@ -379,7 +379,9 @@ export default function IOModal({
             >
               {visibleSession && (
                 <div className="mb-4 h-[5%] text-xl font-semibold">
-                  {visibleSession}
+                  {visibleSession === currentFlowId
+                    ? "Default Session"
+                    : `${visibleSession}`}
                 </div>
               )}
               {haveChat ? (
