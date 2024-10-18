@@ -2,13 +2,12 @@ from datetime import datetime
 
 import pytest
 from httpx import AsyncClient
-from sqlmodel import select
-
 from langflow.services.auth.utils import create_super_user, get_password_hash
 from langflow.services.database.models.user import UserUpdate
 from langflow.services.database.models.user.model import User
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
+from sqlmodel import select
 
 
 @pytest.fixture
@@ -86,7 +85,7 @@ async def test_user_waiting_for_approval(client):
     with session_getter(get_db_service()) as session:
         existing_user = session.exec(select(User).where(User.username == username)).first()
         if existing_user:
-            print(f"User {username} still exists after the test. This is expected.")
+            pass
         else:
             pytest.fail(f"User {username} does not exist after the test. This is unexpected.")
 

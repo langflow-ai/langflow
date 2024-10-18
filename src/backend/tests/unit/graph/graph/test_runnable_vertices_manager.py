@@ -1,9 +1,11 @@
 import pickle
-from collections import defaultdict
+from typing import TYPE_CHECKING
 
 import pytest
-
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
+
+if TYPE_CHECKING:
+    from collections import defaultdict
 
 
 @pytest.fixture
@@ -23,7 +25,7 @@ def data():
 def test_to_dict(data):
     result = RunnableVerticesManager.from_dict(data).to_dict()
 
-    assert all(key in result.keys() for key in data.keys())
+    assert all(key in result for key in data)
 
 
 def test_from_dict(data):
@@ -158,8 +160,8 @@ def test_build_run_map(data):
 
     manager.build_run_map(predecessor_map, vertices_to_run)
 
-    assert all(v in manager.run_map.keys() for v in ["Z", "X", "Y"])
-    assert "W" not in manager.run_map.keys()
+    assert all(v in manager.run_map for v in ["Z", "X", "Y"])
+    assert "W" not in manager.run_map
 
 
 def test_update_vertex_run_state(data):

@@ -3,7 +3,7 @@ from langflow.base.data.utils import format_directory_path
 
 
 @pytest.mark.parametrize(
-    "input_path, expected",
+    ("input_path", "expected"),
     [
         # Test case 1: Standard path with no newlines (no change expected)
         ("/home/user/documents/file.txt", "/home/user/documents/file.txt"),

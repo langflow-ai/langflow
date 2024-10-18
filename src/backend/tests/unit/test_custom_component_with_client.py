@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-
 from langflow.custom import Component
 from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.custom.utils import build_custom_component_template
@@ -11,7 +10,7 @@ from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 @pytest.fixture
 def code_component_with_multiple_outputs():
-    code = Path("src/backend/tests/data/component_multiple_outputs.py").read_text()
+    code = Path("src/backend/tests/data/component_multiple_outputs.py").read_text(encoding="utf-8")
     return Component(_code=code)
 
 

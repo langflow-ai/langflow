@@ -3,7 +3,6 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-
 from langflow.graph.schema import RunOutputs
 from langflow.initial_setup.setup import load_starter_projects
 from langflow.load import run_flow_from_json
@@ -80,9 +79,8 @@ async def test_run_with_inputs_and_outputs(client, starter_project, created_api_
 @pytest.mark.noclient
 @pytest.mark.api_key_required
 def test_run_flow_from_json_object():
-    """Test loading a flow from a json file and applying tweaks"""
-    _, projects = zip(*load_starter_projects())
-    project = [project for project in projects if "Basic Prompting" in project["name"]][0]
+    """Test loading a flow from a json file and applying tweaks."""
+    project = next(project for _, project in load_starter_projects() if "Basic Prompting" in project["name"])
     results = run_flow_from_json(project, input_value="test", fallback_to_env_vars=True)
     assert results is not None
     assert all(isinstance(result, RunOutputs) for result in results)
