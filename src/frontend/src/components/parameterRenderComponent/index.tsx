@@ -97,7 +97,13 @@ export function ParameterRenderComponent({
     }
     switch (templateData.type) {
       case "NestedDict":
-        return <DictComponent {...baseInputProps} id={`dict_${id}`} />;
+        return (
+          <DictComponent
+            name={name ?? ""}
+            {...baseInputProps}
+            id={`dict_${id}`}
+          />
+        );
       case "dict":
         return (
           <KeypairListComponent
@@ -107,7 +113,13 @@ export function ParameterRenderComponent({
           />
         );
       case "bool":
-        return <ToggleShadComponent {...baseInputProps} id={`toggle_${id}`} />;
+        return (
+          <ToggleShadComponent
+            size="medium"
+            {...baseInputProps}
+            id={`toggle_${id}`}
+          />
+        );
       case "link":
         return (
           <LinkComponent
