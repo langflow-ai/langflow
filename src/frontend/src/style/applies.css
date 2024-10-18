@@ -1214,8 +1214,6 @@
   }
 
   .disabled-state{
-    @apply bg-secondary text-hard-zinc
+    @apply bg-secondary text-hard-zinc pointer-events-none
   }
-
-
 }
