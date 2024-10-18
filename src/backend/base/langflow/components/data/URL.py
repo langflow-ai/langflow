@@ -14,6 +14,7 @@ class URLComponent(Component):
     description = "Fetch content from one or more URLs."
     icon = "layout-template"
     name = "URL"
+    add_tool_output=True
 
     inputs = [
         MessageTextInput(
@@ -71,6 +72,9 @@ class URLComponent(Component):
         return string
 
     def fetch_content(self) -> list[Data]:
+        # check if the urls are list or not
+        if not isinstance(self.urls, list):
+            self.urls = [self.urls]
         urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]
         if self.format == "Raw HTML":
             loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
