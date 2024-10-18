@@ -19,7 +19,7 @@ import { ChatMessageType } from "../../../../types/chat";
 import { FilePreviewType, chatViewProps } from "../../../../types/components";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import ChatInput from "./chatInput/newChatInput";
-import ChatMessage from "./chatMessage";
+import ChatMessage from "./chatMessage/newChatMessage";
 
 export default function ChatView({
   sendMessage,
