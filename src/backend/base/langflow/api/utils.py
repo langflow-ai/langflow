@@ -24,6 +24,9 @@ if TYPE_CHECKING:
 
 API_WORDS = ["api", "key", "token"]
 
+MAX_PAGE_SIZE = 50
+MIN_PAGE_SIZE = 1
+
 
 def has_api_terms(word: str):
     return "api" in word and ("key" in word or ("token" in word and "tokens" not in word))
@@ -272,4 +275,4 @@ def custom_params(
 ):
     if page is None and size is None:
         return None
-    return Params(page=page or 1, size=size or 50)
+    return Params(page=page or MIN_PAGE_SIZE, size=size or MAX_PAGE_SIZE)

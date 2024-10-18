@@ -201,13 +201,13 @@ class FlowHeader(BaseModel):
     name : str
         The name of the flow.
     folder_id : UUID | None, optional
-        The ID of the folder containing the flow. Can be `None` if not associated with a folder.
+        The ID of the folder containing the flow. None if not associated with a folder.
     is_component : bool | None, optional
-        Flag indicating whether the flow is a component. Can be `None`.
+        Flag indicating whether the flow is a component.
     endpoint_name : str | None, optional
-        The name of the endpoint associated with this flow. Can be `None`.
+        The name of the endpoint associated with this flow.
     description : str | None, optional
-        A description of the flow. Can be `None`.
+        A description of the flow.
     """
 
     id: UUID

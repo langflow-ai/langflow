@@ -144,7 +144,10 @@ def read_flows(
         session (Session): The database session.
         settings_service (SettingsService): The settings service.
         components_only (bool, optional): Whether to return only components. Defaults to False.
-        get_all (bool, optional): Whether to return all flows without pagination. Defaults to False.
+
+        get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.
+        **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**
+
         folder_id (UUID, optional): The folder ID. Defaults to None.
         params (Params): Pagination parameters.
         remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
@@ -166,7 +169,7 @@ def read_flows(
         if not starter_folder and not default_folder:
             raise HTTPException(
                 status_code=404,
-                detail="Starter folder and default folder not found. " "Please create a folder and add flows to it.",
+                detail="Starter folder and default folder not found. Please create a folder and add flows to it.",
             )
 
         if not folder_id:
