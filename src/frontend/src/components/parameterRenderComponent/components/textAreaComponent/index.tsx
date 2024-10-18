@@ -12,16 +12,15 @@ import { InputProps, TextAreaComponentType } from "../../types";
 const textAreaContentClasses = {
   base: "overflow-hidden text-clip whitespace-nowrap",
   editNode: "input-edit-node input-dialog",
-  normal: "primary-input text-border",
-  disabled: "bg-border text-smooth-zinc",
-  disabledEditNode: "bg-border text-smooth-zinc",
+  normal: "primary-input text-muted-foreground",
+  disabled: "disabled-state",
   password: "password",
 };
 
 const externalLinkIconClasses = {
   gradient: "absolute right-7 h-5 w-10",
-  background: "absolute right-[0.5px] h-5 w-9 rounded-l-xl",
-  icon: "icons-parameters-comp absolute right-3 h-5 w-5 shrink-0",
+  background: "absolute right-[0.9px] h-5 w-9 rounded-l-xl",
+  icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
   editNodeTop: "top-1",
   normalTop: "top-2.5",
 };
@@ -75,7 +74,7 @@ export default function TextAreaComponent({
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
           isDark ? "bg-black" : "bg-white",
-          disabled && "bg-border",
+          disabled && "bg-secondary",
         )}
         aria-hidden="true"
       />
