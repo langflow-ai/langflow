@@ -2,6 +2,7 @@ from .ConditionalRouter import ConditionalRouterComponent
 from .CreateData import CreateDataComponent
 from .FlowTool import FlowToolComponent
 from .Listen import ListenComponent
+from .MultiRouter import MultiConditionalRouterComponent
 from .Notify import NotifyComponent
 from .Pass import PassMessageComponent
 from .PythonFunction import PythonFunctionComponent
@@ -24,4 +25,5 @@ __all__ = [
     "SQLExecutorComponent",
     "SubFlowComponent",
     "UpdateDataComponent",
+    "MultiConditionalRouterComponent",
 ]
