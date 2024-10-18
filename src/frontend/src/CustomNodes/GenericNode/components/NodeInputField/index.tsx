@@ -5,10 +5,14 @@ import {
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
+import { cn } from "@/utils/utils";
 import { useEffect, useRef } from "react";
 import { default as IconComponent } from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
-import { LANGFLOW_SUPPORTED_TYPES } from "../../../../constants/constants";
+import {
+  FLEX_VIEW_TYPES,
+  LANGFLOW_SUPPORTED_TYPES,
+} from "../../../../constants/constants";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { NodeInputFieldComponentType } from "../../../../types/components";
@@ -68,6 +72,8 @@ export default function NodeInputField({
     !LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
     (optionalHandle && optionalHandle.length > 0);
 
+  const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
+
   const Handle = (
     <HandleRenderComponent
       left={true}
@@ -104,7 +110,12 @@ export default function NodeInputField({
       }
     >
       {displayHandle && Handle}
-      <div className="flex w-full flex-col gap-2.5">
+      <div
+        className={cn(
+          "flex w-full flex-col gap-2.5",
+          isFlexView ? "flex-row" : "flex-col",
+        )}
+      >
         <div className="flex w-full items-center justify-between text-sm">
           <div className="flex w-full items-center truncate">
             {proxy ? (
@@ -135,7 +146,7 @@ export default function NodeInputField({
                     <IconComponent
                       name="Info"
                       strokeWidth={2}
-                      className="relative bottom-px top-[1px] ml-1 h-3 w-3 text-muted-foreground"
+                      className="relative bottom-px ml-1 h-3 w-3 text-smooth-zinc"
                     />
                   </div>
                 </ShadTooltip>
