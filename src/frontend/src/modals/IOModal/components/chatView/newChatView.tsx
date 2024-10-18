@@ -197,68 +197,63 @@ export default function ChatView({
     }
   };
 
-  return (
-    <div
-      className="background flex h-full w-full flex-col rounded-md"
-      onDragOver={dragOver}
-      onDragEnter={dragEnter}
-      onDragLeave={dragLeave}
-      onDrop={onDrop}
-    >
-      <div ref={messagesRef} className="chat-message-div">
-        {chatHistory?.length > 0 ? (
-          chatHistory.map((chat, index) => (
-            <ChatMessage
-              setLockChat={setLockChat}
-              lockChat={lockChat}
-              chat={chat}
-              lastMessage={chatHistory.length - 1 === index ? true : false}
-              key={`${chat.id}-${index}`}
-              updateChat={updateChat}
-            />
-          ))
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center">
-            <div className="flex flex-col items-center justify-center bg-background p-8">
-              <span className="pb-5 text-4xl">⛓️</span>
-              <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
-                New chat
-              </h3>
-              <p className="text-lg text-muted-foreground">
-                Test your flow with a chat prompt
-              </p>
+    return (
+
+        <div className="flex w-full flex-col rounded-md background h-[95%]"
+            onDragOver={dragOver}
+            onDragEnter={dragEnter}
+            onDragLeave={dragLeave}
+            onDrop={onDrop}>
+            <div ref={messagesRef} className="chat-message-div">
+                {chatHistory?.length > 0 ? (
+                    chatHistory.map((chat, index) => (
+                        <ChatMessage
+                            setLockChat={setLockChat}
+                            lockChat={lockChat}
+                            chat={chat}
+                            lastMessage={chatHistory.length - 1 === index ? true : false}
+                            key={`${chat.id}-${index}`}
+                            updateChat={updateChat}
+                        />
+                    ))
+                ) : (
+                    <div className="flex h-full w-full flex-col items-center justify-center">
+                        <div className="flex flex-col items-center justify-center bg-background p-8">
+                            <span className="text-4xl pb-5">⛓️</span>
+                            <h3 className="mt-2 text-2xl font-semibold text-primary pb-2">New chat</h3>
+                            <p className="text-muted-foreground text-lg">Test your flow with a chat prompt</p>
+                        </div>
+                    </div>
+                )}
+                <div className={lockChat ? "form-modal-chat-position" : ""} ref={ref}>
+                {lockChat && (
+                    <div className="flex w-full px-8">
+                        <div className="flex items-center space-x-2 text-muted-foreground">
+                            <span className="text-4xl">⛓️</span>
+                            <span className="animate-pulse">Flow running...</span>
+                        </div>
+                    </div>
+                )}
+                </div>
             </div>
-          </div>
-        )}
-        <div className={lockChat ? "form-modal-chat-position" : ""} ref={ref}>
-          {lockChat && (
-            <div className="flex w-full px-8">
-              <div className="flex items-center space-x-2 text-muted-foreground">
-                <span className="text-4xl">⛓️</span>
-                <span className="animate-pulse">Flow running...</span>
-              </div>
+            <div className="w-5/6 m-auto">
+                    <ChatInput
+                        chatValue={chatValue}
+                        noInput={!inputTypes.includes("ChatInput")}
+                        lockChat={lockChat}
+                        sendMessage={({ repeat, files }) => {
+                            sendMessage({ repeat, files });
+                            track("Playground Message Sent");
+                        }}
+                        setChatValue={(value) => {
+                            setChatValue(value);
+                        }}
+                        inputRef={ref}
+                        files={files}
+                        setFiles={setFiles}
+                        isDragging={isDragging}
+                    />
             </div>
-          )}
         </div>
-      </div>
-      <div className="m-auto w-5/6">
-        <ChatInput
-          chatValue={chatValue}
-          noInput={!inputTypes.includes("ChatInput")}
-          lockChat={lockChat}
-          sendMessage={({ repeat, files }) => {
-            sendMessage({ repeat, files });
-            track("Playground Message Sent");
-          }}
-          setChatValue={(value) => {
-            setChatValue(value);
-          }}
-          inputRef={ref}
-          files={files}
-          setFiles={setFiles}
-          isDragging={isDragging}
-        />
-      </div>
-    </div>
-  );
+    );
 }
