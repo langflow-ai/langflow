@@ -25,13 +25,11 @@ const TextAreaWrapper = ({
     } else if (noInput) {
       return CHAT_INPUT_PLACEHOLDER;
     } else {
-      return "Enter a prompt or a trigger";
+      return "Send a message...";
     }
   };
 
-  const lockClass = lockChat
-    ? "form-modal-lock-true bg-input"
-    : noInput
+  const lockClass =  noInput
       ? "form-modal-no-input bg-input"
       : "form-modal-lock-false bg-background";
 
@@ -71,7 +69,7 @@ const TextAreaWrapper = ({
             : "hidden"
         }`,
       }}
-      value={lockChat ? "Thinking..." : chatValue}
+      value={chatValue}
       onChange={(event): void => {
         setChatValue(event.target.value);
       }}
