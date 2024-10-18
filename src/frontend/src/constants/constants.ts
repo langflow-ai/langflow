@@ -957,7 +957,7 @@ export const GRADIENT_WHITE_CLASS =
 export const GRADIENT_DARK_CLASS =
   "linear-gradient(to right, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 1))";
 export const GRADIENT_DISABLE_WHITE_CLASS =
-  "linear-gradient(to right, rgba(228, 228, 231, 0.3), rgba(228, 228, 231, 1))";
+  "linear-gradient(to right, rgba(244, 244, 245, 0.3), rgba(244, 244, 245, 1))";
 export const GRADIENT_DISABLE_DARK_CLASS =
   "linear-gradient(to right, rgba(39, 39, 42, 0.3), rgba(39, 39, 42, 1))";
 export const RECEIVING_INPUT_VALUE = "Receiving input";
