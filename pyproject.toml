@@ -100,7 +100,6 @@ dependencies = [
 
 [tool.uv.sources]
 langflow-base = { path = "src/backend/base" }
-langflow = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
