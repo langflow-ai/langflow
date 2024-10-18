@@ -11,7 +11,7 @@ import { InputProps, TextAreaComponentType } from "../../types";
 const textAreaContentClasses = {
   base: "overflow-hidden text-clip whitespace-nowrap",
   editNode: "input-edit-node input-dialog",
-  normal: "primary-input text-muted-foreground",
+  normal: "primary-input text-border",
   disabled: "bg-border text-muted-foreground",
   disabledEditNode: "bg-border text-muted-foreground",
   password: "password",
