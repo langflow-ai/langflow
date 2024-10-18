@@ -119,7 +119,7 @@ async def async_client() -> AsyncGenerator:
     from langflow.main import create_app
 
     app = create_app()
-    async with AsyncClient(app=app, base_url="http://testserver") as client:
+    async with AsyncClient(app=app, base_url="http://testserver", http2=True) as client:
         yield client
 
 
@@ -297,7 +297,9 @@ async def client_fixture(session: Session, monkeypatch, request, load_flows_dir)
         db_service.reload_engine()
         # app.dependency_overrides[get_session] = get_session_override
         async with LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager:
-            async with AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client:
+            async with AsyncClient(
+                transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True
+            ) as client:
                 yield client
         # app.dependency_overrides.clear()
         monkeypatch.undo()
