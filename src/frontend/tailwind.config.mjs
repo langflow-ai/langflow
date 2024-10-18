@@ -121,6 +121,7 @@ const config = {
         "emerald-icon": "hsl(var(--emerald-icon))",
         "emerald-smooth": "hsl(var(--emaral-smooth))",
         "emerald-hard": "hsl(var(--emeral-hard))",
+        "smooth-zinc": "hsl(var(--smooth-zinc))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",

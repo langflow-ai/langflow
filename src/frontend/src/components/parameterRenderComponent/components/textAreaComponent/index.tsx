@@ -5,6 +5,7 @@ import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 import { getBackgroundStyle } from "../../helpers/get-gradient-class";
+import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { getTextAreaContentClasses } from "../../helpers/get-textarea-content-class";
 import { InputProps, TextAreaComponentType } from "../../types";
 
@@ -12,8 +13,8 @@ const textAreaContentClasses = {
   base: "overflow-hidden text-clip whitespace-nowrap",
   editNode: "input-edit-node input-dialog",
   normal: "primary-input text-border",
-  disabled: "bg-border text-muted-foreground",
-  disabledEditNode: "bg-border text-muted-foreground",
+  disabled: "bg-border text-smooth-zinc",
+  disabledEditNode: "bg-border text-smooth-zinc",
   password: "password",
 };
 
@@ -39,11 +40,6 @@ export default function TextAreaComponent({
 }: InputProps<string, TextAreaComponentType>): JSX.Element {
   const isDark = useDarkStore((state) => state.dark);
 
-  const getPlaceholder = () => {
-    if (disabled) return RECEIVING_INPUT_VALUE;
-    return "Type something...";
-  };
-
   const renderTextAreaContent = () => (
     <span
       id={id}
@@ -56,7 +52,7 @@ export default function TextAreaComponent({
         textAreaContentClasses,
       })}
     >
-      {value !== "" ? value : getPlaceholder()}
+      {value !== "" ? value : getPlaceholder(disabled, "Type something...")}
     </span>
   );
 
@@ -90,14 +86,14 @@ export default function TextAreaComponent({
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
-          disabled ? "text-muted-foreground" : "text-foreground",
+          disabled ? "text-smooth-zinc" : "text-foreground",
         )}
       />
     </>
   );
 
   const renderPasswordToggle = () => {
-    if (password === undefined) return null;
+    if (!password) return null;
 
     return (
       <Button

@@ -1,3 +1,4 @@
+import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { useEffect, useRef, useState } from "react";
 import useAlertStore from "../../../../stores/alertStore";
@@ -97,7 +98,7 @@ const CustomInputPopover = ({
           onClick={() => {
             (isSelected || areOptionsSelected) && setShowOptions(true);
           }}
-          readOnly={disabled}
+          disabled={disabled}
           required={required}
           className={getInputClassName({
             disabled,
@@ -123,7 +124,7 @@ const CustomInputPopover = ({
         />
         {value && selectedOption !== "" && (
           <div
-            className="bg-emerald-smooth pointer-events-none absolute left-2 top-1 h-[calc(100%-9px)] rounded-sm opacity-30"
+            className="pointer-events-none absolute left-2 top-1 h-[calc(100%-9px)] rounded-sm bg-emerald-smooth opacity-30"
             style={{ width: `${inputWidth}px` }}
           />
         )}

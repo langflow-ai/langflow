@@ -1205,4 +1205,7 @@
     @apply absolute inset-x-6 ;
   }
 
+  input[type="text"]:disabled {
+    @apply text-zinc-400;
+  }
 }

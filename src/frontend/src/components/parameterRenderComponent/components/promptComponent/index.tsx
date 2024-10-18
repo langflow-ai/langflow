@@ -5,13 +5,14 @@ import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 import { getBackgroundStyle } from "../../helpers/get-gradient-class";
+import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputProps, PromptAreaComponentType } from "../../types";
 
 const promptContentClasses = {
   base: "overflow-hidden text-clip whitespace-nowrap",
   editNode: "input-edit-node input-dialog",
   normal: "primary-input text-muted-foreground",
-  disabled: "bg-border text-muted-foreground cursor-not-allowed",
+  disabled: "bg-border text-smooth-zinc ",
 };
 
 const externalLinkIconClasses = {
@@ -35,11 +36,6 @@ export default function PromptAreaComponent({
 }: InputProps<string, PromptAreaComponentType>): JSX.Element {
   const isDark = useDarkStore((state) => state.dark);
 
-  const getPlaceholder = () => {
-    if (disabled) return RECEIVING_INPUT_VALUE;
-    return "Type your prompt here...";
-  };
-
   const renderPromptText = () => (
     <span
       id={id}
@@ -50,7 +46,9 @@ export default function PromptAreaComponent({
         disabled && !editNode && promptContentClasses.disabled,
       )}
     >
-      {value !== "" ? value : getPlaceholder()}
+      {value !== ""
+        ? value
+        : getPlaceholder(disabled, "Type your prompt here...")}
     </span>
   );
 
@@ -84,7 +82,7 @@ export default function PromptAreaComponent({
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
-          disabled ? "text-muted" : "text-foreground",
+          disabled ? "text-smooth-zinc" : "text-foreground",
         )}
       />
     </>

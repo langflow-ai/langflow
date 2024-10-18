@@ -16,9 +16,7 @@ export const getInputClassName = ({
 }) => {
   const classes = {
     base: className || "",
-    disabled: disabled
-      ? "pointer-events-none bg-border text-muted-foreground"
-      : "",
+    disabled: disabled ? "pointer-events-none bg-border text-smooth-zinc" : "",
     password:
       password &&
       (!setSelectedOption || selectedOption === "") &&
