@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .custom-disabled-input {
+    -webkit-text-fill-color: #52525b !important;
+    opacity: 1;
+    background-color: #f4f4f5 !important
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -1205,7 +1213,9 @@
     @apply absolute inset-x-6 ;
   }
 
-  input[type="text"]:disabled {
-    @apply text-zinc-400;
+  .disabled-state{
+    @apply bg-secondary text-hard-zinc
   }
+
+
 }
