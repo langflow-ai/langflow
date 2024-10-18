@@ -1,4 +1,4 @@
-class dotdict(dict):
+class dotdict(dict):  # noqa: N801
     """dotdict allows accessing dictionary elements using dot notation (e.g., dict.key instead of dict['key']).
 
     It automatically converts nested dictionaries into dotdict instances, enabling dot notation on them as well.

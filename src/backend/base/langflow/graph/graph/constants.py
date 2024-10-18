@@ -22,7 +22,7 @@ class VertexTypesDict(LazyLoadDictBase):
         self._types = _import_vertex_types
 
     @property
-    def VERTEX_TYPE_MAP(self):
+    def vertex_type_map(self):
         return self.all_types_dict
 
     def _build_dict(self):

@@ -44,8 +44,8 @@ class FirecrawlScrapeApi(CustomComponent):
         api_key: str,
         url: str,
         timeout: int = 10000,
-        pageOptions: Data | None = None,
-        extractorOptions: Data | None = None,
+        pageOptions: Data | None = None,  # noqa: N803
+        extractorOptions: Data | None = None,  # noqa: N803
     ) -> Data:
         try:
             from firecrawl.firecrawl import FirecrawlApp

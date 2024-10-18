@@ -65,7 +65,7 @@ class TelemetryService(Service):
         if path:
             url = f"{url}/{path}"
         try:
-            payload_dict = payload.model_dump(exclude_none=True, exclude_unset=True)
+            payload_dict = payload.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
             response = await self.client.get(url, params=payload_dict)
             if response.status_code != httpx.codes.OK:
                 logger.error(f"Failed to send telemetry data: {response.status_code} {response.text}")
@@ -82,7 +82,7 @@ class TelemetryService(Service):
         await self._queue_event((self.send_telemetry_data, payload, "run"))
 
     async def log_package_shutdown(self):
-        payload = ShutdownPayload(timeRunning=(datetime.now(timezone.utc) - self._start_time).seconds)
+        payload = ShutdownPayload(time_running=(datetime.now(timezone.utc) - self._start_time).seconds)
         await self._queue_event(payload)
 
     async def _queue_event(self, payload):
@@ -99,10 +99,10 @@ class TelemetryService(Service):
             version=version_info["version"],
             platform=platform.platform(),
             python=python_version,
-            cacheType=self.settings_service.settings.cache_type,
-            backendOnly=self.settings_service.settings.backend_only,
+            cache_type=self.settings_service.settings.cache_type,
+            backend_only=self.settings_service.settings.backend_only,
             arch=architecture,
-            autoLogin=self.settings_service.auth_settings.AUTO_LOGIN,
+            auto_login=self.settings_service.auth_settings.AUTO_LOGIN,
         )
         await self._queue_event((self.send_telemetry_data, payload, None))
 

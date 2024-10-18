@@ -292,6 +292,7 @@ class Settings(BaseSettings):
         return value
 
     @field_validator("components_path", mode="before")
+    @classmethod
     def set_components_path(cls, value):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")

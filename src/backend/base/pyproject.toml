@@ -56,9 +56,9 @@ ignore = [
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
 
     # Rules that are TODOs
-    "ANN",
+    "ANN", # Missing type annotations
     "D1", # Missing docstrings
-    "N",
+    "N999", # Invalid module names
     "S",
     "SLF",
 ]

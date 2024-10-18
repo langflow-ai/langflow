@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, cast
 import nest_asyncio
 from loguru import logger
 
-from langflow.exceptions.component import ComponentBuildException
+from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.edge.base import CycleEdge, Edge
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
@@ -1394,7 +1394,7 @@ class Graph:
                     await set_cache(key=vertex.id, data=vertex_dict)
 
         except Exception as exc:
-            if not isinstance(exc, ComponentBuildException):
+            if not isinstance(exc, ComponentBuildError):
                 logger.exception("Error building Component")
             raise
 
@@ -1699,13 +1699,13 @@ class Graph:
             return InterfaceVertex
         if node_name in {"SharedState", "Notify", "Listen"}:
             return StateVertex
-        if node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
-            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]
-        if node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
-            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_name]
+        if node_base_type in lazy_load_vertex_dict.vertex_type_map:
+            return lazy_load_vertex_dict.vertex_type_map[node_base_type]
+        if node_name in lazy_load_vertex_dict.vertex_type_map:
+            return lazy_load_vertex_dict.vertex_type_map[node_name]
 
-        if node_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
-            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_type]
+        if node_type in lazy_load_vertex_dict.vertex_type_map:
+            return lazy_load_vertex_dict.vertex_type_map[node_type]
         return Vertex
 
     def _build_vertices(self) -> list[Vertex]:
@@ -1730,9 +1730,9 @@ class Graph:
             msg = f"Vertex data for {vertex_data['display_name']} does not contain an id"
             raise ValueError(msg)
 
-        VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
+        vertex_class = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
 
-        vertex_instance = VertexClass(frontend_data, graph=self)
+        vertex_instance = vertex_class(frontend_data, graph=self)
         vertex_instance.set_top_level(self.top_level_vertices)
         return vertex_instance
 
