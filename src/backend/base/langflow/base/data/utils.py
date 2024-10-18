@@ -1,5 +1,4 @@
 import unicodedata
-import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from concurrent import futures
 from pathlib import Path
@@ -7,6 +6,7 @@ from pathlib import Path
 import chardet
 import orjson
 import yaml
+from defusedxml import ElementTree as ET
 
 from langflow.schema import Data
 

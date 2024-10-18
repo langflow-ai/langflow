@@ -29,7 +29,9 @@ class AIMLEmbeddingsImpl(BaseModel, Embeddings):
             for index, future in futures:
                 try:
                     result_data = future.result()
-                    assert len(result_data["data"]) == 1, "Expected one embedding"
+                    if len(result_data["data"]) != 1:
+                        msg = "Expected one embedding"
+                        raise ValueError(msg)
                     embeddings[index] = result_data["data"][0]["embedding"]
                 except (
                     httpx.HTTPStatusError,
