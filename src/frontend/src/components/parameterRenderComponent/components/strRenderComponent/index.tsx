@@ -41,6 +41,7 @@ export function StrRenderComponent({
         {...baseInputProps}
         options={templateData.options}
         combobox={templateData.combobox}
+        name={templateData?.name!}
       />
     );
   }
