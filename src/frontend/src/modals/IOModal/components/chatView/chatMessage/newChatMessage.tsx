@@ -19,7 +19,7 @@ import {
 import useAlertStore from "../../../../../stores/alertStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
-import { EditMessageButton } from "./components/editMessageButton";
+import { EditMessageButton } from "./components/editMessageButton/newMessageOptions";
 import EditMessageField from "./components/editMessageField";
 import FileCardWrapper from "./components/fileCardWrapper";
 
@@ -198,13 +198,13 @@ export default function ChatMessage({
 
     return (
         <>
-            <div className="flex-max-width px-2 py-6 pl-32 pr-9 group hover:bg-background">
+            <div className="flex-max-width px-2 py-6 pl-32 pr-9 group">
                 <div
                     className={
-                        "mr-3 mt-1 flex w-full overflow-hidden pb-3"
+                        "mr-3 mt-1 flex w-11/12 pb-3"
                     }
                 >
-                    <div className="flex gap-4 w-full">
+                    <div className="flex gap-4 w-full relative hover:bg-zinc-800 rounded-md p-2">
                         <div
                             className={cn(
                                 "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl",
@@ -286,7 +286,7 @@ export default function ChatMessage({
                                                                             linkTarget="_blank"
                                                                             rehypePlugins={[rehypeMathjax]}
                                                                             className={cn(
-                                                                                "markdown prose flex w-full flex-col word-break-break-word max-w-[92%] dark:prose-invert",
+                                                                                "markdown prose flex w-full flex-col word-break-break-word max-w-full dark:prose-invert",
                                                                                 isEmpty
                                                                                     ? "text-chat-trigger-disabled"
                                                                                     : "text-primary",
@@ -462,17 +462,22 @@ export default function ChatMessage({
                                     )}
                                 </div>
                             )}
-                            {!editMessage && (
-                                <ShadTooltip content="Edit Message" styleClasses="z-50">
+                        </div>
+                        {!editMessage && (
+                            <div className="absolute invisible -top-4 right-0 group-hover:visible">
                                     <div>
                                         <EditMessageButton
-                                            className="invisible h-fit group-hover:visible"
-                                            onClick={() => setEditMessage(true)}
+                                            onCopy={() => {
+                                                navigator.clipboard.writeText(chatMessage);
+                                            }}
+                                            onDelete={() => {}}
+                                            onEdit={() => setEditMessage(true)}
+                                            className=" h-fit group-hover:visible"
                                         />
                                     </div>
-                                </ShadTooltip>
-                            )}
-                        </div>
+
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
