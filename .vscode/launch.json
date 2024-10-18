@@ -23,7 +23,8 @@
       "justMyCode": false,
       "env": {
         "LANGFLOW_LOG_LEVEL": "debug",
-        "LANGFLOW_PROMETHEUS_PORT": "9090"
+        "LANGFLOW_PROMETHEUS_PORT": "9090",
+        "PYTHONPATH": "${workspaceFolder}/src/backend:${workspaceFolder}/src/backend/base",
       },
       "envFile": "${workspaceFolder}/.env"
     },

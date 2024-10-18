@@ -34,10 +34,10 @@ RUN apt-get update \
 
 # Install the project's dependencies using the lockfile and settings
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
+    --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    cd src/backend/base && uv sync --frozen --no-install-project --no-dev --no-editable
+    uv sync --frozen --directory src/backend/base --no-install-project --no-dev
 
 ADD ./src /app/src
 
@@ -48,9 +48,13 @@ RUN npm install \
     && cp -r build /app/src/backend/base/langflow/frontend \
     && rm -rf /tmp/src/frontend
 
-WORKDIR /app/src/backend/base
+WORKDIR /app
+ADD ./src/backend/base/uv.lock src/backend/base/uv.lock
+ADD ./src/backend/base/pyproject.toml src/backend/base/pyproject.toml
+ADD ./src/backend/base/README.md src/backend/base/README.md
+
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-editable
+    uv sync --frozen --directory src/backend/base --no-dev
 
 ################################
 # RUNTIME
