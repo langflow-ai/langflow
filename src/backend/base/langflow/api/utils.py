@@ -4,7 +4,8 @@ import uuid
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Query
+from fastapi_pagination import Params
 from loguru import logger
 from sqlalchemy import delete
 
@@ -22,6 +23,9 @@ if TYPE_CHECKING:
 
 
 API_WORDS = ["api", "key", "token"]
+
+MAX_PAGE_SIZE = 50
+MIN_PAGE_SIZE = 1
 
 
 def has_api_terms(word: str):
@@ -263,3 +267,12 @@ async def cascade_delete_flow(session: Session, flow: Flow):
     except Exception as e:
         msg = f"Unable to cascade delete flow: ${flow.id}"
         raise RuntimeError(msg, e) from e
+
+
+def custom_params(
+    page: int | None = Query(None),
+    size: int | None = Query(None),
+):
+    if page is None and size is None:
+        return None
+    return Params(page=page or MIN_PAGE_SIZE, size=size or MAX_PAGE_SIZE)
