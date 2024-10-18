@@ -16,9 +16,6 @@ export const getInputClassName = ({
 }) => {
   const classes = {
     base: className || "",
-    disabled: disabled
-      ? "pointer-events-none bg-secondary custom-disabled-input"
-      : "",
     password:
       password &&
       (!setSelectedOption || selectedOption === "") &&
@@ -46,7 +43,6 @@ export const getInputClassName = ({
 
   return cn(
     classes.base,
-    classes.disabled,
     classes.password,
     classes.editNode,
     classes.paddingRight,

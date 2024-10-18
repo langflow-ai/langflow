@@ -1,8 +1,7 @@
-import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { useEffect, useRef, useState } from "react";
 import useAlertStore from "../../../../stores/alertStore";
-import { classNames, cn } from "../../../../utils/utils";
+import { cn } from "../../../../utils/utils";
 import ForwardedIconComponent from "../../../genericIconComponent";
 import {
   Command,
@@ -98,7 +97,7 @@ const CustomInputPopover = ({
           onClick={() => {
             (isSelected || areOptionsSelected) && setShowOptions(true);
           }}
-          readOnly={disabled}
+          disabled={disabled}
           required={required}
           className={getInputClassName({
             disabled,

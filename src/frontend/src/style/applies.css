@@ -2,13 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer components {
-  .custom-disabled-input {
-    -webkit-text-fill-color: #52525b !important;
-    opacity: 1;
-    background-color: #f4f4f5 !important
-  }
-}
 
 @layer base {
   * {
@@ -185,7 +178,7 @@
     @apply flex gap-2;
   }
   .primary-input {
-    @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left text-sm shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+    @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left text-sm shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-secondary disabled:text-hard-zinc disabled:pointer-events-none;
   }
 
   .skeleton-card {

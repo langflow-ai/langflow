@@ -64,7 +64,7 @@ export default function InputListComponent({
       {value.map((singleValue, index) => (
         <div key={index} className="flex w-full items-center gap-3">
           <Input
-            readOnly={disabled}
+            disabled={disabled}
             type="text"
             value={singleValue}
             className={cn(
