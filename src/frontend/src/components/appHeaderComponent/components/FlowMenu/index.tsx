@@ -125,7 +125,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 className="header-menu-flow-name-2 flex"
                 data-testid="flow-configuration-button"
               >
-                <div className="whitespace-nowrap font-semibold text-black dark:text-[white]">
+                <div
+                  className="whitespace-nowrap font-semibold text-black dark:text-[white]"
+                  data-testid="flow_name"
+                >
                   {currentFlow.name}
                 </div>
               </div>
