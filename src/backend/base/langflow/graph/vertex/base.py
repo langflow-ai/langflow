@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 from loguru import logger
 
+from langflow.custom import Component
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
@@ -30,7 +31,6 @@ from langflow.utils.util import sync_to_async, unescape_string
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from langflow.custom import Component
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.base import CycleEdge, Edge
     from langflow.graph.graph.base import Graph
@@ -495,7 +495,8 @@ class Vertex:
             )
         else:
             custom_component = self._custom_component
-            self._custom_component.set_event_manager(event_manager)
+            if isinstance(self._custom_component, Component):
+                custom_component.set_event_manager(event_manager)
             custom_params = initialize.loading.get_params(self.params)
 
         await self._build_results(
