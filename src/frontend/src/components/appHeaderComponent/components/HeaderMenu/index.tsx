@@ -47,7 +47,7 @@ export const HeaderMenuSelector = ({
       </span>
     )}
     {Preview ? (
-      <ScienceOutlinedIcon className="h-5 w-6 rounded border border-zinc-100 bg-zinc-100 fill-gray-500 dark:border-zinc-700 dark:bg-zinc-700 dark:fill-zinc-400" />
+      <ScienceOutlinedIcon className="h-5 w-6 rounded border bg-zinc-100 fill-gray-500 group-hover:bg-purple-100 group-hover:fill-purple-700 dark:bg-zinc-800 dark:fill-zinc-400 dark:group-hover:bg-purple-500 dark:group-hover:fill-purple-100" />
     ) : null}
     <ExpandMoreIcon className="fill-gray-400 group-hover:fill-black dark:group-hover:fill-zinc-400" />
   </Menu.Button>
