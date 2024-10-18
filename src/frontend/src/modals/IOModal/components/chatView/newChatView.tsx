@@ -230,14 +230,27 @@ export default function ChatView({
             </div>
           </div>
         )}
-        <div className={lockChat ? "form-modal-chat-position" : ""} ref={ref}>
+        <div className={lockChat ? "flex-max-width px-2 py-6 pl-32 pr-9" : ""} ref={ref}>
           {lockChat && (
-            <div className="flex w-full px-8">
-              <div className="flex items-center space-x-2 text-muted-foreground">
-                <span className="text-4xl">⛓️</span>
-                <span className="animate-pulse">Flow running...</span>
-              </div>
-            </div>
+                <div
+                    className={
+                        "mr-3 mt-1 flex w-full overflow-hidden pb-3"
+                    }
+                >
+                    <div className="flex gap-4 w-full">
+                        <div className="bg-zinc-800 relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5">
+                          <span>
+                            <div className="text-3xl">⛓️</div>
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                            <div>
+                                <span className="text-muted-foreground animate-pulse">Flow running...</span>
+                                {/* TODO: ADD MODEL RELATED NAME */}
+                            </div>
+                        </div>
+                    </div>
+                </div>
           )}
         </div>
       </div>
