@@ -189,6 +189,13 @@ class Settings(BaseSettings):
         logger.debug(f"Setting user agent to {value}")
         return value
 
+    @field_validator("variables_to_get_from_environment", mode="before")
+    @classmethod
+    def set_variables_to_get_from_environment(cls, value):
+        if isinstance(value, str):
+            value = value.split(",")
+        return list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
+
     @field_validator("log_file", mode="before")
     @classmethod
     def set_log_file(cls, value):
