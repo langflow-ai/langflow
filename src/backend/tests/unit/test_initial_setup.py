@@ -2,8 +2,6 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-from sqlmodel import select
-
 from langflow.custom.directory_reader.utils import build_custom_component_list_from_path
 from langflow.initial_setup.setup import (
     STARTER_FOLDER_NAME,
@@ -14,6 +12,7 @@ from langflow.initial_setup.setup import (
 from langflow.interface.types import aget_all_types_dict
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import session_scope
+from sqlmodel import select
 
 
 def test_load_starter_projects():
@@ -101,10 +100,11 @@ async def test_create_or_update_starter_projects():
 
 
 def find_componeny_by_name(components, name):
-    for category, children in components.items():
+    for children in components.values():
         if name in children:
             return children[name]
-    raise ValueError(f"Component {name} not found in components")
+    msg = f"Component {name} not found in components"
+    raise ValueError(msg)
 
 
 def set_value(component, input_name, value):

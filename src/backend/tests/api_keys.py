@@ -4,8 +4,7 @@ import os.path
 
 
 def get_required_env_var(var: str) -> str:
-    """
-    Get the value of the specified environment variable.
+    """Get the value of the specified environment variable.
 
     Args:
     var (str): The environment variable to get.
@@ -18,7 +17,8 @@ def get_required_env_var(var: str) -> str:
     """
     value = os.getenv(var)
     if not value:
-        raise ValueError(f"Environment variable {var} is not set")
+        msg = f"Environment variable {var} is not set"
+        raise ValueError(msg)
     return value
 
 

@@ -5,7 +5,6 @@ from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Data
 from langflow.schema.message import Message
 
-
 # def test_update_data_component():
 #     # Arrange
 #     update_data_component = helpers.UpdateDataComponent()
@@ -36,7 +35,7 @@ from langflow.schema.message import Message
 def test_uuid_generator_component():
     # Arrange
     uuid_generator_component = helpers.IDGeneratorComponent()
-    uuid_generator_component._code = Path(helpers.IDGenerator.__file__).read_text()
+    uuid_generator_component._code = Path(helpers.IDGenerator.__file__).read_text(encoding="utf-8")
 
     frontend_node, _ = build_custom_component_template(uuid_generator_component)
 
