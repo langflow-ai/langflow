@@ -509,7 +509,7 @@ async def build_vertex(
             lock = chat_service._async_cache_locks[flow_id_str]
             vertex_build_result = await graph.build_vertex(
                 vertex_id=vertex_id,
-                user_id=current_user.id,
+                user_id=str(current_user.id),
                 inputs_dict=inputs.model_dump() if inputs else {},
                 files=files,
                 get_cache=chat_service.get_cache,
