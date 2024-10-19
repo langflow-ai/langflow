@@ -68,14 +68,14 @@ async def test_read_flows(client: TestClient, json_flow: str, logged_in_headers)
     assert len(response.json()) > 0
 
 
-async def test_read_flows_pagination_without_params(client: TestClient, json_flow: str, active_user, logged_in_headers):
+async def test_read_flows_pagination_without_params(client: TestClient, logged_in_headers):
     response = await client.get("api/v1/flows/", headers=logged_in_headers)
     response_json = response.json()
     assert response.status_code == 200
     assert len(response_json) == 0
 
 
-async def test_read_flows_pagination_with_params(client: TestClient, json_flow: str, active_user, logged_in_headers):
+async def test_read_flows_pagination_with_params(client: TestClient, logged_in_headers):
     response = await client.get(
         "api/v1/flows/", headers=logged_in_headers, params={"page": 3, "size": 10, "get_all": False}
     )
@@ -87,7 +87,7 @@ async def test_read_flows_pagination_with_params(client: TestClient, json_flow: 
     assert len(response.json()["items"]) == 0
 
 
-async def test_read_flows_pagination_with_flows(client: TestClient, json_flow: str, active_user, logged_in_headers):
+async def test_read_flows_pagination_with_flows(client: TestClient, logged_in_headers):
     number_of_flows = 30
     flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
     flow_ids = []
@@ -117,14 +117,12 @@ async def test_read_flows_pagination_with_flows(client: TestClient, json_flow: s
     assert len(response.json()["items"]) == 0
 
 
-async def test_read_flows_custom_page_size(client: TestClient, json_flow: str, active_user, logged_in_headers):
+async def test_read_flows_custom_page_size(client: TestClient, logged_in_headers):
     number_of_flows = 30
     flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
-    flow_ids = []
     for flow in flows:
         response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
         assert response.status_code == 201
-        flow_ids.append(response.json()["id"])
 
     response = await client.get(
         "api/v1/flows/", headers=logged_in_headers, params={"page": 1, "size": 15, "get_all": False}
@@ -137,7 +135,7 @@ async def test_read_flows_custom_page_size(client: TestClient, json_flow: str, a
     assert len(response.json()["items"]) == 15
 
 
-async def test_read_flows_invalid_page(client: TestClient, json_flow: str, active_user, logged_in_headers):
+async def test_read_flows_invalid_page(client: TestClient, logged_in_headers):
     number_of_flows = 30
     flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
     flow_ids = []
@@ -152,7 +150,7 @@ async def test_read_flows_invalid_page(client: TestClient, json_flow: str, activ
     assert response.status_code == 422  # Assuming 422 is the status code for invalid input
 
 
-async def test_read_flows_invalid_size(client: TestClient, json_flow: str, active_user, logged_in_headers):
+async def test_read_flows_invalid_size(client: TestClient, logged_in_headers):
     number_of_flows = 30
     flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
     flow_ids = []
@@ -167,7 +165,7 @@ async def test_read_flows_invalid_size(client: TestClient, json_flow: str, activ
     assert response.status_code == 422  # Assuming 422 is the status code for invalid input
 
 
-async def test_read_flows_no_pagination_params(client: TestClient, json_flow: str, active_user, logged_in_headers):
+async def test_read_flows_no_pagination_params(client: TestClient, logged_in_headers):
     number_of_flows = 30
     flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
     flow_ids = []
@@ -186,7 +184,7 @@ async def test_read_flows_no_pagination_params(client: TestClient, json_flow: st
     assert len(response.json()["items"]) == number_of_flows
 
 
-async def test_read_flows_components_only(client: TestClient, flow_component: dict, logged_in_headers):
+async def test_read_flows_components_only(client: TestClient, logged_in_headers):
     response = await client.get("api/v1/flows/", headers=logged_in_headers, params={"components_only": True})
     assert response.status_code == 200
     names = [flow["name"] for flow in response.json()]
