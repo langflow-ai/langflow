@@ -360,8 +360,8 @@ def ensure_valid_key(s: str) -> bytes:
 
 
 def get_fernet(settings_service=Depends(get_settings_service)):
-    SECRET_KEY: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    valid_key = ensure_valid_key(SECRET_KEY)
+    secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+    valid_key = ensure_valid_key(secret_key)
     return Fernet(valid_key)
 
 

@@ -50,8 +50,8 @@ class FirecrawlCrawlApi(CustomComponent):
         api_key: str,
         url: str,
         timeout: int = 30000,
-        crawlerOptions: Data | None = None,
-        pageOptions: Data | None = None,
+        crawlerOptions: Data | None = None,  # noqa: N803
+        pageOptions: Data | None = None,  # noqa: N803
         idempotency_key: str | None = None,
     ) -> Data:
         try:
