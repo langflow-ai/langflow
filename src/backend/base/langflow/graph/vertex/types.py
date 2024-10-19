@@ -352,22 +352,17 @@ class InterfaceVertex(ComponentVertex):
         self.artifacts = DataOutputResponse(data=artifacts)
         return self._built_object
 
-    async def _run(self, *args, **kwargs) -> None:
-        if self.is_interface_component:
-            if self.vertex_type in CHAT_COMPONENTS:
-                message = self._process_chat_component()
-            elif self.vertex_type in RECORDS_COMPONENTS:
-                message = self._process_data_component()
-            if isinstance(self._built_object, AsyncIterator | Iterator):
-                if self.params.get("return_data", False):
-                    self._built_object = Data(text=message, data=self.artifacts)
-                else:
-                    self._built_object = message
-            self._built_result = self._built_object
-
-        else:
-            # TODO: _run doesn't exist in ComponentVertex
-            await super()._run(*args, **kwargs)
+    async def _run(self, *args, **kwargs) -> None:  # noqa: ARG002
+        if self.vertex_type in CHAT_COMPONENTS:
+            message = self._process_chat_component()
+        elif self.vertex_type in RECORDS_COMPONENTS:
+            message = self._process_data_component()
+        if isinstance(self._built_object, AsyncIterator | Iterator):
+            if self.params.get("return_data", False):
+                self._built_object = Data(text=message, data=self.artifacts)
+            else:
+                self._built_object = message
+        self._built_result = self._built_object
 
     async def stream(self):
         iterator = self.params.get(INPUT_FIELD_NAME, None)
