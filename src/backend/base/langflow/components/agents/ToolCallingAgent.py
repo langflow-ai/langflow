@@ -46,11 +46,8 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         try:
             return create_tool_calling_agent(self.llm, self.tools, prompt)
         except NotImplementedError as e:
-            import langchain
-
             message = (
-                f"The model '{self.llm.__class__.__name__}' is not supported "
-                f"in version '{langchain.__version__}' of Langchain. "
-                "Please try using a different, compatible model."
+                f"{self.display_name} does not support tool calling."
+                "Please try using a compatible model."
             )
             raise NotImplementedError(message) from e
