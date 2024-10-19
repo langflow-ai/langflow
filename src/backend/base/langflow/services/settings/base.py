@@ -194,7 +194,7 @@ class Settings(BaseSettings):
     def set_variables_to_get_from_environment(cls, value):
         if isinstance(value, str):
             value = value.split(",")
-        return VARIABLES_TO_GET_FROM_ENVIRONMENT + value
+        return list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
 
     @field_validator("log_file", mode="before")
     @classmethod
