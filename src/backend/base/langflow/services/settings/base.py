@@ -326,12 +326,12 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
-    def update_from_yaml(self, file_path: str, *, dev: bool = False):
+    def update_from_yaml(self, file_path: str, *, dev: bool = False) -> None:
         new_settings = load_settings_from_yaml(file_path)
         self.components_path = new_settings.components_path or []
         self.dev = dev
 
-    def update_settings(self, **kwargs):
+    def update_settings(self, **kwargs) -> None:
         logger.debug("Updating settings")
         for key, value in kwargs.items():
             # value may contain sensitive information, so we don't want to log it
@@ -374,7 +374,7 @@ class Settings(BaseSettings):
         return (MyCustomSource(settings_cls),)
 
 
-def save_settings_to_yaml(settings: Settings, file_path: str):
+def save_settings_to_yaml(settings: Settings, file_path: str) -> None:
     with Path(file_path).open("w", encoding="utf-8") as f:
         settings_dict = settings.model_dump()
         yaml.dump(settings_dict, f)

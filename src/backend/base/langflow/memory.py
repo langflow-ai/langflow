@@ -86,7 +86,7 @@ def add_messagetables(messages: list[MessageTable], session: Session):
     return [MessageRead.model_validate(message, from_attributes=True) for message in messages]
 
 
-def delete_messages(session_id: str):
+def delete_messages(session_id: str) -> None:
     """Delete messages from the monitor service based on the provided session ID.
 
     Args:

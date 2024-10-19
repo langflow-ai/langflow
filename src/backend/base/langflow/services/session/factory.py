@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class SessionServiceFactory(ServiceFactory):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(SessionService)
 
     def create(self, cache_service: "CacheService"):

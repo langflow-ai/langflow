@@ -35,14 +35,14 @@ class Logger(glogging.Logger):
     gunicorn logs to loguru.
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         logging.getLogger("gunicorn.error").handlers = [InterceptHandler()]
         logging.getLogger("gunicorn.access").handlers = [InterceptHandler()]
 
 
 class LangflowApplication(BaseApplication):
-    def __init__(self, app, options=None):
+    def __init__(self, app, options=None) -> None:
         self.options = options or {}
 
         self.options["worker_class"] = "langflow.server.LangflowUvicornWorker"
@@ -50,7 +50,7 @@ class LangflowApplication(BaseApplication):
         self.application = app
         super().__init__()
 
-    def load_config(self):
+    def load_config(self) -> None:
         config = {key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None}
         for key, value in config.items():
             self.cfg.set(key.lower(), value)

@@ -165,7 +165,7 @@ class Data(BaseModel):
             msg = f"'{type(self).__name__}' object has no attribute '{key}'"
             raise AttributeError(msg) from e
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key, value) -> None:
         """Set attribute-like values in the data dictionary.
 
         Allows attribute-like setting of values in the data dictionary.
@@ -179,7 +179,7 @@ class Data(BaseModel):
         else:
             self.data[key] = value
 
-    def __delattr__(self, key):
+    def __delattr__(self, key) -> None:
         """Allows attribute-like deletion from the data dictionary."""
         if key in {"data", "text_key"} or key.startswith("_"):
             super().__delattr__(key)
@@ -204,7 +204,7 @@ class Data(BaseModel):
             logger.opt(exception=True).debug("Error converting Data to JSON")
             return str(self.data)
 
-    def __contains__(self, key):
+    def __contains__(self, key) -> bool:
         return key in self.data
 
     def __eq__(self, other):

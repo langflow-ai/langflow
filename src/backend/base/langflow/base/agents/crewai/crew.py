@@ -52,7 +52,7 @@ class BaseCrewComponent(Component):
     def get_task_callback(
         self,
     ) -> Callable:
-        def task_callback(task_output: TaskOutput):
+        def task_callback(task_output: TaskOutput) -> None:
             vertex_id = self._vertex.id if self._vertex else self.display_name or self.__class__.__name__
             self.log(task_output.model_dump(), name=f"Task (Agent: {task_output.agent}) - {vertex_id}")
 
@@ -61,7 +61,7 @@ class BaseCrewComponent(Component):
     def get_step_callback(
         self,
     ) -> Callable:
-        def step_callback(agent_output: AgentFinish | list[tuple[AgentAction, str]]):
+        def step_callback(agent_output: AgentFinish | list[tuple[AgentAction, str]]) -> None:
             _id = self._vertex.id if self._vertex else self.display_name
             if isinstance(agent_output, AgentFinish):
                 messages = agent_output.messages

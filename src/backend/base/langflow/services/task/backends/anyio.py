@@ -9,7 +9,7 @@ from langflow.services.task.backends.base import TaskBackend
 
 
 class AnyIOTaskResult:
-    def __init__(self, scope):
+    def __init__(self, scope) -> None:
         self._scope = scope
         self._status = "PENDING"
         self._result = None
@@ -34,7 +34,7 @@ class AnyIOTaskResult:
     def ready(self) -> bool:
         return self._status == "DONE"
 
-    async def run(self, func, *args, **kwargs):
+    async def run(self, func, *args, **kwargs) -> None:
         try:
             self._result = await func(*args, **kwargs)
         except Exception as e:  # noqa: BLE001
@@ -47,7 +47,7 @@ class AnyIOTaskResult:
 class AnyIOBackend(TaskBackend):
     name = "anyio"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.tasks = {}
 
     async def launch_task(

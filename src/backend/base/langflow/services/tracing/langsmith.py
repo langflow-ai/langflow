@@ -50,7 +50,7 @@ class LangSmithTracer(BaseTracer):
     def ready(self):
         return self._ready
 
-    def setup_langsmith(self):
+    def setup_langsmith(self) -> bool:
         if os.getenv("LANGCHAIN_API_KEY") is None:
             return False
         try:
@@ -72,7 +72,7 @@ class LangSmithTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
-    ):
+    ) -> None:
         if not self._ready:
             return
         processed_inputs = {}
@@ -125,7 +125,7 @@ class LangSmithTracer(BaseTracer):
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
-    ):
+    ) -> None:
         if not self._ready:
             return
         child = self._children[trace_name]
@@ -158,7 +158,7 @@ class LangSmithTracer(BaseTracer):
         outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         if not self._ready:
             return
         self._run_tree.add_metadata({"inputs": inputs})

@@ -36,7 +36,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
             raise ValueError(msg)
 
         class HotaGoogleGenerativeAIEmbeddings(GoogleGenerativeAIEmbeddings):
-            def __init__(self, *args, **kwargs):
+            def __init__(self, *args, **kwargs) -> None:
                 super(GoogleGenerativeAIEmbeddings, self).__init__(*args, **kwargs)
 
             def embed_documents(

@@ -8,7 +8,7 @@ from langflow.services.deps import get_storage_service
 IMAGE_ENDPOINT = "/files/images/"
 
 
-def is_image_file(file_path):
+def is_image_file(file_path) -> bool:
     try:
         with PILImage.open(file_path) as img:
             img.verify()  # Verify that it is, in fact, an image
@@ -61,5 +61,5 @@ class Image(BaseModel):
             "image_url": self.to_base64(),
         }
 
-    def get_url(self):
+    def get_url(self) -> str:
         return f"{IMAGE_ENDPOINT}{self.path}"

@@ -110,7 +110,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
     @override
     async def on_agent_action(  # type: ignore[misc]
         self, action: AgentAction, **kwargs: Any
-    ):
+    ) -> None:
         log = f"Thought: {action.log}"
         # if there are line breaks, split them and send them
         # as separate messages

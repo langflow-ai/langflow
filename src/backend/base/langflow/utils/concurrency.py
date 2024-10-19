@@ -10,7 +10,7 @@ from platformdirs import user_cache_dir
 class KeyedMemoryLockManager:
     """A manager for acquiring and releasing memory locks based on a key."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.locks = {}
         self.global_lock = threading.Lock()
 
@@ -33,7 +33,7 @@ class KeyedMemoryLockManager:
 class KeyedWorkerLockManager:
     """A manager for acquiring locks between workers based on a key."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.locks_dir = Path(user_cache_dir("langflow"), ensure_exists=True) / "worker_locks"
 
     def _validate_key(self, key: str) -> bool:

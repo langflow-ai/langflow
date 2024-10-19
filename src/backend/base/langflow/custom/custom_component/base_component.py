@@ -31,7 +31,7 @@ class BaseComponent:
     _user_id: str | UUID | None = None
     _template_config: dict = {}
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:
         self.cache = TTLCache(maxsize=1024, ttl=60)
         for key, value in data.items():
             if key == "user_id":
@@ -39,7 +39,7 @@ class BaseComponent:
             else:
                 setattr(self, key, value)
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key, value) -> None:
         if key == "_user_id" and self._user_id is not None:
             logger.warning("user_id is immutable and cannot be changed.")
         super().__setattr__(key, value)

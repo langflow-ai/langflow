@@ -55,7 +55,7 @@ class LangWatchTracer(BaseTracer):
     def ready(self):
         return self._ready
 
-    def setup_langwatch(self):
+    def setup_langwatch(self) -> bool:
         try:
             import langwatch
 
@@ -74,7 +74,7 @@ class LangWatchTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
-    ):
+    ) -> None:
         if not self._ready:
             return
         # If user is not using session_id, then it becomes the same as flow_id, but
@@ -109,7 +109,7 @@ class LangWatchTracer(BaseTracer):
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
-    ):
+    ) -> None:
         if not self._ready:
             return
         if self.spans.get(trace_id):
@@ -121,7 +121,7 @@ class LangWatchTracer(BaseTracer):
         outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         if not self._ready:
             return
         self.trace.root_span.end(
