@@ -230,12 +230,12 @@ def add_extra_fields(frontend_node, field_config, function_args):
             _config = config.model_dump() if isinstance(config, BaseModel) else config
             _field_name, field_type, field_value, field_required = get_field_properties(extra_field=_config)
             frontend_node = add_new_custom_field(
-                frontend_node,
-                _field_name,
-                field_type,
-                field_value,
-                field_required,
-                _config,
+                frontend_node=frontend_node,
+                field_name=_field_name,
+                field_type=field_type,
+                field_value=field_value,
+                field_required=field_required,
+                field_config=_config,
             )
 
 
