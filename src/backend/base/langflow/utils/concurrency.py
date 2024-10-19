@@ -11,7 +11,7 @@ class KeyedMemoryLockManager:
     """A manager for acquiring and releasing memory locks based on a key."""
 
     def __init__(self) -> None:
-        self.locks = {}
+        self.locks: dict[str, threading.Lock] = {}
         self.global_lock = threading.Lock()
 
     def _get_lock(self, key: str):

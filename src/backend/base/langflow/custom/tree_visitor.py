@@ -1,12 +1,13 @@
 import ast
+from typing import Any
 
 from typing_extensions import override
 
 
 class RequiredInputsVisitor(ast.NodeVisitor):
-    def __init__(self, inputs) -> None:
-        self.inputs = inputs
-        self.required_inputs = set()
+    def __init__(self, inputs: dict[str, Any]):
+        self.inputs: dict[str, Any] = inputs
+        self.required_inputs: set[str] = set()
 
     @override
     def visit_Attribute(self, node) -> None:

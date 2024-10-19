@@ -86,9 +86,9 @@ class DatabaseService(Service):
         from sqlite3 import Connection as sqliteConnection
 
         if isinstance(dbapi_connection, sqliteConnection):
-            pragmas: dict | None = self.settings_service.settings.sqlite_pragmas
+            pragmas: dict = self.settings_service.settings.sqlite_pragmas or {}
             pragmas_list = []
-            for key, val in pragmas.items() or {}:
+            for key, val in pragmas.items():
                 pragmas_list.append(f"PRAGMA {key} = {val}")
             logger.info(f"sqlite connection, setting pragmas: {pragmas_list}")
             if pragmas_list:

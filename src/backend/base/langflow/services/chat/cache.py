@@ -59,9 +59,9 @@ class CacheService(Subject, Service):
 
     def __init__(self) -> None:
         super().__init__()
-        self._cache = {}
-        self.current_client_id = None
-        self.current_cache = {}
+        self._cache: dict[str, Any] = {}
+        self.current_client_id: str | None = None
+        self.current_cache: dict[str, Any] = {}
 
     @contextmanager
     def set_client_id(self, client_id: str):
@@ -77,7 +77,7 @@ class CacheService(Subject, Service):
             yield
         finally:
             self.current_client_id = previous_client_id
-            self.current_cache = self._cache.get(self.current_client_id, {})
+            self.current_cache = self._cache.setdefault(previous_client_id, {}) if previous_client_id else {}
 
     def add(self, name: str, obj: Any, obj_type: str, extension: str | None = None) -> None:
         """Add an object to the current client's cache.

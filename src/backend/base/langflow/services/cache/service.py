@@ -43,7 +43,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
             max_size (int, optional): Maximum number of items to store in the cache.
             expiration_time (int, optional): Time in seconds after which a cached item expires. Default is 1 hour.
         """
-        self._cache = OrderedDict()
+        self._cache: OrderedDict = OrderedDict()
         self._lock = threading.RLock()
         self.max_size = max_size
         self.expiration_time = expiration_time
@@ -287,7 +287,7 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
 
 class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
     def __init__(self, max_size=None, expiration_time=3600) -> None:
-        self.cache = OrderedDict()
+        self.cache: OrderedDict = OrderedDict()
 
         self.lock = asyncio.Lock()
         self.max_size = max_size

@@ -51,12 +51,12 @@ class TracingService(Service):
         self.outputs_metadata: dict[str, dict] = defaultdict(dict)
         self.run_name: str | None = None
         self.run_id: UUID | None = None
-        self.project_name = None
+        self.project_name: str | None = None
         self._tracers: dict[str, BaseTracer] = {}
         self._logs: dict[str, list[Log | dict[Any, Any]]] = defaultdict(list)
         self.logs_queue: asyncio.Queue = asyncio.Queue()
         self.running = False
-        self.worker_task = None
+        self.worker_task: asyncio.Task | None = None
         self.end_trace_tasks: set[asyncio.Task] = set()
 
     async def log_worker(self) -> None:

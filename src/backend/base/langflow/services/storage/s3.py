@@ -8,7 +8,7 @@ from .service import StorageService
 class S3StorageService(StorageService):
     """A service class for handling operations with AWS S3 storage."""
 
-    async def __init__(self, session_service, settings_service) -> None:
+    def __init__(self, session_service, settings_service) -> None:
         """Initialize the S3 storage service with session and settings services."""
         super().__init__(session_service, settings_service)
         self.bucket = "langflow"

@@ -129,7 +129,7 @@ def build_output_setter(method: Callable, *, validate: bool = True) -> Callable:
     def output_setter(self, value) -> None:  # noqa: ARG001
         if validate:
             __validate_method(method)
-        methods_class = method.__self__
+        methods_class = method.__self__  # type: ignore[attr-defined]
         output = methods_class.get_output_by_method(method)
         output.value = value
 

@@ -366,6 +366,7 @@ class InterfaceVertex(ComponentVertex):
             self._built_result = self._built_object
 
         else:
+            # TODO: _run doesn't exist in ComponentVertex
             await super()._run(*args, **kwargs)
 
     async def stream(self):

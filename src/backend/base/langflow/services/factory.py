@@ -17,7 +17,7 @@ class ServiceFactory:
         service_class,
     ) -> None:
         self.service_class = service_class
-        self.dependencies = infer_service_types(self, import_all_services_into_a_dict())
+        self.dependencies = infer_service_types(ServiceFactory, import_all_services_into_a_dict())
 
     def create(self, *args, **kwargs) -> "Service":
         raise self.service_class(*args, **kwargs)
