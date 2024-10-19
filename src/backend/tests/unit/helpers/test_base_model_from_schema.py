@@ -79,13 +79,13 @@ class TestBuildModelFromSchema:
             {"name": "field1", "type": "str", "default": "default_value1"},
             {"name": "field2", "type": "unknown_type", "default": "default_value2"},
         ]
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid type: unknown_type"):
             build_model_from_schema(schema)
 
     # Confirms that the function raises a specific exception for invalid input
     def test_raises_error_for_invalid_input_different_exception_with_specific_exception(self):
-        with pytest.raises(ValueError):
-            schema = [{"name": "field1", "type": "invalid_type", "default": "default_value"}]
+        schema = [{"name": "field1", "type": "invalid_type", "default": "default_value"}]
+        with pytest.raises(ValueError, match="Invalid type: invalid_type"):
             build_model_from_schema(schema)
 
     # Processes schemas with missing optional keys like description or multiple

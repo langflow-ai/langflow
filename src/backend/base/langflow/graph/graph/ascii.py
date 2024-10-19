@@ -138,22 +138,22 @@ def draw_graph(vertexes, edges, *, return_ascii=True):
     """Build a DAG and draw it in ASCII."""
     sug = build_sugiyama_layout(vertexes, edges)
 
-    Xs = []
-    Ys = []
+    xlist = []
+    ylist = []
 
     for vertex in sug.g.sV:
-        Xs.extend([vertex.view.xy[0] - vertex.view.w / 2.0, vertex.view.xy[0] + vertex.view.w / 2.0])
-        Ys.extend([vertex.view.xy[1], vertex.view.xy[1] + vertex.view.h])
+        xlist.extend([vertex.view.xy[0] - vertex.view.w / 2.0, vertex.view.xy[0] + vertex.view.w / 2.0])
+        ylist.extend([vertex.view.xy[1], vertex.view.xy[1] + vertex.view.h])
 
     for edge in sug.g.sE:
         for x, y in edge.view._pts:
-            Xs.append(x)
-            Ys.append(y)
+            xlist.append(x)
+            ylist.append(y)
 
-    minx = min(Xs)
-    miny = min(Ys)
-    maxx = max(Xs)
-    maxy = max(Ys)
+    minx = min(xlist)
+    miny = min(ylist)
+    maxx = max(xlist)
+    maxy = max(ylist)
 
     canvas_cols = int(math.ceil(maxx - minx)) + 1
     canvas_lines = int(round(maxy - miny))

@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.custom.tree_visitor import RequiredInputsVisitor
-from langflow.field_typing import Tool  # noqa: TCH001 Needed by add_toolkit_output
+from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -801,8 +801,8 @@ class Component(CustomComponent):
         return Input(**kwargs)
 
     def to_toolkit(self) -> list[Tool]:
-        ComponentToolkit = _get_component_toolkit()
-        return ComponentToolkit(component=self).get_tools()
+        component_toolkit = _get_component_toolkit()
+        return component_toolkit(component=self).get_tools()
 
     def get_project_name(self):
         if hasattr(self, "_tracing_service") and self._tracing_service:
