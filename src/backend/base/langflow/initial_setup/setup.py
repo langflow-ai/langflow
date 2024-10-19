@@ -362,18 +362,18 @@ def load_starter_projects(retries=3, delay=1) -> list[tuple[Path, dict]]:
     for file in folder.glob("*.json"):
         attempt = 0
         while attempt < retries:
-            with file.open(encoding="utf-8") as f:
-                try:
-                    project = orjson.loads(f.read())
-                    starter_projects.append((file, project))
-                    logger.info(f"Loaded starter project {file}")
-                    break  # Break if load is successful
-                except orjson.JSONDecodeError as e:
-                    attempt += 1
-                    if attempt >= retries:
-                        msg = f"Error loading starter project {file}: {e}"
-                        raise ValueError(msg) from e
-                    time.sleep(delay)  # Wait before retrying
+            content = file.read_text(encoding="utf-8")
+            try:
+                project = orjson.loads(content)
+                starter_projects.append((file, project))
+                logger.info(f"Loaded starter project {file}")
+                break  # Break if load is successful
+            except orjson.JSONDecodeError as e:
+                attempt += 1
+                if attempt >= retries:
+                    msg = f"Error loading starter project {file}: {e}"
+                    raise ValueError(msg) from e
+                time.sleep(delay)  # Wait before retrying
     return starter_projects
 
 
@@ -427,8 +427,7 @@ def get_project_data(project):
 
 def update_project_file(project_path: Path, project: dict, updated_project_data):
     project["data"] = updated_project_data
-    with project_path.open("w", encoding="utf-8") as f:
-        f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
+    project_path.write_text(orjson.dumps(project, option=ORJSON_OPTIONS).decode(), encoding="utf-8")
     logger.info(f"Updated starter project {project['name']} file")
 
 
@@ -539,44 +538,44 @@ def load_flows_from_directory():
             if f.suffix != ".json":
                 continue
             logger.info(f"Loading flow from file: {f.name}")
-            with f.open(encoding="utf-8") as file:
-                flow = orjson.loads(file.read())
-                no_json_name = f.stem
-                flow_endpoint_name = flow.get("endpoint_name")
-                if _is_valid_uuid(no_json_name):
-                    flow["id"] = no_json_name
-                flow_id = flow.get("id")
+            content = f.read_text(encoding="utf-8")
+            flow = orjson.loads(content)
+            no_json_name = f.stem
+            flow_endpoint_name = flow.get("endpoint_name")
+            if _is_valid_uuid(no_json_name):
+                flow["id"] = no_json_name
+            flow_id = flow.get("id")
 
-                existing = find_existing_flow(session, flow_id, flow_endpoint_name)
-                if existing:
-                    logger.debug(f"Found existing flow: {existing.name}")
-                    logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
-                    for key, value in flow.items():
-                        if hasattr(existing, key):
-                            # flow dict from json and db representation are not 100% the same
-                            setattr(existing, key, value)
-                    existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
-                    existing.user_id = user_id
+            existing = find_existing_flow(session, flow_id, flow_endpoint_name)
+            if existing:
+                logger.debug(f"Found existing flow: {existing.name}")
+                logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
+                for key, value in flow.items():
+                    if hasattr(existing, key):
+                        # flow dict from json and db representation are not 100% the same
+                        setattr(existing, key, value)
+                existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
+                existing.user_id = user_id
 
-                    # Generally, folder_id should not be None, but we must check this due to the previous
-                    # behavior where flows could be added and folder_id was None, orphaning
-                    # them within Langflow.
-                    if existing.folder_id is None:
-                        folder_id = get_default_folder_id(session, user_id)
-                        existing.folder_id = folder_id
-
-                    session.add(existing)
-                else:
-                    logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
-
-                    # Current behavior loads all new flows into default folder
+                # Generally, folder_id should not be None, but we must check this due to the previous
+                # behavior where flows could be added and folder_id was None, orphaning
+                # them within Langflow.
+                if existing.folder_id is None:
                     folder_id = get_default_folder_id(session, user_id)
+                    existing.folder_id = folder_id
 
-                    flow["user_id"] = user_id
-                    flow["folder_id"] = folder_id
-                    flow = Flow.model_validate(flow, from_attributes=True)
-                    flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
-                    session.add(flow)
+                session.add(existing)
+            else:
+                logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
+
+                # Current behavior loads all new flows into default folder
+                folder_id = get_default_folder_id(session, user_id)
+
+                flow["user_id"] = user_id
+                flow["folder_id"] = folder_id
+                flow = Flow.model_validate(flow, from_attributes=True)
+                flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
+                session.add(flow)
 
 
 def find_existing_flow(session, flow_id, flow_endpoint_name):
