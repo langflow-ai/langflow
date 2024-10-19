@@ -43,4 +43,8 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
             ("placeholder", "{agent_scratchpad}"),
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
-        return create_tool_calling_agent(self.llm, self.tools, prompt)
+        try:
+            return create_tool_calling_agent(self.llm, self.tools, prompt)
+        except NotImplementedError as e:
+            message = f"{self.display_name} does not support tool calling." "Please try using a compatible model."
+            raise NotImplementedError(message) from e

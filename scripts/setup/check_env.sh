@@ -1,21 +1,33 @@
 #!/bin/bash
 
-# Detect if in a virtual environment (venv or virtualenv)
+# Detect and use appropriate Python interpreter from virtual environments
 if [ -n "$VIRTUAL_ENV" ]; then
-    exec "$@"
-# Detect if in a conda environment
+    PYTHON_EXEC=python
 elif [ -n "$CONDA_DEFAULT_ENV" ]; then
-    exec conda run -n "$CONDA_DEFAULT_ENV" "$@"
-# Detect if in a pipenv environment
+    PYTHON_EXEC=conda run -n "$CONDA_DEFAULT_ENV" python
 elif [ -f "Pipfile" ]; then
-    exec pipenv run "$@"
-# Detect if in a pyenv environment
+    PYTHON_EXEC=pipenv run python
 elif [ -d ".pyenv" ]; then
-    exec pyenv exec "$@"
-# Detect if in a venv environment
-elif [ -f "pyvenv.cfg" ]; then
-    source bin/activate
-    exec "$@"
+    PYTHON_EXEC=pyenv exec python
 else
-    exec "$@"
+    PYTHON_EXEC=python
 fi
+
+# Check if Python version is compatible
+REQUIRED_VERSION=$1
+PYTHON_INSTALLED=$($PYTHON_EXEC -c "import sys; print(sys.version.split()[0])")
+
+echo "Detected Python version: $PYTHON_INSTALLED"
+
+$PYTHON_EXEC -c "
+import sys
+from distutils.version import LooseVersion
+
+required_version = '$REQUIRED_VERSION'
+python_installed = '$PYTHON_INSTALLED'
+
+min_version, max_version = required_version.replace('>=', '').replace('<', '').split(',')
+if not (LooseVersion(min_version) <= LooseVersion(python_installed) < LooseVersion(max_version)):
+    sys.exit(f'Error: Python version {python_installed} is not compatible with required version {required_version}.')
+" || exit 1
+
