@@ -22,27 +22,27 @@ class TestCreateStateModel:
     # Successfully create a model with valid method return type annotations
 
     def test_create_model_with_valid_return_type_annotations(self, chat_input_component):
-        StateModel = create_state_model(method_one=chat_input_component.message_response)
+        state_model = create_state_model(method_one=chat_input_component.message_response)
 
-        state_instance = StateModel()
+        state_instance = state_model()
         assert state_instance.method_one is UNDEFINED
         chat_input_component.set_output_value("message", "test")
         assert state_instance.method_one == "test"
 
     def test_create_model_and_assign_values_fails(self, chat_input_component):
-        StateModel = create_state_model(method_one=chat_input_component.message_response)
+        state_model = create_state_model(method_one=chat_input_component.message_response)
 
-        state_instance = StateModel()
+        state_instance = state_model()
         state_instance.method_one = "test"
         assert state_instance.method_one == "test"
 
     def test_create_with_multiple_components(self, chat_input_component, chat_output_component):
-        NewStateModel = create_state_model(
+        new_state_model = create_state_model(
             model_name="NewStateModel",
             first_method=chat_input_component.message_response,
             second_method=chat_output_component.message_response,
         )
-        state_instance = NewStateModel()
+        state_instance = new_state_model()
         assert state_instance.first_method is UNDEFINED
         assert state_instance.second_method is UNDEFINED
         state_instance.first_method = "test"
@@ -51,9 +51,9 @@ class TestCreateStateModel:
         assert state_instance.second_method == 123
 
     def test_create_with_pydantic_field(self, chat_input_component):
-        StateModel = create_state_model(method_one=chat_input_component.message_response, my_attribute=Field(None))
+        state_model = create_state_model(method_one=chat_input_component.message_response, my_attribute=Field(None))
 
-        state_instance = StateModel()
+        state_instance = state_model()
         state_instance.method_one = "test"
         state_instance.my_attribute = "test"
         assert state_instance.method_one == "test"
@@ -64,8 +64,8 @@ class TestCreateStateModel:
 
     # Creates a model with fields based on provided keyword arguments
     def test_create_model_with_fields_from_kwargs(self):
-        StateModel = create_state_model(field_one=(str, "default"), field_two=(int, 123))
-        state_instance = StateModel()
+        state_model = create_state_model(field_one=(str, "default"), field_two=(int, 123))
+        state_instance = state_model()
         assert state_instance.field_one == "default"
         assert state_instance.field_two == 123
 
@@ -81,16 +81,16 @@ class TestCreateStateModel:
 
     # Handles empty keyword arguments gracefully
     def test_handle_empty_kwargs_gracefully(self):
-        StateModel = create_state_model()
-        state_instance = StateModel()
+        state_model = create_state_model()
+        state_instance = state_model()
         assert state_instance is not None
 
     # Ensures model name defaults to "State" if not provided
     def test_default_model_name_to_state(self):
-        StateModel = create_state_model()
-        assert StateModel.__name__ == "State"
-        OtherNameModel = create_state_model(model_name="OtherName")
-        assert OtherNameModel.__name__ == "OtherName"
+        state_model = create_state_model()
+        assert state_model.__name__ == "State"
+        other_name_model = create_state_model(model_name="OtherName")
+        assert other_name_model.__name__ == "OtherName"
 
     # Validates that callable values are properly type-annotated
 
@@ -110,8 +110,7 @@ class TestCreateStateModel:
         chat_input = ChatInput(_id="chat_input")
         chat_output = ChatOutput(input_value="test", _id="chat_output")
         chat_output.set(sender_name=chat_input.message_response)
-        ChatStateModel = create_state_model(model_name="ChatState", message=chat_output.message_response)
-        chat_state_model = ChatStateModel()
+        chat_state_model = create_state_model(model_name="ChatState", message=chat_output.message_response)()
         assert chat_state_model.__class__.__name__ == "ChatState"
         assert chat_state_model.message is UNDEFINED
 
@@ -121,9 +120,7 @@ class TestCreateStateModel:
         # and check that the graph is running
         # correctly
         ids = ["chat_input", "chat_output"]
-        results = []
-        for result in graph.start():
-            results.append(result)
+        results = list(graph.start())
 
         assert len(results) == 3
         assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))

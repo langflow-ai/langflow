@@ -1,8 +1,11 @@
+#!/usr/bin/env python
+
 import re
 import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent.parent
+ARGUMENT_NUMBER = 2
 
 
 def update_uv_dep(base_version: str) -> None:
@@ -19,7 +22,7 @@ def update_uv_dep(base_version: str) -> None:
     # Check if the pattern is found
     if not pattern.search(content):
         msg = f"{pattern} UV dependency not found in {pyproject_path}"
-        raise Exception(msg)
+        raise ValueError(msg)
 
     # Replace the matched pattern with the new one
     content = pattern.sub(replacement, content)
@@ -29,9 +32,9 @@ def update_uv_dep(base_version: str) -> None:
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
+    if len(sys.argv) != ARGUMENT_NUMBER:
         msg = "specify base version"
-        raise Exception(msg)
+        raise ValueError(msg)
     base_version = sys.argv[1]
     base_version = base_version.lstrip("v")
     update_uv_dep(base_version)

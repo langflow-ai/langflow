@@ -1,5 +1,5 @@
 import json
-from collections import namedtuple
+from typing import NamedTuple
 from uuid import UUID, uuid4
 
 import orjson
@@ -13,7 +13,6 @@ from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-from sqlmodel import Session
 
 
 @pytest.fixture(scope="module")
@@ -179,11 +178,11 @@ async def test_delete_flows_with_transaction_and_build(client: TestClient, logge
         assert response.status_code == 201
         flow_ids.append(response.json()["id"])
 
+    class VertexTuple(NamedTuple):
+        id: str
+
     # Create a transaction for each flow
-
     for flow_id in flow_ids:
-        VertexTuple = namedtuple("VertexTuple", ["id"])
-
         await log_transaction(
             str(flow_id), source=VertexTuple(id="vid"), target=VertexTuple(id="tid"), status="success"
         )
@@ -249,10 +248,11 @@ async def test_delete_folder_with_flows_with_transaction_and_build(client: TestC
         assert response.status_code == 201
         flow_ids.append(response.json()["id"])
 
+    class VertexTuple(NamedTuple):
+        id: str
+
     # Create a transaction for each flow
     for flow_id in flow_ids:
-        VertexTuple = namedtuple("VertexTuple", ["id"])
-
         await log_transaction(
             str(flow_id), source=VertexTuple(id="vid"), target=VertexTuple(id="tid"), status="success"
         )
@@ -400,9 +400,9 @@ async def test_upload_file(client: TestClient, json_flow: str, logged_in_headers
     assert response_data[1]["data"] == data
 
 
+@pytest.mark.usefixtures("session")
 async def test_download_file(
     client: TestClient,
-    session: Session,
     json_flow,
     active_user,
     logged_in_headers,
@@ -419,14 +419,14 @@ async def test_download_file(
         ]
     )
     db_manager = get_db_service()
-    with session_getter(db_manager) as session:
+    with session_getter(db_manager) as _session:
         saved_flows = []
         for flow in flow_list.flows:
             flow.user_id = active_user.id
             db_flow = Flow.model_validate(flow, from_attributes=True)
-            session.add(db_flow)
+            _session.add(db_flow)
             saved_flows.append(db_flow)
-        session.commit()
+        _session.commit()
         # Make request to endpoint inside the session context
         flow_ids = [str(db_flow.id) for db_flow in saved_flows]  # Convert UUIDs to strings
         flow_ids_json = json.dumps(flow_ids)

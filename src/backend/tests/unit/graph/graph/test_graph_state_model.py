@@ -38,9 +38,9 @@ AI: """
 
     graph = Graph(chat_input, chat_output)
 
-    GraphStateModel = create_state_model_from_graph(graph)
-    assert GraphStateModel.__name__ == "GraphStateModel"
-    assert list(GraphStateModel.model_computed_fields.keys()) == [
+    graph_state_model = create_state_model_from_graph(graph)
+    assert graph_state_model.__name__ == "GraphStateModel"
+    assert list(graph_state_model.model_computed_fields.keys()) == [
         "chat_input",
         "chat_output",
         "openai",
@@ -60,12 +60,9 @@ def test_graph_functional_start_graph_state_update():
     # Now iterate through the graph
     # and check that the graph is running
     # correctly
-    GraphStateModel = create_state_model_from_graph(graph)
-    graph_state_model = GraphStateModel()
+    graph_state_model = create_state_model_from_graph(graph)()
     ids = ["chat_input", "chat_output"]
-    results = []
-    for result in graph.start():
-        results.append(result)
+    results = list(graph.start())
 
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
@@ -87,12 +84,9 @@ def test_graph_state_model_serialization():
     # Now iterate through the graph
     # and check that the graph is running
     # correctly
-    GraphStateModel = create_state_model_from_graph(graph)
-    graph_state_model = GraphStateModel()
+    graph_state_model = create_state_model_from_graph(graph)()
     ids = ["chat_input", "chat_output"]
-    results = []
-    for result in graph.start():
-        results.append(result)
+    results = list(graph.start())
 
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
@@ -116,8 +110,7 @@ def test_graph_state_model_json_schema():
     graph = Graph(chat_input, chat_output)
     graph.prepare()
 
-    GraphStateModel = create_state_model_from_graph(graph)
-    graph_state_model: BaseModel = GraphStateModel()
+    graph_state_model: BaseModel = create_state_model_from_graph(graph)()
     json_schema = graph_state_model.model_json_schema(mode="serialization")
 
     # Test main schema structure

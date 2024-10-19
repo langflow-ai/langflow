@@ -72,19 +72,16 @@ def test_get_variable(service, session):
     assert result == value
 
 
-def test_get_variable__ValueError(service, session):
+def test_get_variable__valueerror(service, session):
     user_id = uuid4()
     name = "name"
     field = ""
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError, match=f"{name} variable not found."):
         service.get_variable(user_id, name, field, session)
 
-    assert name in str(exc.value)
-    assert "variable not found" in str(exc.value)
 
-
-def test_get_variable__TypeError(service, session):
+def test_get_variable__typeerror(service, session):
     user_id = uuid4()
     name = "name"
     value = "value"
@@ -142,16 +139,13 @@ def test_update_variable(service, session):
     assert isinstance(result.updated_at, datetime)
 
 
-def test_update_variable__ValueError(service, session):
+def test_update_variable__valueerror(service, session):
     user_id = uuid4()
     name = "name"
     value = "value"
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError, match=f"{name} variable not found."):
         service.update_variable(user_id, name, value, session=session)
-
-    assert name in str(exc.value)
-    assert "variable not found" in str(exc.value)
 
 
 def test_update_variable_fields(service, session):
@@ -192,26 +186,21 @@ def test_delete_variable(service, session):
     service.create_variable(user_id, name, value, session=session)
     recovered = service.get_variable(user_id, name, field, session=session)
     service.delete_variable(user_id, name, session=session)
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError, match=f"{name} variable not found."):
         service.get_variable(user_id, name, field, session)
 
     assert recovered == value
-    assert name in str(exc.value)
-    assert "variable not found" in str(exc.value)
 
 
-def test_delete_variable__ValueError(service, session):
+def test_delete_variable__valueerror(service, session):
     user_id = uuid4()
     name = "name"
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError, match=f"{name} variable not found."):
         service.delete_variable(user_id, name, session=session)
 
-    assert name in str(exc.value)
-    assert "variable not found" in str(exc.value)
 
-
-def test_delete_varaible_by_id(service, session):
+def test_delete_variable_by_id(service, session):
     user_id = uuid4()
     name = "name"
     value = "value"
@@ -220,23 +209,18 @@ def test_delete_varaible_by_id(service, session):
     saved = service.create_variable(user_id, name, value, session=session)
     recovered = service.get_variable(user_id, name, field, session=session)
     service.delete_variable_by_id(user_id, saved.id, session=session)
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError, match=f"{name} variable not found."):
         service.get_variable(user_id, name, field, session)
 
     assert recovered == value
-    assert name in str(exc.value)
-    assert "variable not found" in str(exc.value)
 
 
-def test_delete_variable_by_id__ValueError(service, session):
+def test_delete_variable_by_id__valueerror(service, session):
     user_id = uuid4()
     variable_id = uuid4()
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError, match=f"{variable_id} variable not found."):
         service.delete_variable_by_id(user_id, variable_id, session=session)
-
-    assert str(variable_id) in str(exc.value)
-    assert "variable not found" in str(exc.value)
 
 
 def test_create_variable(service, session):

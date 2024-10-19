@@ -112,7 +112,7 @@ def test_update_build_config_keep_alive(component):
     "langchain_community.chat_models.ChatOllama",
     return_value=ChatOllama(base_url="http://localhost:11434", model="llama3.1"),
 )
-def test_build_model(_mock_chat_ollama, component):
+def test_build_model(_mock_chat_ollama, component):  # noqa: PT019
     component.base_url = "http://localhost:11434"
     component.model_name = "llama3.1"
     component.mirostat = "Mirostat 2.0"

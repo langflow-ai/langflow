@@ -90,9 +90,9 @@ class TestEventManager:
 
         queue = asyncio.Queue()
         manager = EventManager(queue)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Event name cannot be empty"):
             manager.register_event("", "test_type", mock_callback)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Event name must start with 'on_'"):
             manager.register_event("invalid_name", "test_type", mock_callback)
 
     # Sending an event with complex data and verifying successful event transmission

@@ -119,7 +119,7 @@ def test_sort_up_to_vertex_a(graph):
 def test_sort_up_to_vertex_invalid_vertex(graph):
     vertex_id = "7"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Parent node map is required to find the root of a group node"):
         utils.sort_up_to_vertex(graph, vertex_id)
 
 
@@ -432,7 +432,7 @@ class TestFindCycleVertices:
         assert sorted(result) == sorted(expected_output)
 
     @pytest.mark.parametrize("_", range(5))
-    def test_handle_two_inputs_in_cycle(self, _):
+    def test_handle_two_inputs_in_cycle(self, _):  # noqa: PT019
         edges = [
             ("chat_input", "router"),
             ("chat_input", "concatenate"),

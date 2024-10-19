@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.custom.tree_visitor import RequiredInputsVisitor
-from langflow.field_typing import Tool  # noqa: TCH001 Needed by add_toolkit_output
+from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw

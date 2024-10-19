@@ -112,11 +112,11 @@ def test_teardown_superuser_default_superuser(mock_get_session, mock_get_setting
 @patch("langflow.services.deps.get_settings_service")
 @patch("langflow.services.deps.get_session")
 def test_teardown_superuser_no_default_superuser(mock_get_session, mock_get_settings_service):
-    ADMIN_USER_NAME = "admin_user"
+    admin_user_name = "admin_user"
     mock_settings_service = MagicMock()
     mock_settings_service.auth_settings.AUTO_LOGIN = False
-    mock_settings_service.auth_settings.SUPERUSER = ADMIN_USER_NAME
-    mock_settings_service.auth_settings.SUPERUSER_PASSWORD = "password"
+    mock_settings_service.auth_settings.SUPERUSER = admin_user_name
+    mock_settings_service.auth_settings.SUPERUSER_PASSWORD = "password"  # noqa: S105
     mock_get_settings_service.return_value = mock_settings_service
 
     mock_session = MagicMock()

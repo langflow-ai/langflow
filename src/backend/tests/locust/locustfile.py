@@ -60,7 +60,7 @@ class NameTest(FastHttpUser):
 
     @task
     def send_name_and_check(self):
-        name = random.choice(self.names)
+        name = random.choice(self.names)  # noqa: S311
 
         payload1 = {
             "inputs": {"text": f"Hello, My name is {name}"},
