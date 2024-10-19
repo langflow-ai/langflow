@@ -32,8 +32,7 @@ def find_class_ast_node(class_obj):
         return None, []
 
     # Read the source code from the file
-    with Path(source_file).open(encoding="utf-8") as file:
-        source_code = file.read()
+    source_code = Path(source_file).read_text(encoding="utf-8")
 
     # Parse the source code into an AST
     tree = ast.parse(source_code)

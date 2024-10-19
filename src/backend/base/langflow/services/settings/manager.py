@@ -28,7 +28,7 @@ class SettingsService(Service):
         else:
             _file_path = Path(file_path)
 
-        with _file_path.open() as f:
+        with _file_path.open(encoding="utf-8") as f:
             settings_dict = yaml.safe_load(f)
             settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 

@@ -55,16 +55,14 @@ class JSONToDataComponent(Component):
                 if file_path.suffix.lower() != ".json":
                     self.status = "The provided file must be a JSON file."
                 else:
-                    with file_path.open(encoding="utf-8") as jsonfile:
-                        json_data = jsonfile.read()
+                    json_data = file_path.read_text(encoding="utf-8")
 
             elif self.json_path:
                 file_path = Path(self.json_path)
                 if file_path.suffix.lower() != ".json":
                     self.status = "The provided file must be a JSON file."
                 else:
-                    with file_path.open(encoding="utf-8") as jsonfile:
-                        json_data = jsonfile.read()
+                    json_data = file_path.read_text(encoding="utf-8")
 
             else:
                 json_data = self.json_string
