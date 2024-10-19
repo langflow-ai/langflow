@@ -198,13 +198,13 @@ class PythonCodeStructuredTool(LCToolComponent):
         if "temp_annotation_type" in _globals:
             _globals.pop("temp_annotation_type")
 
-        PythonCodeToolSchema = None
+        python_code_tool_schema = None
         if schema_fields:
-            PythonCodeToolSchema = create_model("PythonCodeToolSchema", **schema_fields)
+            python_code_tool_schema = create_model("PythonCodeToolSchema", **schema_fields)
 
         return StructuredTool.from_function(
             func=_local[self.tool_function].run,
-            args_schema=PythonCodeToolSchema,
+            args_schema=python_code_tool_schema,
             name=self.tool_name,
             description=self.tool_description,
             return_direct=self.return_direct,

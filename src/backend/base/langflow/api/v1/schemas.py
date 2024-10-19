@@ -93,7 +93,7 @@ class ChatMessage(BaseModel):
 
     is_bot: bool = False
     message: str | None | dict = None
-    chatKey: str | None = None
+    chat_key: str | None = Field(None, serialization_alias="chatKey")
     type: str = "human"
 
 
@@ -159,7 +159,7 @@ class FlowListReadWithFolderName(BaseModel):
 
 
 class InitResponse(BaseModel):
-    flowId: str
+    flow_id: str = Field(serialization_alias="flowId")
 
 
 class BuiltResponse(BaseModel):
@@ -169,7 +169,7 @@ class BuiltResponse(BaseModel):
 class UploadFileResponse(BaseModel):
     """Upload file response schema."""
 
-    flowId: str
+    flow_id: str = Field(serialization_alias="flowId")
     file_path: Path
 
 

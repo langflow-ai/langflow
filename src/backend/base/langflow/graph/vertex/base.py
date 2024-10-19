@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 from loguru import logger
 
-from langflow.exceptions.component import ComponentBuildException
+from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from langflow.interface import initialize
@@ -256,7 +256,7 @@ class Vertex:
         )
 
         if self.base_type is None:
-            for base_type, value in lazy_load_dict.ALL_TYPES_DICT.items():
+            for base_type, value in lazy_load_dict.all_types_dict.items():
                 if self.vertex_type in value:
                     self.base_type = base_type
                     break
@@ -720,7 +720,7 @@ class Vertex:
             tb = traceback.format_exc()
             logger.exception(exc)
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
-            raise ComponentBuildException(msg, tb) from exc
+            raise ComponentBuildError(msg, tb) from exc
 
     def _update_built_object_and_artifacts(self, result: Any | tuple[Any, dict] | tuple[Component, Any, dict]):
         """Updates the built object and its artifacts."""

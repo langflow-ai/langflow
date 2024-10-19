@@ -71,7 +71,7 @@ async def upload_file(
         full_file_name = f"{timestamp}_{file_name}"
         folder = flow_id_str
         await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)
-        return UploadFileResponse(flowId=flow_id_str, file_path=f"{folder}/{full_file_name}")
+        return UploadFileResponse(flow_id=flow_id_str, file_path=f"{folder}/{full_file_name}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
