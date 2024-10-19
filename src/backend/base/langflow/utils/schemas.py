@@ -29,6 +29,7 @@ class ChatOutputResponse(BaseModel):
     type: str
 
     @field_validator("files", mode="before")
+    @classmethod
     def validate_files(cls, files):
         """Validate files."""
         if not files:

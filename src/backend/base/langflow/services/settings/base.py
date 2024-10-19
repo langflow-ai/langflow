@@ -292,6 +292,7 @@ class Settings(BaseSettings):
         return value
 
     @field_validator("components_path", mode="before")
+    @classmethod
     def set_components_path(cls, value):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
@@ -381,7 +382,7 @@ def load_settings_from_yaml(file_path: str) -> Settings:
     else:
         _file_path = Path(file_path)
 
-    with _file_path.open() as f:
+    with _file_path.open(encoding="utf-8") as f:
         settings_dict = yaml.safe_load(f)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 
