@@ -311,7 +311,10 @@ class Component(CustomComponent):
 
     def _set_output_types(self) -> None:
         for output in self._outputs_map.values():
-            return_types = self._get_method_return_type(output.method or "")
+            if output.method is None:
+                msg = f"Output {output.name} does not have a method"
+                raise ValueError(msg)
+            return_types = self._get_method_return_type(output.method)
             output.add_types(return_types)
             output.set_selected()
 
