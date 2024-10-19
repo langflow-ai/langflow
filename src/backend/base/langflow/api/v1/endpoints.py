@@ -16,7 +16,6 @@ from langflow.api.v1.schemas import (
     CustomComponentRequest,
     CustomComponentResponse,
     InputValueRequest,
-    ProcessResponse,
     RunResponse,
     SidebarCategoriesResponse,
     SimplifiedAPIRequest,
@@ -68,7 +67,7 @@ async def get_all():
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def validate_input_and_tweaks(input_request: SimplifiedAPIRequest):
+def validate_input_and_tweaks(input_request: SimplifiedAPIRequest) -> None:
     # If the input_value is not None and the input_type is "chat"
     # then we need to check the tweaks if the ChatInput component is present
     # and if its input_value is not None
@@ -483,15 +482,13 @@ async def experimental_run_flow(
 
 @router.post(
     "/predict/{flow_id}",
-    response_model=ProcessResponse,
     dependencies=[Depends(api_key_security)],
 )
 @router.post(
     "/process/{flow_id}",
-    response_model=ProcessResponse,
     dependencies=[Depends(api_key_security)],
 )
-async def process():
+async def process() -> None:
     """Endpoint to process an input with a given flow_id."""
     # Raise a depreciation warning
     logger.warning(

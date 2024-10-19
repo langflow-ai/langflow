@@ -32,7 +32,7 @@ class BaseTracer(ABC):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
-    ):
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -43,7 +43,7 @@ class BaseTracer(ABC):
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
-    ):
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -53,7 +53,7 @@ class BaseTracer(ABC):
         outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod

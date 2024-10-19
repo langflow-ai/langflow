@@ -57,7 +57,7 @@ class ComponentVertex(Vertex):
             return self.artifacts["repr"] or super()._built_object_repr()
         return None
 
-    def _update_built_object_and_artifacts(self, result):
+    def _update_built_object_and_artifacts(self, result) -> None:
         """Updates the built object and its artifacts."""
         if isinstance(result, tuple):
             if len(result) == 2:  # noqa: PLR2004
@@ -182,7 +182,7 @@ class ComponentVertex(Vertex):
                 )
         return messages
 
-    def _finalize_build(self):
+    def _finalize_build(self) -> None:
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
         # to the frontend
@@ -206,7 +206,7 @@ class InterfaceVertex(ComponentVertex):
         self.steps = [self._build, self._run]
         self.is_interface_component = True
 
-    def build_stream_url(self):
+    def build_stream_url(self) -> str:
         return f"/api/v1/build/{self.graph.flow_id}/{self.id}/stream"
 
     def _built_object_repr(self):
@@ -352,7 +352,7 @@ class InterfaceVertex(ComponentVertex):
         self.artifacts = DataOutputResponse(data=artifacts)
         return self._built_object
 
-    async def _run(self, *args, **kwargs):
+    async def _run(self, *args, **kwargs) -> None:
         if self.is_interface_component:
             if self.vertex_type in CHAT_COMPONENTS:
                 message = self._process_chat_component()
@@ -452,7 +452,7 @@ class InterfaceVertex(ComponentVertex):
         self._validate_built_object()
         self._built = True
 
-    async def consume_async_generator(self):
+    async def consume_async_generator(self) -> None:
         async for _ in self.stream():
             pass
 

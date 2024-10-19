@@ -11,18 +11,18 @@ from langflow.services.base import Service
 class Subject:
     """Base class for implementing the observer pattern."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.observers: list[Callable[[], None]] = []
 
-    def attach(self, observer: Callable[[], None]):
+    def attach(self, observer: Callable[[], None]) -> None:
         """Attach an observer to the subject."""
         self.observers.append(observer)
 
-    def detach(self, observer: Callable[[], None]):
+    def detach(self, observer: Callable[[], None]) -> None:
         """Detach an observer from the subject."""
         self.observers.remove(observer)
 
-    def notify(self):
+    def notify(self) -> None:
         """Notify all observers about an event."""
         for observer in self.observers:
             if observer is None:
@@ -33,18 +33,18 @@ class Subject:
 class AsyncSubject:
     """Base class for implementing the async observer pattern."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.observers: list[Callable[[], Awaitable]] = []
 
-    def attach(self, observer: Callable[[], Awaitable]):
+    def attach(self, observer: Callable[[], Awaitable]) -> None:
         """Attach an observer to the subject."""
         self.observers.append(observer)
 
-    def detach(self, observer: Callable[[], Awaitable]):
+    def detach(self, observer: Callable[[], Awaitable]) -> None:
         """Detach an observer from the subject."""
         self.observers.remove(observer)
 
-    async def notify(self):
+    async def notify(self) -> None:
         """Notify all observers about an event."""
         for observer in self.observers:
             if observer is None:
@@ -57,7 +57,7 @@ class CacheService(Subject, Service):
 
     name = "cache_service"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._cache = {}
         self.current_client_id = None
@@ -79,7 +79,7 @@ class CacheService(Subject, Service):
             self.current_client_id = previous_client_id
             self.current_cache = self._cache.get(self.current_client_id, {})
 
-    def add(self, name: str, obj: Any, obj_type: str, extension: str | None = None):
+    def add(self, name: str, obj: Any, obj_type: str, extension: str | None = None) -> None:
         """Add an object to the current client's cache.
 
         Args:
@@ -100,7 +100,7 @@ class CacheService(Subject, Service):
         }
         self.notify()
 
-    def add_pandas(self, name: str, obj: Any):
+    def add_pandas(self, name: str, obj: Any) -> None:
         """Add a pandas DataFrame or Series to the current client's cache.
 
         Args:
@@ -113,7 +113,7 @@ class CacheService(Subject, Service):
             msg = "Object is not a pandas DataFrame or Series"
             raise TypeError(msg)
 
-    def add_image(self, name: str, obj: Any, extension: str = "png"):
+    def add_image(self, name: str, obj: Any, extension: str = "png") -> None:
         """Add a PIL Image to the current client's cache.
 
         Args:

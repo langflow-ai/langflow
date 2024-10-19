@@ -181,7 +181,7 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             )
         return store
 
-    def _map_search_type(self):
+    def _map_search_type(self) -> str:
         if self.search_type == "Similarity":
             return "similarity"
         if self.search_type == "Similarity with score threshold":

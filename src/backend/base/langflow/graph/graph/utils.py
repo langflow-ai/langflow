@@ -27,13 +27,13 @@ def find_last_node(nodes, edges):
     return next((n for n in nodes if all(e["source"] != n["id"] for e in edges)), None)
 
 
-def add_parent_node_id(nodes, parent_node_id):
+def add_parent_node_id(nodes, parent_node_id) -> None:
     """This function receives a list of nodes and adds a parent_node_id to each node."""
     for node in nodes:
         node["parent_node_id"] = parent_node_id
 
 
-def add_frozen(nodes, frozen):
+def add_frozen(nodes, frozen) -> None:
     """This function receives a list of nodes and adds a frozen to each node."""
     for node in nodes:
         node["data"]["node"]["frozen"] = frozen
@@ -75,7 +75,7 @@ def process_flow(flow_object):
     cloned_flow = copy.deepcopy(flow_object)
     processed_nodes = set()  # To keep track of processed nodes
 
-    def process_node(node):
+    def process_node(node) -> None:
         node_id = node.get("id")
 
         # If node already processed, skip
@@ -100,7 +100,7 @@ def process_flow(flow_object):
     return cloned_flow
 
 
-def update_template(template, g_nodes):
+def update_template(template, g_nodes) -> None:
     """Updates the template of a node in a graph with the given template.
 
     Args:
@@ -149,7 +149,7 @@ def update_target_handle(new_edge, g_nodes):
     return new_edge
 
 
-def set_new_target_handle(proxy_id, new_edge, target_handle, node):
+def set_new_target_handle(proxy_id, new_edge, target_handle, node) -> None:
     """Sets a new target handle for a given edge.
 
     Args:
@@ -330,7 +330,7 @@ def has_cycle(vertex_ids: list[str], edges: list[tuple[str, str]]) -> bool:
         graph[u].append(v)
 
     # Utility function to perform DFS
-    def dfs(v, visited, rec_stack):
+    def dfs(v, visited, rec_stack) -> bool:
         visited.add(v)
         rec_stack.add(v)
 

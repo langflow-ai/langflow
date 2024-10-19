@@ -94,7 +94,7 @@ class Message(Data):
         if "timestamp" not in self.data:
             self.data["timestamp"] = self.timestamp
 
-    def set_flow_id(self, flow_id: str):
+    def set_flow_id(self, flow_id: str) -> None:
         self.flow_id = flow_id
 
     def to_lc_message(

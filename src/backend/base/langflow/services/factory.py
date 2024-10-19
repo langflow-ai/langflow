@@ -15,7 +15,7 @@ class ServiceFactory:
     def __init__(
         self,
         service_class,
-    ):
+    ) -> None:
         self.service_class = service_class
         self.dependencies = infer_service_types(self, import_all_services_into_a_dict())
 

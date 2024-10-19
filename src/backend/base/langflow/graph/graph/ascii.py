@@ -24,7 +24,7 @@ class VertexViewer:
 
     HEIGHT = 3  # top and bottom box edges + text
 
-    def __init__(self, name):
+    def __init__(self, name) -> None:
         self._h = self.HEIGHT  # top and bottom box edges + text
         self._w = len(name) + 2  # right and left bottom edges + text
 
@@ -40,7 +40,7 @@ class VertexViewer:
 class AsciiCanvas:
     """Class for drawing in ASCII."""
 
-    def __init__(self, cols, lines):
+    def __init__(self, cols, lines) -> None:
         assert cols > 1
         assert lines > 1
         self.cols = cols
@@ -53,19 +53,19 @@ class AsciiCanvas:
     def draws(self):
         return "\n".join(self.get_lines())
 
-    def draw(self):
+    def draw(self) -> None:
         """Draws ASCII canvas on the screen."""
         lines = self.get_lines()
         print("\n".join(lines))  # noqa: T201
 
-    def point(self, x, y, char):
+    def point(self, x, y, char) -> None:
         """Create a point on ASCII canvas."""
         assert len(char) == 1
         assert 0 <= x < self.cols
         assert 0 <= y < self.lines
         self.canvas[y][x] = char
 
-    def line(self, x0, y0, x1, y1, char):
+    def line(self, x0, y0, x1, y1, char) -> None:
         """Create a line on ASCII canvas."""
         if x0 > x1:
             x1, x0 = x0, x1
@@ -85,12 +85,12 @@ class AsciiCanvas:
                 x = x0 + int(round((y - y0) * dx / float(dy))) if dy else x0
                 self.point(x, y, char)
 
-    def text(self, x, y, text):
+    def text(self, x, y, text) -> None:
         """Print a text on ASCII canvas."""
         for i, char in enumerate(text):
             self.point(x + i, y, char)
 
-    def box(self, x0, y0, width, height):
+    def box(self, x0, y0, width, height) -> None:
         """Create a box on ASCII canvas."""
         assert width > 1
         assert height > 1
