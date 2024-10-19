@@ -355,3 +355,14 @@ class ConfigResponse(BaseModel):
     auto_saving_interval: int
     health_check_max_retries: int
     max_file_size_upload: int
+
+
+class SidebarCategory(BaseModel):
+    display_name: str
+    name: str
+    icon: str
+    beta: bool
+
+
+class SidebarCategoriesResponse(BaseModel):
+    categories: list[SidebarCategory]
