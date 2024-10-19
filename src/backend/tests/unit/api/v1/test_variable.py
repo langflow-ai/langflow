@@ -75,7 +75,7 @@ async def test_create_variable__variable_value_cannot_be_empty(client: AsyncClie
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_create_variable__HTTPException(client: AsyncClient, body, logged_in_headers):
+async def test_create_variable__httpexception(client: AsyncClient, body, logged_in_headers):
     status_code = 418
     generic_message = "I'm a teapot"
 
@@ -89,7 +89,7 @@ async def test_create_variable__HTTPException(client: AsyncClient, body, logged_
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_create_variable__Exception(client: AsyncClient, body, logged_in_headers):
+async def test_create_variable__exception(client: AsyncClient, body, logged_in_headers):
     generic_message = "Generic error message"
 
     with mock.patch("langflow.services.auth.utils.encrypt_api_key") as m:
@@ -133,16 +133,10 @@ async def test_read_variables__empty(client: AsyncClient, logged_in_headers):
 async def test_read_variables__(client: AsyncClient, logged_in_headers):
     generic_message = "Generic error message"
 
-    with pytest.raises(Exception) as exc, mock.patch("sqlmodel.Session.exec") as m:
+    with mock.patch("sqlmodel.Session.exec") as m:
         m.side_effect = Exception(generic_message)
-
-        response = await client.get("api/v1/variables/", headers=logged_in_headers)
-        result = response.json()
-
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert generic_message in result["detail"]
-
-    assert generic_message in str(exc.value)
+        with pytest.raises(Exception, match=generic_message):
+            await client.get("api/v1/variables/", headers=logged_in_headers)
 
 
 @pytest.mark.usefixtures("active_user")
@@ -165,7 +159,7 @@ async def test_update_variable(client: AsyncClient, body, logged_in_headers):
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_update_variable__Exception(client: AsyncClient, body, logged_in_headers):
+async def test_update_variable__exception(client: AsyncClient, body, logged_in_headers):
     wrong_id = uuid4()
     body["id"] = str(wrong_id)
 
@@ -186,7 +180,7 @@ async def test_delete_variable(client: AsyncClient, body, logged_in_headers):
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_delete_variable__Exception(client: AsyncClient, logged_in_headers):
+async def test_delete_variable__exception(client: AsyncClient, logged_in_headers):
     wrong_id = uuid4()
 
     response = await client.delete(f"api/v1/variables/{wrong_id}", headers=logged_in_headers)
