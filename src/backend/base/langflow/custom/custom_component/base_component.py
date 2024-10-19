@@ -32,7 +32,7 @@ class BaseComponent:
     _template_config: dict = {}
 
     def __init__(self, **data) -> None:
-        self.cache = TTLCache(maxsize=1024, ttl=60)
+        self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
         for key, value in data.items():
             if key == "user_id":
                 self._user_id = value

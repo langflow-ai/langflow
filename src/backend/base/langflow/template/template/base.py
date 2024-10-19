@@ -24,7 +24,7 @@ class Template(BaseModel):
     def sort_fields(self) -> None:
         # first sort alphabetically
         # then sort fields so that fields that have .field_type in DIRECT_TYPES are first
-        self.fields.sort(key=lambda x: x.name)
+        self.fields.sort(key=lambda x: x.name or "")
         self.fields.sort(
             key=lambda x: x.field_type in DIRECT_TYPES if hasattr(x, "field_type") else False, reverse=False
         )

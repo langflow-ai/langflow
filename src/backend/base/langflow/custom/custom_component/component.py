@@ -311,7 +311,7 @@ class Component(CustomComponent):
 
     def _set_output_types(self) -> None:
         for output in self._outputs_map.values():
-            return_types = self._get_method_return_type(output.method)
+            return_types = self._get_method_return_type(output.method or "")
             output.add_types(return_types)
             output.set_selected()
 
@@ -326,8 +326,7 @@ class Component(CustomComponent):
                 source_code = inspect.getsource(method)
                 ast_tree = ast.parse(dedent(source_code))
             except Exception:  # noqa: BLE001
-                source_code = self._code
-                ast_tree = ast.parse(dedent(source_code))
+                ast_tree = ast.parse(dedent(self._code or ""))
 
             visitor = RequiredInputsVisitor(self._inputs)
             visitor.visit(ast_tree)

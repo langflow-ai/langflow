@@ -13,7 +13,7 @@ class AnyIOTaskResult:
         self._scope = scope
         self._status = "PENDING"
         self._result = None
-        self._exception = None
+        self._exception: Exception | None = None
 
     @property
     def status(self) -> str:
@@ -48,7 +48,7 @@ class AnyIOBackend(TaskBackend):
     name = "anyio"
 
     def __init__(self) -> None:
-        self.tasks = {}
+        self.tasks: dict[str, AnyIOTaskResult] = {}
 
     async def launch_task(
         self, task_func: Callable[..., Any], *args: Any, **kwargs: Any

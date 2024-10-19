@@ -93,8 +93,8 @@ class CustomComponent(BaseComponent):
         """
         self.cache = TTLCache(maxsize=1024, ttl=60)
         self._logs = []
-        self._results = {}
-        self._artifacts = {}
+        self._results: dict = {}
+        self._artifacts: dict = {}
         super().__init__(**data)
 
     def set_attributes(self, parameters: dict) -> None:
@@ -106,6 +106,9 @@ class CustomComponent(BaseComponent):
 
     @property
     def trace_name(self) -> str:
+        if self._vertex is None:
+            msg = "Vertex is not set"
+            raise ValueError(msg)
         return f"{self.display_name} ({self._vertex.id})"
 
     def update_state(self, name: str, value: Any) -> None:

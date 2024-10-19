@@ -24,7 +24,7 @@ class ServiceManager:
 
     def __init__(self) -> None:
         self.services: dict[str, Service] = {}
-        self.factories = {}
+        self.factories: dict[str, ServiceFactory] = {}
         self.register_factories()
         self.keyed_lock = KeyedMemoryLockManager()
 
@@ -61,6 +61,9 @@ class ServiceManager:
         if factory is None and default is not None:
             self.register_factory(default)
             factory = default
+        if factory is None:
+            msg = f"No factory registered for {service_name}"
+            raise NoFactoryRegisteredError(msg)
         for dependency in factory.dependencies:
             if dependency not in self.services:
                 self._create_service(dependency)

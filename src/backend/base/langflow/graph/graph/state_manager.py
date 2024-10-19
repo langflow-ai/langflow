@@ -33,15 +33,3 @@ class GraphStateManager:
 
     def subscribe(self, key, observer: Callable) -> None:
         self.state_service.subscribe(key, observer)
-
-    def notify_observers(self, key, new_state) -> None:
-        for callback in self.observers[key]:
-            callback(key, new_state, append=False)
-
-    def notify_append_observers(self, key, new_state) -> None:
-        for callback in self.observers[key]:
-            try:
-                callback(key, new_state, append=True)
-            except Exception:  # noqa: BLE001
-                logger.exception(f"Error in observer {callback} for key {key}")
-                logger.warning("Callbacks not implemented yet")

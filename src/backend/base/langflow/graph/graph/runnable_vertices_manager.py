@@ -3,10 +3,10 @@ from collections import defaultdict
 
 class RunnableVerticesManager:
     def __init__(self) -> None:
-        self.run_map = defaultdict(list)  # Tracks successors of each vertex
-        self.run_predecessors = defaultdict(set)  # Tracks predecessors for each vertex
-        self.vertices_to_run = set()  # Set of vertices that are ready to run
-        self.vertices_being_run = set()  # Set of vertices that are currently running
+        self.run_map: dict[str, list[str]] = defaultdict(list)  # Tracks successors of each vertex
+        self.run_predecessors: dict[str, set[str]] = defaultdict(set)  # Tracks predecessors for each vertex
+        self.vertices_to_run: set[str] = set()  # Set of vertices that are ready to run
+        self.vertices_being_run: set[str] = set()  # Set of vertices that are currently running
 
     def to_dict(self) -> dict:
         return {

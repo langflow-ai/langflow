@@ -75,8 +75,8 @@ class Vertex:
         self.base_type: str | None = base_type
         self.outputs: list[dict] = []
         self._parse_data()
-        self._built_object = UnbuiltObject()
-        self._built_result = None
+        self._built_object: Any = UnbuiltObject()
+        self._built_result: Any = None
         self._built = False
         self._successors_ids: list[str] | None = None
         self.artifacts: dict[str, Any] = {}
@@ -326,7 +326,7 @@ class Vertex:
             return
 
         template_dict = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
-        params = {}
+        params: dict = {}
 
         for edge in self.edges:
             if not hasattr(edge, "target_param"):
@@ -500,6 +500,7 @@ class Vertex:
             custom_component=custom_component,
             custom_params=custom_params,
             fallback_to_env_vars=fallback_to_env_vars,
+            base_type=self.base_type,
         )
 
         self._validate_built_object()
@@ -703,14 +704,16 @@ class Vertex:
         if isinstance(self.params[key], list):
             self.params[key].extend(result)
 
-    async def _build_results(self, custom_component, custom_params, *, fallback_to_env_vars=False) -> None:
+    async def _build_results(
+        self, custom_component, custom_params, base_type: str, *, fallback_to_env_vars=False
+    ) -> None:
         try:
             result = await initialize.loading.get_instance_results(
                 custom_component=custom_component,
                 custom_params=custom_params,
                 vertex=self,
                 fallback_to_env_vars=fallback_to_env_vars,
-                base_type=self.base_type,
+                base_type=base_type,
             )
 
             self.outputs_logs = build_output_logs(self, result)

@@ -43,7 +43,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
             max_size (int, optional): Maximum number of items to store in the cache.
             expiration_time (int, optional): Time in seconds after which a cached item expires. Default is 1 hour.
         """
-        self._cache = OrderedDict()
+        self._cache: OrderedDict = OrderedDict()
         self._lock = threading.RLock()
         self.max_size = max_size
         self.expiration_time = expiration_time
@@ -226,15 +226,17 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
             return False
         return True
 
-    @override
-    async def get(self, key, lock=None):
+    def _get(self, key):
         if key is None:
             return None
         value = self._client.get(str(key))
         return pickle.loads(value) if value else None
 
     @override
-    async def set(self, key, value, lock=None) -> None:
+    async def get(self, key, lock=None):
+        return self._get(key)
+
+    def _set(self, key, value) -> None:
         try:
             if pickled := pickle.dumps(value):
                 result = self._client.setex(str(key), self.expiration_time, pickled)
@@ -244,6 +246,10 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
         except TypeError as exc:
             msg = "RedisCache only accepts values that can be pickled. "
             raise TypeError(msg) from exc
+
+    @override
+    async def set(self, key, value, lock=None) -> None:
+        self._set(key, value)
 
     @override
     async def upsert(self, key, value, lock=None) -> None:
@@ -265,9 +271,12 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
 
         await self.set(key, value)
 
+    def _delete(self, key) -> None:
+        self._client.delete(key)
+
     @override
     async def delete(self, key, lock=None) -> None:
-        self._client.delete(key)
+        self._delete(key)
 
     @override
     async def clear(self, lock=None) -> None:
@@ -276,19 +285,19 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
 
     def __contains__(self, key) -> bool:
         """Check if the key is in the cache."""
-        return False if key is None else self._client.exists(str(key))
+        return False if key is None else bool(self._client.exists(str(key)))
 
-    async def __getitem__(self, key):
+    def __getitem__(self, key):
         """Retrieve an item from the cache using the square bracket notation."""
-        return self.get(key)
+        return self._get(key)
 
-    async def __setitem__(self, key, value) -> None:
+    def __setitem__(self, key, value) -> None:
         """Add an item to the cache using the square bracket notation."""
-        self.set(key, value)
+        self._set(key, value)
 
-    async def __delitem__(self, key) -> None:
+    def __delitem__(self, key) -> None:
         """Remove an item from the cache using the square bracket notation."""
-        self.delete(key)
+        self._delete(key)
 
     def __repr__(self) -> str:
         """Return a string representation of the RedisCache instance."""
@@ -297,7 +306,7 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
 
 class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
     def __init__(self, max_size=None, expiration_time=3600) -> None:
-        self.cache = OrderedDict()
+        self.cache: OrderedDict = OrderedDict()
 
         self.lock = asyncio.Lock()
         self.max_size = max_size

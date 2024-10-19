@@ -37,7 +37,7 @@ class StorageService(Service):
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_file(self, flow_id: str, file_name: str) -> bool:
+    async def delete_file(self, flow_id: str, file_name: str) -> None:
         raise NotImplementedError
 
     async def teardown(self) -> None:

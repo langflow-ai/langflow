@@ -16,7 +16,7 @@ def add_type_ignores() -> None:
         class TypeIgnore(ast.AST):
             _fields = ()
 
-        ast.TypeIgnore = TypeIgnore
+        ast.TypeIgnore = TypeIgnore  # type: ignore[assignment, misc]
 
 
 def validate_code(code):
