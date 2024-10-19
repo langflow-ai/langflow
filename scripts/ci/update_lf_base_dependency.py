@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import re
 import sys
 from pathlib import Path
@@ -5,6 +7,7 @@ from pathlib import Path
 import packaging.version
 
 BASE_DIR = Path(__file__).parent.parent.parent
+ARGUMENT_NUMBER = 2
 
 
 def update_base_dep(pyproject_path: str, new_version: str) -> None:
@@ -18,7 +21,7 @@ def update_base_dep(pyproject_path: str, new_version: str) -> None:
     pattern = re.compile(r'langflow-base = \{ path = "\./src/backend/base", develop = true \}')
     if not pattern.search(content):
         msg = f'langflow-base poetry dependency not found in "{filepath}"'
-        raise Exception(msg)
+        raise ValueError(msg)
     content = pattern.sub(replacement, content)
     filepath.write_text(content, encoding="utf-8")
 
@@ -28,16 +31,13 @@ def verify_pep440(version):
 
     https://github.com/pypa/packaging/blob/16.7/packaging/version.py#L191
     """
-    try:
-        return packaging.version.Version(version)
-    except packaging.version.InvalidVersion:
-        raise
+    return packaging.version.Version(version)
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
+    if len(sys.argv) != ARGUMENT_NUMBER:
         msg = "New version not specified"
-        raise Exception(msg)
+        raise ValueError(msg)
     base_version = sys.argv[1]
 
     # Strip "v" prefix from version if present

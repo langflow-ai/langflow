@@ -28,7 +28,6 @@ from langflow.services.database.models.vertex_builds.crud import delete_vertex_b
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from loguru import logger
-from pytest import LogCaptureFixture
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
@@ -102,7 +101,7 @@ def _delete_transactions_and_vertex_builds(session, user: User):
 
 
 @pytest.fixture
-def caplog(caplog: LogCaptureFixture):
+def caplog(caplog: pytest.LogCaptureFixture):
     handler_id = logger.add(
         caplog.handler,
         format="{message}",
@@ -144,7 +143,7 @@ def load_flows_dir():
 
 
 @pytest.fixture(name="distributed_env")
-def setup_env(monkeypatch):
+def _setup_env(monkeypatch):
     monkeypatch.setenv("LANGFLOW_CACHE_TYPE", "redis")
     monkeypatch.setenv("LANGFLOW_REDIS_HOST", "result_backend")
     monkeypatch.setenv("LANGFLOW_REDIS_PORT", "6379")
@@ -158,7 +157,11 @@ def setup_env(monkeypatch):
 
 
 @pytest.fixture(name="distributed_client")
-def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
+def distributed_client_fixture(
+    session: Session,  # noqa: ARG001
+    monkeypatch,
+    distributed_env,  # noqa: ARG001
+):
     # Here we load the .env from ../deploy/.env
     from langflow.core import celery_app
 
@@ -273,7 +276,12 @@ def json_memory_chatbot_no_llm():
 
 
 @pytest.fixture(name="client")
-async def client_fixture(session: Session, monkeypatch, request, load_flows_dir):
+async def client_fixture(
+    session: Session,  # noqa: ARG001
+    monkeypatch,
+    request,
+    load_flows_dir,
+):
     # Set the database url to a test database
     if "noclient" in request.keywords:
         yield
@@ -296,9 +304,11 @@ async def client_fixture(session: Session, monkeypatch, request, load_flows_dir)
         db_service.database_url = f"sqlite:///{db_path}"
         db_service.reload_engine()
         # app.dependency_overrides[get_session] = get_session_override
-        async with LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager:
-            async with AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client:
-                yield client
+        async with (
+            LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+            AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client,
+        ):
+            yield client
         # app.dependency_overrides.clear()
         monkeypatch.undo()
         # clear the temp db
@@ -308,7 +318,7 @@ async def client_fixture(session: Session, monkeypatch, request, load_flows_dir)
 
 # create a fixture for session_getter above
 @pytest.fixture(name="session_getter")
-def session_getter_fixture(client):
+def session_getter_fixture(client):  # noqa: ARG001
     @contextmanager
     def blank_session_getter(db_service: "DatabaseService"):
         with Session(db_service.engine) as session:
@@ -326,7 +336,7 @@ def runner():
 async def test_user(client):
     user_data = UserCreate(
         username="testuser",
-        password="testpassword",
+        password="testpassword",  # noqa: S106
     )
     response = await client.post("api/v1/users/", json=user_data.model_dump())
     assert response.status_code == 201
@@ -337,7 +347,7 @@ async def test_user(client):
 
 
 @pytest.fixture
-def active_user(client):
+def active_user(client):  # noqa: ARG001
     db_manager = get_db_service()
     with db_manager.with_session() as session:
         user = User(
@@ -375,7 +385,11 @@ async def logged_in_headers(client, active_user):
 
 
 @pytest.fixture
-def flow(client, json_flow: str, active_user):
+def flow(
+    client,  # noqa: ARG001
+    json_flow: str,
+    active_user,
+):
     from langflow.services.database.models.flow.model import FlowCreate
 
     loaded_json = json.loads(json_flow)
