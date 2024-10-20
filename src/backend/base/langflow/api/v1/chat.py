@@ -42,7 +42,6 @@ from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_telemetry_service
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
-from langflow.services.telemetry.service import TelemetryService
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.types import InterfaceVertex
@@ -66,17 +65,15 @@ async def try_running_celery_task(vertex, user_id):
     return vertex
 
 
-@router.post("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
+@router.post("/build/{flow_id}/vertices")
 async def retrieve_vertices_order(
     flow_id: uuid.UUID,
     background_tasks: BackgroundTasks,
     data: Annotated[FlowDataRequest | None, Body(embed=True)] | None = None,
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
-    chat_service: ChatService = Depends(get_chat_service),
     session=Depends(get_session),
-    telemetry_service: TelemetryService = Depends(get_telemetry_service),
-):
+) -> VerticesOrderResponse:
     """Retrieve the vertices order for a given flow.
 
     Args:
@@ -85,9 +82,7 @@ async def retrieve_vertices_order(
         data (Optional[FlowDataRequest], optional): The flow data. Defaults to None.
         stop_component_id (str, optional): The ID of the stop component. Defaults to None.
         start_component_id (str, optional): The ID of the start component. Defaults to None.
-        chat_service (ChatService, optional): The chat service dependency. Defaults to Depends(get_chat_service).
         session (Session, optional): The session dependency. Defaults to Depends(get_session).
-        telemetry_service (TelemetryService, optional): The telemetry service.
 
     Returns:
         VerticesOrderResponse: The response containing the ordered vertex IDs and the run ID.
@@ -95,6 +90,8 @@ async def retrieve_vertices_order(
     Raises:
         HTTPException: If there is an error checking the build status.
     """
+    chat_service = get_chat_service()
+    telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
     components_count = None
     try:
@@ -150,11 +147,11 @@ async def build_flow(
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
     log_builds: bool | None = True,
-    chat_service: ChatService = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
-    telemetry_service: TelemetryService = Depends(get_telemetry_service),
     session=Depends(get_session),
 ):
+    chat_service = get_chat_service()
+    telemetry_service = get_telemetry_service()
     if not inputs:
         inputs = InputValueRequest(session=str(flow_id))
 
@@ -464,10 +461,8 @@ async def build_vertex(
     background_tasks: BackgroundTasks,
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
     files: list[str] | None = None,
-    chat_service: ChatService = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
-    telemetry_service: TelemetryService = Depends(get_telemetry_service),
-):
+) -> VertexBuildResponse:
     """Build a vertex instead of the entire graph.
 
     Args:
@@ -476,9 +471,7 @@ async def build_vertex(
         background_tasks (BackgroundTasks): The background tasks dependency.
         inputs (Optional[InputValueRequest], optional): The input values for the vertex. Defaults to None.
         files (List[str], optional): The files to use. Defaults to None.
-        chat_service (ChatService, optional): The chat service dependency. Defaults to Depends(get_chat_service).
         current_user (Any, optional): The current user dependency. Defaults to Depends(get_current_active_user).
-        telemetry_service (TelemetryService, optional): The telemetry service.
 
     Returns:
         VertexBuildResponse: The response containing the built vertex information.
@@ -487,6 +480,8 @@ async def build_vertex(
         HTTPException: If there is an error building the vertex.
 
     """
+    chat_service = get_chat_service()
+    telemetry_service = get_telemetry_service()
     flow_id_str = str(flow_id)
 
     next_runnable_vertices = []
@@ -699,7 +694,6 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
-    chat_service: ChatService = Depends(get_chat_service),
 ):
     """Build a vertex instead of the entire graph.
 
@@ -727,6 +721,8 @@ async def build_vertex_stream(
         HTTPException: If an error occurs while building the vertex.
     """
     try:
-        return StreamingResponse(_stream_vertex(str(flow_id), vertex_id, chat_service), media_type="text/event-stream")
+        return StreamingResponse(
+            _stream_vertex(str(flow_id), vertex_id, get_chat_service()), media_type="text/event-stream"
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Error building Component") from exc
