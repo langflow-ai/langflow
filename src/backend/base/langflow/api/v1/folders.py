@@ -1,3 +1,5 @@
+from typing import Annotated
+
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi_pagination import Params
@@ -31,9 +33,9 @@ router = APIRouter(prefix="/folders", tags=["Folders"])
 @router.post("/", response_model=FolderRead, status_code=201)
 def create_folder(
     *,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     folder: FolderCreate,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     try:
         new_folder = Folder.model_validate(folder, from_attributes=True)
@@ -85,8 +87,8 @@ def create_folder(
 @router.get("/", response_model=list[FolderRead], status_code=200)
 def read_folders(
     *,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_user),
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     try:
         folders = session.exec(
@@ -103,10 +105,10 @@ def read_folders(
 @router.get("/{folder_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
 def read_folder(
     *,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     folder_id: str,
-    current_user: User = Depends(get_current_active_user),
-    params: Params | None = Depends(custom_params),
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    params: Annotated[Params | None, Depends(custom_params)],
     is_component: bool = False,
     is_flow: bool = False,
     search: str = "",
@@ -148,10 +150,10 @@ def read_folder(
 @router.patch("/{folder_id}", response_model=FolderRead, status_code=200)
 def update_folder(
     *,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     folder_id: str,
     folder: FolderUpdate,  # Assuming FolderUpdate is a Pydantic model defining updatable fields
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     try:
         existing_folder = session.exec(
@@ -209,9 +211,9 @@ def update_folder(
 @router.delete("/{folder_id}", status_code=204)
 async def delete_folder(
     *,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     folder_id: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     try:
         flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)).all()
@@ -237,9 +239,9 @@ async def delete_folder(
 @router.get("/download/{folder_id}", response_model=FlowListReadWithFolderName, status_code=200)
 async def download_file(
     *,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     folder_id: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     """Download all flows from folder."""
     try:
@@ -258,9 +260,9 @@ async def download_file(
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)
 async def upload_file(
     *,
-    session: Session = Depends(get_session),
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_active_user),
+    session: Annotated[Session, Depends(get_session)],
+    file: Annotated[UploadFile, File(...)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     """Upload flows from a file."""
     contents = await file.read()

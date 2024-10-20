@@ -38,9 +38,9 @@ router = APIRouter(prefix="/flows", tags=["Flows"])
 @router.post("/", response_model=FlowRead, status_code=201)
 def create_flow(
     *,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     flow: FlowCreate,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     try:
         """Create a new flow."""
@@ -127,14 +127,14 @@ def create_flow(
 @router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
 def read_flows(
     *,
-    current_user: User = Depends(get_current_active_user),
-    session: Session = Depends(get_session),
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    session: Annotated[Session, Depends(get_session)],
     settings_service: SettingsService = Depends(get_settings_service),
     remove_example_flows: bool = False,
     components_only: bool = False,
     get_all: bool = True,
     folder_id: UUID | None = None,
-    params: Params = Depends(),
+    params: Annotated[Params, Depends()],
     header_flows: bool = False,
 ):
     """Retrieve a list of flows with pagination support.
@@ -230,9 +230,9 @@ def _read_flow(
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 def read_flow(
     *,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     flow_id: UUID,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[User, Depends(get_current_active_user)],
     settings_service: SettingsService = Depends(get_settings_service),
 ):
     """Read a flow."""
@@ -244,10 +244,10 @@ def read_flow(
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
 def update_flow(
     *,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     flow_id: UUID,
     flow: FlowUpdate,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[User, Depends(get_current_active_user)],
     settings_service=Depends(get_settings_service),
 ):
     """Update a flow."""
@@ -304,9 +304,9 @@ def update_flow(
 @router.delete("/{flow_id}", status_code=200)
 async def delete_flow(
     *,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     flow_id: UUID,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[User, Depends(get_current_active_user)],
     settings_service=Depends(get_settings_service),
 ):
     """Delete a flow."""
@@ -326,9 +326,9 @@ async def delete_flow(
 @router.post("/batch/", response_model=list[FlowRead], status_code=201)
 def create_flows(
     *,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
     flow_list: FlowListCreate,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     """Create multiple new flows."""
     db_flows = []
@@ -346,9 +346,9 @@ def create_flows(
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)
 async def upload_file(
     *,
-    session: Session = Depends(get_session),
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_active_user),
+    session: Annotated[Session, Depends(get_session)],
+    file: Annotated[UploadFile, File(...)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
     folder_id: UUID | None = None,
 ):
     """Upload flows from a file."""
@@ -448,7 +448,7 @@ async def download_multiple_file(
 @router.get("/basic_examples/", response_model=list[FlowRead], status_code=200)
 def read_basic_examples(
     *,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
 ):
     """Retrieve a list of basic example flows.
 

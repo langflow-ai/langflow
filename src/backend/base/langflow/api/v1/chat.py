@@ -153,9 +153,9 @@ async def build_flow(
     start_component_id: str | None = None,
     log_builds: bool | None = True,
     chat_service: ChatService = Depends(get_chat_service),
-    current_user=Depends(get_current_active_user),
+    current_user: Annotated[User, Depends(get_current_active_user)],
     telemetry_service: TelemetryService = Depends(get_telemetry_service),
-    session=Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
 ):
     if not inputs:
         inputs = InputValueRequest(session=str(flow_id))
@@ -225,7 +225,7 @@ async def build_flow(
                 lock = chat_service._async_cache_locks[flow_id_str]
                 vertex_build_result = await graph.build_vertex(
                     vertex_id=vertex_id,
-                    user_id=current_user.id,
+                    user_id=str(current_user.id),
                     inputs_dict=inputs.model_dump() if inputs else {},
                     files=files,
                     get_cache=chat_service.get_cache,

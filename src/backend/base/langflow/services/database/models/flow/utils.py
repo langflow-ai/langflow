@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import Depends
 from sqlmodel import Session
 
@@ -7,7 +9,7 @@ from langflow.utils.version import get_version_info
 from .model import Flow
 
 
-def get_flow_by_id(session: Session = Depends(get_session), flow_id: str | None = None) -> Flow | None:
+def get_flow_by_id(session: Annotated[Session, Depends(get_session)], flow_id: str | None = None) -> Flow | None:
     """Get flow by id."""
     if flow_id is None:
         msg = "Flow id is required."
