@@ -1,4 +1,5 @@
 import pytest
+
 from langflow.components.prototypes.UpdateData import UpdateDataComponent
 from langflow.schema import Data
 
