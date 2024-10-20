@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 import orjson
 import pytest
 from fastapi.testclient import TestClient
+
 from langflow.api.v1.schemas import FlowListCreate, ResultDataResponse
 from langflow.graph.utils import log_transaction, log_vertex_build
 from langflow.initial_setup.setup import load_flows_from_directory, load_starter_projects
@@ -167,11 +168,9 @@ async def test_read_flows_invalid_size(client: TestClient, logged_in_headers):
 async def test_read_flows_no_pagination_params(client: TestClient, logged_in_headers):
     number_of_flows = 30
     flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
-    flow_ids = []
     for flow in flows:
         response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
         assert response.status_code == 201
-        flow_ids.append(response.json()["id"])
 
     response = await client.get("api/v1/flows/", headers=logged_in_headers, params={"get_all": False})
     assert response.status_code == 200
@@ -183,12 +182,40 @@ async def test_read_flows_no_pagination_params(client: TestClient, logged_in_hea
     assert len(response.json()["items"]) == number_of_flows
 
 
+async def test_read_flows_components_only_paginated(client: TestClient, logged_in_headers):
+    number_of_flows = 10
+    flows = [
+        FlowCreate(name=f"Flow {i}", description="description", data={}, is_component=True)
+        for i in range(number_of_flows)
+    ]
+    for flow in flows:
+        response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+    response = await client.get(
+        "api/v1/flows/", headers=logged_in_headers, params={"components_only": True, "get_all": False}
+    )
+    assert response.status_code == 200
+    response_json = response.json()
+    assert response_json["total"] == 10
+    assert response_json["pages"] == 1
+    assert response_json["page"] == 1
+    assert response_json["size"] == 50
+    assert all(flow["is_component"] is True for flow in response_json["items"])
+
+
 async def test_read_flows_components_only(client: TestClient, logged_in_headers):
+    number_of_flows = 10
+    flows = [
+        FlowCreate(name=f"Flow {i}", description="description", data={}, is_component=True)
+        for i in range(number_of_flows)
+    ]
+    for flow in flows:
+        response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
     response = await client.get("api/v1/flows/", headers=logged_in_headers, params={"components_only": True})
     assert response.status_code == 200
-    names = [flow["name"] for flow in response.json()]
-    assert any("Chat Input Component" in name for name in names)
-    assert all(flow["is_component"] is True for flow in response.json()), [flow["name"] for flow in response.json()]
+    response_json = response.json()
+    assert all(flow["is_component"] is True for flow in response_json)
 
 
 async def test_read_flow(client: TestClient, json_flow: str, logged_in_headers):
