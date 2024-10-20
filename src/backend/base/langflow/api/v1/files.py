@@ -25,8 +25,8 @@ router = APIRouter(tags=["Files"], prefix="/files")
 # using the current user as the owner
 def get_flow_id(
     flow_id: UUID,
-    current_user=Depends(get_current_active_user),
-    session=Depends(get_session),
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    session: Annotated[Session, Depends(get_session)],
 ):
     flow_id_str = str(flow_id)
     # AttributeError: 'SelectOfScalar' object has no attribute 'first'

@@ -166,7 +166,7 @@ async def simplified_run_flow(
     flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
-    api_key_user: UserRead = Depends(api_key_security),
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
 ) -> RunResponse:
     """Executes a specified flow by ID.
 
@@ -370,7 +370,7 @@ async def experimental_run_flow(
     tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,
     stream: Annotated[bool, Body(embed=True)] = False,
     session_id: Annotated[None | str, Body(embed=True)] = None,
-    api_key_user: UserRead = Depends(api_key_security),
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
 ) -> RunResponse:
     """Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
 

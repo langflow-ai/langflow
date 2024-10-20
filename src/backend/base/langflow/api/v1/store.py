@@ -22,7 +22,7 @@ router = APIRouter(prefix="/store", tags=["Components Store"])
 
 
 def get_user_store_api_key(
-    user: User = Depends(auth_utils.get_current_active_user),
+    user: Annotated[User, Depends(auth_utils.get_current_active_user)],
     settings_service=Depends(get_settings_service),
 ):
     if not user.store_api_key:
@@ -34,7 +34,7 @@ def get_user_store_api_key(
 
 
 def get_optional_user_store_api_key(
-    user: User = Depends(auth_utils.get_current_active_user),
+    user: Annotated[User, Depends(auth_utils.get_current_active_user)],
     settings_service=Depends(get_settings_service),
 ):
     if not user.store_api_key:
@@ -107,7 +107,7 @@ async def get_components(
     fields: Annotated[list[str] | None, Query()] = None,
     page: int = 1,
     limit: int = 10,
-    store_api_key: str | None = Depends(get_optional_user_store_api_key),
+    store_api_key: Annotated[str | None, Depends(get_optional_user_store_api_key)],
 ) -> ListComponentResponseModel:
     try:
         return await get_store_service().get_list_component_response_model(
