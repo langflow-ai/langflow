@@ -32,7 +32,7 @@ const useIconStatus = (
         condition: conditionSuccess,
         icon: (
           <Checkmark
-            className="text-emerald-success h-4 w-4 stroke-2 transition-all"
+            className="h-4 w-4 stroke-2 text-emerald-success transition-all"
             isVisible={true}
           />
         ),
