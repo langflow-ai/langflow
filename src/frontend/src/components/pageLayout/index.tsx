@@ -10,14 +10,14 @@ export default function PageLayout({
   children,
   button,
   betaIcon,
-  hasBack = false,
+  backTo = "",
 }: {
   title: string;
   description: string;
   children: React.ReactNode;
   button?: React.ReactNode;
   betaIcon?: boolean;
-  hasBack?: boolean;
+  backTo?: string;
 }) {
   const navigate = useCustomNavigate();
 
@@ -29,11 +29,11 @@ export default function PageLayout({
           <div className="flex w-full items-center justify-between gap-4 space-y-0.5 py-2">
             <div className="flex w-full flex-col">
               <div className="flex items-center gap-2">
-                {hasBack && (
+                {backTo && (
                   <Button
                     unstyled
                     onClick={() => {
-                      navigate("/");
+                      navigate(backTo);
                     }}
                   >
                     <ForwardedIconComponent
