@@ -75,7 +75,7 @@ const CustomInputPopover = ({
   const [inputWidth, setInputWidth] = useState(25);
 
   useEffect(() => {
-    setInputWidth(selectedOption?.length * 8.5);
+    setInputWidth(selectedOption?.length * 8 + 30);
   }, [selectedOption]);
 
   return (
@@ -123,7 +123,7 @@ const CustomInputPopover = ({
         />
         {value && selectedOption !== "" && (
           <div
-            className="pointer-events-none absolute left-1 top-1 h-[calc(100%-9px)] rounded-sm bg-emerald-smooth opacity-30"
+            className="bg-accent-emerald-foreground pointer-events-none absolute left-1 top-1 h-[calc(100%-9px)] rounded-sm opacity-30"
             style={{ width: `${inputWidth}px` }}
           />
         )}
