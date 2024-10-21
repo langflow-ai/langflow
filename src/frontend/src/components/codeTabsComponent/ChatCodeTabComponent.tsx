@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { useDarkStore } from "../../stores/darkStore";
-import { Button } from "../ui/button";
 import IconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
 
 type SimplifiedCodeTabProps = {
   code: string;
@@ -34,8 +34,8 @@ export default function SimplifiedCodeTabComponent({
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-md border bg-zinc-700 text-center inset-0 m-0 dark">
-      <div className="api-modal-tablist-div flex justify-between items-center px-2 py-1">
+    <div className="inset-0 m-0 flex h-full flex-col overflow-hidden rounded-md border bg-zinc-700 text-center dark">
+      <div className="api-modal-tablist-div flex items-center justify-between px-2 py-1">
         <div className="text-sm text-muted-foreground">{language}</div>
         <Button
           variant="ghost"
@@ -54,7 +54,7 @@ export default function SimplifiedCodeTabComponent({
       <div className="flex h-full w-full flex-col">
         {description && (
           <div
-            className="mb-2 w-full text-left text-sm px-2"
+            className="mb-2 w-full px-2 text-left text-sm"
             dangerouslySetInnerHTML={{ __html: description }}
           ></div>
         )}
