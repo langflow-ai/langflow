@@ -362,7 +362,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
         return v
 
 
-class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, BaseModel):
+class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     """Represents a boolean field.
 
     This class represents a boolean input and provides functionality for handling boolean values.

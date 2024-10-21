@@ -94,7 +94,9 @@ class Component(CustomComponent):
         self._reset_all_output_values()
         super().__init__(**config)
         if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_toggle_output") and self.add_tool_output:
-            self._append_tool_toggle_output()
+            pass
+            #  TODO: Future PR Dynamic Outputs
+            # self._append_tool_toggle_output()
         if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_output") and self.add_tool_output:
             self._append_tool_output()
 
@@ -839,17 +841,7 @@ class Component(CustomComponent):
 
     def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
-            set_as_tool_input = self._inputs.get("set_as_tool")
-            hidden_value = not set_as_tool_input.value if set_as_tool_input is not None else False
-            self.outputs.append(
-                Output(
-                    name=TOOL_OUTPUT_NAME,
-                    display_name="Tool",
-                    method="to_toolkit",
-                    types=["Tool"],
-                    hidden=hidden_value,
-                )
-            )
+            self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         return super().update_build_config(build_config, field_value, field_name)
