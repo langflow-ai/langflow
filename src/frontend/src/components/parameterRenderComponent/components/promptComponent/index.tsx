@@ -1,4 +1,3 @@
-import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import PromptModal from "@/modals/promptModal";
 import { useDarkStore } from "@/stores/darkStore";
 import { cn } from "../../../../utils/utils";
