@@ -7,13 +7,12 @@ from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
-MAX_NUMBER_OF_FIELDS = 15
-
 
 class CreateDataComponent(Component):
     display_name: str = "Create Data"
     description: str = "Dynamically create a Data with a specified number of fields."
     name: str = "CreateData"
+    MAX_FIELDS = 15  # Define a constant for maximum number of fields
 
     inputs = [
         IntInput(
@@ -22,7 +21,7 @@ class CreateDataComponent(Component):
             info="Number of fields to be added to the record.",
             real_time_refresh=True,
             value=1,
-            range_spec=RangeSpec(min=1, max=15, step=1, step_type="int"),
+            range_spec=RangeSpec(min=1, max=MAX_FIELDS, step=1, step_type="int"),
         ),
         MessageTextInput(
             name="text_key",
@@ -50,10 +49,11 @@ class CreateDataComponent(Component):
             except ValueError:
                 return build_config
             existing_fields = {}
-            if field_value_int > MAX_NUMBER_OF_FIELDS:
-                build_config["number_of_fields"]["value"] = MAX_NUMBER_OF_FIELDS
+            if field_value_int > self.MAX_FIELDS:
+                build_config["number_of_fields"]["value"] = self.MAX_FIELDS
                 msg = (
-                    f"Number of fields cannot exceed {MAX_NUMBER_OF_FIELDS}. Try using a Component to combine two Data."
+                    f"Number of fields cannot exceed {self.MAX_FIELDS}. "
+                    "Please adjust the number of fields to be within the allowed limit."
                 )
                 raise ValueError(msg)
             if len(build_config) > len(default_keys):
