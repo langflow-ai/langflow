@@ -1,5 +1,5 @@
-from langflow.components.tools.YfinanceTool import YfinanceToolComponent
-from langflow.custom.custom_component.component import Component
+from langflow.components.tools import YfinanceToolComponent
+from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
 
 
