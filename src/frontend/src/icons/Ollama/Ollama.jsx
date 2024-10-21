@@ -6,6 +6,7 @@ export const SvgOllama = (props) => (
     height="40"
     version="1"
     viewBox="0 0 550 850"
+    {...props}
   >
     <defs>
       <filter id="a808475d7c" width="100%" height="100%" x="0%" y="0%">
