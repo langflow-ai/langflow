@@ -169,7 +169,7 @@ export default function InputComponent({
             }}
             className={cn(
               onChange && setSelectedOption && selectedOption !== ""
-                ? "text-emerald-icon"
+                ? "text-accent-emerald-foreground"
                 : "text-muted-foreground",
               !disabled && "hover:text-foreground",
             )}
