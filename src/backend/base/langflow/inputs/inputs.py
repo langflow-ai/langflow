@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator, Callable, Iterator
 from typing import Any, get_args
 
 from pandas import DataFrame
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
+from pydantic import ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
