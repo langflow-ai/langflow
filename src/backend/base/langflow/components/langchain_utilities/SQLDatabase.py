@@ -20,7 +20,8 @@ class SQLDatabaseComponent(CustomComponent):
             uri = uri.replace("postgres://", "postgresql://")
         return uri.strip()
 
-    def build(self, uri: str) -> SQLDatabase:
+    def build(self, uri: str, **kwargs) -> SQLDatabase:
+        _ = kwargs
         uri = self.clean_up_uri(uri)
         # Create an engine using SQLAlchemy with StaticPool
         engine = create_engine(uri, poolclass=StaticPool)
