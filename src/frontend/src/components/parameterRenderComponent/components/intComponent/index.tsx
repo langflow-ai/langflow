@@ -6,6 +6,7 @@ import {
   NumberInputField,
   NumberInputStepper,
 } from "@chakra-ui/number-input";
+import { MinusIcon, PlusIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { handleKeyDown } from "../../../../utils/reactflowUtils";
 import { InputProps, IntComponentType } from "../../types";
@@ -53,7 +54,7 @@ export default function IntComponent({
   const getInputClassName = () => {
     return cn(
       editNode ? "input-edit-node" : "",
-      "nopan nodelete nodrag noflow primary-input",
+      "nopan nodelete nodrag noflow primary-input ",
     );
   };
 
@@ -68,6 +69,13 @@ export default function IntComponent({
     }
   };
 
+  const iconClassName =
+    "text-placeholder h-3 w-3 group-increment-hover:text-primary group-decrement-hover:text-primary transition-colors";
+  const stepperClassName = " w-5 rounded-r-sm border-l-[1px]";
+  const incrementStepperClassName =
+    " border-b-[1px] hover:rounded-tr-[5px] hover:bg-secondary group-increment";
+  const decrementStepperClassName =
+    " hover:rounded-br-[5px] hover:bg-secondary group-decrement";
   const inputRef = useRef(null);
 
   return (
@@ -90,9 +98,13 @@ export default function IntComponent({
           data-testid={id}
           ref={inputRef}
         />
-        <NumberInputStepper paddingRight={10}>
-          <NumberIncrementStepper fontSize={8} marginTop={6} />
-          <NumberDecrementStepper fontSize={8} marginBottom={6} />
+        <NumberInputStepper className={stepperClassName}>
+          <NumberIncrementStepper className={incrementStepperClassName}>
+            <PlusIcon className={iconClassName} />
+          </NumberIncrementStepper>
+          <NumberDecrementStepper className={decrementStepperClassName}>
+            <MinusIcon className={iconClassName} />
+          </NumberDecrementStepper>
         </NumberInputStepper>
       </NumberInput>
     </div>
