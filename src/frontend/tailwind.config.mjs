@@ -33,7 +33,7 @@ const config = {
       padding: "2rem",
       screens: {
         "2xl": "1400px",
-      }
+      },
     },
     extend: {
       keyframes: {
@@ -118,7 +118,7 @@ const config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         "emerald-success": "hsl(var(--emerald-success))",
-        "emerald-icon": "hsl(var(--emerald-icon))",
+        "accent-emerald-foreground": "hsl(var(--accent-emerald-foreground))",
         "emerald-smooth": "hsl(var(--emaral-smooth))",
         "emerald-hard": "hsl(var(--emeral-hard))",
         "smooth-zinc": "hsl(var(--smooth-zinc))",
@@ -152,7 +152,6 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-
       },
       borderRadius: {
         lg: `var(--radius)`,
@@ -160,7 +159,23 @@ const config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'],
+        sans: [
+          "Inter",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "Noto Sans",
+          "sans-serif",
+          "Apple Color Emoji",
+          "Segoe UI Emoji",
+          "Segoe UI Symbol",
+          "Noto Color Emoji",
+        ],
         jetbrains: ["JetBrains Mono", "monospace"],
       },
       boxShadow: {
