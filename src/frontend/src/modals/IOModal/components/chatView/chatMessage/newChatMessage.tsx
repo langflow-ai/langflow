@@ -9,7 +9,7 @@ import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import MaleTechnology from "../../../../../assets/male-technologist.png";
 import Robot from "../../../../../assets/robot.png";
-import CodeTabsComponent from "../../../../../components/codeTabsComponent";
+import CodeTabsComponent from "../../../../../components/codeTabsComponent/ChatCodeTabComponent";
 import IconComponent from "../../../../../components/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
 import {

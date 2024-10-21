@@ -48,7 +48,7 @@ export default function CodeTabsComponent({
     <Tabs
       value={activeTab}
       className={
-        "api-modal-tabs inset-0 m-0 " +
+        "flex h-full flex-col overflow-hidden rounded-md border bg-zinc-700 text-center inset-0 m-0 " +
         (isMessage ? "dark" : "") +
         (dark && isMessage ? "bg-background" : "")
       }
