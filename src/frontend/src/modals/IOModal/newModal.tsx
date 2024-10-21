@@ -388,11 +388,11 @@ export default function IOModal({
                 <div className={visibleSession ? "h-[95%]" : "h-full"}>
                   <ChatView
                     focusChat={sessionId}
-                  sendMessage={sendMessage}
-                  chatValue={chatValue}
-                  setChatValue={setChatValue}
-                  lockChat={lockChat}
-                  setLockChat={setLockChat}
+                    sendMessage={sendMessage}
+                    chatValue={chatValue}
+                    setChatValue={setChatValue}
+                    lockChat={lockChat}
+                    setLockChat={setLockChat}
                     visibleSession={visibleSession}
                   />
                 </div>
