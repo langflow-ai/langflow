@@ -577,7 +577,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   );
 
   return (
-    <div className="h-full w-full" ref={reactFlowWrapper}>
+    <div
+      className="h-full w-full bg-zinc-100 dark:bg-zinc-900"
+      ref={reactFlowWrapper}
+    >
       {showCanvas ? (
         <div id="react-flow-id" className="h-full w-full">
           <ReactFlow
