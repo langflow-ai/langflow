@@ -4,14 +4,12 @@ import os
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from fastapi import Depends
 from loguru import logger
 from sqlmodel import Session, select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableUpdate
-from langflow.services.deps import get_session
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
@@ -26,7 +24,7 @@ class DatabaseVariableService(VariableService, Service):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
 
-    def initialize_user_variables(self, user_id: UUID | str, session: Session = Depends(get_session)):
+    def initialize_user_variables(self, user_id: UUID | str, session: Session):
         if not self.settings_service.settings.store_environment_variables:
             logger.info("Skipping environment variable storage.")
             return
@@ -58,7 +56,7 @@ class DatabaseVariableService(VariableService, Service):
         user_id: UUID | str,
         name: str,
         field: str,
-        session: Session = Depends(get_session),
+        session: Session,
     ) -> str:
         # we get the credential from the database
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
@@ -78,10 +76,10 @@ class DatabaseVariableService(VariableService, Service):
         # we decrypt the value
         return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
 
-    def get_all(self, user_id: UUID | str, session: Session = Depends(get_session)) -> list[Variable | None]:
+    def get_all(self, user_id: UUID | str, session: Session) -> list[Variable | None]:
         return list(session.exec(select(Variable).where(Variable.user_id == user_id)).all())
 
-    def list_variables(self, user_id: UUID | str, session: Session = Depends(get_session)) -> list[str | None]:
+    def list_variables(self, user_id: UUID | str, session: Session) -> list[str | None]:
         variables = self.get_all(user_id=user_id, session=session)
         return [variable.name for variable in variables if variable]
 
@@ -90,7 +88,7 @@ class DatabaseVariableService(VariableService, Service):
         user_id: UUID | str,
         name: str,
         value: str,
-        session: Session = Depends(get_session),
+        session: Session,
     ):
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
         if not variable:
@@ -108,7 +106,7 @@ class DatabaseVariableService(VariableService, Service):
         user_id: UUID | str,
         variable_id: UUID | str,
         variable: VariableUpdate,
-        session: Session = Depends(get_session),
+        session: Session,
     ):
         query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
         db_variable = session.exec(query).one()
@@ -131,7 +129,7 @@ class DatabaseVariableService(VariableService, Service):
         self,
         user_id: UUID | str,
         name: str,
-        session: Session = Depends(get_session),
+        session: Session,
     ):
         stmt = select(Variable).where(Variable.user_id == user_id).where(Variable.name == name)
         variable = session.exec(stmt).first()
@@ -154,9 +152,10 @@ class DatabaseVariableService(VariableService, Service):
         user_id: UUID | str,
         name: str,
         value: str,
+        *,
         default_fields: Sequence[str] = (),
         _type: str = GENERIC_TYPE,
-        session: Session = Depends(get_session),
+        session: Session,
     ):
         variable_base = VariableCreate(
             name=name,
