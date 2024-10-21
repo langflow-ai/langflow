@@ -11,6 +11,7 @@ const config = {
   variants: {
     extend: {
       display: ["group-hover"],
+      textColor: ["group-increment-hover", "group-decrement-hover"],
     },
   },
   darkMode: ["class"],
@@ -294,6 +295,10 @@ const config = {
     }),
     tailwindcssTypography,
     tailwindcssDottedBackground,
+    plugin(({ addVariant }) => {
+      addVariant("group-increment-hover", ":merge(.group-increment):hover &");
+      addVariant("group-decrement-hover", ":merge(.group-decrement):hover &");
+    }),
   ],
 };
 
