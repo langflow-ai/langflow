@@ -194,7 +194,7 @@ export function FlowSidebarComponent() {
     <Sidebar>
       <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
         <div className="flex w-full items-center justify-between">
-          <h3 className="font-semibold">Components</h3>
+          <h3 className="text-sm font-semibold">Components</h3>
           <Button variant="ghost" size="icon">
             <ForwardedIconComponent
               name="SlidersHorizontal"
