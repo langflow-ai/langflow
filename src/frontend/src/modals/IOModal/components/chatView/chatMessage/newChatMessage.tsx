@@ -327,23 +327,13 @@ export default function ChatMessage({
 
                                                                                         return !inline ? (
                                                                                             <CodeTabsComponent
-                                                                                                isMessage
-                                                                                                tabs={[
-                                                                                                    {
-                                                                                                        name: (match && match[1]) || "",
-                                                                                                        mode: (match && match[1]) || "",
-                                                                                                        image:
-                                                                                                            "https://curl.se/logo/curl-symbol-transparent.png",
-                                                                                                        language:
-                                                                                                            (match && match[1]) || "",
-                                                                                                        code: String(content).replace(
+                                                                                                        language={
+                                                                                                            (match && match[1]) || ""
+                                                                                                        }
+                                                                                                        code= {String(content).replace(
                                                                                                             /\n$/,
                                                                                                             "",
-                                                                                                        ),
-                                                                                                    },
-                                                                                                ]}
-                                                                                                activeTab={"0"}
-                                                                                                setActiveTab={() => { }}
+                                                                                                        )}
                                                                                             />
                                                                                         ) : (
                                                                                             <code className={className} {...props}>
