@@ -99,8 +99,8 @@ maintainers = [
 
 
 dependencies = [
-    "fastapi>=0.111.0",
-    "httpx>=0.27",
+    "fastapi>=0.115.2",
+    "httpx[http2]>=0.27",
     "uvicorn>=0.30.0",
     "gunicorn>=22.0.0",
     "langchain~=0.2.0",
@@ -115,7 +115,7 @@ dependencies = [
     "typer>=0.12.0",
     "cachetools>=5.3.1",
     "platformdirs>=4.2.0",
-    "python-multipart>=0.0.7",
+    "python-multipart>=0.0.12",
     "orjson==3.10.0",
     "alembic>=1.13.0",
     "passlib>=1.7.4",
@@ -187,7 +187,7 @@ dev = [
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
     "ruff>=0.6.2",
-    "httpx>=0.27",
+    "httpx[http2]>=0.27",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",
     "requests>=2.32.0",
