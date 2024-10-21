@@ -14,7 +14,7 @@ class URLComponent(Component):
     description = "Fetch content from one or more URLs."
     icon = "layout-template"
     name = "URL"
-    add_tool_output=True
+    add_tool_output = True
 
     inputs = [
         MessageTextInput(
