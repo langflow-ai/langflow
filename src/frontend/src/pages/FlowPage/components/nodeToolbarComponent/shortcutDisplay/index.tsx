@@ -1,18 +1,22 @@
 import RenderIcons from "@/components/renderIconComponent";
+import { cn } from "@/utils/utils";
 
 export default function ShortcutDisplay({
   name,
   shortcut,
 }: {
-  name: string;
+  name?: string;
   shortcut: string;
 }): JSX.Element {
   const fixedShortcut = shortcut?.split("+");
   return (
     <div className="flex justify-center">
-      <span> {name} </span>
+      {name && <span> {name} </span>}
       <span
-        className={`ml-3 flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-lg text-muted-foreground`}
+        className={cn(
+          "flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-lg text-muted-foreground",
+          name && "ml-3",
+        )}
       >
         <RenderIcons filteredShortcut={fixedShortcut} />
       </span>
