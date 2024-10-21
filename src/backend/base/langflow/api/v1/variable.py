@@ -1,14 +1,11 @@
-from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import NoResultFound
-from sqlmodel import Session
 
-from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.user.model import User
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.variable import VariableCreate, VariableRead, VariableUpdate
-from langflow.services.deps import get_session, get_variable_service
+from langflow.services.deps import get_variable_service
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
@@ -19,9 +16,9 @@ router = APIRouter(prefix="/variables", tags=["Variables"])
 @router.post("/", response_model=VariableRead, status_code=201)
 def create_variable(
     *,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
     variable: VariableCreate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveUser,
     variable_service: DatabaseVariableService = Depends(get_variable_service),
 ):
     """Create a new variable."""
@@ -54,8 +51,8 @@ def create_variable(
 @router.get("/", response_model=list[VariableRead], status_code=200)
 def read_variables(
     *,
-    session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    session: DbSession,
+    current_user: CurrentActiveUser,
     variable_service: DatabaseVariableService = Depends(get_variable_service),
 ):
     """Read all variables."""
@@ -68,10 +65,10 @@ def read_variables(
 @router.patch("/{variable_id}", response_model=VariableRead, status_code=200)
 def update_variable(
     *,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
     variable_id: UUID,
     variable: VariableUpdate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveUser,
     variable_service: DatabaseVariableService = Depends(get_variable_service),
 ):
     """Update a variable."""
@@ -92,9 +89,9 @@ def update_variable(
 @router.delete("/{variable_id}", status_code=204)
 def delete_variable(
     *,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
     variable_id: UUID,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveUser,
     variable_service: VariableService = Depends(get_variable_service),
 ):
     """Delete a variable."""
