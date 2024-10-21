@@ -197,7 +197,7 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
                 cached item expires. Default is 1 hour.
         """
         try:
-            import redis
+            from redis.asyncio import StrictRedis
         except ImportError as exc:
             msg = (
                 "RedisCache requires the redis-py package."
@@ -209,9 +209,9 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
             " Please report any issues to our GitHub repository."
         )
         if url:
-            self._client = redis.StrictRedis.from_url(url)
+            self._client = StrictRedis.from_url(url)
         else:
-            self._client = redis.StrictRedis(host=host, port=port, db=db)
+            self._client = StrictRedis(host=host, port=port, db=db)
         self.expiration_time = expiration_time
 
     # check connection
@@ -220,7 +220,7 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
         import redis
 
         try:
-            self._client.ping()
+            asyncio.run(self._client.ping())
         except redis.exceptions.ConnectionError:
             logger.exception("RedisCache could not connect to the Redis server")
             return False
@@ -230,14 +230,14 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
     async def get(self, key, lock=None):
         if key is None:
             return None
-        value = self._client.get(str(key))
+        value = await self._client.get(str(key))
         return pickle.loads(value) if value else None
 
     @override
     async def set(self, key, value, lock=None):
         try:
             if pickled := pickle.dumps(value):
-                result = self._client.setex(str(key), self.expiration_time, pickled)
+                result = await self._client.setex(str(key), self.expiration_time, pickled)
                 if not result:
                     msg = "RedisCache could not set the value."
                     raise ValueError(msg)
@@ -267,28 +267,18 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
 
     @override
     async def delete(self, key, lock=None):
-        self._client.delete(key)
+        await self._client.delete(key)
 
     @override
     async def clear(self, lock=None):
         """Clear all items from the cache."""
-        self._client.flushdb()
+        await self._client.flushdb()
 
     def __contains__(self, key):
         """Check if the key is in the cache."""
-        return False if key is None else self._client.exists(str(key))
-
-    async def __getitem__(self, key):
-        """Retrieve an item from the cache using the square bracket notation."""
-        return self.get(key)
-
-    async def __setitem__(self, key, value):
-        """Add an item to the cache using the square bracket notation."""
-        self.set(key, value)
-
-    async def __delitem__(self, key):
-        """Remove an item from the cache using the square bracket notation."""
-        self.delete(key)
+        if key is None:
+            return False
+        return asyncio.run(self._client.exists(str(key)))
 
     def __repr__(self):
         """Return a string representation of the RedisCache instance."""
