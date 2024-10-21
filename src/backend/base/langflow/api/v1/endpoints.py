@@ -26,7 +26,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template, get_instance_name
-from langflow.exceptions.api import APIException, InvalidChatInputException
+from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
@@ -87,13 +87,13 @@ def validate_input_and_tweaks(input_request: SimplifiedAPIRequest):
                 input_value_is_chat = input_request.input_value is not None and input_request.input_type == "chat"
                 if has_input_value and input_value_is_chat:
                     msg = "If you pass an input_value to the chat input, you cannot pass a tweak with the same name."
-                    raise InvalidChatInputException(msg)
+                    raise InvalidChatInputError(msg)
         elif ("Text Input" in key or "TextInput" in key) and isinstance(value, dict):
             has_input_value = value.get("input_value") is not None
             input_value_is_text = input_request.input_value is not None and input_request.input_type == "text"
             if has_input_value and input_value_is_text:
                 msg = "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
-                raise InvalidChatInputException(msg)
+                raise InvalidChatInputError(msg)
 
 
 async def simple_run_flow(
@@ -253,17 +253,19 @@ async def simplified_run_flow(
         end_time = time.perf_counter()
         background_tasks.add_task(
             telemetry_service.log_package_run,
-            RunPayload(runIsWebhook=False, runSeconds=int(end_time - start_time), runSuccess=True, runErrorMessage=""),
+            RunPayload(
+                run_is_webhook=False, run_seconds=int(end_time - start_time), run_success=True, run_error_message=""
+            ),
         )
 
     except ValueError as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
-                runIsWebhook=False,
-                runSeconds=int(time.perf_counter() - start_time),
-                runSuccess=False,
-                runErrorMessage=str(exc),
+                run_is_webhook=False,
+                run_seconds=int(time.perf_counter() - start_time),
+                run_success=False,
+                run_error_message=str(exc),
             ),
         )
         if "badly formed hexadecimal UUID string" in str(exc):
@@ -272,16 +274,16 @@ async def simplified_run_flow(
         if "not found" in str(exc):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
-    except InvalidChatInputException as exc:
+    except InvalidChatInputError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
-                runIsWebhook=False,
-                runSeconds=int(time.perf_counter() - start_time),
-                runSuccess=False,
-                runErrorMessage=str(exc),
+                run_is_webhook=False,
+                run_seconds=int(time.perf_counter() - start_time),
+                run_success=False,
+                run_error_message=str(exc),
             ),
         )
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
@@ -355,10 +357,10 @@ async def webhook_run_flow(
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
-                runIsWebhook=True,
-                runSeconds=int(time.perf_counter() - start_time),
-                runSuccess=error_msg == "",
-                runErrorMessage=error_msg,
+                run_is_webhook=True,
+                run_seconds=int(time.perf_counter() - start_time),
+                run_success=error_msg == "",
+                run_error_message=error_msg,
             ),
         )
 
@@ -548,7 +550,7 @@ async def create_upload_file(
         file_path = save_uploaded_file(file, folder_name=flow_id_str)
 
         return UploadFileResponse(
-            flowId=flow_id_str,
+            flow_id=flow_id_str,
             file_path=file_path,
         )
     except Exception as exc:

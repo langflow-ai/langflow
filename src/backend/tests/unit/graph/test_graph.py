@@ -79,8 +79,8 @@ def test_invalid_node_types():
         ],
         "edges": [],
     }
-    with pytest.raises(Exception):
-        g = Graph()
+    g = Graph()
+    with pytest.raises(KeyError):
         g.add_nodes_and_edges(graph_data["nodes"], graph_data["edges"])
 
 
