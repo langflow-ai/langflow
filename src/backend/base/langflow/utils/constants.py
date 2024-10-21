@@ -52,7 +52,18 @@ def python_function(text: str) -> str:
 
 
 PYTHON_BASIC_TYPES = [str, bool, int, float, tuple, list, dict, set]
-DIRECT_TYPES = ["str", "bool", "dict", "int", "float", "Any", "prompt", "code", "NestedDict", "table"]
+DIRECT_TYPES = [
+    "str",
+    "bool",
+    "dict",
+    "int",
+    "float",
+    "Any",
+    "prompt",
+    "code",
+    "NestedDict",
+    "table",
+]
 
 
 LOADERS_INFO: list[dict[str, Any]] = [
@@ -178,7 +189,6 @@ MAX_TEXT_LENGTH = 99999
 
 
 SIDEBAR_CATEGORIES = [
-    {"display_name": "Saved", "name": "saved_components", "icon": "GradientSave"},
     {"display_name": "Inputs", "name": "inputs", "icon": "Download"},
     {"display_name": "Outputs", "name": "outputs", "icon": "Upload"},
     {"display_name": "Prompts", "name": "prompts", "icon": "TerminalSquare"},
@@ -188,16 +198,15 @@ SIDEBAR_CATEGORIES = [
     {"display_name": "Vector Stores", "name": "vectorstores", "icon": "Layers"},
     {"display_name": "Embeddings", "name": "embeddings", "icon": "Binary"},
     {"display_name": "Agents", "name": "agents", "icon": "Bot"},
-    {"display_name": "Astra Assistants", "name": "astra_assistants", "icon": "Sparkles"},
+    {
+        "display_name": "Astra Assistants",
+        "name": "astra_assistants",
+        "icon": "Sparkles",
+    },
     {"display_name": "Chains", "name": "chains", "icon": "Link"},
     {"display_name": "Loaders", "name": "documentloaders", "icon": "Paperclip"},
     {"display_name": "Utilities", "name": "langchain_utilities", "icon": "PocketKnife"},
-    {"display_name": "Link Extractors", "name": "link_extractors", "icon": "Link2"},
-    {"display_name": "Memories", "name": "memories", "icon": "Cpu"},
-    {"display_name": "Output Parsers", "name": "output_parsers", "icon": "Compass"},
-    {"display_name": "Prototypes", "name": "prototypes", "icon": "FlaskConical"},
-    {"display_name": "Retrievers", "name": "retrievers", "icon": "FileSearch"},
     {"display_name": "Text Splitters", "name": "textsplitters", "icon": "Scissors"},
-    {"display_name": "Toolkits", "name": "toolkits", "icon": "Package2"},
+    {"display_name": "Memories", "name": "memories", "icon": "Cpu"},
     {"display_name": "Tools", "name": "tools", "icon": "Hammer"},
 ]
