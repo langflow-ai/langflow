@@ -558,8 +558,16 @@
   .header-menu-bar {
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium;
   }
+
   .header-menu-bar-display {
     @apply flex max-w-[110px] cursor-pointer items-center gap-2 lg:max-w-[150px];
+  }
+
+  .header-menu-bar-display-2 {
+    @apply flex cursor-pointer items-center gap-2;
+  }
+  .header-menu-flow-name-2 {
+    @apply flex-1;
   }
   .header-menu-flow-name {
     @apply flex-1 truncate;
@@ -569,8 +577,9 @@
   }
 
   .header-arrangement {
-    @apply flex-max-width h-12 items-center justify-between border-b border-border bg-muted;
+    @apply flex-max-width h-[53px] items-center justify-between border-b border-border;
   }
+
   .header-start-display {
     @apply flex items-center gap-2;
   }
@@ -581,8 +590,9 @@
     @apply ml-auto mr-2 flex items-center gap-5;
   }
   .header-github-link-box {
-    @apply inline-flex h-9 items-center justify-center rounded-md border border-input px-3 pr-0 shadow-sm;
+    @apply inline-flex h-8 items-center justify-center rounded-md border border-input px-2 pr-0;
   }
+
   .header-waitlist-link-box {
     @apply inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-input px-2 text-sm font-medium text-muted-foreground shadow-sm ring-offset-background disabled:pointer-events-none disabled:opacity-50;
   }
@@ -599,7 +609,7 @@
     @apply hover:bg-accent hover:text-accent-foreground;
   }
   .header-github-display {
-    @apply -mr-px ml-1 flex h-9 items-center justify-center rounded-md rounded-l-none border bg-background px-2 text-sm;
+    @apply -mr-px ml-1 flex h-8 items-center justify-center rounded-md rounded-l-none border bg-[white] px-2 text-sm dark:bg-[black];
   }
   .header-notifications-box {
     @apply fixed left-0 top-0 h-screen w-screen;
@@ -607,7 +617,9 @@
   .header-notifications {
     @apply absolute right-[3px] h-1.5 w-1.5 rounded-full bg-destructive;
   }
-
+  .header-notifications-dot {
+    @apply absolute relative left-[32px] top-[-9px] block h-1.5 w-1.5 rounded-full bg-destructive dark:bg-red-500;
+  }
   .input-component-div {
     @apply pointer-events-none relative cursor-not-allowed;
   }
