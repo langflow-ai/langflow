@@ -62,19 +62,6 @@ export function EditMessageButton({
           </Button>
         </div>
       </ShadTooltip>
-
-      <ShadTooltip styleClasses="z-50" content="Delete message" side="top">
-        <div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onDelete}
-            className="h-8 w-8 rounded-none p-0 text-status-red hover:text-status-red"
-          >
-            <IconComponent name="Trash2" className="h-4 w-4" />
-          </Button>
-        </div>
-      </ShadTooltip>
     </div>
   );
 }
