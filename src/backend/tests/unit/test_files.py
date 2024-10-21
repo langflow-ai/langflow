@@ -26,7 +26,13 @@ def mock_storage_service():
 
 
 @pytest.fixture(name="files_client")
-async def files_client_fixture(session: Session, monkeypatch, request, load_flows_dir, mock_storage_service):
+async def files_client_fixture(
+    session: Session,  # noqa: ARG001
+    monkeypatch,
+    request,
+    load_flows_dir,
+    mock_storage_service,
+):
     # Set the database url to a test database
     if "noclient" in request.keywords:
         yield
@@ -47,9 +53,11 @@ async def files_client_fixture(session: Session, monkeypatch, request, load_flow
         app = create_app()
 
         app.dependency_overrides[get_storage_service] = lambda: mock_storage_service
-        async with LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager:
-            async with AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client:
-                yield client
+        async with (
+            LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+            AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client,
+        ):
+            yield client
         # app.dependency_overrides.clear()
         monkeypatch.undo()
         # clear the temp db

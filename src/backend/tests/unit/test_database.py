@@ -1,5 +1,5 @@
 import json
-from collections import namedtuple
+from typing import NamedTuple
 from uuid import UUID, uuid4
 
 import orjson
@@ -13,7 +13,6 @@ from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-from sqlmodel import Session
 
 
 @pytest.fixture(scope="module")
@@ -68,20 +67,17 @@ async def test_read_flows(client: TestClient, json_flow: str, logged_in_headers)
     assert len(response.json()) > 0
 
 
-@pytest.mark.usefixtures("active_user")
-async def test_read_flows_pagination(client: TestClient, logged_in_headers):
+async def test_read_flows_pagination_without_params(client: TestClient, logged_in_headers):
     response = await client.get("api/v1/flows/", headers=logged_in_headers)
+    response_json = response.json()
     assert response.status_code == 200
-    assert response.json()["page"] == 1
-    assert response.json()["size"] == 50
-    assert response.json()["pages"] == 0
-    assert response.json()["total"] == 0
-    assert len(response.json()["items"]) == 0
+    assert len(response_json) == 0
 
 
-@pytest.mark.usefixtures("active_user")
 async def test_read_flows_pagination_with_params(client: TestClient, logged_in_headers):
-    response = await client.get("api/v1/flows/", headers=logged_in_headers, params={"page": 3, "size": 10})
+    response = await client.get(
+        "api/v1/flows/", headers=logged_in_headers, params={"page": 3, "size": 10, "get_all": False}
+    )
     assert response.status_code == 200
     assert response.json()["page"] == 3
     assert response.json()["size"] == 10
@@ -90,15 +86,135 @@ async def test_read_flows_pagination_with_params(client: TestClient, logged_in_h
     assert len(response.json()["items"]) == 0
 
 
-@pytest.mark.usefixtures("flow_component")
-async def test_read_flows_components_only(client: TestClient, logged_in_headers):
+async def test_read_flows_pagination_with_flows(client: TestClient, logged_in_headers):
+    number_of_flows = 30
+    flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
+    flow_ids = []
+    for flow in flows:
+        response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+        flow_ids.append(response.json()["id"])
+
     response = await client.get(
-        "api/v1/flows/", headers=logged_in_headers, params={"components_only": True, "get_all": True}
+        "api/v1/flows/", headers=logged_in_headers, params={"page": 3, "size": 10, "get_all": False}
     )
     assert response.status_code == 200
-    names = [flow["name"] for flow in response.json()]
-    assert any("Chat Input Component" in name for name in names)
-    assert all(flow["is_component"] is True for flow in response.json()), [flow["name"] for flow in response.json()]
+    assert response.json()["page"] == 3
+    assert response.json()["size"] == 10
+    assert response.json()["pages"] == 3
+    assert response.json()["total"] == number_of_flows
+    assert len(response.json()["items"]) == 10
+
+    response = await client.get(
+        "api/v1/flows/", headers=logged_in_headers, params={"page": 4, "size": 10, "get_all": False}
+    )
+    assert response.status_code == 200
+    assert response.json()["page"] == 4
+    assert response.json()["size"] == 10
+    assert response.json()["pages"] == 3
+    assert response.json()["total"] == number_of_flows
+    assert len(response.json()["items"]) == 0
+
+
+async def test_read_flows_custom_page_size(client: TestClient, logged_in_headers):
+    number_of_flows = 30
+    flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
+    for flow in flows:
+        response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+
+    response = await client.get(
+        "api/v1/flows/", headers=logged_in_headers, params={"page": 1, "size": 15, "get_all": False}
+    )
+    assert response.status_code == 200
+    assert response.json()["page"] == 1
+    assert response.json()["size"] == 15
+    assert response.json()["pages"] == 2
+    assert response.json()["total"] == number_of_flows
+    assert len(response.json()["items"]) == 15
+
+
+async def test_read_flows_invalid_page(client: TestClient, logged_in_headers):
+    number_of_flows = 30
+    flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
+    flow_ids = []
+    for flow in flows:
+        response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+        flow_ids.append(response.json()["id"])
+
+    response = await client.get(
+        "api/v1/flows/", headers=logged_in_headers, params={"page": 0, "size": 10, "get_all": False}
+    )
+    assert response.status_code == 422  # Assuming 422 is the status code for invalid input
+
+
+async def test_read_flows_invalid_size(client: TestClient, logged_in_headers):
+    number_of_flows = 30
+    flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
+    flow_ids = []
+    for flow in flows:
+        response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+        flow_ids.append(response.json()["id"])
+
+    response = await client.get(
+        "api/v1/flows/", headers=logged_in_headers, params={"page": 1, "size": 0, "get_all": False}
+    )
+    assert response.status_code == 422  # Assuming 422 is the status code for invalid input
+
+
+async def test_read_flows_no_pagination_params(client: TestClient, logged_in_headers):
+    number_of_flows = 30
+    flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
+    for flow in flows:
+        response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+
+    response = await client.get("api/v1/flows/", headers=logged_in_headers, params={"get_all": False})
+    assert response.status_code == 200
+    # Assert default pagination values, adjust these according to your API's default behavior
+    assert response.json()["page"] == 1
+    assert response.json()["size"] == 50
+    assert response.json()["pages"] == 1
+    assert response.json()["total"] == number_of_flows
+    assert len(response.json()["items"]) == number_of_flows
+
+
+async def test_read_flows_components_only_paginated(client: TestClient, logged_in_headers):
+    number_of_flows = 10
+    flows = [
+        FlowCreate(name=f"Flow {i}", description="description", data={}, is_component=True)
+        for i in range(number_of_flows)
+    ]
+    for flow in flows:
+        response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+    response = await client.get(
+        "api/v1/flows/", headers=logged_in_headers, params={"components_only": True, "get_all": False}
+    )
+    assert response.status_code == 200
+    response_json = response.json()
+    assert response_json["total"] == 10
+    assert response_json["pages"] == 1
+    assert response_json["page"] == 1
+    assert response_json["size"] == 50
+    assert all(flow["is_component"] is True for flow in response_json["items"])
+
+
+async def test_read_flows_components_only(client: TestClient, logged_in_headers):
+    number_of_flows = 10
+    flows = [
+        FlowCreate(name=f"Flow {i}", description="description", data={}, is_component=True)
+        for i in range(number_of_flows)
+    ]
+    for flow in flows:
+        response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+    response = await client.get("api/v1/flows/", headers=logged_in_headers, params={"components_only": True})
+    assert response.status_code == 200
+    response_json = response.json()
+    assert all(flow["is_component"] is True for flow in response_json)
 
 
 async def test_read_flow(client: TestClient, json_flow: str, logged_in_headers):
@@ -179,11 +295,11 @@ async def test_delete_flows_with_transaction_and_build(client: TestClient, logge
         assert response.status_code == 201
         flow_ids.append(response.json()["id"])
 
+    class VertexTuple(NamedTuple):
+        id: str
+
     # Create a transaction for each flow
-
     for flow_id in flow_ids:
-        VertexTuple = namedtuple("VertexTuple", ["id"])
-
         await log_transaction(
             str(flow_id), source=VertexTuple(id="vid"), target=VertexTuple(id="tid"), status="success"
         )
@@ -249,10 +365,11 @@ async def test_delete_folder_with_flows_with_transaction_and_build(client: TestC
         assert response.status_code == 201
         flow_ids.append(response.json()["id"])
 
+    class VertexTuple(NamedTuple):
+        id: str
+
     # Create a transaction for each flow
     for flow_id in flow_ids:
-        VertexTuple = namedtuple("VertexTuple", ["id"])
-
         await log_transaction(
             str(flow_id), source=VertexTuple(id="vid"), target=VertexTuple(id="tid"), status="success"
         )
@@ -305,7 +422,9 @@ async def test_get_flows_from_folder_pagination(client: TestClient, logged_in_he
     created_folder = response.json()
     folder_id = created_folder["id"]
 
-    response = await client.get(f"api/v1/folders/{folder_id}", headers=logged_in_headers)
+    response = await client.get(
+        f"api/v1/folders/{folder_id}", headers=logged_in_headers, params={"page": 1, "size": 50}
+    )
     assert response.status_code == 200
     assert response.json()["folder"]["name"] == folder_name
     assert response.json()["folder"]["description"] == "Test folder description"
@@ -400,9 +519,9 @@ async def test_upload_file(client: TestClient, json_flow: str, logged_in_headers
     assert response_data[1]["data"] == data
 
 
+@pytest.mark.usefixtures("session")
 async def test_download_file(
     client: TestClient,
-    session: Session,
     json_flow,
     active_user,
     logged_in_headers,
@@ -419,14 +538,14 @@ async def test_download_file(
         ]
     )
     db_manager = get_db_service()
-    with session_getter(db_manager) as session:
+    with session_getter(db_manager) as _session:
         saved_flows = []
         for flow in flow_list.flows:
             flow.user_id = active_user.id
             db_flow = Flow.model_validate(flow, from_attributes=True)
-            session.add(db_flow)
+            _session.add(db_flow)
             saved_flows.append(db_flow)
-        session.commit()
+        _session.commit()
         # Make request to endpoint inside the session context
         flow_ids = [str(db_flow.id) for db_flow in saved_flows]  # Convert UUIDs to strings
         flow_ids_json = json.dumps(flow_ids)
@@ -513,6 +632,7 @@ async def test_load_flows(client: TestClient):
     assert response.json()["folder_id"] is not None
 
 
+@pytest.mark.usefixtures("client")
 def test_sqlite_pragmas():
     db_service = get_db_service()
 
@@ -521,3 +641,156 @@ def test_sqlite_pragmas():
 
         assert session.exec(text("PRAGMA journal_mode;")).scalar() == "wal"
         assert session.exec(text("PRAGMA synchronous;")).scalar() == 1
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_read_folder(client: TestClient, logged_in_headers):
+    # Create a new folder
+    folder_name = f"Test Folder {uuid4()}"
+    folder = FolderCreate(name=folder_name, description="Test folder description")
+    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    created_folder = response.json()
+    folder_id = created_folder["id"]
+
+    # Read the folder
+    response = await client.get(f"api/v1/folders/{folder_id}", headers=logged_in_headers)
+    assert response.status_code == 200
+    folder_data = response.json()
+    assert folder_data["name"] == folder_name
+    assert folder_data["description"] == "Test folder description"
+    assert "flows" in folder_data
+    assert isinstance(folder_data["flows"], list)
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_read_folder_with_pagination(client: TestClient, logged_in_headers):
+    # Create a new folder
+    folder_name = f"Test Folder {uuid4()}"
+    folder = FolderCreate(name=folder_name, description="Test folder description")
+    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    created_folder = response.json()
+    folder_id = created_folder["id"]
+
+    # Read the folder with pagination
+    response = await client.get(
+        f"api/v1/folders/{folder_id}", headers=logged_in_headers, params={"page": 1, "size": 10}
+    )
+    assert response.status_code == 200
+    folder_data = response.json()
+    assert isinstance(folder_data, dict)
+    assert "folder" in folder_data
+    assert "flows" in folder_data
+    assert folder_data["folder"]["name"] == folder_name
+    assert folder_data["folder"]["description"] == "Test folder description"
+    assert folder_data["flows"]["page"] == 1
+    assert folder_data["flows"]["size"] == 10
+    assert isinstance(folder_data["flows"]["items"], list)
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_read_folder_with_flows(client: TestClient, json_flow: str, logged_in_headers):
+    # Create a new folder
+    folder_name = f"Test Folder {uuid4()}"
+    flow_name = f"Test Flow {uuid4()}"
+    folder = FolderCreate(name=folder_name, description="Test folder description")
+    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    created_folder = response.json()
+    folder_id = created_folder["id"]
+
+    # Create a flow in the folder
+    flow_data = orjson.loads(json_flow)
+    data = flow_data["data"]
+    flow = FlowCreate(name=flow_name, description="description", data=data)
+    flow.folder_id = folder_id
+    response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+
+    # Read the folder with flows
+    response = await client.get(f"api/v1/folders/{folder_id}", headers=logged_in_headers)
+    assert response.status_code == 200
+    folder_data = response.json()
+    assert folder_data["name"] == folder_name
+    assert folder_data["description"] == "Test folder description"
+    assert len(folder_data["flows"]) == 1
+    assert folder_data["flows"][0]["name"] == flow_name
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_read_nonexistent_folder(client: TestClient, logged_in_headers):
+    nonexistent_id = str(uuid4())
+    response = await client.get(f"api/v1/folders/{nonexistent_id}", headers=logged_in_headers)
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Folder not found"
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_read_folder_with_search(client: TestClient, json_flow: str, logged_in_headers):
+    # Create a new folder
+    folder_name = f"Test Folder {uuid4()}"
+    folder = FolderCreate(name=folder_name, description="Test folder description")
+    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    created_folder = response.json()
+    folder_id = created_folder["id"]
+
+    # Create two flows in the folder
+    flow_data = orjson.loads(json_flow)
+    flow_name_1 = f"Test Flow 1 {uuid4()}"
+    flow_name_2 = f"Another Flow {uuid4()}"
+
+    flow1 = FlowCreate(
+        name=flow_name_1, description="Test flow description", data=flow_data["data"], folder_id=folder_id
+    )
+    flow2 = FlowCreate(
+        name=flow_name_2, description="Another flow description", data=flow_data["data"], folder_id=folder_id
+    )
+    flow1.folder_id = folder_id
+    flow2.folder_id = folder_id
+    await client.post("api/v1/flows/", json=flow1.model_dump(), headers=logged_in_headers)
+    await client.post("api/v1/flows/", json=flow2.model_dump(), headers=logged_in_headers)
+
+    # Read the folder with search
+    response = await client.get(
+        f"api/v1/folders/{folder_id}", headers=logged_in_headers, params={"search": "Test", "page": 1, "size": 10}
+    )
+    assert response.status_code == 200
+    folder_data = response.json()
+    assert len(folder_data["flows"]["items"]) == 1
+    assert folder_data["flows"]["items"][0]["name"] == flow_name_1
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_read_folder_with_component_filter(client: TestClient, json_flow: str, logged_in_headers):
+    # Create a new folder
+    folder_name = f"Test Folder {uuid4()}"
+    folder = FolderCreate(name=folder_name, description="Test folder description")
+    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    created_folder = response.json()
+    folder_id = created_folder["id"]
+
+    # Create a component flow in the folder
+    flow_data = orjson.loads(json_flow)
+    component_flow_name = f"Component Flow {uuid4()}"
+    component_flow = FlowCreate(
+        name=component_flow_name,
+        description="Component flow description",
+        data=flow_data["data"],
+        folder_id=folder_id,
+        is_component=True,
+    )
+    component_flow.folder_id = folder_id
+    await client.post("api/v1/flows/", json=component_flow.model_dump(), headers=logged_in_headers)
+
+    # Read the folder with component filter
+    response = await client.get(
+        f"api/v1/folders/{folder_id}", headers=logged_in_headers, params={"is_component": True, "page": 1, "size": 10}
+    )
+    assert response.status_code == 200
+    folder_data = response.json()
+    assert len(folder_data["flows"]["items"]) == 1
+    assert folder_data["flows"]["items"][0]["name"] == component_flow_name
+    assert folder_data["flows"]["items"][0]["is_component"] == True  # noqa: E712

@@ -1,4 +1,4 @@
-from langflow.components.prompts.Prompt import PromptComponent  # type: ignore
+from langflow.components.prompts.Prompt import PromptComponent
 
 
 class TestPromptComponent:
