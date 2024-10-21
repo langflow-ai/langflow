@@ -75,7 +75,7 @@ const CustomInputPopover = ({
   const [inputWidth, setInputWidth] = useState(25);
 
   useEffect(() => {
-    setInputWidth(selectedOption?.length * 8.4 + 30);
+    setInputWidth(selectedOption?.length * 8.5);
   }, [selectedOption]);
 
   return (
