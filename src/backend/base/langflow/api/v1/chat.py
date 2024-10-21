@@ -16,6 +16,8 @@ from starlette.responses import ContentStream
 from starlette.types import Receive
 
 from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
     build_and_cache_graph_from_data,
     build_graph_from_data,
     build_graph_from_db,
@@ -38,7 +40,6 @@ from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
-from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_telemetry_service
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
@@ -70,12 +71,12 @@ async def try_running_celery_task(vertex, user_id):
 async def retrieve_vertices_order(
     flow_id: uuid.UUID,
     background_tasks: BackgroundTasks,
+    chat_service: Annotated[ChatService, Depends(get_chat_service)],
+    session: DbSession,
+    telemetry_service: Annotated[TelemetryService, Depends(get_telemetry_service)],
     data: Annotated[FlowDataRequest | None, Body(embed=True)] | None = None,
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
-    chat_service: ChatService = Depends(get_chat_service),
-    session=Depends(get_session),
-    telemetry_service: TelemetryService = Depends(get_telemetry_service),
 ):
     """Retrieve the vertices order for a given flow.
 
@@ -151,9 +152,9 @@ async def build_flow(
     start_component_id: str | None = None,
     log_builds: bool | None = True,
     chat_service: ChatService = Depends(get_chat_service),
-    current_user=Depends(get_current_active_user),
+    current_user: CurrentActiveUser,
     telemetry_service: TelemetryService = Depends(get_telemetry_service),
-    session=Depends(get_session),
+    session: DbSession,
 ):
     if not inputs:
         inputs = InputValueRequest(session=str(flow_id))
@@ -223,7 +224,7 @@ async def build_flow(
                 lock = chat_service._async_cache_locks[flow_id_str]
                 vertex_build_result = await graph.build_vertex(
                     vertex_id=vertex_id,
-                    user_id=current_user.id,
+                    user_id=str(current_user.id),
                     inputs_dict=inputs.model_dump() if inputs else {},
                     files=files,
                     get_cache=chat_service.get_cache,
@@ -462,11 +463,11 @@ async def build_vertex(
     flow_id: uuid.UUID,
     vertex_id: str,
     background_tasks: BackgroundTasks,
+    chat_service: Annotated[ChatService, Depends(get_chat_service)],
+    current_user: CurrentActiveUser,
+    telemetry_service: Annotated[TelemetryService, Depends(get_telemetry_service)],
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
     files: list[str] | None = None,
-    chat_service: ChatService = Depends(get_chat_service),
-    current_user=Depends(get_current_active_user),
-    telemetry_service: TelemetryService = Depends(get_telemetry_service),
 ):
     """Build a vertex instead of the entire graph.
 
@@ -510,7 +511,7 @@ async def build_vertex(
             lock = chat_service._async_cache_locks[flow_id_str]
             vertex_build_result = await graph.build_vertex(
                 vertex_id=vertex_id,
-                user_id=current_user.id,
+                user_id=str(current_user.id),
                 inputs_dict=inputs.model_dump() if inputs else {},
                 files=files,
                 get_cache=chat_service.get_cache,
@@ -699,7 +700,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
-    chat_service: ChatService = Depends(get_chat_service),
+    chat_service: Annotated[ChatService, Depends(get_chat_service)],
 ):
     """Build a vertex instead of the entire graph.
 

@@ -147,9 +147,9 @@ class PythonCodeStructuredTool(LCToolComponent):
             params: dict = {}
 
             def run(**kwargs):
-                for key in kwargs:
+                for key, arg in kwargs.items():
                     if key not in PythonCodeToolFunc.params:
-                        PythonCodeToolFunc.params[key] = kwargs[key]
+                        PythonCodeToolFunc.params[key] = arg
                 return _local_namespace[self.tool_function](**PythonCodeToolFunc.params)
 
         _globals = globals()

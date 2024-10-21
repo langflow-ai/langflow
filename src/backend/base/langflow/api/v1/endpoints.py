@@ -8,9 +8,9 @@ from uuid import UUID
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import select
 
-from langflow.api.utils import parse_value
+from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -41,7 +41,6 @@ from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
-    get_session,
     get_session_service,
     get_settings_service,
     get_task_service,
@@ -172,7 +171,7 @@ async def simplified_run_flow(
     flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
-    api_key_user: UserRead = Depends(api_key_security),
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
     telemetry_service: TelemetryService = Depends(get_telemetry_service),
 ):
     """Executes a specified flow by ID.
@@ -359,7 +358,7 @@ async def webhook_run_flow(
             RunPayload(
                 run_is_webhook=True,
                 run_seconds=int(time.perf_counter() - start_time),
-                run_success=error_msg == "",
+                run_success=not error_msg,
                 run_error_message=error_msg,
             ),
         )
@@ -370,14 +369,14 @@ async def webhook_run_flow(
 @router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 async def experimental_run_flow(
     *,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
     flow_id: UUID,
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
     tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,
     stream: Annotated[bool, Body(embed=True)] = False,
     session_id: Annotated[None | str, Body(embed=True)] = None,
-    api_key_user: UserRead = Depends(api_key_security),
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
     session_service: SessionService = Depends(get_session_service),
 ):
     """Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
@@ -567,7 +566,7 @@ def get_version():
 @router.post("/custom_component", status_code=HTTPStatus.OK, response_model=CustomComponentResponse)
 async def custom_component(
     raw_code: CustomComponentRequest,
-    user: Annotated[User, Depends(get_current_active_user)],
+    user: CurrentActiveUser,
 ):
     component = Component(_code=raw_code.code)
 
@@ -582,7 +581,7 @@ async def custom_component(
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
-    user: Annotated[User, Depends(get_current_active_user)],
+    user: CurrentActiveUser,
 ):
     """Update a custom component with the provided code request.
 
