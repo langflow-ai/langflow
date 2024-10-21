@@ -385,15 +385,17 @@ export default function IOModal({
                 </div>
               )}
               {haveChat ? (
-                <ChatView
-                  focusChat={sessionId}
+                <div className={visibleSession ? "h-[95%]" : "h-full"}>
+                  <ChatView
+                    focusChat={sessionId}
                   sendMessage={sendMessage}
                   chatValue={chatValue}
                   setChatValue={setChatValue}
                   lockChat={lockChat}
                   setLockChat={setLockChat}
-                  visibleSession={visibleSession}
-                />
+                    visibleSession={visibleSession}
+                  />
+                </div>
               ) : (
                 <span className="flex h-full w-full items-center justify-center font-thin text-muted-foreground">
                   Select an IO component to view
