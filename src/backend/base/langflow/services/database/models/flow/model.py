@@ -196,19 +196,30 @@ class FlowRead(FlowBase):
 
 
 class FlowHeader(BaseModel):
+    """Model representing a header for a flow - Without the data.
+
+    Attributes:
+    -----------
+    id : UUID
+        Unique identifier for the flow.
+    name : str
+        The name of the flow.
+    folder_id : UUID | None, optional
+        The ID of the folder containing the flow. None if not associated with a folder.
+    is_component : bool | None, optional
+        Flag indicating whether the flow is a component.
+    endpoint_name : str | None, optional
+        The name of the endpoint associated with this flow.
+    description : str | None, optional
+        A description of the flow.
+    """
+
     id: UUID
     name: str
     folder_id: UUID | None = None
     is_component: bool | None = None
     endpoint_name: str | None = None
     description: str | None = None
-
-
-class PaginatedFlowResponse(BaseModel):
-    flows: list[FlowRead]
-    total: int
-    page_size: int
-    page_index: int
 
 
 class FlowUpdate(SQLModel):
