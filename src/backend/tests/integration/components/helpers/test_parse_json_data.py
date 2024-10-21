@@ -1,5 +1,5 @@
 import pytest
-from langflow.components.helpers.ParseJSONData import ParseJSONDataComponent
+from langflow.components.helpers import ParseJSONDataComponent
 from langflow.components.inputs import ChatInput
 from langflow.schema import Data
 
