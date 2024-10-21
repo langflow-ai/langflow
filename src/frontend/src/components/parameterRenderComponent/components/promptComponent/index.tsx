@@ -17,7 +17,7 @@ const promptContentClasses = {
 
 const externalLinkIconClasses = {
   gradient: "absolute right-7 h-5 w-10",
-  background: "absolute right-[0.5px] h-5 w-9 rounded-l-xl",
+  background: "absolute right-[0.6px] h-5 w-9 rounded-l-xl",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
   editNodeTop: "top-1",
   normalTop: "top-2.5",
@@ -82,7 +82,7 @@ export default function PromptAreaComponent({
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
-          disabled ? "text-smooth-zinc" : "text-foreground",
+          disabled ? "text-placeholder" : "text-foreground",
         )}
       />
     </>

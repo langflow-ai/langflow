@@ -121,7 +121,7 @@ const config = {
         "accent-emerald-foreground": "hsl(var(--accent-emerald-foreground))",
         "emerald-smooth": "hsl(var(--emaral-smooth))",
         "emerald-hard": "hsl(var(--emeral-hard))",
-        "smooth-zinc": "hsl(var(--smooth-zinc))",
+        placeholder: "hsl(var(--placeholder))",
         "hard-zinc": "hsl(var(--hard-zinc))",
         "smooth-red": "hsl(var(--smooth-red))",
         primary: {

@@ -85,7 +85,7 @@ export default function TextAreaComponent({
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
-          disabled ? "text-smooth-zinc" : "text-foreground",
+          disabled ? "text-placeholder" : "text-foreground",
         )}
       />
     </>

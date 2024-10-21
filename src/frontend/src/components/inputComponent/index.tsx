@@ -177,7 +177,7 @@ export default function InputComponent({
             <ForwardedIconComponent
               name={getIconName(disabled!, selectedOption!, optionsIcon)}
               className={cn(
-                disabled ? "cursor-grab text-smooth-zinc" : "cursor-pointer",
+                disabled ? "text-placeholder cursor-grab" : "cursor-pointer",
                 "h-4 w-4",
               )}
               aria-hidden="true"

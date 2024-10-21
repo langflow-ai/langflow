@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
 @layer base {
   * {
     @apply border-border;
@@ -13,7 +12,7 @@
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
-      font-family: Inter, system-ui, sans-serif;
+    font-family: Inter, system-ui, sans-serif;
   }
 }
 
@@ -178,7 +177,7 @@
     @apply flex gap-2;
   }
   .primary-input {
-    @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left text-sm shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-secondary disabled:text-hard-zinc disabled:pointer-events-none;
+    @apply placeholder:text-placeholder form-input block w-full truncate rounded-md border-border bg-background px-3 text-left text-sm shadow-sm hover:border-muted-foreground focus:border-muted focus:placeholder-transparent focus:ring-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-hard-zinc disabled:opacity-100;
   }
 
   .skeleton-card {
@@ -195,7 +194,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply form-input block w-full rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
+    @apply placeholder:text-placeholder form-input block w-full rounded-md border-border bg-background px-3 text-left shadow-sm hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-hard-zinc disabled:opacity-100 sm:text-sm;
   }
 
   .input-edit-node {
@@ -1186,8 +1185,8 @@
     @apply flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm bg-transparent p-0 hover:bg-secondary hover:p-1;
   }
 
-  .play-button-icon{
-    @apply h-4 w-4 fill-current transition-all group-hover/node:opacity-100
+  .play-button-icon {
+    @apply h-4 w-4 fill-current transition-all group-hover/node:opacity-100;
   }
 
   .lucide-icon {
@@ -1203,10 +1202,10 @@
   }
 
   .show-node-icon {
-    @apply absolute inset-x-6 ;
+    @apply absolute inset-x-6;
   }
 
-  .disabled-state{
-    @apply bg-secondary text-hard-zinc pointer-events-none
+  .disabled-state {
+    @apply pointer-events-none bg-secondary text-hard-zinc;
   }
 }
