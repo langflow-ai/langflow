@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -325,7 +326,7 @@ export function FlowSidebarComponent() {
                     </SidebarMenuItem>
                   ))
                 : categories?.categories
-                    .filter((item, index) => index < 3)
+                    .filter((item, index) => index < 2)
                     .map((item) => (
                       <Collapsible className="group/collapsible">
                         <SidebarMenuItem>
@@ -358,6 +359,32 @@ export function FlowSidebarComponent() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-t p-4 py-3">
+        <SidebarMenuButton asChild>
+          <a href="https://langflow.store/" target="_blank" rel="noreferrer">
+            <div className="flex items-center gap-2">
+              <ForwardedIconComponent
+                name="Store"
+                className="h-4 w-4 text-muted-foreground"
+              />
+              <span className="group-data-[state=open]/collapsible:font-semibold">
+                Discover more components
+              </span>
+            </div>
+          </a>
+        </SidebarMenuButton>
+        <SidebarMenuButton asChild>
+          <Button unstyled className="flex items-center gap-2">
+            <ForwardedIconComponent
+              name="Plus"
+              className="h-4 w-4 text-muted-foreground"
+            />
+            <span className="group-data-[state=open]/collapsible:font-semibold">
+              Custom Component
+            </span>
+          </Button>
+        </SidebarMenuButton>
+      </SidebarFooter>
     </Sidebar>
   );
 }
