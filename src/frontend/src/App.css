@@ -136,13 +136,14 @@ body {
 /* selected */
 .react-flow__edge.selected .react-flow__edge-path {
   stroke: var(--selected) !important;
-  stroke-width: 1.5px !important;
+  stroke-width: 2px !important;
 }
 
 .react-flow__edge .react-flow__edge-path {
-  stroke: var(--connection) !important;
   transition: color;
+  stroke: var(--connection) !important;
   transition-duration: 150ms;
+  stroke-width: 2px !important;
 }
 
 .react-flow__edge.running .react-flow__edge-path {
