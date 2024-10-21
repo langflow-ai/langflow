@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from httpx import AsyncClient
@@ -11,7 +11,7 @@ from sqlmodel import select
 
 
 @pytest.fixture
-def super_user(client):
+def super_user(client):  # noqa: ARG001
     settings_manager = get_settings_service()
     auth_settings = settings_manager.auth_settings
     with session_getter(get_db_service()) as session:
@@ -23,7 +23,10 @@ def super_user(client):
 
 
 @pytest.fixture
-async def super_user_headers(client: AsyncClient, super_user):
+async def super_user_headers(
+    client: AsyncClient,
+    super_user,  # noqa: ARG001
+):
     settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
     login_data = {
@@ -38,14 +41,14 @@ async def super_user_headers(client: AsyncClient, super_user):
 
 
 @pytest.fixture
-def deactivated_user(client):
+def deactivated_user(client):  # noqa: ARG001
     with session_getter(get_db_service()) as session:
         user = User(
             username="deactivateduser",
             password=get_password_hash("testpassword"),
             is_active=False,
             is_superuser=False,
-            last_login_at=datetime.now(),
+            last_login_at=datetime.now(tz=timezone.utc),
         )
         session.add(user)
         session.commit()
@@ -55,7 +58,7 @@ def deactivated_user(client):
 
 async def test_user_waiting_for_approval(client):
     username = "waitingforapproval"
-    password = "testpassword"
+    password = "testpassword"  # noqa: S105
 
     # Debug: Check if the user already exists
     with session_getter(get_db_service()) as session:
@@ -140,7 +143,7 @@ async def test_inactive_user(client: AsyncClient):
             username="inactiveuser",
             password=get_password_hash("testpassword"),
             is_active=False,
-            last_login_at=datetime(2023, 1, 1, 0, 0, 0),
+            last_login_at=datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
         )
         session.add(user)
         session.commit()
@@ -205,7 +208,7 @@ async def test_patch_user(client: AsyncClient, active_user, logged_in_headers):
 async def test_patch_reset_password(client: AsyncClient, active_user, logged_in_headers):
     user_id = active_user.id
     update_data = UserUpdate(
-        password="newpassword",
+        password="newpassword",  # noqa: S106
     )
 
     response = await client.patch(

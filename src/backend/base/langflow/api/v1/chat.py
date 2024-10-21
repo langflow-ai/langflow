@@ -34,7 +34,7 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.events.event_manager import EventManager, create_default_event_manager
-from langflow.exceptions.component import ComponentBuildException
+from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
@@ -117,9 +117,9 @@ async def retrieve_vertices_order(
         background_tasks.add_task(
             telemetry_service.log_package_playground,
             PlaygroundPayload(
-                playgroundSeconds=int(time.perf_counter() - start_time),
-                playgroundComponentCount=components_count,
-                playgroundSuccess=True,
+                playground_seconds=int(time.perf_counter() - start_time),
+                playground_component_count=components_count,
+                playground_success=True,
             ),
         )
         return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
@@ -127,10 +127,10 @@ async def retrieve_vertices_order(
         background_tasks.add_task(
             telemetry_service.log_package_playground,
             PlaygroundPayload(
-                playgroundSeconds=int(time.perf_counter() - start_time),
-                playgroundComponentCount=components_count,
-                playgroundSuccess=False,
-                playgroundErrorMessage=str(exc),
+                playground_seconds=int(time.perf_counter() - start_time),
+                playground_component_count=components_count,
+                playground_success=False,
+                playground_error_message=str(exc),
             ),
         )
         if "stream or streaming set to True" in str(exc):
@@ -188,19 +188,19 @@ async def build_flow(
             background_tasks.add_task(
                 telemetry_service.log_package_playground,
                 PlaygroundPayload(
-                    playgroundSeconds=int(time.perf_counter() - start_time),
-                    playgroundComponentCount=components_count,
-                    playgroundSuccess=True,
+                    playground_seconds=int(time.perf_counter() - start_time),
+                    playground_component_count=components_count,
+                    playground_success=True,
                 ),
             )
         except Exception as exc:
             background_tasks.add_task(
                 telemetry_service.log_package_playground,
                 PlaygroundPayload(
-                    playgroundSeconds=int(time.perf_counter() - start_time),
-                    playgroundComponentCount=components_count,
-                    playgroundSuccess=False,
-                    playgroundErrorMessage=str(exc),
+                    playground_seconds=int(time.perf_counter() - start_time),
+                    playground_component_count=components_count,
+                    playground_success=False,
+                    playground_error_message=str(exc),
                 ),
             )
             if "stream or streaming set to True" in str(exc):
@@ -239,7 +239,7 @@ async def build_flow(
 
                 result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
             except Exception as exc:  # noqa: BLE001
-                if isinstance(exc, ComponentBuildException):
+                if isinstance(exc, ComponentBuildError):
                     params = exc.message
                     tb = exc.formatted_traceback
                 else:
@@ -301,20 +301,20 @@ async def build_flow(
             background_tasks.add_task(
                 telemetry_service.log_package_component,
                 ComponentPayload(
-                    componentName=vertex_id.split("-")[0],
-                    componentSeconds=int(time.perf_counter() - start_time),
-                    componentSuccess=valid,
-                    componentErrorMessage=error_message,
+                    component_name=vertex_id.split("-")[0],
+                    component_seconds=int(time.perf_counter() - start_time),
+                    component_success=valid,
+                    component_error_message=error_message,
                 ),
             )
         except Exception as exc:
             background_tasks.add_task(
                 telemetry_service.log_package_component,
                 ComponentPayload(
-                    componentName=vertex_id.split("-")[0],
-                    componentSeconds=int(time.perf_counter() - start_time),
-                    componentSuccess=False,
-                    componentErrorMessage=str(exc),
+                    component_name=vertex_id.split("-")[0],
+                    component_seconds=int(time.perf_counter() - start_time),
+                    component_success=False,
+                    component_error_message=str(exc),
                 ),
             )
             logger.exception("Error building Component")
@@ -524,7 +524,7 @@ async def build_vertex(
             top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
             result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
         except Exception as exc:  # noqa: BLE001
-            if isinstance(exc, ComponentBuildException):
+            if isinstance(exc, ComponentBuildError):
                 params = exc.message
                 tb = exc.formatted_traceback
             else:
@@ -590,20 +590,20 @@ async def build_vertex(
         background_tasks.add_task(
             telemetry_service.log_package_component,
             ComponentPayload(
-                componentName=vertex_id.split("-")[0],
-                componentSeconds=int(time.perf_counter() - start_time),
-                componentSuccess=valid,
-                componentErrorMessage=error_message,
+                component_name=vertex_id.split("-")[0],
+                component_seconds=int(time.perf_counter() - start_time),
+                component_success=valid,
+                component_error_message=error_message,
             ),
         )
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_component,
             ComponentPayload(
-                componentName=vertex_id.split("-")[0],
-                componentSeconds=int(time.perf_counter() - start_time),
-                componentSuccess=False,
-                componentErrorMessage=str(exc),
+                component_name=vertex_id.split("-")[0],
+                component_seconds=int(time.perf_counter() - start_time),
+                component_success=False,
+                component_error_message=str(exc),
             ),
         )
         logger.exception("Error building Component")
