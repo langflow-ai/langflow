@@ -12,6 +12,7 @@ import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { nodeColors } from "@/utils/styleUtils";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
 import _, { cloneDeep } from "lodash";
 import {
@@ -576,6 +577,11 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     [isAddingNote],
   );
 
+  const handleEdgeClick = (event, edge) => {
+    const color = nodeColors[edge?.data?.targetHandle?.inputTypes[0]] || "#999";
+    document.documentElement.style.setProperty("--selected", color);
+  };
+
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
       {showCanvas ? (
@@ -614,6 +620,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}
             onPaneMouseMove={onPaneMouseMove}
+            onEdgeClick={handleEdgeClick}
           >
             <Background className="" />
             {!view && (

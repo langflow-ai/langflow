@@ -327,6 +327,8 @@ export const nodeColors: { [char: string]: string } = {
   Embeddings: "#10b981",
   BaseLanguageModel: "#c026d3",
   LanguageModel: "#c026d3",
+  Agent: "#903BBE",
+  Tool: "#00fbfc",
 };
 
 export const nodeNames: { [char: string]: string } = {
