@@ -198,13 +198,13 @@ export default function ChatMessage({
 
     return (
         <>
-            <div className="flex-max-width px-2 py-6 pl-32 pr-9 group">
+            <div className="flex-max-width px-2 py-6 pl-32 pr-9">
                 <div
                     className={
                         "mr-3 mt-1 flex w-11/12 pb-3"
                     }
                 >
-                    <div className={cn("flex gap-4 w-full relative hover:bg-zinc-800 rounded-md p-2", editMessage ? "bg-zinc-800" : "")}>
+                    <div className={cn("flex gap-4 w-full relative group hover:bg-zinc-800 rounded-md p-2", editMessage ? "bg-zinc-800" : "")}>
                         <div
                             className={cn(
                                 "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl",
