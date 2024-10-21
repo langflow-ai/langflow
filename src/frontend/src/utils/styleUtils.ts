@@ -37,6 +37,7 @@ import {
   ChevronsUpDown,
   ChevronsUpDownIcon,
   Circle,
+  CircleCheckBig,
   CircleDot,
   CircleOff,
   Clipboard,
@@ -688,4 +689,5 @@ export const nodeIconsLucide: iconsType = {
   Table,
   Scan,
   GlobeOkIcon,
+  CircleCheckBig,
 };
