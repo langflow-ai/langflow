@@ -73,9 +73,8 @@ class URLComponent(Component):
 
     def fetch_content(self) -> list[Data]:
         # check if the urls are list or not
-        if not isinstance(self.urls, list):
-            self.urls = [self.urls]
-        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]
+        urls_list = [self.urls] if isinstance(self.urls, str) else self.urls
+        urls = [self.ensure_url(url.strip()) for url in urls_list if url.strip()]
         if self.format == "Raw HTML":
             loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
         else:

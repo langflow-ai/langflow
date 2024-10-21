@@ -371,12 +371,12 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     Attributes:
         field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.BOOLEAN.
         value (CoalesceBool): The value of the boolean input.
-        onChange (Optional[Callable[[CoalesceBool], None]]): The callback function to be called when the value changes.
+        on_change (Optional[Callable[[CoalesceBool], None]]): The callback function to be called when the value changes.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.BOOLEAN
     value: CoalesceBool = Field(default=False)
-    onChange: Callable[[CoalesceBool], None] | None = Field(default=None, exclude=True, repr=False)
+    on_change: Callable[[CoalesceBool], None] | None = Field(default=None, exclude=True, repr=False)
 
     _previous_value: CoalesceBool = PrivateAttr(default=False)
 
@@ -384,8 +384,8 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
 
     @model_validator(mode="after")
     def check_value_change(self):
-        if callable(self.onChange) and self._previous_value != self.value:
-            self.onChange(self.value)
+        if callable(self.on_change) and self._previous_value != self.value:
+            self.on_change(self.value)
         self._previous_value = self.value
         return self
 
@@ -394,7 +394,7 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
         new_instance = self.model_copy(deep=False)  # Shallow copy of the model
 
         # Manually copy mutable attributes
-        new_instance.onChange = copy.deepcopy(self.onChange, memo)
+        new_instance.on_change = copy.deepcopy(self.on_change, memo)
         new_instance._previous_value = copy.deepcopy(self._previous_value, memo)
         new_instance.value = copy.deepcopy(self.value, memo)
 

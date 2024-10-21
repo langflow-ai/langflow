@@ -856,7 +856,7 @@ class Component(CustomComponent):
                 display_name="Component as Tool",
                 advanced=True,
                 info="If True, the component will be treated as a tool.",
-                onChange=lambda value: self.update_build_config(
+                on_change=lambda value: self.update_build_config(
                     build_config=self.build_config(), field_value=value, field_name="set_as_tool"
                 ),
             )
