@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.agents.CrewAIAgent import CrewAIAgentComponent
 from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
 from langflow.components.helpers.SequentialTask import SequentialTaskComponent
@@ -12,7 +11,7 @@ from langflow.template.field.base import Output
 def test_set_invalid_output():
     chatinput = ChatInput()
     chatoutput = ChatOutput()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Method build_config is not a valid output of ChatInput"):
         chatoutput.set(input_value=chatinput.build_config)
 
 

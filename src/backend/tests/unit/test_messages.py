@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.memory import add_messages, add_messagetables, delete_messages, get_messages, store_message
 from langflow.schema.message import Message
 
@@ -10,30 +9,26 @@ from langflow.services.deps import session_scope
 from langflow.services.tracing.utils import convert_to_langchain_type
 
 
-@pytest.fixture()
+@pytest.fixture
 def created_message():
     with session_scope() as session:
         message = MessageCreate(text="Test message", sender="User", sender_name="User", session_id="session_id")
         messagetable = MessageTable.model_validate(message, from_attributes=True)
         messagetables = add_messagetables([messagetable], session)
-        message_read = MessageRead.model_validate(messagetables[0], from_attributes=True)
-        return message_read
+        return MessageRead.model_validate(messagetables[0], from_attributes=True)
 
 
-@pytest.fixture()
-def created_messages(session):
-    with session_scope() as session:
+@pytest.fixture
+def created_messages(session):  # noqa: ARG001
+    with session_scope() as _session:
         messages = [
             MessageCreate(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             MessageCreate(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
             MessageCreate(text="Test message 3", sender="User", sender_name="User", session_id="session_id2"),
         ]
         messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
-        messagetables = add_messagetables(messagetables, session)
-        messages_read = [
-            MessageRead.model_validate(messagetable, from_attributes=True) for messagetable in messagetables
-        ]
-        return messages_read
+        messagetables = add_messagetables(messagetables, _session)
+        return [MessageRead.model_validate(messagetable, from_attributes=True) for messagetable in messagetables]
 
 
 @pytest.mark.usefixtures("client")
@@ -87,10 +82,10 @@ def test_convert_to_langchain(method_name):
     def convert(value):
         if method_name == "message":
             return value.to_lc_message()
-        elif method_name == "convert_to_langchain_type":
+        if method_name == "convert_to_langchain_type":
             return convert_to_langchain_type(value)
-        else:
-            raise ValueError(f"Invalid method: {method_name}")
+        msg = f"Invalid method: {method_name}"
+        raise ValueError(msg)
 
     lc_message = convert(Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"))
     assert lc_message.content == "Test message 1"

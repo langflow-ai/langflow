@@ -1,12 +1,11 @@
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, ANY
+from unittest.mock import ANY, Mock, patch
 
 import httpx
 import pytest
 import respx
 from httpx import Response
-
 from langflow.components import data
 
 
@@ -163,16 +162,16 @@ def test_directory_without_mocks():
     directory_component = data.DirectoryComponent()
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        (Path(temp_dir) / "test.txt").write_text("test")
+        (Path(temp_dir) / "test.txt").write_text("test", encoding="utf-8")
         # also add a json file
-        (Path(temp_dir) / "test.json").write_text('{"test": "test"}')
+        (Path(temp_dir) / "test.json").write_text('{"test": "test"}', encoding="utf-8")
 
         directory_component.set_attributes({"path": str(temp_dir), "use_multithreading": False})
         results = directory_component.load_directory()
         assert len(results) == 2
         values = ["test", '{"test":"test"}']
         assert all(result.text in values for result in results), [
-            (len(result.text), len(val)) for result, val in zip(results, values)
+            (len(result.text), len(val)) for result, val in zip(results, values, strict=True)
         ]
 
     # in ../docs/docs/components there are many mdx files

@@ -1,10 +1,10 @@
-from langflow.utils.util_strings import truncate_long_strings
-from langflow.utils.constants import MAX_TEXT_LENGTH
 import pytest
+from langflow.utils.constants import MAX_TEXT_LENGTH
+from langflow.utils.util_strings import truncate_long_strings
 
 
 @pytest.mark.parametrize(
-    "input_data, max_length, expected",
+    ("input_data", "max_length", "expected"),
     [
         # Test case 1: Simple string truncation
         ({"key": "a" * 100}, 10, {"key": "a" * 10 + "..."}),

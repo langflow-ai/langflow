@@ -21,7 +21,7 @@ def load_file_into_dict(file_path: str) -> dict:
         raise FileNotFoundError(msg)
 
     # Files names are UUID, so we can't find the extension
-    with _file_path.open() as file:
+    with _file_path.open(encoding="utf-8") as file:
         try:
             data = json.load(file)
         except json.JSONDecodeError:

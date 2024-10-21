@@ -132,7 +132,7 @@ def read_flows(
     settings_service: SettingsService = Depends(get_settings_service),
     remove_example_flows: bool = False,
     components_only: bool = False,
-    get_all: bool = False,
+    get_all: bool = True,
     folder_id: UUID | None = None,
     params: Params = Depends(),
     header_flows: bool = False,
@@ -144,14 +144,18 @@ def read_flows(
         session (Session): The database session.
         settings_service (SettingsService): The settings service.
         components_only (bool, optional): Whether to return only components. Defaults to False.
-        get_all (bool, optional): Whether to return all flows without pagination. Defaults to False.
+
+        get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.
+        **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**
+
         folder_id (UUID, optional): The folder ID. Defaults to None.
         params (Params): Pagination parameters.
         remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
         header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.
 
     Returns:
-        Union[list[FlowRead], Page[FlowRead]]: A list of flows or a paginated response containing the list of flows.
+        list[FlowRead] | Page[FlowRead] | list[FlowHeader]
+        A list of flows or a paginated response containing the list of flows or a list of flow headers.
     """
     try:
         auth_settings = settings_service.auth_settings
@@ -161,6 +165,12 @@ def read_flows(
 
         starter_folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
         starter_folder_id = starter_folder.id if starter_folder else None
+
+        if not starter_folder and not default_folder:
+            raise HTTPException(
+                status_code=404,
+                detail="Starter folder and default folder not found. Please create a folder and add flows to it.",
+            )
 
         if not folder_id:
             folder_id = default_folder_id
@@ -178,9 +188,6 @@ def read_flows(
         if components_only:
             stmt = stmt.where(Flow.is_component == True)  # noqa: E712
 
-        if not get_all:
-            stmt = stmt.where(Flow.folder_id == folder_id)
-
         if get_all:
             flows = session.exec(stmt).all()
             flows = validate_is_component(flows)
@@ -194,6 +201,8 @@ def read_flows(
                     for flow in flows
                 ]
             return flows
+
+        stmt = stmt.where(Flow.folder_id == folder_id)
         return paginate(session, stmt, params=params)
 
     except Exception as e:

@@ -1,8 +1,8 @@
-import pytest
 import threading
-from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import pytest
+from langflow.services.telemetry.opentelemetry import OpenTelemetry
 
 fixed_labels = {"flow_id": "this_flow_id", "service": "this", "user": "that"}
 
@@ -72,9 +72,9 @@ def test_missing_labels(opentelemetry_instance):
     with pytest.raises(ValueError, match="Labels must be provided for the metric"):
         opentelemetry_instance.up_down_counter("num_files_uploaded", 1, None)
     with pytest.raises(ValueError, match="Labels must be provided for the metric"):
-        opentelemetry_instance.update_gauge(metric_name="num_files_uploaded", value=1.0, labels=dict())
+        opentelemetry_instance.update_gauge(metric_name="num_files_uploaded", value=1.0, labels={})
     with pytest.raises(ValueError, match="Labels must be provided for the metric"):
-        opentelemetry_instance.observe_histogram("num_files_uploaded", 1, dict())
+        opentelemetry_instance.observe_histogram("num_files_uploaded", 1, {})
 
 
 def test_multithreaded_singleton():

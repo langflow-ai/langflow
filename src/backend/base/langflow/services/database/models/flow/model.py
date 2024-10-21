@@ -56,6 +56,7 @@ class FlowBase(SQLModel):
         return v
 
     @field_validator("icon_bg_color")
+    @classmethod
     def validate_icon_bg_color(cls, v):
         if v is not None and not isinstance(v, str):
             msg = "Icon background color must be a string"
@@ -72,6 +73,7 @@ class FlowBase(SQLModel):
         return v
 
     @field_validator("icon")
+    @classmethod
     def validate_icon_atr(cls, v):
         #   const emojiRegex = /\p{Emoji}/u;
         # const isEmoji = emojiRegex.test(data?.node?.icon!);
@@ -111,7 +113,8 @@ class FlowBase(SQLModel):
         return v
 
     @field_validator("data")
-    def validate_json(v):
+    @classmethod
+    def validate_json(cls, v):
         if not v:
             return v
         if not isinstance(v, dict):
@@ -130,7 +133,7 @@ class FlowBase(SQLModel):
 
     # updated_at can be serialized to JSON
     @field_serializer("updated_at")
-    def serialize_datetime(value):
+    def serialize_datetime(self, value):
         if isinstance(value, datetime):
             # I'm getting 2024-05-29T17:57:17.631346
             # and I want 2024-05-29T17:57:17-05:00
@@ -141,6 +144,7 @@ class FlowBase(SQLModel):
         return value
 
     @field_validator("updated_at", mode="before")
+    @classmethod
     def validate_dt(cls, v):
         if v is None:
             return v
@@ -192,19 +196,30 @@ class FlowRead(FlowBase):
 
 
 class FlowHeader(BaseModel):
+    """Model representing a header for a flow - Without the data.
+
+    Attributes:
+    -----------
+    id : UUID
+        Unique identifier for the flow.
+    name : str
+        The name of the flow.
+    folder_id : UUID | None, optional
+        The ID of the folder containing the flow. None if not associated with a folder.
+    is_component : bool | None, optional
+        Flag indicating whether the flow is a component.
+    endpoint_name : str | None, optional
+        The name of the endpoint associated with this flow.
+    description : str | None, optional
+        A description of the flow.
+    """
+
     id: UUID
     name: str
     folder_id: UUID | None = None
     is_component: bool | None = None
     endpoint_name: str | None = None
     description: str | None = None
-
-
-class PaginatedFlowResponse(BaseModel):
-    flows: list[FlowRead]
-    total: int
-    page_size: int
-    page_index: int
 
 
 class FlowUpdate(SQLModel):
