@@ -20,7 +20,7 @@ import useAlertStore from "../../../../../stores/alertStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
 import { EditMessageButton } from "./components/editMessageButton/newMessageOptions";
-import EditMessageField from "./components/editMessageField";
+import EditMessageField from "./components/editMessageField/newEditMessageField";
 import FileCardWrapper from "./components/fileCardWrapper";
 
 export default function ChatMessage({
@@ -204,7 +204,7 @@ export default function ChatMessage({
                         "mr-3 mt-1 flex w-11/12 pb-3"
                     }
                 >
-                    <div className="flex gap-4 w-full relative hover:bg-zinc-800 rounded-md p-2">
+                    <div className={cn("flex gap-4 w-full relative hover:bg-zinc-800 rounded-md p-2", editMessage ? "bg-zinc-800" : "")}>
                         <div
                             className={cn(
                                 "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl",
@@ -217,7 +217,7 @@ export default function ChatMessage({
                                 alt={!chat.isSend ? "robot_image" : "male_technology"}
                             />
                         </div>
-                        <div className="flex flex-col">
+                        <div className="flex flex-col w-full">
                             <div>
                                 <div
                                     className="max-w-full truncate font-semibold pb-2"
@@ -268,7 +268,7 @@ export default function ChatMessage({
                                                             className="h-8 w-8 animate-pulse"
                                                         />
                                                     ) : (
-                                                        <div onDoubleClick={() => setEditMessage(true)}>
+                                                        <div className="w-full" onDoubleClick={() => setEditMessage(true)}>
                                                             {editMessage ? (
                                                                 <EditMessageField
                                                                     key={`edit-message-${chat.id}`}
@@ -370,7 +370,7 @@ export default function ChatMessage({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="form-modal-chat-text-position min-w-96 flex-grow">
+                                <div className="form-modal-chat-text-position min-w-96 flex-grow w-full">
                                     {template ? (
                                         <>
                                             <button
@@ -426,7 +426,7 @@ export default function ChatMessage({
                                             </span>
                                         </>
                                     ) : (
-                                        <div className="flex flex-col">
+                                        <div className="flex flex-col w-full">
                                             {editMessage ? (
                                                 <EditMessageField
                                                     key={`edit-message-${chat.id}`}
