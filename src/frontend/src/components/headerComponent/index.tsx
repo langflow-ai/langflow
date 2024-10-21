@@ -100,6 +100,7 @@ export default function Header(): JSX.Element {
             className="gap-2"
             variant={
               location.pathname.includes("/all") ||
+              location.pathname.includes("/flows") ||
               location.pathname.includes("/components")
                 ? "primary"
                 : "secondary"
