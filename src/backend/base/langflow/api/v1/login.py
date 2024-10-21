@@ -4,8 +4,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import Session
 
+from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
 from langflow.services.auth.utils import (
     authenticate_user,
@@ -15,7 +15,7 @@ from langflow.services.auth.utils import (
 )
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_session, get_settings_service, get_variable_service
+from langflow.services.deps import get_settings_service, get_variable_service
 
 router = APIRouter(tags=["Login"])
 
@@ -24,7 +24,7 @@ router = APIRouter(tags=["Login"])
 async def login_to_get_access_token(
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db: Annotated[Session, Depends(get_session)],
+    db: DbSession,
 ):
     auth_settings = get_settings_service().auth_settings
     try:
@@ -78,7 +78,7 @@ async def login_to_get_access_token(
 
 
 @router.get("/auto_login")
-async def auto_login(response: Response, db: Annotated[Session, Depends(get_session)]):
+async def auto_login(response: Response, db: DbSession):
     auth_settings = get_settings_service().auth_settings
 
     if auth_settings.AUTO_LOGIN:
@@ -124,7 +124,7 @@ async def auto_login(response: Response, db: Annotated[Session, Depends(get_sess
 async def refresh_token(
     request: Request,
     response: Response,
-    db: Annotated[Session, Depends(get_session)],
+    db: DbSession,
 ):
     auth_settings = get_settings_service().auth_settings
 

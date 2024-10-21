@@ -5,15 +5,14 @@ from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFil
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy import or_, update
-from sqlmodel import Session, select
+from sqlmodel import select
 
-from langflow.api.utils import cascade_delete_flow, custom_params
+from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.schemas import FlowListCreate, FlowListReadWithFolderName
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
-from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -24,8 +23,6 @@ from langflow.services.database.models.folder.model import (
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
-from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session
 
 router = APIRouter(prefix="/folders", tags=["Folders"])
 
@@ -33,9 +30,9 @@ router = APIRouter(prefix="/folders", tags=["Folders"])
 @router.post("/", response_model=FolderRead, status_code=201)
 def create_folder(
     *,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
     folder: FolderCreate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveUser,
 ):
     try:
         new_folder = Folder.model_validate(folder, from_attributes=True)
@@ -87,8 +84,8 @@ def create_folder(
 @router.get("/", response_model=list[FolderRead], status_code=200)
 def read_folders(
     *,
-    session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    session: DbSession,
+    current_user: CurrentActiveUser,
 ):
     try:
         folders = session.exec(
@@ -105,9 +102,9 @@ def read_folders(
 @router.get("/{folder_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
 def read_folder(
     *,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
     folder_id: str,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveUser,
     params: Annotated[Params | None, Depends(custom_params)],
     is_component: bool = False,
     is_flow: bool = False,
@@ -150,10 +147,10 @@ def read_folder(
 @router.patch("/{folder_id}", response_model=FolderRead, status_code=200)
 def update_folder(
     *,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
     folder_id: str,
     folder: FolderUpdate,  # Assuming FolderUpdate is a Pydantic model defining updatable fields
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveUser,
 ):
     try:
         existing_folder = session.exec(
@@ -211,9 +208,9 @@ def update_folder(
 @router.delete("/{folder_id}", status_code=204)
 async def delete_folder(
     *,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
     folder_id: str,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveUser,
 ):
     try:
         flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)).all()
@@ -239,9 +236,9 @@ async def delete_folder(
 @router.get("/download/{folder_id}", response_model=FlowListReadWithFolderName, status_code=200)
 async def download_file(
     *,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
     folder_id: str,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveUser,
 ):
     """Download all flows from folder."""
     try:
@@ -260,9 +257,9 @@ async def download_file(
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)
 async def upload_file(
     *,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
     file: Annotated[UploadFile, File(...)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveUser,
 ):
     """Upload flows from a file."""
     contents = await file.read()

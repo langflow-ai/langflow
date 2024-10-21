@@ -8,15 +8,16 @@ import typing
 import uuid
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, HTTPException
 from fastapi.responses import StreamingResponse
 from loguru import logger
-from sqlmodel import Session
 from starlette.background import BackgroundTask
 from starlette.responses import ContentStream
 from starlette.types import Receive
 
 from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
     build_and_cache_graph_from_data,
     build_graph_from_data,
     build_graph_from_db,
@@ -39,9 +40,7 @@ from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
-from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models import User
 from langflow.services.deps import get_chat_service, get_session, get_telemetry_service
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
@@ -75,7 +74,7 @@ async def retrieve_vertices_order(
     data: Annotated[FlowDataRequest | None, Body(embed=True)] | None = None,
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
 ) -> VerticesOrderResponse:
     """Retrieve the vertices order for a given flow.
 
@@ -150,8 +149,8 @@ async def build_flow(
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
     log_builds: bool | None = True,
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    session: Annotated[Session, Depends(get_session)],
+    current_user: CurrentActiveUser,
+    session: DbSession,
 ):
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
@@ -465,7 +464,7 @@ async def build_vertex(
     background_tasks: BackgroundTasks,
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
     files: list[str] | None = None,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveUser,
 ) -> VertexBuildResponse:
     """Build a vertex instead of the entire graph.
 

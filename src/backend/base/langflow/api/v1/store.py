@@ -4,9 +4,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 
-from langflow.api.utils import check_langflow_version
+from langflow.api.utils import CurrentActiveUser, check_langflow_version
 from langflow.services.auth import utils as auth_utils
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_store_service
 from langflow.services.store.exceptions import CustomError
 from langflow.services.store.schema import (
@@ -22,7 +21,7 @@ router = APIRouter(prefix="/store", tags=["Components Store"])
 
 
 def get_user_store_api_key(
-    user: Annotated[User, Depends(auth_utils.get_current_active_user)],
+    user: CurrentActiveUser,
     settings_service=Depends(get_settings_service),
 ):
     if not user.store_api_key:
@@ -34,7 +33,7 @@ def get_user_store_api_key(
 
 
 def get_optional_user_store_api_key(
-    user: Annotated[User, Depends(auth_utils.get_current_active_user)],
+    user: CurrentActiveUser,
     settings_service=Depends(get_settings_service),
 ):
     if not user.store_api_key:

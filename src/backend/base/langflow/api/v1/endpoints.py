@@ -8,9 +8,9 @@ from uuid import UUID
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import select
 
-from langflow.api.utils import parse_value
+from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -40,7 +40,6 @@ from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
-    get_session,
     get_session_service,
     get_settings_service,
     get_task_service,
@@ -363,7 +362,7 @@ async def webhook_run_flow(
 @router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 async def experimental_run_flow(
     *,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
     flow_id: UUID,
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
@@ -556,7 +555,7 @@ def get_version():
 @router.post("/custom_component", status_code=HTTPStatus.OK)
 async def custom_component(
     raw_code: CustomComponentRequest,
-    user: Annotated[User, Depends(get_current_active_user)],
+    user: CurrentActiveUser,
 ) -> CustomComponentResponse:
     component = Component(_code=raw_code.code)
 
@@ -571,7 +570,7 @@ async def custom_component(
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
-    user: Annotated[User, Depends(get_current_active_user)],
+    user: CurrentActiveUser,
 ):
     """Update a custom component with the provided code request.
 
