@@ -148,13 +148,12 @@ def run(
     ),
 ):
     """Run Langflow."""
-    configure(log_level=log_level, log_file=log_file)
-    set_var_for_macos_issue()
-
     if env_file:
         load_dotenv(env_file, override=True)
-        logger.debug(f"Loading config from file: '{env_file}'")
 
+    configure(log_level=log_level, log_file=log_file)
+    logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
+    set_var_for_macos_issue()
     settings_service = get_settings_service()
 
     frame = inspect.currentframe()
