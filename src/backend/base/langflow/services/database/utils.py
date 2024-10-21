@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
 
 
-def initialize_database(*, fix_migration: bool = False):
+def initialize_database(*, fix_migration: bool = False) -> None:
     logger.debug("Initializing database")
     from langflow.services.deps import get_db_service
 

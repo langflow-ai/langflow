@@ -16,7 +16,7 @@ class AssistantsRun(ComponentWithCache):
     display_name = "Run Assistant"
     description = "Executes an Assistant Run against a thread"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.client = get_patched_openai_client(self._shared_component_cache)
         self.thread_id = None
@@ -26,7 +26,7 @@ class AssistantsRun(ComponentWithCache):
         build_config: dotdict,
         field_value: Any,
         field_name: str | None = None,
-    ):
+    ) -> None:
         if field_name == "thread_id":
             if field_value is None:
                 thread = self.client.beta.threads.create()
@@ -75,7 +75,7 @@ class AssistantsRun(ComponentWithCache):
         self.client.beta.threads.messages.create(thread_id=self.thread_id, role="user", content=self.user_message)
 
         class EventHandler(AssistantEventHandler):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__()
 
             def on_exception(self, exception: Exception) -> None:

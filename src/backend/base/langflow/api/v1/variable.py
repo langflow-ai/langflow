@@ -95,7 +95,7 @@ def delete_variable(
     variable_id: UUID,
     current_user: User = Depends(get_current_active_user),
     variable_service: VariableService = Depends(get_variable_service),
-):
+) -> None:
     """Delete a variable."""
     try:
         variable_service.delete_variable_by_id(user_id=current_user.id, variable_id=variable_id, session=session)

@@ -36,7 +36,7 @@ async def get_vertex_builds(
 async def delete_vertex_builds(
     flow_id: Annotated[UUID, Query()],
     session: Annotated[Session, Depends(get_session)],
-):
+) -> None:
     try:
         delete_vertex_builds_by_flow_id(session, flow_id)
     except Exception as e:
@@ -75,7 +75,7 @@ async def get_messages(
 async def delete_messages(
     message_ids: list[UUID],
     session: Annotated[Session, Depends(get_session)],
-):
+) -> None:
     try:
         session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]
         session.commit()

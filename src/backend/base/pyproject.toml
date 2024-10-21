@@ -28,6 +28,7 @@ exclude = ["langflow/alembic"]
 line-length = 120
 
 [tool.ruff.lint]
+flake8-annotations.mypy-init-return = true
 flake8-bugbear.extend-immutable-calls = [
     "fastapi.Depends",
     "fastapi.File",

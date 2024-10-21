@@ -19,7 +19,7 @@ def get_memory_key(langchain_object):
     return None  # or some other default value or action
 
 
-def update_memory_keys(langchain_object, possible_new_mem_key):
+def update_memory_keys(langchain_object, possible_new_mem_key) -> None:
     """Update the memory keys in the LangChain object's memory attribute.
 
     Given a LangChain object and a possible new memory key, this function updates the input and output keys in the

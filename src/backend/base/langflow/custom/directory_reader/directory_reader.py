@@ -13,7 +13,7 @@ class CustomComponentPathValueError(ValueError):
 
 
 class StringCompressor:
-    def __init__(self, input_string):
+    def __init__(self, input_string) -> None:
         """Initialize StringCompressor with a string to compress."""
         self.input_string = input_string
 
@@ -39,7 +39,7 @@ class DirectoryReader:
     # the custom components from this directory.
     base_path = ""
 
-    def __init__(self, directory_path, *, compress_code_field=False):
+    def __init__(self, directory_path, *, compress_code_field=False) -> None:
         """Initialize DirectoryReader with a directory path and a flag indicating whether to compress the code."""
         self.directory_path = directory_path
         self.compress_code_field = compress_code_field
@@ -76,7 +76,7 @@ class DirectoryReader:
         logger.debug(f'Filtered components {"with errors" if with_errors else ""}: {len(filtered)}')
         return {"menu": filtered}
 
-    def validate_code(self, file_content):
+    def validate_code(self, file_content) -> bool:
         """Validate the Python code by trying to parse it with ast.parse."""
         try:
             ast.parse(file_content)

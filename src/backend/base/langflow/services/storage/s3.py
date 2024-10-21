@@ -8,14 +8,14 @@ from .service import StorageService
 class S3StorageService(StorageService):
     """A service class for handling operations with AWS S3 storage."""
 
-    async def __init__(self, session_service, settings_service):
+    def __init__(self, session_service, settings_service) -> None:
         """Initialize the S3 storage service with session and settings services."""
         super().__init__(session_service, settings_service)
         self.bucket = "langflow"
         self.s3_client = boto3.client("s3")
         self.set_ready()
 
-    async def save_file(self, folder: str, file_name: str, data):
+    async def save_file(self, folder: str, file_name: str, data) -> None:
         """Save a file to the S3 bucket.
 
         :param folder: The folder in the bucket to save the file.
@@ -66,7 +66,7 @@ class S3StorageService(StorageService):
         logger.info(f"{len(files)} files listed in folder {folder}.")
         return files
 
-    async def delete_file(self, folder: str, file_name: str):
+    async def delete_file(self, folder: str, file_name: str) -> None:
         """Delete a file from the S3 bucket.
 
         :param folder: The folder in the bucket where the file is stored.
@@ -80,6 +80,6 @@ class S3StorageService(StorageService):
             logger.exception(f"Error deleting file {file_name} from folder {folder}")
             raise
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for S3 storage at the moment.

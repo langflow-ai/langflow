@@ -414,7 +414,7 @@ def update_settings(
     auto_saving_interval: int = 1000,
     health_check_max_retries: int = 5,
     max_file_size_upload: int = 100,
-):
+) -> None:
     """Update the settings from a config file."""
     from langflow.services.utils import initialize_settings_service
 

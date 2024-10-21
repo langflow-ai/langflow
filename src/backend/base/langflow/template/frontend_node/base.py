@@ -107,7 +107,7 @@ class FrontendNode(BaseModel):
     def add_extra_base_classes(self) -> None:
         pass
 
-    def set_base_classes_from_outputs(self):
+    def set_base_classes_from_outputs(self) -> None:
         self.base_classes = [output_type for output in self.outputs for output_type in output.types]
 
     def validate_component(self) -> None:
@@ -180,13 +180,13 @@ class FrontendNode(BaseModel):
         kwargs["template"] = template
         return cls(**kwargs)
 
-    def set_field_value_in_template(self, field_name, value):
+    def set_field_value_in_template(self, field_name, value) -> None:
         for field in self.template.fields:
             if field.name == field_name:
                 field.value = value
                 break
 
-    def set_field_load_from_db_in_template(self, field_name, value):
+    def set_field_load_from_db_in_template(self, field_name, value) -> None:
         for field in self.template.fields:
             if field.name == field_name and hasattr(field, "load_from_db"):
                 field.load_from_db = value

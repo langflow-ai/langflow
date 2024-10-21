@@ -42,7 +42,7 @@ class LCModelComponent(Component):
     def _get_exception_message(self, e: Exception):
         return str(e)
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         # At least these two outputs must be defined
         required_output_methods = ["text_response", "build_model"]
         output_names = [output.name for output in self.outputs]

@@ -2,10 +2,10 @@ from typing import Any
 
 
 class BasePlugin:
-    def initialize(self):
+    def initialize(self) -> None:
         pass
 
-    def teardown(self):
+    def teardown(self) -> None:
         pass
 
     def get(self) -> Any:

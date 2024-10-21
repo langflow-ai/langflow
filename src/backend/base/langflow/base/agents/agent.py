@@ -64,7 +64,7 @@ class LCAgentComponent(Component):
         self.status = message
         return message
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         required_output_methods = ["build_agent"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:

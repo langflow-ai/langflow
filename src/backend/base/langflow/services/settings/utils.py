@@ -4,7 +4,7 @@ from pathlib import Path
 from loguru import logger
 
 
-def set_secure_permissions(file_path: Path):
+def set_secure_permissions(file_path: Path) -> None:
     if platform.system() in {"Linux", "Darwin"}:  # Unix/Linux/Mac
         file_path.chmod(0o600)
     elif platform.system() == "Windows":

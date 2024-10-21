@@ -71,7 +71,7 @@ class LCVectorStoreComponent(Component):
         ),
     ]
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         # At least these three outputs must be defined
         required_output_methods = [
             "build_base_retriever",

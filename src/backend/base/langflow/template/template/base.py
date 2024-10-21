@@ -16,15 +16,15 @@ class Template(BaseModel):
     def process_fields(
         self,
         format_field_func: Callable | None = None,
-    ):
+    ) -> None:
         if format_field_func:
             for field in self.fields:
                 format_field_func(field, self.type_name)
 
-    def sort_fields(self):
+    def sort_fields(self) -> None:
         # first sort alphabetically
         # then sort fields so that fields that have .field_type in DIRECT_TYPES are first
-        self.fields.sort(key=lambda x: x.name)
+        self.fields.sort(key=lambda x: x.name or "")
         self.fields.sort(
             key=lambda x: x.field_type in DIRECT_TYPES if hasattr(x, "field_type") else False, reverse=False
         )

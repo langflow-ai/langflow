@@ -28,7 +28,7 @@ class KubernetesSecretService(VariableService, Service):
         self.kubernetes_secrets = KubernetesSecretManager()
 
     @override
-    def initialize_user_variables(self, user_id: UUID | str, session: Session):
+    def initialize_user_variables(self, user_id: UUID | str, session: Session) -> None:
         # Check for environment variables that should be stored in the database
         should_or_should_not = "Should" if self.settings_service.settings.store_environment_variables else "Should not"
         logger.info(f"{should_or_should_not} store environment variables in the kubernetes.")

@@ -36,7 +36,7 @@ def get_langfuse_callback(trace_id):
     return None
 
 
-def flush_langfuse_callback_if_present(callbacks: list[BaseCallbackHandler | CallbackHandler]):
+def flush_langfuse_callback_if_present(callbacks: list[BaseCallbackHandler | CallbackHandler]) -> None:
     """If langfuse callback is present, run callback.langfuse.flush()."""
     for callback in callbacks:
         if hasattr(callback, "langfuse") and hasattr(callback.langfuse, "flush"):

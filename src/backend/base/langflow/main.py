@@ -40,7 +40,7 @@ MAX_PORT = 65535
 
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app):
+    def __init__(self, app) -> None:
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next):
@@ -224,7 +224,7 @@ def create_app():
     return app
 
 
-def setup_sentry(app: FastAPI):
+def setup_sentry(app: FastAPI) -> None:
     settings = get_settings_service().settings
     if settings.sentry_dsn:
         import sentry_sdk
@@ -238,7 +238,7 @@ def setup_sentry(app: FastAPI):
         app.add_middleware(SentryAsgiMiddleware)
 
 
-def setup_static_files(app: FastAPI, static_files_dir: Path):
+def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
     """Setup the static files directory.
 
     Args:
