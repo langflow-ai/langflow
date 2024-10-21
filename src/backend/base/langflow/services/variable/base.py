@@ -90,6 +90,7 @@ class VariableService(Service):
         user_id: UUID | str,
         name: str,
         value: str,
+        *,
         default_fields: list[str],
         _type: str,
         session: Session,
