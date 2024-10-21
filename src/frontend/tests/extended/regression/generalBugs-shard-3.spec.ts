@@ -173,7 +173,7 @@ test("should copy code from playground modal", async ({ page }) => {
     }
   }
 
-  await visibleElementHandle.hover();
+  // await visibleElementHandle.hover();
   await page.mouse.up();
 
   await page.getByLabel("fit view").click();
