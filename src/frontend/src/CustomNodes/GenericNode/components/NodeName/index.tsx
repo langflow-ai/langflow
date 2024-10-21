@@ -28,7 +28,7 @@ export default function NodeName({
   }, [display_name]);
 
   return inputName ? (
-    <div className="w-full">
+    <div className="m-[1px] w-full">
       <InputComponent
         onBlur={() => {
           setInputName(false);

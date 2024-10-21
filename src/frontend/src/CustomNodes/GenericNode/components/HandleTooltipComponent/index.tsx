@@ -18,7 +18,7 @@ export default function HandleTooltipComponent({
   const tooltips = tooltipTitle.split("\n");
   const plural = tooltips.length > 1 ? "s" : "";
   return (
-    <div className="py-1.5 font-medium text-muted-foreground">
+    <div className="py-1.5 font-medium text-background">
       {isSameNode ? (
         "Can't connect to the same node"
       ) : (
@@ -26,15 +26,18 @@ export default function HandleTooltipComponent({
           {isConnecting ? (
             isCompatible ? (
               <span>
-                <span className="font-semibold text-foreground">Connect</span>{" "}
+                <span className="font-semibold text-background">Connect</span>{" "}
                 to
               </span>
             ) : (
               <span>Incompatible with</span>
             )
           ) : (
-            <span className="text-foreground">
-              {isInput ? `Input${plural}` : `Output${plural}`}:{" "}
+            <span className="text-background">
+              {isInput
+                ? `Input${plural} type${plural}`
+                : `Output${plural} type${plural}`}
+              :{" "}
             </span>
           )}
           {tooltips.map((word, index) => (
@@ -50,7 +53,7 @@ export default function HandleTooltipComponent({
         </div>
       )}
       {!isConnecting && (
-        <div className="mt-2 flex flex-col gap-0.5 text-xs">
+        <div className="mt-2 flex flex-col gap-0.5 text-xs text-background">
           <div>
             <b>Drag</b> to connect compatible {!isInput ? "inputs" : "outputs"}
           </div>

@@ -108,7 +108,7 @@ export default function NodeStatus({
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
       validationStatus,
-      isDark,
+      isBuilding,
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
@@ -194,7 +194,7 @@ export default function NodeStatus({
         >
           <div className="cursor-help">{iconStatus}</div>
         </ShadTooltip>
-        <ShadTooltip content={"Run component"} darkTooltip>
+        <ShadTooltip content={"Run component"} contrastTooltip>
           <div
             ref={divRef}
             className="button-run-bg"

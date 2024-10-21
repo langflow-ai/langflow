@@ -140,7 +140,7 @@ export default function NodeOutputField({
                   ? "Show output"
                   : "Hide output"
             }
-            darkTooltip
+            contrastTooltip
           >
             <div className="flex flex-1">
               <Button
@@ -185,7 +185,7 @@ export default function NodeOutputField({
               />
             </span>
             <ShadTooltip
-              darkTooltip
+              contrastTooltip
               content={
                 displayOutputPreview
                   ? unknownOutput

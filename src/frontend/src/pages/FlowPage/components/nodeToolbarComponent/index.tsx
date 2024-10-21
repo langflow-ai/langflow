@@ -314,6 +314,7 @@ export default function NodeToolbarComponent({
         <span className="isolate inline-flex rounded-md shadow-sm">
           {hasCode && (
             <ShadTooltip
+              contrastTooltip
               content={
                 <ShortcutDisplay
                   {...shortcuts.find(
@@ -336,6 +337,7 @@ export default function NodeToolbarComponent({
           )}
           {nodeLength > 0 && (
             <ShadTooltip
+              contrastTooltip
               content={
                 <ShortcutDisplay
                   {...shortcuts.find(
@@ -361,6 +363,7 @@ export default function NodeToolbarComponent({
           )}
 
           <ShadTooltip
+            contrastTooltip
             content={
               <ShortcutDisplay
                 {...shortcuts.find(
@@ -395,7 +398,7 @@ export default function NodeToolbarComponent({
           </ShadTooltip>
 
           <Select onValueChange={handleSelectChange} value="">
-            <ShadTooltip content="All" side="top">
+            <ShadTooltip content="All" side="top" contrastTooltip>
               <SelectTrigger>
                 <div>
                   <div

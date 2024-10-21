@@ -38,6 +38,8 @@ export default function InputComponent({
   onChangeFolderName,
   nodeStyle = false,
 }: InputComponentType): JSX.Element {
+  console.log(value, nodeStyle);
+
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);

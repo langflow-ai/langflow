@@ -191,6 +191,7 @@ export default function HandleRenderComponent({
         setOpen={setOpenTooltip}
         styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
         delayDuration={1000}
+        contrastTooltip
         content={
           <HandleTooltipComponent
             isInput={left}

@@ -121,7 +121,7 @@ const CustomInputPopover = ({
           }}
           data-testid={editNode ? id + "-edit" : id}
         />
-        {value && selectedOption !== "" && (
+        {value && selectedOption !== "" && nodeStyle && (
           <div
             className="bg-accent-emerald-foreground pointer-events-none absolute left-1 top-1 h-[calc(100%-9px)] rounded-sm opacity-30"
             style={{ width: `${inputWidth}px` }}

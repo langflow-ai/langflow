@@ -409,7 +409,7 @@ export default function GenericNode({
                       ? TOOLTIP_HIDDEN_OUTPUTS
                       : TOOLTIP_OPEN_HIDDEN_OUTPUTS
                   }
-                  darkTooltip
+                  contrastTooltip
                 >
                   <div
                     className={cn(

@@ -12,7 +12,7 @@ const ShadTooltip: React.FC<ShadToolTipType> = ({
   delayDuration = 500,
   open,
   setOpen,
-  darkTooltip = false,
+  contrastTooltip = false,
 }) => {
   if (!content) {
     return <>{children}</>;
@@ -21,7 +21,7 @@ const ShadTooltip: React.FC<ShadToolTipType> = ({
   const tooltipContentClass = cn(
     "max-w-96",
     styleClasses,
-    darkTooltip ? "bg-black text-white dark:bg-white dark:text-black" : "",
+    contrastTooltip ? "bg-black text-white dark:bg-white dark:text-black" : "",
   );
 
   return (

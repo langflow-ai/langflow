@@ -1,3 +1,4 @@
+import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ReactElement, ReactNode } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
@@ -9,6 +10,7 @@ import {
 } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
+import { ColumnField } from "../utils/functions";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
@@ -51,7 +53,6 @@ export type DropDownComponent = {
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
-  name?: string;
 };
 export type ParameterComponentType = {
   selected?: boolean;
@@ -88,7 +89,7 @@ export type NodeOutputFieldComponentType = {
   type: string | undefined;
   outputName?: string;
   outputProxy?: OutputFieldProxyType;
-  lastOutput: boolean;
+  lastOutput?: boolean;
 };
 
 export type NodeInputFieldComponentType = {
@@ -245,7 +246,7 @@ export type ShadToolTipType = {
   children?: ReactElement;
   delayDuration?: number;
   styleClasses?: string;
-  darkTooltip?: boolean;
+  contrastTooltip?: boolean;
 };
 
 export type TextHighlightType = {
