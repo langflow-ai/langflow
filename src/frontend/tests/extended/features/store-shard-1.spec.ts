@@ -109,8 +109,11 @@ test("should like and add components and flows", async ({ page }) => {
   await page.waitForTimeout(1000);
   await page.getByText("Component Installed Successfully").isVisible();
 
-  await page.getByText("My Collection").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page.waitForSelector("text=Website Content QA", { timeout: 30000 });
 

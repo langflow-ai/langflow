@@ -99,7 +99,11 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   ).toBe(true);
 
   //user must see just your own flows
-  await page.getByText("My Collection", { exact: true }).last().click();
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page.waitForSelector('[id="new-project-btn"]', {
     timeout: 30000,
@@ -154,7 +158,7 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.getByTestId("user-profile-settings").click();
 
-  await page.getByText("Log Out", { exact: true }).click();
+  await page.getByText("Logout", { exact: true }).click();
 
   await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
 
@@ -231,7 +235,7 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.getByTestId("user-profile-settings").click();
 
-  await page.getByText("Log Out", { exact: true }).click();
+  await page.getByText("Logout", { exact: true }).click();
 
   await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
 

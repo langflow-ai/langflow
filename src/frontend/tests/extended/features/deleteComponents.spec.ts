@@ -33,7 +33,11 @@ test("should delete a component", async ({ page }) => {
   await page.getByText("Store").nth(0).click();
   await page.getByTestId("install-Basic RAG").click();
   await page.waitForTimeout(5000);
-  await page.getByText("My Collection").nth(0).click();
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("icon-ChevronLeft").first().click();
   await page.getByText("Components").first().click();
   await page.getByText("Basic RAG").first().isVisible();
 

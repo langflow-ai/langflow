@@ -56,8 +56,11 @@ test("should be able to share a component on the store by clicking on the share 
 
   await page.waitForTimeout(1000);
 
-  await page.getByText("My Collection", { exact: true }).click();
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
 
+  await page.getByTestId("icon-ChevronLeft").first().click();
   await page.waitForTimeout(1000);
 
   await page.getByText("New Project", { exact: true }).click();
