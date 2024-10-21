@@ -59,7 +59,11 @@ export const AccountMenu = () => {
                 Account Settings
               </HeaderMenuItemLink>
             ) : (
-              <HeaderMenuItemButton onClick={() => navigate("/settings")}>
+              <HeaderMenuItemButton
+                onClick={() => {
+                  navigate("/settings");
+                }}
+              >
                 Settings
               </HeaderMenuItemButton>
             )}

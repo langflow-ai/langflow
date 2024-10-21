@@ -112,7 +112,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
       <div className="header-menu-bar">
         {currentFolder?.name && (
           <>
-            <div className="whitespace-nowrap font-normal text-zinc-500 dark:text-zinc-400">
+            <div
+              className="cursor-pointer whitespace-nowrap font-normal text-zinc-500 dark:text-zinc-400"
+              onClick={() => {
+                navigate("/");
+              }}
+            >
               {currentFolder?.name}
             </div>
             <div className="px-2 font-normal text-zinc-500">/</div>
