@@ -56,6 +56,11 @@ jobs:
         if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'false' }}
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
+          # TODO: Problem is 
+          # A) If we use `python ./scripts/...` then we don't have our deps installed
+          # B) If we use `uv run ./scripts/...` then we `uv run` "builds", and it requires
+          # the pyproject.toml/package metadata/lockfile to be in sync, and later on when we're
+          # updating the tomls for nightlies, it will complain and fail. 
           BASE_TAG="$(python ./scripts/ci/pypi_nightly_tag.py base)"
           echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
           echo "base_tag=$BASE_TAG"
