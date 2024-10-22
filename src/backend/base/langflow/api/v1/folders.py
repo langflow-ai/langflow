@@ -100,7 +100,7 @@ async def read_folders(
 
 
 @router.get("/{folder_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
-def read_folder(
+async def read_folder(
     *,
     session: DbSession,
     folder_id: str,
