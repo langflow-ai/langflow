@@ -57,7 +57,7 @@ class AuthSettings(BaseSettings):
         extra = "ignore"
         env_prefix = "LANGFLOW_"
 
-    def reset_credentials(self):
+    def reset_credentials(self) -> None:
         self.SUPERUSER = DEFAULT_SUPERUSER
         self.SUPERUSER_PASSWORD = DEFAULT_SUPERUSER_PASSWORD
 

@@ -14,7 +14,7 @@ class LCToolComponent(Component):
         Output(name="api_build_tool", display_name="Tool", method="build_tool"),
     ]
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         required_output_methods = ["run_model", "build_tool"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
