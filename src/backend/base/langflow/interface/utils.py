@@ -21,7 +21,7 @@ def load_file_into_dict(file_path: str) -> dict:
         raise FileNotFoundError(msg)
 
     # Files names are UUID, so we can't find the extension
-    with _file_path.open() as file:
+    with _file_path.open(encoding="utf-8") as file:
         try:
             data = json.load(file)
         except json.JSONDecodeError:
@@ -89,7 +89,7 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
     return variables
 
 
-def setup_llm_caching():
+def setup_llm_caching() -> None:
     """Setup LLM caching."""
     settings_service = get_settings_service()
     try:
@@ -100,7 +100,7 @@ def setup_llm_caching():
         logger.opt(exception=True).warning("Could not setup LLM caching.")
 
 
-def set_langchain_cache(settings):
+def set_langchain_cache(settings) -> None:
     from langchain.globals import set_llm_cache
 
     from langflow.interface.importing.utils import import_class

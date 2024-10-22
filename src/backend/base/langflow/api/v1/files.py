@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow
-from langflow.services.deps import get_session, get_storage_service
+from langflow.services.deps import get_session, get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.services.storage.utils import build_content_type_from_extension
 
@@ -39,14 +39,15 @@ def get_flow_id(
 
 @router.post("/upload/{flow_id}", status_code=HTTPStatus.CREATED)
 async def upload_file(
+    *,
     file: UploadFile,
     flow_id: Annotated[UUID, Depends(get_flow_id)],
     current_user=Depends(get_current_active_user),
     session=Depends(get_session),
-    storage_service: StorageService = Depends(get_storage_service),
-):
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+) -> UploadFileResponse:
     try:
-        max_file_size_upload = get_storage_service().settings_service.settings.max_file_size_upload
+        max_file_size_upload = get_settings_service().settings.max_file_size_upload
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -71,7 +72,7 @@ async def upload_file(
         full_file_name = f"{timestamp}_{file_name}"
         folder = flow_id_str
         await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)
-        return UploadFileResponse(flowId=flow_id_str, file_path=f"{folder}/{full_file_name}")
+        return UploadFileResponse(flow_id=flow_id_str, file_path=f"{folder}/{full_file_name}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -106,9 +107,8 @@ async def download_file(
 
 
 @router.get("/images/{flow_id}/{file_name}")
-async def download_image(
-    file_name: str, flow_id: UUID, storage_service: Annotated[StorageService, Depends(get_storage_service)]
-):
+async def download_image(file_name: str, flow_id: UUID):
+    storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
     flow_id_str = str(flow_id)
 
@@ -135,11 +135,11 @@ async def download_image(
 async def download_profile_picture(
     folder_name: str,
     file_name: str,
-    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
+        storage_service = get_storage_service()
         extension = file_name.split(".")[-1]
-        config_dir = get_storage_service().settings_service.settings.config_dir
+        config_dir = storage_service.settings_service.settings.config_dir
         config_path = Path(config_dir)  # type: ignore[arg-type]
         folder_path = config_path / "profile_pictures" / folder_name
         content_type = build_content_type_from_extension(extension)
@@ -151,9 +151,10 @@ async def download_profile_picture(
 
 
 @router.get("/profile_pictures/list")
-async def list_profile_pictures(storage_service: Annotated[StorageService, Depends(get_storage_service)]):
+async def list_profile_pictures():
     try:
-        config_dir = get_storage_service().settings_service.settings.config_dir
+        storage_service = get_storage_service()
+        config_dir = storage_service.settings_service.settings.config_dir
         config_path = Path(config_dir)  # type: ignore[arg-type]
 
         people_path = config_path / "profile_pictures/People"

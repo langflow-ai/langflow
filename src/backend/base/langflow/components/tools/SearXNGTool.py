@@ -129,11 +129,11 @@ class SearXNGToolComponent(LCToolComponent):
             "categories": (list[str], Field(default=[], description="The categories to search in.")),
         }
 
-        SearxSearchSchema = create_model("SearxSearchSchema", **schema_fields)
+        searx_search_schema = create_model("SearxSearchSchema", **schema_fields)
 
         return StructuredTool.from_function(
             func=_local["SearxSearch"].search,
-            args_schema=SearxSearchSchema,
+            args_schema=searx_search_schema,
             name="searxng_search_tool",
             description="A tool that searches for tools using SearXNG.\nThe available categories are: "
             + ", ".join(self.categories),

@@ -189,6 +189,13 @@ class Settings(BaseSettings):
         logger.debug(f"Setting user agent to {value}")
         return value
 
+    @field_validator("variables_to_get_from_environment", mode="before")
+    @classmethod
+    def set_variables_to_get_from_environment(cls, value):
+        if isinstance(value, str):
+            value = value.split(",")
+        return list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
+
     @field_validator("log_file", mode="before")
     @classmethod
     def set_log_file(cls, value):
@@ -292,6 +299,7 @@ class Settings(BaseSettings):
         return value
 
     @field_validator("components_path", mode="before")
+    @classmethod
     def set_components_path(cls, value):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
@@ -318,12 +326,12 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
-    def update_from_yaml(self, file_path: str, *, dev: bool = False):
+    def update_from_yaml(self, file_path: str, *, dev: bool = False) -> None:
         new_settings = load_settings_from_yaml(file_path)
         self.components_path = new_settings.components_path or []
         self.dev = dev
 
-    def update_settings(self, **kwargs):
+    def update_settings(self, **kwargs) -> None:
         logger.debug("Updating settings")
         for key, value in kwargs.items():
             # value may contain sensitive information, so we don't want to log it
@@ -366,7 +374,7 @@ class Settings(BaseSettings):
         return (MyCustomSource(settings_cls),)
 
 
-def save_settings_to_yaml(settings: Settings, file_path: str):
+def save_settings_to_yaml(settings: Settings, file_path: str) -> None:
     with Path(file_path).open("w", encoding="utf-8") as f:
         settings_dict = settings.model_dump()
         yaml.dump(settings_dict, f)
@@ -381,7 +389,7 @@ def load_settings_from_yaml(file_path: str) -> Settings:
     else:
         _file_path = Path(file_path)
 
-    with _file_path.open() as f:
+    with _file_path.open(encoding="utf-8") as f:
         settings_dict = yaml.safe_load(f)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 

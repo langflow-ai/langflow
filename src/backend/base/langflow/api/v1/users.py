@@ -26,13 +26,12 @@ router = APIRouter(tags=["Users"], prefix="/users")
 def add_user(
     user: UserCreate,
     session: Annotated[Session, Depends(get_session)],
-    settings_service=Depends(get_settings_service),
 ) -> User:
     """Add a new user to the database."""
     new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_password_hash(user.password)
-        new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
+        new_user.is_active = get_settings_service().auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
         session.commit()
         session.refresh(new_user)
@@ -54,11 +53,10 @@ def read_current_user(
     return current_user
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(get_current_active_superuser)])
 def read_all_users(
     skip: int = 0,
     limit: int = 10,
-    _: Session = Depends(get_current_active_superuser),
     session: Session = Depends(get_session),
 ) -> UsersResponse:
     """Retrieve a list of users from the database with pagination."""
