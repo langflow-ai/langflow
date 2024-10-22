@@ -635,5 +635,5 @@ async def get_config():
 
 
 @router.get("/sidebar_categories")
-def get_sidebar_categories() -> SidebarCategoriesResponse:
+async def get_sidebar_categories() -> SidebarCategoriesResponse:
     return SidebarCategoriesResponse(categories=SIDEBAR_CATEGORIES)
