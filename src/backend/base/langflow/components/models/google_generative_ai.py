@@ -80,5 +80,5 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             top_k=top_k or None,
             top_p=top_p or None,
             n=n or 1,
-            google_api_key=SecretStr(google_api_key),
+            google_api_key=SecretStr(google_api_key).get_secret_value(),
         )
