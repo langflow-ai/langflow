@@ -1,4 +1,5 @@
 import pytest
+
 from langflow.components.prototypes.UpdateData import UpdateDataComponent
 from langflow.schema import Data
 
@@ -48,9 +49,7 @@ def test_update_build_config_exceed_limit(update_data_component):
             "value": False,
         },
     }
-    with pytest.raises(
-        ValueError, match="Number of fields cannot exceed 15. Try using a Component to combine two Data."
-    ):
+    with pytest.raises(ValueError, match="Number of fields cannot exceed 15."):
         update_data_component.update_build_config(build_config, 16, "number_of_fields")
 
 
@@ -100,6 +99,6 @@ def test_validate_text_key_invalid(update_data_component):
         update_data_component.validate_text_key(data)
 
     expected_error_message = (
-        f"Text Key: {update_data_component.text_key} not found in the Data keys: {','.join(data.data.keys())}"
+        f"Text Key: '{update_data_component.text_key}' not found in the Data keys: {', '.join(data.data.keys())}"
     )
     assert str(exc_info.value) == expected_error_message
