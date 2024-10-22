@@ -46,7 +46,7 @@ async def create_api_key_route(
 
 
 @router.delete("/{api_key_id}", dependencies=[Depends(auth_utils.get_current_active_user)])
-def delete_api_key_route(
+async def delete_api_key_route(
     api_key_id: UUID,
     db: DbSession,
 ):
