@@ -33,7 +33,7 @@ async def get_api_keys_route(
 
 
 @router.post("/")
-def create_api_key_route(
+async def create_api_key_route(
     req: ApiKeyCreate,
     current_user: CurrentActiveUser,
     db: DbSession,
