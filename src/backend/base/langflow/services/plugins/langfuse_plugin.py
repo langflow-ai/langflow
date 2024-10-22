@@ -22,7 +22,7 @@ class LangfuseInstance:
         return cls._instance
 
     @classmethod
-    def create(cls):
+    def create(cls) -> None:
         try:
             logger.debug("Creating Langfuse instance")
             from langfuse import Langfuse
@@ -44,13 +44,13 @@ class LangfuseInstance:
             cls._instance = None
 
     @classmethod
-    def update(cls):
+    def update(cls) -> None:
         logger.debug("Updating Langfuse instance")
         cls._instance = None
         cls.create()
 
     @classmethod
-    def teardown(cls):
+    def teardown(cls) -> None:
         logger.debug("Tearing down Langfuse instance")
         if cls._instance is not None:
             cls._instance.flush()
@@ -58,10 +58,10 @@ class LangfuseInstance:
 
 
 class LangfusePlugin(CallbackPlugin):
-    def initialize(self):
+    def initialize(self) -> None:
         LangfuseInstance.create()
 
-    def teardown(self):
+    def teardown(self) -> None:
         LangfuseInstance.teardown()
 
     def get(self):

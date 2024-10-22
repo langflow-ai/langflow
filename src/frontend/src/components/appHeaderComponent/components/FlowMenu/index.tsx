@@ -1,11 +1,4 @@
-import { useState } from "react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "../../../ui/dropdown-menu";
+import { useMemo, useState } from "react";
 
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -13,21 +6,30 @@ import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useHotkeys } from "react-hotkeys-hook";
-import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
-import { SAVED_HOVER } from "../../../../constants/constants";
-import ExportModal from "../../../../modals/exportModal";
-import FlowLogsModal from "../../../../modals/flowLogsModal";
-import FlowSettingsModal from "../../../../modals/flowSettingsModal";
-import ToolbarSelectItem from "../../../../pages/FlowPage/components/nodeToolbarComponent/toolbarSelectItem";
-import useAlertStore from "../../../../stores/alertStore";
-import useFlowStore from "../../../../stores/flowStore";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { useShortcutsStore } from "../../../../stores/shortcuts";
-import { useTypesStore } from "../../../../stores/typesStore";
-import { cn } from "../../../../utils/utils";
-import IconComponent from "../../../genericIconComponent";
-import ShadTooltip from "../../../shadTooltipComponent";
-import { Button } from "../../../ui/button";
+
+import IconComponent from "@/components/genericIconComponent";
+import ShadTooltip from "@/components/shadTooltipComponent";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { UPLOAD_ERROR_ALERT } from "@/constants/alerts_constants";
+import { SAVED_HOVER } from "@/constants/constants";
+import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
+import ExportModal from "@/modals/exportModal";
+import FlowLogsModal from "@/modals/flowLogsModal";
+import FlowSettingsModal from "@/modals/flowSettingsModal";
+import ToolbarSelectItem from "@/pages/FlowPage/components/nodeToolbarComponent/toolbarSelectItem";
+import useAlertStore from "@/stores/alertStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import useFlowStore from "@/stores/flowStore";
+import { useShortcutsStore } from "@/stores/shortcuts";
+import { useTypesStore } from "@/stores/typesStore";
+import { cn } from "@/utils/utils";
 
 export const MenuBar = ({}: {}): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
@@ -51,6 +53,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const onFlowPage = useFlowStore((state) => state.onFlowPage);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
+  const { data: folders } = useGetFoldersQuery();
+
+  const currentFolder = useMemo(
+    () => folders?.find((f) => f.id === currentFlow?.folder_id),
+    [folders, currentFlow?.folder_id],
+  );
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow);
@@ -102,23 +110,37 @@ export const MenuBar = ({}: {}): JSX.Element => {
   return currentFlow && onFlowPage ? (
     <div className="flex items-center">
       <div className="header-menu-bar">
+        {currentFolder?.name && (
+          <>
+            <div
+              className="cursor-pointer whitespace-nowrap font-normal text-zinc-500 dark:text-zinc-400"
+              onClick={() => {
+                navigate("/");
+              }}
+            >
+              {currentFolder?.name}
+            </div>
+            <div className="px-2 font-normal text-zinc-500">/</div>
+          </>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              asChild
-              variant="primary"
-              size="sm"
-              data-testid="flow-configuration-button"
-            >
-              <div className="header-menu-bar-display">
-                <div className="header-menu-flow-name" data-testid="flow_name">
+            <div className="header-menu-bar-display-2">
+              <div
+                className="header-menu-flow-name-2 flex"
+                data-testid="flow-configuration-button"
+              >
+                <div
+                  className="whitespace-nowrap font-semibold text-black dark:text-[white]"
+                  data-testid="flow_name"
+                >
                   {currentFlow.name}
                 </div>
-                <IconComponent name="ChevronDown" className="h-4 w-4" />
               </div>
-            </Button>
+              <IconComponent name="ChevronDown" className="w-4 text-zinc-500" />
+            </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-44">
+          <DropdownMenuContent className="w-44 bg-white dark:bg-black">
             <DropdownMenuLabel>Options</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => {
@@ -290,19 +312,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
           styleClasses="cursor-default"
         >
           <div className="ml-2 flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-            <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-              {(saveLoading || !changesNotSaved || isBuilding) && (
-                <IconComponent
-                  name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
-                  className={cn(
-                    "h-4 w-4",
-                    isBuilding || saveLoading
-                      ? "animate-spin"
-                      : "animate-wiggle",
-                  )}
-                />
-              )}
-
+            <div className="flex cursor-default items-center gap-2 text-sm text-zinc-500 transition-all">
               <div>{printByBuildStatus()}</div>
             </div>
             <button

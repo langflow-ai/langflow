@@ -21,9 +21,9 @@ def create_variable(
     session: Session = Depends(get_session),
     variable: VariableCreate,
     current_user: User = Depends(get_current_active_user),
-    variable_service: DatabaseVariableService = Depends(get_variable_service),
 ):
     """Create a new variable."""
+    variable_service = get_variable_service()
     if not variable.name and not variable.value:
         raise HTTPException(status_code=400, detail="Variable name and value cannot be empty")
 
@@ -95,7 +95,7 @@ def delete_variable(
     variable_id: UUID,
     current_user: User = Depends(get_current_active_user),
     variable_service: VariableService = Depends(get_variable_service),
-):
+) -> None:
     """Delete a variable."""
     try:
         variable_service.delete_variable_by_id(user_id=current_user.id, variable_id=variable_id, session=session)

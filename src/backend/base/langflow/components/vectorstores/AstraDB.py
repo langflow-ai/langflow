@@ -434,7 +434,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
         return vector_store
 
-    def _add_documents_to_vector_store(self, vector_store):
+    def _add_documents_to_vector_store(self, vector_store) -> None:
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
@@ -453,7 +453,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         else:
             logger.debug("No documents to add to the Vector Store.")
 
-    def _map_search_type(self):
+    def _map_search_type(self) -> str:
         if self.search_type == "Similarity with score threshold":
             return "similarity_score_threshold"
         if self.search_type == "MMR (Max Marginal Relevance)":

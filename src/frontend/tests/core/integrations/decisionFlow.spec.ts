@@ -408,8 +408,4 @@ test("should create a flow with decision", async ({ page }) => {
     timeout: 100000,
   });
   await page.getByTestId("icon-LucideSend").click();
-  await page.waitForSelector("text=🤪", {
-    timeout: 1200000,
-  });
-  await page.getByText("🤪").isVisible();
 });

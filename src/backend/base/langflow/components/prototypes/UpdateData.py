@@ -106,7 +106,7 @@ class UpdateDataComponent(Component):
                 data.update(_value_dict)
         return data
 
-    def validate_text_key(self, data: Data):
+    def validate_text_key(self, data: Data) -> None:
         """This function validates that the Text Key is one of the keys in the Data."""
         data_keys = data.data.keys()
         if self.text_key not in data_keys and self.text_key != "":

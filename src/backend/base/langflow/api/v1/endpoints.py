@@ -16,7 +16,6 @@ from langflow.api.v1.schemas import (
     CustomComponentRequest,
     CustomComponentResponse,
     InputValueRequest,
-    ProcessResponse,
     RunResponse,
     SidebarCategoriesResponse,
     SimplifiedAPIRequest,
@@ -47,9 +46,7 @@ from langflow.services.deps import (
     get_task_service,
     get_telemetry_service,
 )
-from langflow.services.session.service import SessionService
 from langflow.services.telemetry.schema import RunPayload
-from langflow.services.telemetry.service import TelemetryService
 from langflow.utils.constants import SIDEBAR_CATEGORIES
 from langflow.utils.version import get_version_info
 
@@ -60,20 +57,17 @@ router = APIRouter(tags=["Base"])
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
-async def get_all(
-    *,
-    settings_service=Depends(get_settings_service),
-):
+async def get_all():
     from langflow.interface.types import get_and_cache_all_types_dict
 
     try:
-        return await get_and_cache_all_types_dict(settings_service=settings_service)
+        return await get_and_cache_all_types_dict(settings_service=get_settings_service())
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def validate_input_and_tweaks(input_request: SimplifiedAPIRequest):
+def validate_input_and_tweaks(input_request: SimplifiedAPIRequest) -> None:
     # If the input_value is not None and the input_type is "chat"
     # then we need to check the tweaks if the ChatInput component is present
     # and if its input_value is not None
@@ -165,7 +159,7 @@ async def simple_run_flow_task(
         logger.exception(f"Error running flow {flow.id} task")
 
 
-@router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)  # noqa: RUF100, FAST003
+@router.post("/run/{flow_id_or_name}", response_model_exclude_none=True)  # noqa: RUF100, FAST003
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,
@@ -173,8 +167,7 @@ async def simplified_run_flow(
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: UserRead = Depends(api_key_security),
-    telemetry_service: TelemetryService = Depends(get_telemetry_service),
-):
+) -> RunResponse:
     """Executes a specified flow by ID.
 
     Executes a specified flow by ID with input customization, performance enhancements through caching,
@@ -239,6 +232,7 @@ async def simplified_run_flow(
     supporting a wide range of applications by allowing for dynamic input and output configuration along with
     performance optimizations through session management and caching.
     """
+    telemetry_service = get_telemetry_service()
     input_request = input_request if input_request is not None else SimplifiedAPIRequest()
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
@@ -297,7 +291,6 @@ async def webhook_run_flow(
     user: Annotated[User, Depends(get_user_by_flow_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
-    telemetry_service: Annotated[TelemetryService, Depends(get_telemetry_service)],
 ):
     """Run a flow using a webhook request.
 
@@ -306,7 +299,6 @@ async def webhook_run_flow(
         user (User): The flow user.
         request (Request): The incoming HTTP request.
         background_tasks (BackgroundTasks): The background tasks manager.
-        telemetry_service (TelemetryService): The telemetry service.
 
     Returns:
         dict: A dictionary containing the status of the task.
@@ -314,6 +306,7 @@ async def webhook_run_flow(
     Raises:
         HTTPException: If the flow is not found or if there is an error processing the request.
     """
+    telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
     logger.debug("Received webhook request")
     error_msg = ""
@@ -378,8 +371,7 @@ async def experimental_run_flow(
     stream: Annotated[bool, Body(embed=True)] = False,
     session_id: Annotated[None | str, Body(embed=True)] = None,
     api_key_user: UserRead = Depends(api_key_security),
-    session_service: SessionService = Depends(get_session_service),
-):
+) -> RunResponse:
     """Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
 
     This endpoint supports running flows with caching to enhance performance and efficiency.
@@ -397,7 +389,6 @@ async def experimental_run_flow(
     - `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow
       execution.
     - `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.
-    - `session_service` (SessionService): The session service object for managing flow sessions.
 
     ### Returns:
     A `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow
@@ -427,6 +418,7 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
     catering to diverse application requirements.
     """  # noqa: E501
+    session_service = get_session_service()
     flow_id_str = str(flow_id)
     if outputs is None:
         outputs = []
@@ -490,15 +482,13 @@ async def experimental_run_flow(
 
 @router.post(
     "/predict/{flow_id}",
-    response_model=ProcessResponse,
     dependencies=[Depends(api_key_security)],
 )
 @router.post(
     "/process/{flow_id}",
-    response_model=ProcessResponse,
     dependencies=[Depends(api_key_security)],
 )
-async def process():
+async def process() -> None:
     """Endpoint to process an input with a given flow_id."""
     # Raise a depreciation warning
     logger.warning(
@@ -511,8 +501,8 @@ async def process():
     )
 
 
-@router.get("/task/{task_id}", response_model=TaskStatusResponse)
-async def get_task_status(task_id: str):
+@router.get("/task/{task_id}")
+async def get_task_status(task_id: str) -> TaskStatusResponse:
     task_service = get_task_service()
     task = task_service.get_task(task_id)
     result = None
@@ -538,13 +528,12 @@ async def get_task_status(task_id: str):
 
 @router.post(
     "/upload/{flow_id}",
-    response_model=UploadFileResponse,
     status_code=HTTPStatus.CREATED,
 )
 async def create_upload_file(
     file: UploadFile,
     flow_id: UUID,
-):
+) -> UploadFileResponse:
     try:
         flow_id_str = str(flow_id)
         file_path = save_uploaded_file(file, folder_name=flow_id_str)
@@ -564,11 +553,11 @@ def get_version():
     return get_version_info()
 
 
-@router.post("/custom_component", status_code=HTTPStatus.OK, response_model=CustomComponentResponse)
+@router.post("/custom_component", status_code=HTTPStatus.OK)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: Annotated[User, Depends(get_current_active_user)],
-):
+) -> CustomComponentResponse:
     component = Component(_code=raw_code.code)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
@@ -646,6 +635,6 @@ def get_config():
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.get("/sidebar_categories", response_model=SidebarCategoriesResponse)
-def get_sidebar_categories():
+@router.get("/sidebar_categories")
+def get_sidebar_categories() -> SidebarCategoriesResponse:
     return SidebarCategoriesResponse(categories=SIDEBAR_CATEGORIES)

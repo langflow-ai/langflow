@@ -19,11 +19,11 @@ if TYPE_CHECKING:
 router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
 
-@router.get("/", response_model=ApiKeysResponse)
+@router.get("/")
 def get_api_keys_route(
     db: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(auth_utils.get_current_active_user)],
-):
+) -> ApiKeysResponse:
     try:
         user_id = current_user.id
         keys = get_api_keys(db, user_id)
@@ -33,12 +33,12 @@ def get_api_keys_route(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.post("/", response_model=UnmaskedApiKeyRead)
+@router.post("/")
 def create_api_key_route(
     req: ApiKeyCreate,
     current_user: Annotated[User, Depends(auth_utils.get_current_active_user)],
     db: Annotated[Session, Depends(get_session)],
-):
+) -> UnmaskedApiKeyRead:
     try:
         user_id = current_user.id
         return create_api_key(db, req, user_id=user_id)

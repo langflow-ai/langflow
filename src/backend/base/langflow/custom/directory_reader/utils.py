@@ -109,7 +109,7 @@ def create_invalid_component_template(component, component_name):
     return component_frontend_node.model_dump(by_alias=True, exclude_none=True)
 
 
-def log_invalid_component_details(component):
+def log_invalid_component_details(component) -> None:
     """Log details of an invalid component."""
     logger.debug(component)
     logger.debug(f"Component Path: {component.get('path', None)}")
