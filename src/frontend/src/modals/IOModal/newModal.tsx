@@ -26,7 +26,7 @@ import { NodeType } from "../../types/flow";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
-import SessionSelector from "./components/IOFieldView/components/sessionSelector";
+import SessionSelector from "./components/IOFieldView/components/sessionSelector/newSessionSelector";
 import SessionView from "./components/SessionView";
 import ChatView from "./components/chatView/newChatView";
 
