@@ -129,7 +129,6 @@ def read_flows(
     *,
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session),
-    settings_service: SettingsService = Depends(get_settings_service),
     remove_example_flows: bool = False,
     components_only: bool = False,
     get_all: bool = True,
@@ -158,7 +157,7 @@ def read_flows(
         A list of flows or a paginated response containing the list of flows or a list of flow headers.
     """
     try:
-        auth_settings = settings_service.auth_settings
+        auth_settings = get_settings_service().auth_settings
 
         default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
         default_folder_id = default_folder.id if default_folder else None
@@ -233,10 +232,9 @@ def read_flow(
     session: Session = Depends(get_session),
     flow_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    settings_service: SettingsService = Depends(get_settings_service),
 ):
     """Read a flow."""
-    if user_flow := _read_flow(session, flow_id, current_user, settings_service):
+    if user_flow := _read_flow(session, flow_id, current_user, get_settings_service()):
         return user_flow
     raise HTTPException(status_code=404, detail="Flow not found")
 
@@ -248,9 +246,9 @@ def update_flow(
     flow_id: UUID,
     flow: FlowUpdate,
     current_user: User = Depends(get_current_active_user),
-    settings_service=Depends(get_settings_service),
 ):
     """Update a flow."""
+    settings_service = get_settings_service()
     try:
         db_flow = _read_flow(
             session=session,
@@ -307,14 +305,13 @@ async def delete_flow(
     session: Session = Depends(get_session),
     flow_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    settings_service=Depends(get_settings_service),
 ):
     """Delete a flow."""
     flow = _read_flow(
         session=session,
         flow_id=flow_id,
         current_user=current_user,
-        settings_service=settings_service,
+        settings_service=get_settings_service(),
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")

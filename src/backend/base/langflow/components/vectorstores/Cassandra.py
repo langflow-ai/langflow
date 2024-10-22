@@ -206,7 +206,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             )
         return table
 
-    def _map_search_type(self):
+    def _map_search_type(self) -> str:
         if self.search_type == "Similarity with score threshold":
             return "similarity_score_threshold"
         if self.search_type == "MMR (Max Marginal Relevance)":
