@@ -361,7 +361,7 @@ class InterfaceVertex(ComponentVertex):
                 self.built_object = Data(text=message, data=self.artifacts)
             else:
                 self.built_object = message
-        self._built_result = self._built_object
+        self.built_result = self.built_object
 
     async def stream(self):
         iterator = self.params.get(INPUT_FIELD_NAME, None)

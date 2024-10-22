@@ -1127,7 +1127,7 @@ class Graph:
             vertex (Vertex): The vertex to be updated.
             other_vertex (Vertex): The vertex to update from.
         """
-        vertex.data = other_vertex.data
+        vertex.full_data = other_vertex.full_data
         vertex.parse_data()
         # Now we update the edges of the vertex
         self.update_edges_from_vertex(other_vertex)
@@ -1367,7 +1367,7 @@ class Graph:
                         vertex.artifacts = cached_vertex_dict["artifacts"]
                         vertex.built_object = cached_vertex_dict["built_object"]
                         vertex.built_result = cached_vertex_dict["built_result"]
-                        vertex.data = cached_vertex_dict["data"]
+                        vertex.full_data = cached_vertex_dict["full_data"]
                         vertex.results = cached_vertex_dict["results"]
                         try:
                             vertex.finalize_build()
@@ -1394,7 +1394,7 @@ class Graph:
                         "artifacts": vertex.artifacts,
                         "built_object": vertex.built_object,
                         "built_result": vertex.built_result,
-                        "data": vertex.data,
+                        "full_data": vertex.full_data,
                     }
 
                     await set_cache(key=vertex.id, data=vertex_dict)
