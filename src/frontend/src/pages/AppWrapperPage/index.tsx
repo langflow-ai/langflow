@@ -11,7 +11,6 @@ export function AppWrapperPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <CustomHeader />
       <ErrorBoundary
         onReset={() => {
           // any reset function
