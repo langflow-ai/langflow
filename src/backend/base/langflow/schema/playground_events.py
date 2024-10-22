@@ -90,7 +90,7 @@ def create_message(
     icon: str | None = None,
     background_color: str = "#FFFFFF",
     content_blocks: list[ContentBlock] | None = None,
-    allow_markdown: bool | None = None,
+    allow_markdown: bool = True,
     sender_name: str | None = None,
     files: list[str] | None = None,
     timestamp: str | None = None,
