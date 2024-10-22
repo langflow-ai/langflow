@@ -194,7 +194,7 @@ async def flow_function({func_args}):
 
     compiled_func = compile(func_body, "<string>", "exec")
     local_scope: dict = {}
-    exec(compiled_func, globals(), local_scope)
+    exec(compiled_func, globals(), local_scope)  # noqa: S102
     return local_scope["flow_function"]
 
 

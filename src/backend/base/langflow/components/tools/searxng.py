@@ -61,7 +61,7 @@ class SearXNGToolComponent(LCToolComponent):
         try:
             url = f"{field_value}/config"
 
-            response = requests.get(url=url, headers=self.search_headers.copy())
+            response = requests.get(url=url, headers=self.search_headers.copy(), timeout=10)
             data = None
             if response.headers.get("Content-Encoding") == "zstd":
                 data = json.loads(response.content)
@@ -105,6 +105,7 @@ class SearXNGToolComponent(LCToolComponent):
                             "language": SearxSearch._language,
                             "format": "json",
                         },
+                        timeout=10,
                     ).json()
 
                     num_results = min(SearxSearch._max_results, len(response["results"]))

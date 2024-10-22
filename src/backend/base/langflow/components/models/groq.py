@@ -68,7 +68,7 @@ class GroqModel(LCModelComponent):
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             model_list = response.json()
             return [model["id"] for model in model_list.get("data", [])]

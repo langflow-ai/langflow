@@ -109,7 +109,7 @@ class NotionListPages(LCToolComponent):
                 return f"Invalid JSON format for query: {e}"
 
         try:
-            response = requests.post(url, headers=headers, json=query_payload)
+            response = requests.post(url, headers=headers, json=query_payload, timeout=10)
             response.raise_for_status()
             results = response.json()
             return results["results"]

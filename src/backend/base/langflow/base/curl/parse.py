@@ -53,7 +53,7 @@ def normalize_newlines(multiline_text):
 
 def parse_curl_command(curl_command):
     tokens = shlex.split(normalize_newlines(curl_command))
-    tokens = [token for token in tokens if token and token != " "]
+    tokens = [token for token in tokens if token and token != " "]  # noqa: S105
     if tokens and "curl" not in tokens[0]:
         msg = "Invalid curl command"
         raise ValueError(msg)
@@ -78,7 +78,7 @@ def parse_curl_command(curl_command):
     i = 0
     while i < len(tokens):
         token = tokens[i]
-        if token == "-X":
+        if token == "-X":  # noqa: S105
             i += 1
             args["method"] = tokens[i].lower()
             method_on_curl = tokens[i].lower()
@@ -91,7 +91,7 @@ def parse_curl_command(curl_command):
         elif token in {"-H", "--header"}:
             i += 1
             args["headers"].append(tokens[i])
-        elif token == "--compressed":
+        elif token == "--compressed":  # noqa: S105
             args["compressed"] = True
         elif token in {"-k", "--insecure"}:
             args["insecure"] = True
