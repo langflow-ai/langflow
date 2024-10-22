@@ -1,13 +1,13 @@
 import uuid
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from loguru import logger
 from pydantic import BaseModel
-from sqlmodel import Session, select
+from sqlmodel import select
 
+from langflow.api.utils import DbSession
 from langflow.services.database.models.flow import Flow
-from langflow.services.deps import get_chat_service, get_session
+from langflow.services.deps import get_chat_service
 
 health_check_router = APIRouter(tags=["Health Check"])
 
@@ -36,10 +36,10 @@ async def health():
 
 # /health_check evaluates key services
 # It's a reliable health check for a langflow instance
-@health_check_router.get("/health_check", response_model=HealthResponse)
+@health_check_router.get("/health_check")
 async def health_check(
-    session: Annotated[Session, Depends(get_session)],
-):
+    session: DbSession,
+) -> HealthResponse:
     response = HealthResponse()
     # use a fixed valid UUId that UUID collision is very unlikely
     user_id = "da93c2bd-c857-4b10-8c8c-60988103320f"

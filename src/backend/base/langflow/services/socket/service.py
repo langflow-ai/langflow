@@ -17,7 +17,7 @@ class SocketIOService(Service):
     def __init__(self, cache_service: "CacheService"):
         self.cache_service = cache_service
 
-    def init(self, sio: socketio.AsyncServer):
+    def init(self, sio: socketio.AsyncServer) -> None:
         # Registering event handlers
         self.sio = sio
         if self.sio:
@@ -28,32 +28,32 @@ class SocketIOService(Service):
             self.sio.on("build_vertex")(self.on_build_vertex)
         self.sessions = {}  # type: dict[str, dict]
 
-    async def emit_error(self, sid, error):
+    async def emit_error(self, sid, error) -> None:
         await self.sio.emit("error", to=sid, data=error)
 
-    async def connect(self, sid, environ):
+    async def connect(self, sid, environ) -> None:
         logger.info(f"Socket connected: {sid}")
         self.sessions[sid] = environ
 
-    async def disconnect(self, sid):
+    async def disconnect(self, sid) -> None:
         logger.info(f"Socket disconnected: {sid}")
         self.sessions.pop(sid, None)
 
-    async def message(self, sid, data=None):
+    async def message(self, sid, data=None) -> None:
         # Logic for handling messages
         await self.emit_message(to=sid, data=data or {"foo": "bar", "baz": [1, 2, 3]})
 
-    async def emit_message(self, to, data):
+    async def emit_message(self, to, data) -> None:
         # Abstracting sio.emit
         await self.sio.emit("message", to=to, data=data)
 
-    async def emit_token(self, to, data):
+    async def emit_token(self, to, data) -> None:
         await self.sio.emit("token", to=to, data=data)
 
-    async def on_get_vertices(self, sid, flow_id):
+    async def on_get_vertices(self, sid, flow_id) -> None:
         await get_vertices(self.sio, sid, flow_id, get_chat_service())
 
-    async def on_build_vertex(self, sid, flow_id, vertex_id):
+    async def on_build_vertex(self, sid, flow_id, vertex_id) -> None:
         await build_vertex(
             sio=self.sio,
             sid=sid,
