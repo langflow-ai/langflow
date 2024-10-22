@@ -19,7 +19,7 @@ router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
 
 @router.get("/")
-def get_api_keys_route(
+async def get_api_keys_route(
     db: DbSession,
     current_user: CurrentActiveUser,
 ) -> ApiKeysResponse:
