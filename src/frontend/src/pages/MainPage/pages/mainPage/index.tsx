@@ -102,8 +102,8 @@ export default function HomePage(): JSX.Element {
         {/* <EmptyPage setOpenModal={setOpenModal} /> */}
         <CollectionPage />
         {/* <div className="relative h-full w-full flex-1">
-            <Outlet />
-          </div> */}
+          <Outlet />
+        </div> */}
       </div>
       <ModalsComponent
         openModal={openModal}
