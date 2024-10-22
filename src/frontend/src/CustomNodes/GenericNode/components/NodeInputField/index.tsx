@@ -146,7 +146,7 @@ export default function NodeInputField({
                     <IconComponent
                       name="Info"
                       strokeWidth={2}
-                      className="text-placeholder relative bottom-px ml-1 h-3 w-3"
+                      className="relative bottom-px ml-1 h-3 w-3 text-placeholder"
                     />
                   </div>
                 </ShadTooltip>

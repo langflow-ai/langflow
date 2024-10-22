@@ -208,7 +208,7 @@ export default function NodeOutputField({
                     {
                       <IconComponent
                         className={cn(
-                          "text-placeholder h-5 w-5 rounded-md",
+                          "h-5 w-5 rounded-md text-placeholder",
                           displayOutputPreview && !unknownOutput
                             ? "hover:text-foreground"
                             : "cursor-not-allowed text-muted-foreground opacity-60",
