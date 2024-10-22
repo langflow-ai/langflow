@@ -13,7 +13,7 @@ router = APIRouter(prefix="/variables", tags=["Variables"])
 
 
 @router.post("/", response_model=VariableRead, status_code=201)
-def create_variable(
+async def create_variable(
     *,
     session: DbSession,
     variable: VariableCreate,
@@ -48,7 +48,7 @@ def create_variable(
 
 
 @router.get("/", response_model=list[VariableRead], status_code=200)
-def read_variables(
+async def read_variables(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
@@ -65,7 +65,7 @@ def read_variables(
 
 
 @router.patch("/{variable_id}", response_model=VariableRead, status_code=200)
-def update_variable(
+async def update_variable(
     *,
     session: DbSession,
     variable_id: UUID,
@@ -92,7 +92,7 @@ def update_variable(
 
 
 @router.delete("/{variable_id}", status_code=204)
-def delete_variable(
+async def delete_variable(
     *,
     session: DbSession,
     variable_id: UUID,
