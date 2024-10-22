@@ -1228,4 +1228,22 @@
   .gradient-fade-input {
     @apply absolute right-7 h-6 w-12 rounded-l-xl;
   }
+
+  .background-fade-input-edit-node {
+    @apply absolute right-[0.9px] h-4 w-7  bg-background
+  }
+
+  .gradient-fade-input-edit-node {
+    @apply absolute right-7 h-4 w-12 rounded-l-xl;
+  }
+
+  .fade-top-position {
+    @apply top-[-35px];
+  }
+  .icon-top-position {
+    @apply top-[-30px];
+  }
+  .edit-node-icon-top-position {
+    @apply top-[-23px];
+  }
 }

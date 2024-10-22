@@ -99,8 +99,9 @@ export default function InputFileComponent({
               <input
                 type="text"
                 className={cn(
-                  "primary-input w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
-                  !value && "text-muted-foreground",
+                  "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
+                  !value && "text-placeholder",
+                  editNode && "h-6",
                 )}
                 value={value || "Upload a file..."}
                 readOnly
@@ -111,11 +112,12 @@ export default function InputFileComponent({
             <div>
               <Button
                 className={cn(
-                  "h-[38px] w-9 rounded-l-none",
+                  "h-9 w-9 rounded-l-none",
                   value &&
                     "bg-accent-emerald-foreground ring-accent-emerald-foreground hover:bg-accent-emerald-foreground",
                   isDisabled &&
                     "relative top-[1px] h-9 ring-1 ring-border ring-offset-0 hover:ring-border",
+                  editNode && "h-6",
                 )}
                 onClick={handleButtonClick}
                 disabled={isDisabled}

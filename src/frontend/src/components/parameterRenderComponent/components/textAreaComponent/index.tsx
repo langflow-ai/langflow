@@ -1,32 +1,53 @@
 import { GRADIENT_CLASS } from "@/constants/constants";
 import ComponentTextModal from "@/modals/textAreaModal";
-import { useDarkStore } from "@/stores/darkStore";
 import { useRef, useState } from "react";
 import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
-import { Button } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputProps, TextAreaComponentType } from "../../types";
 
 const inputClasses = {
-  base: ({ isFocused }: { isFocused: boolean }) =>
-    `w-full ${isFocused ? "" : "pr-3"}`,
+  base: ({ isFocused, password }: { isFocused: boolean; password: boolean }) =>
+    `w-full ${isFocused ? "" : "pr-3"} ${password ? "pr-16" : ""}`,
   editNode: "input-edit-node",
-  normal: "primary-input text-muted-foreground",
+  normal: ({ isFocused }: { isFocused: boolean }) =>
+    `primary-input ${isFocused ? "text-primary" : "text-muted-foreground"}`,
   disabled: "disabled-state",
   password: "password",
 };
 
 const externalLinkIconClasses = {
-  gradient: ({ disabled }: { disabled: boolean }) =>
-    disabled ? "" : "gradient-fade-input",
-  background: ({ disabled }: { disabled: boolean }) =>
-    disabled ? "" : "background-fade-input",
+  gradient: ({
+    disabled,
+    editNode,
+    password,
+  }: {
+    disabled: boolean;
+    editNode: boolean;
+    password: boolean;
+  }) =>
+    disabled || password
+      ? ""
+      : editNode
+        ? "gradient-fade-input-edit-node"
+        : "gradient-fade-input",
+  background: ({
+    disabled,
+    editNode,
+  }: {
+    disabled: boolean;
+    editNode: boolean;
+  }) =>
+    disabled
+      ? ""
+      : editNode
+        ? "background-fade-input-edit-node"
+        : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0 cursor-pointer",
-  editNodeTop: "top-1",
-  normalTop: "top-[-35px]",
-  iconTop: "top-[-30px]",
+  editNodeTop: "edit-node-icon-top-position",
+  normalTop: "fade-top-position",
+  iconTop: "icon-top-position",
 };
 
 export default function TextAreaComponent({
@@ -36,15 +57,19 @@ export default function TextAreaComponent({
   editNode = false,
   id = "",
   updateVisibility,
+  password,
 }: InputProps<string, TextAreaComponentType>): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
 
+  const [passwordVisible, setPasswordVisible] = useState(false);
+
   const getInputClassName = () => {
     return cn(
-      inputClasses.base({ isFocused }),
-      editNode ? inputClasses.editNode : inputClasses.normal,
+      inputClasses.base({ isFocused, password: password! }),
+      editNode ? inputClasses.editNode : inputClasses.normal({ isFocused }),
       disabled && inputClasses.disabled,
+      password && !passwordVisible && "text-clip",
     );
   };
 
@@ -57,7 +82,11 @@ export default function TextAreaComponent({
       <div className="relative cursor-pointer">
         <div
           className={cn(
-            externalLinkIconClasses.gradient({ disabled }),
+            externalLinkIconClasses.gradient({
+              disabled,
+              editNode,
+              password: password!,
+            }),
             editNode
               ? externalLinkIconClasses.editNodeTop
               : externalLinkIconClasses.normalTop,
@@ -74,7 +103,7 @@ export default function TextAreaComponent({
         />
         <div
           className={cn(
-            externalLinkIconClasses.background({ disabled }),
+            externalLinkIconClasses.background({ disabled, editNode }),
             editNode
               ? externalLinkIconClasses.editNodeTop
               : externalLinkIconClasses.normalTop,
@@ -82,6 +111,7 @@ export default function TextAreaComponent({
           )}
           aria-hidden="true"
         />
+
         <IconComponent
           name={disabled ? "lock" : "Scan"}
           className={cn(
@@ -110,6 +140,7 @@ export default function TextAreaComponent({
         placeholder={getPlaceholder(disabled, "Type something...")}
         aria-label={disabled ? value : undefined}
         ref={inputRef}
+        type={password ? (passwordVisible ? "text" : "password") : "text"}
       />
 
       <ComponentTextModal
@@ -120,6 +151,25 @@ export default function TextAreaComponent({
       >
         {renderIcon()}
       </ComponentTextModal>
+      {password && !isFocused && (
+        <div
+          onClick={() => {
+            setPasswordVisible(!passwordVisible);
+          }}
+        >
+          <IconComponent
+            name={passwordVisible ? "eye" : "eye-off"}
+            className={cn(
+              externalLinkIconClasses.icon,
+              editNode ? "top-[5px]" : "top-[13px]",
+              disabled
+                ? "text-placeholder"
+                : "text-muted-foreground hover:text-foreground",
+              "right-10",
+            )}
+          />
+        </div>
+      )}
     </div>
   );
 }

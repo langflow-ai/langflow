@@ -14,12 +14,32 @@ const promptContentClasses = {
 };
 
 const externalLinkIconClasses = {
-  gradient: ({ disabled }: { disabled: boolean }) =>
-    disabled ? "" : "gradient-fade-input",
-  background: ({ disabled }: { disabled: boolean }) =>
-    disabled ? "" : "background-fade-input",
+  gradient: ({
+    disabled,
+    editNode,
+  }: {
+    disabled: boolean;
+    editNode: boolean;
+  }) =>
+    disabled
+      ? ""
+      : editNode
+        ? "gradient-fade-input-edit-node"
+        : "gradient-fade-input",
+  background: ({
+    disabled,
+    editNode,
+  }: {
+    disabled: boolean;
+    editNode: boolean;
+  }) =>
+    disabled
+      ? ""
+      : editNode
+        ? "background-fade-input-edit-node"
+        : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
-  editNodeTop: "top-1",
+  editNodeTop: "top-[6px]",
   normalTop: "top-2.5",
 };
 
@@ -54,7 +74,7 @@ export default function PromptAreaComponent({
     <>
       <div
         className={cn(
-          externalLinkIconClasses.gradient({ disabled }),
+          externalLinkIconClasses.gradient({ disabled, editNode }),
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
@@ -67,7 +87,7 @@ export default function PromptAreaComponent({
       />
       <div
         className={cn(
-          externalLinkIconClasses.background({ disabled }),
+          externalLinkIconClasses.background({ disabled, editNode }),
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
