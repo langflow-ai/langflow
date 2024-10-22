@@ -10,7 +10,7 @@ from langflow.custom import Component
 from langflow.graph import Graph
 from langflow.graph.graph.utils import find_cycle_vertices
 from langflow.io import MessageTextInput, Output
-from langflow.schema import Message
+from langflow.schema.message import Message
 
 
 class Concatenate(Component):

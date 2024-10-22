@@ -7,7 +7,7 @@ from langflow.components.inputs import ChatInput
 from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
 from langflow.graph import Graph
-from langflow.schema import Message
+from langflow.schema.message import Message
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 
