@@ -6,7 +6,10 @@ import { useTypesStore } from "@/stores/typesStore";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { getComponent } from "../../controllers/API";
-import IOModal from "../../modals/IOModal";
+import { ENABLE_NEW_IO_MODAL } from "@/customization/feature-flags";
+import IOModalNew from "../../modals/IOModal/newModal";
+import IOModalOld from "../../modals/IOModal";
+const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import cloneFLowWithParent from "../../utils/storeUtils";
 

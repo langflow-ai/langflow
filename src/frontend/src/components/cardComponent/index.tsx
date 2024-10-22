@@ -1,7 +1,10 @@
 import { track } from "@/customization/utils/analytics";
 import { useState } from "react";
 import { Control } from "react-hook-form";
-import IOModal from "../../modals/IOModal";
+import { ENABLE_NEW_IO_MODAL } from "@/customization/feature-flags";
+import IOModalNew from "../../modals/IOModal/newModal";
+import IOModalOld from "../../modals/IOModal";
+const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowType } from "../../types/flow";

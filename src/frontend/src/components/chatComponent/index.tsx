@@ -1,9 +1,8 @@
-import { ENABLE_API } from "@/customization/feature-flags";
+import { ENABLE_API, ENABLE_NEW_IO_MODAL } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { Transition } from "@headlessui/react";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import IOModal from "../../modals/IOModal/newModal";
 import ApiModal from "../../modals/apiModal";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";
@@ -12,6 +11,9 @@ import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
+import IOModalNew from "../../modals/IOModal/newModal";
+import IOModalOld from "../../modals/IOModal";
+const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 
 export default function FlowToolbar(): JSX.Element {
   const preventDefault = true;
