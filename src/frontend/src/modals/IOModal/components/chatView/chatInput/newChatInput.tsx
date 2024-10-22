@@ -18,7 +18,7 @@ import {
 import FilePreview from "../filePreviewChat/newFilePreview";
 import ButtonSendWrapper from "./components/buttonSendWrapper/newButtonSendWrapper";
 import TextAreaWrapper from "./components/textAreaWrapper/newTextAreaWrapper";
-import UploadFileButton from "./components/uploadFileButton";
+import UploadFileButton from "./components/uploadFileButton/newUploadFileButton";
 import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
