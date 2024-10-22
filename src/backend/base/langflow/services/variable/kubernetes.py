@@ -129,14 +129,16 @@ class KubernetesSecretService(VariableService, Service):
     def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID | str, _session: Session) -> None:
         self.delete_variable(user_id, _session, str(variable_id))
 
+    @override
     def create_variable(
         self,
         user_id: UUID | str,
         name: str,
         value: str,
+        *,
         default_fields: list[str],
         _type: str,
-        _session: Session,
+        session: Session,
     ) -> Variable:
         secret_name = encode_user_id(user_id)
         secret_key = name
