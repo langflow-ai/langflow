@@ -64,7 +64,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --frozen --directory src/backend/base
+        run: uv sync --frozen --dev --directory src/backend/base
       - name: Check Version
         id: check-version
         run: |
@@ -125,7 +125,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --frozen
+        run: uv sync --frozen --dev
 
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow

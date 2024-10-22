@@ -105,7 +105,7 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --frozen
+        run: uv sync --frozen --dev
 
       - name: create .env
         run: |
