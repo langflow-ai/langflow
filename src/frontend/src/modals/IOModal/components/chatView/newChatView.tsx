@@ -37,13 +37,22 @@ export default function ChatView({
       .filter(
         (message) =>
           message.flow_id === currentFlowId &&
-          (visibleSession === message.session_id ?? true),
+          (visibleSession === message.session_id || visibleSession === null),
       )
       .map((message) => {
         let files = message.files;
-        //HANDLE THE "[]" case
-        if (typeof files === "string") {
-          files = JSON.parse(files);
+        // Handle the "[]" case, empty string, or already parsed array
+        if (Array.isArray(files)) {
+          // files is already an array, no need to parse
+        } else if (files === "[]" || files === "") {
+          files = [];
+        } else if (typeof files === "string") {
+          try {
+            files = JSON.parse(files);
+          } catch (error) {
+            console.error("Error parsing files:", error);
+            files = [];
+          }
         }
         return {
           isSend: message.sender === "User",
@@ -54,6 +63,8 @@ export default function ChatView({
           timestamp: message.timestamp,
           session: message.session_id,
           edit: message.edit,
+          background_color: message.background_color || "",
+          text_color: message.text_color || "",
         };
       });
     const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
