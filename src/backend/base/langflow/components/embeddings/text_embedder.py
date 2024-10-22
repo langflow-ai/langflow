@@ -71,15 +71,8 @@ class TextEmbedderComponent(Component):
             if not embeddings or not isinstance(embeddings, list):
                 raise ValueError(ERRORS["INVALID_EMBEDDINGS"])
 
-            embedding_vector = embeddings[0]
-
         except Exception as e:
             logging.exception("Error generating embeddings")
             error_data = Data(data={"text": "", "embeddings": [], "error": str(e)})
             self.status = {"error": str(e)}
             return error_data
-        else:
-            # Create a Data object to encapsulate the results
-            result_data = Data(data={"text": text_content, "embeddings": embedding_vector})
-            self.status = {"text": text_content, "embeddings": embedding_vector}
-            return result_data
