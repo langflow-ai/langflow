@@ -156,10 +156,9 @@ class ComponentVertex(Vertex):
             List[str]: The extracted messages.
         """
         messages = []
-        for key in artifacts:
-            artifact = artifacts[key]
+        for key, artifact in artifacts.items():
             if any(
-                key not in artifact for key in ["text", "sender", "sender_name", "session_id", "stream_url"]
+                k not in artifact for k in ["text", "sender", "sender_name", "session_id", "stream_url"]
             ) and not isinstance(artifact, Message):
                 continue
             message_dict = artifact if isinstance(artifact, dict) else artifact.model_dump()

@@ -178,7 +178,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
         if query:
             search_type = self.search_type.lower()
-            if search_type not in ["similarity", "mmr"]:
+            if search_type not in {"similarity", "mmr"}:
                 msg = f"Invalid search type: {self.search_type}"
                 logger.error(msg)
                 raise ValueError(msg)

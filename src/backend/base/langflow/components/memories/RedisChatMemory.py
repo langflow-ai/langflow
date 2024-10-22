@@ -36,7 +36,7 @@ class RedisIndexChatMemory(LCChatMemoryComponent):
         password: str | None = self.password
         if self.key_prefix:
             kwargs["key_prefix"] = self.key_prefix
-        if password is not None and password != "":
+        if password:
             password = parse.quote_plus(password)
 
         url = f"redis://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"

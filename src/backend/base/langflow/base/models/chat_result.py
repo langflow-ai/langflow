@@ -56,7 +56,7 @@ def get_chat_result(
     inputs: list | dict = messages or {}
     try:
         if config and config.get("output_parser") is not None:
-            runnable = runnable | config["output_parser"]
+            runnable |= config["output_parser"]
 
         if config:
             runnable = runnable.with_config(
