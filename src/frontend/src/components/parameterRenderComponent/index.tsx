@@ -3,6 +3,7 @@ import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { Slider } from "@radix-ui/react-slider";
 import { useMemo } from "react";
+import { InputBadge } from "../inputBadge";
 import SliderComponent from "../sliderComponent";
 import TableNodeComponent from "./components/TableNodeComponent";
 import CodeAreaComponent from "./components/codeAreaComponent";

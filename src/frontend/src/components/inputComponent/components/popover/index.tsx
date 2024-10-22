@@ -1,22 +1,20 @@
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import { useEffect, useRef, useState } from "react";
-import useAlertStore from "../../../../stores/alertStore";
-import { cn } from "../../../../utils/utils";
-import ForwardedIconComponent from "../../../genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import {
   Command,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-} from "../../../ui/command";
-import { Input } from "../../../ui/input";
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverContentWithoutPortal,
-} from "../../../ui/popover";
-import { getInputClassName } from "../helpers/get-input-class-name";
+} from "@/components/ui/popover";
+import { cn } from "@/utils/utils";
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import { X } from "lucide-react";
+import React from "react";
 
 const CustomInputPopover = ({
   id,
@@ -46,97 +44,94 @@ const CustomInputPopover = ({
   showOptions,
   nodeStyle,
 }) => {
-  const setErrorData = useAlertStore.getState().setErrorData;
   const PopoverContentInput = editNode
     ? PopoverContent
     : PopoverContentWithoutPortal;
 
-  const handleInputChange = (e) => {
-    if (password) {
-      if (
-        e.target.value.split("").every((char) => char === "•") &&
-        e.target.value !== ""
-      ) {
-        setErrorData({
-          title: `Invalid characters: ${e.target.value}`,
-          list: [
-            "It seems you are trying to paste a password. Make sure the value is visible before copying from another field.",
-          ],
-        });
-      }
+  const handleRemoveOption = (optionToRemove, e) => {
+    e.stopPropagation(); // Prevent the popover from opening when removing badges
+    if (setSelectedOptions) {
+      setSelectedOptions(
+        selectedOptions.filter((option) => option !== optionToRemove),
+      );
+    } else if (setSelectedOption) {
+      setSelectedOption("");
     }
-    onChange && onChange(e.target.value);
   };
 
-  const isSelected = (selectedOption !== "" || !onChange) && setSelectedOption;
-  const areOptionsSelected =
-    (selectedOptions?.length !== 0 || !onChange) && setSelectedOptions;
+  const noSelectedOptionsClass =
+    "border-none p-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0";
 
-  const [inputWidth, setInputWidth] = useState(25);
-
-  useEffect(() => {
-    setInputWidth(
-      selectedOption?.length > 25
-        ? selectedOption?.length * 8
-        : selectedOption?.length * 10,
-    );
-  }, [selectedOption]);
+  const selectedOptionsClass =
+    "h-[45px] px-3 placeholder:text-placeholder border-1";
 
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
-        <Input
-          id={id}
-          ref={refInput}
-          type="text"
-          onBlur={onInputLostFocus}
-          value={
-            isSelected
-              ? selectedOption
-              : areOptionsSelected
-                ? selectedOptions?.join(", ")
-                : value
-          }
-          autoFocus={autoFocus}
-          onClick={() => {
-            (isSelected || areOptionsSelected) && setShowOptions(true);
-          }}
-          disabled={disabled}
-          required={required}
-          className={getInputClassName({
-            disabled,
-            password,
-            setSelectedOption,
-            selectedOption,
-            pwdVisible,
-            value,
-            editNode,
-            setSelectedOptions,
-            isSelected,
-            areOptionsSelected,
-            nodeStyle,
-            className,
-          })}
-          placeholder={password && editNode ? "Key" : placeholder}
-          onChange={handleInputChange}
-          onKeyDown={(e) => {
-            handleKeyDown(e);
-            if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
-          }}
-          data-testid={editNode ? id + "-edit" : id}
-        />
-        {value && selectedOption !== "" && nodeStyle && (
-          <div
-            className="pointer-events-none absolute left-1 top-1 h-[calc(100%-9px)] rounded-sm bg-accent-emerald-foreground bg-emerald-100 opacity-30"
-            style={{ width: `${inputWidth}px` }}
-          />
-        )}
+        <div
+          className={cn(
+            "primary-input flex flex-wrap items-center",
+            value !== "" && selectedOptionsClass,
+            value === "" && noSelectedOptionsClass,
+          )}
+          onClick={() => !disabled && setShowOptions(true)}
+        >
+          {selectedOptions?.length > 0 ? (
+            selectedOptions.map((option) => (
+              <Badge
+                key={option}
+                variant="secondary"
+                className="flex items-center gap-1 truncate"
+              >
+                <div className="truncate">{option}</div>
+                <X
+                  className="h-3 w-3 cursor-pointer hover:text-destructive"
+                  onClick={(e) => handleRemoveOption(option, e)}
+                />
+              </Badge>
+            ))
+          ) : selectedOption ? (
+            <Badge
+              variant="secondary"
+              className="flex items-center gap-1 truncate"
+            >
+              <div className="max-w-36 truncate">{selectedOption}</div>
+              <X
+                className="h-3 w-3 cursor-pointer hover:text-destructive"
+                onClick={(e) => handleRemoveOption(selectedOption, e)}
+              />
+            </Badge>
+          ) : null}
+
+          {selectedOption?.length === 0 && (
+            <input
+              id={id}
+              ref={refInput}
+              type="text"
+              onBlur={onInputLostFocus}
+              value={value || ""}
+              autoFocus={autoFocus}
+              disabled={disabled}
+              required={required}
+              className="primary-input flex-1 bg-transparent outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder={
+                selectedOptions?.length > 0 || selectedOption ? "" : placeholder
+              }
+              onChange={(e) => onChange?.(e.target.value)}
+              onKeyDown={(e) => {
+                handleKeyDown?.(e);
+                if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
+              }}
+              data-testid={editNode ? id + "-edit" : id}
+            />
+          )}
+        </div>
       </PopoverAnchor>
       <PopoverContentInput
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
         side="bottom"
-        align="center"
+        align="start"
       >
         <Command
           filter={(value, search) => {
@@ -150,62 +145,40 @@ const CustomInputPopover = ({
         >
           <CommandInput placeholder={optionsPlaceholder} />
           <CommandList>
-            <CommandGroup defaultChecked={false}>
+            <CommandGroup>
               {options.map((option, id) => (
                 <CommandItem
-                  className="group"
                   key={option + id}
                   value={option}
                   onSelect={(currentValue) => {
-                    setSelectedOption &&
+                    if (setSelectedOption) {
                       setSelectedOption(
                         currentValue === selectedOption ? "" : currentValue,
                       );
-                    setSelectedOptions &&
+                    }
+                    if (setSelectedOptions) {
                       setSelectedOptions(
                         selectedOptions?.includes(currentValue)
                           ? selectedOptions.filter(
                               (item) => item !== currentValue,
                             )
-                          : [...selectedOptions, currentValue],
+                          : [...(selectedOptions || []), currentValue],
                       );
+                    }
                     !setSelectedOptions && setShowOptions(false);
                   }}
+                  className="group"
                 >
-                  <div className="group flex w-full items-center justify-between">
-                    <div className="flex items-center">
-                      <div
-                        className={cn(
-                          "relative mr-2 h-4 w-4",
-                          selectedOption === option ||
-                            selectedOptions?.includes(option)
-                            ? "opacity-100"
-                            : "opacity-0",
-                        )}
-                      >
-                        <div className="absolute opacity-100 transition-all group-hover:opacity-0">
-                          <ForwardedIconComponent
-                            name="Check"
-                            className="mr-2 h-4 w-4 text-primary"
-                            aria-hidden="true"
-                          />
-                        </div>
-                        <div className="absolute opacity-0 transition-all group-hover:opacity-100">
-                          <ForwardedIconComponent
-                            name="X"
-                            className="mr-2 h-4 w-4 text-status-red"
-                            aria-hidden="true"
-                          />
-                        </div>
-                      </div>
-
-                      {option}
-                    </div>
-                    {optionButton && optionButton(option)}
+                  <div className="flex w-full items-center justify-between">
+                    <span>{option}</span>
+                    {(selectedOptions?.includes(option) ||
+                      selectedOption === option) && (
+                      <X className="h-4 w-4 text-muted-foreground" />
+                    )}
                   </div>
                 </CommandItem>
               ))}
-              {optionsButton && optionsButton}
+              {optionsButton}
             </CommandGroup>
           </CommandList>
         </Command>
