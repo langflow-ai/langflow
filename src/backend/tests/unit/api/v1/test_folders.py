@@ -2,6 +2,7 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
+
 @pytest.fixture
 def basic_case():
     return {
@@ -24,7 +25,7 @@ async def test_create_folder(client: AsyncClient, logged_in_headers, basic_case)
     assert "parent_id" in result.keys(), "The dictionary must contain a key called 'parent_id'"
 
 
-async def test_read_folders(client: AsyncClient, logged_in_headers, basic_case):
+async def test_read_folder(client: AsyncClient, logged_in_headers, basic_case):
     _response = await client.post("api/v1/folders/", json=basic_case, headers=logged_in_headers)
     _id = _response.json()["id"]
     response = await client.get(f"api/v1/folders/{_id}", headers=logged_in_headers)
