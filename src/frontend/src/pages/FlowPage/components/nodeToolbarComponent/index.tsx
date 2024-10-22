@@ -412,7 +412,7 @@ export default function NodeToolbarComponent({
                 </div>
               </SelectTrigger>
             </ShadTooltip>
-            <SelectContent>
+            <SelectContent className="min-w-[14rem]">
               {hasCode && (
                 <SelectItem value={"code"}>
                   <ToolbarSelectItem
@@ -612,6 +612,7 @@ export default function NodeToolbarComponent({
                 override: true,
               });
               setSuccessData({ title: "New component successfully saved!" });
+              setShowOverrideModal(false);
             }}
           >
             <ConfirmationModal.Content>

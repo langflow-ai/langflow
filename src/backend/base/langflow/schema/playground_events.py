@@ -90,7 +90,7 @@ def create_message(
     icon: str | None = None,
     background_color: str = "#FFFFFF",
     content_blocks: list[ContentBlock] | None = None,
-    allow_markdown: bool = True,
+    allow_markdown: bool | None = None,
     sender_name: str | None = None,
     files: list[str] | None = None,
     timestamp: str | None = None,
@@ -98,8 +98,8 @@ def create_message(
     sender: str | None = None,
     session_id: str | None = None,
     id: UUID | str | None = None,  # noqa: A002
-    error: bool = False,
-    edit: bool = False,
+    error: bool | None = None,
+    edit: bool | None = None,
     flow_id: UUID | str | None = None,
 ):
     return MessageEvent(

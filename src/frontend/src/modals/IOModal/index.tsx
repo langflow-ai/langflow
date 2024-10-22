@@ -65,9 +65,12 @@ export default function IOModal({
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
-  const [visibleSession, setvisibleSession] = useState<string | undefined>();
+  const [visibleSession, setvisibleSession] = useState<string | undefined>(
+    currentFlowId,
+  );
 
   function handleDeleteSession(session_id: string) {
     deleteSessionFunction(
@@ -117,7 +120,6 @@ export default function IOModal({
   const setLockChat = useFlowStore((state) => state.setLockChat);
   const [chatValue, setChatValue] = useState("");
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setNode = useFlowStore((state) => state.setNode);
   const messages = useMessagesStore((state) => state.messages);
   const [sessions, setSessions] = useState<string[]>(
@@ -198,12 +200,18 @@ export default function IOModal({
   }, [messages]);
 
   useEffect(() => {
-    if (!visibleSession && sessions.length > 0) {
+    if (!visibleSession) {
       setSessionId(
-        `Session ${new Date().toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true, second: "2-digit" })}`,
+        `Session ${new Date().toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, second: "2-digit", timeZone: "UTC" })}`,
       );
     } else if (visibleSession) {
       setSessionId(visibleSession);
+      if (selectedViewField?.type === "Session") {
+        setSelectedViewField({
+          id: visibleSession,
+          type: "Session",
+        });
+      }
     }
   }, [visibleSession]);
 
@@ -435,6 +443,7 @@ export default function IOModal({
                       <Button
                         onClick={(_) => {
                           setvisibleSession(undefined);
+                          setSelectedViewField(undefined);
                         }}
                       >
                         New Chat

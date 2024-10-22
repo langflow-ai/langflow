@@ -2,13 +2,8 @@ import pytest
 from langflow.utils.connection_string_parser import transform_connection_string
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 @pytest.mark.parametrize(
-    "connection_string, expected",
+    ("connection_string", "expected"),
     [
         ("protocol:user:password@host", "protocol:user:password@host"),
         ("protocol:user@host", "protocol:user@host"),

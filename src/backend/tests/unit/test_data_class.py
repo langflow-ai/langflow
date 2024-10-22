@@ -1,12 +1,6 @@
 import pytest
 from langchain_core.documents import Document
-
 from langflow.schema import Data
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 def test_data_initialization():

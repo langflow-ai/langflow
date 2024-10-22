@@ -12,7 +12,7 @@ from loguru import logger
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path, serialize_field
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.exceptions import NoComponentInstance
+from langflow.graph.vertex.exceptions import NoComponentInstanceError
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.message import Message
@@ -49,7 +49,7 @@ class ComponentVertex(Vertex):
 
     def get_output(self, name: str) -> Output:
         if self._custom_component is None:
-            raise NoComponentInstance(self.id)
+            raise NoComponentInstanceError(self.id)
         return self._custom_component.get_output(name)
 
     def _built_object_repr(self):
@@ -57,7 +57,7 @@ class ComponentVertex(Vertex):
             return self.artifacts["repr"] or super()._built_object_repr()
         return None
 
-    def _update_built_object_and_artifacts(self, result):
+    def _update_built_object_and_artifacts(self, result) -> None:
         """Updates the built object and its artifacts."""
         if isinstance(result, tuple):
             if len(result) == 2:  # noqa: PLR2004
@@ -130,7 +130,7 @@ class ComponentVertex(Vertex):
                         result = self.results[edge.source_handle.name]
                     else:
                         result = cast(Any, output.value)
-                except NoComponentInstance:
+                except NoComponentInstanceError:
                     result = self.results[edge.source_handle.name]
                 break
         if result is UNDEFINED:
@@ -156,10 +156,9 @@ class ComponentVertex(Vertex):
             List[str]: The extracted messages.
         """
         messages = []
-        for key in artifacts:
-            artifact = artifacts[key]
+        for key, artifact in artifacts.items():
             if any(
-                key not in artifact for key in ["text", "sender", "sender_name", "session_id", "stream_url"]
+                k not in artifact for k in ["text", "sender", "sender_name", "session_id", "stream_url"]
             ) and not isinstance(artifact, Message):
                 continue
             message_dict = artifact if isinstance(artifact, dict) else artifact.model_dump()
@@ -182,7 +181,7 @@ class ComponentVertex(Vertex):
                 )
         return messages
 
-    def _finalize_build(self):
+    def _finalize_build(self) -> None:
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
         # to the frontend
@@ -206,7 +205,7 @@ class InterfaceVertex(ComponentVertex):
         self.steps = [self._build, self._run]
         self.is_interface_component = True
 
-    def build_stream_url(self):
+    def build_stream_url(self) -> str:
         return f"/api/v1/build/{self.graph.flow_id}/{self.id}/stream"
 
     def _built_object_repr(self):
@@ -352,21 +351,17 @@ class InterfaceVertex(ComponentVertex):
         self.artifacts = DataOutputResponse(data=artifacts)
         return self._built_object
 
-    async def _run(self, *args, **kwargs):
-        if self.is_interface_component:
-            if self.vertex_type in CHAT_COMPONENTS:
-                message = self._process_chat_component()
-            elif self.vertex_type in RECORDS_COMPONENTS:
-                message = self._process_data_component()
-            if isinstance(self._built_object, AsyncIterator | Iterator):
-                if self.params.get("return_data", False):
-                    self._built_object = Data(text=message, data=self.artifacts)
-                else:
-                    self._built_object = message
-            self._built_result = self._built_object
-
-        else:
-            await super()._run(*args, **kwargs)
+    async def _run(self, *args, **kwargs) -> None:  # noqa: ARG002
+        if self.vertex_type in CHAT_COMPONENTS:
+            message = self._process_chat_component()
+        elif self.vertex_type in RECORDS_COMPONENTS:
+            message = self._process_data_component()
+        if isinstance(self._built_object, AsyncIterator | Iterator):
+            if self.params.get("return_data", False):
+                self._built_object = Data(text=message, data=self.artifacts)
+            else:
+                self._built_object = message
+        self._built_result = self._built_object
 
     async def stream(self):
         iterator = self.params.get(INPUT_FIELD_NAME, None)
@@ -452,7 +447,7 @@ class InterfaceVertex(ComponentVertex):
         self._validate_built_object()
         self._built = True
 
-    async def consume_async_generator(self):
+    async def consume_async_generator(self) -> None:
         async for _ in self.stream():
             pass
 

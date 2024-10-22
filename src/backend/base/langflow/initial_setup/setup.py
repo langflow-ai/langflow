@@ -12,6 +12,7 @@ from uuid import UUID
 import orjson
 from emoji import demojize, purely_emoji
 from loguru import logger
+from sqlalchemy.exc import NoResultFound
 from sqlmodel import select
 
 from langflow.base.constants import (
@@ -340,7 +341,7 @@ def update_edges_with_latest_component_versions(project_data):
     return project_data_copy
 
 
-def log_node_changes(node_changes_log):
+def log_node_changes(node_changes_log) -> None:
     # The idea here is to log the changes that were made to the nodes in debug
     # Something like:
     # Node: "Node Name" was updated with the following changes:
@@ -362,23 +363,26 @@ def load_starter_projects(retries=3, delay=1) -> list[tuple[Path, dict]]:
     for file in folder.glob("*.json"):
         attempt = 0
         while attempt < retries:
-            with file.open(encoding="utf-8") as f:
-                try:
-                    project = orjson.loads(f.read())
-                    starter_projects.append((file, project))
-                    logger.info(f"Loaded starter project {file}")
-                    break  # Break if load is successful
-                except orjson.JSONDecodeError as e:
-                    attempt += 1
-                    if attempt >= retries:
-                        msg = f"Error loading starter project {file}: {e}"
-                        raise ValueError(msg) from e
-                    time.sleep(delay)  # Wait before retrying
+            content = file.read_text(encoding="utf-8")
+            try:
+                project = orjson.loads(content)
+                starter_projects.append((file, project))
+                logger.info(f"Loaded starter project {file}")
+                break  # Break if load is successful
+            except orjson.JSONDecodeError as e:
+                attempt += 1
+                if attempt >= retries:
+                    msg = f"Error loading starter project {file}: {e}"
+                    raise ValueError(msg) from e
+                time.sleep(delay)  # Wait before retrying
     return starter_projects
 
 
-def copy_profile_pictures():
+def copy_profile_pictures() -> None:
     config_dir = get_storage_service().settings_service.settings.config_dir
+    if config_dir is None:
+        msg = "Config dir is not set in the settings"
+        raise ValueError(msg)
     origin = Path(__file__).parent / "profile_pictures"
     target = Path(config_dir) / "profile_pictures"
 
@@ -425,10 +429,9 @@ def get_project_data(project):
     )
 
 
-def update_project_file(project_path: Path, project: dict, updated_project_data):
+def update_project_file(project_path: Path, project: dict, updated_project_data) -> None:
     project["data"] = updated_project_data
-    with project_path.open("w", encoding="utf-8") as f:
-        f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
+    project_path.write_text(orjson.dumps(project, option=ORJSON_OPTIONS).decode(), encoding="utf-8")
     logger.info(f"Updated starter project {project['name']} file")
 
 
@@ -441,7 +444,7 @@ def update_existing_project(
     project_data,
     project_icon,
     project_icon_bg_color,
-):
+) -> None:
     logger.info(f"Updating starter project {project_name}")
     existing_project.data = project_data
     existing_project.folder = STARTER_FOLDER_NAME
@@ -464,7 +467,7 @@ def create_new_project(
     project_icon,
     project_icon_bg_color,
     new_folder_id,
-):
+) -> None:
     logger.debug(f"Creating starter project {project_name}")
     new_project = FlowCreate(
         name=project_name,
@@ -486,7 +489,7 @@ def get_all_flows_similar_to_project(session, folder_id):
     return session.exec(select(Folder).where(Folder.id == folder_id)).first().flows
 
 
-def delete_start_projects(session, folder_id):
+def delete_start_projects(session, folder_id) -> None:
     flows = session.exec(select(Folder).where(Folder.id == folder_id)).first().flows
     for flow in flows:
         session.delete(flow)
@@ -517,7 +520,7 @@ def _is_valid_uuid(val):
     return str(uuid_obj) == val
 
 
-def load_flows_from_directory():
+def load_flows_from_directory() -> None:
     """On langflow startup, this loads all flows from the directory specified in the settings.
 
     All flows are uploaded into the default folder for the superuser.
@@ -532,51 +535,55 @@ def load_flows_from_directory():
         return
 
     with session_scope() as session:
-        user_id = get_user_by_username(session, settings_service.auth_settings.SUPERUSER).id
+        user = get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
+        if user is None:
+            msg = "Superuser not found in the database"
+            raise NoResultFound(msg)
+        user_id = user.id
         _flows_path = Path(flows_path)
         files = [f for f in _flows_path.iterdir() if f.is_file()]
         for f in files:
             if f.suffix != ".json":
                 continue
             logger.info(f"Loading flow from file: {f.name}")
-            with f.open(encoding="utf-8") as file:
-                flow = orjson.loads(file.read())
-                no_json_name = f.stem
-                flow_endpoint_name = flow.get("endpoint_name")
-                if _is_valid_uuid(no_json_name):
-                    flow["id"] = no_json_name
-                flow_id = flow.get("id")
+            content = f.read_text(encoding="utf-8")
+            flow = orjson.loads(content)
+            no_json_name = f.stem
+            flow_endpoint_name = flow.get("endpoint_name")
+            if _is_valid_uuid(no_json_name):
+                flow["id"] = no_json_name
+            flow_id = flow.get("id")
 
-                existing = find_existing_flow(session, flow_id, flow_endpoint_name)
-                if existing:
-                    logger.debug(f"Found existing flow: {existing.name}")
-                    logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
-                    for key, value in flow.items():
-                        if hasattr(existing, key):
-                            # flow dict from json and db representation are not 100% the same
-                            setattr(existing, key, value)
-                    existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
-                    existing.user_id = user_id
+            existing = find_existing_flow(session, flow_id, flow_endpoint_name)
+            if existing:
+                logger.debug(f"Found existing flow: {existing.name}")
+                logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
+                for key, value in flow.items():
+                    if hasattr(existing, key):
+                        # flow dict from json and db representation are not 100% the same
+                        setattr(existing, key, value)
+                existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
+                existing.user_id = user_id
 
-                    # Generally, folder_id should not be None, but we must check this due to the previous
-                    # behavior where flows could be added and folder_id was None, orphaning
-                    # them within Langflow.
-                    if existing.folder_id is None:
-                        folder_id = get_default_folder_id(session, user_id)
-                        existing.folder_id = folder_id
-
-                    session.add(existing)
-                else:
-                    logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
-
-                    # Current behavior loads all new flows into default folder
+                # Generally, folder_id should not be None, but we must check this due to the previous
+                # behavior where flows could be added and folder_id was None, orphaning
+                # them within Langflow.
+                if existing.folder_id is None:
                     folder_id = get_default_folder_id(session, user_id)
+                    existing.folder_id = folder_id
 
-                    flow["user_id"] = user_id
-                    flow["folder_id"] = folder_id
-                    flow = Flow.model_validate(flow, from_attributes=True)
-                    flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
-                    session.add(flow)
+                session.add(existing)
+            else:
+                logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
+
+                # Current behavior loads all new flows into default folder
+                folder_id = get_default_folder_id(session, user_id)
+
+                flow["user_id"] = user_id
+                flow["folder_id"] = folder_id
+                flow = Flow.model_validate(flow, from_attributes=True)
+                flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
+                session.add(flow)
 
 
 def find_existing_flow(session, flow_id, flow_endpoint_name):
@@ -593,7 +600,7 @@ def find_existing_flow(session, flow_id, flow_endpoint_name):
     return None
 
 
-async def create_or_update_starter_projects(get_all_components_coro: Awaitable[dict]):
+async def create_or_update_starter_projects(get_all_components_coro: Awaitable[dict]) -> None:
     try:
         all_types_dict = await get_all_components_coro
     except Exception:
@@ -648,7 +655,7 @@ async def create_or_update_starter_projects(get_all_components_coro: Awaitable[d
                 )
 
 
-def initialize_super_user_if_needed():
+def initialize_super_user_if_needed() -> None:
     settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN:
         return

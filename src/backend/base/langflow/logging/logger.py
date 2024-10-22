@@ -42,7 +42,7 @@ class SizedLogBuffer:
     def get_write_lock(self) -> Lock:
         return self._wlock
 
-    def write(self, message: str):
+    def write(self, message: str) -> None:
         record = json.loads(message)
         log_entry = record["text"]
         epoch = int(record["record"]["time"]["timestamp"] * 1000)
@@ -52,7 +52,7 @@ class SizedLogBuffer:
                     self.buffer.popleft()
             self.buffer.append((epoch, log_entry))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.buffer)
 
     def get_after_timestamp(self, timestamp: int, lines: int = 5) -> dict[int, str]:
@@ -123,7 +123,7 @@ def serialize_log(record):
     return orjson.dumps(subset)
 
 
-def patching(record):
+def patching(record) -> None:
     record["extra"]["serialized"] = serialize_log(record)
     if DEV is False:
         record.pop("exception", None)
@@ -142,13 +142,17 @@ def configure(
     log_file: Path | None = None,
     disable: bool | None = False,
     log_env: str | None = None,
-):
+) -> None:
     if disable and log_level is None and log_file is None:
         logger.disable("langflow")
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
     if log_level is None:
         log_level = "ERROR"
+
+    if log_file is None:
+        env_log_file = os.getenv("LANGFLOW_LOG_FILE", "")
+        log_file = Path(env_log_file) if env_log_file else None
 
     if log_env is None:
         log_env = os.getenv("LANGFLOW_LOG_ENV", "")
@@ -205,14 +209,14 @@ def configure(
     setup_gunicorn_logger()
 
 
-def setup_uvicorn_logger():
+def setup_uvicorn_logger() -> None:
     loggers = (logging.getLogger(name) for name in logging.root.manager.loggerDict if name.startswith("uvicorn."))
     for uvicorn_logger in loggers:
         uvicorn_logger.handlers = []
     logging.getLogger("uvicorn").handlers = [InterceptHandler()]
 
 
-def setup_gunicorn_logger():
+def setup_gunicorn_logger() -> None:
     logging.getLogger("gunicorn.error").handlers = [InterceptHandler()]
     logging.getLogger("gunicorn.access").handlers = [InterceptHandler()]
 
@@ -223,7 +227,7 @@ class InterceptHandler(logging.Handler):
     See https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging.
     """
 
-    def emit(self, record):
+    def emit(self, record) -> None:
         # Get corresponding Loguru level if it exists
         try:
             level = logger.level(record.levelname).name
@@ -232,7 +236,7 @@ class InterceptHandler(logging.Handler):
 
         # Find caller from where originated the logged message
         frame, depth = logging.currentframe(), 2
-        while frame.f_code.co_filename == logging.__file__:
+        while frame.f_code.co_filename == logging.__file__ and frame.f_back:
             frame = frame.f_back
             depth += 1
 

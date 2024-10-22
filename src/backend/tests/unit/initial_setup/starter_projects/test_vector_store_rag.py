@@ -1,25 +1,19 @@
 import copy
+import operator
 from textwrap import dedent
 
 import pytest
-
-from langflow.components.data.File import FileComponent
-from langflow.components.embeddings.OpenAIEmbeddings import OpenAIEmbeddingsComponent
-from langflow.components.helpers.ParseData import ParseDataComponent
-from langflow.components.helpers.SplitText import SplitTextComponent
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.components.prompts.Prompt import PromptComponent
-from langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent
-from langflow.graph.graph.base import Graph
+from langflow.components.data import FileComponent
+from langflow.components.embeddings import OpenAIEmbeddingsComponent
+from langflow.components.helpers import ParseDataComponent, SplitTextComponent
+from langflow.components.inputs import ChatInput
+from langflow.components.models import OpenAIModelComponent
+from langflow.components.outputs import ChatOutput
+from langflow.components.prompts import PromptComponent
+from langflow.components.vectorstores import AstraVectorStoreComponent
+from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
-from langflow.schema.data import Data
-
-
-@pytest.fixture
-def client():
-    pass
+from langflow.schema import Data
 
 
 @pytest.fixture
@@ -39,14 +33,13 @@ def ingestion_graph():
         embedding=openai_embeddings.build_embeddings,
         ingest_data=text_splitter.split_text,
         api_endpoint="https://astra.example.com",
-        token="token",
+        token="token",  # noqa: S106
     )
     vector_store.set_on_output(name="vector_store", value="mock_vector_store", cache=True)
     vector_store.set_on_output(name="base_retriever", value="mock_retriever", cache=True)
     vector_store.set_on_output(name="search_results", value=[Data(text="This is a test file.")], cache=True)
 
-    ingestion_graph = Graph(file_component, vector_store)
-    return ingestion_graph
+    return Graph(file_component, vector_store)
 
 
 @pytest.fixture
@@ -59,7 +52,7 @@ def rag_graph():
     rag_vector_store.set(
         search_input=chat_input.message_response,
         api_endpoint="https://astra.example.com",
-        token="token",
+        token="token",  # noqa: S106
         embedding=openai_embeddings.build_embeddings,
     )
     # Mock search_documents
@@ -94,8 +87,7 @@ def rag_graph():
     chat_output = ChatOutput(_id="chatoutput-123")
     chat_output.set(input_value=openai_component.text_response)
 
-    graph = Graph(start=chat_input, end=chat_output)
-    return graph
+    return Graph(start=chat_input, end=chat_output)
 
 
 def test_vector_store_rag(ingestion_graph, rag_graph):
@@ -116,10 +108,8 @@ def test_vector_store_rag(ingestion_graph, rag_graph):
         "rag-vector-store-123",
         "openai-embeddings-124",
     ]
-    for ids, graph, len_results in zip([ingestion_ids, rag_ids], [ingestion_graph, rag_graph], [5, 8]):
-        results = []
-        for result in graph.start():
-            results.append(result)
+    for ids, graph, len_results in [(ingestion_ids, ingestion_graph, 5), (rag_ids, rag_graph, 8)]:
+        results = list(graph.start())
 
         assert len(results) == len_results
         vids = [result.vertex.id for result in results if hasattr(result, "vertex")]
@@ -139,7 +129,7 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     ingestion_edges = ingestion_data["edges"]
 
     # Sort nodes by id to check components
-    ingestion_nodes = sorted(ingestion_nodes, key=lambda x: x["id"])
+    ingestion_nodes = sorted(ingestion_nodes, key=operator.itemgetter("id"))
 
     # Check components in the ingestion graph
     assert ingestion_nodes[0]["data"]["type"] == "File"
@@ -177,7 +167,7 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     rag_edges = rag_data["edges"]
 
     # Sort nodes by id to check components
-    rag_nodes = sorted(rag_nodes, key=lambda x: x["id"])
+    rag_nodes = sorted(rag_nodes, key=operator.itemgetter("id"))
 
     # Check components in the RAG graph
     assert rag_nodes[0]["data"]["type"] == "ChatInput"
@@ -224,12 +214,14 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
     rag_graph_copy = copy.deepcopy(rag_graph)
     ingestion_graph_copy += rag_graph_copy
 
-    assert (
-        len(ingestion_graph_copy.vertices) == len(ingestion_graph.vertices) + len(rag_graph.vertices)
-    ), f"Vertices mismatch: {len(ingestion_graph_copy.vertices)} != {len(ingestion_graph.vertices)} + {len(rag_graph.vertices)}"
-    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(
-        rag_graph.edges
-    ), f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
+    assert len(ingestion_graph_copy.vertices) == len(ingestion_graph.vertices) + len(rag_graph.vertices), (
+        f"Vertices mismatch: {len(ingestion_graph_copy.vertices)} "
+        f"!= {len(ingestion_graph.vertices)} + {len(rag_graph.vertices)}"
+    )
+    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(rag_graph.edges), (
+        f"Edges mismatch: {len(ingestion_graph_copy.edges)} "
+        f"!= {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
+    )
 
     combined_graph_dump = ingestion_graph_copy.dump(
         name="Combined Graph", description="Graph for data ingestion and RAG", endpoint_name="combined"
@@ -240,7 +232,7 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
     combined_edges = combined_data["edges"]
 
     # Sort nodes by id to check components
-    combined_nodes = sorted(combined_nodes, key=lambda x: x["id"])
+    combined_nodes = sorted(combined_nodes, key=operator.itemgetter("id"))
 
     # Expected components in the combined graph (both ingestion and RAG nodes)
     expected_nodes = sorted(
@@ -257,10 +249,10 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
             {"id": "prompt-123", "type": "Prompt"},
             {"id": "rag-vector-store-123", "type": "AstraDB"},
         ],
-        key=lambda x: x["id"],
+        key=operator.itemgetter("id"),
     )
 
-    for expected_node, combined_node in zip(expected_nodes, combined_nodes):
+    for expected_node, combined_node in zip(expected_nodes, combined_nodes, strict=True):
         assert combined_node["data"]["type"] == expected_node["type"]
         assert combined_node["id"] == expected_node["id"]
 

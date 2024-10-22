@@ -7,7 +7,7 @@ import threading
 
 import astra_assistants.tools as astra_assistants_tools
 import requests
-from astra_assistants import OpenAI, patch
+from astra_assistants import OpenAIWithDefaultKey, patch
 from astra_assistants.tools.tool_interface import ToolInterface
 
 client_lock = threading.Lock()
@@ -18,7 +18,7 @@ def get_patched_openai_client(shared_component_cache):
     os.environ["ASTRA_ASSISTANTS_QUIET"] = "true"
     client = shared_component_cache.get("client")
     if client is None:
-        client = patch(OpenAI())
+        client = patch(OpenAIWithDefaultKey())
         shared_component_cache.set("client", client)
     return client
 
@@ -36,7 +36,7 @@ tool_names = []
 tools_and_names = {}
 
 
-def tools_from_package(your_package):
+def tools_from_package(your_package) -> None:
     # Iterate over all modules in the package
     package_name = your_package.__name__
     for module_info in pkgutil.iter_modules(your_package.__path__):

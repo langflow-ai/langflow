@@ -3,6 +3,7 @@ import { performStreamingRequest } from "@/controllers/API/api";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { AxiosError } from "axios";
 import { timeStamp } from "console";
+import { flushSync } from "react-dom";
 import { Edge, Node } from "reactflow";
 import { BuildStatus } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
@@ -285,11 +286,12 @@ export async function buildFlowVertices({
         return true;
       }
       case "token": {
-        // await one milisencond so we avoid react batched updates
-        await new Promise((resolve) => {
-          useMessagesStore.getState().updateMessagePartial(data);
-          setTimeout(resolve, 10);
-        });
+        // flushSync and timeout is needed to avoid react batched updates
+        setTimeout(() => {
+          flushSync(() => {
+            useMessagesStore.getState().updateMessagePartial(data);
+          });
+        }, 10);
         return true;
       }
       case "end": {

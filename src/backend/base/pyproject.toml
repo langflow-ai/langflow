@@ -28,6 +28,7 @@ exclude = ["langflow/alembic"]
 line-length = 120
 
 [tool.ruff.lint]
+flake8-annotations.mypy-init-return = true
 flake8-bugbear.extend-immutable-calls = [
     "fastapi.Depends",
     "fastapi.File",
@@ -56,9 +57,8 @@ ignore = [
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
 
     # Rules that are TODOs
-    "ANN",
+    "ANN", # Missing type annotations
     "D1", # Missing docstrings
-    "N",
     "S",
     "SLF",
 ]

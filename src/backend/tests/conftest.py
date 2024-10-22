@@ -1,5 +1,4 @@
 import json
-import os.path
 import shutil
 
 # we need to import tmpdir
@@ -13,18 +12,11 @@ from uuid import UUID
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
-from base.langflow.components.inputs.ChatInput import ChatInput
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from loguru import logger
-from pytest import LogCaptureFixture
-from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
-from tests.api_keys import get_openai_api_key
-from typer.testing import CliRunner
-
-from langflow.graph.graph.base import Graph
+from langflow.components.inputs import ChatInput
+from langflow.graph import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
@@ -35,6 +27,12 @@ from langflow.services.database.models.user.model import User, UserCreate, UserR
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from loguru import logger
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
+
+from tests.api_keys import get_openai_api_key
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -103,7 +101,7 @@ def _delete_transactions_and_vertex_builds(session, user: User):
 
 
 @pytest.fixture
-def caplog(caplog: LogCaptureFixture):
+def caplog(caplog: pytest.LogCaptureFixture):
     handler_id = logger.add(
         caplog.handler,
         format="{message}",
@@ -115,7 +113,7 @@ def caplog(caplog: LogCaptureFixture):
     logger.remove(handler_id)
 
 
-@pytest.fixture()
+@pytest.fixture
 async def async_client() -> AsyncGenerator:
     from langflow.main import create_app
 
@@ -145,7 +143,7 @@ def load_flows_dir():
 
 
 @pytest.fixture(name="distributed_env")
-def setup_env(monkeypatch):
+def _setup_env(monkeypatch):
     monkeypatch.setenv("LANGFLOW_CACHE_TYPE", "redis")
     monkeypatch.setenv("LANGFLOW_REDIS_HOST", "result_backend")
     monkeypatch.setenv("LANGFLOW_REDIS_PORT", "6379")
@@ -159,7 +157,11 @@ def setup_env(monkeypatch):
 
 
 @pytest.fixture(name="distributed_client")
-def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
+def distributed_client_fixture(
+    session: Session,  # noqa: ARG001
+    monkeypatch,
+    distributed_env,  # noqa: ARG001
+):
     # Here we load the .env from ../deploy/.env
     from langflow.core import celery_app
 
@@ -189,8 +191,7 @@ def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
 
 
 def get_graph(_type="basic"):
-    """Get a graph from a json file"""
-
+    """Get a graph from a json file."""
     if _type == "basic":
         path = pytest.BASIC_EXAMPLE_PATH
     elif _type == "complex":
@@ -198,7 +199,7 @@ def get_graph(_type="basic"):
     elif _type == "openapi":
         path = pytest.OPENAPI_EXAMPLE_PATH
 
-    with open(path) as f:
+    with path.open(encoding="utf-8") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
@@ -210,13 +211,13 @@ def get_graph(_type="basic"):
 
 @pytest.fixture
 def basic_graph_data():
-    with open(pytest.BASIC_EXAMPLE_PATH) as f:
+    with pytest.BASIC_EXAMPLE_PATH.open(encoding="utf-8") as f:
         return json.load(f)
 
 
 @pytest.fixture
 def basic_graph():
-    yield get_graph()
+    return get_graph()
 
 
 @pytest.fixture
@@ -231,60 +232,56 @@ def openapi_graph():
 
 @pytest.fixture
 def json_flow():
-    with open(pytest.BASIC_EXAMPLE_PATH) as f:
-        return f.read()
+    return pytest.BASIC_EXAMPLE_PATH.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def grouped_chat_json_flow():
-    with open(pytest.GROUPED_CHAT_EXAMPLE_PATH) as f:
-        return f.read()
+    return pytest.GROUPED_CHAT_EXAMPLE_PATH.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def one_grouped_chat_json_flow():
-    with open(pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH) as f:
-        return f.read()
+    return pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def vector_store_grouped_json_flow():
-    with open(pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH) as f:
-        return f.read()
+    return pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def json_flow_with_prompt_and_history():
-    with open(pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY) as f:
-        return f.read()
+    return pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def json_simple_api_test():
-    with open(pytest.SIMPLE_API_TEST) as f:
-        return f.read()
+    return pytest.SIMPLE_API_TEST.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def json_vector_store():
-    with open(pytest.VECTOR_STORE_PATH) as f:
-        return f.read()
+    return pytest.VECTOR_STORE_PATH.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def json_webhook_test():
-    with open(pytest.WEBHOOK_TEST) as f:
-        return f.read()
+    return pytest.WEBHOOK_TEST.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def json_memory_chatbot_no_llm():
-    with open(pytest.MEMORY_CHATBOT_NO_LLM) as f:
-        return f.read()
+    return pytest.MEMORY_CHATBOT_NO_LLM.read_text(encoding="utf-8")
 
 
-@pytest.fixture(name="client", autouse=True)
-async def client_fixture(session: Session, monkeypatch, request, load_flows_dir):
+@pytest.fixture(name="client")
+async def client_fixture(
+    session: Session,  # noqa: ARG001
+    monkeypatch,
+    request,
+    load_flows_dir,
+):
     # Set the database url to a test database
     if "noclient" in request.keywords:
         yield
@@ -295,7 +292,7 @@ async def client_fixture(session: Session, monkeypatch, request, load_flows_dir)
         monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
         if "load_flows" in request.keywords:
             shutil.copyfile(
-                pytest.BASIC_EXAMPLE_PATH, os.path.join(load_flows_dir, "c54f9130-f2fa-4a3e-b22a-3856d946351b.json")
+                pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
             )
             monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
@@ -307,9 +304,11 @@ async def client_fixture(session: Session, monkeypatch, request, load_flows_dir)
         db_service.database_url = f"sqlite:///{db_path}"
         db_service.reload_engine()
         # app.dependency_overrides[get_session] = get_session_override
-        async with LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager:
-            async with AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client:
-                yield client
+        async with (
+            LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+            AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client,
+        ):
+            yield client
         # app.dependency_overrides.clear()
         monkeypatch.undo()
         # clear the temp db
@@ -319,25 +318,25 @@ async def client_fixture(session: Session, monkeypatch, request, load_flows_dir)
 
 # create a fixture for session_getter above
 @pytest.fixture(name="session_getter")
-def session_getter_fixture(client):
+def session_getter_fixture(client):  # noqa: ARG001
     @contextmanager
     def blank_session_getter(db_service: "DatabaseService"):
         with Session(db_service.engine) as session:
             yield session
 
-    yield blank_session_getter
+    return blank_session_getter
 
 
 @pytest.fixture
 def runner():
-    yield CliRunner()
+    return CliRunner()
 
 
 @pytest.fixture
 async def test_user(client):
     user_data = UserCreate(
         username="testuser",
-        password="testpassword",
+        password="testpassword",  # noqa: S106
     )
     response = await client.post("api/v1/users/", json=user_data.model_dump())
     assert response.status_code == 201
@@ -347,8 +346,8 @@ async def test_user(client):
     await client.delete(f"/api/v1/users/{user['id']}")
 
 
-@pytest.fixture(scope="function")
-def active_user(client):
+@pytest.fixture
+def active_user(client):  # noqa: ARG001
     db_manager = get_db_service()
     with db_manager.with_session() as session:
         user = User(
@@ -382,11 +381,15 @@ async def logged_in_headers(client, active_user):
     assert response.status_code == 200
     tokens = response.json()
     a_token = tokens["access_token"]
-    yield {"Authorization": f"Bearer {a_token}"}
+    return {"Authorization": f"Bearer {a_token}"}
 
 
 @pytest.fixture
-def flow(client, json_flow: str, active_user):
+def flow(
+    client,  # noqa: ARG001
+    json_flow: str,
+    active_user,
+):
     from langflow.services.database.models.flow.model import FlowCreate
 
     loaded_json = json.loads(json_flow)
@@ -405,14 +408,12 @@ def flow(client, json_flow: str, active_user):
 
 @pytest.fixture
 def json_chat_input():
-    with open(pytest.CHAT_INPUT) as f:
-        yield f.read()
+    return pytest.CHAT_INPUT.read_text(encoding="utf-8")
 
 
 @pytest.fixture
 def json_two_outputs():
-    with open(pytest.TWO_OUTPUTS) as f:
-        yield f.read()
+    return pytest.TWO_OUTPUTS.read_text(encoding="utf-8")
 
 
 @pytest.fixture
@@ -540,7 +541,8 @@ def get_starter_project(active_user):
             .where(Flow.name == "Basic Prompting (Hello, World)")
         ).first()
         if not flow:
-            raise ValueError("No starter project found")
+            msg = "No starter project found"
+            raise ValueError(msg)
 
         # ensure openai api key is set
         get_openai_api_key()
