@@ -6,8 +6,8 @@ from langflow.services.auth.utils import get_current_active_user
 router = APIRouter(prefix="/starter-projects", tags=["Flows"])
 
 
-@router.get("/", dependencies=[Depends(get_current_active_user)], response_model=list[GraphDump], status_code=200)
-def get_starter_projects():
+@router.get("/", dependencies=[Depends(get_current_active_user)], status_code=200)
+def get_starter_projects() -> list[GraphDump]:
     """Get a list of starter projects."""
     from langflow.initial_setup.load import get_starter_projects_dump
 
