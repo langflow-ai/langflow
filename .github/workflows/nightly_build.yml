@@ -37,7 +37,7 @@ jobs:
         id: generate_main_tag
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
-          MAIN_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py main)"
+          MAIN_TAG="$(python ./scripts/ci/pypi_nightly_tag.py main)"
           echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
           echo "main_tag=$MAIN_TAG"
 
@@ -56,7 +56,7 @@ jobs:
         if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'false' }}
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
-          BASE_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py base)"
+          BASE_TAG="$(python ./scripts/ci/pypi_nightly_tag.py base)"
           echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
           echo "base_tag=$BASE_TAG"
 
@@ -71,16 +71,15 @@ jobs:
 
           BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
           echo "Updating base project version to $BASE_TAG"
-          # TODO: I suppose they are different packages, so we could add a scripts dir in base. 
-          uv run --directory src/backend/base ../../../scripts/ci/update_pyproject_name.py langflow-base-nightly base
-          uv run --directory src/backend/base ../../../scripts/ci/update_pyproject_version.py $BASE_TAG base
+          python ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
+          python ./scripts/ci/update_pyproject_version.py $BASE_TAG base
 
           # Use the main tag created earlier
           MAIN_TAG="${{ steps.generate_main_tag.outputs.main_tag }}"
           echo "Updating main project version to $MAIN_TAG"
-          uv run ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
-          uv run ./scripts/ci/update_pyproject_name.py langflow-nightly main
-          uv run ./scripts/ci/update_uv_dependency.py $BASE_TAG
+          python ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
+          python ./scripts/ci/update_pyproject_name.py langflow-nightly main
+          python ./scripts/ci/update_uv_dependency.py $BASE_TAG
 
           uv lock --upgrade
           uv lock --upgrade --directory src/backend/base

@@ -26,10 +26,7 @@ def update_uv_dep(pyproject_path: str, new_project_name: str) -> None:
     filepath = BASE_DIR / pyproject_path
     content = filepath.read_text(encoding="utf-8")
 
-    if new_project_name == "langflow-nightly":
-        pattern = re.compile(r"langflow = \{ workspace = true \}")
-        replacement = "langflow-nightly = { workspace = true }"
-    elif new_project_name == "langflow-base-nightly":
+    if new_project_name == "langflow-base-nightly":
         pattern = re.compile(r"langflow-base = \{ path = \"src/backend/base\" \}")
         replacement = 'langflow-base-nightly = { path = "src/backend/base" }'
     else:
@@ -53,7 +50,7 @@ def main() -> None:
 
     if build_type == "base":
         update_pyproject_name("src/backend/base/pyproject.toml", new_project_name)
-        # update_uv_dep("pyproject.toml", new_project_name)
+        update_uv_dep("pyproject.toml", new_project_name)
     elif build_type == "main":
         update_pyproject_name("pyproject.toml", new_project_name)
         # update_uv_dep("pyproject.toml", new_project_name)
