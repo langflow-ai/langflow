@@ -19,7 +19,6 @@ import FilePreview from "../filePreviewChat/newFilePreview";
 import ButtonSendWrapper from "./components/buttonSendWrapper/newButtonSendWrapper";
 import TextAreaWrapper from "./components/textAreaWrapper/newTextAreaWrapper";
 import UploadFileButton from "./components/uploadFileButton/newUploadFileButton";
-import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
 export default function ChatInput({
@@ -156,6 +155,13 @@ export default function ChatInput({
     fileInputRef.current!.click();
   };
 
+  const handleDeleteFile = (file: FilePreviewType) => {
+    setFiles((prev: FilePreviewType[]) =>
+      prev.filter((f) => f.id !== file.id),
+    );
+    // TODO: delete file on backend
+  }
+
   return (
     <div className="flex w-full flex-col-reverse">
       <div className="flex w-full flex-col rounded-md border border-border p-4">
@@ -181,10 +187,7 @@ export default function ChatInput({
               loading={file.loading}
               key={file.id}
               onDelete={() => {
-                setFiles((prev: FilePreviewType[]) =>
-                  prev.filter((f) => f.id !== file.id),
-                );
-                // TODO: delete file on backend
+                handleDeleteFile(file);
               }}
             />
           ))}
