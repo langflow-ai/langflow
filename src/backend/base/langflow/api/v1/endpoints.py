@@ -548,7 +548,7 @@ async def create_upload_file(
 
 # get endpoint to return version of langflow
 @router.get("/version")
-def get_version():
+async def get_version():
     return get_version_info()
 
 
