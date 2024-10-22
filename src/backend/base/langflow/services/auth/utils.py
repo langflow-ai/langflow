@@ -33,9 +33,9 @@ MINIMUM_KEY_LENGTH = 32
 
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
 async def api_key_security(
-    query_param: str = Security(api_key_query),
-    header_param: str = Security(api_key_header),
-    db: Session = Depends(get_session),
+    query_param: Annotated[str, Security(api_key_query)],
+    header_param: Annotated[str, Security(api_key_header)],
+    db: Annotated[Session, Depends(get_session)],
 ) -> UserRead | None:
     settings_service = get_settings_service()
     result: ApiKey | User | None = None
@@ -75,10 +75,10 @@ async def api_key_security(
 
 
 async def get_current_user(
-    token: str = Security(oauth2_login),
-    query_param: str = Security(api_key_query),
-    header_param: str = Security(api_key_header),
-    db: Session = Depends(get_session),
+    token: Annotated[str, Security(oauth2_login)],
+    query_param: Annotated[str, Security(api_key_query)],
+    header_param: Annotated[str, Security(api_key_header)],
+    db: Annotated[Session, Depends(get_session)],
 ) -> User:
     if token:
         return await get_current_user_by_jwt(token, db)
@@ -94,7 +94,7 @@ async def get_current_user(
 
 async def get_current_user_by_jwt(
     token: Annotated[str, Depends(oauth2_login)],
-    db: Session = Depends(get_session),
+    db: Annotated[Session, Depends(get_session)],
 ) -> User:
     settings_service = get_settings_service()
 
@@ -155,8 +155,8 @@ async def get_current_user_by_jwt(
 
 async def get_current_user_for_websocket(
     websocket: WebSocket,
-    db: Session = Depends(get_session),
-    query_param: str = Security(api_key_query),
+    db: Annotated[Session, Depends(get_session)],
+    query_param: Annotated[str, Security(api_key_query)],
 ) -> User | None:
     token = websocket.query_params.get("token")
     api_key = websocket.query_params.get("x-api-key")
