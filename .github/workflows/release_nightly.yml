@@ -75,7 +75,7 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --directory src/backend/base
+        run: uv sync --directory src/backend/base --frozen
 
       - name: Verify Nightly Name and Version
         id: verify
@@ -147,7 +147,7 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --no-editable
+        run: uv sync --frozen
 
       - name: Verify Nightly Name and Version
         id: verify

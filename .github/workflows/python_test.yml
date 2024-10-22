@@ -64,7 +64,7 @@ jobs:
             uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
             uv-${{ runner.os }}
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync --dev --frozen
       - name: Run unit tests
         uses: nick-fields/retry@v3
         with:
@@ -101,7 +101,7 @@ jobs:
             uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
             uv-${{ runner.os }}
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync --dev --frozen
       - name: Run integration tests
         run: make integration_tests_no_api_keys
       - name: Minimize uv cache
