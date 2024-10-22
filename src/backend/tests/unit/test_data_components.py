@@ -6,6 +6,7 @@ import httpx
 import pytest
 import respx
 from httpx import Response
+
 from langflow.components import data
 
 
@@ -113,8 +114,8 @@ async def test_build_with_multiple_urls(api_request):
     assert len(results) == len(urls)
 
 
-@patch("langflow.components.data.Directory.parallel_load_data")
-@patch("langflow.components.data.Directory.retrieve_file_paths")
+@patch("langflow.components.data.directory.parallel_load_data")
+@patch("langflow.components.data.directory.retrieve_file_paths")
 @patch("langflow.components.data.DirectoryComponent.resolve_path")
 def test_directory_component_build_with_multithreading(
     mock_resolve_path, mock_retrieve_file_paths, mock_parallel_load_data

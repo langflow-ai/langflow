@@ -59,7 +59,6 @@ ignore = [
     # Rules that are TODOs
     "ANN", # Missing type annotations
     "D1", # Missing docstrings
-    "N999", # Invalid module names
     "S",
     "SLF",
 ]
@@ -104,8 +103,8 @@ dependencies = [
     "httpx>=0.27",
     "uvicorn>=0.30.0",
     "gunicorn>=22.0.0",
-    "langchain~=0.2.0",
-    "langchain-core>=0.2.32",
+    "langchain~=0.3.3",
+    "langchain-core~=0.3.10",
     "langchainhub~=0.1.15",
     "sqlmodel==0.0.18",
     "loguru>=0.7.1",
@@ -149,7 +148,7 @@ dependencies = [
     "nanoid>=2.0.0",
     "filelock>=3.15.4",
     "grandalf>=0.8.0",
-    "crewai>=0.36.0",
+    "crewai>=0.74.2",
     "spider-client>=0.0.27",
     "diskcache>=5.6.3",
     "clickhouse-connect==0.7.19",

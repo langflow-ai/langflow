@@ -32,6 +32,7 @@
     --chart-3: 197 37% 24%; /* hsl(197 37% 24%) */
     --chart-4: 43 74% 66%; /* hsl(43 74% 66%) */
     --chart-5: 27 87% 67%; /* hsl(27 87% 67%) */
+    --canvas: 240 6% 10%; /* hsl(240 6% 10%) */
 
     --node-selected: 243 75% 59%;
     --round-btn-shadow: #00000063;
@@ -73,7 +74,7 @@
     --chat-trigger-disabled: #b4c3da;
     --status-red: #ef4444;
     --status-yellow: #eab308;
-    --chat-send: #059669;
+    --chat-send: #000000;
     --status-green: #4ade80;
     --status-blue: #2563eb;
     --status-gray: #6b7280;
@@ -123,6 +124,7 @@
     --chart-3: 30 80% 55%; /* hsl(30, 80%, 55%) */
     --chart-4: 280 65% 60%; /* hsl(280, 65%, 60%) */
     --chart-5: 340 75% 55%; /* hsl(340, 75%, 55%) */
+    --canvas: 240 6% 10%; /* hsl(240 6% 10%) */
 
     --note-default: #0f172a;
     --note-indigo: #312e81;
@@ -173,7 +175,7 @@
     --chat-trigger-disabled: #2d3b54;
     --status-red: #ef4444;
     --status-yellow: #eab308;
-    --chat-send: #059669;
+    --chat-send: #ffffff;
     --status-green: #4ade80;
     --status-blue: #2563eb;
     --connection: #6d6c6c;

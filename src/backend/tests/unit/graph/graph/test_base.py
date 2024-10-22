@@ -2,12 +2,12 @@ import logging
 from collections import deque
 
 import pytest
-from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.components.outputs.TextOutput import TextOutputComponent
-from langflow.components.tools.YfinanceTool import YfinanceToolComponent
-from langflow.graph.graph.base import Graph
+
+from langflow.components.agents import ToolCallingAgentComponent
+from langflow.components.inputs import ChatInput
+from langflow.components.outputs import ChatOutput, TextOutputComponent
+from langflow.components.tools import YfinanceToolComponent
+from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
 
 

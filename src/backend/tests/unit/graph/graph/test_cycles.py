@@ -1,14 +1,14 @@
 import os
 
 import pytest
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.components.outputs.TextOutput import TextOutputComponent
-from langflow.components.prompts.Prompt import PromptComponent
-from langflow.components.prototypes.ConditionalRouter import ConditionalRouterComponent
-from langflow.custom.custom_component.component import Component
-from langflow.graph.graph.base import Graph
+
+from langflow.components.inputs import ChatInput
+from langflow.components.models import OpenAIModelComponent
+from langflow.components.outputs import ChatOutput, TextOutputComponent
+from langflow.components.prompts import PromptComponent
+from langflow.components.prototypes import ConditionalRouterComponent
+from langflow.custom import Component
+from langflow.graph import Graph
 from langflow.graph.graph.utils import find_cycle_vertices
 from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message

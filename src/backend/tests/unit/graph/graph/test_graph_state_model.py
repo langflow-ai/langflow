@@ -1,11 +1,12 @@
 from typing import TYPE_CHECKING
 
 import pytest
-from langflow.components.helpers.Memory import MemoryComponent
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.components.prompts.Prompt import PromptComponent
+
+from langflow.components.helpers import MemoryComponent
+from langflow.components.inputs import ChatInput
+from langflow.components.models import OpenAIModelComponent
+from langflow.components.outputs import ChatOutput
+from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.graph.graph.state_model import create_state_model_from_graph
