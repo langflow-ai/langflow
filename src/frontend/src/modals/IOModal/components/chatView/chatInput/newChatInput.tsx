@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
@@ -15,11 +16,10 @@ import {
   ChatInputType,
   FilePreviewType,
 } from "../../../../../types/components";
-import FilePreview from "../filePreviewChat";
-import ButtonSendWrapper from "./components/buttonSendWrapper";
-import TextAreaWrapper from "./components/textAreaWrapper";
-import UploadFileButton from "./components/uploadFileButton";
-import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
+import FilePreview from "../filePreviewChat/newFilePreview";
+import ButtonSendWrapper from "./components/buttonSendWrapper/newButtonSendWrapper";
+import TextAreaWrapper from "./components/textAreaWrapper/newTextAreaWrapper";
+import UploadFileButton from "./components/uploadFileButton/newUploadFileButton";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
 export default function ChatInput({
@@ -150,15 +150,50 @@ export default function ChatInput({
     );
   };
 
-  const classNameFilePreview = getClassNamesFilePreview(inputFocus);
+  const classNameFilePreview = `flex w-full items-center gap-2 bg-background py-2 overflow-auto custom-scroll`;
 
   const handleButtonClick = () => {
     fileInputRef.current!.click();
   };
 
+  const handleDeleteFile = (file: FilePreviewType) => {
+    setFiles((prev: FilePreviewType[]) => prev.filter((f) => f.id !== file.id));
+    // TODO: delete file on backend
+  };
+
+  if (noInput) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center">
+        <div className="flex flex-col items-center justify-center gap-3 bg-background p-2">
+          <Button
+            className="font-semibold"
+            onClick={() => {
+              sendMessage({
+                repeat: 1,
+              });
+            }}
+          >
+            Run Flow
+          </Button>
+          <p className="text-muted-foreground">
+            Add a{" "}
+            <a
+              className="underline underline-offset-4"
+              target="_blank"
+              href="https://docs.langflow.org/components-io#chat-input"
+            >
+              Chat Input
+            </a>{" "}
+            component to your flow to send messages.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex w-full flex-col-reverse">
-      <div className="w-full">
+      <div className="flex w-full flex-col rounded-md border border-border p-4">
         <TextAreaWrapper
           checkSendingOk={checkSendingOk}
           send={send}
@@ -173,30 +208,6 @@ export default function ChatInput({
           files={files}
           isDragging={isDragging}
         />
-        <div className="form-modal-send-icon-position">
-          <ButtonSendWrapper
-            send={send}
-            lockChat={lockChat}
-            noInput={noInput}
-            chatValue={chatValue}
-            files={files}
-          />
-        </div>
-
-        <div
-          className={`absolute bottom-2 left-4 ${
-            lockChat ? "cursor-not-allowed" : ""
-          }`}
-        >
-          <UploadFileButton
-            lockChat={lockChat}
-            fileInputRef={fileInputRef}
-            handleFileChange={handleFileChange}
-            handleButtonClick={handleButtonClick}
-          />
-        </div>
-      </div>
-      {files.length > 0 && (
         <div className={classNameFilePreview}>
           {files.map((file) => (
             <FilePreview
@@ -205,15 +216,31 @@ export default function ChatInput({
               loading={file.loading}
               key={file.id}
               onDelete={() => {
-                setFiles((prev: FilePreviewType[]) =>
-                  prev.filter((f) => f.id !== file.id),
-                );
-                // TODO: delete file on backend
+                handleDeleteFile(file);
               }}
             />
           ))}
         </div>
-      )}
+        <div className="flex w-full items-end justify-between">
+          <div className={lockChat ? "cursor-not-allowed" : ""}>
+            <UploadFileButton
+              lockChat={lockChat}
+              fileInputRef={fileInputRef}
+              handleFileChange={handleFileChange}
+              handleButtonClick={handleButtonClick}
+            />
+          </div>
+          <div className="">
+            <ButtonSendWrapper
+              send={send}
+              lockChat={lockChat}
+              noInput={noInput}
+              chatValue={chatValue}
+              files={files}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

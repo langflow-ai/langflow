@@ -108,6 +108,7 @@ const config = {
         },
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
+        canvas: "var(--canvas)",
         ice: "var(--ice)",
         selected: "var(--selected)",
         hover: "var(--hover)",
