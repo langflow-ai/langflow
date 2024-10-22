@@ -13,6 +13,7 @@ from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_session, get_settings_service, get_storage_service
+from langflow.services.storage.service import StorageService
 from langflow.services.storage.utils import build_content_type_from_extension
 
 router = APIRouter(tags=["Files"], prefix="/files")
@@ -38,12 +39,13 @@ def get_flow_id(
 
 @router.post("/upload/{flow_id}", status_code=HTTPStatus.CREATED)
 async def upload_file(
+    *,
     file: UploadFile,
     flow_id: Annotated[UUID, Depends(get_flow_id)],
     current_user=Depends(get_current_active_user),
     session=Depends(get_session),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> UploadFileResponse:
-    storage_service = get_storage_service()
     try:
         max_file_size_upload = get_settings_service().settings.max_file_size_upload
     except Exception as e:
@@ -76,8 +78,9 @@ async def upload_file(
 
 
 @router.get("/download/{flow_id}/{file_name}")
-async def download_file(file_name: str, flow_id: UUID):
-    storage_service = get_storage_service()
+async def download_file(
+    file_name: str, flow_id: UUID, storage_service: Annotated[StorageService, Depends(get_storage_service)]
+):
     flow_id_str = str(flow_id)
     extension = file_name.split(".")[-1]
 
@@ -172,10 +175,11 @@ async def list_profile_pictures():
 @router.get("/list/{flow_id}")
 async def list_files(
     flow_id: Annotated[UUID, Depends(get_flow_id)],
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
         flow_id_str = str(flow_id)
-        files = await get_storage_service().list_files(flow_id=flow_id_str)
+        files = await storage_service.list_files(flow_id=flow_id_str)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -186,10 +190,11 @@ async def list_files(
 async def delete_file(
     file_name: str,
     flow_id: Annotated[UUID, Depends(get_flow_id)],
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
         flow_id_str = str(flow_id)
-        await get_storage_service().delete_file(flow_id=flow_id_str, file_name=file_name)
+        await storage_service.delete_file(flow_id=flow_id_str, file_name=file_name)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
