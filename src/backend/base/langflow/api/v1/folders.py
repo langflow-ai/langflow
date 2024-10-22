@@ -82,7 +82,7 @@ async def create_folder(
 
 
 @router.get("/", response_model=list[FolderRead], status_code=200)
-def read_folders(
+async def read_folders(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
