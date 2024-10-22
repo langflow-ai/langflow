@@ -120,7 +120,6 @@ export default function SessionSelector({
                 }}
                 onChange={handleInputChange}
                 onBlur={(e) => {
-                  console.log(e.relatedTarget);
                   if (
                     !e.relatedTarget ||
                     e.relatedTarget.getAttribute("data-confirm") !== "true"
