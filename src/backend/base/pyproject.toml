@@ -59,7 +59,7 @@ ignore = [
     # Rules that are TODOs
     "ANN", # Missing type annotations
     "D1", # Missing docstrings
-    "SLF",
+    "SLF001", # Using private attributes outside of class
 ]
 
 [tool.ruff.lint.per-file-ignores]
