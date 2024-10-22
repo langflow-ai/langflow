@@ -1,25 +1,16 @@
-import { INVALID_FILE_SIZE_ALERT } from "@/constants/alerts_constants";
 import { useDeleteBuilds } from "@/controllers/API/queries/_builds";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useRef, useState } from "react";
-import ShortUniqueId from "short-unique-id";
-import IconComponent from "../../../../components/genericIconComponent";
-import {
-  ALLOWED_IMAGE_INPUT_EXTENSIONS,
-  FS_ERROR_TEXT,
-  SN_ERROR_TEXT,
-} from "../../../../constants/constants";
-import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { ChatMessageType } from "../../../../types/chat";
-import { FilePreviewType, chatViewProps } from "../../../../types/components";
+import { chatViewProps } from "../../../../types/components";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import ChatInput from "./chatInput/newChatInput";
 import ChatMessage from "./chatMessage/newChatMessage";
+import { useFileHandler } from './chatInput/hooks/use-file-handler';
 
 export default function ChatView({
   sendMessage,
@@ -30,8 +21,7 @@ export default function ChatView({
   visibleSession,
   focusChat,
 }: chatViewProps): JSX.Element {
-  const { flowPool, outputs, inputs, CleanFlowPool } = useFlowStore();
-  const { setErrorData } = useAlertStore();
+  const { flowPool, inputs, CleanFlowPool } = useFlowStore();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
@@ -39,9 +29,7 @@ export default function ChatView({
 
   const inputTypes = inputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
-  const [id, setId] = useState<string>("");
   const { mutate: mutateDeleteFlowPool } = useDeleteBuilds();
-  const maxFileSizeUpload = useUtilityStore((state) => state.maxFileSizeUpload);
 
   //build chat history
   useEffect(() => {
@@ -89,21 +77,6 @@ export default function ChatView({
     // trigger focus on chat when new session is set
   }, [focusChat]);
 
-  function clearChat(): void {
-    setChatHistory([]);
-
-    mutateDeleteFlowPool(
-      { flowId: currentFlowId },
-      {
-        onSuccess: () => {
-          CleanFlowPool();
-        },
-      },
-    );
-    //TODO tell backend to clear chat session
-    if (lockChat) setLockChat(false);
-  }
-
   function updateChat(
     chat: ChatMessageType,
     message: string,
@@ -117,7 +90,8 @@ export default function ChatView({
         sender: chat.isSend ? "User" : "Machine",
       });
   }
-  const [files, setFiles] = useState<FilePreviewType[]>([]);
+
+  const { files, setFiles, handleFiles } = useFileHandler(currentFlowId);
   const [isDragging, setIsDragging] = useState(false);
 
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(setIsDragging);
@@ -125,77 +99,13 @@ export default function ChatView({
   const onDrop = (e) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files, setFiles, currentFlowId, setErrorData);
+      handleFiles(e.dataTransfer.files);
       e.dataTransfer.clearData();
     }
     setIsDragging(false);
   };
 
   const { mutate } = usePostUploadFile();
-
-  const handleFiles = (files, setFiles, currentFlowId, setErrorData) => {
-    if (files) {
-      const file = files?.[0];
-      const fileExtension = file.name.split(".").pop()?.toLowerCase();
-      if (file.size > maxFileSizeUpload) {
-        setErrorData({
-          title: INVALID_FILE_SIZE_ALERT(maxFileSizeUpload / 1024 / 1024),
-        });
-        return;
-      }
-
-      if (
-        !fileExtension ||
-        !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
-      ) {
-        console.log("Error uploading file");
-        setErrorData({
-          title: "Error uploading file",
-          list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
-        });
-        return;
-      }
-      const uid = new ShortUniqueId();
-      const id = uid.randomUUID(3);
-      setId(id);
-
-      const type = files[0].type.split("/")[0];
-      const blob = files[0];
-
-      setFiles((prevFiles) => [
-        ...prevFiles,
-        { file: blob, loading: true, error: false, id, type },
-      ]);
-
-      mutate(
-        { file: blob, id: currentFlowId },
-        {
-          onSuccess: (data) => {
-            setFiles((prev) => {
-              const newFiles = [...prev];
-              const updatedIndex = newFiles.findIndex((file) => file.id === id);
-              newFiles[updatedIndex].loading = false;
-              newFiles[updatedIndex].path = data.file_path;
-              return newFiles;
-            });
-          },
-          onError: (error) => {
-            setFiles((prev) => {
-              const newFiles = [...prev];
-              const updatedIndex = newFiles.findIndex((file) => file.id === id);
-              newFiles[updatedIndex].loading = false;
-              newFiles[updatedIndex].error = true;
-              return newFiles;
-            });
-            setErrorData({
-              title: "Error uploading file",
-              list: [error.response?.data?.detail],
-            });
-          },
-        },
-      );
-    }
-  };
 
   return (
     <div
