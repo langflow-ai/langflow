@@ -145,7 +145,7 @@ async def read_folder(
 
 
 @router.patch("/{folder_id}", response_model=FolderRead, status_code=200)
-def update_folder(
+async def update_folder(
     *,
     session: DbSession,
     folder_id: str,
