@@ -1,3 +1,4 @@
+import { ProfileIcon } from "@/components/appHeaderComponent/components/ProfileIcon";
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -22,7 +23,6 @@ import { cn } from "../../../../../utils/utils";
 import { EditMessageButton } from "./components/editMessageButton/newMessageOptions";
 import EditMessageField from "./components/editMessageField/newEditMessageField";
 import FileCardWrapper from "./components/fileCardWrapper";
-import { ProfileIcon } from "@/components/appHeaderComponent/components/ProfileIcon";
 
 export default function ChatMessage({
   chat,
@@ -148,13 +148,13 @@ export default function ChatMessage({
   const convertFiles = (
     files:
       | (
-        | string
-        | {
-          path: string;
-          type: string;
-          name: string;
-        }
-      )[]
+          | string
+          | {
+              path: string;
+              type: string;
+              name: string;
+            }
+        )[]
       | undefined,
   ) => {
     if (!files) return [];
@@ -213,15 +213,17 @@ export default function ChatMessage({
                 !chat.isSend ? "bg-chat-bot-icon" : "bg-zinc-400",
               )}
             >
-              {!chat.isSend ?<img
-                src={Robot}
-                className="absolute scale-[60%]"
-                alt={"robot_image"}
-              />:
+              {!chat.isSend ? (
+                <img
+                  src={Robot}
+                  className="absolute scale-[60%]"
+                  alt={"robot_image"}
+                />
+              ) : (
                 <div className="absolute scale-[80%]">
                   <ProfileIcon />
                 </div>
-              }
+              )}
             </div>
             <div className="flex w-[94%] flex-col">
               <div>
@@ -399,35 +401,35 @@ export default function ChatMessage({
                       >
                         {promptOpen
                           ? template?.split("\n")?.map((line, index) => {
-                            const regex = /{([^}]+)}/g;
-                            let match;
-                            let parts: Array<JSX.Element | string> = [];
-                            let lastIndex = 0;
-                            while ((match = regex.exec(line)) !== null) {
-                              // Push text up to the match
-                              if (match.index !== lastIndex) {
-                                parts.push(
-                                  line.substring(lastIndex, match.index),
-                                );
-                              }
-                              // Push div with matched text
-                              if (chat.message[match[1]]) {
-                                parts.push(
-                                  <span className="chat-message-highlight">
-                                    {chat.message[match[1]]}
-                                  </span>,
-                                );
-                              }
+                              const regex = /{([^}]+)}/g;
+                              let match;
+                              let parts: Array<JSX.Element | string> = [];
+                              let lastIndex = 0;
+                              while ((match = regex.exec(line)) !== null) {
+                                // Push text up to the match
+                                if (match.index !== lastIndex) {
+                                  parts.push(
+                                    line.substring(lastIndex, match.index),
+                                  );
+                                }
+                                // Push div with matched text
+                                if (chat.message[match[1]]) {
+                                  parts.push(
+                                    <span className="chat-message-highlight">
+                                      {chat.message[match[1]]}
+                                    </span>,
+                                  );
+                                }
 
-                              // Update last index
-                              lastIndex = regex.lastIndex;
-                            }
-                            // Push text after the last match
-                            if (lastIndex !== line.length) {
-                              parts.push(line.substring(lastIndex));
-                            }
-                            return <p>{parts}</p>;
-                          })
+                                // Update last index
+                                lastIndex = regex.lastIndex;
+                              }
+                              // Push text after the last match
+                              if (lastIndex !== line.length) {
+                                parts.push(line.substring(lastIndex));
+                              }
+                              return <p>{parts}</p>;
+                            })
                           : isEmpty
                             ? EMPTY_INPUT_SEND_MESSAGE
                             : chatMessage}
@@ -447,10 +449,11 @@ export default function ChatMessage({
                       ) : (
                         <>
                           <div
-                            className={`flex w-full gap-2 whitespace-pre-wrap break-words ${isEmpty
+                            className={`flex w-full gap-2 whitespace-pre-wrap break-words ${
+                              isEmpty
                                 ? "text-chat-trigger-disabled"
                                 : "text-primary"
-                              }`}
+                            }`}
                             data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                           >
                             {isEmpty
@@ -481,7 +484,7 @@ export default function ChatMessage({
                     onCopy={() => {
                       navigator.clipboard.writeText(chatMessage);
                     }}
-                    onDelete={() => { }}
+                    onDelete={() => {}}
                     onEdit={() => setEditMessage(true)}
                     className="h-fit group-hover:visible"
                   />

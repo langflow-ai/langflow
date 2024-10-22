@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
@@ -21,7 +22,6 @@ import TextAreaWrapper from "./components/textAreaWrapper/newTextAreaWrapper";
 import UploadFileButton from "./components/uploadFileButton/newUploadFileButton";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
-import { Button } from "@/components/ui/button";
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -164,23 +164,32 @@ export default function ChatInput({
   if (noInput) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center">
-        <div className="flex flex-col gap-3 items-center justify-center bg-background p-2">
-          <Button className="font-semibold" onClick={() => {
-            sendMessage({
-              repeat: 1,
-            });
-          }}>
+        <div className="flex flex-col items-center justify-center gap-3 bg-background p-2">
+          <Button
+            className="font-semibold"
+            onClick={() => {
+              sendMessage({
+                repeat: 1,
+              });
+            }}
+          >
             Run Flow
           </Button>
           <p className="text-muted-foreground">
-            Add a <a className="underline underline-offset-4" target="_blank" href="https://docs.langflow.org/components-io#chat-input">Chat Input</a> component to your flow to send messages.
+            Add a{" "}
+            <a
+              className="underline underline-offset-4"
+              target="_blank"
+              href="https://docs.langflow.org/components-io#chat-input"
+            >
+              Chat Input
+            </a>{" "}
+            component to your flow to send messages.
           </p>
         </div>
       </div>
     );
   }
-
-
 
   return (
     <div className="flex w-full flex-col-reverse">
