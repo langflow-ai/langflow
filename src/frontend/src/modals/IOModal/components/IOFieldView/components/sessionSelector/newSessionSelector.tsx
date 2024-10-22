@@ -164,7 +164,7 @@ export default function SessionSelector({
             data-confirm="true"
             className={cn(
               "h-8 w-fit border-none bg-transparent p-2 focus:ring-0",
-              isVisible ? "visible" : "invisible group-hover:visible"
+              isVisible ? "visible" : "invisible group-hover:visible",
             )}
           >
             <IconComponent name="MoreHorizontal" className="h-4 w-4" />
