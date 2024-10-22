@@ -73,7 +73,7 @@ class LangFuseTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
-    ):
+    ) -> None:
         start_time = datetime.now(tz=timezone.utc)
         if not self._ready:
             return
@@ -103,7 +103,7 @@ class LangFuseTracer(BaseTracer):
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
-    ):
+    ) -> None:
         end_time = datetime.now(tz=timezone.utc)
         if not self._ready:
             return
@@ -124,7 +124,7 @@ class LangFuseTracer(BaseTracer):
         outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         if not self._ready:
             return
 

@@ -21,7 +21,7 @@ class AssistantsCreateThread(ComponentWithCache):
         Output(display_name="Thread ID", name="thread_id", method="process_inputs"),
     ]
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.client = get_patched_openai_client(self._shared_component_cache)
 

@@ -419,7 +419,7 @@ async def build_flow(
     event_manager = create_default_event_manager(queue=asyncio_queue)
     main_task = asyncio.create_task(event_generator(event_manager, asyncio_queue_client_consumed))
 
-    def on_disconnect():
+    def on_disconnect() -> None:
         logger.debug("Client disconnected, closing tasks")
         main_task.cancel()
 

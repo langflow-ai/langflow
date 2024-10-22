@@ -10,13 +10,13 @@ from pydantic import ValidationError
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 
 
-def add_type_ignores():
+def add_type_ignores() -> None:
     if not hasattr(ast, "TypeIgnore"):
 
         class TypeIgnore(ast.AST):
             _fields = ()
 
-        ast.TypeIgnore = TypeIgnore
+        ast.TypeIgnore = TypeIgnore  # type: ignore[assignment, misc]
 
 
 def validate_code(code):

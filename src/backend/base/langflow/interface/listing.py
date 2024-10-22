@@ -3,7 +3,7 @@ from langflow.utils.lazy_load import LazyLoadDictBase
 
 
 class AllTypesDict(LazyLoadDictBase):
-    def __init__(self):
+    def __init__(self) -> None:
         self._all_types_dict = None
 
     def _build_dict(self):

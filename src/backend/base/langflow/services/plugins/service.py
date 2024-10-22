@@ -13,13 +13,13 @@ from langflow.services.plugins.base import BasePlugin, CallbackPlugin
 class PluginService(Service):
     name = "plugin_service"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.plugins: dict[str, BasePlugin] = {}
         self.plugin_dir = Path(__file__).parent
         self.plugins_base_module = "langflow.services.plugins"
         self.load_plugins()
 
-    def load_plugins(self):
+    def load_plugins(self) -> None:
         base_files = ["base.py", "service.py", "factory.py", "__init__.py"]
         for module in self.plugin_dir.iterdir():
             if module.suffix == ".py" and module.name not in base_files:
@@ -38,7 +38,7 @@ class PluginService(Service):
                 except Exception:  # noqa: BLE001
                     logger.exception(f"Error loading plugin {plugin_name}")
 
-    def register_plugin(self, plugin_name, plugin_instance):
+    def register_plugin(self, plugin_name, plugin_instance) -> None:
         self.plugins[plugin_name] = plugin_instance
         plugin_instance.initialize()
 
@@ -50,7 +50,7 @@ class PluginService(Service):
             return plugin.get()
         return None
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         for plugin in self.plugins.values():
             plugin.teardown()
 

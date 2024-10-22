@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class CacheServiceFactory(ServiceFactory):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(CacheService)
 
     def create(self, settings_service: SettingsService):

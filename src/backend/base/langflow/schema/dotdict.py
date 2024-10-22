@@ -33,7 +33,7 @@ class dotdict(dict):  # noqa: N801
         else:
             return value
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key, value) -> None:
         """Override attribute setting to work as dictionary item assignment.
 
         Args:
@@ -44,7 +44,7 @@ class dotdict(dict):  # noqa: N801
             value = dotdict(value)
         self[key] = value
 
-    def __delattr__(self, key):
+    def __delattr__(self, key) -> None:
         """Override attribute deletion to work as dictionary item deletion.
 
         Args:

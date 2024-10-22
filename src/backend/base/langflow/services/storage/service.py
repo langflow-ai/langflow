@@ -21,7 +21,7 @@ class StorageService(Service):
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         raise NotImplementedError
 
-    def set_ready(self):
+    def set_ready(self) -> None:
         self.ready = True
 
     @abstractmethod
@@ -37,8 +37,8 @@ class StorageService(Service):
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_file(self, flow_id: str, file_name: str) -> bool:
+    async def delete_file(self, flow_id: str, file_name: str) -> None:
         raise NotImplementedError
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         raise NotImplementedError

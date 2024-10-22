@@ -24,7 +24,7 @@ class DatabaseVariableService(VariableService, Service):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
 
-    def initialize_user_variables(self, user_id: UUID | str, session: Session):
+    def initialize_user_variables(self, user_id: UUID | str, session: Session) -> None:
         if not self.settings_service.settings.store_environment_variables:
             logger.info("Skipping environment variable storage.")
             return
@@ -130,7 +130,7 @@ class DatabaseVariableService(VariableService, Service):
         user_id: UUID | str,
         name: str,
         session: Session,
-    ):
+    ) -> None:
         stmt = select(Variable).where(Variable.user_id == user_id).where(Variable.name == name)
         variable = session.exec(stmt).first()
         if not variable:
@@ -139,7 +139,7 @@ class DatabaseVariableService(VariableService, Service):
         session.delete(variable)
         session.commit()
 
-    def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: Session):
+    def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: Session) -> None:
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.id == variable_id)).first()
         if not variable:
             msg = f"{variable_id} variable not found."

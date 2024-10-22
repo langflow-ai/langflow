@@ -108,7 +108,7 @@ class DataOutputResponse(BaseModel):
 
 
 class ContainsEnumMeta(enum.EnumMeta):
-    def __contains__(cls, item):
+    def __contains__(cls, item) -> bool:
         try:
             cls(item)
         except ValueError:

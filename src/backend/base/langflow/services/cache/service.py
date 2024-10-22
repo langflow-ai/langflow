@@ -36,14 +36,14 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         b = cache["b"]
     """
 
-    def __init__(self, max_size=None, expiration_time=60 * 60):
+    def __init__(self, max_size=None, expiration_time=60 * 60) -> None:
         """Initialize a new InMemoryCache instance.
 
         Args:
             max_size (int, optional): Maximum number of items to store in the cache.
             expiration_time (int, optional): Time in seconds after which a cached item expires. Default is 1 hour.
         """
-        self._cache = OrderedDict()
+        self._cache: OrderedDict = OrderedDict()
         self._lock = threading.RLock()
         self.max_size = max_size
         self.expiration_time = expiration_time
@@ -72,7 +72,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
             self.delete(key)
         return None
 
-    def set(self, key, value, lock: Union[threading.Lock, None] = None):  # noqa: UP007
+    def set(self, key, value, lock: Union[threading.Lock, None] = None) -> None:  # noqa: UP007
         """Add an item to the cache.
 
         If the cache is full, the least recently used item is evicted.
@@ -93,7 +93,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
 
             self._cache[key] = {"value": value, "time": time.time()}
 
-    def upsert(self, key, value, lock: Union[threading.Lock, None] = None):  # noqa: UP007
+    def upsert(self, key, value, lock: Union[threading.Lock, None] = None) -> None:  # noqa: UP007
         """Inserts or updates a value in the cache.
 
         If the existing value and the new value are both dictionaries, they are merged.
@@ -130,16 +130,16 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
             self.set(key, value)
             return value
 
-    def delete(self, key, lock: Union[threading.Lock, None] = None):  # noqa: UP007
+    def delete(self, key, lock: Union[threading.Lock, None] = None) -> None:  # noqa: UP007
         with lock or self._lock:
             self._cache.pop(key, None)
 
-    def clear(self, lock: Union[threading.Lock, None] = None):  # noqa: UP007
+    def clear(self, lock: Union[threading.Lock, None] = None) -> None:  # noqa: UP007
         """Clear all items from the cache."""
         with lock or self._lock:
             self._cache.clear()
 
-    def __contains__(self, key):
+    def __contains__(self, key) -> bool:
         """Check if the key is in the cache."""
         return key in self._cache
 
@@ -147,19 +147,19 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         """Retrieve an item from the cache using the square bracket notation."""
         return self.get(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         """Add an item to the cache using the square bracket notation."""
         self.set(key, value)
 
-    def __delitem__(self, key):
+    def __delitem__(self, key) -> None:
         """Remove an item from the cache using the square bracket notation."""
         self.delete(key)
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the number of items in the cache."""
         return len(self._cache)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return a string representation of the InMemoryCache instance."""
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
 
@@ -185,7 +185,7 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
         b = cache["b"]
     """
 
-    def __init__(self, host="localhost", port=6379, db=0, url=None, expiration_time=60 * 60):
+    def __init__(self, host="localhost", port=6379, db=0, url=None, expiration_time=60 * 60) -> None:
         """Initialize a new RedisCache instance.
 
         Args:
@@ -215,7 +215,7 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
         self.expiration_time = expiration_time
 
     # check connection
-    def is_connected(self):
+    def is_connected(self) -> bool:
         """Check if the Redis client is connected."""
         import redis
 
@@ -234,7 +234,7 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
         return pickle.loads(value) if value else None
 
     @override
-    async def set(self, key, value, lock=None):
+    async def set(self, key, value, lock=None) -> None:
         try:
             if pickled := pickle.dumps(value):
                 result = await self._client.setex(str(key), self.expiration_time, pickled)
@@ -246,7 +246,7 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
             raise TypeError(msg) from exc
 
     @override
-    async def upsert(self, key, value, lock=None):
+    async def upsert(self, key, value, lock=None) -> None:
         """Inserts or updates a value in the cache.
 
         If the existing value and the new value are both dictionaries, they are merged.
@@ -266,28 +266,28 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
         await self.set(key, value)
 
     @override
-    async def delete(self, key, lock=None):
+    async def delete(self, key, lock=None) -> None:
         await self._client.delete(key)
 
     @override
-    async def clear(self, lock=None):
+    async def clear(self, lock=None) -> None:
         """Clear all items from the cache."""
         await self._client.flushdb()
 
-    def __contains__(self, key):
+    def __contains__(self, key) -> bool:
         """Check if the key is in the cache."""
         if key is None:
             return False
-        return asyncio.run(self._client.exists(str(key)))
+        return bool(asyncio.run(self._client.exists(str(key))))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return a string representation of the RedisCache instance."""
         return f"RedisCache(expiration_time={self.expiration_time})"
 
 
 class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
-    def __init__(self, max_size=None, expiration_time=3600):
-        self.cache = OrderedDict()
+    def __init__(self, max_size=None, expiration_time=3600) -> None:
+        self.cache: OrderedDict = OrderedDict()
 
         self.lock = asyncio.Lock()
         self.max_size = max_size
@@ -310,7 +310,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
             await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS
 
-    async def set(self, key, value, lock: asyncio.Lock | None = None):
+    async def set(self, key, value, lock: asyncio.Lock | None = None) -> None:
         if not lock:
             async with self.lock:
                 await self._set(
@@ -323,46 +323,46 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
                 value,
             )
 
-    async def _set(self, key, value):
+    async def _set(self, key, value) -> None:
         if self.max_size and len(self.cache) >= self.max_size:
             self.cache.popitem(last=False)
         self.cache[key] = {"value": value, "time": time.time()}
         self.cache.move_to_end(key)
 
-    async def delete(self, key, lock: asyncio.Lock | None = None):
+    async def delete(self, key, lock: asyncio.Lock | None = None) -> None:
         if not lock:
             async with self.lock:
                 await self._delete(key)
         else:
             await self._delete(key)
 
-    async def _delete(self, key):
+    async def _delete(self, key) -> None:
         if key in self.cache:
             del self.cache[key]
 
-    async def clear(self, lock: asyncio.Lock | None = None):
+    async def clear(self, lock: asyncio.Lock | None = None) -> None:
         if not lock:
             async with self.lock:
                 await self._clear()
         else:
             await self._clear()
 
-    async def _clear(self):
+    async def _clear(self) -> None:
         self.cache.clear()
 
-    async def upsert(self, key, value, lock: asyncio.Lock | None = None):
+    async def upsert(self, key, value, lock: asyncio.Lock | None = None) -> None:
         if not lock:
             async with self.lock:
                 await self._upsert(key, value)
         else:
             await self._upsert(key, value)
 
-    async def _upsert(self, key, value):
+    async def _upsert(self, key, value) -> None:
         existing_value = await self.get(key)
         if existing_value is not None and isinstance(existing_value, dict) and isinstance(value, dict):
             existing_value.update(value)
             value = existing_value
         await self.set(key, value)
 
-    def __contains__(self, key):
+    def __contains__(self, key) -> bool:
         return key in self.cache

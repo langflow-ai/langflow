@@ -36,7 +36,7 @@ tool_names = []
 tools_and_names = {}
 
 
-def tools_from_package(your_package):
+def tools_from_package(your_package) -> None:
     # Iterate over all modules in the package
     package_name = your_package.__name__
     for module_info in pkgutil.iter_modules(your_package.__path__):

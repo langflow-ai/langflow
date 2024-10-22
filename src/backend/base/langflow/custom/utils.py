@@ -32,7 +32,7 @@ class UpdateBuildConfigError(Exception):
     pass
 
 
-def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: list[str]):
+def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: list[str]) -> None:
     """Add output types to the frontend node."""
     for return_type in return_types:
         if return_type is None:
@@ -55,7 +55,7 @@ def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: l
         frontend_node.add_output_type(_return_type)
 
 
-def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list[str]):
+def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list[str]) -> None:
     """Reorder fields in the frontend node based on the specified field_order."""
     if not field_order:
         return
@@ -69,7 +69,7 @@ def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list
     frontend_node.field_order = field_order
 
 
-def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: list[str]):
+def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: list[str]) -> None:
     """Add base classes to the frontend node."""
     for return_type_instance in return_types:
         if return_type_instance is None:
@@ -196,7 +196,7 @@ def add_new_custom_field(
     return frontend_node
 
 
-def add_extra_fields(frontend_node, field_config, function_args):
+def add_extra_fields(frontend_node, field_config, function_args) -> None:
     """Add extra fields to the frontend node."""
     if not function_args:
         return
