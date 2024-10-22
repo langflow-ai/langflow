@@ -99,7 +99,7 @@ export default function SessionSelector({
     ) {
       handleCancel();
     }
-  }
+  };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -107,7 +107,7 @@ export default function SessionSelector({
       e.stopPropagation();
       handleConfirm();
     }
-  }
+  };
 
   return (
     <div

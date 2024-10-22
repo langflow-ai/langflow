@@ -156,11 +156,9 @@ export default function ChatInput({
   };
 
   const handleDeleteFile = (file: FilePreviewType) => {
-    setFiles((prev: FilePreviewType[]) =>
-      prev.filter((f) => f.id !== file.id),
-    );
+    setFiles((prev: FilePreviewType[]) => prev.filter((f) => f.id !== file.id));
     // TODO: delete file on backend
-  }
+  };
 
   return (
     <div className="flex w-full flex-col-reverse">
