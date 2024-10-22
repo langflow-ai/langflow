@@ -1,3 +1,3 @@
-from .OutputParser import OutputParserComponent
+from .output_parser import OutputParserComponent
 
 __all__ = ["OutputParserComponent"]

@@ -1,11 +1,10 @@
 import pytest
-from langflow.components.agents.CrewAIAgent import CrewAIAgentComponent
-from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
-from langflow.components.helpers.SequentialTask import SequentialTaskComponent
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
+from langflow.components.agents import CrewAIAgentComponent, ToolCallingAgentComponent
+from langflow.components.helpers import SequentialTaskComponent
+from langflow.components.inputs import ChatInput
+from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
-from langflow.template.field.base import Output
+from langflow.template import Output
 
 
 def test_set_invalid_output():

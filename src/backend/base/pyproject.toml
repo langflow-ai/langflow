@@ -59,7 +59,6 @@ ignore = [
     # Rules that are TODOs
     "ANN", # Missing type annotations
     "D1", # Missing docstrings
-    "N999", # Invalid module names
     "S",
     "SLF",
 ]

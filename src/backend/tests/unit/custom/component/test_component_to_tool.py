@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from langflow.components.inputs.ChatInput import ChatInput
+from langflow.components.inputs import ChatInput
 
 
 def test_component_to_toolkit():

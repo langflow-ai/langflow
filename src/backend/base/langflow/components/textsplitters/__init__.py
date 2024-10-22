@@ -1,7 +1,7 @@
-from .CharacterTextSplitter import CharacterTextSplitterComponent
-from .LanguageRecursiveTextSplitter import LanguageRecursiveTextSplitterComponent
-from .NaturalLanguageTextSplitter import NaturalLanguageTextSplitterComponent
-from .RecursiveCharacterTextSplitter import RecursiveCharacterTextSplitterComponent
+from .character import CharacterTextSplitterComponent
+from .language_recursive import LanguageRecursiveTextSplitterComponent
+from .natural_language import NaturalLanguageTextSplitterComponent
+from .recursive_character import RecursiveCharacterTextSplitterComponent
 
 __all__ = [
     "CharacterTextSplitterComponent",

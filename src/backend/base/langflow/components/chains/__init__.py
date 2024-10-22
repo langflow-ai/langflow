@@ -1,8 +1,8 @@
-from .ConversationChain import ConversationChainComponent
-from .LLMCheckerChain import LLMCheckerChainComponent
-from .LLMMathChain import LLMMathChainComponent
-from .RetrievalQA import RetrievalQAComponent
-from .SQLGenerator import SQLGeneratorComponent
+from .conversation import ConversationChainComponent
+from .llm_checker import LLMCheckerChainComponent
+from .llm_math import LLMMathChainComponent
+from .retrieval_qa import RetrievalQAComponent
+from .sql_generator import SQLGeneratorComponent
 
 __all__ = [
     "ConversationChainComponent",

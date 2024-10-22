@@ -1,5 +1,5 @@
-from .Confluence import ConfluenceComponent
-from .GitLoader import GitLoaderComponent
-from .Unstructured import UnstructuredComponent
+from .confluence import ConfluenceComponent
+from .git import GitLoaderComponent
+from .unstructured import UnstructuredComponent
 
 __all__ = ["ConfluenceComponent", "GitLoaderComponent", "UnstructuredComponent"]

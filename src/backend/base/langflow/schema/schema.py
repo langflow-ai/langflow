@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from pydantic.v1 import BaseModel as BaseModelV1
 from typing_extensions import TypedDict
 
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 INPUT_FIELD_NAME = "input_value"
