@@ -13,7 +13,6 @@ from uuid import UUID
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
-from base.langflow.components.inputs.ChatInput import ChatInput
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
@@ -484,6 +483,8 @@ async def added_webhook_test(client, json_webhook_test, logged_in_headers):
 
 @pytest.fixture
 async def flow_component(client: TestClient, logged_in_headers):
+    from langflow.components.inputs.ChatInput import ChatInput
+
     chat_input = ChatInput()
     graph = Graph(start=chat_input, end=chat_input)
     graph_dict = graph.dump(name="Chat Input Component")
