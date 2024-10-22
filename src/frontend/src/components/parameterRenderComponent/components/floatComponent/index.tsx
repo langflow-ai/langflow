@@ -20,8 +20,8 @@ export default function FloatComponent({
   id = "",
 }: InputProps<number, FloatComponentType>): JSX.Element {
   const step = rangeSpec?.step ?? 0.1;
-  const min = rangeSpec?.min ?? -Infinity;
-  const max = rangeSpec?.max ?? Infinity;
+  const min = rangeSpec?.min ?? -2;
+  const max = rangeSpec?.max ?? 2;
 
   // Clear component state
   useEffect(() => {

@@ -73,7 +73,7 @@ test("user must be able to freeze a path", async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
-  await page.getByTestId("float-input").fill("1.0");
+  await page.getByTestId("float_float_temperature").fill("1.0");
 
   await page.waitForTimeout(1000);
 
@@ -96,7 +96,8 @@ test("user must be able to freeze a path", async ({ page }) => {
 
   await page.waitForTimeout(3000);
 
-  await page.getByTestId("float-input").fill("1.2");
+  await page.getByTestId("float_float_temperature").fill("");
+  await page.getByTestId("float_float_temperature").fill("1.2");
 
   await page.waitForTimeout(1000);
 
