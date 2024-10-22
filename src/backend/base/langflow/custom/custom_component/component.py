@@ -93,10 +93,6 @@ class Component(CustomComponent):
         self.__config = config
         self._reset_all_output_values()
         super().__init__(**config)
-        if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_toggle_output") and self.add_tool_output:
-            pass
-            #  TODO: Future PR Dynamic Outputs
-            # self._append_tool_toggle_output()
         if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_output") and self.add_tool_output:
             self._append_tool_output()
 
@@ -845,20 +841,3 @@ class Component(CustomComponent):
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         return super().update_build_config(build_config, field_value, field_name)
-
-    def _append_tool_toggle_output(self):
-        from langflow.inputs import BoolInput
-
-        self.inputs.append(
-            BoolInput(
-                name="set_as_tool",
-                value=False,
-                display_name="Component as Tool",
-                advanced=True,
-                info="If True, the component will be treated as a tool.",
-                on_change=lambda value: self.update_build_config(
-                    build_config=self.build_config(), field_value=value, field_name="set_as_tool"
-                ),
-            )
-        )
-        # TODO: update Frontend outputs accoriding to the toggle may be by updating the build config
