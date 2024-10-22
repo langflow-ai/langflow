@@ -8,9 +8,9 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { ChatMessageType } from "../../../../types/chat";
 import { chatViewProps } from "../../../../types/components";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
+import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatInput from "./chatInput/newChatInput";
 import ChatMessage from "./chatMessage/newChatMessage";
-import { useFileHandler } from './chatInput/hooks/use-file-handler';
 
 export default function ChatView({
   sendMessage,
