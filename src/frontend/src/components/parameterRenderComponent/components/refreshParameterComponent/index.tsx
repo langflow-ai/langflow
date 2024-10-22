@@ -41,7 +41,7 @@ export function RefreshParameterComponent({
     );
   return (
     (children || templateData.refresh_button) && (
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-3">
         {children}
         {templateData.refresh_button && (
           <div className="shrink-0 flex-col">

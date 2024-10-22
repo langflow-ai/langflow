@@ -28,7 +28,7 @@ function RefreshButton({
     className,
     disabled ? "cursor-not-allowed" : "",
     !editNode ? "py-2.5 px-3" : "px-2 py-1",
-    "group text-placeholder",
+    "group text-placeholder p-1 h-6 w-6",
   );
 
   // icon class name should take into account the disabled state and the loading state
@@ -40,7 +40,7 @@ function RefreshButton({
 
   return (
     <Button
-      variant="primary"
+      variant="ghost"
       disabled={disabled}
       className={classNames}
       onClick={handleClick}
