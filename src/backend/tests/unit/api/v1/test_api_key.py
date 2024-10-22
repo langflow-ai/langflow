@@ -34,3 +34,22 @@ async def test_create_api_key_route(client: AsyncClient, logged_in_headers, acti
     assert "name" in result.keys(), "The dictionary must contain a key called 'name'"
     assert "total_uses" in result.keys(), "The dictionary must contain a key called 'total_uses'"
     assert "user_id" in result.keys(), "The dictionary must contain a key called 'user_id'"
+
+
+async def test_delete_api_key_route(client: AsyncClient, logged_in_headers, active_user):
+    basic_case = {
+        "name": "string",
+        "total_uses": 0,
+        "is_active": True,
+        "api_key": "string",
+        "user_id": str(active_user.id),
+    }
+    _response = await client.post("api/v1/api_key/", json=basic_case, headers=logged_in_headers)
+    _id = _response.json()["id"]
+
+    response = await client.delete(f"api/v1/api_key/{_id}", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert isinstance(result, dict), "The result must be a dictionary"
+    assert "detail" in result.keys(), "The dictionary must contain a key called 'detail'"
