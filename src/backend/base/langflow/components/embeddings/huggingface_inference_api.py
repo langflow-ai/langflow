@@ -91,7 +91,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
             msg = "API Key is required for non-local inference endpoints"
             raise ValueError(msg)
         else:
-            api_key = SecretStr(self.api_key)
+            api_key = SecretStr(self.api_key).get_secret_value()
 
         try:
             return self.create_huggingface_embeddings(api_key, api_url, self.model_name)
