@@ -1,17 +1,16 @@
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlmodel import Session
 
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import ApiKeyCreateRequest, ApiKeysResponse
 from langflow.services.auth import utils as auth_utils
 
 # Assuming you have these methods in your service layer
 from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key, get_api_keys
 from langflow.services.database.models.api_key.model import ApiKeyCreate, UnmaskedApiKeyRead
-from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session, get_settings_service
+from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     pass
@@ -21,8 +20,8 @@ router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
 @router.get("/")
 def get_api_keys_route(
-    db: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(auth_utils.get_current_active_user)],
+    db: DbSession,
+    current_user: CurrentActiveUser,
 ) -> ApiKeysResponse:
     try:
         user_id = current_user.id
@@ -36,8 +35,8 @@ def get_api_keys_route(
 @router.post("/")
 def create_api_key_route(
     req: ApiKeyCreate,
-    current_user: Annotated[User, Depends(auth_utils.get_current_active_user)],
-    db: Annotated[Session, Depends(get_session)],
+    current_user: CurrentActiveUser,
+    db: DbSession,
 ) -> UnmaskedApiKeyRead:
     try:
         user_id = current_user.id
@@ -49,7 +48,7 @@ def create_api_key_route(
 @router.delete("/{api_key_id}", dependencies=[Depends(auth_utils.get_current_active_user)])
 def delete_api_key_route(
     api_key_id: UUID,
-    db: Session = Depends(get_session),
+    db: DbSession,
 ):
     try:
         delete_api_key(db, api_key_id)
@@ -62,10 +61,10 @@ def delete_api_key_route(
 def save_store_api_key(
     api_key_request: ApiKeyCreateRequest,
     response: Response,
-    current_user: Annotated[User, Depends(auth_utils.get_current_active_user)],
-    db: Annotated[Session, Depends(get_session)],
-    settings_service=Depends(get_settings_service),
+    current_user: CurrentActiveUser,
+    db: DbSession,
 ):
+    settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
 
     try:
@@ -95,8 +94,8 @@ def save_store_api_key(
 
 @router.delete("/store")
 def delete_store_api_key(
-    current_user: Annotated[User, Depends(auth_utils.get_current_active_user)],
-    db: Annotated[Session, Depends(get_session)],
+    current_user: CurrentActiveUser,
+    db: DbSession,
 ):
     try:
         current_user.store_api_key = None

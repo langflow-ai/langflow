@@ -15,7 +15,10 @@ from .WikipediaAPI import WikipediaAPIComponent
 from .WolframAlphaAPI import WolframAlphaAPIComponent
 
 __all__ = [
+    "AstraDBCQLToolComponent",
+    "AstraDBToolComponent",
     "BingSearchAPIComponent",
+    "CalculatorToolComponent",
     "CalculatorToolComponent",
     "GleanSearchAPIComponent",
     "GoogleSearchAPIComponent",
@@ -28,7 +31,4 @@ __all__ = [
     "SerpAPIComponent",
     "WikipediaAPIComponent",
     "WolframAlphaAPIComponent",
-    "CalculatorToolComponent",
-    "AstraDBToolComponent",
-    "AstraDBCQLToolComponent",
 ]
