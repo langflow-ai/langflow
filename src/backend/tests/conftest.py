@@ -15,8 +15,8 @@ from asgi_lifespan import LifespanManager
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.graph.graph.base import Graph
+from langflow.components.inputs import ChatInput
+from langflow.graph import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
