@@ -7,3 +7,4 @@ export const ENABLE_BRANDING = true;
 export const ENABLE_MVPS = false;
 export const ENABLE_CUSTOM_PARAM = false;
 export const ENABLE_INTEGRATIONS = false;
+export const ENABLE_NEW_IO_MODAL = false;
