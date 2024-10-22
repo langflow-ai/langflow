@@ -20,26 +20,20 @@ from langflow.services.store.schema import (
 router = APIRouter(prefix="/store", tags=["Components Store"])
 
 
-def get_user_store_api_key(
-    user: CurrentActiveUser,
-    settings_service=Depends(get_settings_service),
-):
+def get_user_store_api_key(user: CurrentActiveUser):
     if not user.store_api_key:
         raise HTTPException(status_code=400, detail="You must have a store API key set.")
     try:
-        return auth_utils.decrypt_api_key(user.store_api_key, settings_service)
+        return auth_utils.decrypt_api_key(user.store_api_key, get_settings_service())
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to decrypt API key. Please set a new one.") from e
 
 
-def get_optional_user_store_api_key(
-    user: CurrentActiveUser,
-    settings_service=Depends(get_settings_service),
-):
+def get_optional_user_store_api_key(user: CurrentActiveUser):
     if not user.store_api_key:
         return None
     try:
-        return auth_utils.decrypt_api_key(user.store_api_key, settings_service)
+        return auth_utils.decrypt_api_key(user.store_api_key, get_settings_service())
     except Exception:  # noqa: BLE001
         logger.exception("Failed to decrypt API key")
         return user.store_api_key
