@@ -63,9 +63,9 @@ async def build_vertex(
             return
         start_time = time.perf_counter()
         try:
-            if isinstance(vertex, Vertex) or not vertex._built:
+            if isinstance(vertex, Vertex) or not vertex.built:
                 await vertex.build(user_id=None, session_id=sid)
-            params = vertex._built_object_repr()
+            params = vertex.built_object_repr()
             valid = True
             result_dict = vertex.get_built_result()
             # We need to set the artifacts to pass information
