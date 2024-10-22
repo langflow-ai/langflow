@@ -1,6 +1,9 @@
 import { usePostLikeComponent } from "@/controllers/API/queries/store";
+import { ENABLE_NEW_IO_MODAL } from "@/customization/feature-flags";
 import { useState } from "react";
 import { getComponent } from "../../controllers/API";
+import IOModalOld from "../../modals/IOModal";
+import IOModalNew from "../../modals/IOModal/newModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
@@ -24,11 +27,7 @@ import Loading from "../ui/loading";
 import useDataEffect from "./hooks/use-data-effect";
 import useInstallComponent from "./hooks/use-handle-install";
 import { convertTestName } from "./utils/convert-test-name";
-import { ENABLE_NEW_IO_MODAL } from "@/customization/feature-flags";
-import IOModalNew from "../../modals/IOModal/newModal";
-import IOModalOld from "../../modals/IOModal";
 const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
-
 
 export default function StoreCardComponent({
   data,

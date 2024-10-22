@@ -4,6 +4,8 @@ import { Transition } from "@headlessui/react";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import ApiModal from "../../modals/apiModal";
+import IOModalOld from "../../modals/IOModal";
+import IOModalNew from "../../modals/IOModal/newModal";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
@@ -11,8 +13,6 @@ import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
-import IOModalNew from "../../modals/IOModal/newModal";
-import IOModalOld from "../../modals/IOModal";
 const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 
 export default function FlowToolbar(): JSX.Element {
