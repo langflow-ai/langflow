@@ -78,7 +78,7 @@ const CustomInputPopover = ({
     setInputWidth(
       selectedOption?.length > 25
         ? selectedOption?.length * 8
-        : selectedOption?.length * 10,
+        : selectedOption?.length * 11,
     );
   }, [selectedOption]);
 
