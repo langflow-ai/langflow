@@ -60,7 +60,7 @@ class Message(Data):
         return value
 
     @field_serializer("timestamp")
-    def serialize_timestamp(self,value):
+    def serialize_timestamp(self, value):
         return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").astimezone(timezone.utc)
 
     @field_validator("files", mode="before")

@@ -842,7 +842,7 @@ class Component(CustomComponent):
         message: Message,
         background_color: str | None = None,
         text_color: str | None = None,
-        allow_markdown: bool | None = None,  # Changed from bool = True
+        allow_markdown: bool = True,
         icon: str | None = None,
         content_blocks: list[ContentBlock] | None = None,
         format_type: Literal["default", "error", "warning", "info"] = "default",
@@ -933,4 +933,3 @@ class Component(CustomComponent):
                 }
             )
         return complete_message
-

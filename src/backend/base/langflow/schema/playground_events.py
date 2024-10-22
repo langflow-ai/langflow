@@ -98,8 +98,8 @@ def create_message(
     sender: str | None = None,
     session_id: str | None = None,
     id: UUID | str | None = None,  # noqa: A002
-    error: bool | None = None,
-    edit: bool | None = None,
+    error: bool = False,
+    edit: bool = False,
     flow_id: UUID | str | None = None,
 ):
     return MessageEvent(
