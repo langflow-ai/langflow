@@ -619,10 +619,12 @@ export type textModalPropsType = {
   setValue: (value: string) => void;
   value: string;
   disabled?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
   readonly?: boolean;
   password?: boolean;
   changeVisibility?: () => void;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type newFlowModalPropsType = {

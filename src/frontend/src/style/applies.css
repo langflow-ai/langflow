@@ -1220,4 +1220,12 @@
   .disabled-state {
     @apply pointer-events-none bg-secondary text-hard-zinc;
   }
+
+  .background-fade-input {
+    @apply absolute right-[0.9px] h-6 w-7  bg-background
+  }
+
+  .gradient-fade-input {
+    @apply absolute right-7 h-6 w-12 rounded-l-xl;
+  }
 }
