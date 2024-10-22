@@ -2,22 +2,24 @@ from __future__ import annotations
 
 import uuid
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import HTTPException, Query
+from fastapi import Depends, HTTPException, Query
 from fastapi_pagination import Params
 from loguru import logger
 from sqlalchemy import delete
+from sqlmodel import Session
 
 from langflow.graph.graph.base import Graph
+from langflow.services.auth.utils import get_current_active_user
+from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from langflow.services.deps import get_session
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
-    from sqlmodel import Session
-
     from langflow.services.chat.service import ChatService
     from langflow.services.store.schema import StoreComponentCreate
 
@@ -26,6 +28,9 @@ API_WORDS = ["api", "key", "token"]
 
 MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
+
+CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
+DbSession = Annotated[Session, Depends(get_session)]
 
 
 def has_api_terms(word: str):

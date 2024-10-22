@@ -78,6 +78,7 @@ def set_var_for_macos_issue() -> None:
 
 @app.command()
 def run(
+    *,
     host: str | None = typer.Option(None, help="Host to bind the server to.", show_default=False),
     workers: int | None = typer.Option(None, help="Number of worker processes.", show_default=False),
     worker_timeout: int | None = typer.Option(None, help="Worker timeout in seconds.", show_default=False),
