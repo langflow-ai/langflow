@@ -92,6 +92,23 @@ export default function SessionSelector({
     }
   };
 
+  const handleOnBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (
+      !e.relatedTarget ||
+      e.relatedTarget.getAttribute("data-confirm") !== "true"
+    ) {
+      handleCancel();
+    }
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      handleConfirm();
+    }
+  }
+
   return (
     <div
       data-testid="session-selector"
@@ -111,22 +128,9 @@ export default function SessionSelector({
               <Input
                 ref={inputRef}
                 value={editedSession}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleConfirm();
-                  }
-                }}
+                onKeyDown={onKeyDown}
                 onChange={handleInputChange}
-                onBlur={(e) => {
-                  if (
-                    !e.relatedTarget ||
-                    e.relatedTarget.getAttribute("data-confirm") !== "true"
-                  ) {
-                    handleCancel();
-                  }
-                }}
+                onBlur={handleOnBlur}
                 autoFocus
                 className="h-6 flex-grow px-1 py-0"
               />
