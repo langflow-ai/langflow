@@ -10,15 +10,6 @@ if TYPE_CHECKING:
     from langflow.schema.message import Message
 
 
-# Error messages as constants
-ERRORS = {
-    "NO_MODEL": "Embedding model not provided",
-    "NO_TEXT": "No text content found in message",
-    "NO_CLIENT": "Embedding model client not properly initialized",
-    "INVALID_EMBEDDINGS": "Invalid embeddings generated",
-}
-
-
 class TextEmbedderComponent(Component):
     display_name: str = "Text Embedder"
     description: str = "Generate embeddings for a given message using the specified embedding model."
@@ -47,16 +38,19 @@ class TextEmbedderComponent(Component):
 
             # Validate embedding model
             if not embedding_model:
-                raise ValueError(ERRORS["NO_MODEL"])
+                msg = "Embedding model not provided"
+                raise ValueError(msg)
 
             # Extract the text content from the message
             text_content = message.text if message and message.text else ""
             if not text_content:
-                raise ValueError(ERRORS["NO_TEXT"])
+                msg = "No text content found in message"
+                raise ValueError(msg)
 
             # Check if the embedding model has the required attributes
             if not hasattr(embedding_model, "client") or not embedding_model.client:
-                raise ValueError(ERRORS["NO_CLIENT"])
+                msg = "Embedding model client not properly initialized"
+                raise ValueError(msg)
 
             # Ensure the base URL has proper protocol
             if hasattr(embedding_model.client, "base_url"):
@@ -69,10 +63,19 @@ class TextEmbedderComponent(Component):
 
             # Validate embeddings output
             if not embeddings or not isinstance(embeddings, list):
-                raise ValueError(ERRORS["INVALID_EMBEDDINGS"])
+                msg = "Invalid embeddings generated"
+                raise ValueError(msg)
+
+            embedding_vector = embeddings[0]
 
         except Exception as e:
             logging.exception("Error generating embeddings")
+            # Return empty data with error status
             error_data = Data(data={"text": "", "embeddings": [], "error": str(e)})
             self.status = {"error": str(e)}
             return error_data
+
+        # Create a Data object to encapsulate the results
+        result_data = Data(data={"text": text_content, "embeddings": embedding_vector})
+        self.status = {"text": text_content, "embeddings": embedding_vector}
+        return result_data
