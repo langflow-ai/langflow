@@ -71,8 +71,9 @@ jobs:
 
           BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
           echo "Updating base project version to $BASE_TAG"
-          uv run ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
-          uv run ./scripts/ci/update_pyproject_version.py $BASE_TAG base
+          # TODO: I suppose they are different packages, so we could add a scripts dir in base. 
+          uv run --directory src/backend/base ../../../scripts/ci/update_pyproject_name.py langflow-base-nightly base
+          uv run --directory src/backend/base ../../../scripts/ci/update_pyproject_version.py $BASE_TAG base
 
           # Use the main tag created earlier
           MAIN_TAG="${{ steps.generate_main_tag.outputs.main_tag }}"
