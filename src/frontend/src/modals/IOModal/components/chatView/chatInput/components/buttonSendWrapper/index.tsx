@@ -1,4 +1,3 @@
-import Loading from "@/components/ui/loading";
 import useFlowStore from "@/stores/flowStore";
 import IconComponent from "../../../../../../../components/genericIconComponent";
 import { Button } from "../../../../../../../components/ui/button";
@@ -9,7 +8,7 @@ import { classNames } from "../../../../../../../utils/utils";
 const BUTTON_STATES = {
   NO_INPUT: "bg-high-indigo text-background",
   HAS_CHAT_VALUE: "text-primary",
-  SHOW_STOP: "bg-zinc-400 text-white cursor-pointer",
+  SHOW_STOP: "bg-error text-background cursor-pointer",
   DEFAULT: "bg-chat-send text-background",
 };
 
@@ -39,7 +38,7 @@ const ButtonSendWrapper = ({
   const getButtonState = () => {
     if (showStopButton) return BUTTON_STATES.SHOW_STOP;
     if (noInput) return BUTTON_STATES.NO_INPUT;
-    if (chatValue) return BUTTON_STATES.DEFAULT;
+    if (chatValue) return BUTTON_STATES.HAS_CHAT_VALUE;
 
     return BUTTON_STATES.DEFAULT;
   };
@@ -62,10 +61,11 @@ const ButtonSendWrapper = ({
       unstyled
     >
       <Case condition={showStopButton}>
-        <div className="flex items-center gap-2">
-          Stop
-          <Loading className="text-black" />
-        </div>
+        <IconComponent
+          name="Square"
+          className="form-modal-lock-icon"
+          aria-hidden="true"
+        />
       </Case>
 
       <Case condition={showPlayButton}>
@@ -77,7 +77,11 @@ const ButtonSendWrapper = ({
       </Case>
 
       <Case condition={showSendButton}>
-        <div className="flex items-center gap-2">Send</div>
+        <IconComponent
+          name="LucideSend"
+          className="form-modal-send-icon"
+          aria-hidden="true"
+        />
       </Case>
     </Button>
   );

@@ -16,7 +16,7 @@ import {
   FilePreviewType,
 } from "../../../../../types/components";
 import FilePreview from "../filePreviewChat/newFilePreview";
-import ButtonSendWrapper from "./components/buttonSendWrapper";
+import ButtonSendWrapper from "./components/buttonSendWrapper/newButtonSendWrapper";
 import TextAreaWrapper from "./components/textAreaWrapper/newTextAreaWrapper";
 import UploadFileButton from "./components/uploadFileButton";
 import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
