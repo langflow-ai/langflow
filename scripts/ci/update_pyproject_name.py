@@ -53,10 +53,10 @@ def main() -> None:
 
     if build_type == "base":
         update_pyproject_name("src/backend/base/pyproject.toml", new_project_name)
-        update_uv_dep("pyproject.toml", new_project_name)
+        # update_uv_dep("pyproject.toml", new_project_name)
     elif build_type == "main":
         update_pyproject_name("pyproject.toml", new_project_name)
-        update_uv_dep("pyproject.toml", new_project_name)
+        # update_uv_dep("pyproject.toml", new_project_name)
     else:
         msg = f"Invalid build type: {build_type}"
         raise ValueError(msg)
