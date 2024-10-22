@@ -45,7 +45,7 @@ def get_number_of_workers(workers=None):
     return workers
 
 
-def display_results(results):
+def display_results(results) -> None:
     """Display the results of the migration."""
     for table_results in results:
         table = Table(title=f"Migration {table_results.table_name}")
@@ -62,7 +62,7 @@ def display_results(results):
         console.print()  # Print a new line
 
 
-def set_var_for_macos_issue():
+def set_var_for_macos_issue() -> None:
     # OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
     # we need to set this var is we are running on MacOS
     # otherwise we get an error when running gunicorn
@@ -146,7 +146,7 @@ def run(
         help="Defines the maximum file size for the upload in MB.",
         show_default=False,
     ),
-):
+) -> None:
     """Run Langflow."""
     if env_file:
         load_dotenv(env_file, override=True)
@@ -201,7 +201,7 @@ def run(
             # Run using uvicorn on MacOS and Windows
             # Windows doesn't support gunicorn
             # MacOS requires an env variable to be set to use gunicorn
-            process = run_on_windows(host, port, log_level, options, app)
+            run_on_windows(host, port, log_level, options, app)
         else:
             # Run using gunicorn on Linux
             process = run_on_mac_or_linux(host, port, log_level, options, app)
@@ -218,7 +218,7 @@ def run(
         sys.exit(1)
 
 
-def wait_for_server_ready(host, port):
+def wait_for_server_ready(host, port) -> None:
     """Wait for the server to become ready by polling the health endpoint."""
     status_code = 0
     while status_code != httpx.codes.OK:
@@ -240,7 +240,7 @@ def run_on_mac_or_linux(host, port, log_level, options, app):
     return webapp_process
 
 
-def run_on_windows(host, port, log_level, options, app):
+def run_on_windows(host, port, log_level, options, app) -> None:
     """Run the Langflow server on Windows."""
     print_banner(host, port)
     run_langflow(host, port, log_level, options, app)
@@ -274,7 +274,7 @@ def get_free_port(port):
     return port
 
 
-def get_letter_from_version(version: str):
+def get_letter_from_version(version: str) -> str | None:
     """Get the letter from a pre-release version."""
     if "a" in version:
         return "a"
@@ -293,7 +293,7 @@ def build_version_notice(current_version: str, package_name: str) -> str:
     return ""
 
 
-def generate_pip_command(package_names, is_pre_release):
+def generate_pip_command(package_names, is_pre_release) -> str:
     """Generate the pip install command based on the packages and whether it's a pre-release."""
     base_command = "pip install"
     if is_pre_release:
@@ -308,7 +308,7 @@ def stylize_text(text: str, to_style: str, *, is_prerelease: bool) -> str:
     return text.replace(to_style, styled_text)
 
 
-def print_banner(host: str, port: int):
+def print_banner(host: str, port: int) -> None:
     notices = []
     package_names = []  # Track package names for pip install instructions
     is_pre_release = False  # Track if any package is a pre-release
@@ -354,7 +354,7 @@ def print_banner(host: str, port: int):
     rprint(panel)
 
 
-def run_langflow(host, port, log_level, options, app):
+def run_langflow(host, port, log_level, options, app) -> None:
     """Run Langflow server on localhost."""
     if platform.system() == "Windows":
         # Run using uvicorn on MacOS and Windows
@@ -380,7 +380,7 @@ def superuser(
     username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
     password: str = typer.Option(..., prompt=True, hide_input=True, help="Password for the superuser."),
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
-):
+) -> None:
     """Create a superuser."""
     configure(log_level=log_level)
     initialize_services()
@@ -412,7 +412,7 @@ def superuser(
 # command to copy the langflow database from the cache to the current directory
 # because now the database is stored per installation
 @app.command()
-def copy_db():
+def copy_db() -> None:
     """Copy the database files to the current directory.
 
     This function copies the 'langflow.db' and 'langflow-pre.db' files from the cache directory to the current
@@ -451,7 +451,7 @@ def migration(
         default=False,
         help="Fix migrations. This is a destructive operation, and should only be used if you know what you are doing.",
     ),
-):
+) -> None:
     """Run or test migrations."""
     if fix and not typer.confirm(
         "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
@@ -469,7 +469,7 @@ def migration(
 @app.command()
 def api_key(
     log_level: str = typer.Option("error", help="Logging level."),
-):
+) -> None:
     """Creates an API key for the default superuser if AUTO_LOGIN is enabled.
 
     Args:
@@ -509,7 +509,7 @@ def api_key(
         api_key_banner(unmasked_api_key)
 
 
-def api_key_banner(unmasked_api_key):
+def api_key_banner(unmasked_api_key) -> None:
     is_mac = platform.system() == "Darwin"
     import pyperclip
 
@@ -528,7 +528,7 @@ def api_key_banner(unmasked_api_key):
     console.print(panel)
 
 
-def main():
+def main() -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         app()

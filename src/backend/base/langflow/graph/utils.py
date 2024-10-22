@@ -172,7 +172,7 @@ def log_vertex_build(
     params: Any,
     data: ResultDataResponse,
     artifacts: dict | None = None,
-):
+) -> None:
     try:
         if not get_settings_service().settings.vertex_builds_storage_enabled:
             return
