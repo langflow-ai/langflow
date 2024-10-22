@@ -127,7 +127,7 @@ const CustomInputPopover = ({
         />
         {value && selectedOption !== "" && nodeStyle && (
           <div
-            className="bg-accent-emerald-foreground pointer-events-none absolute left-1 top-1 h-[calc(100%-9px)] rounded-sm bg-emerald-100 opacity-30"
+            className="pointer-events-none absolute left-1 top-1 h-[calc(100%-9px)] rounded-sm bg-accent-emerald-foreground bg-emerald-100 opacity-30"
             style={{ width: `${inputWidth}px` }}
           />
         )}

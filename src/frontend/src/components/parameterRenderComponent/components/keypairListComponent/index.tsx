@@ -45,7 +45,7 @@ const KeyValuePairComponent = ({
         <IconComponent
           name={iconName}
           className={cn(
-            "text-placeholder h-4 w-6",
+            "h-4 w-6 text-placeholder",
             !disabled && "hover:cursor-pointer hover:text-foreground",
             isFirstItem
               ? "group-hover:text-foreground"
