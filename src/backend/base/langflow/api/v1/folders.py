@@ -28,7 +28,7 @@ router = APIRouter(prefix="/folders", tags=["Folders"])
 
 
 @router.post("/", response_model=FolderRead, status_code=201)
-def create_folder(
+async def create_folder(
     *,
     session: DbSession,
     folder: FolderCreate,
