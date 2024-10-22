@@ -95,7 +95,7 @@ class OpenAIModelComponent(LCModelComponent):
         json_mode = bool(output_schema_dict) or self.json_mode
         seed = self.seed
 
-        api_key = SecretStr(openai_api_key) if openai_api_key else None
+        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None
         output = ChatOpenAI(
             max_tokens=max_tokens or None,
             model_kwargs=model_kwargs,

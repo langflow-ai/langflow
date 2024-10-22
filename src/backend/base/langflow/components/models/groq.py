@@ -98,6 +98,6 @@ class GroqModel(LCModelComponent):
             temperature=temperature,
             base_url=groq_api_base,
             n=n or 1,
-            api_key=SecretStr(groq_api_key),
+            api_key=SecretStr(groq_api_key).get_secret_value(),
             streaming=stream,
         )
