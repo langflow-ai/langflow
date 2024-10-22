@@ -36,7 +36,7 @@ def get_messages(
         List[Data]: A list of Data objects representing the retrieved messages.
     """
     with session_scope() as session:
-        stmt = select(MessageTable)
+        stmt = select(MessageTable).where(MessageTable.error == False)  # noqa: E712
         if sender:
             stmt = stmt.where(MessageTable.sender == sender)
         if sender_name:
@@ -86,7 +86,7 @@ def add_messagetables(messages: list[MessageTable], session: Session):
     return [MessageRead.model_validate(message, from_attributes=True) for message in messages]
 
 
-def delete_messages(session_id: str):
+def delete_messages(session_id: str) -> None:
     """Delete messages from the monitor service based on the provided session ID.
 
     Args:
@@ -142,7 +142,7 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
         messages = get_messages(
             session_id=self.session_id,
         )
-        return [m.to_lc_message() for m in messages]
+        return [m.to_lc_message() for m in messages if not m.error]  # Exclude error messages
 
     def add_messages(self, messages: Sequence[BaseMessage]) -> None:
         for lc_message in messages:

@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class VariableServiceFactory(ServiceFactory):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(VariableService)
 
     def create(self, settings_service: SettingsService):

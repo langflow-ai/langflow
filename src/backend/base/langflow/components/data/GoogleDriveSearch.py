@@ -88,7 +88,7 @@ class GoogleDriveSearchComponent(Component):
 
         return query
 
-    def on_inputs_changed(self):
+    def on_inputs_changed(self) -> None:
         # Automatically regenerate the query string when inputs change
         self.generate_query_string()
 

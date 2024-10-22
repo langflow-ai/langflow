@@ -64,7 +64,7 @@ class LCAgentComponent(Component):
         self.status = message
         return message
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         required_output_methods = ["build_agent"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
@@ -115,7 +115,9 @@ class LCAgentComponent(Component):
 class LCToolsAgentComponent(LCAgentComponent):
     _base_inputs = [
         *LCAgentComponent._base_inputs,
-        HandleInput(name="tools", display_name="Tools", input_types=["Tool", "BaseTool"], is_list=True),
+        HandleInput(
+            name="tools", display_name="Tools", input_types=["Tool", "BaseTool", "StructuredTool"], is_list=True
+        ),
     ]
 
     def build_agent(self) -> AgentExecutor:

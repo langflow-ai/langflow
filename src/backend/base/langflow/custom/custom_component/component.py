@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.custom.tree_visitor import RequiredInputsVisitor
-from langflow.field_typing import Tool  # noqa: TCH001 Needed by add_toolkit_output
+from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -61,7 +61,7 @@ class Component(CustomComponent):
     _current_output: str = ""
     _metadata: dict = {}
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         # if key starts with _ it is a config
         # else it is an input
         inputs = {}
@@ -107,10 +107,10 @@ class Component(CustomComponent):
         self.set_class_code()
         self._set_output_required_inputs()
 
-    def set_event_manager(self, event_manager: EventManager | None = None):
+    def set_event_manager(self, event_manager: EventManager | None = None) -> None:
         self._event_manager = event_manager
 
-    def _reset_all_output_values(self):
+    def _reset_all_output_values(self) -> None:
         if isinstance(self._outputs_map, dict):
             for output in self._outputs_map.values():
                 output.value = UNDEFINED
@@ -138,8 +138,8 @@ class Component(CustomComponent):
     def __deepcopy__(self, memo):
         if id(self) in memo:
             return memo[id(self)]
-        kwargs = deepcopy(self.__config)
-        kwargs["inputs"] = deepcopy(self.__inputs)
+        kwargs = deepcopy(self.__config, memo)
+        kwargs["inputs"] = deepcopy(self.__inputs, memo)
         new_component = type(self)(**kwargs)
         new_component._code = self._code
         new_component._outputs_map = self._outputs_map
@@ -153,7 +153,7 @@ class Component(CustomComponent):
         memo[id(self)] = new_component
         return new_component
 
-    def set_class_code(self):
+    def set_class_code(self) -> None:
         # Get the source code of the calling class
         if self._code:
             return
@@ -200,7 +200,7 @@ class Component(CustomComponent):
         """
         return await self._run()
 
-    def set_vertex(self, vertex: Vertex):
+    def set_vertex(self, vertex: Vertex) -> None:
         """Sets the vertex for the component.
 
         Args:
@@ -245,7 +245,7 @@ class Component(CustomComponent):
         msg = f"Output {name} not found in {self.__class__.__name__}"
         raise ValueError(msg)
 
-    def set_on_output(self, name: str, **kwargs):
+    def set_on_output(self, name: str, **kwargs) -> None:
         output = self.get_output(name)
         for key, value in kwargs.items():
             if not hasattr(output, key):
@@ -253,14 +253,14 @@ class Component(CustomComponent):
                 raise ValueError(msg)
             setattr(output, key, value)
 
-    def set_output_value(self, name: str, value: Any):
+    def set_output_value(self, name: str, value: Any) -> None:
         if name in self._outputs_map:
             self._outputs_map[name].value = value
         else:
             msg = f"Output {name} not found in {self.__class__.__name__}"
             raise ValueError(msg)
 
-    def map_outputs(self, outputs: list[Output]):
+    def map_outputs(self, outputs: list[Output]) -> None:
         """Maps the given list of outputs to the component.
 
         Args:
@@ -280,7 +280,7 @@ class Component(CustomComponent):
             # allows each instance of each component to modify its own output
             self._outputs_map[output.name] = deepcopy(output)
 
-    def map_inputs(self, inputs: list[InputTypes]):
+    def map_inputs(self, inputs: list[InputTypes]) -> None:
         """Maps the given inputs to the component.
 
         Args:
@@ -296,7 +296,7 @@ class Component(CustomComponent):
                 raise ValueError(msg)
             self._inputs[input_.name] = deepcopy(input_)
 
-    def validate(self, params: dict):
+    def validate(self, params: dict) -> None:
         """Validates the component parameters.
 
         Args:
@@ -309,13 +309,16 @@ class Component(CustomComponent):
         self._validate_inputs(params)
         self._validate_outputs()
 
-    def _set_output_types(self):
+    def _set_output_types(self) -> None:
         for output in self._outputs_map.values():
+            if output.method is None:
+                msg = f"Output {output.name} does not have a method"
+                raise ValueError(msg)
             return_types = self._get_method_return_type(output.method)
             output.add_types(return_types)
             output.set_selected()
 
-    def _set_output_required_inputs(self):
+    def _set_output_required_inputs(self) -> None:
         for output in self.outputs:
             if not output.method:
                 continue
@@ -326,8 +329,7 @@ class Component(CustomComponent):
                 source_code = inspect.getsource(method)
                 ast_tree = ast.parse(dedent(source_code))
             except Exception:  # noqa: BLE001
-                source_code = self._code
-                ast_tree = ast.parse(dedent(source_code))
+                ast_tree = ast.parse(dedent(self._code or ""))
 
             visitor = RequiredInputsVisitor(self._inputs)
             visitor.visit(ast_tree)
@@ -420,7 +422,7 @@ class Component(CustomComponent):
             raise TypeError(msg)
         return getattr(value, output.method)
 
-    def _process_connection_or_parameter(self, key, value):
+    def _process_connection_or_parameter(self, key, value) -> None:
         _input = self._get_or_create_input(key)
         # We need to check if callable AND if it is a method from a class that inherits from Component
         if isinstance(value, Component):
@@ -438,7 +440,7 @@ class Component(CustomComponent):
         else:
             self._set_parameter_or_attribute(key, value)
 
-    def _process_connection_or_parameters(self, key, value):
+    def _process_connection_or_parameters(self, key, value) -> None:
         # if value is a list of components, we need to process each component
         if isinstance(value, list):
             for val in value:
@@ -455,13 +457,13 @@ class Component(CustomComponent):
             self.inputs.append(_input)
             return _input
 
-    def _connect_to_component(self, key, value, _input):
+    def _connect_to_component(self, key, value, _input) -> None:
         component = value.__self__
         self._components.append(component)
         output = component.get_output_by_method(value)
         self._add_edge(component, key, output, _input)
 
-    def _add_edge(self, component, key, output, _input):
+    def _add_edge(self, component, key, output, _input) -> None:
         self._edges.append(
             {
                 "source": component._id,
@@ -483,7 +485,7 @@ class Component(CustomComponent):
             }
         )
 
-    def _set_parameter_or_attribute(self, key, value):
+    def _set_parameter_or_attribute(self, key, value) -> None:
         if isinstance(value, Component):
             methods = ", ".join([f"'{output.method}'" for output in value.outputs])
             msg = (
@@ -527,7 +529,7 @@ class Component(CustomComponent):
         msg = f"{name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
 
-    def _set_input_value(self, name: str, value: Any):
+    def _set_input_value(self, name: str, value: Any) -> None:
         if name in self._inputs:
             input_value = self._inputs[name].value
             if isinstance(input_value, Component):
@@ -547,15 +549,15 @@ class Component(CustomComponent):
             msg = f"Input {name} not found in {self.__class__.__name__}"
             raise ValueError(msg)
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         # Raise Error if some rule isn't met
         pass
 
-    def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode):
+    def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
             frontend_node.set_field_value_in_template(name, value)
 
-    def _map_parameters_on_template(self, template: dict):
+    def _map_parameters_on_template(self, template: dict) -> None:
         for name, value in self._parameters.items():
             try:
                 template[name]["value"] = value
@@ -625,7 +627,7 @@ class Component(CustomComponent):
             "id": self._id,
         }
 
-    def _validate_inputs(self, params: dict):
+    def _validate_inputs(self, params: dict) -> None:
         # Params keys are the `name` attribute of the Input objects
         for key, value in params.copy().items():
             if key not in self._inputs:
@@ -636,7 +638,7 @@ class Component(CustomComponent):
             input_.value = value
             params[input_.name] = input_.value
 
-    def set_attributes(self, params: dict):
+    def set_attributes(self, params: dict) -> None:
         self._validate_inputs(params)
         _attributes = {}
         for key, value in params.items():
@@ -652,7 +654,7 @@ class Component(CustomComponent):
                 _attributes[key] = input_obj.value or None
         self._attributes = _attributes
 
-    def _set_outputs(self, outputs: list[dict]):
+    def _set_outputs(self, outputs: list[dict]) -> None:
         self.outputs = [Output(**output) for output in outputs]
         for output in self.outputs:
             setattr(self, output.name, output)
@@ -794,22 +796,22 @@ class Component(CustomComponent):
         except KeyError:
             return []
 
-    def build(self, **kwargs):
+    def build(self, **kwargs) -> None:
         self.set_attributes(kwargs)
 
     def _get_fallback_input(self, **kwargs):
         return Input(**kwargs)
 
     def to_toolkit(self) -> list[Tool]:
-        ComponentToolkit = _get_component_toolkit()
-        return ComponentToolkit(component=self).get_tools()
+        component_toolkit = _get_component_toolkit()
+        return component_toolkit(component=self).get_tools()
 
     def get_project_name(self):
         if hasattr(self, "_tracing_service") and self._tracing_service:
             return self._tracing_service.project_name
         return "Langflow"
 
-    def log(self, message: LoggableType | list[LoggableType], name: str | None = None):
+    def log(self, message: LoggableType | list[LoggableType], name: str | None = None) -> None:
         """Logs a message.
 
         Args:
@@ -828,6 +830,6 @@ class Component(CustomComponent):
             data["component_id"] = self._id
             self._event_manager.on_log(data=data)
 
-    def _append_tool_output(self):
+    def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
             self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))

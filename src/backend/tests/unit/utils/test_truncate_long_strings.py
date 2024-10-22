@@ -1,9 +1,11 @@
+import math
+
 import pytest
 from langflow.utils.util_strings import truncate_long_strings
 
 
 @pytest.mark.parametrize(
-    "input_data, max_length, expected",
+    ("input_data", "max_length", "expected"),
     [
         # Test case 1: String shorter than max_length
         ("short string", 20, "short string"),
@@ -20,7 +22,7 @@ from langflow.utils.util_strings import truncate_long_strings
         # Test case 7: Integer input
         (12345, 3, 12345),
         # Test case 8: Float input
-        (3.14159, 4, 3.14159),
+        (math.pi, 4, math.pi),
         # Test case 9: Boolean input
         (True, 2, True),
         # Test case 10: None input
