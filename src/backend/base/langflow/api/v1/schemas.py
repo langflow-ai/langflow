@@ -361,7 +361,7 @@ class SidebarCategory(BaseModel):
     display_name: str
     name: str
     icon: str
-    beta: bool
+    beta: bool = False
 
 
 class SidebarCategoriesResponse(BaseModel):

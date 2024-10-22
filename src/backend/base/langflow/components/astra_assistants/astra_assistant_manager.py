@@ -104,7 +104,7 @@ class AstraAssistantManager(ComponentWithCache):
         logger.info(self.tool)
         tools = []
         tool_obj = None
-        if self.tool is not None and self.tool != "":
+        if self.tool:
             tool_cls = tools_and_names[self.tool]
             tool_obj = tool_cls()
             tools.append(tool_obj)

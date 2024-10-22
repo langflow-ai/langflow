@@ -4,8 +4,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import Session
 
+from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
 from langflow.services.auth.utils import (
     authenticate_user,
@@ -15,8 +15,7 @@ from langflow.services.auth.utils import (
 )
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_session, get_settings_service, get_variable_service
-from langflow.services.variable.service import VariableService
+from langflow.services.deps import get_settings_service, get_variable_service
 
 router = APIRouter(tags=["Login"])
 
@@ -25,12 +24,9 @@ router = APIRouter(tags=["Login"])
 async def login_to_get_access_token(
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db: Annotated[Session, Depends(get_session)],
-    # _: Session = Depends(get_current_active_user)
-    settings_service=Depends(get_settings_service),
-    variable_service: VariableService = Depends(get_variable_service),
+    db: DbSession,
 ):
-    auth_settings = settings_service.auth_settings
+    auth_settings = get_settings_service().auth_settings
     try:
         user = authenticate_user(form_data.username, form_data.password, db)
     except Exception as exc:
@@ -70,7 +66,7 @@ async def login_to_get_access_token(
             expires=None,  # Set to None to make it a session cookie
             domain=auth_settings.COOKIE_DOMAIN,
         )
-        variable_service.initialize_user_variables(user.id, db)
+        get_variable_service().initialize_user_variables(user.id, db)
         # Create default folder for user if it doesn't exist
         create_default_folder_if_it_doesnt_exist(db, user.id)
         return tokens
@@ -82,7 +78,7 @@ async def login_to_get_access_token(
 
 
 @router.get("/auto_login")
-async def auto_login(response: Response, db: Annotated[Session, Depends(get_session)]):
+async def auto_login(response: Response, db: DbSession):
     auth_settings = get_settings_service().auth_settings
 
     if auth_settings.AUTO_LOGIN:
@@ -128,7 +124,7 @@ async def auto_login(response: Response, db: Annotated[Session, Depends(get_sess
 async def refresh_token(
     request: Request,
     response: Response,
-    db: Annotated[Session, Depends(get_session)],
+    db: DbSession,
 ):
     auth_settings = get_settings_service().auth_settings
 
