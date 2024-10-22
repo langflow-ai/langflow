@@ -38,7 +38,7 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
             literal_string = f"Literal{input_model.options}"
             # validate that the literal_string is a valid literal
 
-            field_type = eval(literal_string, {"Literal": Literal})
+            field_type = eval(literal_string, {"Literal": Literal})  # noqa: S307
         if hasattr(input_model, "is_list") and input_model.is_list:
             field_type = list[field_type]  # type: ignore[valid-type]
         if input_model.name:

@@ -55,7 +55,7 @@ class NotionPageContent(LCToolComponent):
             "Notion-Version": "2022-06-28",
         }
         try:
-            blocks_response = requests.get(blocks_url, headers=headers)
+            blocks_response = requests.get(blocks_url, headers=headers, timeout=10)
             blocks_response.raise_for_status()
             blocks_data = blocks_response.json()
             return self.parse_blocks(blocks_data.get("results", []))

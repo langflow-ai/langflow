@@ -143,12 +143,12 @@ def format_elapsed_time(elapsed_time: float) -> str:
 async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
     """Build and cache the graph."""
     graph = Graph.from_payload(payload, flow_id, **kwargs)
-    for vertex_id in graph._has_session_id_vertices:
+    for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
             msg = f"Vertex {vertex_id} not found"
             raise ValueError(msg)
-        if not vertex._raw_params.get("session_id"):
+        if not vertex.raw_params.get("session_id"):
             vertex.update_raw_params({"session_id": flow_id}, overwrite=True)
 
     run_id = uuid.uuid4()
