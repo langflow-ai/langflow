@@ -58,7 +58,7 @@ async def delete_api_key_route(
 
 
 @router.post("/store")
-def save_store_api_key(
+async def save_store_api_key(
     api_key_request: ApiKeyCreateRequest,
     response: Response,
     current_user: CurrentActiveUser,
