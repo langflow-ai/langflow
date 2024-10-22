@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
-from langflow.services.deps import get_storage_service
+from langflow.services import deps
 from langflow.services.storage.service import StorageService
 from sqlmodel import Session
 
@@ -48,17 +48,18 @@ async def files_client_fixture(
             monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
 
+        monkeypatch.setattr(deps, "get_storage_service", lambda: mock_storage_service)
+
         from langflow.main import create_app
 
         app = create_app()
 
-        app.dependency_overrides[get_storage_service] = lambda: mock_storage_service
         async with (
             LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
             AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client,
         ):
             yield client
-        # app.dependency_overrides.clear()
+
         monkeypatch.undo()
         # clear the temp db
         with suppress(FileNotFoundError):
