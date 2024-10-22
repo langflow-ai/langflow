@@ -36,10 +36,10 @@ async def health():
 
 # /health_check evaluates key services
 # It's a reliable health check for a langflow instance
-@health_check_router.get("/health_check", response_model=HealthResponse)
+@health_check_router.get("/health_check")
 async def health_check(
     session: Annotated[Session, Depends(get_session)],
-):
+) -> HealthResponse:
     response = HealthResponse()
     # use a fixed valid UUId that UUID collision is very unlikely
     user_id = "da93c2bd-c857-4b10-8c8c-60988103320f"

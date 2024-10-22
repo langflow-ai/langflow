@@ -34,8 +34,6 @@ test("CRUD folders", async ({ page }) => {
   });
 
   await page.getByTestId("icon-ChevronLeft").first().click();
-
-  await page.getByText("My Collection").nth(2).isVisible();
   await page.getByPlaceholder("Search flows").first().isVisible();
   await page.getByText("Flows").first().isVisible();
   await page.getByText("Components").first().isVisible();
@@ -163,7 +161,6 @@ test("change flow folder", async ({ page }) => {
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
-  await page.getByText("My Collection").nth(2).isVisible();
   await page.getByPlaceholder("Search flows").isVisible();
   await page.getByText("Flows").first().isVisible();
   await page.getByText("Components").first().isVisible();
