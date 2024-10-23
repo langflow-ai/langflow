@@ -20,6 +20,7 @@ import { nodeIconsLucide } from "../../../../utils/styleUtils";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import { SidebarCategoryComponent } from "./SidebarCategoryComponent";
 
+import { useUtilityStore } from "@/stores/utilityStore";
 import { SidebarFilterComponent } from "./sidebarFilterComponent";
 import { sortKeys } from "./utils";
 
@@ -30,6 +31,7 @@ export default function ExtraSidebar(): JSX.Element {
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const hasStore = useStoreStore((state) => state.hasStore);
   const filterType = useFlowStore((state) => state.filterType);
+  const mvpComponents = useUtilityStore((state) => state.mvpComponents);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
@@ -248,7 +250,7 @@ export default function ExtraSidebar(): JSX.Element {
               <div key={index}></div>
             ),
           )}
-        {ENABLE_INTEGRATIONS && (
+        {(ENABLE_INTEGRATIONS || mvpComponents) && (
           <ParentDisclosureComponent
             defaultOpen={true}
             key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
