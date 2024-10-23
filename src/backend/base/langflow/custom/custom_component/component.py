@@ -17,7 +17,6 @@ from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
-from langflow.schema.dotdict import dotdict  # noqa: TCH001
 from langflow.schema.message import Message
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.tracing.schema import Log
@@ -35,6 +34,7 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
+    from langflow.schema.dotdict import dotdict
     from langflow.schema.log import LoggableType
 
 
