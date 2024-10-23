@@ -59,13 +59,18 @@ ignore = [
     # Rules that are TODOs
     "ANN", # Missing type annotations
     "D1", # Missing docstrings
-    "S",
-    "SLF",
+    "SLF001", # Using private attributes outside of class
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "langflow/api/v1/*" = [
     "TCH", # FastAPI needs to evaluate types at runtime
+]
+"langflow/{components/tools/python_code_structured_tool.py,custom/code_parser/code_parser.py,utils/validate.py}" = [
+    "S102", # Use of exec
+]
+"langflow/services/cache/*" = [
+    "S301", # Use of pickle
 ]
 
 [tool.uv]
@@ -99,12 +104,12 @@ maintainers = [
 
 
 dependencies = [
-    "fastapi>=0.111.0",
-    "httpx>=0.27",
+    "fastapi>=0.115.2",
+    "httpx[http2]>=0.27",
     "uvicorn>=0.30.0",
     "gunicorn>=22.0.0",
-    "langchain~=0.2.0",
-    "langchain-core>=0.2.32",
+    "langchain~=0.3.3",
+    "langchain-core~=0.3.10",
     "langchainhub~=0.1.15",
     "sqlmodel==0.0.18",
     "loguru>=0.7.1",
@@ -115,7 +120,7 @@ dependencies = [
     "typer>=0.12.0",
     "cachetools>=5.3.1",
     "platformdirs>=4.2.0",
-    "python-multipart>=0.0.7",
+    "python-multipart>=0.0.12",
     "orjson==3.10.0",
     "alembic>=1.13.0",
     "passlib>=1.7.4",
@@ -148,12 +153,13 @@ dependencies = [
     "nanoid>=2.0.0",
     "filelock>=3.15.4",
     "grandalf>=0.8.0",
-    "crewai>=0.36.0",
+    "crewai>=0.74.2",
     "spider-client>=0.0.27",
     "diskcache>=5.6.3",
     "clickhouse-connect==0.7.19",
     "assemblyai>=0.33.0",
     "fastapi-pagination>=0.12.29",
+    "defusedxml>=0.7.1",
 ]
 
 [project.urls]
@@ -187,7 +193,7 @@ dev = [
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
     "ruff>=0.6.2",
-    "httpx>=0.27",
+    "httpx[http2]>=0.27",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",
     "requests>=2.32.0",

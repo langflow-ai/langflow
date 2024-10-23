@@ -1,5 +1,4 @@
 import unicodedata
-import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from concurrent import futures
 from pathlib import Path
@@ -7,6 +6,7 @@ from pathlib import Path
 import chardet
 import orjson
 import yaml
+from defusedxml import ElementTree
 
 from langflow.schema import Data
 
@@ -155,8 +155,8 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
         elif file_path.endswith((".yaml", ".yml")):
             text = yaml.safe_load(text)
         elif file_path.endswith(".xml"):
-            xml_element = ET.fromstring(text)
-            text = ET.tostring(xml_element, encoding="unicode")
+            xml_element = ElementTree.fromstring(text)
+            text = ElementTree.tostring(xml_element, encoding="unicode")
     except Exception as e:
         if not silent_errors:
             msg = f"Error loading file {file_path}: {e}"

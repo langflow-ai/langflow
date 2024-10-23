@@ -222,7 +222,7 @@ async def build_flow(
         try:
             vertex = graph.get_vertex(vertex_id)
             try:
-                lock = chat_service._async_cache_locks[flow_id_str]
+                lock = chat_service.async_cache_locks[flow_id_str]
                 vertex_build_result = await graph.build_vertex(
                     vertex_id=vertex_id,
                     user_id=str(current_user.id),
@@ -508,7 +508,7 @@ async def build_vertex(
         vertex = graph.get_vertex(vertex_id)
 
         try:
-            lock = chat_service._async_cache_locks[flow_id_str]
+            lock = chat_service.async_cache_locks[flow_id_str]
             vertex_build_result = await graph.build_vertex(
                 vertex_id=vertex_id,
                 user_id=str(current_user.id),
@@ -646,7 +646,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
             yield str(StreamData(event="error", data={"error": msg}))
             return
 
-        if isinstance(vertex._built_result, str) and vertex._built_result:
+        if isinstance(vertex.built_result, str) and vertex.built_result:
             stream_data = StreamData(
                 event="message",
                 data={"message": f"Streaming vertex {vertex_id}"},
@@ -654,11 +654,11 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
             yield str(stream_data)
             stream_data = StreamData(
                 event="message",
-                data={"chunk": vertex._built_result},
+                data={"chunk": vertex.built_result},
             )
             yield str(stream_data)
 
-        elif not vertex.frozen or not vertex._built:
+        elif not vertex.frozen or not vertex.built:
             logger.debug(f"Streaming vertex {vertex_id}")
             stream_data = StreamData(
                 event="message",
@@ -681,7 +681,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
         elif vertex.result is not None:
             stream_data = StreamData(
                 event="message",
-                data={"chunk": vertex._built_result},
+                data={"chunk": vertex.built_result},
             )
             yield str(stream_data)
         else:
