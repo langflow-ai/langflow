@@ -97,3 +97,18 @@ async def test_reset_password(client: AsyncClient, logged_in_headers, active_use
     assert "store_api_key" in result, "The result must have an 'store_api_key' key"
     assert "updated_at" in result, "The result must have an 'updated_at' key"
     assert "username" in result, "The result must have an 'username' key"
+
+
+async def test_delete_user(client: AsyncClient, logged_in_headers_super_user):
+    basic_case = {
+        "username": "string",
+        "password": "string"
+    }
+    _response = await client.post("api/v1/users/", json=basic_case)
+    _id = _response.json()["id"]
+    response = await client.delete(f"api/v1/users/{_id}", headers=logged_in_headers_super_user)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert isinstance(result, dict), "The result must be a dictionary"
+    assert "detail" in result, "The result must have an 'detail' key"
