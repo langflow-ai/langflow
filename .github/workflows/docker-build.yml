@@ -60,6 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get-version-input.outputs.version || steps.get-version-base.outputs.version || steps.get-version-main.outputs.version }}
+      version-no-v: ${{ steps.get-version-input.outputs.version_no_v || steps.get-version-base.outputs.version_no_v || steps.get-version-main.outputs.version_no_v }}
       nightly-tag: ${{ steps.resolve-nightly-tag.outputs.nightly_tag }}
       nightly-build: ${{ steps.resolve-nightly-tag.outputs.nightly_build }}
     steps:
@@ -131,16 +132,23 @@ jobs:
             echo "base nightly version=${{ inputs.nightly_tag_base }}"
             echo "building image for nightly_version=${{ steps.resolve-nightly-tag.outputs.nightly-tag }}"
 
-            # Strip leading v from nightly tag main if present
             version=${{ inputs.nightly_tag_main }}
-            version=${version#v}
-            echo version=$version >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.version }}" != '' ]]; then
-            # strip leading v if present
-            version=${{ inputs.version }}
-            version=${version#v}
             echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
+
+            # strip leading v
+            version=${version#v}
+            echo version_no_v=$version
+            echo version_no_v=$version >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.version }}" != '' ]]; then
+            version=${{ inputs.version }}
+            echo version=$version
+            echo version=$version >> $GITHUB_OUTPUT
+
+            # strip leading v
+            version=${version#v}
+            echo version_no_v=$version
+            echo version_no_v=$version >> $GITHUB_OUTPUT
           else
             echo "No version or ref specified. Exiting the workflow."
             exit 1
@@ -149,16 +157,26 @@ jobs:
         if: ${{ inputs.version == '' && inputs.release_type == 'base' }}
         id: get-version-base
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
           echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
+
+          # strip leading v
+          version=${version#v}
+          echo version_no_v=$version
+          echo version_no_v=$version >> $GITHUB_OUTPUT
       - name: Get Version Main
         if: ${{ inputs.version == '' && (inputs.release_type == 'main' || inputs.release_type == 'main-ep') }}
         id: get-version-main
         run: |
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}')
           echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
+
+          # strip leading v
+          version=${version#v}
+          echo version_no_v=$version
+          echo version_no_v=$version >> $GITHUB_OUTPUT
   setup:
     runs-on: ubuntu-latest
     needs: get-version
@@ -177,24 +195,24 @@ jobs:
 
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
             # LANGFLOW-BASE RELEASE
-            echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
-            echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
+            echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version-no-v }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
+            echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version-no-v }},ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
           else
             if [[ "${{ inputs.pre_release }}" == "true" ]]; then
               # LANGFLOW-MAIN PRE-RELEASE
-              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
-              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
+              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version-no-v }}" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version-no-v }}" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
             elif [[ "${{ inputs.release_type }}" == "main-ep" ]]; then
               # LANGFLOW-MAIN (ENTRYPOINT) RELEASE
-              echo "docker_tags=langflowai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
-              echo "ghcr_tags=ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "docker_tags=langflowai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version-no-v }},langflowai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version-no-v }},ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push_ep.Dockerfile" >> $GITHUB_OUTPUT
             elif [[ "${{ inputs.release_type }}" == "main" ]]; then
               # LANGFLOW-MAIN RELEASE
-              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
-              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version-no-v }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version-no-v }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
             else 
               echo "Invalid release type. Exiting the workflow."
@@ -266,20 +284,20 @@ jobs:
         include:
           - component: docker-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend{0}:{1}', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-backend{0}:{1},langflowai/langflow-backend{0}:latest',  needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
-            langflow_image: langflowai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend{0}:{1}', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version-no-v) || format('langflowai/langflow-backend{0}:{1},langflowai/langflow-backend{0}:latest',  needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version-no-v) }}
+            langflow_image: langflowai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version-no-v }}
           - component: docker-frontend
             dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
-            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend{0}:{1}', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-frontend{0}:{1},langflowai/langflow-frontend{0}:latest',  needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
-            langflow_image: langflowai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend{0}:{1}', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version-no-v) || format('langflowai/langflow-frontend{0}:{1},langflowai/langflow-frontend{0}:latest',  needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version-no-v) }}
+            langflow_image: langflowai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version-no-v }}
           - component: ghcr-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            tags: ${{ format('ghcr.io/langflow-ai/langflow-backend{0}:{1},ghcr.io/langflow-ai/langflow-backend{0}:latest', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
-            langflow_image: ghcr.io/langflow-ai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            tags: ${{ format('ghcr.io/langflow-ai/langflow-backend{0}:{1},ghcr.io/langflow-ai/langflow-backend{0}:latest', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version-no-v) }}
+            langflow_image: ghcr.io/langflow-ai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version-no-v }}
           - component: ghcr-frontend
             dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
-            tags: ${{ format('ghcr.io/langflow-ai/langflow-frontend{0}:{1},ghcr.io/langflow-ai/langflow-frontend{0}:latest', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
-            langflow_image: ghcr.io/langflow-ai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            tags: ${{ format('ghcr.io/langflow-ai/langflow-frontend{0}:{1},ghcr.io/langflow-ai/langflow-frontend{0}:latest', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version-no-v) }}
+            langflow_image: ghcr.io/langflow-ai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version-no-v }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
