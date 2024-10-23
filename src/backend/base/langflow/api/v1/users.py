@@ -74,7 +74,7 @@ async def read_all_users(
 
 
 @router.patch("/{user_id}", response_model=UserRead)
-def patch_user(
+async def patch_user(
     user_id: UUID,
     user_update: UserUpdate,
     user: CurrentActiveUser,
