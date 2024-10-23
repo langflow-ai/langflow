@@ -127,13 +127,13 @@ def test_that_outputs_cache_is_set_to_false_in_cycle():
 
     graph = Graph(chat_input, chat_output)
     cycle_vertices = find_cycle_vertices(graph._get_edges_as_list_of_tuples())
-    cycle_outputs_lists = [graph.vertex_map[vertex_id]._custom_component.outputs for vertex_id in cycle_vertices]
+    cycle_outputs_lists = [graph.vertex_map[vertex_id].custom_component.outputs for vertex_id in cycle_vertices]
     cycle_outputs = [output for outputs in cycle_outputs_lists for output in outputs]
     for output in cycle_outputs:
         assert output.cache is False
 
     non_cycle_outputs_lists = [
-        vertex._custom_component.outputs for vertex in graph.vertices if vertex.id not in cycle_vertices
+        vertex.custom_component.outputs for vertex in graph.vertices if vertex.id not in cycle_vertices
     ]
     non_cycle_outputs = [output for outputs in non_cycle_outputs_lists for output in outputs]
     for output in non_cycle_outputs:

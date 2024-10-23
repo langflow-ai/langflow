@@ -67,17 +67,17 @@ class Vertex:
         self.is_input = any(input_component_name in self.id for input_component_name in INPUT_COMPONENTS)
         self.is_output = any(output_component_name in self.id for output_component_name in OUTPUT_COMPONENTS)
         self.has_session_id = None
-        self._custom_component = None
+        self.custom_component = None
         self.has_external_input = False
         self.has_external_output = False
         self.graph = graph
-        self._data = data.copy()
+        self.full_data = data.copy()
         self.base_type: str | None = base_type
         self.outputs: list[dict] = []
-        self._parse_data()
-        self._built_object: Any = UnbuiltObject()
-        self._built_result: Any = None
-        self._built = False
+        self.parse_data()
+        self.built_object: Any = UnbuiltObject()
+        self.built_result: Any = None
+        self.built = False
         self._successors_ids: list[str] | None = None
         self.artifacts: dict[str, Any] = {}
         self.artifacts_raw: dict[str, Any] = {}
@@ -87,7 +87,7 @@ class Vertex:
         self.task_id: str | None = None
         self.is_task = is_task
         self.params = params or {}
-        self.parent_node_id: str | None = self._data.get("parent_node_id")
+        self.parent_node_id: str | None = self.full_data.get("parent_node_id")
         self.load_from_db_fields: list[str] = []
         self.parent_is_top_level = False
         self.layer = None
@@ -95,7 +95,7 @@ class Vertex:
         self.results: dict[str, Any] = {}
         self.outputs_logs: dict[str, OutputValue] = {}
         self.logs: dict[str, Log] = {}
-        self._has_cycle_edges = False
+        self.has_cycle_edges = False
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
         except ValueError:
@@ -107,17 +107,17 @@ class Vertex:
         self.log_transaction_tasks: set[asyncio.Task] = set()
 
     def set_input_value(self, name: str, value: Any) -> None:
-        if self._custom_component is None:
+        if self.custom_component is None:
             msg = f"Vertex {self.id} does not have a component instance."
             raise ValueError(msg)
-        self._custom_component._set_input_value(name, value)
+        self.custom_component._set_input_value(name, value)
 
     def to_data(self):
-        return self._data
+        return self.full_data
 
     def add_component_instance(self, component_instance: Component) -> None:
         component_instance.set_vertex(self)
-        self._custom_component = component_instance
+        self.custom_component = component_instance
 
     def add_result(self, name: str, result: Any) -> None:
         self.results[name] = result
@@ -154,19 +154,19 @@ class Vertex:
         # If the Vertex.type is a power component
         # then we need to return the built object
         # instead of the result dict
-        if self.is_interface_component and not isinstance(self._built_object, UnbuiltObject):
-            result = self._built_object
+        if self.is_interface_component and not isinstance(self.built_object, UnbuiltObject):
+            result = self.built_object
             # if it is not a dict or a string and hasattr model_dump then
             # return the model_dump
             if not isinstance(result, dict | str) and hasattr(result, "content"):
                 return result.content
             return result
-        if isinstance(self._built_object, str):
-            self._built_result = self._built_object
+        if isinstance(self.built_object, str):
+            self.built_result = self.built_object
 
-        if isinstance(self._built_result, UnbuiltResult):
+        if isinstance(self.built_result, UnbuiltResult):
             return {}
-        return self._built_result if isinstance(self._built_result, dict) else {"result": self._built_result}
+        return self.built_result if isinstance(self.built_result, dict) else {"result": self.built_result}
 
     def set_artifacts(self) -> None:
         pass
@@ -202,21 +202,21 @@ class Vertex:
     def __getstate__(self):
         state = self.__dict__.copy()
         state["_lock"] = None  # Locks are not serializable
-        state["_built_object"] = None if isinstance(self._built_object, UnbuiltObject) else self._built_object
-        state["_built_result"] = None if isinstance(self._built_result, UnbuiltResult) else self._built_result
+        state["built_object"] = None if isinstance(self.built_object, UnbuiltObject) else self.built_object
+        state["built_result"] = None if isinstance(self.built_result, UnbuiltResult) else self.built_result
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
         self._lock = asyncio.Lock()  # Reinitialize the lock
-        self._built_object = state.get("_built_object") or UnbuiltObject()
-        self._built_result = state.get("_built_result") or UnbuiltResult()
+        self.built_object = state.get("built_object") or UnbuiltObject()
+        self.built_result = state.get("built_result") or UnbuiltResult()
 
     def set_top_level(self, top_level_vertices: list[str]) -> None:
         self.parent_is_top_level = self.parent_node_id in top_level_vertices
 
-    def _parse_data(self) -> None:
-        self.data = self._data["data"]
+    def parse_data(self) -> None:
+        self.data = self.full_data["data"]
         if self.data["node"]["template"]["_type"] == "Component":
             if "outputs" not in self.data["node"]:
                 msg = f"Outputs not found for {self.display_name}"
@@ -300,7 +300,7 @@ class Vertex:
                     params[param_key] = self.graph.get_vertex(edge.source_id)
         return params
 
-    def _build_params(self) -> None:
+    def build_params(self) -> None:
         # sourcery skip: merge-list-append, remove-redundant-if
         # Some params are required, some are optional
         # but most importantly, some params are python base classes
@@ -436,7 +436,7 @@ class Vertex:
         # Add _type to params
         self.params = params
         self.load_from_db_fields = load_from_db_fields
-        self._raw_params = params.copy()
+        self.raw_params = params.copy()
 
     def update_raw_params(self, new_params: Mapping[str, str | list[str]], *, overwrite: bool = False) -> None:
         """Update the raw parameters of the vertex with the given new parameters.
@@ -447,28 +447,24 @@ class Vertex:
                 Defaults to False.
 
         Raises:
-            ValueError: If any key in new_params is not found in self._raw_params.
+            ValueError: If any key in new_params is not found in self.raw_params.
         """
-        # First check if the input_value in _raw_params is not a vertex
+        # First check if the input_value in raw_params is not a vertex
         if not new_params:
             return
-        if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
+        if any(isinstance(self.raw_params.get(key), Vertex) for key in new_params):
             return
         if not overwrite:
             for key in new_params.copy():  # type: ignore[attr-defined]
-                if key not in self._raw_params:
+                if key not in self.raw_params:
                     new_params.pop(key)  # type: ignore[attr-defined]
-        self._raw_params.update(new_params)
-        self.params = self._raw_params.copy()
+        self.raw_params.update(new_params)
+        self.params = self.raw_params.copy()
         self.updated_raw_params = True
 
-    def has_cycle_edges(self):
-        """Checks if the vertex has any cycle edges."""
-        return self._has_cycle_edges
-
     async def instantiate_component(self, user_id=None) -> None:
-        if not self._custom_component:
-            self._custom_component, _ = await initialize.loading.instantiate_class(
+        if not self.custom_component:
+            self.custom_component, _ = await initialize.loading.instantiate_class(
                 user_id=user_id,
                 vertex=self,
             )
@@ -487,13 +483,13 @@ class Vertex:
             msg = f"Base type for vertex {self.display_name} not found"
             raise ValueError(msg)
 
-        if not self._custom_component:
+        if not self.custom_component:
             custom_component, custom_params = await initialize.loading.instantiate_class(
                 user_id=user_id, vertex=self, event_manager=event_manager
             )
         else:
-            custom_component = self._custom_component
-            self._custom_component.set_event_manager(event_manager)
+            custom_component = self.custom_component
+            self.custom_component.set_event_manager(event_manager)
             custom_params = initialize.loading.get_params(self.params)
 
         await self._build_results(
@@ -505,7 +501,7 @@ class Vertex:
 
         self._validate_built_object()
 
-        self._built = True
+        self.built = True
 
     def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:
         """Extracts messages from the artifacts.
@@ -546,7 +542,7 @@ class Vertex:
 
         return messages
 
-    def _finalize_build(self) -> None:
+    def finalize_build(self) -> None:
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
         # to the frontend
@@ -566,7 +562,7 @@ class Vertex:
 
     async def _build_each_vertex_in_params_dict(self) -> None:
         """Iterates over each vertex in the params dictionary and builds it."""
-        for key, value in self._raw_params.items():
+        for key, value in self.raw_params.items():
             if self._is_vertex(value):
                 if value == self:
                     del self.params[key]
@@ -637,13 +633,13 @@ class Vertex:
             The built result if use_result is True, else the built object.
         """
         flow_id = self.graph.flow_id
-        if not self._built:
+        if not self.built:
             if flow_id:
                 self._log_transaction_async(str(flow_id), source=self, target=requester, status="error")
             msg = f"Component {self.display_name} has not been built yet"
             raise ValueError(msg)
 
-        result = self._built_result if self.use_result else self._built_object
+        result = self.built_result if self.use_result else self.built_object
         if flow_id:
             self._log_transaction_async(str(flow_id), source=self, target=requester, status="success")
         return result
@@ -729,50 +725,50 @@ class Vertex:
         """Updates the built object and its artifacts."""
         if isinstance(result, tuple):
             if len(result) == 2:  # noqa: PLR2004
-                self._built_object, self.artifacts = result
+                self.built_object, self.artifacts = result
             elif len(result) == 3:  # noqa: PLR2004
-                self._custom_component, self._built_object, self.artifacts = result
-                self.logs = self._custom_component._output_logs
+                self.custom_component, self.built_object, self.artifacts = result
+                self.logs = self.custom_component._output_logs
                 self.artifacts_raw = self.artifacts.get("raw", None)
                 self.artifacts_type = {
                     self.outputs[0]["name"]: self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
                 }
                 self.artifacts = {self.outputs[0]["name"]: self.artifacts}
         else:
-            self._built_object = result
+            self.built_object = result
 
     def _validate_built_object(self) -> None:
         """Checks if the built object is None and raises a ValueError if so."""
-        if isinstance(self._built_object, UnbuiltObject):
-            msg = f"{self.display_name}: {self._built_object_repr()}"
+        if isinstance(self.built_object, UnbuiltObject):
+            msg = f"{self.display_name}: {self.built_object_repr()}"
             raise TypeError(msg)
-        if self._built_object is None:
+        if self.built_object is None:
             message = f"{self.display_name} returned None."
             if self.base_type == "custom_components":
                 message += " Make sure your build method returns a component."
 
             logger.warning(message)
-        elif isinstance(self._built_object, Iterator | AsyncIterator):
+        elif isinstance(self.built_object, Iterator | AsyncIterator):
             if self.display_name == "Text Output":
                 msg = f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
                 raise ValueError(msg)
 
     def _reset(self) -> None:
-        self._built = False
-        self._built_object = UnbuiltObject()
-        self._built_result = UnbuiltResult()
+        self.built = False
+        self.built_object = UnbuiltObject()
+        self.built_result = UnbuiltResult()
         self.artifacts = {}
         self.steps_ran = []
-        self._build_params()
+        self.build_params()
 
     def _is_chat_input(self) -> bool:
         return False
 
     def build_inactive(self) -> None:
         # Just set the results to None
-        self._built = True
-        self._built_object = None
-        self._built_result = None
+        self.built = True
+        self.built_object = None
+        self.built_result = None
 
     async def build(
         self,
@@ -789,9 +785,9 @@ class Vertex:
                 self.build_inactive()
                 return None
 
-            if self.frozen and self._built:
+            if self.frozen and self.built:
                 return await self.get_requester_result(requester)
-            if self._built and requester is not None:
+            if self.built and requester is not None:
                 # This means that the vertex has already been built
                 # and we are just getting the result for the requester
                 return await self.get_requester_result(requester)
@@ -824,7 +820,7 @@ class Vertex:
                         step(user_id=user_id, event_manager=event_manager, **kwargs)
                     self.steps_ran.append(step)
 
-            self._finalize_build()
+            self.finalize_build()
 
         return await self.get_requester_result(requester)
 
@@ -832,7 +828,7 @@ class Vertex:
         # If the requester is None, this means that
         # the Vertex is the root of the graph
         if requester is None:
-            return self._built_object
+            return self.built_object
 
         # Get the requester edge
         requester_edge = next((edge for edge in self.edges if edge.target_id == requester.id), None)
@@ -857,7 +853,7 @@ class Vertex:
             # We should create a more robust comparison
             # for the Vertex class
             ids_are_equal = self.id == __o.id
-            # self._data is a dict and we need to compare them
+            # self.data is a dict and we need to compare them
             # to check if they are equal
             data_are_equal = self.data == __o.data
         except AttributeError:
@@ -868,13 +864,13 @@ class Vertex:
     def __hash__(self) -> int:
         return id(self)
 
-    def _built_object_repr(self) -> str:
-        # Add a message with an emoji, stars for sucess,
-        return "Built successfully ✨" if self._built_object is not None else "Failed to build 😵‍💫"
+    def built_object_repr(self) -> str:
+        # Add a message with an emoji, stars for success,
+        return "Built successfully ✨" if self.built_object is not None else "Failed to build 😵‍💫"
 
     def apply_on_outputs(self, func: Callable[[Any], Any]) -> None:
         """Applies a function to the outputs of the vertex."""
-        if not self._custom_component or not self._custom_component.outputs:
+        if not self.custom_component or not self.custom_component.outputs:
             return
         # Apply the function to each output
-        [func(output) for output in self._custom_component.outputs]
+        [func(output) for output in self.custom_component.outputs]

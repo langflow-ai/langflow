@@ -68,7 +68,7 @@ class GroqModel(LCModelComponent):
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             model_list = response.json()
             return [model["id"] for model in model_list.get("data", [])]
@@ -98,6 +98,6 @@ class GroqModel(LCModelComponent):
             temperature=temperature,
             base_url=groq_api_base,
             n=n or 1,
-            api_key=SecretStr(groq_api_key),
+            api_key=SecretStr(groq_api_key).get_secret_value(),
             streaming=stream,
         )
