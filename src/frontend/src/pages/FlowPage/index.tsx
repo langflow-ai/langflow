@@ -1,3 +1,4 @@
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { ENABLE_BRANDING } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -36,16 +37,19 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+
+  const flowToCanvas = useFlowsManagerStore((state) => state.flowToCanvas);
+
   const { mutateAsync: refreshFlows } = useGetRefreshFlows();
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const getTypes = useTypesStore((state) => state.getTypes);
   const types = useTypesStore((state) => state.types);
 
   const updatedAt = currentSavedFlow?.updated_at;
-
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
-
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
+
+  const { mutateAsync: getFlow } = useGetFlow();
 
   const handleSave = () => {
     let saving = true;
@@ -106,16 +110,20 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           return;
         }
 
-        setCurrentFlow(isAnExistingFlow);
+        const isAnExistingFlowId = isAnExistingFlow.id;
+
+        flowToCanvas
+          ? setCurrentFlow(flowToCanvas)
+          : getFlowToAddToCanvas(isAnExistingFlowId);
       } else if (!flows) {
         setIsLoading(true);
-        await refreshFlows(undefined);
+        await refreshFlows({ get_all: true, header_flows: true });
         if (!types || Object.keys(types).length === 0) await getTypes();
         setIsLoading(false);
       }
     };
     awaitgetTypes();
-  }, [id, flows, currentFlowId]);
+  }, [id, flows, currentFlowId, flowToCanvas]);
 
   useEffect(() => {
     setOnFlowPage(true);
@@ -146,6 +154,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       }
     }
   }, [blocker.state, isBuilding]);
+
+  const getFlowToAddToCanvas = async (id: string) => {
+    const flow = await getFlow({ id: id });
+    setCurrentFlow(flow);
+  };
 
   return (
     <>

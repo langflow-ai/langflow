@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from langflow.services.factory import ServiceFactory
@@ -8,10 +10,10 @@ if TYPE_CHECKING:
 
 
 class VariableServiceFactory(ServiceFactory):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(VariableService)
 
-    def create(self, settings_service: "SettingsService"):
+    def create(self, settings_service: SettingsService):
         # here you would have logic to create and configure a VariableService
         # based on the settings_service
 
@@ -20,5 +22,4 @@ class VariableServiceFactory(ServiceFactory):
             from langflow.services.variable.kubernetes import KubernetesSecretService
 
             return KubernetesSecretService(settings_service)
-        else:
-            return DatabaseVariableService(settings_service)
+        return DatabaseVariableService(settings_service)

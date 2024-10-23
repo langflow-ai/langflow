@@ -29,6 +29,7 @@ class ChatOutputResponse(BaseModel):
     type: str
 
     @field_validator("files", mode="before")
+    @classmethod
     def validate_files(cls, files):
         """Validate files."""
         if not files:
@@ -36,14 +37,16 @@ class ChatOutputResponse(BaseModel):
 
         for file in files:
             if not isinstance(file, dict):
-                raise ValueError("Files must be a list of dictionaries.")
+                msg = "Files must be a list of dictionaries."
+                raise ValueError(msg)  # noqa: TRY004
 
             if not all(key in file for key in ["path", "name", "type"]):
                 # If any of the keys are missing, we should extract the
                 # values from the file path
                 path = file.get("path")
                 if not path:
-                    raise ValueError("File path is required.")
+                    msg = "File path is required."
+                    raise ValueError(msg)
 
                 name = file.get("name")
                 if not name:
@@ -62,7 +65,8 @@ class ChatOutputResponse(BaseModel):
                                 _type = file_type
                                 break
                     if not _type:
-                        raise ValueError("File type is required.")
+                        msg = "File type is required."
+                        raise ValueError(msg)
                 file["type"] = _type
 
         return files
@@ -76,7 +80,7 @@ class ChatOutputResponse(BaseModel):
     ):
         """Build chat output response from message."""
         content = message.content
-        return cls(message=content, sender=sender, sender_name=sender_name)  # type: ignore
+        return cls(message=content, sender=sender, sender_name=sender_name)
 
     @model_validator(mode="after")
     def validate_message(self):
@@ -104,7 +108,7 @@ class DataOutputResponse(BaseModel):
 
 
 class ContainsEnumMeta(enum.EnumMeta):
-    def __contains__(cls, item):
+    def __contains__(cls, item) -> bool:
         try:
             cls(item)
         except ValueError:

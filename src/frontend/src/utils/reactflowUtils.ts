@@ -471,7 +471,11 @@ Array<{ id: string; errors: Array<string> }> {
     ];
   }
   // validateNode(n, edges) returns an array of errors for the node
-  return nodes.map((n) => ({ id: n.id, errors: validateNode(n, edges) }));
+  const nodeMap = nodes.map((n) => ({
+    id: n.id,
+    errors: validateNode(n, edges),
+  }));
+  return nodeMap.filter((n) => n.errors?.length);
 }
 
 export function updateEdges(edges: Edge[]) {
@@ -1714,4 +1718,15 @@ export function checkOldComponents({ nodes }: { nodes: any[] }) {
         "(CustomComponent):",
       ),
   );
+}
+
+export function someFlowTemplateFields(
+  { nodes }: { nodes: NodeType[] },
+  validateFn: (field: InputFieldType) => boolean,
+): boolean {
+  return nodes.some((node) => {
+    return Object.keys(node.data.node?.template ?? {}).some((field) => {
+      return validateFn((node.data.node?.template ?? {})[field]);
+    });
+  });
 }

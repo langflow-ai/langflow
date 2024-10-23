@@ -13,6 +13,7 @@ from langflow.utils.util import update_settings
 
 def load_flow_from_json(
     flow: Path | str | dict,
+    *,
     tweaks: dict | None = None,
     log_level: str | None = None,
     log_file: str | None = None,
@@ -20,8 +21,7 @@ def load_flow_from_json(
     cache: str | None = None,
     disable_logs: bool | None = True,
 ) -> Graph:
-    """
-    Load a flow graph from a JSON file or a JSON object.
+    """Load a flow graph from a JSON file or a JSON object.
 
     Args:
         flow (Union[Path, str, dict]): The flow to load. It can be a file path (str or Path object)
@@ -53,25 +53,27 @@ def load_flow_from_json(
     update_settings(cache=cache)
 
     if isinstance(flow, str | Path):
-        with open(flow, encoding="utf-8") as f:
+        with Path(flow).open(encoding="utf-8") as f:
             flow_graph = json.load(f)
     # If input is a dictionary, assume it's a JSON object
     elif isinstance(flow, dict):
         flow_graph = flow
     else:
-        raise TypeError("Input must be either a file path (str) or a JSON object (dict)")
+        msg = "Input must be either a file path (str) or a JSON object (dict)"
+        raise TypeError(msg)
 
     graph_data = flow_graph["data"]
     if tweaks is not None:
         graph_data = process_tweaks(graph_data, tweaks)
 
-    graph = Graph.from_payload(graph_data)
-    return graph
+    return Graph.from_payload(graph_data)
 
 
 def run_flow_from_json(
     flow: Path | str | dict,
     input_value: str,
+    *,
+    session_id: str | None = None,
     tweaks: dict | None = None,
     input_type: str = "chat",
     output_type: str = "chat",
@@ -83,12 +85,12 @@ def run_flow_from_json(
     disable_logs: bool | None = True,
     fallback_to_env_vars: bool = False,
 ) -> list[RunOutputs]:
-    """
-    Run a flow from a JSON file or dictionary.
+    """Run a flow from a JSON file or dictionary.
 
     Args:
         flow (Union[Path, str, dict]): The path to the JSON file or the JSON dictionary representing the flow.
         input_value (str): The input value to be processed by the flow.
+        session_id (str | None, optional): The session ID to be used for the flow. Defaults to None.
         tweaks (Optional[dict], optional): Optional tweaks to be applied to the flow. Defaults to None.
         input_type (str, optional): The type of the input value. Defaults to "chat".
         output_type (str, optional): The type of the output value. Defaults to "chat".
@@ -98,18 +100,19 @@ def run_flow_from_json(
         env_file (Optional[str], optional): The environment file to load. Defaults to None.
         cache (Optional[str], optional): The cache directory to use. Defaults to None.
         disable_logs (Optional[bool], optional): Whether to disable logs. Defaults to True.
-        fallback_to_env_vars (bool, optional): Whether Global Variables should fallback to environment variables if not found. Defaults to False.
+        fallback_to_env_vars (bool, optional): Whether Global Variables should fallback to environment variables if
+            not found. Defaults to False.
 
     Returns:
         List[RunOutputs]: A list of RunOutputs objects representing the results of running the flow.
     """
     # Set all streaming to false
     try:
-        import nest_asyncio  # type: ignore
+        import nest_asyncio
 
         nest_asyncio.apply()
-    except Exception as e:
-        logger.warning(f"Could not apply nest_asyncio: {e}")
+    except Exception:  # noqa: BLE001
+        logger.opt(exception=True).warning("Could not apply nest_asyncio")
     if tweaks is None:
         tweaks = {}
     tweaks["stream"] = False
@@ -122,12 +125,12 @@ def run_flow_from_json(
         cache=cache,
         disable_logs=disable_logs,
     )
-    result = run_graph(
+    return run_graph(
         graph=graph,
+        session_id=session_id,
         input_value=input_value,
         input_type=input_type,
         output_type=output_type,
         output_component=output_component,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    return result

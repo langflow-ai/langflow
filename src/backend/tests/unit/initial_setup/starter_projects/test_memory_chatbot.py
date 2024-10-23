@@ -1,15 +1,18 @@
+import operator
 from collections import deque
+from typing import TYPE_CHECKING
 
 import pytest
-
-from langflow.components.helpers.Memory import MemoryComponent
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.components.prompts.Prompt import PromptComponent
+from langflow.components.helpers import MemoryComponent
+from langflow.components.inputs import ChatInput
+from langflow.components.models import OpenAIModelComponent
+from langflow.components.outputs import ChatOutput
+from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
-from langflow.graph.graph.schema import GraphDump
+
+if TYPE_CHECKING:
+    from langflow.graph.graph.schema import GraphDump
 
 
 @pytest.fixture
@@ -40,6 +43,7 @@ AI: """
     return graph
 
 
+@pytest.mark.usefixtures("client")
 def test_memory_chatbot(memory_chatbot_graph):
     # Now we run step by step
     expected_order = deque(["chat_input", "chat_memory", "prompt", "openai", "chat_output"])
@@ -100,7 +104,7 @@ def test_memory_chatbot_dump_components_and_edges(memory_chatbot_graph: Graph):
     edges = data_dict["edges"]
 
     # sort the nodes by id
-    nodes = sorted(nodes, key=lambda x: x["id"])
+    nodes = sorted(nodes, key=operator.itemgetter("id"))
 
     # Check each node
     assert nodes[0]["data"]["type"] == "ChatInput"

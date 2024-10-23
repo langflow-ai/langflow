@@ -82,7 +82,8 @@ class NotionSearch(LCToolComponent):
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
             name="notion_search",
-            description="Search Notion pages and databases. Input should include the search query and optionally filter type and sort direction.",
+            description="Search Notion pages and databases. "
+            "Input should include the search query and optionally filter type and sort direction.",
             func=self._search_notion,
             args_schema=self.NotionSearchSchema,
         )
@@ -103,7 +104,7 @@ class NotionSearch(LCToolComponent):
             "sort": {"direction": sort_direction, "timestamp": "last_edited_time"},
         }
 
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(url, headers=headers, json=data, timeout=10)
         response.raise_for_status()
 
         results = response.json()

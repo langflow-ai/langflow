@@ -79,8 +79,11 @@ test("should share component with share button", async ({ page }) => {
   await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
-  await page.getByText("My Collection").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("icon-ChevronLeft").first().click();
 
   let modalCount = 0;
   try {
@@ -101,6 +104,7 @@ test("should share component with share button", async ({ page }) => {
 
   const randomName = Math.random().toString(36).substring(2);
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(1000);
   const flowName = await page.getByTestId("flow_name").innerText();

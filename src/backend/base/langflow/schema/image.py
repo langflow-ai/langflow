@@ -8,13 +8,13 @@ from langflow.services.deps import get_storage_service
 IMAGE_ENDPOINT = "/files/images/"
 
 
-def is_image_file(file_path):
+def is_image_file(file_path) -> bool:
     try:
         with PILImage.open(file_path) as img:
             img.verify()  # Verify that it is, in fact, an image
-        return True
     except (OSError, SyntaxError):
         return False
+    return True
 
 
 async def get_file_paths(files: list[str]):
@@ -28,6 +28,7 @@ async def get_file_paths(files: list[str]):
 
 async def get_files(
     file_paths: list[str],
+    *,
     convert_to_base64: bool = False,
 ):
     storage_service = get_storage_service()
@@ -51,7 +52,8 @@ class Image(BaseModel):
         if self.path:
             files = get_files([self.path], convert_to_base64=True)
             return files[0]
-        raise ValueError("Image path is not set.")
+        msg = "Image path is not set."
+        raise ValueError(msg)
 
     def to_content_dict(self):
         return {
@@ -59,5 +61,5 @@ class Image(BaseModel):
             "image_url": self.to_base64(),
         }
 
-    def get_url(self):
+    def get_url(self) -> str:
         return f"{IMAGE_ENDPOINT}{self.path}"

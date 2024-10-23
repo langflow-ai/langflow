@@ -3,6 +3,7 @@ import pytest
 from tests.integration.utils import run_single_component
 
 
+@pytest.mark.api_key_required
 async def test_list_assistants():
     from langflow.components.astra_assistants import AssistantsListAssistants
 
@@ -34,6 +35,7 @@ async def test_create_assistants():
     await run_assistant(assistant_id, thread_id)
 
 
+@pytest.mark.api_key_required
 async def test_create_thread():
     from langflow.components.astra_assistants import AssistantsCreateThread
 

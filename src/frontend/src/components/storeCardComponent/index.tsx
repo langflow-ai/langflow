@@ -1,7 +1,9 @@
 import { usePostLikeComponent } from "@/controllers/API/queries/store";
+import { ENABLE_NEW_IO_MODAL } from "@/customization/feature-flags";
 import { useState } from "react";
 import { getComponent } from "../../controllers/API";
-import IOModal from "../../modals/IOModal";
+import IOModalOld from "../../modals/IOModal";
+import IOModalNew from "../../modals/IOModal/newModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
@@ -25,6 +27,7 @@ import Loading from "../ui/loading";
 import useDataEffect from "./hooks/use-data-effect";
 import useInstallComponent from "./hooks/use-handle-install";
 import { convertTestName } from "./utils/convert-test-name";
+const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 
 export default function StoreCardComponent({
   data,
@@ -116,7 +119,7 @@ export default function StoreCardComponent({
         data-testid={`card-${convertTestName(data.name)}`}
         //TODO check color schema
         className={cn(
-          "group relative flex h-[11rem] flex-col justify-between overflow-hidden",
+          "group relative flex h-[12rem] flex-col justify-between overflow-hidden",
           !data.is_component &&
             "hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#5f5f5f0e]",
           disabled ? "pointer-events-none opacity-50" : "",

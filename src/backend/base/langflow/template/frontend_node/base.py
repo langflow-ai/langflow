@@ -53,6 +53,8 @@ class FrontendNode(BaseModel):
     """Error message for the frontend node."""
     edited: bool = False
     """Whether the frontend node has been edited."""
+    metadata: dict = {}
+    """Metadata for the component node."""
 
     def set_documentation(self, documentation: str) -> None:
         """Sets the documentation of the frontend node."""
@@ -61,14 +63,11 @@ class FrontendNode(BaseModel):
     @field_serializer("base_classes")
     def process_base_classes(self, base_classes: list[str]) -> list[str]:
         """Removes unwanted base classes from the list of base classes."""
-
-        sorted_base_classes = sorted(list(set(base_classes)), key=lambda x: x.lower())
-        return sorted_base_classes
+        return sorted(set(base_classes), key=lambda x: x.lower())
 
     @field_serializer("display_name")
     def process_display_name(self, display_name: str) -> str:
         """Sets the display name of the frontend node."""
-
         return display_name or self.name
 
     @model_serializer(mode="wrap")
@@ -95,7 +94,7 @@ class FrontendNode(BaseModel):
         return cls(**data)
 
     # For backwards compatibility
-    def to_dict(self, keep_name=True) -> dict:
+    def to_dict(self, *, keep_name=True) -> dict:
         """Returns a dict representation of the frontend node."""
         dump = self.model_dump(by_alias=True, exclude_none=True)
         if not keep_name:
@@ -108,7 +107,7 @@ class FrontendNode(BaseModel):
     def add_extra_base_classes(self) -> None:
         pass
 
-    def set_base_classes_from_outputs(self):
+    def set_base_classes_from_outputs(self) -> None:
         self.base_classes = [output_type for output in self.outputs for output_type in output.types]
 
     def validate_component(self) -> None:
@@ -121,14 +120,13 @@ class FrontendNode(BaseModel):
         input_names = [input_.name for input_ in self.template.fields]
         overlap = set(output_names).intersection(input_names)
         if overlap:
-            overlap_str = ", ".join(map(lambda x: f"'{x}'", overlap))
-            raise ValueError(
-                f"There should be no overlap between input and output names. Names {overlap_str} are duplicated."
-            )
+            overlap_str = ", ".join(f"'{x}'" for x in overlap)
+            msg = f"There should be no overlap between input and output names. Names {overlap_str} are duplicated."
+            raise ValueError(msg)
 
     def validate_attributes(self) -> None:
-        # None of inputs, outputs, _artifacts, _results, logs, status, vertex, graph, display_name, description, documentation, icon
-        # should be present in outputs or input names
+        # None of inputs, outputs, _artifacts, _results, logs, status, vertex, graph, display_name, description,
+        # documentation, icon should be present in outputs or input names
         output_names = [output.name for output in self.outputs]
         input_names = [input_.name for input_ in self.template.fields]
         attributes = [
@@ -149,10 +147,10 @@ class FrontendNode(BaseModel):
         input_overlap = set(input_names).intersection(attributes)
         error_message = ""
         if output_overlap:
-            output_overlap_str = ", ".join(map(lambda x: f"'{x}'", output_overlap))
+            output_overlap_str = ", ".join(f"'{x}'" for x in output_overlap)
             error_message += f"Output names {output_overlap_str} are reserved attributes.\n"
         if input_overlap:
-            input_overlap_str = ", ".join(map(lambda x: f"'{x}'", input_overlap))
+            input_overlap_str = ", ".join(f"'{x}'" for x in input_overlap)
             error_message += f"Input names {input_overlap_str} are reserved attributes."
 
     def add_base_class(self, base_class: str | list[str]) -> None:
@@ -173,7 +171,8 @@ class FrontendNode(BaseModel):
     def from_inputs(cls, **kwargs):
         """Create a frontend node from inputs."""
         if "inputs" not in kwargs:
-            raise ValueError("Missing 'inputs' argument.")
+            msg = "Missing 'inputs' argument."
+            raise ValueError(msg)
         if "_outputs_map" in kwargs:
             kwargs["outputs"] = kwargs.pop("_outputs_map")
         inputs = kwargs.pop("inputs")
@@ -181,13 +180,13 @@ class FrontendNode(BaseModel):
         kwargs["template"] = template
         return cls(**kwargs)
 
-    def set_field_value_in_template(self, field_name, value):
+    def set_field_value_in_template(self, field_name, value) -> None:
         for field in self.template.fields:
             if field.name == field_name:
                 field.value = value
                 break
 
-    def set_field_load_from_db_in_template(self, field_name, value):
+    def set_field_load_from_db_in_template(self, field_name, value) -> None:
         for field in self.template.fields:
             if field.name == field_name and hasattr(field, "load_from_db"):
                 field.load_from_db = value

@@ -83,6 +83,7 @@ This component generates embeddings using Azure OpenAI models.
 
 | Name | Type | Description |
 |------|------|-------------|
+| Model | String | Name of the model to use (default: `text-embedding-3-small`) |
 | Azure Endpoint | String | Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/` |
 | Deployment Name | String | The name of the deployment |
 | API Version | String | The API version to use, options include various dates |

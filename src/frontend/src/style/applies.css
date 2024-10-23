@@ -80,7 +80,7 @@
     @apply w-full truncate pr-1 text-xs text-foreground;
   }
   .side-bar-components-div-form {
-    @apply flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-ring bg-white px-3 py-1 text-sm;
+    @apply flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-ring px-3 py-1 text-sm;
   }
   .side-bar-components-border {
     @apply cursor-grab rounded-l-md border-l-8;
@@ -231,14 +231,14 @@
     @apply fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1;
   }
   .parent-disclosure-arrangement {
-    @apply flex w-full select-none items-center justify-between bg-background px-5 py-3;
+    @apply flex w-full select-none items-center justify-between bg-background py-3 pl-5 pr-3;
   }
   .components-disclosure-arrangement {
-    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-primary-foreground px-3 py-2;
   }
   .components-disclosure-arrangement-child {
     /* different color than the non child */
-    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-primary-foreground px-3 py-2;
   }
   .components-disclosure-title {
     @apply flex items-center text-sm text-primary;
@@ -324,7 +324,7 @@
     @apply relative flex flex-col justify-center bg-background transition-all;
   }
   .generic-node-div-title {
-    @apply flex w-full items-center gap-2 border-b bg-muted p-5;
+    @apply flex w-full items-center gap-2 border-b p-5;
   }
   .generic-node-title-arrangement {
     @apply flex-max-width items-center truncate;
@@ -558,8 +558,16 @@
   .header-menu-bar {
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium;
   }
+
   .header-menu-bar-display {
     @apply flex max-w-[110px] cursor-pointer items-center gap-2 lg:max-w-[150px];
+  }
+
+  .header-menu-bar-display-2 {
+    @apply flex cursor-pointer items-center gap-2;
+  }
+  .header-menu-flow-name-2 {
+    @apply flex-1;
   }
   .header-menu-flow-name {
     @apply flex-1 truncate;
@@ -569,8 +577,9 @@
   }
 
   .header-arrangement {
-    @apply flex-max-width h-12 items-center justify-between border-b border-border bg-muted;
+    @apply flex-max-width h-[53px] items-center justify-between border-b border-border;
   }
+
   .header-start-display {
     @apply flex items-center gap-2;
   }
@@ -581,8 +590,9 @@
     @apply ml-auto mr-2 flex items-center gap-5;
   }
   .header-github-link-box {
-    @apply inline-flex h-9 items-center justify-center rounded-md border border-input px-3 pr-0 shadow-sm;
+    @apply inline-flex h-8 items-center justify-center rounded-md border border-input px-2 pr-0;
   }
+
   .header-waitlist-link-box {
     @apply inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-input px-2 text-sm font-medium text-muted-foreground shadow-sm ring-offset-background disabled:pointer-events-none disabled:opacity-50;
   }
@@ -599,7 +609,7 @@
     @apply hover:bg-accent hover:text-accent-foreground;
   }
   .header-github-display {
-    @apply -mr-px ml-1 flex h-9 items-center justify-center rounded-md rounded-l-none border bg-background px-2 text-sm;
+    @apply -mr-px ml-1 flex h-8 items-center justify-center rounded-md rounded-l-none border bg-[white] px-2 text-sm dark:bg-[black];
   }
   .header-notifications-box {
     @apply fixed left-0 top-0 h-screen w-screen;
@@ -607,7 +617,9 @@
   .header-notifications {
     @apply absolute right-[3px] h-1.5 w-1.5 rounded-full bg-destructive;
   }
-
+  .header-notifications-dot {
+    @apply absolute relative left-[32px] top-[-9px] block h-1.5 w-1.5 rounded-full bg-destructive dark:bg-red-500;
+  }
   .input-component-div {
     @apply pointer-events-none relative cursor-not-allowed;
   }
@@ -939,7 +951,7 @@
     @apply bg-input text-center text-primary dark:bg-gray-700 dark:text-gray-300;
   }
   .form-modal-lock-false {
-    @apply bg-white text-primary;
+    @apply text-primary;
   }
   .code-highlight {
     @apply block w-full overflow-auto border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
@@ -949,13 +961,13 @@
     @apply block w-full overflow-auto border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
   }
   .form-modal-lockchat {
-    @apply form-input block w-full rounded-md border-border p-4 pr-16 custom-scroll focus:border-ring focus:ring-ring sm:text-sm;
+    @apply form-input block w-full rounded-md border border-border p-4 pr-16 custom-scroll focus:border-ring focus:ring-0 sm:text-sm;
   }
   .form-modal-send-icon-position {
     @apply absolute bottom-2 right-4;
   }
   .form-modal-send-button {
-    @apply rounded-md p-2 px-1 transition-all duration-300;
+    @apply rounded-md p-1.5 px-2.5 transition-all duration-300;
   }
   .form-modal-lock-icon {
     @apply ml-1 mr-1 h-5 w-5 animate-pulse;

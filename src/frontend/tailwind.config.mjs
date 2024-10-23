@@ -26,7 +26,7 @@ const config = {
     "bg-status-red",
     "bg-status-yellow",
   ],
-  important: true,
+  important: false,
   theme: {
     container: {
       center: true,
@@ -108,10 +108,10 @@ const config = {
         },
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
+        canvas: "var(--canvas)",
         ice: "var(--ice)",
         selected: "var(--selected)",
         hover: "var(--hover)",
-        white: "var(--white)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -254,6 +254,18 @@ const config = {
         ":focus-visible": {
           outline: "none  !important",
           outlineOffset: "0px !important",
+        },
+        ".note-node-markdown": {
+          lineHeight: "1",
+          "& ul li::marker": {
+            color: "black",
+          },
+          "& ol li::marker": {
+            color: "black",
+          },
+          "& h1, & h2, & h3, & h4, & h5, & h6, & p, & ul, & ol": {
+            marginBottom: "0.25rem",
+          },
         },
       });
     }),

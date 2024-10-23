@@ -42,6 +42,7 @@ test("Dynamic Agent", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Dynamic Agent" }).click();
 
   await page.waitForSelector('[title="fit view"]', {
@@ -94,7 +95,7 @@ test("Dynamic Agent", async ({ page }) => {
     timeout: 15000,
   });
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
 
   await page.waitForTimeout(1000);
 

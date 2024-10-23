@@ -1,4 +1,7 @@
-import { ENABLE_MVPS } from "@/customization/feature-flags";
+import {
+  ENABLE_INTEGRATIONS,
+  ENABLE_MVPS,
+} from "@/customization/feature-flags";
 import { useStoreStore } from "@/stores/storeStore";
 import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
@@ -46,22 +49,48 @@ export default function ExtraSidebar(): JSX.Element {
     event.dataTransfer.setDragImage(crt, 0, 0);
     event.dataTransfer.setData("genericNode", JSON.stringify(data));
   }
+  function normalizeString(str: string): string {
+    return str.toLowerCase().replace(/_/g, " ").replace(/\s+/g, "");
+  }
 
-  // Handle showing components after use search input
+  function searchInMetadata(metadata: any, searchTerm: string): boolean {
+    if (!metadata || typeof metadata !== "object") return false;
+
+    return Object.entries(metadata).some(([key, value]) => {
+      if (typeof value === "string") {
+        return (
+          normalizeString(key).includes(searchTerm) ||
+          normalizeString(value).includes(searchTerm)
+        );
+      }
+      if (typeof value === "object") {
+        return searchInMetadata(value, searchTerm);
+      }
+      return false;
+    });
+  }
+
   function handleSearchInput(e: string) {
     if (e === "") {
       setFilterData(data);
       return;
     }
+
+    const searchTerm = normalizeString(e);
+
     setFilterData((_) => {
-      let ret = {};
-      Object.keys(data).forEach((d: keyof APIObjectType, i) => {
+      let ret: APIObjectType = {};
+      Object.keys(data).forEach((d: keyof APIObjectType) => {
         ret[d] = {};
-        let keys = Object.keys(data[d]).filter(
-          (nd) =>
-            nd.toLowerCase().includes(e.toLowerCase()) ||
-            data[d][nd].display_name?.toLowerCase().includes(e.toLowerCase()),
-        );
+        let keys = Object.keys(data[d]).filter((nd) => {
+          const item = data[d][nd];
+          return (
+            normalizeString(nd).includes(searchTerm) ||
+            normalizeString(item.display_name).includes(searchTerm) ||
+            normalizeString(d.toString()).includes(searchTerm) ||
+            (item.metadata && searchInMetadata(item.metadata, searchTerm))
+          );
+        });
         keys.forEach((element) => {
           ret[d][element] = data[d][element];
         });
@@ -105,43 +134,6 @@ export default function ExtraSidebar(): JSX.Element {
   useEffect(() => {
     handleSearchInput(search);
   }, [data]);
-
-  useEffect(() => {
-    if (getFilterEdge?.length > 0) {
-      setFilterData((_) => {
-        let dataClone = cloneDeep(data);
-        let ret = {};
-        Object.keys(dataClone).forEach((d: keyof APIObjectType, i) => {
-          ret[d] = {};
-          if (getFilterEdge.some((x) => x.family === d)) {
-            ret[d] = dataClone[d];
-
-            const filtered = getFilterEdge
-              .filter((x) => x.family === d)
-              .pop()
-              .type.split(",");
-
-            for (let i = 0; i < filtered.length; i++) {
-              filtered[i] = filtered[i].trimStart();
-            }
-
-            if (filtered.some((x) => x !== "")) {
-              let keys = Object.keys(dataClone[d]).filter((nd) =>
-                filtered.includes(nd),
-              );
-              Object.keys(dataClone[d]).forEach((element) => {
-                if (!keys.includes(element)) {
-                  delete ret[d][element];
-                }
-              });
-            }
-          }
-        });
-        setSearch("");
-        return ret;
-      });
-    }
-  }, [getFilterEdge]);
 
   useEffect(() => {
     if (getFilterEdge?.length > 0) {
@@ -256,6 +248,35 @@ export default function ExtraSidebar(): JSX.Element {
               <div key={index}></div>
             ),
           )}
+        {ENABLE_INTEGRATIONS && (
+          <ParentDisclosureComponent
+            defaultOpen={true}
+            key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
+            button={{
+              title: "Integrations",
+              Icon: nodeIconsLucide.unknown,
+            }}
+            testId="bundle-extended-disclosure"
+          >
+            {Object.keys(dataFilter)
+              .sort(sortKeys)
+              .filter((x) => BUNDLES_SIDEBAR_FOLDER_NAMES.includes(x))
+              .map((SBSectionName: keyof APIObjectType, index) =>
+                Object.keys(dataFilter[SBSectionName]).length > 0 ? (
+                  <SidebarCategoryComponent
+                    key={`DisclosureComponent${index + search + JSON.stringify(getFilterEdge)}`}
+                    search={search}
+                    getFilterEdge={getFilterEdge}
+                    category={dataFilter[SBSectionName]}
+                    name={SBSectionName}
+                    onDragStart={onDragStart}
+                  />
+                ) : (
+                  <div key={index}></div>
+                ),
+              )}
+          </ParentDisclosureComponent>
+        )}
         <ParentDisclosureComponent
           defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
           key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Advanced`}
@@ -317,39 +338,6 @@ export default function ExtraSidebar(): JSX.Element {
             </a>
           )}
         </ParentDisclosureComponent>
-        {ENABLE_MVPS && (
-          <>
-            <Separator />
-
-            <ParentDisclosureComponent
-              defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
-              key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
-              button={{
-                title: "Bundles",
-                Icon: nodeIconsLucide.unknown,
-              }}
-              testId="bundle-extended-disclosure"
-            >
-              {Object.keys(dataFilter)
-                .sort(sortKeys)
-                .filter((x) => BUNDLES_SIDEBAR_FOLDER_NAMES.includes(x))
-                .map((SBSectionName: keyof APIObjectType, index) =>
-                  Object.keys(dataFilter[SBSectionName]).length > 0 ? (
-                    <SidebarCategoryComponent
-                      key={`DisclosureComponent${index + search + JSON.stringify(getFilterEdge)}`}
-                      search={search}
-                      getFilterEdge={getFilterEdge}
-                      category={dataFilter[SBSectionName]}
-                      name={SBSectionName}
-                      onDragStart={onDragStart}
-                    />
-                  ) : (
-                    <div key={index}></div>
-                  ),
-                )}
-            </ParentDisclosureComponent>
-          </>
-        )}
       </div>
     </div>
   );

@@ -24,6 +24,11 @@ on:
         required: true
         type: boolean
         default: false
+      build_docker_ep:
+        description: "Build Docker Image for Langflow with Entrypoint"
+        required: false
+        type: boolean
+        default: false
       pre_release:
         description: "Pre-release"
         required: false
@@ -35,8 +40,6 @@ on:
         type: boolean
         default: true
 
-env:
-  POETRY_VERSION: "1.8.2"
 
 jobs:
   ci:
@@ -56,22 +59,16 @@ jobs:
       version: ${{ steps.check-version.outputs.version }}
       skipped: ${{ steps.check-version.outputs.skipped }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Install poetry
-        run: pipx install poetry==${{ env.POETRY_VERSION }}
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "poetry"
-      - name: Set up Nodejs 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Environment
+        uses: ./.github/actions/setup-uv
+      - name: Install the project
+        run: uv sync --dev
       - name: Check Version
         id: check-version
         run: |
-          version=$(cd src/backend/base && poetry version --short)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
@@ -83,12 +80,15 @@ jobs:
           fi
       - name: Build project for distribution
         if: steps.check-version.outputs.skipped == 'false'
-        run: make build base=true
+        run: make build base=true args="--wheel"
       - name: Test CLI
         if: steps.check-version.outputs.skipped == 'false'
         run: |
-          python -m pip install src/backend/base/dist/*.whl
-          python -m langflow run --host 127.0.0.1 --port 7860 &
+          # TODO: Unsure why the whl is not built in src/backend/base/dist
+          mkdir src/backend/base/dist
+          mv dist/*.whl src/backend/base/dist
+          uv pip install src/backend/base/dist/*.whl
+          uv run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
@@ -103,10 +103,10 @@ jobs:
             echo "Server terminated successfully"
           fi
       - name: Publish to PyPI
-        if: steps.check-version.outputs.skipped == 'false'
         env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-        run: make publish base=true
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          make publish base=true
       - name: Upload Artifact
         if: steps.check-version.outputs.skipped == 'false'
         uses: actions/upload-artifact@v4
@@ -122,24 +122,19 @@ jobs:
     outputs:
       version: ${{ steps.check-version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Install poetry
-        run: pipx install poetry==${{ env.POETRY_VERSION }}
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "poetry"
-      - name: Set up Nodejs 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Environment
+        uses: ./.github/actions/setup-uv
+      - name: Install the project
+        run: uv sync --dev
+
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow
       - name: Check if pre-release
         if: inputs.pre_release == 'true'
         run: |
-          version=$(poetry version --short)
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
           if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post)([0-9]+))$ ]]; then
             echo "Pre-release version detected. Continuing with the release."
           else
@@ -149,7 +144,7 @@ jobs:
       - name: Check Version
         id: check-version
         run: |
-          version=$(poetry version --short)
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
@@ -162,11 +157,11 @@ jobs:
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
 
       - name: Build project for distribution
-        run: make build main=true
+        run: make build main=true args="--no-sources --wheel"
       - name: Test CLI
         run: |
-          python -m pip install dist/*.whl
-          python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          uv pip install dist/*.whl
+          uv run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
@@ -182,8 +177,9 @@ jobs:
           fi
       - name: Publish to PyPI
         env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-        run: make publish main=true
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          make publish main=true
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -193,33 +189,33 @@ jobs:
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: inputs.build_docker_base == true
+    needs: release-base
     uses: ./.github/workflows/docker-build.yml
-    strategy:
-      matrix:
-        release_type:
-          - base
     with:
-      # version should be needs.release-base.outputs.version  if release_type is base
-      # version should be needs.release-main.outputs.version  if release_type is main
-      version: ""
-      release_type: ${{ matrix.release_type }}
+      version: ${{ needs.release-base.outputs.version }}
+      release_type: base
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: inputs.build_docker_main == true
+    needs: release-main
     uses: ./.github/workflows/docker-build.yml
-    strategy:
-      matrix:
-        release_type:
-          - main
     with:
-      # version should be needs.release-base.outputs.version  if release_type is base
-      # version should be needs.release-main.outputs.version  if release_type is main
-      version: ""
-      release_type: ${{ matrix.release_type }}
+      version: ${{ needs.release-main.outputs.version }}
+      release_type: main
       pre_release: ${{ inputs.pre_release }}
+    secrets: inherit
+
+  call_docker_build_main_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: inputs.build_docker_ep == true
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      version: needs.release-main.outputs.version
+      release_type: main-ep
+      pre_release: False
     secrets: inherit
 
   create_release:

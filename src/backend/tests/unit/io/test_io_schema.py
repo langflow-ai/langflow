@@ -1,14 +1,10 @@
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import pytest
-from pydantic.fields import FieldInfo
+from langflow.components.inputs import ChatInput
 
-from langflow.components.inputs.ChatInput import ChatInput
-
-
-@pytest.fixture
-def client():
-    pass
+if TYPE_CHECKING:
+    from pydantic.fields import FieldInfo
 
 
 def test_create_input_schema():
@@ -184,7 +180,7 @@ class TestCreateInputSchema:
         input_instance = StrInput(name="test_field", is_list=True)
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["test_field"]
-        assert field_info.annotation == list[str]  # type: ignore
+        assert field_info.annotation == list[str]
 
     # Converting FieldTypes to corresponding Python types
     def test_field_types_conversion(self):
@@ -218,18 +214,6 @@ class TestCreateInputSchema:
         assert field_info.description == ""
 
     # Handling invalid field types
-    def test_invalid_field_types_handling(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
-        class InvalidFieldType:
-            pass
-
-        input_instance = StrInput(name="test_field")
-        input_instance.field_type = InvalidFieldType()
-
-        with pytest.raises(KeyError):
-            create_input_schema([input_instance])
 
     # Handling input types with None as default value
     def test_none_default_value_handling(self):

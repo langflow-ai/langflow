@@ -1,26 +1,36 @@
 from __future__ import annotations
 
 import uuid
-import warnings
-from typing import TYPE_CHECKING, Any
+from datetime import timedelta
+from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException, Query
+from fastapi_pagination import Params
+from loguru import logger
 from sqlalchemy import delete
 from sqlmodel import Session
 
 from langflow.graph.graph.base import Graph
-from langflow.services.chat.service import ChatService
+from langflow.services.auth.utils import get_current_active_user
+from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.store.schema import StoreComponentCreate
+from langflow.services.deps import get_session
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.chat.service import ChatService
+    from langflow.services.store.schema import StoreComponentCreate
 
 
 API_WORDS = ["api", "key", "token"]
+
+MAX_PAGE_SIZE = 50
+MIN_PAGE_SIZE = 1
+
+CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
+DbSession = Annotated[Session, Depends(get_session)]
 
 
 def has_api_terms(word: str):
@@ -42,9 +52,8 @@ def remove_api_keys(flow: dict):
 
 def build_input_keys_response(langchain_object, artifacts):
     """Build the input keys response."""
-
     input_keys_response = {
-        "input_keys": {key: "" for key in langchain_object.input_keys},
+        "input_keys": dict.fromkeys(langchain_object.input_keys, ""),
         "memory_keys": [],
         "handle_keys": artifacts.get("handle_keys", []),
     }
@@ -89,7 +98,7 @@ def get_is_component_from_data(data: dict):
     return data.get("is_component")
 
 
-async def check_langflow_version(component: StoreComponentCreate):
+async def check_langflow_version(component: StoreComponentCreate) -> None:
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]
@@ -100,8 +109,8 @@ async def check_langflow_version(component: StoreComponentCreate):
     langflow_version = get_lf_version_from_pypi()
     if langflow_version is None:
         raise HTTPException(status_code=500, detail="Unable to verify the latest version of Langflow")
-    elif langflow_version != component.last_tested_version:
-        warnings.warn(
+    if langflow_version != component.last_tested_version:
+        logger.warning(
             f"Your version of Langflow ({component.last_tested_version}) is outdated. "
             f"Please update to the latest version ({langflow_version}) and try again."
         )
@@ -114,29 +123,32 @@ def format_elapsed_time(elapsed_time: float) -> str:
     - Less than 1 minute: returns seconds rounded to 2 decimals
     - 1 minute or more: returns minutes and seconds
     """
-    if elapsed_time < 1:
-        milliseconds = int(round(elapsed_time * 1000))
+    delta = timedelta(seconds=elapsed_time)
+    if delta < timedelta(seconds=1):
+        milliseconds = round(delta / timedelta(milliseconds=1))
         return f"{milliseconds} ms"
-    elif elapsed_time < 60:
+
+    if delta < timedelta(minutes=1):
         seconds = round(elapsed_time, 2)
         unit = "second" if seconds == 1 else "seconds"
         return f"{seconds} {unit}"
-    else:
-        minutes = int(elapsed_time // 60)
-        seconds = round(elapsed_time % 60, 2)
-        minutes_unit = "minute" if minutes == 1 else "minutes"
-        seconds_unit = "second" if seconds == 1 else "seconds"
-        return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
+
+    minutes = delta // timedelta(minutes=1)
+    seconds = round((delta - timedelta(minutes=minutes)).total_seconds(), 2)
+    minutes_unit = "minute" if minutes == 1 else "minutes"
+    seconds_unit = "second" if seconds == 1 else "seconds"
+    return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
 async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
     """Build and cache the graph."""
     graph = Graph.from_payload(payload, flow_id, **kwargs)
-    for vertex_id in graph._has_session_id_vertices:
+    for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
-            raise ValueError(f"Vertex {vertex_id} not found")
-        if not vertex._raw_params.get("session_id"):
+            msg = f"Vertex {vertex_id} not found"
+            raise ValueError(msg)
+        if not vertex.raw_params.get("session_id"):
             vertex.update_raw_params({"session_id": flow_id}, overwrite=True)
 
     run_id = uuid.uuid4()
@@ -150,7 +162,8 @@ async def build_graph_from_db_no_cache(flow_id: str, session: Session):
     """Build and cache the graph."""
     flow: Flow | None = session.get(Flow, flow_id)
     if not flow or not flow.data:
-        raise ValueError("Invalid flow ID")
+        msg = "Invalid flow ID"
+        raise ValueError(msg)
     return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
 
 
@@ -196,8 +209,7 @@ def format_exception_message(exc: Exception) -> str:
 
 
 def get_top_level_vertices(graph, vertices_ids):
-    """
-    Retrieves the top-level vertices from the given graph based on the provided vertex IDs.
+    """Retrieves the top-level vertices from the given graph based on the provided vertex IDs.
 
     Args:
         graph (Graph): The graph object containing the vertices.
@@ -229,29 +241,43 @@ def get_suggestion_message(outdated_components: list[str]) -> str:
     count = len(outdated_components)
     if count == 0:
         return "The flow contains no outdated components."
-    elif count == 1:
-        return f"The flow contains 1 outdated component. We recommend updating the following component: {outdated_components[0]}."
-    else:
-        components = ", ".join(outdated_components)
-        return f"The flow contains {count} outdated components. We recommend updating the following components: {components}."
+    if count == 1:
+        return (
+            "The flow contains 1 outdated component. "
+            f"We recommend updating the following component: {outdated_components[0]}."
+        )
+    components = ", ".join(outdated_components)
+    return (
+        f"The flow contains {count} outdated components. "
+        f"We recommend updating the following components: {components}."
+    )
 
 
 def parse_value(value: Any, input_type: str) -> Any:
     """Helper function to parse the value based on input type."""
     if value == "":
         return value
-    elif input_type == "IntInput":
+    if input_type == "IntInput":
         return int(value) if value is not None else None
-    elif input_type == "FloatInput":
+    if input_type == "FloatInput":
         return float(value) if value is not None else None
-    else:
-        return value
+    return value
 
 
-async def cascade_delete_flow(session: Session, flow: Flow):
+async def cascade_delete_flow(session: Session, flow: Flow) -> None:
     try:
-        session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))  # type: ignore
-        session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))  # type: ignore
-        session.exec(delete(Flow).where(Flow.id == flow.id))  # type: ignore
+        session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))
+        session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))
+        session.exec(delete(Flow).where(Flow.id == flow.id))
     except Exception as e:
-        raise RuntimeError(f"Unable to cascade delete flow: ${flow.id}", e)
+        msg = f"Unable to cascade delete flow: ${flow.id}"
+        raise RuntimeError(msg, e) from e
+
+
+def custom_params(
+    page: int | None = Query(None),
+    size: int | None = Query(None),
+):
+    if page is None and size is None:
+        return None
+    return Params(page=page or MIN_PAGE_SIZE, size=size or MAX_PAGE_SIZE)

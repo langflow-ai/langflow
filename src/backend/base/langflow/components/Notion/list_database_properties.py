@@ -1,5 +1,6 @@
 import requests
 from langchain.tools import StructuredTool
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -36,9 +37,8 @@ class NotionDatabaseProperties(LCToolComponent):
         if isinstance(result, str):
             # An error occurred, return it as text
             return Data(text=result)
-        else:
-            # Success, return the properties
-            return Data(text=str(result), data=result)
+        # Success, return the properties
+        return Data(text=str(result), data=result)
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
@@ -55,14 +55,14 @@ class NotionDatabaseProperties(LCToolComponent):
             "Notion-Version": "2022-06-28",  # Use the latest supported version
         }
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             data = response.json()
-            properties = data.get("properties", {})
-            return properties
+            return data.get("properties", {})
         except requests.exceptions.RequestException as e:
-            return f"Error fetching Notion database properties: {str(e)}"
+            return f"Error fetching Notion database properties: {e}"
         except ValueError as e:
-            return f"Error parsing Notion API response: {str(e)}"
-        except Exception as e:
-            return f"An unexpected error occurred: {str(e)}"
+            return f"Error parsing Notion API response: {e}"
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error fetching Notion database properties")
+            return f"An unexpected error occurred: {e}"

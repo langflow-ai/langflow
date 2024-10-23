@@ -5,13 +5,11 @@ from langflow.helpers.base_model import BaseModel
 
 
 def camel_to_snake(camel_str: str) -> str:
-    snake_str = re.sub(r"(?<!^)(?=[A-Z])", "_", camel_str).lower()
-    return snake_str
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", camel_str).lower()
 
 
 def create_state_model_from_graph(graph: BaseModel) -> type[BaseModel]:
-    """
-    Create a Pydantic state model from a graph representation.
+    """Create a Pydantic state model from a graph representation.
 
     This function generates a Pydantic model that represents the state of an entire graph.
     It creates getter methods for each vertex in the graph, allowing access to the state
@@ -30,18 +28,18 @@ def create_state_model_from_graph(graph: BaseModel) -> type[BaseModel]:
 
     Raises:
         ValueError: If any vertex in the graph does not have a properly initialized
-            component instance (i.e., if vertex._custom_component is None).
+            component instance (i.e., if vertex.custom_component is None).
 
     Notes:
-        - Each vertex in the graph must have a '_custom_component' attribute.
-        - The '_custom_component' must have a 'get_state_model_instance_getter' method.
+        - Each vertex in the graph must have a 'custom_component' attribute.
+        - The 'custom_component' must have a 'get_state_model_instance_getter' method.
         - Vertex IDs are converted from camel case to snake case for the resulting model's field names.
         - The resulting model uses the 'create_state_model' function with validation disabled.
 
     Example:
         >>> class Vertex(BaseModel):
         ...     id: str
-        ...     _custom_component: Any
+        ...     custom_component: Any
         >>> class Graph(BaseModel):
         ...     vertices: List[Vertex]
         >>> # Assume proper setup of vertices and components
@@ -52,16 +50,17 @@ def create_state_model_from_graph(graph: BaseModel) -> type[BaseModel]:
         >>> print(graph_state.some_component_name)
     """
     for vertex in graph.vertices:
-        if hasattr(vertex, "_custom_component") and vertex._custom_component is None:
-            raise ValueError(f"Vertex {vertex.id} does not have a component instance.")
+        if hasattr(vertex, "custom_component") and vertex.custom_component is None:
+            msg = f"Vertex {vertex.id} does not have a component instance."
+            raise ValueError(msg)
 
     state_model_getters = [
-        vertex._custom_component.get_state_model_instance_getter()
+        vertex.custom_component.get_state_model_instance_getter()
         for vertex in graph.vertices
-        if hasattr(vertex, "_custom_component") and hasattr(vertex._custom_component, "get_state_model_instance_getter")
+        if hasattr(vertex, "custom_component") and hasattr(vertex.custom_component, "get_state_model_instance_getter")
     ]
     fields = {
         camel_to_snake(vertex.id): state_model_getter
-        for vertex, state_model_getter in zip(graph.vertices, state_model_getters)
+        for vertex, state_model_getter in zip(graph.vertices, state_model_getters, strict=False)
     }
     return create_state_model(model_name="GraphStateModel", validate=False, **fields)

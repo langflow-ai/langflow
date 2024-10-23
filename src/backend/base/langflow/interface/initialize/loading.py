@@ -10,13 +10,13 @@ from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
-from langflow.events.event_manager import EventManager
 from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.services.deps import get_tracing_service
 
 if TYPE_CHECKING:
     from langflow.custom import Component, CustomComponent
+    from langflow.events.event_manager import EventManager
     from langflow.graph.vertex.base import Vertex
 
 
@@ -25,14 +25,14 @@ async def instantiate_class(
     user_id=None,
     event_manager: EventManager | None = None,
 ) -> Any:
-    """Instantiate class from module type and key, and params"""
-
+    """Instantiate class from module type and key, and params."""
     vertex_type = vertex.vertex_type
     base_type = vertex.base_type
     logger.debug(f"Instantiating {vertex_type} of type {base_type}")
 
     if not base_type:
-        raise ValueError("No base type provided for vertex")
+        msg = "No base type provided for vertex"
+        raise ValueError(msg)
 
     custom_params = get_params(vertex.params)
     code = custom_params.pop("code")
@@ -52,20 +52,21 @@ async def get_instance_results(
     custom_component,
     custom_params: dict,
     vertex: Vertex,
+    *,
     fallback_to_env_vars: bool = False,
     base_type: str = "component",
 ):
     custom_params = update_params_with_load_from_db_fields(
-        custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars
+        custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars=fallback_to_env_vars
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
         if base_type == "custom_components":
             return await build_custom_component(params=custom_params, custom_component=custom_component)
-        elif base_type == "component":
+        if base_type == "component":
             return await build_component(params=custom_params, custom_component=custom_component)
-        else:
-            raise ValueError(f"Base type {base_type} not found.")
+        msg = f"Base type {base_type} not found."
+        raise ValueError(msg)
 
 
 def get_params(vertex_params):
@@ -76,7 +77,7 @@ def get_params(vertex_params):
 
 
 def convert_params_to_sets(params):
-    """Convert certain params to sets"""
+    """Convert certain params to sets."""
     if "allowed_special" in params:
         params["allowed_special"] = set(params["allowed_special"])
     if "disallowed_special" in params:
@@ -88,12 +89,11 @@ def convert_kwargs(params):
     # Loop through items to avoid repeated lookups
     items_to_remove = []
     for key, value in params.items():
-        if "kwargs" in key or "config" in key:
-            if isinstance(value, str):
-                try:
-                    params[key] = orjson.loads(value)
-                except orjson.JSONDecodeError:
-                    items_to_remove.append(key)
+        if ("kwargs" in key or "config" in key) and isinstance(value, str):
+            try:
+                params[key] = orjson.loads(value)
+            except orjson.JSONDecodeError:
+                items_to_remove.append(key)
 
     # Remove invalid keys outside the loop to avoid modifying dict during iteration
     for key in items_to_remove:
@@ -106,40 +106,31 @@ def update_params_with_load_from_db_fields(
     custom_component: CustomComponent,
     params,
     load_from_db_fields,
+    *,
     fallback_to_env_vars=False,
 ):
-    # For each field in load_from_db_fields, we will check if it's in the params
-    # and if it is, we will get the value from the custom_component.keys(name)
-    # and update the params with the value
     for field in load_from_db_fields:
-        if field in params:
-            try:
-                key = None
-                try:
-                    key = custom_component.variables(params[field], field)
-                except ValueError as e:
-                    # check if "User id is not set" is in the error message, this is an internal bug
-                    if "User id is not set" in str(e):
-                        raise e
-                    logger.debug(str(e))
-                if fallback_to_env_vars and key is None:
-                    var = os.getenv(params[field])
-                    if var is None:
-                        raise ValueError(f"Environment variable {params[field]} is not set.")
-                    key = var
-                    logger.info(f"Using environment variable {params[field]} for {field}")
-                if key is None:
-                    logger.warning(f"Could not get value for {field}. Setting it to None.")
+        if field not in params:
+            continue
 
-                params[field] = key
+        try:
+            key = custom_component.variables(params[field], field)
+        except ValueError as e:
+            if any(reason in str(e) for reason in ["User id is not set", "variable not found."]):
+                raise
+            logger.debug(str(e))
+            key = None
 
-            except TypeError as exc:
-                raise exc
+        if fallback_to_env_vars and key is None:
+            key = os.getenv(params[field])
+            if key:
+                logger.info(f"Using environment variable {params[field]} for {field}")
+            else:
+                logger.error(f"Environment variable {params[field]} is not set.")
 
-            except Exception as exc:
-                logger.error(f"Failed to get value for {field} from custom component. Setting it to None. Error: {exc}")
-
-                params[field] = None
+        params[field] = key if key is not None else None
+        if key is None:
+            logger.warning(f"Could not get value for {field}. Setting it to None.")
 
     return params
 
@@ -197,4 +188,5 @@ async def build_custom_component(params: dict, custom_component: CustomComponent
         custom_component._results = {custom_component._vertex.outputs[0].get("name"): build_result}
         return custom_component, build_result, artifact
 
-    raise ValueError("Custom component does not have a vertex")
+    msg = "Custom component does not have a vertex"
+    raise ValueError(msg)

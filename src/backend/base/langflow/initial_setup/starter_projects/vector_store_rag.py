@@ -1,15 +1,14 @@
 from textwrap import dedent
 
-from langflow.components.data.File import FileComponent
-from langflow.components.embeddings.OpenAIEmbeddings import OpenAIEmbeddingsComponent
-from langflow.components.helpers.ParseData import ParseDataComponent
-from langflow.components.helpers.SplitText import SplitTextComponent
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.components.prompts.Prompt import PromptComponent
-from langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent
-from langflow.graph.graph.base import Graph
+from langflow.components.data import FileComponent
+from langflow.components.embeddings import OpenAIEmbeddingsComponent
+from langflow.components.helpers import ParseDataComponent, SplitTextComponent
+from langflow.components.inputs import ChatInput
+from langflow.components.models import OpenAIModelComponent
+from langflow.components.outputs import ChatOutput
+from langflow.components.prompts import PromptComponent
+from langflow.components.vectorstores import AstraVectorStoreComponent
+from langflow.graph import Graph
 
 
 def ingestion_graph():
@@ -24,8 +23,7 @@ def ingestion_graph():
         ingest_data=text_splitter.split_text,
     )
 
-    ingestion_graph = Graph(file_component, vector_store)
-    return ingestion_graph
+    return Graph(file_component, vector_store)
 
 
 def rag_graph():
@@ -57,8 +55,7 @@ def rag_graph():
     chat_output = ChatOutput()
     chat_output.set(input_value=openai_component.text_response)
 
-    graph = Graph(start=chat_input, end=chat_output)
-    return graph
+    return Graph(start=chat_input, end=chat_output)
 
 
 def vector_store_rag_graph():

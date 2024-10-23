@@ -9,20 +9,17 @@ from langflow.services.deps import get_cache_service
 
 
 class ChatService(Service):
-    """
-    Service class for managing chat-related operations.
-    """
+    """Service class for managing chat-related operations."""
 
     name = "chat_service"
 
-    def __init__(self):
-        self._async_cache_locks = defaultdict(asyncio.Lock)
-        self._sync_cache_locks = defaultdict(RLock)
+    def __init__(self) -> None:
+        self.async_cache_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+        self._sync_cache_locks: dict[str, RLock] = defaultdict(RLock)
         self.cache_service = get_cache_service()
 
     def _get_lock(self, key: str):
-        """
-        Retrieves the lock associated with the given key.
+        """Retrieves the lock associated with the given key.
 
         Args:
             key (str): The key to retrieve the lock for.
@@ -31,20 +28,19 @@ class ChatService(Service):
             threading.Lock or asyncio.Lock: The lock associated with the given key.
         """
         if isinstance(self.cache_service, AsyncBaseCacheService):
-            return self._async_cache_locks[key]
-        else:
-            return self._sync_cache_locks[key]
+            return self.async_cache_locks[key]
+        return self._sync_cache_locks[key]
 
     async def _perform_cache_operation(
         self, operation: str, key: str, data: Any = None, lock: asyncio.Lock | None = None
     ):
-        """
-        Perform a cache operation based on the given operation type.
+        """Perform a cache operation based on the given operation type.
 
         Args:
             operation (str): The type of cache operation to perform. Possible values are "upsert", "get", or "delete".
             key (str): The key associated with the cache operation.
-            data (Any, optional): The data to be stored in the cache. Only applicable for "upsert" operation. Defaults to None.
+            data (Any, optional): The data to be stored in the cache. Only applicable for "upsert" operation.
+                Defaults to None.
             lock (Optional[asyncio.Lock], optional): The lock to be used for the cache operation. Defaults to None.
 
         Returns:
@@ -58,21 +54,25 @@ class ChatService(Service):
         if isinstance(self.cache_service, AsyncBaseCacheService):
             if operation == "upsert":
                 await self.cache_service.upsert(str(key), data, lock=lock)
-            elif operation == "get":
+                return None
+            if operation == "get":
                 return await self.cache_service.get(key, lock=lock)
-            elif operation == "delete":
+            if operation == "delete":
                 await self.cache_service.delete(key, lock=lock)
-        else:
-            if operation == "upsert":
-                self.cache_service.upsert(str(key), data, lock=lock)
-            elif operation == "get":
-                return self.cache_service.get(key, lock=lock)
-            elif operation == "delete":
-                self.cache_service.delete(key, lock=lock)
+                return None
+            return None
+        if operation == "upsert":
+            self.cache_service.upsert(str(key), data, lock=lock)
+            return None
+        if operation == "get":
+            return self.cache_service.get(key, lock=lock)
+        if operation == "delete":
+            self.cache_service.delete(key, lock=lock)
+            return None
+        return None
 
     async def set_cache(self, key: str, data: Any, lock: asyncio.Lock | None = None) -> bool:
-        """
-        Set the cache for a client.
+        """Set the cache for a client.
 
         Args:
             key (str): The cache key.
@@ -90,8 +90,7 @@ class ChatService(Service):
         return key in self.cache_service
 
     async def get_cache(self, key: str, lock: asyncio.Lock | None = None) -> Any:
-        """
-        Get the cache for a client.
+        """Get the cache for a client.
 
         Args:
             key (str): The cache key.
@@ -102,9 +101,8 @@ class ChatService(Service):
         """
         return await self._perform_cache_operation("get", key, lock=lock or self._get_lock(key))
 
-    async def clear_cache(self, key: str, lock: asyncio.Lock | None = None):
-        """
-        Clear the cache for a client.
+    async def clear_cache(self, key: str, lock: asyncio.Lock | None = None) -> None:
+        """Clear the cache for a client.
 
         Args:
             key (str): The cache key.

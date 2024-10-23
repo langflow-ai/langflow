@@ -11,8 +11,8 @@ from rich import print
 class NameTest(FastHttpUser):
     wait_time = between(1, 5)
 
-    with open("names.txt", "r") as file:
-        names = [line.strip() for line in file.readlines()]
+    with Path("names.txt").open(encoding="utf-8") as file:
+        names = [line.strip() for line in file]
 
     headers: dict = {}
 
@@ -28,8 +28,9 @@ class NameTest(FastHttpUser):
                 print(f"Poll Response: {response.js}")
                 if status == "SUCCESS":
                     return response.js.get("result")
-                elif status in ["FAILURE", "REVOKED"]:
-                    raise ValueError(f"Task failed with status: {status}")
+                if status in {"FAILURE", "REVOKED"}:
+                    msg = f"Task failed with status: {status}"
+                    raise ValueError(msg)
             time.sleep(sleep_time)
 
     def process(self, name, flow_id, payload):
@@ -45,7 +46,8 @@ class NameTest(FastHttpUser):
             print(response.js)
             if response.status_code != 200:
                 response.failure("Process call failed")
-                raise ValueError("Process call failed")
+                msg = "Process call failed"
+                raise ValueError(msg)
             task_id = response.js.get("id")
             session_id = response.js.get("session_id")
             assert task_id, "Inner Task ID not found"
@@ -58,13 +60,13 @@ class NameTest(FastHttpUser):
 
     @task
     def send_name_and_check(self):
-        name = random.choice(self.names)
+        name = random.choice(self.names)  # noqa: S311
 
         payload1 = {
             "inputs": {"text": f"Hello, My name is {name}"},
             "sync": False,
         }
-        result1, session_id = self.process(name, self.flow_id, payload1)
+        _result1, session_id = self.process(name, self.flow_id, payload1)
 
         payload2 = {
             "inputs": {"text": "What is my name? Please, answer like this: Your name is <name>"},
@@ -86,11 +88,9 @@ class NameTest(FastHttpUser):
         a_token = tokens["access_token"]
         logged_in_headers = {"Authorization": f"Bearer {a_token}"}
         print("Logged in")
-        with open(
-            Path(__file__).parent.parent / "data" / "BasicChatwithPromptandHistory.json",
-            "r",
-        ) as f:
-            json_flow = f.read()
+        json_flow = (Path(__file__).parent.parent / "data" / "BasicChatwithPromptandHistory.json").read_text(
+            encoding="utf-8"
+        )
         flow = orjson.loads(json_flow)
         data = flow["data"]
         # Create test data

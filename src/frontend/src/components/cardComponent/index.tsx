@@ -1,7 +1,9 @@
+import { ENABLE_NEW_IO_MODAL } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useState } from "react";
 import { Control } from "react-hook-form";
-import IOModal from "../../modals/IOModal";
+import IOModalOld from "../../modals/IOModal";
+import IOModalNew from "../../modals/IOModal/newModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowType } from "../../types/flow";
@@ -22,6 +24,7 @@ import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
 import useDragStart from "./hooks/use-on-drag-start";
 import { convertTestName } from "./utils/convert-test-name";
+const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 
 export default function CollectionCardComponent({
   data,
@@ -42,6 +45,7 @@ export default function CollectionCardComponent({
   const selectedFlowsComponentsCards = useFlowsManagerStore(
     (state) => state.selectedFlowsComponentsCards,
   );
+
   function hasPlayground(flow?: FlowType) {
     if (!flow) {
       return false;
@@ -60,9 +64,9 @@ export default function CollectionCardComponent({
     e.stopPropagation();
     track("Playground Button Clicked", { flowId: data.id });
     setLoadingPlayground(true);
-    const flow = getFlowById(data.id);
-    if (flow) {
-      if (!hasPlayground(flow)) {
+
+    if (data) {
+      if (!hasPlayground(data)) {
         setErrorData({
           title: "Error",
           list: ["This flow doesn't have a playground."],
@@ -70,7 +74,7 @@ export default function CollectionCardComponent({
         setLoadingPlayground(false);
         return;
       }
-      setCurrentFlow(flow);
+      setCurrentFlow(data);
       setOpenPlayground(true);
       setLoadingPlayground(false);
     } else {

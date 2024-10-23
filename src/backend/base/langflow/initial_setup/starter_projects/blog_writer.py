@@ -1,12 +1,12 @@
 from textwrap import dedent
 
-from langflow.components.data.URL import URLComponent
-from langflow.components.helpers.ParseData import ParseDataComponent
-from langflow.components.inputs.TextInput import TextInputComponent
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.components.prompts.Prompt import PromptComponent
-from langflow.graph.graph.base import Graph
+from langflow.components.data import URLComponent
+from langflow.components.helpers import ParseDataComponent
+from langflow.components.inputs import TextInputComponent
+from langflow.components.models import OpenAIModelComponent
+from langflow.components.outputs import ChatOutput
+from langflow.components.prompts import PromptComponent
+from langflow.graph import Graph
 
 
 def blog_writer_graph(template: str | None = None):
@@ -28,7 +28,8 @@ Blog:
 
     text_input = TextInputComponent(_display_name="Instructions")
     text_input.set(
-        input_value="Use the references above for style to write a new blog/tutorial about Langflow and AI. Suggest non-covered topics."
+        input_value="Use the references above for style to write a new blog/tutorial about Langflow and AI. "
+        "Suggest non-covered topics."
     )
 
     prompt_component = PromptComponent()
@@ -44,5 +45,4 @@ Blog:
     chat_output = ChatOutput()
     chat_output.set(input_value=openai_component.text_response)
 
-    graph = Graph(start=text_input, end=chat_output)
-    return graph
+    return Graph(start=text_input, end=chat_output)

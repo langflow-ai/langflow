@@ -1,4 +1,5 @@
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
+import { ENABLE_NEW_IO_MODAL } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import { useStoreStore } from "@/stores/storeStore";
@@ -6,9 +7,11 @@ import { useTypesStore } from "@/stores/typesStore";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { getComponent } from "../../controllers/API";
-import IOModal from "../../modals/IOModal";
+import IOModalOld from "../../modals/IOModal";
+import IOModalNew from "../../modals/IOModal/newModal";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import cloneFLowWithParent from "../../utils/storeUtils";
+const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 
 export default function PlaygroundPage() {
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -49,7 +52,7 @@ export default function PlaygroundPage() {
         setCurrentFlow(isAnExistingFlow);
       } else if (!flows) {
         setIsLoading(true);
-        await refreshFlows(undefined);
+        await refreshFlows({ get_all: true, header_flows: true });
         if (!types || Object.keys(types).length === 0) await getTypes();
         setIsLoading(false);
       }
