@@ -23,7 +23,7 @@ router = APIRouter(tags=["Users"], prefix="/users")
 
 
 @router.post("/", response_model=UserRead, status_code=201)
-def add_user(
+async def add_user(
     user: UserCreate,
     session: DbSession,
 ) -> User:
