@@ -169,6 +169,8 @@ class Settings(BaseSettings):
     """The maximum number of retries for the health check."""
     max_file_size_upload: int = 100
     """The maximum file size for the upload in MB."""
+    mvp_components: bool = False
+    """If set to True, Langflow will use the mvp components."""
 
     @field_validator("dev")
     @classmethod

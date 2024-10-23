@@ -147,6 +147,11 @@ def run(
         help="Defines the maximum file size for the upload in MB.",
         show_default=False,
     ),
+    mvp_components: bool | None = typer.Option(  # noqa: ARG001
+        None,
+        help="Defines if the mvp components are enabled.",
+        show_default=False,
+    ),
 ) -> None:
     """Run Langflow."""
     if env_file:

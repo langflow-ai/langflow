@@ -414,6 +414,7 @@ def update_settings(
     auto_saving_interval: int = 1000,
     health_check_max_retries: int = 5,
     max_file_size_upload: int = 100,
+    mvp_components: bool = False,
 ) -> None:
     """Update the settings from a config file."""
     from langflow.services.utils import initialize_settings_service
@@ -449,6 +450,9 @@ def update_settings(
     if max_file_size_upload is not None:
         logger.debug(f"Setting max_file_size_upload to {max_file_size_upload}")
         settings_service.settings.update_settings(max_file_size_upload=max_file_size_upload)
+    if mvp_components is not None:
+        logger.debug(f"Setting mvp_components to {mvp_components}")
+        settings_service.settings.update_settings(mvp_components=mvp_components)
 
 
 def is_class_method(func, cls):
