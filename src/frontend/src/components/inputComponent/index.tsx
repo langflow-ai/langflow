@@ -36,7 +36,7 @@ export default function InputComponent({
   isObjectOption = false,
   name,
   onChangeFolderName,
-  nodeStyle = false,
+  nodeStyle,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -147,6 +147,7 @@ export default function InputComponent({
               options={options}
               optionsPlaceholder={optionsPlaceholder}
               className={className}
+              nodeStyle={nodeStyle}
             />
           )}
         </>
@@ -174,7 +175,12 @@ export default function InputComponent({
             )}
           >
             <ForwardedIconComponent
-              name={getIconName(disabled!, selectedOption!, optionsIcon)}
+              name={getIconName(
+                disabled!,
+                selectedOption!,
+                optionsIcon,
+                nodeStyle!,
+              )}
               className={cn(
                 disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
                 "h-4 w-4",

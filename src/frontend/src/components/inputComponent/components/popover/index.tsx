@@ -42,6 +42,7 @@ const CustomInputPopover = ({
   optionsButton,
   handleKeyDown,
   showOptions,
+  nodeStyle,
 }) => {
   const PopoverContentInput = editNode
     ? PopoverContent
@@ -58,14 +59,14 @@ const CustomInputPopover = ({
     }
   };
 
-  console.log(pwdVisible);
+  console.log(selectedOption);
 
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
         <div
           className={cn(
-            "primary-input border-1 flex h-full flex-wrap items-center px-3 placeholder:text-placeholder",
+            "primary-input border-1 flex h-full min-h-[45px] flex-wrap items-center px-3 placeholder:text-placeholder",
           )}
           onClick={() => !disabled && setShowOptions(true)}
         >
@@ -74,7 +75,7 @@ const CustomInputPopover = ({
               <Badge
                 key={option}
                 variant="secondary"
-                className="m-1 flex items-center gap-1 truncate"
+                className="m-[1px] flex items-center gap-1 truncate px-1"
               >
                 <div className="truncate">{option}</div>
                 <X
@@ -83,10 +84,14 @@ const CustomInputPopover = ({
                 />
               </Badge>
             ))
-          ) : selectedOption ? (
+          ) : selectedOption?.length > 0 ? (
             <Badge
               variant="secondary"
-              className="flex items-center gap-1 truncate"
+              className={cn(
+                "flex items-center gap-1 truncate",
+                nodeStyle &&
+                  "rounded-[3px] bg-emerald-100 px-1 font-jetbrains text-emerald-700 hover:bg-emerald-200",
+              )}
             >
               <div className="max-w-36 truncate">{selectedOption}</div>
               <X
@@ -96,7 +101,7 @@ const CustomInputPopover = ({
             </Badge>
           ) : null}
 
-          {selectedOption?.length === 0 && (
+          {!selectedOption && (
             <input
               id={id}
               ref={refInput}

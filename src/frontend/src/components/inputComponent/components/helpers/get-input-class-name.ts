@@ -11,7 +11,6 @@ export const getInputClassName = ({
   setSelectedOptions,
   isSelected,
   areOptionsSelected,
-  nodeStyle,
   className,
 }) => {
   const classes = {
@@ -38,7 +37,6 @@ export const getInputClassName = ({
       isSelected || areOptionsSelected
         ? "font-jetbrains text-sm font-medium text-foreground"
         : "",
-    nodeStyle: selectedOption !== "" && nodeStyle ? "text-emerald-hard" : "",
   };
 
   return cn(
@@ -47,6 +45,5 @@ export const getInputClassName = ({
     classes.editNode,
     classes.paddingRight,
     classes.selected,
-    classes.nodeStyle,
   );
 };

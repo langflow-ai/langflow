@@ -69,8 +69,8 @@ export default function InputGlobalComponent({
   }
   return (
     <InputComponent
-      placeholder={getPlaceholder(disabled, "Type something...")}
       nodeStyle
+      placeholder={getPlaceholder(disabled, "Type something...")}
       id={id}
       editNode={editNode}
       disabled={disabled}
