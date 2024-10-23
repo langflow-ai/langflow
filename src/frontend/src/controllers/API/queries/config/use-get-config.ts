@@ -12,6 +12,7 @@ export interface ConfigResponse {
   auto_saving_interval: number;
   health_check_max_retries: number;
   max_file_size_upload: number;
+  mvp_components: boolean;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
@@ -27,6 +28,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
   const setMaxFileSizeUpload = useUtilityStore(
     (state) => state.setMaxFileSizeUpload,
   );
+  const setMvpComponents = useUtilityStore((state) => state.setMvpComponents);
 
   const { query } = UseRequestProcessor();
 
@@ -43,6 +45,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
       setAutoSavingInterval(data.auto_saving_interval);
       setHealthCheckMaxRetries(data.health_check_max_retries);
       setMaxFileSizeUpload(data.max_file_size_upload);
+      setMvpComponents(data.mvp_components);
     }
     return data;
   };
