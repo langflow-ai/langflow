@@ -1,6 +1,6 @@
 ---
 title: LangWatch
-sidebar_position: 1
+sidebar_position: 4
 slug: /integrations-langwatch
 ---
 
