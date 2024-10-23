@@ -25,10 +25,10 @@ export default function EditMessageField({
   }, []);
 
   return (
-    <div className="flex h-fit w-full flex-col bg-muted dark:bg-zinc-800">
+    <div className="flex h-fit w-full flex-col bg-muted">
       <Textarea
         ref={textareaRef}
-        className="h-mx-full w-full resize-none border-0 rounded-none shadow-none bg-muted dark:bg-zinc-800 focus:ring-0"
+        className="h-mx-full w-full resize-none border-0 rounded-none shadow-none bg-muted focus:ring-0"
         onBlur={() => {
           if (!isButtonClicked) {
             onCancel();
@@ -42,13 +42,12 @@ export default function EditMessageField({
         <div className="flex flex-row-reverse gap-2">
           <Button
             data-testid="save-button"
-            variant={"primary"}
             onMouseDown={() => setIsButtonClicked(true)}
             onClick={() => {
               onEdit(message);
               setIsButtonClicked(false);
             }}
-            className="mt-2 bg-black text-white hover:bg-white hover:text-black dark:text-white dark:hover:!bg-zinc-950"
+            className="mt-2 bg-foreground"
           >
             Save
           </Button>
@@ -60,7 +59,7 @@ export default function EditMessageField({
               onCancel();
               setIsButtonClicked(false);
             }}
-            className="mt-2 bg-[#e4e4e7] dark:bg-white !text-black hover:bg-white"
+            className="mt-2 bg-border"
           >
             Cancel
           </Button>
