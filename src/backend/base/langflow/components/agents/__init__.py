@@ -22,7 +22,6 @@ from .write_observation import ObserveResultComponent
 from .xml import XMLAgentComponent
 
 __all__ = [
-    "Agent",
     "AgentActionRouter",
     "AgentContextBuilder",
     "CheckTerminationComponent",
@@ -48,4 +47,5 @@ __all__ = [
     "VectorStoreAgentComponent",
     "VectorStoreRouterAgentComponent",
     "XMLAgentComponent",
+    "Agent",
 ]
