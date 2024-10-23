@@ -233,15 +233,15 @@ span.token {
   max-width: 100%;
 }
 
-code {
+pre code {
   max-width: 100%;
   display: inline-block;
   width: 100%;
-  /* bg ignored now */
-  background-color: var(--canvas);
+  /* Dark mode canvas color */
+  background-color: #18181B !important;
 }
 
 pre {
-  /* bg ignored now */
-  background-color: var(--canvas);
+    /* Dark mode canvas color */
+  background-color: #18181B !important;
 }

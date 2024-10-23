@@ -31,13 +31,13 @@ export default function SimplifiedCodeTabComponent({
   };
 
   return (
-    <div className="flex w-full flex-col overflow-hidden rounded-md text-left">
-      <div className="flex w-full items-center justify-between bg-zinc-700 px-4 py-2">
+    <div className="dark flex w-full flex-col overflow-hidden rounded-md text-left">
+      <div className="flex w-full items-center justify-between bg-muted px-4 py-2">
         <span className="text-sm font-semibold text-white dar">{language}</span>
         <Button
           variant="ghost"
           size="icon"
-          className="text-gray-400 hover:bg-[#3a3a3a]"
+          className="text-muted-foreground bg-card"
           onClick={copyToClipboard}
         >
           {isCopied ? (
@@ -45,6 +45,7 @@ export default function SimplifiedCodeTabComponent({
           ) : (
             <IconComponent name="Copy" className="h-4 w-4" />
           )}
+          Copy
         </Button>
       </div>
       <SyntaxHighlighter
