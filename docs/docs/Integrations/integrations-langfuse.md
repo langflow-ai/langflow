@@ -72,3 +72,7 @@ Replace `SECRET_KEY`, `PUBLIC_KEY`, and `HOST_URL` with the API key information 
 
 Langflow automatically collects and sends tracing data about the flow execution to Langfuse.
 You can view the collected data in your Langfuse project dashboard.
+
+## Disable the Langfuse integration
+
+To disable the Langfuse integration, remove the environment variables you set in the previous steps and restart Langflow.
