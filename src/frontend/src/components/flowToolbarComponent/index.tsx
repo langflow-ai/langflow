@@ -1,8 +1,9 @@
+import ShadTooltip from "@/components/shadTooltipComponent";
 import { ENABLE_API, ENABLE_NEW_IO_MODAL } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useEffect, useMemo, useState } from "react";
-import { Panel } from "reactflow";
 import { useHotkeys } from "react-hotkeys-hook";
+import { Panel } from "reactflow";
 import ApiModal from "../../modals/apiModal";
 import IOModalOld from "../../modals/IOModal";
 import IOModalNew from "../../modals/IOModal/newModal";
@@ -12,7 +13,6 @@ import { useShortcutsStore } from "../../stores/shortcuts";
 import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
-import ShadTooltip from "@/components/shadTooltipComponent";
 
 const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 
@@ -67,18 +67,25 @@ export default function FlowToolbar(): JSX.Element {
         open={openShareModal}
         setOpen={setOpenShareModal}
       >
-        <ShadTooltip content={(!hasApiKey || !validApiKey || !hasStore) ? "Store API Key Required" : ""} side="bottom" align="end">
-        <button
-          disabled={!hasApiKey || !validApiKey || !hasStore}
-          className={classNames(
-            "relative inline-flex h-full w-full items-center justify-center gap-1.5 py-1.5 px-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out rounded hover:bg-accent",
+        <ShadTooltip
+          content={
             !hasApiKey || !validApiKey || !hasStore
-              ? "text-muted-foreground"
-              : "",
-          )}
-          data-testid="shared-button-flow"
+              ? "Store API Key Required"
+              : ""
+          }
+          side="bottom"
+          align="end"
         >
-          
+          <button
+            disabled={!hasApiKey || !validApiKey || !hasStore}
+            className={classNames(
+              "relative inline-flex h-full w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-accent",
+              !hasApiKey || !validApiKey || !hasStore
+                ? "text-muted-foreground"
+                : "",
+            )}
+            data-testid="shared-button-flow"
+          >
             <>
               <ForwardedIconComponent
                 name="Share2"
@@ -91,8 +98,7 @@ export default function FlowToolbar(): JSX.Element {
               />
               Share
             </>
-          
-        </button>
+          </button>
         </ShadTooltip>
       </ShareModal>
     ),
@@ -108,12 +114,10 @@ export default function FlowToolbar(): JSX.Element {
 
   return (
     <>
-      <Panel
-        position="top-right"
-      >
+      <Panel position="top-right">
         <div
           className={
-            "shadow-round-btn-shadow bg-background hover:shadow-round-btn-shadow flex items-center justify-center gap-7 p-1.5 rounded-sm border shadow-md transition-all"
+            "shadow-round-btn-shadow hover:shadow-round-btn-shadow flex items-center justify-center gap-7 rounded-sm border bg-background p-1.5 shadow-md transition-all"
           }
         >
           <div className="flex gap-1.5">
@@ -122,7 +126,7 @@ export default function FlowToolbar(): JSX.Element {
                 <IOModal open={open} setOpen={setOpen} disable={!hasIO}>
                   <div
                     data-testid="playground-btn-flow-io"
-                    className="relative inline-flex w-full items-center justify-center gap-1.5 py-1.5 px-3 text-sm font-semibold transition-all duration-500 ease-in-out rounded hover:bg-accent"
+                    className="relative inline-flex w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-accent"
                   >
                     <ForwardedIconComponent
                       name="Play"
@@ -133,7 +137,7 @@ export default function FlowToolbar(): JSX.Element {
                 </IOModal>
               ) : (
                 <div
-                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1.5 py-1.5 px-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out rounded`}
+                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
                   data-testid="playground-btn-flow"
                 >
                   <ForwardedIconComponent
@@ -155,7 +159,7 @@ export default function FlowToolbar(): JSX.Element {
                     >
                       <div
                         className={classNames(
-                          "relative inline-flex w-full items-center justify-center gap-1.5 py-1.5 px-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out rounded hover:bg-accent",
+                          "relative inline-flex w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-accent",
                         )}
                       >
                         <ForwardedIconComponent

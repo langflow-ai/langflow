@@ -1,5 +1,9 @@
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
+import CanvasControls, {
+  CustomControlButton,
+} from "@/components/canvasControlsComponent";
+import FlowToolbar from "@/components/flowToolbarComponent";
 import IconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
@@ -65,8 +69,6 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
-import FlowToolbar from "@/components/flowToolbarComponent";
-import CanvasControls, { CustomControlButton } from "@/components/canvasControlsComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,

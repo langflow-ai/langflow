@@ -1,38 +1,44 @@
-import { 
-  ControlButton, 
-  Panel, 
-  useReactFlow, 
-  useStore, 
-  useStoreApi, 
-  type ReactFlowState 
-} from "reactflow"
-import { shallow } from 'zustand/shallow';
 import IconComponent from "@/components/genericIconComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { cn } from "@/utils/utils";
+import {
+  ControlButton,
+  Panel,
+  useReactFlow,
+  useStore,
+  useStoreApi,
+  type ReactFlowState,
+} from "reactflow";
+import { shallow } from "zustand/shallow";
 
 type CustomControlButtonProps = {
   iconName: string;
   tooltipText: string;
   onClick: () => void;
   disabled?: boolean;
-  backgroundClasses?: string
-  iconClasses?: string
+  backgroundClasses?: string;
+  iconClasses?: string;
   testId?: string;
 };
 
-export const CustomControlButton = (
-  {iconName, tooltipText, onClick, disabled, backgroundClasses, iconClasses, testId}: CustomControlButtonProps
-): JSX.Element => {
+export const CustomControlButton = ({
+  iconName,
+  tooltipText,
+  onClick,
+  disabled,
+  backgroundClasses,
+  iconClasses,
+  testId,
+}: CustomControlButtonProps): JSX.Element => {
   return (
     <ControlButton
       data-testid={testId}
-      className="!w-8 !h-8 !p-0 rounded"
+      className="!h-8 !w-8 rounded !p-0"
       onClick={onClick}
       disabled={disabled}
     >
       <ShadTooltip content={tooltipText}>
-        <div className={cn("p-2.5 rounded", backgroundClasses)}>
+        <div className={cn("rounded p-2.5", backgroundClasses)}>
           <IconComponent
             name={iconName}
             aria-hidden="true"
@@ -50,10 +56,13 @@ const selector = (s: ReactFlowState) => ({
   maxZoomReached: s.transform[2] >= s.maxZoom,
 });
 
-const CanvasControls = ({ children}) => {
+const CanvasControls = ({ children }) => {
   const store = useStoreApi();
   const { fitView, zoomIn, zoomOut } = useReactFlow();
-  const { isInteractive, minZoomReached, maxZoomReached } = useStore(selector, shallow);
+  const { isInteractive, minZoomReached, maxZoomReached } = useStore(
+    selector,
+    shallow,
+  );
 
   const onToggleInteractivity = () => {
     store.setState({
@@ -66,7 +75,7 @@ const CanvasControls = ({ children}) => {
   return (
     <Panel
       data-testid="canvas_controls"
-      className="react-flow__controls flex gap-1.5 fill-foreground stroke-foreground text-primary rounded border-secondary-hover bg-background border p-1.5 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
+      className="react-flow__controls flex gap-1.5 rounded border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
       position="bottom-left"
     >
       {/* Zoom In */}
@@ -103,7 +112,7 @@ const CanvasControls = ({ children}) => {
       />
       {children}
     </Panel>
-  )
-}
+  );
+};
 
 export default CanvasControls;
