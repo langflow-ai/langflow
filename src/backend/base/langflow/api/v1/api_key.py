@@ -90,17 +90,3 @@ async def save_store_api_key(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     return {"detail": "API Key saved"}
-
-
-@router.delete("/store")
-def delete_store_api_key(
-    current_user: CurrentActiveUser,
-    db: DbSession,
-):
-    try:
-        current_user.store_api_key = None
-        db.commit()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-
-    return {"detail": "API Key deleted"}
