@@ -30,13 +30,13 @@ const TextAreaWrapper = ({
   };
 
   const lockClass = noInput
-    ? "form-modal-no-input bg-input"
-    : "form-modal-lock-false bg-background";
+    ? "form-modal-no-input"
+    : "form-modal-lock-false";
 
   const fileClass = files.length > 0 ? "!rounded-t-none border-t-0" : "";
 
   const additionalClassNames =
-    "form-input block w-full border-0 custom-scroll focus:border-ring focus:ring-0 p-0 sm:text-sm";
+    "form-input block w-full border-0 custom-scroll focus:border-ring rounded-none shadow-none focus:ring-0 p-0 sm:text-sm bg-transparent";
 
   useEffect(() => {
     if (!lockChat && !noInput) {

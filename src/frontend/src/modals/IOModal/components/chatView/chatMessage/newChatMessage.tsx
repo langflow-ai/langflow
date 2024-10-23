@@ -247,7 +247,7 @@ export default function ChatMessage({
             <div
               className={cn(
                 "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl",
-                !chat.isSend ? "bg-chat-bot-icon" : "bg-zinc-400",
+                !chat.isSend ? "bg-chat-bot-icon" : "bg-muted-foreground",
               )}
             >
               {!chat.isSend ? (

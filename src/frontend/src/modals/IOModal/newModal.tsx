@@ -244,7 +244,7 @@ export default function IOModal({
               sidebarOpen ? "w-1/5" : "w-16",
             )}
           >
-            <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted dark:bg-zinc-950 p-6 text-center custom-scroll">
+            <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted dark:bg-background p-6 text-center custom-scroll">
               <div className="flex items-center gap-2 pb-8">
                 <Button
                   variant="ghost"
@@ -317,7 +317,7 @@ export default function IOModal({
               )}
             </div>
           </div>
-          <div className="flex h-full min-w-96 flex-grow">
+          <div className="flex h-full min-w-96 flex-grow dark:bg-accent bg-background">
             {selectedViewField && (
               <div
                 className={cn(

@@ -85,10 +85,10 @@ export default function FilePreview({
             className={`absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center opacity-100 transition-opacity`}
           >
             <div
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-zinc-800 p-2 transition-all hover:bg-zinc-700"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-muted p-2 transition-all hover:bg-foreground"
               onClick={onDelete}
             >
-              <IconComponent name="X" className="stroke-zinc-100 stroke-2" />
+              <IconComponent name="X" className="stroke-muted-foreground stroke-2" />
             </div>
           </div>
         </div>

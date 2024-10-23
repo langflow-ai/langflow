@@ -150,7 +150,7 @@ export default function ChatInput({
     );
   };
 
-  const classNameFilePreview = `flex w-full items-center gap-2 bg-background py-2 overflow-auto custom-scroll`;
+  const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto custom-scroll`;
 
   const handleButtonClick = () => {
     fileInputRef.current!.click();
@@ -193,7 +193,7 @@ export default function ChatInput({
 
   return (
     <div className="flex w-full flex-col-reverse">
-      <div className="flex w-full flex-col rounded-md border border-border p-4">
+      <div className="flex w-full flex-col rounded-md border border-input p-4">
         <TextAreaWrapper
           checkSendingOk={checkSendingOk}
           send={send}
