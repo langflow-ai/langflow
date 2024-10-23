@@ -127,6 +127,7 @@ export default function NodeDescription({
         </>
       ) : (
         <div
+          data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
             "nodoubleclick generic-node-desc-text h-full cursor-text word-break-break-word dark:text-note-placeholder",

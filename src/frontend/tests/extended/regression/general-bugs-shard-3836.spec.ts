@@ -73,13 +73,13 @@ test("user must be able to send an image on chat using advanced tool on ChatInpu
   const userQuestion = "What is this image?";
   await page.getByTestId("textarea_str_input_value").fill(userQuestion);
 
-  const filePath = "tests/assets/chain.png";
+  const filePath = "src/frontend/tests/assets/chain.png";
 
-  await page.click('[data-testid="inputfile_file_files"]');
+  await page.click('[data-testid="button_upload_file"]');
 
   const [fileChooser] = await Promise.all([
     page.waitForEvent("filechooser"),
-    page.click('[data-testid="inputfile_file_files"]'),
+    page.click('[data-testid="button_upload_file"]'),
   ]);
 
   await fileChooser.setFiles(filePath);

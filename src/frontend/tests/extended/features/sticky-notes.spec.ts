@@ -90,7 +90,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   await page.getByTestId("note_node").click();
 
-  await page.locator(".generic-node-desc").last().dblclick();
+  await page.locator(".generic-node-desc-text").last().dblclick();
   await page.getByTestId("textarea").fill(noteText);
 
   expect(await page.getByText("2500/2500")).toBeVisible();
