@@ -1,29 +1,17 @@
 import FolderSidebarNav from "@/components/folderSidebarComponent";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
-import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+import { useFolderStore } from "@/stores/foldersStore";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import DropdownButton from "../../../../components/dropdownButtonComponent";
-import PageLayout from "../../../../components/pageLayout";
-import {
-  MY_COLLECTION_DESC,
-  USER_PROJECTS_HEADER,
-} from "../../../../constants/constants";
-import { useFolderStore } from "../../../../stores/foldersStore";
-import ModalsComponent from "../../components/modalsComponent";
-import useDropdownOptions from "../../hooks/use-dropdown-options";
-import CollectionPage from "../collectionPage";
-import EmptyPage from "../emptyPage";
+import ModalsComponent from "../components/modalsComponent";
 
-export default function HomePage(): JSX.Element {
+export default function CollectionPage(): JSX.Element {
   const location = useLocation();
-  const pathname = location.pathname;
   const [openModal, setOpenModal] = useState(false);
   const [openDeleteFolderModal, setOpenDeleteFolderModal] = useState(false);
-  const is_component = pathname.includes("/components");
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
   const navigate = useCustomNavigate();
 
@@ -39,11 +27,6 @@ export default function HomePage(): JSX.Element {
   useEffect(() => {
     return () => queryClient.removeQueries({ queryKey: ["useGetFolder"] });
   }, []);
-
-  const dropdownOptions = useDropdownOptions({
-    navigate,
-    is_component,
-  });
 
   const { mutate } = useDeleteFolders();
 
@@ -69,18 +52,6 @@ export default function HomePage(): JSX.Element {
     );
   };
 
-  const isFetchingFolders = !!useIsFetching({
-    queryKey: ["useGetFolders"],
-    exact: false,
-  });
-
-  const isFetchingFolder = !!useIsFetching({
-    queryKey: ["useGetFolder"],
-    exact: false,
-  });
-
-  const isLoadingFolder = isFetchingFolders || isFetchingFolder;
-
   return (
     <>
       <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-y-0">
@@ -98,12 +69,9 @@ export default function HomePage(): JSX.Element {
             />
           </aside>
         )}
-
-        {/* <EmptyPage setOpenModal={setOpenModal} /> */}
-        <CollectionPage />
-        {/* <div className="relative h-full w-full flex-1">
+        <div className="relative h-full w-full">
           <Outlet />
-        </div> */}
+        </div>
       </div>
       <ModalsComponent
         openModal={openModal}
