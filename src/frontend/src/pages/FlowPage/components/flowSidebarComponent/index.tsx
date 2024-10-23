@@ -36,6 +36,7 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
+import { SidebarFilterComponent } from "../extraSidebarComponent/sidebarFilterComponent";
 import sensitiveSort from "../extraSidebarComponent/utils/sensitive-sort";
 import ShortcutDisplay from "../nodeToolbarComponent/shortcutDisplay";
 import SidebarDraggableComponent from "./components/sidebarDraggableComponent";
@@ -86,6 +87,79 @@ export function FlowSidebarComponent() {
     setFuse(new Fuse(fuseData, options));
   }, [data]);
 
+  useEffect(() => {
+    filterComponents();
+  }, [data, search, filterType, getFilterEdge]);
+
+  const filterComponents = () => {
+    let filteredData = cloneDeep(data);
+
+    // Apply search filter
+    if (search) {
+      if (fuse) {
+        const results = fuse.search(search);
+        filteredData = {};
+        results.forEach((result) => {
+          const { category, key, ...item } = result.item;
+          if (!filteredData[category]) {
+            filteredData[category] = {};
+          }
+          filteredData[category][key] = item;
+        });
+      }
+    }
+
+    // Apply edge filter
+    if (getFilterEdge?.length > 0) {
+      let ret = {};
+      Object.keys(data).forEach((d: keyof APIObjectType) => {
+        ret[d] = {};
+        if (getFilterEdge.some((x) => x.family === d)) {
+          ret[d] = data[d];
+
+          const filtered = getFilterEdge
+            .filter((x) => x.family === d)
+            .pop()
+            .type.split(",");
+
+          for (let i = 0; i < filtered.length; i++) {
+            filtered[i] = filtered[i].trimStart();
+          }
+
+          if (filtered.some((x) => x !== "")) {
+            let keys = Object.keys(data[d]).filter((nd) =>
+              filtered.includes(nd),
+            );
+            Object.keys(data[d]).forEach((element) => {
+              if (!keys.includes(element)) {
+                delete ret[d][element];
+              }
+            });
+          }
+        }
+      });
+      filteredData = ret;
+    }
+
+    setFilterData(filteredData);
+    if (search !== "" || filterType || getFilterEdge.length > 0) {
+      setOpenCategories(
+        Object.keys(filteredData).filter(
+          (cat) => Object.keys(filteredData[cat]).length > 0,
+        ),
+      );
+    } else {
+      setOpenCategories([]);
+    }
+
+    setSearch(search);
+  };
+
+  function handleSearchInput(e: string) {
+    setSearch(e);
+    filterComponents();
+  }
+
   function onDragStart(
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType },
@@ -101,53 +175,6 @@ export function FlowSidebarComponent() {
     event.dataTransfer.setDragImage(crt, 0, 0);
     event.dataTransfer.setData("genericNode", JSON.stringify(data));
   }
-  function normalizeString(str: string): string {
-    return str.toLowerCase().replace(/_/g, " ").replace(/\s+/g, "");
-  }
-
-  function searchInMetadata(metadata: any, searchTerm: string): boolean {
-    if (!metadata || typeof metadata !== "object") return false;
-
-    return Object.entries(metadata).some(([key, value]) => {
-      if (typeof value === "string") {
-        return (
-          normalizeString(key).includes(searchTerm) ||
-          normalizeString(value).includes(searchTerm)
-        );
-      }
-      if (typeof value === "object") {
-        return searchInMetadata(value, searchTerm);
-      }
-      return false;
-    });
-  }
-
-  function handleSearchInput(e: string) {
-    setSearch(e);
-    if (e === "") {
-      setFilterData(data);
-      setOpenCategories([]);
-      return;
-    }
-
-    if (fuse) {
-      const results = fuse.search(e);
-      const filteredData = {};
-      const categoriesToOpen = new Set<string>();
-
-      results.forEach((result) => {
-        const { category, key, ...item } = result.item;
-        if (!filteredData[category]) {
-          filteredData[category] = {};
-        }
-        filteredData[category][key] = item;
-        categoriesToOpen.add(category);
-      });
-
-      setFilterData(filteredData);
-      setOpenCategories(Array.from(categoriesToOpen));
-    }
-  }
 
   useEffect(() => {
     // show components with error on load
@@ -161,66 +188,15 @@ export function FlowSidebarComponent() {
       setErrorData({ title: " Components with errors: ", list: errors });
   }, []);
 
-  function handleBlur() {
-    // check if search is search to reset fitler on click input
-    if ((!search && search === "") || search === "search") {
-      setFilterData(data);
-      setFilterEdge([]);
-      setSearch("");
-    }
-  }
-
   useEffect(() => {
     if (getFilterEdge.length !== 0) {
       setSearch("");
-    }
-
-    if (getFilterEdge.length === 0 && search === "") {
-      setSearch("");
-      setFilterData(data);
     }
   }, [getFilterEdge, data]);
 
   useEffect(() => {
     handleSearchInput(search);
   }, [data]);
-
-  useEffect(() => {
-    if (getFilterEdge?.length > 0) {
-      setFilterData((_) => {
-        let dataClone = cloneDeep(data);
-        let ret = {};
-        Object.keys(dataClone).forEach((d: keyof APIObjectType, i) => {
-          ret[d] = {};
-          if (getFilterEdge.some((x) => x.family === d)) {
-            ret[d] = dataClone[d];
-
-            const filtered = getFilterEdge
-              .filter((x) => x.family === d)
-              .pop()
-              .type.split(",");
-
-            for (let i = 0; i < filtered.length; i++) {
-              filtered[i] = filtered[i].trimStart();
-            }
-
-            if (filtered.some((x) => x !== "")) {
-              let keys = Object.keys(dataClone[d]).filter((nd) =>
-                filtered.includes(nd),
-              );
-              Object.keys(dataClone[d]).forEach((element) => {
-                if (!keys.includes(element)) {
-                  delete ret[d][element];
-                }
-              });
-            }
-          }
-        });
-        setSearch("");
-        return ret;
-      });
-    }
-  }, [getFilterEdge, data]);
 
   const customComponent = useMemo(() => {
     return data?.["custom_component"]?.["CustomComponent"] ?? null;
@@ -261,6 +237,16 @@ export function FlowSidebarComponent() {
             </div>
           )}
         </div>
+        {filterType && (
+          <SidebarFilterComponent
+            isInput={!!filterType.source}
+            type={filterType.type}
+            resetFilters={() => {
+              setFilterEdge([]);
+              setFilterData(data);
+            }}
+          />
+        )}
       </SidebarHeader>
       <SidebarContent className="p-2">
         {hasResults ? (
@@ -276,7 +262,8 @@ export function FlowSidebarComponent() {
                       ))
                     : categories?.categories.map(
                         (item) =>
-                          dataFilter[item.name] && (
+                          dataFilter[item.name] &&
+                          Object.keys(dataFilter[item.name]).length > 0 && (
                             <Collapsible
                               key={item.name}
                               className="group/collapsible"
@@ -339,7 +326,6 @@ export function FlowSidebarComponent() {
                                             key={idx}
                                             onDragStart={(event) =>
                                               onDragStart(event, {
-                                                //split type to remove type in nodes saved with same name removing it's
                                                 type: removeCountFromString(
                                                   SBItemName,
                                                 ),
@@ -350,7 +336,6 @@ export function FlowSidebarComponent() {
                                             }
                                             color={nodeColors[item.name]}
                                             itemName={SBItemName}
-                                            //convert error to boolean
                                             error={
                                               !!dataFilter[item.name][
                                                 SBItemName
