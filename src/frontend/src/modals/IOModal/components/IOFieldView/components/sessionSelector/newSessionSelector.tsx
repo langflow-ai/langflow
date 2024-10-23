@@ -117,8 +117,8 @@ export default function SessionSelector({
         else toggleVisibility();
       }}
       className={cn(
-        "file-component-accordion-div group cursor-pointer rounded-md hover:bg-muted-foreground/30",
-        isVisible ? "bg-muted-foreground/15" : "",
+        "file-component-accordion-div group cursor-pointer rounded-md hover:bg-secondary-hover",
+        isVisible ? "bg-secondary-hover" : "",
       )}
     >
       <div className="flex w-full items-center justify-between gap-2 overflow-hidden px-2 py-1 align-middle">
