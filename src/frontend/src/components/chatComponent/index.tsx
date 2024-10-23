@@ -13,6 +13,7 @@ import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
+import ShadTooltip from "../shadTooltipComponent";
 const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 
 export default function FlowToolbar(): JSX.Element {
@@ -132,16 +133,18 @@ export default function FlowToolbar(): JSX.Element {
                   </div>
                 </IOModal>
               ) : (
-                <div
-                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
-                  data-testid="playground-btn-flow"
-                >
-                  <ForwardedIconComponent
-                    name="BotMessageSquareIcon"
-                    className={"h-5 w-5 transition-all"}
-                  />
-                  Playground
-                </div>
+                <ShadTooltip content="Add a chat input or output to use the playground">
+                  <div
+                    className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
+                    data-testid="playground-btn-flow"
+                  >
+                    <ForwardedIconComponent
+                      name="BotMessageSquareIcon"
+                      className={"h-5 w-5 transition-all"}
+                    />
+                    Playground
+                  </div>
+                </ShadTooltip>
               )}
             </div>
             <div>
@@ -177,11 +180,10 @@ export default function FlowToolbar(): JSX.Element {
             )}
             <div className="flex items-center gap-2">
               <div
-                className={`side-bar-button ${
-                  !hasApiKey || !validApiKey || !hasStore
+                className={`side-bar-button ${!hasApiKey || !validApiKey || !hasStore
                     ? "cursor-not-allowed"
                     : "cursor-pointer"
-                }`}
+                  }`}
               >
                 {ModalMemo}
               </div>
