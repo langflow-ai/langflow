@@ -9,8 +9,8 @@ import { classNames } from "../../../../../../../utils/utils";
 const BUTTON_STATES = {
   NO_INPUT: "bg-high-indigo text-background",
   HAS_CHAT_VALUE: "text-primary",
-  SHOW_STOP: "bg-zinc-400 text-white cursor-pointer",
-  DEFAULT: "bg-chat-send text-background",
+  SHOW_STOP: "bg-mutedh text-white cursor-pointer",
+  DEFAULT: "bg-primary text-background",
 };
 
 type ButtonSendWrapperProps = {
