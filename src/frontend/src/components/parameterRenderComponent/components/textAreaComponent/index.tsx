@@ -46,9 +46,9 @@ const externalLinkIconClasses = {
         ? "background-fade-input-edit-node"
         : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
-  editNodeTop: "top-[-42px] h-5",
-  normalTop: "top-[-56px] h-7",
-  iconTop: "top-[-51px]",
+  editNodeTop: "top-[-2.3rem] h-5 ",
+  normalTop: "top-[-3.125rem]  h-7",
+  iconTop: "top-[-2.8rem]",
 };
 
 export default function TextAreaComponent({
@@ -110,6 +110,7 @@ export default function TextAreaComponent({
           disabled && "bg-secondary",
         )}
         aria-hidden="true"
+        data-testid={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
       />
 
       <IconComponent
@@ -148,11 +149,7 @@ export default function TextAreaComponent({
         setValue={(newValue) => handleOnNewValue({ value: newValue })}
         disabled={disabled}
       >
-        <Button
-          unstyled
-          className="w-full"
-          data-testid={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
-        >
+        <Button unstyled className="w-full">
           <div className="relative w-full">{renderIcon()}</div>
         </Button>
       </ComponentTextModal>

@@ -131,14 +131,23 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("button_open_text_area_modal").nth(3).click();
+  await page
+    .getByTestId(
+      "button_open_text_area_modal_textarea_str_edit_prompt1_advanced",
+    )
+    .click();
   await page
     .getByTestId("text-area-modal")
     .fill("prompt_edit_test_12312312321!@#$");
 
   await page.getByText("Finish Editing", { exact: true }).click();
 
-  await page.getByTestId("button_open_text_area_modal").nth(2).click();
+  await page
+    .getByTestId(
+      "button_open_text_area_modal_textarea_str_edit_prompt_advanced",
+    )
+    .nth(0)
+    .click();
   await page
     .getByTestId("text-area-modal")
     .fill("prompt_edit_test_44444444444!@#$");

@@ -93,8 +93,12 @@ const KeypairListComponent = ({
       <button
         disabled={disabled}
         onClick={action}
-        id={testId}
-        data-testid={testId}
+        id={
+          isFirstItem
+            ? getTestId("plusbtn", index)
+            : getTestId("minusbtn", index)
+        }
+        data-testid={id}
         className={cn(
           "group flex h-6 w-6 items-center justify-center rounded-sm",
           disabled

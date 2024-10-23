@@ -7,7 +7,7 @@ import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputProps, PromptAreaComponentType } from "../../types";
 
 const promptContentClasses = {
-  base: "overflow-hidden text-clip whitespace-nowrap",
+  base: "overflow-hidden text-clip whitespace-nowrap bg-background",
   editNode: "input-edit-node input-dialog",
   normal: "primary-input text-muted-foreground",
   disabled: "disabled-state",
@@ -39,7 +39,7 @@ const externalLinkIconClasses = {
         ? "background-fade-input-edit-node"
         : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
-  editNodeTop: "top-[6px]",
+  editNodeTop: "top-[0.375rem]",
   normalTop: "top-2.5",
 };
 
