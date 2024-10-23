@@ -66,7 +66,7 @@ import SelectionMenu from "../SelectionMenuComponent";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 import FlowToolbar from "@/components/flowToolbarComponent";
-import CanvasControls from "@/components/canvasControlsComponent";
+import CanvasControls, { CustomControlButton } from "@/components/canvasControlsComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -627,22 +627,15 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             {!view && (
               <>
                 <CanvasControls>
-                  <ControlButton
-                    data-testid="add_note"
+                  <CustomControlButton
+                    iconName="sticky-note"
+                    tooltipText="Add Note"
                     onClick={() => {
                       setIsAddingNote(true);
                     }}
-                  >
-                    <ShadTooltip content="Add note">
-                      <div>
-                        <IconComponent
-                          name="SquarePen"
-                          aria-hidden="true"
-                          className="scale-125"
-                        />
-                      </div>
-                    </ShadTooltip>
-                  </ControlButton>
+                    iconClasses="text-primary"
+                    testId="add_note"
+                  />
                 </CanvasControls>
                 <FlowToolbar />
               </>

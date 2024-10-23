@@ -97,9 +97,6 @@
   .extra-side-bar-save-disable {
     @apply text-muted-foreground;
   }
-  .extra-side-bar-save-disable:hover {
-    @apply hover:text-accent-foreground;
-  }
   .side-bar-button-size {
     @apply h-5 w-5;
   }
