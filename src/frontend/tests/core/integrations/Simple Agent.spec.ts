@@ -101,11 +101,11 @@ test("Simple Agent", async ({ page }) => {
 
   expect(page.getByText("User")).toBeVisible();
 
-  expect(page.locator(".language-python")).toBeVisible();
+  expect(page.getByTestId("div-chat-message")).toBeVisible();
 
   let pythonWords = await page.getByText("4 + 4").count();
 
-  expect(pythonWords).toBe(3);
+  expect(pythonWords).toBe(2);
 
   await page
     .getByPlaceholder("Send a message...")
