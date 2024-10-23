@@ -321,7 +321,7 @@ export default function IOModal({
             {selectedViewField && (
               <div
                 className={cn(
-                  "flex h-full w-full flex-col items-start gap-4 pt-4",
+                  "flex h-full w-full flex-col items-start gap-4 p-4",
                   !selectedViewField ? "hidden" : "",
                 )}
               >
