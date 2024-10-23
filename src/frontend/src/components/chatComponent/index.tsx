@@ -133,7 +133,7 @@ export default function FlowToolbar(): JSX.Element {
                   </div>
                 </IOModal>
               ) : (
-                <ShadTooltip content="Add a chat input or output to use the playground">
+                <ShadTooltip content="Add a Chat Input or Chat Output to use the playground">
                   <div
                     className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
                     data-testid="playground-btn-flow"

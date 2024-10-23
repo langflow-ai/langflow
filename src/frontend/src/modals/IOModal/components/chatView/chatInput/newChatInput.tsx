@@ -164,7 +164,7 @@ export default function ChatInput({
   if (noInput) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center">
-        <div className="flex flex-col items-center justify-center gap-3 bg-background p-2">
+        <div className="flex flex-col items-center justify-center gap-3 bg-muted p-2 w-full rounded-md border border-input py-4">
           <Button
             className="font-semibold"
             onClick={() => {
