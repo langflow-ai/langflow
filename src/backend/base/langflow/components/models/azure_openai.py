@@ -16,15 +16,15 @@ class AzureChatOpenAIComponent(LCModelComponent):
     name = "AzureOpenAIModel"
 
     AZURE_OPENAI_API_VERSIONS = [
-        "2023-03-15-preview",
+        "2024-06-01",
+        "2024-07-01-preview",
+        "2024-08-01-preview",
+        "2024-09-01-preview",
+        "2024-10-01-preview",
         "2023-05-15",
-        "2023-06-01-preview",
-        "2023-07-01-preview",
-        "2023-08-01-preview",
-        "2023-09-01-preview",
         "2023-12-01-preview",
-        "2024-04-09",
-        "2024-05-13",
+        "2024-02-15-preview",
+        "2024-03-01-preview",
     ]
 
     inputs = [
@@ -40,8 +40,15 @@ class AzureChatOpenAIComponent(LCModelComponent):
         DropdownInput(
             name="api_version",
             display_name="API Version",
-            options=AZURE_OPENAI_API_VERSIONS,
-            value=AZURE_OPENAI_API_VERSIONS[-1],
+            options=sorted(AZURE_OPENAI_API_VERSIONS, reverse=True),
+            value=next(
+                (
+                    version
+                    for version in sorted(AZURE_OPENAI_API_VERSIONS, reverse=True)
+                    if not version.endswith("-preview")
+                ),
+                AZURE_OPENAI_API_VERSIONS[0],
+            ),
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.7),
         IntInput(

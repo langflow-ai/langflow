@@ -46,7 +46,7 @@ class MistralAIEmbeddingsComponent(LCModelComponent):
             msg = "Mistral API Key is required"
             raise ValueError(msg)
 
-        api_key = SecretStr(self.mistral_api_key)
+        api_key = SecretStr(self.mistral_api_key).get_secret_value()
 
         return MistralAIEmbeddings(
             api_key=api_key,
