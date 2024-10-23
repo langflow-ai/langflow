@@ -12,6 +12,7 @@ import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
+import { Panel } from "reactflow";
 
 export default function FlowToolbar(): JSX.Element {
   const preventDefault = true;
@@ -99,19 +100,12 @@ export default function FlowToolbar(): JSX.Element {
 
   return (
     <>
-      <Transition
-        show={true}
-        appear={true}
-        enter="transition ease-out duration-300"
-        enterFrom="translate-y-96"
-        enterTo="translate-y-0"
-        leave="transition ease-in duration-300"
-        leaveFrom="translate-y-0"
-        leaveTo="translate-y-96"
+      <Panel
+        position="bottom-right"
       >
         <div
           className={
-            "shadow-round-btn-shadow hover:shadow-round-btn-shadow message-button-position flex items-center justify-center gap-7 rounded-sm border bg-muted shadow-md transition-all"
+            "shadow-round-btn-shadow hover:shadow-round-btn-shadow flex items-center justify-center gap-7 rounded-sm border bg-muted shadow-md transition-all"
           }
         >
           <div className="flex">
@@ -186,7 +180,7 @@ export default function FlowToolbar(): JSX.Element {
             </div>
           </div>
         </div>
-      </Transition>
+      </Panel>
     </>
   );
 }

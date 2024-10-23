@@ -617,13 +617,15 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
           >
             <Background className="" />
             {!view && (
-              <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border">
+              <Controls
+                className="flex fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border"
+                position="top-right"
+              >
                 <ControlButton
                   data-testid="add_note"
                   onClick={() => {
                     setIsAddingNote(true);
                   }}
-                  className="postion react-flow__controls absolute -top-10"
                 >
                   <ShadTooltip content="Add note">
                     <div>
