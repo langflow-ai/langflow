@@ -208,7 +208,7 @@ export default function ChatMessage({
                 <div className="text-3xl -ml-1">⛓️</div>
               </span>
             </div>
-            <div className="w-full rounded-md bg-red-950 border border-red-900 p-4 text-foreground">
+            <div className="w-full rounded-md dark:bg-red-950 border bg-red-50 border-red-500 dark:border-red-900 p-4 text-foreground">
               <div className="mb-2 flex gap-2 items-center">
                 <ForwardedIconComponent className="h-6 w-6 text-status-red" name="OctagonAlert" />
                 <span className="">An error stopped your flow.</span>
