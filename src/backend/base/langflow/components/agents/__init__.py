@@ -1,3 +1,4 @@
+from .agent import Agent
 from .agent_action_router import AgentActionRouter
 from .agent_context import AgentContextBuilder
 from .check_termination import CheckTerminationComponent
@@ -21,6 +22,7 @@ from .write_observation import ObserveResultComponent
 from .xml import XMLAgentComponent
 
 __all__ = [
+    "Agent",
     "AgentActionRouter",
     "AgentContextBuilder",
     "CheckTerminationComponent",

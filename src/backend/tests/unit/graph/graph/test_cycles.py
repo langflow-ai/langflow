@@ -2,28 +2,22 @@ import os
 
 import pytest
 from langflow.components.agents import (
+    Agent,
     AgentActionRouter,
     AgentContextBuilder,
     DecideActionComponent,
     GenerateThoughtComponent,
 )
-from langflow.components.agents.agent import Agent
 from langflow.components.agents.execute_action import ExecuteActionComponent
 from langflow.components.agents.write_final_answer import ProvideFinalAnswerComponent
 from langflow.components.inputs import ChatInput
-from langflow.components.inputs.ChatInput import ChatInput
 from langflow.components.models import OpenAIModelComponent
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput, TextOutputComponent
-from langflow.components.outputs.TextOutput import TextOutputComponent
 from langflow.components.prompts import PromptComponent
 from langflow.components.prototypes import ConditionalRouterComponent
-from langflow.components.prototypes.ConditionalRouter import ConditionalRouterComponent
-from langflow.components.tools.Calculator import CalculatorToolComponent
+from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.custom import Component
-from langflow.custom.custom_component.component import Component
 from langflow.graph import Graph
-from langflow.graph.graph.base import Graph
 from langflow.graph.graph.utils import find_cycle_vertices
 from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message
@@ -306,8 +300,6 @@ def test_complex_agent_flow():
         assert expected_id in results_ids, f"Expected component {expected_id} not in results: {results_ids}"
 
     assert results_ids[-1] == "chat_output", "Last executed component should be chat_output"
-
-    print(f"Execution completed with results: {results_ids}")
 
 
 async def test_agent_component():

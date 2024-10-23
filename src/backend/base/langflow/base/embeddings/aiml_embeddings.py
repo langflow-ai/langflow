@@ -29,13 +29,16 @@ class AIMLEmbeddingsImpl(BaseModel, Embeddings):
             for index, future in futures:
                 try:
                     result_data = future.result()
-                    assert len(result_data["data"]) == 1, "Expected one embedding"
+                    if len(result_data["data"]) != 1:
+                        msg = f"Expected one embedding, got {len(result_data['data'])}"
+                        raise ValueError(msg)
                     embeddings[index] = result_data["data"][0]["embedding"]
                 except (
                     httpx.HTTPStatusError,
                     httpx.RequestError,
                     json.JSONDecodeError,
                     KeyError,
+                    ValueError,
                 ):
                     logger.exception("Error occurred")
                     raise
