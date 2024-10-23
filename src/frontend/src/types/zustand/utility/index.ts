@@ -13,4 +13,6 @@ export type UtilityStoreType = {
   setFlowsPagination: (pagination: Pagination) => void;
   tags: Tag[];
   setTags: (tags: Tag[]) => void;
+  mvpComponents: boolean;
+  setMvpComponents: (mvpComponents: boolean) => void;
 };
