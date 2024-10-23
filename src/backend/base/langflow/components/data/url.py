@@ -14,6 +14,7 @@ class URLComponent(Component):
     description = "Fetch content from one or more URLs."
     icon = "layout-template"
     name = "URL"
+    add_tool_output = True
 
     inputs = [
         MessageTextInput(
@@ -71,7 +72,12 @@ class URLComponent(Component):
         return string
 
     def fetch_content(self) -> list[Data]:
-        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]
+        # check if the url is valid or empty if so raise an error that the url is invalid
+        if self.urls is None or self.urls == "":
+            msg = "Invalid URL: The URL is empty."
+            raise ValueError(msg)
+        urls_list = [self.urls] if isinstance(self.urls, str) else self.urls
+        urls = [self.ensure_url(url.strip()) for url in urls_list if url.strip()]
         if self.format == "Raw HTML":
             loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
         else:

@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
+    from langflow.schema.dotdict import dotdict
     from langflow.schema.log import LoggableType
 
 
@@ -91,17 +92,21 @@ class Component(CustomComponent):
         self.__inputs = inputs
         self.__config = config
         self._reset_all_output_values()
-        if FEATURE_FLAGS.add_toolkit_output and hasattr(self, "_append_tool_output"):
-            self._append_tool_output()
         super().__init__(**config)
+        if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_output") and self.add_tool_output:
+            self._append_tool_output()
+
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
             self.trace_type = "chain"
         if self.inputs is not None:
             self.map_inputs(self.inputs)
+            if any(input_.name == "set_as_tool" and input_.value for input_ in self.inputs):
+                self._append_tool_output()
         if self.outputs is not None:
             self.map_outputs(self.outputs)
+        #
         # Set output types
         self._set_output_types()
         self.set_class_code()
@@ -442,7 +447,9 @@ class Component(CustomComponent):
 
     def _process_connection_or_parameters(self, key, value) -> None:
         # if value is a list of components, we need to process each component
-        if isinstance(value, list):
+        # Note this update make sure it is a list of components and not of any other values
+
+        if isinstance(value, list) and all(isinstance(item, Component) for item in value):
             for val in value:
                 self._process_connection_or_parameter(key, val)
         else:
@@ -833,3 +840,6 @@ class Component(CustomComponent):
     def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
             self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
+
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+        return super().update_build_config(build_config, field_value, field_name)
