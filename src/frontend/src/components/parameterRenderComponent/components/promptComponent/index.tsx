@@ -1,24 +1,45 @@
+import { GRADIENT_CLASS } from "@/constants/constants";
 import PromptModal from "@/modals/promptModal";
-import { useDarkStore } from "@/stores/darkStore";
 import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
-import { getBackgroundStyle } from "../../helpers/get-gradient-class";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputProps, PromptAreaComponentType } from "../../types";
 
 const promptContentClasses = {
-  base: "overflow-hidden text-clip whitespace-nowrap",
+  base: "overflow-hidden text-clip whitespace-nowrap bg-background",
   editNode: "input-edit-node input-dialog",
   normal: "primary-input text-muted-foreground",
   disabled: "disabled-state",
 };
 
 const externalLinkIconClasses = {
-  gradient: "absolute right-7 h-5 w-10",
-  background: "absolute right-[0.6px] h-5 w-9 rounded-l-xl",
+  gradient: ({
+    disabled,
+    editNode,
+  }: {
+    disabled: boolean;
+    editNode: boolean;
+  }) =>
+    disabled
+      ? ""
+      : editNode
+        ? "gradient-fade-input-edit-node"
+        : "gradient-fade-input",
+  background: ({
+    disabled,
+    editNode,
+  }: {
+    disabled: boolean;
+    editNode: boolean;
+  }) =>
+    disabled
+      ? ""
+      : editNode
+        ? "background-fade-input-edit-node"
+        : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
-  editNodeTop: "top-1",
+  editNodeTop: "top-[0.375rem]",
   normalTop: "top-2.5",
 };
 
@@ -33,8 +54,6 @@ export default function PromptAreaComponent({
   id = "",
   readonly = false,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element {
-  const isDark = useDarkStore((state) => state.dark);
-
   const renderPromptText = () => (
     <span
       id={id}
@@ -55,21 +74,23 @@ export default function PromptAreaComponent({
     <>
       <div
         className={cn(
-          externalLinkIconClasses.gradient,
+          externalLinkIconClasses.gradient({ disabled, editNode }),
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
         )}
-        style={getBackgroundStyle(disabled, isDark) as React.CSSProperties}
+        style={{
+          pointerEvents: "none",
+          background: disabled ? "" : GRADIENT_CLASS,
+        }}
         aria-hidden="true"
       />
       <div
         className={cn(
-          externalLinkIconClasses.background,
+          externalLinkIconClasses.background({ disabled, editNode }),
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
-          isDark ? "bg-black" : "bg-white",
           disabled && "bg-border",
         )}
         aria-hidden="true"
@@ -98,7 +119,11 @@ export default function PromptAreaComponent({
         nodeClass={nodeClass}
         setNodeClass={handleNodeClass}
       >
-        <Button unstyled className="w-full">
+        <Button
+          unstyled
+          className="w-full"
+          data-testid="button_open_prompt_modal"
+        >
           <div className="relative w-full">
             {renderPromptText()}
             {renderExternalLinkIcon()}

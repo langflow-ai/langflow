@@ -319,6 +319,8 @@ test("user must be able to check similarity between embedding texts", async ({
   await textOutputInput.hover();
   await page.mouse.up();
 
+  await page.waitForTimeout(3000);
+
   await page.getByTestId("button_run_text output").click();
 
   await page.waitForSelector("text=built successfully", { timeout: 30000 });

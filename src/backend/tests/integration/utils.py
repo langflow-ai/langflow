@@ -5,7 +5,6 @@ from typing import Any
 
 import requests
 from astrapy.admin import parse_api_endpoint
-
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.custom import Component
 from langflow.field_typing import Embeddings
@@ -170,4 +169,4 @@ async def run_single_component(
     _, _ = await run_graph_internal(
         graph, flow_id, session_id=session_id, inputs=graph_run_inputs, outputs=[component_id]
     )
-    return graph.get_vertex(component_id)._built_object
+    return graph.get_vertex(component_id).built_object

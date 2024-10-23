@@ -1,13 +1,12 @@
 import os
 
 import pytest
-
 from langflow.base.tools.component_tool import ComponentToolkit
-from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
+from langflow.components.agents import ToolCallingAgentComponent
+from langflow.components.inputs import ChatInput
+from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
-from langflow.graph.graph.base import Graph
+from langflow.graph import Graph
 from langflow.schema.message import Message
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 

@@ -2,22 +2,24 @@ from __future__ import annotations
 
 import uuid
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import HTTPException, Query
+from fastapi import Depends, HTTPException, Query
 from fastapi_pagination import Params
 from loguru import logger
 from sqlalchemy import delete
+from sqlmodel import Session
 
 from langflow.graph.graph.base import Graph
+from langflow.services.auth.utils import get_current_active_user
+from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from langflow.services.deps import get_session
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
-    from sqlmodel import Session
-
     from langflow.services.chat.service import ChatService
     from langflow.services.store.schema import StoreComponentCreate
 
@@ -26,6 +28,9 @@ API_WORDS = ["api", "key", "token"]
 
 MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
+
+CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
+DbSession = Annotated[Session, Depends(get_session)]
 
 
 def has_api_terms(word: str):
@@ -138,12 +143,12 @@ def format_elapsed_time(elapsed_time: float) -> str:
 async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
     """Build and cache the graph."""
     graph = Graph.from_payload(payload, flow_id, **kwargs)
-    for vertex_id in graph._has_session_id_vertices:
+    for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
             msg = f"Vertex {vertex_id} not found"
             raise ValueError(msg)
-        if not vertex._raw_params.get("session_id"):
+        if not vertex.raw_params.get("session_id"):
             vertex.update_raw_params({"session_id": flow_id}, overwrite=True)
 
     run_id = uuid.uuid4()

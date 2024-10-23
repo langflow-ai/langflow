@@ -954,12 +954,7 @@ export const STORE_PAGINATION_PAGE = 1;
 export const PAGINATION_ROWS_COUNT = [10, 20, 50, 100];
 export const STORE_PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
 
-export const GRADIENT_WHITE_CLASS =
-  "linear-gradient(to right, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 1))";
-export const GRADIENT_DARK_CLASS =
-  "linear-gradient(to right, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 1))";
-export const GRADIENT_DISABLE_WHITE_CLASS =
-  "linear-gradient(to right, rgba(244, 244, 245, 0.3), rgba(244, 244, 245, 1))";
-export const GRADIENT_DISABLE_DARK_CLASS =
-  "linear-gradient(to right, rgba(39, 39, 42, 0.3), rgba(39, 39, 42, 1))";
+export const GRADIENT_CLASS =
+  "linear-gradient(to right, hsl(var(--background) / 0.3), hsl(var(--background)))";
+
 export const RECEIVING_INPUT_VALUE = "Receiving input";

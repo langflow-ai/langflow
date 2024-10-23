@@ -98,7 +98,7 @@ test("KeypairListComponent", async ({ page }) => {
 
   const plusButtonLocator = page.locator('//*[@id="plusbtn0"]');
   const elementCount = await plusButtonLocator?.count();
-  if (elementCount === 0) {
+  if (elementCount === 1) {
     expect(true).toBeTruthy();
     await page.getByTestId("div-generic-node").click();
 

@@ -26,7 +26,7 @@ export const getInputClassName = ({
     editNode: editNode ? "input-edit-node" : "",
     paddingRight: (() => {
       if (password && (setSelectedOption || setSelectedOptions))
-        return "pr-[62.9px]";
+        return "pr-[70px]";
       if (
         (!password && (setSelectedOption || setSelectedOptions)) ||
         (password && !(setSelectedOption || setSelectedOptions))

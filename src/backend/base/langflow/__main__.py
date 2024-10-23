@@ -78,6 +78,7 @@ def set_var_for_macos_issue() -> None:
 
 @app.command()
 def run(
+    *,
     host: str | None = typer.Option(None, help="Host to bind the server to.", show_default=False),
     workers: int | None = typer.Option(None, help="Number of worker processes.", show_default=False),
     worker_timeout: int | None = typer.Option(None, help="Worker timeout in seconds.", show_default=False),
@@ -148,13 +149,12 @@ def run(
     ),
 ) -> None:
     """Run Langflow."""
-    configure(log_level=log_level, log_file=log_file)
-    set_var_for_macos_issue()
-
     if env_file:
         load_dotenv(env_file, override=True)
-        logger.debug(f"Loading config from file: '{env_file}'")
 
+    configure(log_level=log_level, log_file=log_file)
+    logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
+    set_var_for_macos_issue()
     settings_service = get_settings_service()
 
     frame = inspect.currentframe()

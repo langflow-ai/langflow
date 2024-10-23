@@ -4,9 +4,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 
-from langflow.api.utils import check_langflow_version
+from langflow.api.utils import CurrentActiveUser, check_langflow_version
 from langflow.services.auth import utils as auth_utils
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_store_service
 from langflow.services.store.exceptions import CustomError
 from langflow.services.store.schema import (
@@ -21,26 +20,20 @@ from langflow.services.store.schema import (
 router = APIRouter(prefix="/store", tags=["Components Store"])
 
 
-def get_user_store_api_key(
-    user: User = Depends(auth_utils.get_current_active_user),
-    settings_service=Depends(get_settings_service),
-):
+def get_user_store_api_key(user: CurrentActiveUser):
     if not user.store_api_key:
         raise HTTPException(status_code=400, detail="You must have a store API key set.")
     try:
-        return auth_utils.decrypt_api_key(user.store_api_key, settings_service)
+        return auth_utils.decrypt_api_key(user.store_api_key, get_settings_service())
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to decrypt API key. Please set a new one.") from e
 
 
-def get_optional_user_store_api_key(
-    user: User = Depends(auth_utils.get_current_active_user),
-    settings_service=Depends(get_settings_service),
-):
+def get_optional_user_store_api_key(user: CurrentActiveUser):
     if not user.store_api_key:
         return None
     try:
-        return auth_utils.decrypt_api_key(user.store_api_key, settings_service)
+        return auth_utils.decrypt_api_key(user.store_api_key, get_settings_service())
     except Exception:  # noqa: BLE001
         logger.exception("Failed to decrypt API key")
         return user.store_api_key
@@ -107,7 +100,7 @@ async def get_components(
     fields: Annotated[list[str] | None, Query()] = None,
     page: int = 1,
     limit: int = 10,
-    store_api_key: str | None = Depends(get_optional_user_store_api_key),
+    store_api_key: Annotated[str | None, Depends(get_optional_user_store_api_key)],
 ) -> ListComponentResponseModel:
     try:
         return await get_store_service().get_list_component_response_model(

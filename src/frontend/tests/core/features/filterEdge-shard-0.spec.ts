@@ -64,7 +64,7 @@ test("user must see on handle hover a tooltip with possibility connections", asy
         .first(),
     ).toBeVisible();
 
-    await expect(page.getByText("Output:").first()).toBeVisible();
+    await expect(page.getByText("Output type:").first()).toBeVisible();
 
     await expect(
       page.getByTestId("output-tooltip-message").first(),
@@ -98,7 +98,7 @@ test("user must see on handle hover a tooltip with possibility connections", asy
         .first(),
     ).toBeVisible();
 
-    await expect(page.getByText("Input:").first()).toBeVisible();
+    await expect(page.getByText("Input type:").first()).toBeVisible();
 
     await expect(
       page.getByTestId("input-tooltip-languagemodel").first(),
@@ -131,7 +131,7 @@ test("user must see on handle hover a tooltip with possibility connections", asy
         .first(),
     ).toBeVisible();
 
-    await expect(page.getByText("Input:").first()).toBeVisible();
+    await expect(page.getByText("Input type:").first()).toBeVisible();
 
     await expect(
       page.getByTestId("input-tooltip-retriever").first(),
@@ -165,7 +165,7 @@ test("user must see on handle hover a tooltip with possibility connections", asy
         .first(),
     ).toBeVisible();
 
-    await expect(page.getByText("Input:").first()).toBeVisible();
+    await expect(page.getByText("Input type:").first()).toBeVisible();
 
     await expect(
       page.getByTestId("input-tooltip-basechatmemory").first(),

@@ -14,7 +14,7 @@ export function StrRenderComponent({
     return templateData.multiline ? (
       <TextAreaComponent
         {...baseInputProps}
-        password={templateData.password}
+        // password={templateData.password}
         updateVisibility={() => {
           if (templateData.password !== undefined) {
             handleOnNewValue(

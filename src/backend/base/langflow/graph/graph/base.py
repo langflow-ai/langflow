@@ -91,7 +91,7 @@ class Graph:
         self._is_input_vertices: list[str] = []
         self._is_output_vertices: list[str] = []
         self._is_state_vertices: list[str] = []
-        self._has_session_id_vertices: list[str] = []
+        self.has_session_id_vertices: list[str] = []
         self._sorted_vertices_layers: list[list[str]] = []
         self._run_id = ""
         self._start_time = datetime.now(timezone.utc)
@@ -258,10 +258,10 @@ class Graph:
             msg = f"Target vertex {target_id} is not a component vertex."
             raise TypeError(msg)
         output_name, input_name = output_input_tuple
-        if source_vertex._custom_component is None:
+        if source_vertex.custom_component is None:
             msg = f"Source vertex {source_id} does not have a custom component."
             raise ValueError(msg)
-        if target_vertex._custom_component is None:
+        if target_vertex.custom_component is None:
             msg = f"Target vertex {target_id} does not have a custom component."
             raise ValueError(msg)
 
@@ -282,8 +282,8 @@ class Graph:
             "target": target_id,
             "data": {
                 "sourceHandle": {
-                    "dataType": source_vertex._custom_component.name
-                    or source_vertex._custom_component.__class__.__name__,
+                    "dataType": source_vertex.custom_component.name
+                    or source_vertex.custom_component.__class__.__name__,
                     "id": source_vertex.id,
                     "name": output_name,
                     "output_types": source_vertex.get_output(output_name).types,
@@ -339,9 +339,9 @@ class Graph:
 
     def __apply_config(self, config: StartConfigDict) -> None:
         for vertex in self.vertices:
-            if vertex._custom_component is None:
+            if vertex.custom_component is None:
                 continue
-            for output in vertex._custom_component._outputs_map.values():
+            for output in vertex.custom_component._outputs_map.values():
                 for key, value in config["output"].items():
                     setattr(output, key, value)
 
@@ -439,8 +439,8 @@ class Graph:
             if vertex_id == caller or vertex.display_name == caller_vertex.display_name:
                 continue
             if (
-                isinstance(vertex._raw_params["name"], str)
-                and name in vertex._raw_params["name"]
+                isinstance(vertex.raw_params["name"], str)
+                and name in vertex.raw_params["name"]
                 and vertex_id != caller
                 and isinstance(vertex, StateVertex)
             ):
@@ -604,11 +604,15 @@ class Graph:
 
     def define_vertices_lists(self) -> None:
         """Defines the lists of vertices that are inputs, outputs, and have session_id."""
-        attributes = ["is_input", "is_output", "has_session_id", "is_state"]
         for vertex in self.vertices:
-            for attribute in attributes:
-                if getattr(vertex, attribute):
-                    getattr(self, f"_{attribute}_vertices").append(vertex.id)
+            if vertex.is_input:
+                self._is_input_vertices.append(vertex.id)
+            if vertex.is_output:
+                self._is_output_vertices.append(vertex.id)
+            if vertex.has_session_id:
+                self.has_session_id_vertices.append(vertex.id)
+            if vertex.is_state:
+                self._is_state_vertices.append(vertex.id)
 
     def _set_inputs(self, input_components: list[str], inputs: dict[str, str], input_type: InputType | None) -> None:
         for vertex_id in self._is_input_vertices:
@@ -662,7 +666,7 @@ class Graph:
         if inputs:
             self._set_inputs(input_components, inputs, input_type)
         # Update all the vertices with the session_id
-        for vertex_id in self._has_session_id_vertices:
+        for vertex_id in self.has_session_id_vertices:
             vertex = self.get_vertex(vertex_id)
             if vertex is None:
                 msg = f"Vertex {vertex_id} not found"
@@ -690,7 +694,7 @@ class Graph:
         # Get the outputs
         vertex_outputs = []
         for vertex in self.vertices:
-            if not vertex._built:
+            if not vertex.built:
                 continue
             if vertex is None:
                 msg = f"Vertex {vertex_id} not found"
@@ -781,7 +785,7 @@ class Graph:
             List[RunOutputs]: The outputs of the graph.
         """
         # inputs is {"message": "Hello, world!"}
-        # we need to go through self.inputs and update the self._raw_params
+        # we need to go through self.inputs and update the self.raw_params
         # of the vertices that are inputs
         # if the value is a list, we need to run multiple times
         vertex_outputs = []
@@ -948,7 +952,7 @@ class Graph:
             "_edges": self._edges,
             "_is_input_vertices": self._is_input_vertices,
             "_is_output_vertices": self._is_output_vertices,
-            "_has_session_id_vertices": self._has_session_id_vertices,
+            "has_session_id_vertices": self.has_session_id_vertices,
             "_sorted_vertices_layers": self._sorted_vertices_layers,
         }
 
@@ -1123,17 +1127,17 @@ class Graph:
             vertex (Vertex): The vertex to be updated.
             other_vertex (Vertex): The vertex to update from.
         """
-        vertex._data = other_vertex._data
-        vertex._parse_data()
+        vertex.full_data = other_vertex.full_data
+        vertex.parse_data()
         # Now we update the edges of the vertex
         self.update_edges_from_vertex(other_vertex)
         vertex.params = {}
-        vertex._build_params()
+        vertex.build_params()
         vertex.graph = self
         # If the vertex is frozen, we don't want
-        # to reset the results nor the _built attribute
+        # to reset the results nor the built attribute
         if not vertex.frozen:
-            vertex._built = False
+            vertex.built = False
             vertex.result = None
             vertex.artifacts = {}
             vertex.set_top_level(self.top_level_vertices)
@@ -1146,7 +1150,7 @@ class Graph:
                 if vid in self.vertex_map:
                     _vertex = self.vertex_map[vid]
                     if not _vertex.frozen:
-                        _vertex._build_params()
+                        _vertex.build_params()
 
     def _add_vertex(self, vertex: Vertex) -> None:
         """Adds a vertex to the graph."""
@@ -1206,7 +1210,7 @@ class Graph:
     def _build_vertex_params(self) -> None:
         """Identifies and handles the LLM vertex within the graph."""
         for vertex in self.vertices:
-            vertex._build_params()
+            vertex.build_params()
 
     def _validate_vertex(self, vertex: Vertex) -> bool:
         """Validates a vertex."""
@@ -1359,14 +1363,14 @@ class Graph:
                     try:
                         cached_vertex_dict = cached_result["result"]
                         # Now set update the vertex with the cached vertex
-                        vertex._built = cached_vertex_dict["_built"]
+                        vertex.built = cached_vertex_dict["built"]
                         vertex.artifacts = cached_vertex_dict["artifacts"]
-                        vertex._built_object = cached_vertex_dict["_built_object"]
-                        vertex._built_result = cached_vertex_dict["_built_result"]
-                        vertex._data = cached_vertex_dict["_data"]
+                        vertex.built_object = cached_vertex_dict["built_object"]
+                        vertex.built_result = cached_vertex_dict["built_result"]
+                        vertex.full_data = cached_vertex_dict["full_data"]
                         vertex.results = cached_vertex_dict["results"]
                         try:
-                            vertex._finalize_build()
+                            vertex.finalize_build()
                             if vertex.result is not None:
                                 vertex.result.used_frozen_result = True
                         except Exception:  # noqa: BLE001
@@ -1385,12 +1389,12 @@ class Graph:
                 )
                 if set_cache is not None:
                     vertex_dict = {
-                        "_built": vertex._built,
+                        "built": vertex.built,
                         "results": vertex.results,
                         "artifacts": vertex.artifacts,
-                        "_built_object": vertex._built_object,
-                        "_built_result": vertex._built_result,
-                        "_data": vertex._data,
+                        "built_object": vertex.built_object,
+                        "built_result": vertex.built_result,
+                        "full_data": vertex.full_data,
                     }
 
                     await set_cache(key=vertex.id, data=vertex_dict)
@@ -1401,7 +1405,7 @@ class Graph:
             raise
 
         if vertex.result is not None:
-            params = f"{vertex._built_object_repr()}{params}"
+            params = f"{vertex.built_object_repr()}{params}"
             valid = True
             result_dict = vertex.result
             artifacts = vertex.artifacts
@@ -1416,6 +1420,7 @@ class Graph:
     def get_vertex_edges(
         self,
         vertex_id: str,
+        *,
         is_target: bool | None = None,
         is_source: bool | None = None,
     ) -> list[CycleEdge]:
@@ -1451,7 +1456,7 @@ class Graph:
         self.set_run_id(run_id)
         self.set_run_name()
         await self.initialize_run()
-        lock = chat_service._async_cache_locks[self.run_id]
+        lock = chat_service.async_cache_locks[self.run_id]
         while to_process:
             current_batch = list(to_process)  # Copy current deque items to a list
             to_process.clear()  # Clear the deque for new items
@@ -1539,7 +1544,7 @@ class Graph:
             # This could usually happen with input vertices like ChatInput
             self.run_manager.remove_vertex_from_runnables(v.id)
 
-            logger.debug(f"Vertex {v.id}, result: {v._built_result}, object: {v._built_object}")
+            logger.debug(f"Vertex {v.id}, result: {v.built_result}, object: {v.built_object}")
 
         for v in vertices:
             next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
@@ -1887,11 +1892,11 @@ class Graph:
     def sort_chat_inputs_first(self, vertices_layers: list[list[str]]) -> list[list[str]]:
         chat_inputs_first = []
         for layer in vertices_layers:
-            for vertex_id in layer:
-                if "ChatInput" in vertex_id:
-                    # Remove the ChatInput from the layer
-                    layer.remove(vertex_id)
-                    chat_inputs_first.append(vertex_id)
+            layer_chat_inputs_first = [vertex_id for vertex_id in layer if "ChatInput" in vertex_id]
+            chat_inputs_first.extend(layer_chat_inputs_first)
+            for vertex_id in layer_chat_inputs_first:
+                # Remove the ChatInput from the layer
+                layer.remove(vertex_id)
         if not chat_inputs_first:
             return vertices_layers
 
