@@ -1,14 +1,12 @@
 from loguru import logger
 
-from langflow.components.agents import (
-    AgentActionRouter,
-    AgentContextBuilder,
-    DecideActionComponent,
-    ExecuteActionComponent,
-    GenerateThoughtComponent,
-    ProvideFinalAnswerComponent,
-)
-from langflow.components.inputs.ChatInput import ChatInput
+from langflow.components.agents.agent_action_router import AgentActionRouter
+from langflow.components.agents.agent_context import AgentContextBuilder
+from langflow.components.agents.decide_action import DecideActionComponent
+from langflow.components.agents.execute_action import ExecuteActionComponent
+from langflow.components.agents.generate_thought import GenerateThoughtComponent
+from langflow.components.agents.write_final_answer import ProvideFinalAnswerComponent
+from langflow.components.inputs.chat import ChatInput
 from langflow.components.outputs import ChatOutput
 from langflow.components.prompts import PromptComponent
 from langflow.custom import Component
