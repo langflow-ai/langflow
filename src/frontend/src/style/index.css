@@ -94,6 +94,8 @@
     --note-emerald-opacity: #064e3b80;
     --note-amber-opacity: #78350f80;
     --note-red-opacity: #7f1d1d80;
+
+    --radius: 0.5rem;
   }
 
   .dark {
