@@ -48,7 +48,7 @@ export default function EditMessageField({
               onEdit(message);
               setIsButtonClicked(false);
             }}
-            className="mt-2 hover:!bg-zinc-950"
+            className="mt-2 bg-black text-white hover:bg-white hover:text-black dark:text-white dark:hover:!bg-zinc-950"
           >
             Save
           </Button>
@@ -60,7 +60,7 @@ export default function EditMessageField({
               onCancel();
               setIsButtonClicked(false);
             }}
-            className="mt-2 bg-white !text-black hover:bg-white"
+            className="mt-2 bg-[#e4e4e7] dark:bg-white !text-black hover:bg-white"
           >
             Cancel
           </Button>
