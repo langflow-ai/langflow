@@ -59,6 +59,8 @@ class CustomComponent(BaseComponent):
     is_input: bool | None = None
     """The input state of the component. Defaults to None.
     If True, the component must have a field named 'input_value'."""
+    add_tool_output: bool | None = False
+    """Indicates whether the component will be treated as a tool. Defaults to False."""
     is_output: bool | None = None
     """The output state of the component. Defaults to None.
     If True, the component must have a field named 'input_value'."""

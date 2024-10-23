@@ -91,9 +91,9 @@ class Component(CustomComponent):
         self.__inputs = inputs
         self.__config = config
         self._reset_all_output_values()
-        if FEATURE_FLAGS.add_toolkit_output and hasattr(self, "_append_tool_output"):
-            self._append_tool_output()
         super().__init__(**config)
+        if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_output") and self.add_tool_output:
+            self._append_tool_output()
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
