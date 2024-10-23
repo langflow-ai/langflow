@@ -122,7 +122,6 @@ export default function InputComponent({
             />
           ) : (
             <CustomInputPopover
-              nodeStyle={nodeStyle}
               refInput={refInput}
               handleKeyDown={handleKeyDown}
               optionButton={optionButton}

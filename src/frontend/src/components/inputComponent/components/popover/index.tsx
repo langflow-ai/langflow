@@ -42,7 +42,6 @@ const CustomInputPopover = ({
   optionsButton,
   handleKeyDown,
   showOptions,
-  nodeStyle,
 }) => {
   const PopoverContentInput = editNode
     ? PopoverContent
@@ -59,20 +58,14 @@ const CustomInputPopover = ({
     }
   };
 
-  const noSelectedOptionsClass =
-    "border-none p-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0";
-
-  const selectedOptionsClass =
-    "h-[45px] px-3 placeholder:text-placeholder border-1";
+  console.log(pwdVisible);
 
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
         <div
           className={cn(
-            "primary-input flex flex-wrap items-center",
-            value !== "" && selectedOptionsClass,
-            value === "" && noSelectedOptionsClass,
+            "primary-input border-1 flex h-full flex-wrap items-center px-3 placeholder:text-placeholder",
           )}
           onClick={() => !disabled && setShowOptions(true)}
         >
@@ -81,7 +74,7 @@ const CustomInputPopover = ({
               <Badge
                 key={option}
                 variant="secondary"
-                className="flex items-center gap-1 truncate"
+                className="m-1 flex items-center gap-1 truncate"
               >
                 <div className="truncate">{option}</div>
                 <X
@@ -107,13 +100,13 @@ const CustomInputPopover = ({
             <input
               id={id}
               ref={refInput}
-              type="text"
+              type={!pwdVisible && password ? "password" : "text"}
               onBlur={onInputLostFocus}
               value={value || ""}
               autoFocus={autoFocus}
               disabled={disabled}
               required={required}
-              className="primary-input flex-1 bg-transparent outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className="primary-input flex-1 border-none bg-transparent p-0 shadow-none outline-none ring-0 ring-offset-0 placeholder:text-muted-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
               placeholder={
                 selectedOptions?.length > 0 || selectedOption ? "" : placeholder
               }
