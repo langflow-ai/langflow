@@ -238,7 +238,7 @@ export default function ChatMessage({
                 {/* TODO: ADD MODEL RELATED NAME */}
               </div>
               {!chat.isSend ? (
-                <div className="form-modal-chat-text-position min-w-96 flex-grow">
+                <div className="form-modal-chat-text-position flex-grow">
                   <div className="form-modal-chat-text">
                     {hidden && chat.thought && chat.thought !== "" && (
                       <div
@@ -305,6 +305,13 @@ export default function ChatMessage({
                                           : "text-primary",
                                       )}
                                       components={{
+                                        p({ node, ...props }) {
+                                          return (
+                                            <span className="inline-block max-w-full">
+                                              {props.children}
+                                            </span>
+                                          );
+                                        },
                                         pre({ node, ...props }) {
                                           return <>{props.children}</>;
                                         },
@@ -376,7 +383,7 @@ export default function ChatMessage({
                   </div>
                 </div>
               ) : (
-                <div className="form-modal-chat-text-position min-w-96 flex-grow">
+                <div className="form-modal-chat-text-position flex-grow">
                   {template ? (
                     <>
                       <button
