@@ -158,9 +158,9 @@ export default function ChatView({
           {lockChat && (
             <div className={"mr-3 mt-1 flex w-full overflow-hidden pb-3"}>
               <div className="flex w-full gap-4">
-                <div className="relative flex -ml-1 h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-zinc-800 p-5">
+                <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-muted p-5">
                   <span>
-                    <div className="text-3xl">⛓️</div>
+                    <div className="text-3xl -ml-1">⛓️</div>
                   </span>
                 </div>
                 <div className="flex items-center">
