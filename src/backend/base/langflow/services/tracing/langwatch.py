@@ -1,20 +1,23 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
-from uuid import UUID
 
-import nanoid  # type: ignore
+import nanoid
 from loguru import logger
+from typing_extensions import override
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
-from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from uuid import UUID
+
     from langchain.callbacks.base import BaseCallbackHandler
     from langwatch.tracer import ContextSpan
 
     from langflow.graph.vertex.base import Vertex
+    from langflow.services.tracing.schema import Log
 
 
 class LangWatchTracer(BaseTracer):
@@ -44,24 +47,25 @@ class LangWatchTracer(BaseTracer):
                 name=name_without_id,
                 type="workflow",
             )
-        except Exception as e:
-            logger.debug(f"Error setting up LangWatch tracer: {e}")
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error setting up LangWatch tracer")
             self._ready = False
 
     @property
     def ready(self):
         return self._ready
 
-    def setup_langwatch(self):
+    def setup_langwatch(self) -> bool:
         try:
             import langwatch
 
             self._client = langwatch
         except ImportError:
-            logger.error("Could not import langwatch. Please install it with `pip install langwatch`.")
+            logger.exception("Could not import langwatch. Please install it with `pip install langwatch`.")
             return False
         return True
 
+    @override
     def add_trace(
         self,
         trace_id: str,
@@ -70,7 +74,7 @@ class LangWatchTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
-    ):
+    ) -> None:
         if not self._ready:
             return
         # If user is not using session_id, then it becomes the same as flow_id, but
@@ -97,14 +101,15 @@ class LangWatchTracer(BaseTracer):
         self.trace.set_current_span(span)
         self.spans[trace_id] = span
 
+    @override
     def end_trace(
         self,
         trace_id: str,
         trace_name: str,
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
-        logs: list[Log | dict] = [],
-    ):
+        logs: Sequence[Log | dict] = (),
+    ) -> None:
         if not self._ready:
             return
         if self.spans.get(trace_id):
@@ -116,7 +121,7 @@ class LangWatchTracer(BaseTracer):
         outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         if not self._ready:
             return
         self.trace.root_span.end(

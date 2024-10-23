@@ -32,7 +32,8 @@ test("should be able to move flow from folder, rename it and be displayed on cor
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Vector Store RAG" }).click();
+  await page.getByTestId("side_nav_options_all-templates").click();
+  await page.getByRole("heading", { name: "Vector Store RAG" }).first().click();
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
   });
@@ -52,7 +53,8 @@ test("should be able to move flow from folder, rename it and be displayed on cor
   while (countFolders > 1) {
     await page.getByText("New Folder").first().hover();
 
-    await page.getByTestId("btn-delete-folder").first().click();
+    await page.getByTestId("more-options-button").first().click();
+    await page.getByTestId("btn-delete-folder").click();
     await page.getByText("Delete").last().click();
     countFolders--;
     await page.waitForTimeout(1000);

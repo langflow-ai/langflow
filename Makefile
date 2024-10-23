@@ -6,7 +6,7 @@ DOCKERFILE=docker/build_and_push.Dockerfile
 DOCKERFILE_BACKEND=docker/build_and_push_backend.Dockerfile
 DOCKERFILE_FRONTEND=docker/frontend/build_and_push_frontend.Dockerfile
 DOCKER_COMPOSE=docker_example/docker-compose.yml
-PYTHON_REQUIRED=$(shell grep '^python[[:space:]]*=' pyproject.toml | sed -n 's/.*"\([^"]*\)".*/\1/p')
+PYTHON_REQUIRED=$(shell grep '^requires-python[[:space:]]*=' pyproject.toml | sed -n 's/.*"\([^"]*\)".*/\1/p')
 RED=\033[0;31m
 NC=\033[0m # No Color
 GREEN=\033[0;32m
@@ -44,10 +44,7 @@ check_tools:
 # check if Python version is compatible
 check_env: ## check if Python version is compatible
 	@chmod +x scripts/setup/check_env.sh
-	@PYTHON_INSTALLED=$$(scripts/setup/check_env.sh python --version 2>&1 | awk '{print $$2}'); \
-	if ! scripts/setup/check_env.sh python -c "import sys; from packaging.specifiers import SpecifierSet; from packaging.version import Version; sys.exit(not SpecifierSet('$(PYTHON_REQUIRED)').contains(Version('$$PYTHON_INSTALLED')))" 2>/dev/null; then \
-		echo "$(RED)Error: Python version $$PYTHON_INSTALLED is not compatible with the required version $(PYTHON_REQUIRED). Aborting.$(NC)"; exit 1; \
-	fi
+	@scripts/setup/check_env.sh "$(PYTHON_REQUIRED)"
 
 help: ## show this help message
 	@echo '----'
@@ -197,6 +194,9 @@ format: ## run code formatters
 	@uv run ruff format .
 	@cd src/frontend && npm run format
 
+unsafe_fix:
+	@uv run ruff check . --fix --unsafe-fixes
+
 lint: install_backend ## run linters
 	@uv run mypy --namespace-packages -p "langflow"
 
@@ -243,7 +243,7 @@ start:
 
 ifeq ($(open_browser),false)
 	@make install_backend && uv run langflow run \
-		--path $(path) \
+		--frontend-path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
 		--port $(port) \
@@ -251,7 +251,7 @@ ifeq ($(open_browser),false)
 		--no-open-browser
 else
 	@make install_backend && uv run langflow run \
-		--path $(path) \
+		--frontend-path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
 		--port $(port) \
@@ -262,7 +262,7 @@ setup_devcontainer: ## set up the development container
 	make install_backend
 	make install_frontend
 	make build_frontend
-	uv run langflow --path src/frontend/build
+	uv run langflow --frontend-path src/frontend/build
 
 setup_env: ## set up the environment
 	@sh ./scripts/setup/setup_env.sh
@@ -315,18 +315,18 @@ build: setup_env ## build the frontend static files and package the project
 ifdef base
 	make install_frontendci
 	make build_frontend
-	make build_langflow_base
+	make build_langflow_base args="$(args)"
 endif
 
 ifdef main
 	make install_frontendci
 	make build_frontend
-	make build_langflow_base
+	make build_langflow_base args="$(args)"
 	make build_langflow args="$(args)"
 endif
 
 build_langflow_base:
-	cd src/backend/base && uv build
+	cd src/backend/base && uv build $(args)
 	rm -rf src/backend/base/langflow/frontend
 
 build_langflow_backup:
@@ -394,8 +394,8 @@ lock_langflow:
 
 lock: ## lock dependencies
 	@echo 'Locking dependencies'
-	cd src/backend/base && uv lock --no-update
-	uv lock --no-update
+	cd src/backend/base && uv lock
+	uv lock
 
 update: ## update dependencies
 	@echo 'Updating dependencies'
@@ -440,3 +440,34 @@ ifdef main
 	poetry config repositories.test-pypi https://test.pypi.org/legacy/
 	make publish_langflow_testpypi
 endif
+
+
+# example make alembic-revision message="Add user table"
+alembic-revision: ## generate a new migration
+	@echo 'Generating a new Alembic revision'
+	cd src/backend/base/langflow/ && uv run alembic revision --autogenerate -m "$(message)"
+
+
+alembic-upgrade: ## upgrade database to the latest version
+	@echo 'Upgrading database to the latest version'
+	cd src/backend/base/langflow/ && uv run alembic upgrade head
+
+alembic-downgrade: ## downgrade database by one version
+	@echo 'Downgrading database by one version'
+	cd src/backend/base/langflow/ && uv run alembic downgrade -1
+
+alembic-current: ## show current revision
+	@echo 'Showing current Alembic revision'
+	cd src/backend/base/langflow/ && uv run alembic current
+
+alembic-history: ## show migration history
+	@echo 'Showing Alembic migration history'
+	cd src/backend/base/langflow/ && uv run alembic history --verbose
+
+alembic-check: ## check migration status
+	@echo 'Running alembic check'
+	cd src/backend/base/langflow/ && uv run alembic check
+
+alembic-stamp: ## stamp the database with a specific revision
+	@echo 'Stamping the database with revision $(revision)'
+	cd src/backend/base/langflow/ && uv run alembic stamp $(revision)

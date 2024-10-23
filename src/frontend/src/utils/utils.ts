@@ -528,7 +528,18 @@ export function generateBackendColumnsFromValue(rows: Object[]): ColumnField[] {
       display_name: column.headerName ?? "",
       sortable: true,
       filterable: true,
+      default: null, // Initialize default to null or appropriate value
     };
+
+    // Attempt to infer the default value from the data, if possible
+    if (rows.length > 0) {
+      const sampleValue = rows[0][column.field ?? ""];
+      if (sampleValue !== undefined) {
+        newColumn.default = sampleValue;
+      }
+    }
+
+    // Determine the formatter based on the sample value
     if (rows[0] && rows[0][column.field ?? ""]) {
       const value = rows[0][column.field ?? ""] as any;
       if (typeof value === "string") {
@@ -538,7 +549,6 @@ export function generateBackendColumnsFromValue(rows: Object[]): ColumnField[] {
           newColumn.formatter = FormatterType.text;
         }
       } else if (typeof value === "object" && value !== null) {
-        // Check if the object is a Date object
         if (
           Object.prototype.toString.call(value) === "[object Date]" ||
           value instanceof Date
@@ -623,6 +633,18 @@ export function addPlusSignes(array: string[]): string[] {
   });
 }
 
+export function removeDuplicatesBasedOnAttribute<T>(
+  arr: T[],
+  attribute: string,
+): T[] {
+  const seen = new Set();
+  const filteredChatHistory = arr.filter((item) => {
+    const duplicate = seen.has(item[attribute]);
+    seen.add(item[attribute]);
+    return !duplicate;
+  });
+  return filteredChatHistory;
+}
 export function isSupportedNodeTypes(type: string) {
   return Object.keys(DRAG_EVENTS_CUSTOM_TYPESS).some((key) => key === type);
 }

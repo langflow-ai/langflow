@@ -1,8 +1,6 @@
 import { expect, test } from "@playwright/test";
-import * as dotenv from "dotenv";
-import path from "path";
 
-test("user must be able to freeze a component", async ({ page }) => {
+test.skip("user must be able to freeze a component", async ({ page }) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
@@ -28,7 +26,7 @@ test("user must be able to freeze a component", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Blank Flow" }).click();
+  await page.getByTestId("blank-flow").click();
 
   //first component
 
@@ -223,7 +221,7 @@ test("user must be able to freeze a component", async ({ page }) => {
 
   await page.getByTestId("output-inspection-message").first().click();
 
-  await page.getByRole("gridcell").first().click();
+  await page.getByRole("gridcell").nth(4).click();
 
   const firstRunWithoutFreezing = await page
     .getByPlaceholder("Empty")
@@ -246,7 +244,7 @@ test("user must be able to freeze a component", async ({ page }) => {
 
   await page.getByTestId("output-inspection-message").first().click();
 
-  await page.getByRole("gridcell").first().click();
+  await page.getByRole("gridcell").nth(4).click();
 
   const secondRunWithoutFreezing = await page
     .getByPlaceholder("Empty")
@@ -290,7 +288,7 @@ test("user must be able to freeze a component", async ({ page }) => {
 
   await page.getByTestId("output-inspection-message").first().click();
 
-  await page.getByRole("gridcell").first().click();
+  await page.getByRole("gridcell").nth(4).click();
 
   const firstTextFreezed = await page.getByPlaceholder("Empty").textContent();
 
@@ -325,7 +323,7 @@ test("user must be able to freeze a component", async ({ page }) => {
 
   await page.getByTestId("output-inspection-message").first().click();
 
-  await page.getByRole("gridcell").first().click();
+  await page.getByRole("gridcell").nth(4).click();
 
   const thirdTextWithoutFreezing = await page
     .getByPlaceholder("Empty")

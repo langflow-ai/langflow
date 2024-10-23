@@ -1,19 +1,17 @@
 from base64 import b64decode, b64encode
+from http import HTTPStatus
 from uuid import UUID
 
-from kubernetes import client, config  # type: ignore
-from kubernetes.client.rest import ApiException  # type: ignore
+from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 from loguru import logger
 
 
 class KubernetesSecretManager:
-    """
-    A class for managing Kubernetes secrets.
-    """
+    """A class for managing Kubernetes secrets."""
 
     def __init__(self, namespace: str = "langflow"):
-        """
-        Initialize the KubernetesSecretManager class.
+        """Initialize the KubernetesSecretManager class.
 
         Args:
             namespace (str): The namespace in which to perform secret operations.
@@ -24,9 +22,13 @@ class KubernetesSecretManager:
         # initialize the Kubernetes API client
         self.core_api = client.CoreV1Api()
 
-    def create_secret(self, name: str, data: dict, secret_type: str = "Opaque"):
-        """
-        Create a new secret in the specified namespace.
+    def create_secret(
+        self,
+        name: str,
+        data: dict,
+        secret_type: str = "Opaque",  # noqa: S107
+    ):
+        """Create a new secret in the specified namespace.
 
         Args:
             name (str): The name of the secret to create.
@@ -45,9 +47,9 @@ class KubernetesSecretManager:
 
         return self.core_api.create_namespaced_secret(self.namespace, secret)
 
-    def upsert_secret(self, secret_name: str, data: dict, secret_type: str = "Opaque"):
-        """
-        Upsert a secret in the specified namespace.
+    def upsert_secret(self, secret_name: str, data: dict):
+        """Upsert a secret in the specified namespace.
+
         If the secret doesn't exist, it will be created.
         If it exists, it will be updated with new data while preserving existing keys.
 
@@ -71,15 +73,14 @@ class KubernetesSecretManager:
             return self.core_api.replace_namespaced_secret(secret_name, self.namespace, existing_secret)
 
         except ApiException as e:
-            if e.status == 404:
+            if e.status == HTTPStatus.NOT_FOUND:
                 # Secret doesn't exist, create a new one
                 return self.create_secret(secret_name, data)
-            logger.error(f"Error upserting secret {secret_name}: {e}")
+            logger.exception(f"Error upserting secret {secret_name}")
             raise
 
     def get_secret(self, name: str) -> dict | None:
-        """
-        Read a secret from the specified namespace.
+        """Read a secret from the specified namespace.
 
         Args:
             name (str): The name of the secret to read.
@@ -91,13 +92,12 @@ class KubernetesSecretManager:
             secret = self.core_api.read_namespaced_secret(name, self.namespace)
             return {k: b64decode(v).decode() for k, v in secret.data.items()}
         except ApiException as e:
-            if e.status == 404:
+            if e.status == HTTPStatus.NOT_FOUND:
                 return None
             raise
 
     def update_secret(self, name: str, data: dict):
-        """
-        Update an existing secret in the specified namespace.
+        """Update an existing secret in the specified namespace.
 
         Args:
             name (str): The name of the secret to update.
@@ -119,8 +119,7 @@ class KubernetesSecretManager:
         return self.core_api.replace_namespaced_secret(name, self.namespace, secret)
 
     def delete_secret_key(self, name: str, key: str):
-        """
-        Delete a key from the specified secret in the namespace.
+        """Delete a key from the specified secret in the namespace.
 
         Args:
             name (str): The name of the secret.
@@ -144,8 +143,7 @@ class KubernetesSecretManager:
         return self.core_api.replace_namespaced_secret(name, self.namespace, secret)
 
     def delete_secret(self, name: str):
-        """
-        Delete a secret from the specified namespace.
+        """Delete a secret from the specified namespace.
 
         Args:
             name (str): The name of the secret to delete.
@@ -164,31 +162,31 @@ def encode_user_id(user_id: UUID | str) -> str:
         return f"uuid-{str(user_id).lower()}"[:253]
 
     # Convert string to lowercase
-    id = str(user_id).lower()
+    _user_id = str(user_id).lower()
 
     # If the user_id looks like an email, replace @ and . with allowed characters
-    if "@" in id or "." in id:
-        id = id.replace("@", "-at-").replace(".", "-dot-")
+    if "@" in _user_id or "." in _user_id:
+        _user_id = _user_id.replace("@", "-at-").replace(".", "-dot-")
 
     # Encode the user_id to base64
     # encoded = base64.b64encode(user_id.encode("utf-8")).decode("utf-8")
 
     # Replace characters not allowed in Kubernetes names
-    id = id.replace("+", "-").replace("/", "_").rstrip("=")
+    _user_id = _user_id.replace("+", "-").replace("/", "_").rstrip("=")
 
     # Ensure the name starts with an alphanumeric character
-    if not id[0].isalnum():
-        id = "a-" + id
+    if not _user_id[0].isalnum():
+        _user_id = "a-" + _user_id
 
     # Truncate to 253 characters (Kubernetes name length limit)
-    id = id[:253]
+    _user_id = _user_id[:253]
 
-    if not all(c.isalnum() or c in "-_" for c in id):
-        msg = f"Invalid user_id: {id}"
+    if not all(c.isalnum() or c in "-_" for c in _user_id):
+        msg = f"Invalid user_id: {_user_id}"
         raise ValueError(msg)
 
     # Ensure the name ends with an alphanumeric character
-    while not id[-1].isalnum():
-        id = id[:-1]
+    while not _user_id[-1].isalnum():
+        _user_id = _user_id[:-1]
 
-    return id
+    return _user_id

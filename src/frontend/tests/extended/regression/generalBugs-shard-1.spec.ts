@@ -35,6 +35,7 @@ test("should delete rows from table message", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
@@ -71,10 +72,7 @@ test("should delete rows from table message", async ({ page }) => {
 
   await page.waitForTimeout(2000);
 
-  await page.getByTestId("user-profile-settings").last().click();
-  await page.waitForSelector(
-    '[data-testid="user-profile-settings"]:last-child',
-  );
+  await page.getByTestId("user-profile-settings").click();
 
   await page.waitForTimeout(500);
 

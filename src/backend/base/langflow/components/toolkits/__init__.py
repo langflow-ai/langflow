@@ -1,9 +1,9 @@
-from .ComposioAPI import ComposioAPIComponent
-from .Metaphor import MetaphorToolkit
-from .VectorStoreInfo import VectorStoreInfoComponent
+from .composio_api import ComposioAPIComponent
+from .metaphor import MetaphorToolkit
+from .vector_store_info import VectorStoreInfoComponent
 
 __all__ = [
+    "ComposioAPIComponent",
     "MetaphorToolkit",
     "VectorStoreInfoComponent",
-    "ComposioAPIComponent",
 ]

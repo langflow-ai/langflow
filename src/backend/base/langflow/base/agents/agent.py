@@ -1,9 +1,8 @@
 from abc import abstractmethod
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
-from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
 from langflow.base.agents.callback import AgentAsyncHandler
@@ -16,6 +15,9 @@ from langflow.schema import Data
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
+
+if TYPE_CHECKING:
+    from langchain_core.messages import BaseMessage
 
 
 class LCAgentComponent(Component):
@@ -62,7 +64,7 @@ class LCAgentComponent(Component):
         self.status = message
         return message
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         required_output_methods = ["build_agent"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
@@ -73,7 +75,7 @@ class LCAgentComponent(Component):
                 msg = f"Method '{method_name}' must be defined."
                 raise ValueError(msg)
 
-    def get_agent_kwargs(self, flatten: bool = False) -> dict:
+    def get_agent_kwargs(self, *, flatten: bool = False) -> dict:
         base = {
             "handle_parsing_errors": self.handle_parsing_errors,
             "verbose": self.verbose,
@@ -100,7 +102,7 @@ class LCAgentComponent(Component):
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
         result = agent.invoke(
-            input_dict, config={"callbacks": [AgentAsyncHandler(self.log)] + self.get_langchain_callbacks()}
+            input_dict, config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]}
         )
         self.status = result
         if "output" not in result:
@@ -111,12 +113,10 @@ class LCAgentComponent(Component):
 
 
 class LCToolsAgentComponent(LCAgentComponent):
-    _base_inputs = LCAgentComponent._base_inputs + [
+    _base_inputs = [
+        *LCAgentComponent._base_inputs,
         HandleInput(
-            name="tools",
-            display_name="Tools",
-            input_types=["Tool", "BaseTool"],
-            is_list=True,
+            name="tools", display_name="Tools", input_types=["Tool", "BaseTool", "StructuredTool"], is_list=True
         ),
     ]
 
@@ -136,7 +136,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             runnable = agent
         else:
             runnable = AgentExecutor.from_agent_and_tools(
-                agent=agent,  # type: ignore
+                agent=agent,
                 tools=self.tools,
                 handle_parsing_errors=self.handle_parsing_errors,
                 verbose=self.verbose,
@@ -147,7 +147,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
         result = runnable.invoke(
-            input_dict, config={"callbacks": [AgentAsyncHandler(self.log)] + self.get_langchain_callbacks()}
+            input_dict, config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]}
         )
         self.status = result
         if "output" not in result:

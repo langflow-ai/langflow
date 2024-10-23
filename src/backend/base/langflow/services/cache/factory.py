@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from langflow.logging.logger import logger
@@ -10,10 +12,10 @@ if TYPE_CHECKING:
 
 
 class CacheServiceFactory(ServiceFactory):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(CacheService)
 
-    def create(self, settings_service: "SettingsService"):
+    def create(self, settings_service: SettingsService):
         # Here you would have logic to create and configure a CacheService
         # based on the settings_service
 

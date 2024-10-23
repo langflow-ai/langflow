@@ -1,14 +1,15 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
@@ -24,16 +25,19 @@ from langflow.utils.constants import (
     MESSAGE_SENDER_USER,
 )
 
+if TYPE_CHECKING:
+    from langchain_core.prompt_values import ImagePromptValue
+
 
 def _timestamp_to_str(timestamp: datetime | str) -> str:
     if isinstance(timestamp, str):
         # Just check if the string is a valid datetime
         try:
-            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-            return timestamp
-        except ValueError:
+            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
+        except ValueError as e:
             msg = f"Invalid timestamp: {timestamp}"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
+        return timestamp
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -50,6 +54,8 @@ class Message(Data):
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     )
     flow_id: str | UUID | None = None
+    error: bool = Field(default=False)
+    edit: bool = Field(default=False)
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -59,10 +65,14 @@ class Message(Data):
         return value
 
     @field_serializer("flow_id")
-    def serialize_flow_id(value):
-        if isinstance(value, str):
-            return UUID(value)
+    def serialize_flow_id(self, value):
+        if isinstance(value, UUID):
+            return str(value)
         return value
+
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, value):
+        return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").astimezone(timezone.utc)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -84,14 +94,13 @@ class Message(Data):
         if "timestamp" not in self.data:
             self.data["timestamp"] = self.timestamp
 
-    def set_flow_id(self, flow_id: str):
+    def set_flow_id(self, flow_id: str) -> None:
         self.flow_id = flow_id
 
     def to_lc_message(
         self,
     ) -> BaseMessage:
-        """
-        Converts the Data to a BaseMessage.
+        """Converts the Data to a BaseMessage.
 
         Returns:
             BaseMessage: The converted BaseMessage.
@@ -103,24 +112,21 @@ class Message(Data):
         # they are: "text", "sender"
         if self.text is None or not self.sender:
             logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
-        if not isinstance(self.text, str):
-            text = ""
-        else:
-            text = self.text
+        text = "" if not isinstance(self.text, str) else self.text
 
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": text}]
                 contents.extend(self.sync_get_file_content_dicts())
-                human_message = HumanMessage(content=contents)  # type: ignore
+                human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(content=text)
             return human_message
 
-        return AIMessage(content=text)  # type: ignore
+        return AIMessage(content=text)
 
     @classmethod
-    def from_lc_message(cls, lc_message: BaseMessage) -> "Message":
+    def from_lc_message(cls, lc_message: BaseMessage) -> Message:
         if lc_message.type == "human":
             sender = MESSAGE_SENDER_USER
             sender_name = MESSAGE_SENDER_NAME_USER
@@ -137,17 +143,15 @@ class Message(Data):
         return cls(text=lc_message.content, sender=sender, sender_name=sender_name)
 
     @classmethod
-    def from_data(cls, data: "Data") -> "Message":
-        """
-        Converts a BaseMessage to a Data.
+    def from_data(cls, data: Data) -> Message:
+        """Converts Data to a Message.
 
         Args:
-            record (BaseMessage): The BaseMessage to convert.
+            data: The Data to convert.
 
         Returns:
-            Data: The converted Data.
+            The converted Message.
         """
-
         return cls(
             text=data.text,
             sender=data.sender,
@@ -156,13 +160,13 @@ class Message(Data):
             session_id=data.session_id,
             timestamp=data.timestamp,
             flow_id=data.flow_id,
+            error=data.error,
+            edit=data.edit,
         )
 
     @field_serializer("text", mode="plain")
     def serialize_text(self, value):
-        if isinstance(value, AsyncIterator):
-            return ""
-        if isinstance(value, Iterator):
+        if isinstance(value, AsyncIterator | Iterator):
             return ""
         return value
 
@@ -181,7 +185,7 @@ class Message(Data):
                 content_dicts.append(file.to_content_dict())
             else:
                 image_template = ImagePromptTemplate()
-                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})  # type: ignore
+                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})
                 content_dicts.append({"type": "image_url", "image_url": image_prompt_value.image_url})
         return content_dicts
 
@@ -234,9 +238,9 @@ class Message(Data):
                 content_dicts = await value.get_file_content_dicts()
                 contents.extend(content_dicts)
         if contents:
-            message = HumanMessage(content=[{"type": "text", "text": text}] + contents)
+            message = HumanMessage(content=[{"type": "text", "text": text}, *contents])
 
-        prompt_template = ChatPromptTemplate.from_messages([message])  # type: ignore
+        prompt_template = ChatPromptTemplate.from_messages([message])
 
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])

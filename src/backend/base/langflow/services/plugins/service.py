@@ -1,32 +1,29 @@
+from __future__ import annotations
+
 import importlib
 import inspect
-import os
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from loguru import logger
 
 from langflow.services.base import Service
 from langflow.services.plugins.base import BasePlugin, CallbackPlugin
 
-if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
-
 
 class PluginService(Service):
     name = "plugin_service"
 
-    def __init__(self, settings_service: "SettingsService"):
+    def __init__(self) -> None:
         self.plugins: dict[str, BasePlugin] = {}
-        # plugin_dir = settings_service.settings.PLUGIN_DIR
-        self.plugin_dir = os.path.dirname(__file__)
+        self.plugin_dir = Path(__file__).parent
         self.plugins_base_module = "langflow.services.plugins"
         self.load_plugins()
 
-    def load_plugins(self):
+    def load_plugins(self) -> None:
         base_files = ["base.py", "service.py", "factory.py", "__init__.py"]
-        for module in os.listdir(self.plugin_dir):
-            if module.endswith(".py") and module not in base_files:
-                plugin_name = module[:-3]
+        for module in self.plugin_dir.iterdir():
+            if module.suffix == ".py" and module.name not in base_files:
+                plugin_name = module.stem
                 module_path = f"{self.plugins_base_module}.{plugin_name}"
                 try:
                     mod = importlib.import_module(module_path)
@@ -35,13 +32,13 @@ class PluginService(Service):
                         if (
                             inspect.isclass(attr)
                             and issubclass(attr, BasePlugin)
-                            and attr not in [CallbackPlugin, BasePlugin]
+                            and attr not in {CallbackPlugin, BasePlugin}
                         ):
                             self.register_plugin(plugin_name, attr())
-                except Exception as exc:
-                    logger.error(f"Error loading plugin {plugin_name}: {exc}")
+                except Exception:  # noqa: BLE001
+                    logger.exception(f"Error loading plugin {plugin_name}")
 
-    def register_plugin(self, plugin_name, plugin_instance):
+    def register_plugin(self, plugin_name, plugin_instance) -> None:
         self.plugins[plugin_name] = plugin_instance
         plugin_instance.initialize()
 
@@ -53,7 +50,7 @@ class PluginService(Service):
             return plugin.get()
         return None
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         for plugin in self.plugins.values():
             plugin.teardown()
 

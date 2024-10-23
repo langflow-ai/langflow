@@ -5,6 +5,7 @@ import time
 import uuid
 from functools import partial
 
+from fastapi.encoders import jsonable_encoder
 from typing_extensions import Protocol
 
 from langflow.schema.log import LoggableType
@@ -24,20 +25,21 @@ class EventManager:
         self.events: dict[str, PartialEventCallback] = {}
 
     @staticmethod
-    def _validate_callback(callback: EventCallback):
+    def _validate_callback(callback: EventCallback) -> None:
         if not callable(callback):
             msg = "Callback must be callable"
-            raise ValueError(msg)
+            raise TypeError(msg)
         # Check if it has `self, event_type and data`
         sig = inspect.signature(callback)
-        if len(sig.parameters) != 3:
+        parameters = ["manager", "event_type", "data"]
+        if len(sig.parameters) != len(parameters):
             msg = "Callback must have exactly 3 parameters"
             raise ValueError(msg)
-        if not all(param.name in ["manager", "event_type", "data"] for param in sig.parameters.values()):
+        if not all(param.name in parameters for param in sig.parameters.values()):
             msg = "Callback must have exactly 3 parameters: manager, event_type, and data"
             raise ValueError(msg)
 
-    def register_event(self, name: str, event_type: str, callback: EventCallback | None = None):
+    def register_event(self, name: str, event_type: str, callback: EventCallback | None = None) -> None:
         if not name:
             msg = "Event name cannot be empty"
             raise ValueError(msg)
@@ -50,13 +52,14 @@ class EventManager:
             _callback = partial(callback, manager=self, event_type=event_type)
         self.events[name] = _callback
 
-    def send_event(self, *, event_type: str, data: LoggableType):
-        json_data = {"event": event_type, "data": data}
+    def send_event(self, *, event_type: str, data: LoggableType) -> None:
+        jsonable_data = jsonable_encoder(data)
+        json_data = {"event": event_type, "data": jsonable_data}
         event_id = uuid.uuid4()
         str_data = json.dumps(json_data) + "\n\n"
         self.queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
 
-    def noop(self, *, data: LoggableType):
+    def noop(self, *, data: LoggableType) -> None:
         pass
 
     def __getattr__(self, name: str) -> PartialEventCallback:

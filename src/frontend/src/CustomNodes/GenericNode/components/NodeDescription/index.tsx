@@ -36,10 +36,6 @@ export default function NodeDescription({
     //timeout to wait for the dom to update
     setTimeout(() => {
       if (overflowRef.current) {
-        console.log(
-          overflowRef.current.clientHeight,
-          overflowRef.current.scrollHeight,
-        );
         if (
           overflowRef.current.clientHeight < overflowRef.current.scrollHeight
         ) {
@@ -67,6 +63,7 @@ export default function NodeDescription({
         "generic-node-desc",
         !inputDescription ? "overflow-auto" : "",
         hasScroll ? "nowheel" : "",
+        charLimit ? "px-2" : "",
       )}
     >
       {inputDescription ? (
@@ -145,8 +142,9 @@ export default function NodeDescription({
             emptyPlaceholder
           ) : (
             <Markdown
+              linkTarget="_blank"
               className={cn(
-                "markdown prose flex h-full w-full flex-col text-primary word-break-break-word dark:prose-invert",
+                "markdown prose flex h-full w-full flex-col text-primary word-break-break-word note-node-markdown dark:prose-invert",
                 mdClassName,
               )}
             >

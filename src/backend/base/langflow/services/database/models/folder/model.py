@@ -1,14 +1,11 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import Column, Field, Relationship, SQLModel
 
-from langflow.services.database.models.flow.model import FlowRead
-
-if TYPE_CHECKING:
-    from langflow.services.database.models.flow.model import Flow
-    from langflow.services.database.models.user.model import User
+from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.user.model import User
 
 
 class FolderBase(SQLModel):
@@ -16,7 +13,7 @@ class FolderBase(SQLModel):
     description: str | None = Field(default=None, sa_column=Column(Text))
 
 
-class Folder(FolderBase, table=True):  # type: ignore
+class Folder(FolderBase, table=True):  # type: ignore[call-arg]
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     parent_id: UUID | None = Field(default=None, foreign_key="folder.id")
 
@@ -26,8 +23,8 @@ class Folder(FolderBase, table=True):  # type: ignore
     )
     children: list["Folder"] = Relationship(back_populates="parent")
     user_id: UUID | None = Field(default=None, foreign_key="user.id")
-    user: "User" = Relationship(back_populates="folders")
-    flows: list["Flow"] = Relationship(
+    user: User = Relationship(back_populates="folders")
+    flows: list[Flow] = Relationship(
         back_populates="folder", sa_relationship_kwargs={"cascade": "all, delete, delete-orphan"}
     )
 
@@ -47,7 +44,7 @@ class FolderRead(FolderBase):
 class FolderReadWithFlows(FolderBase):
     id: UUID
     parent_id: UUID | None = Field()
-    flows: list["FlowRead"] = Field(default=[])
+    flows: list[FlowRead] = Field(default=[])
 
 
 class FolderUpdate(SQLModel):

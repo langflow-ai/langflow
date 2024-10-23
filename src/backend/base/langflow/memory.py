@@ -1,4 +1,3 @@
-import warnings
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -22,21 +21,22 @@ def get_messages(
     flow_id: UUID | None = None,
     limit: int | None = None,
 ) -> list[Message]:
-    """
-    Retrieves messages from the monitor service based on the provided filters.
+    """Retrieves messages from the monitor service based on the provided filters.
 
     Args:
         sender (Optional[str]): The sender of the messages (e.g., "Machine" or "User")
         sender_name (Optional[str]): The name of the sender.
         session_id (Optional[str]): The session ID associated with the messages.
         order_by (Optional[str]): The field to order the messages by. Defaults to "timestamp".
+        order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
+        flow_id (Optional[UUID]): The flow ID associated with the messages.
         limit (Optional[int]): The maximum number of messages to retrieve.
 
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
     with session_scope() as session:
-        stmt = select(MessageTable)
+        stmt = select(MessageTable).where(MessageTable.error == False)  # noqa: E712
         if sender:
             stmt = stmt.where(MessageTable.sender == sender)
         if sender_name:
@@ -46,10 +46,7 @@ def get_messages(
         if flow_id:
             stmt = stmt.where(MessageTable.flow_id == flow_id)
         if order_by:
-            if order == "DESC":
-                col = getattr(MessageTable, order_by).desc()
-            else:
-                col = getattr(MessageTable, order_by).asc()
+            col = getattr(MessageTable, order_by).desc() if order == "DESC" else getattr(MessageTable, order_by).asc()
             stmt = stmt.order_by(col)
         if limit:
             stmt = stmt.limit(limit)
@@ -58,27 +55,23 @@ def get_messages(
 
 
 def add_messages(messages: Message | list[Message], flow_id: str | None = None):
-    """
-    Add a message to the monitor service.
-    """
+    """Add a message to the monitor service."""
+    if not isinstance(messages, list):
+        messages = [messages]
+
+    if not all(isinstance(message, Message) for message in messages):
+        types = ", ".join([str(type(message)) for message in messages])
+        msg = f"The messages must be instances of Message. Found: {types}"
+        raise ValueError(msg)
+
     try:
-        if not isinstance(messages, list):
-            messages = [messages]
-
-        if not all(isinstance(message, Message) for message in messages):
-            types = ", ".join([str(type(message)) for message in messages])
-            msg = f"The messages must be instances of Message. Found: {types}"
-            raise ValueError(msg)
-
-        messages_models: list[MessageTable] = []
-        for msg in messages:
-            messages_models.append(MessageTable.from_message(msg, flow_id=flow_id))
+        messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
         with session_scope() as session:
             messages_models = add_messagetables(messages_models, session)
         return [Message(**message.model_dump()) for message in messages_models]
     except Exception as e:
         logger.exception(e)
-        raise e
+        raise
 
 
 def add_messagetables(messages: list[MessageTable], session: Session):
@@ -89,13 +82,12 @@ def add_messagetables(messages: list[MessageTable], session: Session):
             session.refresh(message)
         except Exception as e:
             logger.exception(e)
-            raise e
+            raise
     return [MessageRead.model_validate(message, from_attributes=True) for message in messages]
 
 
-def delete_messages(session_id: str):
-    """
-    Delete messages from the monitor service based on the provided session ID.
+def delete_messages(session_id: str) -> None:
+    """Delete messages from the monitor service based on the provided session ID.
 
     Args:
         session_id (str): The session ID associated with the messages to delete.
@@ -112,8 +104,7 @@ def store_message(
     message: Message,
     flow_id: str | None = None,
 ) -> list[Message]:
-    """
-    Stores a message in the memory.
+    """Stores a message in the memory.
 
     Args:
         message (Message): The message to store.
@@ -127,7 +118,7 @@ def store_message(
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
     """
     if not message:
-        warnings.warn("No message provided.")
+        logger.warning("No message provided.")
         return []
 
     if not message.session_id or not message.sender or not message.sender_name:
@@ -151,7 +142,7 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
         messages = get_messages(
             session_id=self.session_id,
         )
-        return [m.to_lc_message() for m in messages]
+        return [m.to_lc_message() for m in messages if not m.error]  # Exclude error messages
 
     def add_messages(self, messages: Sequence[BaseMessage]) -> None:
         for lc_message in messages:

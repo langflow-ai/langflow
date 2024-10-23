@@ -70,45 +70,52 @@ export default function HomePage(): JSX.Element {
     exact: false,
   });
 
+  const isFetchingFolder = !!useIsFetching({
+    queryKey: ["useGetFolder"],
+    exact: false,
+  });
+
+  const isLoadingFolder = isFetchingFolders || isFetchingFolder;
+
   return (
     <>
-      <PageLayout
-        title={USER_PROJECTS_HEADER}
-        description={MY_COLLECTION_DESC}
-        button={
-          <div className="flex gap-2">
-            <DropdownButton
-              firstButtonName="New Project"
-              onFirstBtnClick={() => {
-                setOpenModal(true);
-                track("New Project Button Clicked");
-              }}
-              options={dropdownOptions}
-              plusButton={true}
-              dropdownOptions={false}
-              isFetchingFolders={isFetchingFolders}
-            />
-          </div>
-        }
-      >
-        <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-x-8 lg:space-y-0">
-          <aside className="flex h-fit w-fit flex-col space-y-6">
-            <FolderSidebarNav
-              handleChangeFolder={(id: string) => {
-                navigate(`all/folder/${id}`);
-              }}
-              handleDeleteFolder={(item) => {
-                setFolderToEdit(item);
-                setOpenDeleteFolderModal(true);
-              }}
-              className="w-[20vw]"
-            />
-          </aside>
+      <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-y-0">
+        <aside className="hidden h-full w-fit flex-col space-y-6 border-r px-4 lg:flex">
+          <FolderSidebarNav
+            handleChangeFolder={(id: string) => {
+              navigate(`all/folder/${id}`);
+            }}
+            handleDeleteFolder={(item) => {
+              setFolderToEdit(item);
+              setOpenDeleteFolderModal(true);
+            }}
+            className="w-[20vw] max-w-[288px]"
+          />
+        </aside>
+        <PageLayout
+          title={USER_PROJECTS_HEADER}
+          description={MY_COLLECTION_DESC}
+          button={
+            <div className="flex gap-2">
+              <DropdownButton
+                firstButtonName="New Project"
+                onFirstBtnClick={() => {
+                  setOpenModal(true);
+                  track("New Project Button Clicked");
+                }}
+                options={dropdownOptions}
+                plusButton={true}
+                dropdownOptions={false}
+                isFetchingFolders={isLoadingFolder}
+              />
+            </div>
+          }
+        >
           <div className="relative h-full w-full flex-1">
             <Outlet />
           </div>
-        </div>
-      </PageLayout>
+        </PageLayout>
+      </div>
       <ModalsComponent
         openModal={openModal}
         setOpenModal={setOpenModal}

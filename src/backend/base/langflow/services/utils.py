@@ -50,16 +50,17 @@ def get_or_create_super_user(session: Session, username, password, is_default):
         logger.debug("Creating superuser.")
     try:
         return create_super_user(username, password, db=session)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         if "UNIQUE constraint failed: user.username" in str(exc):
             # This is to deal with workers running this
             # at startup and trying to create the superuser
             # at the same time.
-            logger.debug("Superuser already exists.")
+            logger.opt(exception=True).debug("Superuser already exists.")
             return None
+        logger.opt(exception=True).debug("Error creating superuser.")
 
 
-def setup_superuser(settings_service, session: Session):
+def setup_superuser(settings_service, session: Session) -> None:
     if settings_service.auth_settings.AUTO_LOGIN:
         logger.debug("AUTO_LOGIN is set to True. Creating default superuser.")
     else:
@@ -83,10 +84,8 @@ def setup_superuser(settings_service, session: Session):
         settings_service.auth_settings.reset_credentials()
 
 
-def teardown_superuser(settings_service, session):
-    """
-    Teardown the superuser.
-    """
+def teardown_superuser(settings_service, session) -> None:
+    """Teardown the superuser."""
     # If AUTO_LOGIN is True, we will remove the default superuser
     # from the database.
 
@@ -111,37 +110,31 @@ def teardown_superuser(settings_service, session):
             raise RuntimeError(msg) from exc
 
 
-async def teardown_services():
-    """
-    Teardown all the services.
-    """
+async def teardown_services() -> None:
+    """Teardown all the services."""
     try:
         teardown_superuser(get_settings_service(), next(get_session()))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.exception(exc)
     try:
         from langflow.services.manager import service_manager
 
         await service_manager.teardown()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.exception(exc)
 
 
-def initialize_settings_service():
-    """
-    Initialize the settings manager.
-    """
+def initialize_settings_service() -> None:
+    """Initialize the settings manager."""
     from langflow.services.settings import factory as settings_factory
 
     get_service(ServiceType.SETTINGS_SERVICE, settings_factory.SettingsServiceFactory())
 
 
-def initialize_session_service():
-    """
-    Initialize the session manager.
-    """
+def initialize_session_service() -> None:
+    """Initialize the session manager."""
     from langflow.services.cache import factory as cache_factory
-    from langflow.services.session import factory as session_service_factory  # type: ignore
+    from langflow.services.session import factory as session_service_factory
 
     initialize_settings_service()
 
@@ -156,21 +149,16 @@ def initialize_session_service():
     )
 
 
-def initialize_services(fix_migration: bool = False, socketio_server=None):
-    """
-    Initialize all the services needed.
-    """
+def initialize_services(*, fix_migration: bool = False) -> None:
+    """Initialize all the services needed."""
     # Test cache connection
     get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
     # Setup the superuser
-    try:
-        initialize_database(fix_migration=fix_migration)
-    except Exception as exc:
-        raise exc
+    initialize_database(fix_migration=fix_migration)
     setup_superuser(get_service(ServiceType.SETTINGS_SERVICE), next(get_session()))
     try:
         get_db_service().migrate_flows_if_auto_login()
     except Exception as exc:
-        logger.error(f"Error migrating flows: {exc}")
         msg = "Error migrating flows"
+        logger.exception(msg)
         raise RuntimeError(msg) from exc

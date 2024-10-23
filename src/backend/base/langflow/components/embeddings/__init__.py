@@ -1,13 +1,13 @@
-from .AIMLEmbeddings import AIMLEmbeddingsComponent
-from .AmazonBedrockEmbeddings import AmazonBedrockEmbeddingsComponent
-from .AstraVectorize import AstraVectorizeComponent
-from .AzureOpenAIEmbeddings import AzureOpenAIEmbeddingsComponent
-from .CohereEmbeddings import CohereEmbeddingsComponent
-from .GoogleGenerativeAIEmbeddings import GoogleGenerativeAIEmbeddingsComponent
-from .HuggingFaceInferenceAPIEmbeddings import HuggingFaceInferenceAPIEmbeddingsComponent
-from .OllamaEmbeddings import OllamaEmbeddingsComponent
-from .OpenAIEmbeddings import OpenAIEmbeddingsComponent
-from .VertexAIEmbeddings import VertexAIEmbeddingsComponent
+from .aiml import AIMLEmbeddingsComponent
+from .amazon_bedrock import AmazonBedrockEmbeddingsComponent
+from .astra_vectorize import AstraVectorizeComponent
+from .azure_openai import AzureOpenAIEmbeddingsComponent
+from .cohere import CohereEmbeddingsComponent
+from .google_generative_ai import GoogleGenerativeAIEmbeddingsComponent
+from .huggingface_inference_api import HuggingFaceInferenceAPIEmbeddingsComponent
+from .ollama import OllamaEmbeddingsComponent
+from .openai import OpenAIEmbeddingsComponent
+from .vertexai import VertexAIEmbeddingsComponent
 
 __all__ = [
     "AIMLEmbeddingsComponent",
@@ -15,9 +15,9 @@ __all__ = [
     "AstraVectorizeComponent",
     "AzureOpenAIEmbeddingsComponent",
     "CohereEmbeddingsComponent",
+    "GoogleGenerativeAIEmbeddingsComponent",
     "HuggingFaceInferenceAPIEmbeddingsComponent",
     "OllamaEmbeddingsComponent",
     "OpenAIEmbeddingsComponent",
     "VertexAIEmbeddingsComponent",
-    "GoogleGenerativeAIEmbeddingsComponent",
 ]

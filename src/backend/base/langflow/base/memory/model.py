@@ -17,7 +17,7 @@ class LCChatMemoryComponent(Component):
         )
     ]
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         required_output_methods = ["build_message_history"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
@@ -33,6 +33,4 @@ class LCChatMemoryComponent(Component):
 
     @abstractmethod
     def build_message_history(self) -> BaseChatMessageHistory:
-        """
-        Builds the chat message history memory.
-        """
+        """Builds the chat message history memory."""

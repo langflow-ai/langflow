@@ -1,6 +1,7 @@
 import { AIMLIcon } from "@/icons/AIML";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import Perplexity from "@/icons/Perplexity/Perplexity";
+import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
@@ -10,6 +11,7 @@ import {
   ArrowBigUp,
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   ArrowUpToLine,
   Bell,
   Binary,
@@ -17,6 +19,7 @@ import {
   BookMarked,
   BookmarkPlus,
   Bot,
+  BotMessageSquare,
   Boxes,
   Braces,
   BrainCircuit,
@@ -43,6 +46,7 @@ import {
   Command,
   Compass,
   Copy,
+  CornerDownLeft,
   Cpu,
   CpuIcon,
   Database,
@@ -83,14 +87,17 @@ import {
   Heart,
   HelpCircle,
   Home,
+  Image,
   Info,
   Key,
   Keyboard,
   Laptop2,
   Layers,
+  LayoutPanelTop,
   Link,
   Link2,
   ListFilter,
+  ListOrdered,
   Loader2,
   Lock,
   LogIn,
@@ -110,11 +117,14 @@ import {
   OptionIcon,
   Package2,
   Palette,
+  PanelLeftClose,
+  PanelLeftOpen,
   Paperclip,
   PaperclipIcon,
   Pencil,
   PencilLine,
   Pin,
+  Plane,
   Play,
   Plus,
   PlusCircle,
@@ -130,6 +140,7 @@ import {
   ScanEye,
   Scissors,
   ScreenShare,
+  Scroll,
   ScrollText,
   Search,
   Settings,
@@ -143,6 +154,7 @@ import {
   Sparkles,
   Square,
   SquarePen,
+  SquarePlay,
   StickyNote,
   Store,
   SunIcon,
@@ -162,6 +174,7 @@ import {
   UserCog2,
   UserMinus2,
   UserPlus2,
+  Users,
   Users2,
   Variable,
   Wand2,
@@ -205,6 +218,7 @@ import { GroqIcon } from "../icons/Groq";
 import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
+import { LMStudioIcon } from "../icons/LMStudio";
 import { LangChainIcon } from "../icons/LangChain";
 import { MaritalkIcon } from "../icons/Maritalk";
 import { MetaIcon } from "../icons/Meta";
@@ -282,7 +296,7 @@ export const nodeColors: { [char: string]: string } = {
   chains: "#FE7500",
   list: "#9AAE42",
   agents: "#903BBE",
-  tools: "#FF3434",
+  tools: "#00fbfc",
   memories: "#F5B85A",
   saved_components: "#a5B85A",
   advanced: "#000000",
@@ -297,6 +311,8 @@ export const nodeColors: { [char: string]: string } = {
   wrappers: "#E6277A",
   notion: "#000000",
   Notion: "#000000",
+  AssemblyAI: "#213ED7",
+  assemblyai: "#213ED7",
   helpers: "#31A3CC",
   prototypes: "#E6277A",
   astra_assistants: "#272541",
@@ -325,6 +341,8 @@ export const nodeNames: { [char: string]: string } = {
   models: "Models",
   notion: "Notion",
   Notion: "Notion",
+  AssemblyAI: "AssemblyAI",
+  assemblyai: "AssemblyAI",
   model_specs: "Model Specs",
   chains: "Chains",
   agents: "Agents",
@@ -352,6 +370,7 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  LMStudio: LMStudioIcon,
   X: X,
   Notify: Bell,
   ListFlows: Group,
@@ -391,6 +410,7 @@ export const nodeIconsLucide: iconsType = {
   Amazon: AWSIcon,
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
+  assemblyai: AssemblyAIIcon,
   AssemblyAI: AssemblyAIIcon,
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
@@ -510,6 +530,9 @@ export const nodeIconsLucide: iconsType = {
   Palette,
   RefreshCcwDot,
   FolderUp,
+  SquarePlay,
+  LayoutPanelTop,
+  Database,
   Blocks,
   ChevronDown,
   ArrowLeft,
@@ -571,11 +594,15 @@ export const nodeIconsLucide: iconsType = {
   BookMarked,
   Minus,
   LogOut,
+  BotMessageSquare,
   Square,
   Minimize2,
   Maximize2,
   FormInput,
   ChevronRightSquare,
+  Plane,
+  Users,
+  ListOrdered,
   SaveAll,
   MessageSquareMore,
   Forward,
@@ -617,6 +644,12 @@ export const nodeIconsLucide: iconsType = {
   PaperclipIcon,
   Settings,
   Streamlit,
+  PanelLeftClose: PanelLeftClose,
+  PanelLeftOpen: PanelLeftOpen,
+  ArrowUpRight: ArrowUpRight,
+  Scroll,
+  Image,
+  CornerDownLeft,
   MistralAI: MistralIcon,
   Upstash: UpstashSvgIcon,
   PGVector: CpuIcon,
@@ -631,6 +664,7 @@ export const nodeIconsLucide: iconsType = {
   OptionIcon: OptionIcon,
   Option: OptionIcon,
   Perplexity,
+  TavilyIcon,
   DuckDuckGo: DuckDuckGoIcon,
   OpenSearch,
 };

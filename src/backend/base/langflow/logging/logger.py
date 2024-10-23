@@ -23,10 +23,10 @@ class SizedLogBuffer:
         self,
         max_readers: int = 20,  # max number of concurrent readers for the buffer
     ):
-        """
-        a buffer for storing log messages for the log retrieval API
-        the buffer can be overwritten by an env variable LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE
-        because the logger is initialized before the settings_service are loaded
+        """A buffer for storing log messages for the log retrieval API.
+
+        The buffer can be overwritten by an env variable LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE
+        because the logger is initialized before the settings_service are loaded.
         """
         self.max: int = 0
         env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
@@ -42,7 +42,7 @@ class SizedLogBuffer:
     def get_write_lock(self) -> Lock:
         return self._wlock
 
-    def write(self, message: str):
+    def write(self, message: str) -> None:
         record = json.loads(message)
         log_entry = record["text"]
         epoch = int(record["record"]["time"]["timestamp"] * 1000)
@@ -52,7 +52,7 @@ class SizedLogBuffer:
                     self.buffer.popleft()
             self.buffer.append((epoch, log_entry))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.buffer)
 
     def get_after_timestamp(self, timestamp: int, lines: int = 5) -> dict[int, str]:
@@ -77,22 +77,18 @@ class SizedLogBuffer:
         try:
             with self._wlock:
                 as_list = list(self.buffer)
-            i = 0
             max_index = -1
-            for ts, msg in as_list:
+            for i, (ts, _) in enumerate(as_list):
                 if ts >= timestamp:
                     max_index = i
                     break
-                i += 1
             if max_index == -1:
                 return self.get_last_n(lines)
             rc = {}
-            i = 0
             start_from = max(max_index - lines, 0)
-            for ts, msg in as_list:
+            for i, (ts, msg) in enumerate(as_list):
                 if start_from <= i < max_index:
                     rc[ts] = msg
-                i += 1
             return rc
         finally:
             self._rsemaphore.release()
@@ -102,10 +98,7 @@ class SizedLogBuffer:
         try:
             with self._wlock:
                 as_list = list(self.buffer)
-            rc = {}
-            for ts, msg in as_list[-last_idx:]:
-                rc[ts] = msg
-            return rc
+            return dict(as_list[-last_idx:])
         finally:
             self._rsemaphore.release()
 
@@ -130,7 +123,7 @@ def serialize_log(record):
     return orjson.dumps(subset)
 
 
-def patching(record):
+def patching(record) -> None:
     record["extra"]["serialized"] = serialize_log(record)
     if DEV is False:
         record.pop("exception", None)
@@ -144,17 +137,22 @@ class LogConfig(TypedDict):
 
 
 def configure(
+    *,
     log_level: str | None = None,
     log_file: Path | None = None,
     disable: bool | None = False,
     log_env: str | None = None,
-):
+) -> None:
     if disable and log_level is None and log_file is None:
         logger.disable("langflow")
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
     if log_level is None:
         log_level = "ERROR"
+
+    if log_file is None:
+        env_log_file = os.getenv("LANGFLOW_LOG_FILE", "")
+        log_file = Path(env_log_file) if env_log_file else None
 
     if log_env is None:
         log_env = os.getenv("LANGFLOW_LOG_ENV", "")
@@ -199,8 +197,8 @@ def configure(
                 rotation="10 MB",  # Log rotation based on file size
                 serialize=True,
             )
-        except Exception as exc:
-            logger.error(f"Error setting up log file: {exc}")
+        except Exception:  # noqa: BLE001
+            logger.exception("Error setting up log file")
 
     if log_buffer.enabled():
         logger.add(sink=log_buffer.write, format="{time} {level} {message}", serialize=True)
@@ -211,25 +209,25 @@ def configure(
     setup_gunicorn_logger()
 
 
-def setup_uvicorn_logger():
+def setup_uvicorn_logger() -> None:
     loggers = (logging.getLogger(name) for name in logging.root.manager.loggerDict if name.startswith("uvicorn."))
     for uvicorn_logger in loggers:
         uvicorn_logger.handlers = []
     logging.getLogger("uvicorn").handlers = [InterceptHandler()]
 
 
-def setup_gunicorn_logger():
+def setup_gunicorn_logger() -> None:
     logging.getLogger("gunicorn.error").handlers = [InterceptHandler()]
     logging.getLogger("gunicorn.access").handlers = [InterceptHandler()]
 
 
 class InterceptHandler(logging.Handler):
-    """
-    Default handler from examples in loguru documentaion.
-    See https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging
+    """Default handler from examples in loguru documentation.
+
+    See https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging.
     """
 
-    def emit(self, record):
+    def emit(self, record) -> None:
         # Get corresponding Loguru level if it exists
         try:
             level = logger.level(record.levelname).name
@@ -238,7 +236,7 @@ class InterceptHandler(logging.Handler):
 
         # Find caller from where originated the logged message
         frame, depth = logging.currentframe(), 2
-        while frame.f_code.co_filename == logging.__file__:
+        while frame.f_code.co_filename == logging.__file__ and frame.f_back:
             frame = frame.f_back
             depth += 1
 

@@ -1,22 +1,23 @@
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
+from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.services.auth.utils import (
     get_current_active_superuser,
-    get_current_active_user,
     get_password_hash,
     verify_password,
 )
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.models.user import User, UserCreate, UserRead, UserUpdate
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
-from langflow.services.deps import get_session, get_settings_service
+from langflow.services.deps import get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
 
@@ -24,16 +25,13 @@ router = APIRouter(tags=["Users"], prefix="/users")
 @router.post("/", response_model=UserRead, status_code=201)
 def add_user(
     user: UserCreate,
-    session: Session = Depends(get_session),
-    settings_service=Depends(get_settings_service),
+    session: DbSession,
 ) -> User:
-    """
-    Add a new user to the database.
-    """
+    """Add a new user to the database."""
     new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_password_hash(user.password)
-        new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
+        new_user.is_active = get_settings_service().auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
         session.commit()
         session.refresh(new_user)
@@ -49,32 +47,28 @@ def add_user(
 
 @router.get("/whoami", response_model=UserRead)
 def read_current_user(
-    current_user: User = Depends(get_current_active_user),
+    current_user: CurrentActiveUser,
 ) -> User:
-    """
-    Retrieve the current user's data.
-    """
+    """Retrieve the current user's data."""
     return current_user
 
 
-@router.get("/", response_model=UsersResponse)
+@router.get("/", dependencies=[Depends(get_current_active_superuser)])
 def read_all_users(
+    *,
     skip: int = 0,
     limit: int = 10,
-    _: Session = Depends(get_current_active_superuser),
-    session: Session = Depends(get_session),
+    session: DbSession,
 ) -> UsersResponse:
-    """
-    Retrieve a list of users from the database with pagination.
-    """
+    """Retrieve a list of users from the database with pagination."""
     query: SelectOfScalar = select(User).offset(skip).limit(limit)
     users = session.exec(query).fetchall()
 
-    count_query = select(func.count()).select_from(User)  # type: ignore
+    count_query = select(func.count()).select_from(User)
     total_count = session.exec(count_query).first()
 
     return UsersResponse(
-        total_count=total_count,  # type: ignore
+        total_count=total_count,
         users=[UserRead(**user.model_dump()) for user in users],
     )
 
@@ -83,14 +77,11 @@ def read_all_users(
 def patch_user(
     user_id: UUID,
     user_update: UserUpdate,
-    user: User = Depends(get_current_active_user),
-    session: Session = Depends(get_session),
+    user: CurrentActiveUser,
+    session: DbSession,
 ) -> User:
-    """
-    Update an existing user's data.
-    """
-
-    update_password = user_update.password is not None and user_update.password != ""
+    """Update an existing user's data."""
+    update_password = bool(user_update.password)
 
     if not user.is_superuser and user_update.is_superuser:
         raise HTTPException(status_code=403, detail="Permission denied")
@@ -113,12 +104,10 @@ def patch_user(
 def reset_password(
     user_id: UUID,
     user_update: UserUpdate,
-    user: User = Depends(get_current_active_user),
-    session: Session = Depends(get_session),
+    user: CurrentActiveUser,
+    session: DbSession,
 ) -> User:
-    """
-    Reset a user's password.
-    """
+    """Reset a user's password."""
     if user_id != user.id:
         raise HTTPException(status_code=400, detail="You can't change another user's password")
 
@@ -134,15 +123,13 @@ def reset_password(
     return user
 
 
-@router.delete("/{user_id}", response_model=dict)
+@router.delete("/{user_id}")
 def delete_user(
     user_id: UUID,
-    current_user: User = Depends(get_current_active_superuser),
-    session: Session = Depends(get_session),
+    current_user: Annotated[User, Depends(get_current_active_superuser)],
+    session: DbSession,
 ) -> dict:
-    """
-    Delete a user from the database.
-    """
+    """Delete a user from the database."""
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="You can't delete your own user account")
     if not current_user.is_superuser:
