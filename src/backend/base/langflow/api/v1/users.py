@@ -101,7 +101,7 @@ async def patch_user(
 
 
 @router.patch("/{user_id}/reset-password", response_model=UserRead)
-def reset_password(
+async def reset_password(
     user_id: UUID,
     user_update: UserUpdate,
     user: CurrentActiveUser,
