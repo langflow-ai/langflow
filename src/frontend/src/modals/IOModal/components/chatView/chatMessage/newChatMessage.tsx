@@ -198,7 +198,7 @@ export default function ChatMessage({
   ) : null;
 
   // Add this before the default return statement
-  if (Math.floor(Math.random() * 3) + 1 === 3) {
+  if (false) {
     return (
       <div className="flex-max-width py-6 pl-28 pr-9">
         <div className="mr-3 mt-1 flex w-11/12 pb-3">

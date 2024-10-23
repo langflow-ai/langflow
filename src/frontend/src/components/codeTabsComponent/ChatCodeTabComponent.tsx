@@ -33,7 +33,7 @@ export default function SimplifiedCodeTabComponent({
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-md text-left">
       <div className="flex w-full items-center justify-between bg-zinc-700 px-4 py-2">
-        <span className="text-sm font-semibold">{language}</span>
+        <span className="text-sm font-semibold text-white dar">{language}</span>
         <Button
           variant="ghost"
           size="icon"
