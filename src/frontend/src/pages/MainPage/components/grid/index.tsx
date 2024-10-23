@@ -5,6 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import IOModal from "@/modals/IOModal";
 import useAlertStore from "@/stores/alertStore";
@@ -12,16 +13,23 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
 import { getInputsAndOutputs } from "@/utils/storeUtils";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
 
 const GridComponent = ({ flowData }: { flowData: FlowType }) => {
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   const [openPlayground, setOpenPlayground] = useState(false);
   const [loadingPlayground, setLoadingPlayground] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+  const { folderId } = useParams();
+  const isComponent = flowData.is_component ?? false;
+  const setFlowToCanvas = useFlowsManagerStore(
+    (state) => state.setFlowToCanvas,
+  );
+
+  const editFlowLink = `/flow/${flowData.id}${folderId ? `/folder/${folderId}` : ""}`;
 
   function hasPlayground(flow?: FlowType) {
     if (!flow) {
@@ -56,11 +64,19 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
       });
     }
   };
+
+  const handleClick = async () => {
+    if (!isComponent) {
+      await setFlowToCanvas(flowData);
+      navigate(editFlowLink);
+    }
+  };
+
   return (
     <>
       <div
         key={flowData.id}
-        onClick={() => navigate(`/flowData/${flowData.id}`)}
+        onClick={handleClick}
         className="my-1 flex cursor-pointer flex-col rounded-lg border border-zinc-100 p-5 hover:border-zinc-200 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-600"
       >
         <div className="flex w-full items-center gap-2">
@@ -77,20 +93,16 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
             <div>
               <div className="text-lg font-semibold">{flowData.name}</div>
               <div className="text-xs text-zinc-500">
-                Edited {timeElapsed(flowData.updated_at)} ago by{" "}
-                <span className="font-semibold">{flowData.user_id}</span>
+                Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  unstyled
-                  className="h-10 w-10 rounded px-0 hover:bg-zinc-200 dark:hover:bg-zinc-800"
-                >
+                <Button variant="ghost" size="icon" className="h-10 w-10">
                   <ForwardedIconComponent
                     name="ellipsis"
                     aria-hidden="true"
-                    className="mx-2 h-5 w-5 text-zinc-500 dark:text-zinc-300"
+                    className="h-5 w-5"
                   />
                 </Button>
               </DropdownMenuTrigger>
@@ -105,14 +117,15 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
           </div>
         </div>
 
-        <div className="h-full py-5 text-sm text-zinc-800 dark:text-white">
+        <div className="line-clamp-2 h-full pt-5 text-sm text-zinc-800 dark:text-white">
           {flowData.description}
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-[24px]">
           <Button
+            disabled={loadingPlayground || !hasPlayground(flowData)}
             onClick={handlePlaygroundClick}
-            className="border border-zinc-200 bg-white text-[black] hover:border-zinc-400 hover:bg-white hover:shadow-sm dark:border-zinc-600 dark:bg-transparent dark:text-white dark:hover:border-white"
+            variant="outline"
           >
             Playground
           </Button>

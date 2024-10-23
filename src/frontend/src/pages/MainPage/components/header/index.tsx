@@ -57,44 +57,41 @@ const HeaderComponent = ({
             placeholder="Search flows..."
             className="mr-2"
           />
-          <div className="px-py flex rounded-lg border border-zinc-300 bg-zinc-300 dark:border-zinc-900 dark:bg-zinc-900">
+          <div className="px-py flex rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-900 dark:bg-zinc-900">
             <Button
               unstyled
-              className={`rounded-lg border border-zinc-900 p-2 ${
+              className={`m-[2px] rounded-lg border p-2 ${
                 view === "list"
-                  ? "border-zinc-300 bg-white text-black shadow-md dark:border-zinc-900 dark:bg-black dark:text-white"
-                  : "border-zinc-300 bg-zinc-300 text-zinc-500 dark:border-zinc-900 dark:bg-black dark:bg-zinc-900"
+                  ? "border-zinc-100 bg-white text-black shadow-md dark:border-zinc-900 dark:bg-black dark:text-white"
+                  : "border-zinc-100 bg-zinc-100 text-zinc-500 dark:border-zinc-900 dark:bg-black dark:bg-zinc-900"
               }`}
               onClick={() => setView("list")}
             >
               <ForwardedIconComponent
                 name="menu"
                 aria-hidden="true"
-                className="h-5 w-5"
+                className="h-4 w-4"
               />
             </Button>
             <Button
               unstyled
-              className={`rounded-lg border border-zinc-900 p-2 ${
+              className={`m-[2px] rounded-lg border p-2 ${
                 view === "grid"
-                  ? "border-zinc-300 bg-white text-black shadow-md dark:border-zinc-900 dark:bg-black dark:text-white"
-                  : "border-zinc-300 bg-zinc-300 text-zinc-500 dark:border-zinc-900 dark:bg-black dark:bg-zinc-900"
+                  ? "border-zinc-100 bg-white text-black shadow-md dark:border-zinc-900 dark:bg-black dark:text-white"
+                  : "border-zinc-100 bg-zinc-100 text-zinc-500 dark:border-zinc-900 dark:bg-black dark:bg-zinc-900"
               }`}
               onClick={() => setView("grid")}
             >
               <ForwardedIconComponent
                 name="layout-grid"
                 aria-hidden="true"
-                className="h-5 w-5"
+                className="h-4 w-4"
               />
             </Button>
           </div>
         </div>
         <div className="flex gap-3">
-          <Button
-            className="border border-zinc-200 bg-white text-[black] hover:border-zinc-400 hover:bg-white hover:shadow-sm dark:border-zinc-600 dark:bg-transparent dark:text-white dark:hover:border-white"
-            onClick={() => navigate("/store")}
-          >
+          <Button variant="outline" onClick={() => navigate("/store")}>
             <ForwardedIconComponent
               name="store"
               aria-hidden="true"
@@ -102,14 +99,11 @@ const HeaderComponent = ({
             />
             Browse Store
           </Button>
-          <Button
-            onClick={() => setNewProjectModal(true)}
-            className="text-white dark:bg-white dark:text-[black]"
-          >
+          <Button variant="default" onClick={() => setNewProjectModal(true)}>
             <ForwardedIconComponent
               name="plus"
               aria-hidden="true"
-              className="h-4 w-4 text-[white] dark:text-[black]"
+              className="h-4 w-4"
             />
             New Flow
           </Button>

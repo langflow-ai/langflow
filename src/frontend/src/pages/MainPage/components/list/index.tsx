@@ -6,6 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import IOModal from "@/modals/IOModal";
 import useAlertStore from "@/stores/alertStore";
@@ -13,16 +14,23 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
 import { getInputsAndOutputs } from "@/utils/storeUtils";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
 
 const ListComponent = ({ flowData }: { flowData: FlowType }) => {
-  const navigate = useNavigate();
+  const navigate = useCustomNavigate();
   const [openPlayground, setOpenPlayground] = useState(false);
   const [loadingPlayground, setLoadingPlayground] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+  const { folderId } = useParams();
+  const isComponent = flowData.is_component ?? false;
+  const setFlowToCanvas = useFlowsManagerStore(
+    (state) => state.setFlowToCanvas,
+  );
+
+  const editFlowLink = `/flow/${flowData.id}${folderId ? `/folder/${folderId}` : ""}`;
 
   function hasPlayground(flow?: FlowType) {
     if (!flow) {
@@ -58,6 +66,13 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
     }
   };
 
+  const handleClick = async () => {
+    if (!isComponent) {
+      await setFlowToCanvas(flowData);
+      navigate(editFlowLink);
+    }
+  };
+
   return (
     <>
       <div
@@ -67,9 +82,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         {/* left side */}
         <div
           className="flex cursor-pointer items-center gap-2"
-          onClick={() => {
-            navigate(`/flowData/${flowData.id}`);
-          }}
+          onClick={handleClick}
         >
           {/* Icon */}
           <div
@@ -86,34 +99,31 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
             <div className="flex items-baseline gap-2">
               <div className="text-lg font-semibold">{flowData.name}</div>
               <div className="item-baseline text-xs text-zinc-500 dark:text-zinc-300">
-                Edited {timeElapsed(flowData.updated_at)} ago by{" "}
-                <span className="font-semibold">{flowData.user_id}</span>
+                Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
-            <div className="flex w-full text-sm text-zinc-800 dark:text-white">
+            <div className="line-clamp-2 flex text-sm text-zinc-800 dark:text-white">
               {flowData.description}
             </div>
           </div>
         </div>
 
         {/* right side */}
-        <div className="flex items-center gap-2">
+        <div className="ml-5 flex items-center gap-2">
           <Button
+            variant="outline"
+            disabled={loadingPlayground || !hasPlayground(flowData)}
             onClick={handlePlaygroundClick}
-            className="border border-zinc-200 bg-white text-[black] hover:border-zinc-400 hover:bg-white hover:shadow-sm dark:border-zinc-600 dark:bg-transparent dark:text-white dark:hover:border-white"
           >
             Playground
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                unstyled
-                className="h-10 w-10 rounded px-0 hover:bg-zinc-200 dark:hover:bg-zinc-800"
-              >
+              <Button variant="ghost" size="icon" className="h-10 w-10">
                 <ForwardedIconComponent
                   name="ellipsis"
                   aria-hidden="true"
-                  className="mx-auto text-zinc-500 dark:text-zinc-300"
+                  className="h-5 w-5"
                 />
               </Button>
             </DropdownMenuTrigger>
