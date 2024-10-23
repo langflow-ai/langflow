@@ -46,7 +46,7 @@ async def add_user(
 
 
 @router.get("/whoami", response_model=UserRead)
-def read_current_user(
+async def read_current_user(
     current_user: CurrentActiveUser,
 ) -> User:
     """Retrieve the current user's data."""
