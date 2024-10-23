@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
+import { useAddComponent } from "@/hooks/useAddComponent";
 import { DragEventHandler, forwardRef, useRef, useState } from "react";
 import IconComponent, {
   ForwardedIconComponent,
@@ -48,6 +49,7 @@ export const SidebarDraggableComponent = forwardRef(
     const [open, setOpen] = useState(false);
     const { deleteFlow } = useDeleteFlow();
     const flows = useFlowsManagerStore((state) => state.flows);
+    const addComponent = useAddComponent();
 
     const version = useDarkStore((state) => state.version);
     const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
@@ -102,7 +104,7 @@ export const SidebarDraggableComponent = forwardRef(
             data-testid={sectionName + display_name}
             id={sectionName + display_name}
             className={cn(
-              "bg-sidebar-background hover:bg-sidebar-accent group/draggable flex cursor-grab items-center gap-2 rounded-md p-3",
+              "group/draggable flex cursor-grab items-center gap-2 rounded-md bg-sidebar-background p-3 hover:bg-sidebar-accent",
               error ? "cursor-not-allowed select-none" : "",
             )}
             draggable={!error}
@@ -125,6 +127,7 @@ export const SidebarDraggableComponent = forwardRef(
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground hover:text-primary"
+                onClick={() => addComponent(apiClass, itemName)}
               >
                 <ForwardedIconComponent
                   name="Plus"
