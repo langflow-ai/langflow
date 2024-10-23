@@ -46,9 +46,9 @@ const externalLinkIconClasses = {
         ? "background-fade-input-edit-node"
         : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
-  editNodeTop: "top-[-2.3rem] h-5 ",
-  normalTop: "top-[-3.125rem]  h-7",
-  iconTop: "top-[-2.8rem]",
+  editNodeTop: "top-[-1.4rem] h-5",
+  normalTop: "top-[-2.1rem] h-7 bg-blue-300",
+  iconTop: "top-[-1.6rem]",
 };
 
 export default function TextAreaComponent({
@@ -80,47 +80,41 @@ export default function TextAreaComponent({
 
   const renderIcon = () => (
     <div className={cn(isFocused && "opacity-0")}>
-      <div
-        className={cn(
-          externalLinkIconClasses.gradient({
-            disabled,
-            editNode,
-            password: password!,
-          }),
-          editNode
-            ? externalLinkIconClasses.editNodeTop
-            : externalLinkIconClasses.normalTop,
-        )}
-        style={{
-          pointerEvents: "none",
-          background: isFocused
-            ? undefined
-            : disabled
-              ? "bg-background"
-              : GRADIENT_CLASS,
-        }}
-        aria-hidden="true"
-      />
-      <div
-        className={cn(
-          externalLinkIconClasses.background({ disabled, editNode }),
-          editNode
-            ? externalLinkIconClasses.editNodeTop
-            : externalLinkIconClasses.normalTop,
-          disabled && "bg-secondary",
-        )}
-        aria-hidden="true"
-        data-testid={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
-      />
+      {!disabled && (
+        <div
+          className={cn(
+            externalLinkIconClasses.gradient({
+              disabled,
+              editNode,
+              password: password!,
+            }),
+            editNode
+              ? externalLinkIconClasses.editNodeTop
+              : externalLinkIconClasses.normalTop,
+          )}
+          style={{
+            pointerEvents: "none",
+            background: isFocused
+              ? undefined
+              : disabled
+                ? "bg-background"
+                : GRADIENT_CLASS,
+          }}
+          aria-hidden="true"
+        />
+      )}
 
       <IconComponent
         name={disabled ? "lock" : "Scan"}
         className={cn(
+          "bg-background",
           externalLinkIconClasses.icon,
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.iconTop,
-          disabled ? "text-placeholder" : "text-foreground",
+          disabled
+            ? "bg-muted text-placeholder"
+            : "bg-background text-foreground",
         )}
       />
     </div>
@@ -149,9 +143,7 @@ export default function TextAreaComponent({
         setValue={(newValue) => handleOnNewValue({ value: newValue })}
         disabled={disabled}
       >
-        <Button unstyled className="w-full">
-          <div className="relative w-full">{renderIcon()}</div>
-        </Button>
+        <div className="relative w-full">{renderIcon()}</div>
       </ComponentTextModal>
       {password && !isFocused && (
         <div
