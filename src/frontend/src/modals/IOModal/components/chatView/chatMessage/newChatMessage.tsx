@@ -203,7 +203,7 @@ export default function ChatMessage({
       <div className="flex-max-width py-6 pl-28 pr-9">
         <div className="mr-3 mt-1 flex w-11/12 pb-3">
           <div className="flex w-full gap-4">
-            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-zinc-800 p-5">
+            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-muted dark:bg-zinc-800 p-5">
               <span>
                 <div className="text-3xl -ml-1">⛓️</div>
               </span>
@@ -240,8 +240,8 @@ export default function ChatMessage({
         <div className={"mr-3 mt-1 flex w-11/12 pb-3"}>
           <div
             className={cn(
-              "group relative flex w-full gap-4 rounded-md p-2 hover:bg-zinc-800",
-              editMessage ? "bg-zinc-800" : "",
+              "group relative flex w-full gap-4 rounded-md p-2 hover:bg-muted dark:hover:bg-zinc-800",
+              editMessage ? "bg-muted dark:bg-zinc-800" : "",
             )}
           >
             <div

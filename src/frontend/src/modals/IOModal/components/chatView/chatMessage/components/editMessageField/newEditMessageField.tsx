@@ -25,10 +25,10 @@ export default function EditMessageField({
   }, []);
 
   return (
-    <div className="flex h-fit w-full flex-col bg-zinc-800">
+    <div className="flex h-fit w-full flex-col bg-muted dark:bg-zinc-800">
       <Textarea
         ref={textareaRef}
-        className="h-mx-full w-full resize-none border-0 bg-zinc-800 focus:ring-0"
+        className="h-mx-full w-full resize-none border-0 rounded-none shadow-none bg-muted dark:bg-zinc-800 focus:ring-0"
         onBlur={() => {
           if (!isButtonClicked) {
             onCancel();
