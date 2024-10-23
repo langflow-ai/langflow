@@ -17,7 +17,10 @@ def code_component_with_multiple_outputs():
 @pytest.fixture
 def code_component_with_multiple_outputs_with_add_tool_output():
     code = Path("src/backend/tests/data/component_multiple_outputs.py").read_text(encoding="utf-8")
-    code = code.replace("class MultipleOutputsComponent(Component):", "class MultipleOutputsComponent(Component):\n    add_tool_output = True")
+    code = code.replace(
+        "class MultipleOutputsComponent(Component):",
+        "class MultipleOutputsComponent(Component):\n    add_tool_output = True",
+    )
     return Component(_code=code)
 
 
