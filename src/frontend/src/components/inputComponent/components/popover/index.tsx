@@ -40,6 +40,9 @@ const CustomInputPopover = ({
   handleKeyDown,
   showOptions,
   nodeStyle,
+  optionButton,
+  autoFocus,
+  className,
 }) => {
   const PopoverContentInput = editNode
     ? PopoverContent
@@ -105,7 +108,7 @@ const CustomInputPopover = ({
 
           {!selectedOption && (
             <input
-              autoFocus
+              autoFocus={autoFocus}
               id={id}
               ref={refInput}
               type={!pwdVisible && password ? "password" : "text"}
