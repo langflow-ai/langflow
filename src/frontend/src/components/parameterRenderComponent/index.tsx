@@ -109,6 +109,7 @@ export function ParameterRenderComponent({
           <KeypairListComponent
             {...baseInputProps}
             isList={templateData.list ?? false}
+            id={`keypair_${id}`}
           />
         );
       case "bool":

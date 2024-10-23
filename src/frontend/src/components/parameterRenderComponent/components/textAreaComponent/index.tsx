@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import ComponentTextModal from "@/modals/textAreaModal";
 import { useRef, useState } from "react";
@@ -44,10 +45,10 @@ const externalLinkIconClasses = {
       : editNode
         ? "background-fade-input-edit-node"
         : "background-fade-input",
-  icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0 cursor-pointer",
-  editNodeTop: "edit-node-icon-top-position",
-  normalTop: "fade-top-position",
-  iconTop: "icon-top-position",
+  icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
+  editNodeTop: "top-[-42px] h-5",
+  normalTop: "top-[-56px] h-7",
+  iconTop: "top-[-51px]",
 };
 
 export default function TextAreaComponent({
@@ -79,55 +80,53 @@ export default function TextAreaComponent({
 
   const renderIcon = () => (
     <div className={cn(isFocused && "opacity-0")}>
-      <div className="relative cursor-pointer">
-        <div
-          className={cn(
-            externalLinkIconClasses.gradient({
-              disabled,
-              editNode,
-              password: password!,
-            }),
-            editNode
-              ? externalLinkIconClasses.editNodeTop
-              : externalLinkIconClasses.normalTop,
-          )}
-          style={{
-            pointerEvents: "none",
-            background: isFocused
-              ? undefined
-              : disabled
-                ? "bg-background"
-                : GRADIENT_CLASS,
-          }}
-          aria-hidden="true"
-        />
-        <div
-          className={cn(
-            externalLinkIconClasses.background({ disabled, editNode }),
-            editNode
-              ? externalLinkIconClasses.editNodeTop
-              : externalLinkIconClasses.normalTop,
-            disabled && "bg-secondary",
-          )}
-          aria-hidden="true"
-        />
+      <div
+        className={cn(
+          externalLinkIconClasses.gradient({
+            disabled,
+            editNode,
+            password: password!,
+          }),
+          editNode
+            ? externalLinkIconClasses.editNodeTop
+            : externalLinkIconClasses.normalTop,
+        )}
+        style={{
+          pointerEvents: "none",
+          background: isFocused
+            ? undefined
+            : disabled
+              ? "bg-background"
+              : GRADIENT_CLASS,
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className={cn(
+          externalLinkIconClasses.background({ disabled, editNode }),
+          editNode
+            ? externalLinkIconClasses.editNodeTop
+            : externalLinkIconClasses.normalTop,
+          disabled && "bg-secondary",
+        )}
+        aria-hidden="true"
+      />
 
-        <IconComponent
-          name={disabled ? "lock" : "Scan"}
-          className={cn(
-            externalLinkIconClasses.icon,
-            editNode
-              ? externalLinkIconClasses.editNodeTop
-              : externalLinkIconClasses.iconTop,
-            disabled ? "text-placeholder" : "text-foreground",
-          )}
-        />
-      </div>
+      <IconComponent
+        name={disabled ? "lock" : "Scan"}
+        className={cn(
+          externalLinkIconClasses.icon,
+          editNode
+            ? externalLinkIconClasses.editNodeTop
+            : externalLinkIconClasses.iconTop,
+          disabled ? "text-placeholder" : "text-foreground",
+        )}
+      />
     </div>
   );
 
   return (
-    <div className={cn("relative w-full", disabled && "pointer-events-none")}>
+    <div className={cn("w-full", disabled && "pointer-events-none")}>
       <Input
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
@@ -149,7 +148,13 @@ export default function TextAreaComponent({
         setValue={(newValue) => handleOnNewValue({ value: newValue })}
         disabled={disabled}
       >
-        {renderIcon()}
+        <Button
+          unstyled
+          className="w-full"
+          data-testid={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
+        >
+          <div className="relative w-full">{renderIcon()}</div>
+        </Button>
       </ComponentTextModal>
       {password && !isFocused && (
         <div

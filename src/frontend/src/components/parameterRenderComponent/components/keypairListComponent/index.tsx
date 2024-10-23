@@ -1,22 +1,83 @@
 import { Input } from "@/components/ui/input";
+import {
+  convertObjToArray,
+  convertValuesToNumbers,
+  hasDuplicateKeys,
+} from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
-import React from "react";
+import { cloneDeep } from "lodash";
+import React, { useEffect, useState } from "react";
 import IconComponent from "../../../genericIconComponent";
 
 const KeypairListComponent = ({
-  values,
-  editNode,
-  duplicateKey,
+  value,
+  handleOnNewValue,
   disabled,
-  isList,
-  handleChangeKey,
-  handleChangeValue,
-  addNewKeyValuePair,
-  removeKeyValuePair,
-  getInputClassName,
+  editNode = false,
+  isList = true,
+  id,
 }) => {
   const getTestId = (prefix, index) =>
     `${editNode ? "editNode" : ""}${prefix}${index}`;
+
+  useEffect(() => {
+    if (disabled && value.length > 0 && value[0] !== "") {
+      handleOnNewValue({ value: [{ "": "" }] }, { skipSnapshot: true });
+    }
+  }, [disabled]);
+
+  const [duplicateKey, setDuplicateKey] = useState(false);
+
+  const values =
+    Object.keys(value || {})?.length === 0 || !value
+      ? [{ "": "" }]
+      : convertObjToArray(value, "dict");
+
+  Array.isArray(value) ? value : [value];
+
+  const handleNewValue = (newValue: any) => {
+    const valueToNumbers = convertValuesToNumbers(newValue);
+    setDuplicateKey(hasDuplicateKeys(valueToNumbers));
+    if (isList) {
+      handleOnNewValue({ value: valueToNumbers });
+    } else handleOnNewValue({ value: valueToNumbers[0] });
+  };
+
+  const handleChangeKey = (event, idx) => {
+    const oldKey = Object.keys(values[idx])[0];
+    const updatedObj = { [event.target.value]: values[idx][oldKey] };
+
+    const newValue = cloneDeep(values);
+    newValue[idx] = updatedObj;
+
+    handleNewValue(newValue);
+  };
+
+  const handleChangeValue = (event, idx) => {
+    const key = Object.keys(values[idx])[0];
+    const updatedObj = { [key]: event.target.value };
+
+    const newValue = cloneDeep(values);
+    newValue[idx] = updatedObj;
+
+    handleNewValue(newValue);
+  };
+
+  const addNewKeyValuePair = () => {
+    const newValues = cloneDeep(values);
+    newValues.push({ "": "" });
+    handleOnNewValue({ value: newValues });
+  };
+
+  const removeKeyValuePair = (index) => {
+    const newValues = cloneDeep(values);
+    newValues.splice(index, 1);
+    handleOnNewValue({ value: newValues });
+  };
+
+  const getInputClassName = (isEditNode, isDuplicateKey) => {
+    return `${isEditNode ? "input-edit-node" : ""} ${isDuplicateKey ? "input-invalid" : ""}`.trim();
+  };
 
   const renderActionButton = (index) => {
     const isFirstItem = index === 0;

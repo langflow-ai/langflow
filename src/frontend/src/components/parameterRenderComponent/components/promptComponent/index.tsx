@@ -96,7 +96,6 @@ export default function PromptAreaComponent({
         aria-hidden="true"
       />
       <IconComponent
-        data-testid="open_prompt_modal"
         name={disabled ? "lock" : "Scan"}
         className={cn(
           externalLinkIconClasses.icon,
