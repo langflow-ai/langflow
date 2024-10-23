@@ -46,8 +46,10 @@ const externalLinkIconClasses = {
         ? "background-fade-input-edit-node"
         : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
-  editNodeTop: "top-[-2.3rem] h-5 ",
-  normalTop: "top-[-3.125rem]  h-7",
+  editNodeTop: ({ value }: { value: string }) =>
+    value ? "top-[-2.3rem] h-5 " : "",
+  normalTop: ({ value }: { value: string }) =>
+    value ? "top-[-3.125rem]  h-7" : "",
   iconTop: "top-[-2.8rem]",
 };
 
@@ -60,6 +62,8 @@ export default function TextAreaComponent({
   updateVisibility,
   password,
 }: InputProps<string, TextAreaComponentType>): JSX.Element {
+  console.log(!value);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -88,8 +92,8 @@ export default function TextAreaComponent({
             password: password!,
           }),
           editNode
-            ? externalLinkIconClasses.editNodeTop
-            : externalLinkIconClasses.normalTop,
+            ? externalLinkIconClasses.editNodeTop({ value })
+            : externalLinkIconClasses.normalTop({ value }),
         )}
         style={{
           pointerEvents: "none",
@@ -105,8 +109,8 @@ export default function TextAreaComponent({
         className={cn(
           externalLinkIconClasses.background({ disabled, editNode }),
           editNode
-            ? externalLinkIconClasses.editNodeTop
-            : externalLinkIconClasses.normalTop,
+            ? externalLinkIconClasses.editNodeTop({ value })
+            : externalLinkIconClasses.normalTop({ value }),
           disabled && "bg-secondary",
         )}
         aria-hidden="true"
@@ -118,7 +122,7 @@ export default function TextAreaComponent({
         className={cn(
           externalLinkIconClasses.icon,
           editNode
-            ? externalLinkIconClasses.editNodeTop
+            ? externalLinkIconClasses.editNodeTop({ value })
             : externalLinkIconClasses.iconTop,
           disabled ? "text-placeholder" : "text-foreground",
         )}
