@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
@@ -25,10 +25,12 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { useGetCategoriesQuery } from "@/controllers/API/queries/categories/use-get-categories";
+import { useAddComponent } from "@/hooks/useAddComponent";
 import { useStoreStore } from "@/stores/storeStore";
 import { nodeColors } from "@/utils/styleUtils";
 import { removeCountFromString } from "@/utils/utils";
 import { cloneDeep } from "lodash";
+import { useStoreApi } from "reactflow";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -48,10 +50,15 @@ export function FlowSidebarComponent() {
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const hasStore = useStoreStore((state) => state.hasStore);
   const filterType = useFlowStore((state) => state.filterType);
+  const store = useStoreApi();
+
+  const paste = useFlowStore((state) => state.paste);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
+  const addComponent = useAddComponent();
+
   function onDragStart(
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType },
@@ -189,6 +196,10 @@ export function FlowSidebarComponent() {
       });
     }
   }, [getFilterEdge, data]);
+
+  const customComponent = useMemo(() => {
+    return data?.["custom_component"]?.["CustomComponent"] ?? null;
+  }, [data]);
 
   return (
     <Sidebar>
@@ -374,7 +385,15 @@ export function FlowSidebarComponent() {
           </a>
         </SidebarMenuButton>
         <SidebarMenuButton asChild>
-          <Button unstyled className="flex items-center gap-2">
+          <Button
+            unstyled
+            onClick={() => {
+              if (customComponent) {
+                addComponent(customComponent, "CustomComponent");
+              }
+            }}
+            className="flex items-center gap-2"
+          >
             <ForwardedIconComponent
               name="Plus"
               className="h-4 w-4 text-muted-foreground"
