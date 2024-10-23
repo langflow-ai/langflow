@@ -29,4 +29,6 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   setFlowsPagination: (flowsPagination: Pagination) => set({ flowsPagination }),
   tags: [],
   setTags: (tags: Tag[]) => set({ tags }),
+  mvpComponents: false,
+  setMvpComponents: (mvpComponents: boolean) => set({ mvpComponents }),
 }));
