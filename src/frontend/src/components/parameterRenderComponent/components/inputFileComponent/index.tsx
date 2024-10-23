@@ -122,6 +122,7 @@ export default function InputFileComponent({
                 onClick={handleButtonClick}
                 disabled={isDisabled}
                 size="icon"
+                data-testid="button_upload_file"
               >
                 <IconComponent
                   name={value ? "CircleCheckBig" : "Upload"}
