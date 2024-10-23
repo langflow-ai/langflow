@@ -209,12 +209,12 @@ export default function InputComponent({
           {pwdVisible ? (
             <ForwardedIconComponent
               name="Eye"
-              className="h-4 w-4 text-muted-foreground hover:text-foreground"
+              className="relative top-[1px] h-5 w-5 text-muted-foreground hover:text-foreground"
             />
           ) : (
             <ForwardedIconComponent
               name="EyeOff"
-              className="h-4 w-4 text-muted-foreground hover:text-foreground"
+              className="relative top-[1px] h-5 w-5 text-muted-foreground hover:text-foreground"
             />
           )}
         </button>
