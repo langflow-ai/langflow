@@ -54,7 +54,7 @@ async def read_current_user(
 
 
 @router.get("/", dependencies=[Depends(get_current_active_superuser)])
-def read_all_users(
+async def read_all_users(
     *,
     skip: int = 0,
     limit: int = 10,
