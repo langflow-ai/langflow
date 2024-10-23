@@ -66,7 +66,11 @@ const CustomInputPopover = ({
             editNode && disabled && "min-h-5 border-muted p-0",
             disabled && "bg-secondary text-muted",
           )}
-          onClick={() => !disabled && setShowOptions(true)}
+          onClick={() => {
+            if (!nodeStyle && !disabled) {
+              setShowOptions(true);
+            }
+          }}
         >
           {selectedOptions?.length > 0 ? (
             selectedOptions.map((option) => (
