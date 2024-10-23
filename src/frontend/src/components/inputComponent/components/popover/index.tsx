@@ -25,11 +25,9 @@ const CustomInputPopover = ({
   selectedOptions,
   setSelectedOptions,
   value,
-  autoFocus,
   disabled,
   setShowOptions,
   required,
-  className,
   password,
   pwdVisible,
   editNode,
@@ -38,7 +36,6 @@ const CustomInputPopover = ({
   blurOnEnter,
   options,
   optionsPlaceholder,
-  optionButton,
   optionsButton,
   handleKeyDown,
   showOptions,
@@ -59,14 +56,15 @@ const CustomInputPopover = ({
     }
   };
 
-  console.log(selectedOption);
-
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
         <div
           className={cn(
-            "primary-input border-1 flex h-full min-h-[45px] flex-wrap items-center px-3 placeholder:text-placeholder",
+            "primary-input border-1 flex h-full min-h-[43px] flex-wrap items-center px-3 placeholder:text-placeholder",
+            editNode && "min-h-7 p-0",
+            editNode && disabled && "min-h-5 border-muted p-0",
+            disabled && "bg-secondary text-muted",
           )}
           onClick={() => !disabled && setShowOptions(true)}
         >
@@ -103,15 +101,21 @@ const CustomInputPopover = ({
 
           {!selectedOption && (
             <input
+              autoFocus
               id={id}
               ref={refInput}
               type={!pwdVisible && password ? "password" : "text"}
               onBlur={onInputLostFocus}
               value={value || ""}
-              autoFocus={autoFocus}
               disabled={disabled}
               required={required}
-              className="primary-input flex-1 border-none bg-transparent p-0 shadow-none outline-none ring-0 ring-offset-0 placeholder:text-muted-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+              className={cn(
+                "popover-input",
+                editNode && "px-3",
+                editNode && disabled && "h-fit w-fit",
+                disabled &&
+                  "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
+              )}
               placeholder={
                 selectedOptions?.length > 0 || selectedOption ? "" : placeholder
               }

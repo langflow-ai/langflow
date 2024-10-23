@@ -1246,4 +1246,7 @@
   .edit-node-icon-top-position {
     @apply top-[-23px];
   }
+  .popover-input {
+    @apply  h-fit w-fit flex-1 border-none bg-transparent p-0 shadow-none outline-none ring-0 ring-offset-0 placeholder:text-muted-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50
+  }
 }
