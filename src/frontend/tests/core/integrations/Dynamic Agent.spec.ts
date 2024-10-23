@@ -62,20 +62,24 @@ test("Dynamic Agent", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .last()
-    .fill(process.env.SEARCH_API_KEY ?? "");
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+
+  if (isApiKeyInputVisible) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
   await page.waitForTimeout(1000);
 
   let openAiLlms = await page.getByText("OpenAI", { exact: true }).count();
 
   for (let i = 0; i < openAiLlms; i++) {
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .nth(i)
-      .fill(process.env.OPENAI_API_KEY ?? "");
+    const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+    const isApiKeyInputVisible = await apiKeyInput.isVisible();
+
+    if (isApiKeyInputVisible) {
+      await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+    }
 
     await page.getByTestId("dropdown_str_model_name").nth(i).click();
     await page.getByTestId("gpt-4o-1-option").last().click();

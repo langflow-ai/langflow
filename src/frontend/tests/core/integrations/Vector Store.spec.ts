@@ -103,10 +103,12 @@ test("Vector Store RAG", async ({ page }) => {
     await page.waitForTimeout(500);
   }
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .nth(0)
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+
+  if (isApiKeyInputVisible) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
