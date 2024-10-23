@@ -1,5 +1,4 @@
 import { ProfileIcon } from "@/components/appHeaderComponent/components/ProfileIcon";
-import ShadTooltip from "@/components/shadTooltipComponent";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -11,7 +10,7 @@ import remarkGfm from "remark-gfm";
 import MaleTechnology from "../../../../../assets/male-technologist.png";
 import Robot from "../../../../../assets/robot.png";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent/ChatCodeTabComponent";
-import IconComponent from "../../../../../components/genericIconComponent";
+import IconComponent, { ForwardedIconComponent } from "../../../../../components/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
 import {
   EMPTY_INPUT_SEND_MESSAGE,
@@ -23,6 +22,7 @@ import { cn } from "../../../../../utils/utils";
 import { EditMessageButton } from "./components/editMessageButton/newMessageOptions";
 import EditMessageField from "./components/editMessageField/newEditMessageField";
 import FileCardWrapper from "./components/fileCardWrapper";
+import { AlertTriangle } from "lucide-react"; // Add this import for the error icon
 
 export default function ChatMessage({
   chat,
@@ -197,6 +197,43 @@ export default function ChatMessage({
     <span className="text-sm text-chat-trigger-disabled">(Edited)</span>
   ) : null;
 
+  // Add this before the default return statement
+  if (Math.floor(Math.random() * 3) + 1 === 3) {
+    return (
+      <div className="flex-max-width py-6 pl-28 pr-9">
+        <div className="mr-3 mt-1 flex w-11/12 pb-3">
+          <div className="flex w-full gap-4">
+            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-zinc-800 p-5">
+              <span>
+                <div className="text-3xl -ml-1">⛓️</div>
+              </span>
+            </div>
+            <div className="w-full rounded-md bg-red-950 border border-red-900 p-4 text-foreground">
+              <div className="mb-2 flex gap-2 items-center">
+                <ForwardedIconComponent className="h-6 w-6 text-status-red" name="OctagonAlert" />
+                <span className="">An error stopped your flow.</span>
+              </div>
+              <div className="mb-4">
+                <h3 className="font-semibold pb-3">Error details:</h3>
+                <p className="pb-1">Component: {"Unknown"}</p>
+                <p className="pb-1">Field: {"Unknown"}</p>
+                <p className="pb-1">Reason: {"Unknown error occurred"}</p>
+              </div>
+              <div>
+                <h3 className="font-semibold pb-3">Steps to fix:</h3>
+                <ol className="list-decimal pl-5">
+                  <li>Check the component settings</li>
+                  <li>Ensure all required fields are filled</li>
+                  <li>Re-run your flow</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex-max-width px-2 py-6 pl-32 pr-9">
@@ -254,7 +291,7 @@ export default function ChatMessage({
                     {chat.thought && chat.thought !== "" && !hidden && (
                       <SanitizedHTMLWrapper
                         className="form-modal-chat-thought"
-                        content={convert.toHtml(chat.thought)}
+                        content={convert.toHtml(chat.thought??"")}
                         onClick={() => setHidden((prev) => !prev)}
                       />
                     )}
@@ -472,7 +509,7 @@ export default function ChatMessage({
                       )}
                       {chat.files && (
                         <div className="my-2 flex flex-col gap-5">
-                          {chat.files.map((file, index) => {
+                          {chat.files?.map((file, index) => {
                             return (
                               <FileCardWrapper index={index} path={file} />
                             );
