@@ -447,7 +447,9 @@ class Component(CustomComponent):
 
     def _process_connection_or_parameters(self, key, value) -> None:
         # if value is a list of components, we need to process each component
-        if isinstance(value, list):
+        # Note this update make sure it is a list of components and not of any other values
+
+        if isinstance(value, list) and all(isinstance(item, Component) for item in value):
             for val in value:
                 self._process_connection_or_parameter(key, val)
         else:
