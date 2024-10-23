@@ -101,7 +101,7 @@ export default function FlowToolbar(): JSX.Element {
   return (
     <>
       <Panel
-        position="bottom-right"
+        position="top-right"
       >
         <div
           className={

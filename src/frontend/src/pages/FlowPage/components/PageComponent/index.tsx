@@ -31,8 +31,11 @@ import ReactFlow, {
   Edge,
   NodeDragHandler,
   OnSelectionChangeParams,
+  Panel,
   SelectionDragHandler,
   updateEdge,
+  useReactFlow,
+  useViewport,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
@@ -62,6 +65,8 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
+import FlowToolbar from "@/components/flowToolbarComponent";
+import CanvasControls from "@/components/canvasControlsComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -116,6 +121,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [isHighlightingCursor, setIsHighlightingCursor] = useState(false);
+
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const { zoom } = useViewport();
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -617,27 +625,27 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
           >
             <Background className="" />
             {!view && (
-              <Controls
-                className="flex fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border"
-                position="top-right"
-              >
-                <ControlButton
-                  data-testid="add_note"
-                  onClick={() => {
-                    setIsAddingNote(true);
-                  }}
-                >
-                  <ShadTooltip content="Add note">
-                    <div>
-                      <IconComponent
-                        name="SquarePen"
-                        aria-hidden="true"
-                        className="scale-125"
-                      />
-                    </div>
-                  </ShadTooltip>
-                </ControlButton>
-              </Controls>
+              <>
+                <CanvasControls>
+                  <ControlButton
+                    data-testid="add_note"
+                    onClick={() => {
+                      setIsAddingNote(true);
+                    }}
+                  >
+                    <ShadTooltip content="Add note">
+                      <div>
+                        <IconComponent
+                          name="SquarePen"
+                          aria-hidden="true"
+                          className="scale-125"
+                        />
+                      </div>
+                    </ShadTooltip>
+                  </ControlButton>
+                </CanvasControls>
+                <FlowToolbar />
+              </>
             )}
             <SelectionMenu
               lastSelection={lastSelection}

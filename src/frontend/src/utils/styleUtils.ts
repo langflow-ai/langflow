@@ -177,6 +177,8 @@ import {
   X,
   XCircle,
   Zap,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -653,4 +655,6 @@ export const nodeIconsLucide: iconsType = {
   TavilyIcon,
   DuckDuckGo: DuckDuckGoIcon,
   OpenSearch,
+  ZoomIn,
+  ZoomOut,
 };
