@@ -32,7 +32,7 @@ def check_cached_vector_store(f):
         self._cached_vector_store = result
         return result
 
-    check_cached._is_cached_vector_store_checked = True
+    check_cached.is_cached_vector_store_checked = True
     return check_cached
 
 
@@ -45,7 +45,7 @@ class LCVectorStoreComponent(Component):
         super().__init_subclass__(**kwargs)
         if hasattr(cls, "build_vector_store"):
             method = cls.build_vector_store
-            if not hasattr(method, "_is_cached_vector_store_checked"):
+            if not hasattr(method, "is_cached_vector_store_checked"):
                 msg = (
                     f"The method 'build_vector_store' in class {cls.__name__} "
                     "must be decorated with @check_cached_vector_store"
@@ -71,7 +71,7 @@ class LCVectorStoreComponent(Component):
         ),
     ]
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         # At least these three outputs must be defined
         required_output_methods = [
             "build_base_retriever",

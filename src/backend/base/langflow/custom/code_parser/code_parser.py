@@ -161,7 +161,7 @@ class CodeParser:
 
             # Handle cases where the type is not found in the constructed environment
             with contextlib.suppress(NameError):
-                return_type = eval(return_type_str, eval_env)
+                return_type = eval(return_type_str, eval_env)  # noqa: S307
 
         func = CallableCodeDetails(
             name=node.name,
@@ -318,7 +318,7 @@ class CodeParser:
             self.process_class_node(_node, class_details)
         self.data["classes"].append(class_details.model_dump())
 
-    def process_class_node(self, node, class_details):
+    def process_class_node(self, node, class_details) -> None:
         for stmt in node.body:
             if isinstance(stmt, ast.Assign):
                 if attr := self.parse_assign(stmt):

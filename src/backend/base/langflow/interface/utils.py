@@ -89,7 +89,7 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
     return variables
 
 
-def setup_llm_caching():
+def setup_llm_caching() -> None:
     """Setup LLM caching."""
     settings_service = get_settings_service()
     try:
@@ -100,7 +100,7 @@ def setup_llm_caching():
         logger.opt(exception=True).warning("Could not setup LLM caching.")
 
 
-def set_langchain_cache(settings):
+def set_langchain_cache(settings) -> None:
     from langchain.globals import set_llm_cache
 
     from langflow.interface.importing.utils import import_class

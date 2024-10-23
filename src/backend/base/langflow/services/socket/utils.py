@@ -14,16 +14,16 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_session
 
 
-def set_socketio_server(socketio_server):
+def set_socketio_server(socketio_server) -> None:
     from langflow.services.deps import get_socket_service
 
     socket_service = get_socket_service()
     socket_service.init(socketio_server)
 
 
-async def get_vertices(sio, sid, flow_id, chat_service):
+async def get_vertices(sio, sid, flow_id, chat_service) -> None:
     try:
-        session = get_session()
+        session = next(get_session())
         flow: Flow = session.exec(select(Flow).where(Flow.id == flow_id)).first()
         if not flow or not flow.data:
             await sio.emit("error", data="Invalid flow ID", to=sid)
@@ -31,7 +31,7 @@ async def get_vertices(sio, sid, flow_id, chat_service):
 
         graph = Graph.from_payload(flow.data)
         chat_service.set_cache(flow_id, graph)
-        vertices = graph.layered_topological_sort()
+        vertices = graph.layered_topological_sort(graph.vertices)
 
         # Emit the vertices to the client
         await sio.emit("vertices_order", data=vertices, to=sid)
@@ -48,7 +48,7 @@ async def build_vertex(
     vertex_id: str,
     get_cache: Callable,
     set_cache: Callable,
-):
+) -> None:
     try:
         cache = get_cache(flow_id)
         graph = cache.get("result")
@@ -63,9 +63,9 @@ async def build_vertex(
             return
         start_time = time.perf_counter()
         try:
-            if isinstance(vertex, Vertex) or not vertex._built:
+            if isinstance(vertex, Vertex) or not vertex.built:
                 await vertex.build(user_id=None, session_id=sid)
-            params = vertex._built_object_repr()
+            params = vertex.built_object_repr()
             valid = True
             result_dict = vertex.get_built_result()
             # We need to set the artifacts to pass information
