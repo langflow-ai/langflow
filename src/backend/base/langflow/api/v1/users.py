@@ -124,7 +124,7 @@ async def reset_password(
 
 
 @router.delete("/{user_id}")
-def delete_user(
+async def delete_user(
     user_id: UUID,
     current_user: Annotated[User, Depends(get_current_active_superuser)],
     session: DbSession,
