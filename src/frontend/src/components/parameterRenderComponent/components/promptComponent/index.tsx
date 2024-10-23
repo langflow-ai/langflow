@@ -96,6 +96,7 @@ export default function PromptAreaComponent({
         aria-hidden="true"
       />
       <IconComponent
+        data-testid="open_prompt_modal"
         name={disabled ? "lock" : "Scan"}
         className={cn(
           externalLinkIconClasses.icon,
@@ -119,7 +120,11 @@ export default function PromptAreaComponent({
         nodeClass={nodeClass}
         setNodeClass={handleNodeClass}
       >
-        <Button unstyled className="w-full">
+        <Button
+          unstyled
+          className="w-full"
+          data-testid="button_open_prompt_modal"
+        >
           <div className="relative w-full">
             {renderPromptText()}
             {renderExternalLinkIcon()}

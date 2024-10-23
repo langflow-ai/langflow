@@ -108,10 +108,7 @@ AI:
   `;
 
   await page.getByTestId("title-Prompt").last().click();
-  await page
-    .getByTestId("promptarea_prompt_template-ExternalLink")
-    .nth(0)
-    .click();
+  await page.getByTestId("button_open_prompt_modal").nth(0).click();
 
   await page.getByTestId("modal-promptarea_prompt_template").fill(prompt);
   await page.getByText("Edit Prompt", { exact: true }).click();

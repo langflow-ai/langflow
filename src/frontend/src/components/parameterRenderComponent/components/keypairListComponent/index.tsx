@@ -3,7 +3,7 @@ import { cn } from "@/utils/utils";
 import React from "react";
 import IconComponent from "../../../genericIconComponent";
 
-const KeyValuePairComponent = ({
+const KeypairListComponent = ({
   values,
   editNode,
   duplicateKey,
@@ -13,9 +13,11 @@ const KeyValuePairComponent = ({
   handleChangeValue,
   addNewKeyValuePair,
   removeKeyValuePair,
-  getTestId,
   getInputClassName,
 }) => {
+  const getTestId = (prefix, index) =>
+    `${editNode ? "editNode" : ""}${prefix}${index}`;
+
   const renderActionButton = (index) => {
     const isFirstItem = index === 0;
     const action = isFirstItem
@@ -95,4 +97,4 @@ const KeyValuePairComponent = ({
   );
 };
 
-export default KeyValuePairComponent;
+export default KeypairListComponent;
