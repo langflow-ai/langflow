@@ -104,15 +104,13 @@ const KeypairListComponent = ({
           disabled
             ? "pointer-events-none bg-background hover:bg-background"
             : "",
-          isFirstItem
-            ? "bg-background hover:bg-secondary"
-            : "hover:bg-smooth-red",
+          isFirstItem ? "bg-background hover:bg-muted" : "hover:bg-smooth-red",
         )}
       >
         <IconComponent
           name={iconName}
           className={cn(
-            "h-4 w-6 text-placeholder",
+            "text-placeholder h-4 w-6",
             !disabled && "hover:cursor-pointer hover:text-foreground",
             isFirstItem
               ? "group-hover:text-foreground"

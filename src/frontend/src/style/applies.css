@@ -1194,7 +1194,7 @@
   }
 
   .button-run-bg {
-    @apply flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm bg-transparent p-0 hover:bg-secondary hover:p-1;
+    @apply flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm bg-transparent p-0 hover:bg-muted hover:p-1;
   }
 
   .play-button-icon {

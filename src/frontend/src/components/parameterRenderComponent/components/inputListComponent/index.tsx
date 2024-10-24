@@ -83,7 +83,7 @@ export default function InputListComponent({
                 ? "pointer-events-none bg-background hover:bg-background"
                 : "",
               index === 0
-                ? "bg-background hover:bg-secondary"
+                ? "bg-background hover:bg-muted"
                 : "hover:bg-smooth-red",
             )}
           >
@@ -96,7 +96,7 @@ export default function InputListComponent({
               <IconComponent
                 name={index === 0 ? "Plus" : "Trash2"}
                 className={cn(
-                  "h-4 w-6 text-placeholder",
+                  "text-placeholder h-4 w-6",
                   !disabled && "hover:cursor-pointer hover:text-foreground",
                   index === 0
                     ? "group-hover:text-foreground"
