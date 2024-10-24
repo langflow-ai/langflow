@@ -83,7 +83,14 @@ def add_messagetables(messages: list[MessageTable], session: Session):
         except Exception as e:
             logger.exception(e)
             raise
-    return [MessageRead.model_validate(message, from_attributes=True) for message in messages]
+    import json
+    new_messages = []
+    for i in messages:
+        i.meta_data = json.loads(i.meta_data)
+        i.content_blocks = [json.loads(j) for j in i.content_blocks]
+        new_messages.append(i)
+
+    return [MessageRead.model_validate(message, from_attributes=True) for message in new_messages]
 
 
 def delete_messages(session_id: str) -> None:
