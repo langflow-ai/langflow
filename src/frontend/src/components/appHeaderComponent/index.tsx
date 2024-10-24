@@ -26,7 +26,7 @@ export default function AppHeader(): JSX.Element {
   return (
     <div className="relative flex items-center border-b px-4 py-1.5 dark:bg-black">
       {/* Left Section */}
-      <div className="flex w-full items-center gap-2 lg:max-w-[475px]">
+      <div className="flex w-full items-center gap-2 xl:max-w-[325px] 2xl:max-w-[475px]">
         <Button
           unstyled
           onClick={() => navigate("/")}
@@ -60,7 +60,7 @@ export default function AppHeader(): JSX.Element {
           <>
             <Button
               unstyled
-              className="flex items-center"
+              className="flex hidden items-center whitespace-nowrap 2xl:inline"
               onClick={() =>
                 window.open("https://github.com/langflow-ai/langflow", "_blank")
               }
@@ -69,22 +69,26 @@ export default function AppHeader(): JSX.Element {
             </Button>
             <Separator
               orientation="vertical"
-              className="h-7 dark:border-zinc-700"
+              className="hidden h-7 dark:border-zinc-700 2xl:inline"
             />
           </>
         )}
         <AlertDropdown>
           <ShadTooltip content="Notifications" side="bottom">
-            <Button variant="ghost" className="flex text-sm font-medium">
-              {notificationCenter && (
-                <div className="header-notifications-dot"></div>
-              )}
+            <Button variant="ghost" className="relative">
+              <span
+                className={
+                  notificationCenter ? `header-notifications-dot` : "hidden"
+                }
+              />
               <ForwardedIconComponent
                 name="bell"
                 className="side-bar-button-size"
                 aria-hidden="true"
               />
-              Notifications
+              <span className="hidden whitespace-nowrap lg:inline">
+                Notifications
+              </span>
             </Button>
           </ShadTooltip>
         </AlertDropdown>
@@ -101,7 +105,9 @@ export default function AppHeader(): JSX.Element {
                   name="Store"
                   className="side-bar-button-size"
                 />
-                Store
+                <span className="hidden whitespace-nowrap lg:inline">
+                  Store
+                </span>
               </Button>
             </ShadTooltip>
             <Separator

@@ -7,6 +7,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
+import useDeleteFlow from "@/hooks/flows/use-delete-flow";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import IOModal from "@/modals/IOModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -15,12 +17,17 @@ import { getInputsAndOutputs } from "@/utils/storeUtils";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { timeElapsed } from "../../utils/time-elapse";
+import useDescriptionModal from "../componentsComponent/hooks/use-description-modal";
 import DropdownComponent from "../dropdown";
 
 const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
   const [openPlayground, setOpenPlayground] = useState(false);
   const [loadingPlayground, setLoadingPlayground] = useState(false);
+  const [openDelete, setOpenDelete] = useState(false);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const { deleteFlow } = useDeleteFlow();
+
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const { folderId } = useParams();
@@ -72,6 +79,23 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
     }
   };
 
+  const handleDelete = () => {
+    deleteFlow({ id: [flowData.id] })
+      .then(() => {
+        setSuccessData({
+          title: "Selected items deleted successfully",
+        });
+      })
+      .catch(() => {
+        setErrorData({
+          title: "Error deleting items",
+          list: ["Please try again"],
+        });
+      });
+  };
+
+  const descriptionModal = useDescriptionModal([flowData?.id], "flow");
+
   return (
     <>
       <div
@@ -117,7 +141,10 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
                 sideOffset={5}
                 side="bottom"
               >
-                <DropdownComponent />
+                <DropdownComponent
+                  flowData={flowData}
+                  setOpenDelete={setOpenDelete}
+                />
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -146,6 +173,16 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         >
           <></>
         </IOModal>
+      )}
+      {openDelete && (
+        <DeleteConfirmationModal
+          open={openDelete}
+          setOpen={setOpenDelete}
+          onConfirm={handleDelete}
+          description={descriptionModal}
+        >
+          <></>
+        </DeleteConfirmationModal>
       )}
     </>
   );

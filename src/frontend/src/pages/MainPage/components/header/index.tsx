@@ -1,7 +1,10 @@
 import ForwardedIconComponent from "@/components/genericIconComponent";
+import ShadTooltip from "@/components/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { FlowType } from "@/types/flow";
+import { useEffect, useState } from "react";
 
 interface HeaderComponentProps {
   flowType: "flows" | "components";
@@ -10,15 +13,23 @@ interface HeaderComponentProps {
   setView: (view: "list" | "grid") => void;
   setNewProjectModal: (newProjectModal: boolean) => void;
   folderName: string;
+  currentFlows: FlowType[];
+  setCurrentFlows: (flows: FlowType[]) => void;
+  search: string;
+  setSearch: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const HeaderComponent = ({
+  currentFlows,
+  setCurrentFlows,
   folderName,
   flowType,
   setFlowType,
   view,
   setView,
   setNewProjectModal,
+  search,
+  setSearch,
 }: HeaderComponentProps) => {
   const navigate = useCustomNavigate();
 
@@ -52,14 +63,16 @@ const HeaderComponent = ({
 
       {/* Search and filters */}
       <div className="flex justify-between">
-        <div className="flex w-4/12">
+        <div className="flex w-full lg:w-6/12 xl:w-5/12">
           <Input
             icon="search"
             type="search"
             placeholder="Search flows..."
             className="mr-2"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
-          <div className="px-py flex rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-900 dark:bg-zinc-900">
+          <div className="px-py mr-2 flex rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-900 dark:bg-zinc-900">
             <Button
               unstyled
               size="icon"
@@ -94,23 +107,31 @@ const HeaderComponent = ({
             </Button>
           </div>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => navigate("/store")}>
-            <ForwardedIconComponent
-              name="store"
-              aria-hidden="true"
-              className="h-4 w-4"
-            />
-            Browse Store
-          </Button>
-          <Button variant="default" onClick={() => setNewProjectModal(true)}>
-            <ForwardedIconComponent
-              name="plus"
-              aria-hidden="true"
-              className="h-4 w-4"
-            />
-            New Flow
-          </Button>
+        <div className="flex gap-2">
+          <ShadTooltip content="Store" side="bottom">
+            <Button variant="outline" onClick={() => navigate("/store")}>
+              <ForwardedIconComponent
+                name="store"
+                aria-hidden="true"
+                className="h-4 w-4"
+              />
+              <span className="hidden whitespace-nowrap md:inline">
+                Browse Store
+              </span>
+            </Button>
+          </ShadTooltip>
+          <ShadTooltip content="New Flow" side="bottom">
+            <Button variant="default" onClick={() => setNewProjectModal(true)}>
+              <ForwardedIconComponent
+                name="plus"
+                aria-hidden="true"
+                className="h-4 w-4"
+              />
+              <span className="hidden whitespace-nowrap md:inline">
+                New Flow
+              </span>
+            </Button>
+          </ShadTooltip>
         </div>
       </div>
     </>

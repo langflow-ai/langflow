@@ -1,6 +1,7 @@
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { useFolderStore } from "@/stores/foldersStore";
-import { useState } from "react";
+import { FlowType } from "@/types/flow";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import GridComponent from "../../components/grid";
 import HeaderComponent from "../../components/header";
@@ -19,7 +20,8 @@ const HomePage = ({ type }: HomePageProps) => {
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [search, setSearch] = useState<string>("");
+  const [currentFlows, setCurrentFlows] = useState<FlowType[]>([]);
+  const [search, setSearch] = useState("");
 
   const [filter, setFilter] = useState<string>(() => {
     if (location.pathname.includes("components")) return "Components";
@@ -33,7 +35,6 @@ const HomePage = ({ type }: HomePageProps) => {
     size: pageSize,
     is_component: filter === "Components",
     is_flow: filter === "Flows",
-    search: search,
   });
 
   const data = {
@@ -50,31 +51,45 @@ const HomePage = ({ type }: HomePageProps) => {
     },
   };
 
-  console.log(data);
+  useEffect(() => {
+    setCurrentFlows(data.flows);
+  }, [data.flows]);
+
+  const filteredFlows = currentFlows.filter((flow) =>
+    flow.name.toLowerCase().includes(search.toLowerCase()),
+  );
 
   return (
     <>
-      {true ? (
+      {data.flows?.length > 0 ? (
         <div className="mx-5">
           <HeaderComponent
+            currentFlows={currentFlows}
             folderName={data.name}
             flowType={flowType}
             setFlowType={setFlowType}
             view={view}
             setView={setView}
             setNewProjectModal={setNewProjectModal}
+            setCurrentFlows={setCurrentFlows}
+            search={search}
+            setSearch={setSearch}
           />
 
           {/* Flows */}
           {flowType === "flows" ? (
             <>
               {view === "grid" ? (
-                <div className="mt-8 grid grid-cols-3 gap-3">
-                  {data?.flows.map((flow) => <GridComponent flowData={flow} />)}
+                <div className="mt-8 grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+                  {filteredFlows.map((flow) => (
+                    <GridComponent key={flow.id} flowData={flow} />
+                  ))}
                 </div>
               ) : (
                 <div className="mt-8 flex h-full flex-col">
-                  {data?.flows.map((flow) => <ListComponent flowData={flow} />)}
+                  {filteredFlows.map((flow) => (
+                    <ListComponent key={flow.id} flowData={flow} />
+                  ))}
                 </div>
               )}
             </>
