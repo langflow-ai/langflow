@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import inspect
+import json
 from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
@@ -440,13 +441,26 @@ class Component(CustomComponent):
         else:
             self._set_parameter_or_attribute(key, value)
 
+    import json
+
     def _process_connection_or_parameters(self, key, value) -> None:
         # if value is a list of components, we need to process each component
-        # Note this update make sure it is a list of components and not of any other values
+        # Ensure the list contains only components and handle serialization
         if isinstance(value, list) and all(isinstance(item, Component) for item in value):
             for val in value:
                 self._process_connection_or_parameter(key, val)
         else:
+            # Convert non-serializable objects to a serializable format
+            if isinstance(value, dict):
+                # Convert dict to JSON string
+                try:
+                    value = json.dumps(value)
+                except TypeError:
+                    # Handle non-serializable dict contents
+                    value = {k: str(v) for k, v in value.items()}
+                    value = json.dumps(value)
+            elif not isinstance(value, str | int | float | bool | list | type(None)):
+                value = str(value)  # or use another method to serialize
             self._process_connection_or_parameter(key, value)
 
     def _get_or_create_input(self, key):
