@@ -99,6 +99,9 @@ dependencies = [
     "langchain-google-community~=2.0.1",
     "wolframalpha>=5.1.3",
     "astra-assistants~=2.2.2",
+    # Contrain e2b dependencies for now. Remove when this is fixed in astra-assistants.
+    "e2b-code-interpreter>=0.0.10,<1",
+    "e2b>=0.17.1,<1",
     "composio-langchain==0.5.9",
     "spider-client>=0.0.27",
     "nltk>=3.9.1",
