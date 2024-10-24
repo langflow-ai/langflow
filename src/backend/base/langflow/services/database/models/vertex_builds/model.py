@@ -50,7 +50,7 @@ class VertexBuildBase(SQLModel):
         return truncate_long_strings(data)
 
     @field_serializer("params")
-    def serialize_params(self, data) -> dict:
+    def serialize_params(self, data) -> str:
         return truncate_long_strings(data)
 
 
