@@ -1,3 +1,4 @@
+import ForwardedIconComponent from "@/components/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import {
   Command,
@@ -64,7 +65,7 @@ const CustomInputPopover = ({
       <PopoverAnchor>
         <div
           className={cn(
-            "primary-input border-1 flex h-full min-h-[43px] flex-wrap items-center px-3 placeholder:text-placeholder",
+            "primary-input border-1 placeholder:text-placeholder flex h-full min-h-[43px] flex-wrap items-center px-3",
             editNode && "min-h-7 p-0",
             editNode && disabled && "min-h-5 border-muted p-0",
             disabled && "bg-secondary text-muted",
@@ -93,9 +94,9 @@ const CustomInputPopover = ({
             <Badge
               variant="secondary"
               className={cn(
-                "flex items-center gap-1 truncate",
+                "flex items-center gap-1 truncate bg-muted",
                 nodeStyle &&
-                  "rounded-[3px] bg-emerald-100 px-1 font-jetbrains text-emerald-700 hover:bg-emerald-200",
+                  "font-jetbrains rounded-[3px] bg-emerald-100 px-1 text-emerald-700 hover:bg-emerald-200",
               )}
             >
               <div className="max-w-36 truncate">{selectedOption}</div>
@@ -178,12 +179,35 @@ const CustomInputPopover = ({
                   }}
                   className="group"
                 >
-                  <div className="flex w-full items-center justify-between">
-                    <span>{option}</span>
-                    {(selectedOptions?.includes(option) ||
-                      selectedOption === option) && (
-                      <X className="h-4 w-4 text-muted-foreground" />
-                    )}
+                  <div className="group flex w-full items-center justify-between">
+                    <div className="flex items-center justify-between">
+                      <div
+                        className={cn(
+                          "relative mr-2 h-4 w-4",
+                          selectedOption === option ||
+                            selectedOptions?.includes(option)
+                            ? "opacity-100"
+                            : "opacity-0",
+                        )}
+                      >
+                        <div className="absolute opacity-100 transition-all group-hover:opacity-0">
+                          <ForwardedIconComponent
+                            name="Check"
+                            className="mr-2 h-4 w-4 text-primary"
+                            aria-hidden="true"
+                          />
+                        </div>
+                        <div className="absolute opacity-0 transition-all group-hover:opacity-100">
+                          <ForwardedIconComponent
+                            name="X"
+                            className="mr-2 h-4 w-4 text-status-red"
+                            aria-hidden="true"
+                          />
+                        </div>
+                      </div>
+                      <span className="max-w-52 truncate pr-2">{option}</span>
+                    </div>
+                    {optionButton && optionButton(option)}
                   </div>
                 </CommandItem>
               ))}

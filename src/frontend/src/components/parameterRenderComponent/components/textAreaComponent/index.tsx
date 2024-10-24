@@ -105,6 +105,7 @@ export default function TextAreaComponent({
       )}
 
       <IconComponent
+        dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
         name={disabled ? "lock" : "Scan"}
         className={cn(
           "bg-background",
@@ -113,7 +114,7 @@ export default function TextAreaComponent({
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.iconTop,
           disabled
-            ? "bg-muted text-placeholder"
+            ? "text-placeholder bg-muted"
             : "bg-background text-foreground",
         )}
       />

@@ -182,7 +182,7 @@ export default function InputComponent({
                 nodeStyle!,
               )}
               className={cn(
-                disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
+                disabled ? "text-placeholder cursor-grab" : "cursor-pointer",
                 "h-4 w-4",
               )}
               aria-hidden="true"
@@ -196,7 +196,7 @@ export default function InputComponent({
           type="button"
           tabIndex={-1}
           className={classNames(
-            "mb-px",
+            "mb-px mr-3 p-0",
             editNode
               ? "input-component-true-button"
               : "input-component-false-button",

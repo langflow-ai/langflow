@@ -270,6 +270,7 @@ export type IconComponentProps = {
   strokeWidth?: number;
   id?: string;
   skipFallback?: boolean;
+  dataTestId?: string;
 };
 
 export type InputProps = {
