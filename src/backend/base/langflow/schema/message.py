@@ -30,6 +30,31 @@ if TYPE_CHECKING:
     from langchain_core.prompt_values import ImagePromptValue
 
 
+class MetaData(BaseModel):
+    text_color: str | None = None
+    background_color: str | None = None
+    edited: bool = False
+    source: str | None = None
+    icon: str | None = None
+    allow_markdown: bool = False
+    targets: list = []
+
+
+class ContentBlock(BaseModel):
+    component: str | None = None
+    field: str | None = None
+    reason: str | None = None
+    solution: str | None = None
+    tracback: str | None = None
+
+    def to_dict(self):
+        return self.model_dump()
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
+
+
 class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
@@ -45,6 +70,11 @@ class Message(Data):
     flow_id: str | UUID | None = None
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
+
+    meta_data: MetaData | None = None
+    category: str | None = None
+    content_blocks: list[ContentBlock] | None = None
+
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -62,6 +92,14 @@ class Message(Data):
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
         return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").astimezone(timezone.utc)
+
+    @field_serializer("meta_data")
+    def serializer_meta_data(self, value):
+        return {}
+
+    @field_serializer("content_blocks")
+    def serializer_content_blocks(self, value):
+        return []
 
     @field_validator("files", mode="before")
     @classmethod
@@ -275,6 +313,7 @@ class MessageResponse(DefaultModel):
     session_id: str
     text: str
     files: list[str] = []
+    edit: bool
 
     @field_validator("files", mode="before")
     @classmethod
