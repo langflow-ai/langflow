@@ -26,7 +26,6 @@ from langflow.graph.graph.utils import (
     find_all_cycle_edges,
     find_cycle_vertices,
     find_start_component_id,
-    has_cycle,
     process_flow,
     should_continue,
     sort_up_to_vertex,
@@ -36,6 +35,7 @@ from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.logging.logger import LogConfig, configure
+from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.deps import get_chat_service, get_tracing_service
@@ -64,6 +64,7 @@ class Graph:
         description: str | None = None,
         user_id: str | None = None,
         log_config: LogConfig | None = None,
+        context: dict[str, Any] | None = None,
     ) -> None:
         """Initializes a new instance of the Graph class.
 
@@ -75,9 +76,11 @@ class Graph:
             description: The graph description.
             user_id: The user ID.
             log_config: The log configuration.
+            context: Additional context for the graph. Defaults to None.
         """
         if log_config:
             configure(**log_config)
+
         self._start = start
         self._state_model = None
         self._end = end
@@ -107,6 +110,7 @@ class Graph:
         self.state_manager = GraphStateManager()
         self._vertices: list[NodeData] = []
         self._edges: list[EdgeData] = []
+
         self.top_level_vertices: list[str] = []
         self.vertex_map: dict[str, Vertex] = {}
         self.predecessor_map: dict[str, list[str]] = defaultdict(list)
@@ -123,6 +127,11 @@ class Graph:
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
+
+        if context and not isinstance(context, dict):
+            msg = "Context must be a dictionary"
+            raise TypeError(msg)
+        self._context = dotdict(context or {})
         try:
             self.tracing_service: TracingService | None = get_tracing_service()
         except Exception:  # noqa: BLE001
@@ -134,6 +143,21 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             msg = "You must provide both input and output components"
             raise ValueError(msg)
+
+    @property
+    def context(self) -> dotdict:
+        if isinstance(self._context, dotdict):
+            return self._context
+        return dotdict(self._context)
+
+    @context.setter
+    def context(self, value: dict[str, Any]):
+        if not isinstance(value, dict):
+            msg = "Context must be a dictionary"
+            raise TypeError(msg)
+        if isinstance(value, dict):
+            value = dotdict(value)
+        self._context = value
 
     @property
     def state_model(self):
@@ -209,6 +233,8 @@ class Graph:
         for vertex in self._vertices:
             if vertex_id := vertex.get("id"):
                 self.top_level_vertices.append(vertex_id)
+            if vertex_id in self.cycle_vertices:
+                self.run_manager.add_to_cycle_vertices(vertex_id)
         self._graph_data = process_flow(self.raw_graph_data)
 
         self._vertices = self._graph_data["nodes"]
@@ -525,12 +551,7 @@ class Graph:
             bool: True if the graph has any cycles, False otherwise.
         """
         if self._is_cyclic is None:
-            vertices = [vertex.id for vertex in self.vertices]
-            try:
-                edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
-            except KeyError:
-                edges = [(e["source"], e["target"]) for e in self._edges]
-            self._is_cyclic = has_cycle(vertices, edges)
+            self._is_cyclic = bool(self.cycle_vertices)
         return self._is_cyclic
 
     @property
@@ -1180,6 +1201,9 @@ class Graph:
         self._build_vertex_params()
         run_until_complete(self._instantiate_components_in_vertices())
         self._set_cache_to_vertices_in_cycle()
+        for vertex in self.vertices:
+            if vertex.id in self.cycle_vertices:
+                self.run_manager.add_to_cycle_vertices(vertex.id)
 
     def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
         """Returns the edges of the graph as a list of tuples."""
@@ -1761,6 +1785,8 @@ class Graph:
 
         for vertex_id in first_layer:
             self.run_manager.add_to_vertices_being_run(vertex_id)
+            if vertex_id in self.cycle_vertices:
+                self.run_manager.add_to_cycle_vertices(vertex_id)
         self._first_layer = sorted(first_layer)
         self._run_queue = deque(self._first_layer)
         self._prepared = True
