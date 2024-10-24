@@ -252,11 +252,23 @@ export default function ChatMessage({
               )}
             >
               {!chat.isSend ? (
-                <img
-                  src={Robot}
-                  className="absolute scale-[60%]"
-                  alt={"robot_image"}
-                />
+                <div>
+                  {chat.meta_data?.icon ? (
+                    chat.meta_data.icon.match(/[\uD83C-\uDBFF\uDC00-\uDFFF]/) ? (
+                    <span className="absolute scale-[60%]">{chat.meta_data.icon}</span>
+                  ) : (
+                    <ForwardedIconComponent
+                      name={chat.meta_data.icon}
+                    />
+                  )
+                ) : (
+                  <img
+                    src={Robot}
+                    className="absolute scale-[60%]"
+                    alt={"robot_image"}
+                  />
+                )}
+              </div>
               ) : (
                 <div className="absolute scale-[80%]">
                   <ProfileIcon />
@@ -266,18 +278,18 @@ export default function ChatMessage({
             <div className="flex w-[94%] flex-col">
               <div>
                 <div
-                  className="max-w-full truncate pb-2 font-semibold"
+                  className="flex items-baseline gap-3 max-w-full truncate pb-2 font-semibold"
                   data-testid={
                     "sender_name_" + chat.sender_name?.toLocaleLowerCase()
                   }
                 >
                   {chat.sender_name}
+                  {chat.meta_data?.source && (
+                    <div className="text-xs text-muted-foreground">
+                      {chat.meta_data?.source}
+                    </div>
+                  )}
                 </div>
-                {chat.meta_data?.source && (
-                  <div className="text-xs text-muted-foreground">
-                    {chat.meta_data?.source}
-                  </div>
-                )}
               </div>
               {!chat.isSend ? (
                 <div className="form-modal-chat-text-position flex-grow">
@@ -377,7 +389,7 @@ export default function ChatMessage({
                                               if (content[0] === "▍") {
                                                 return (
                                                   <span className="form-modal-markdown-span">
-                                                    ▍
+                                                    ���
                                                   </span>
                                                 );
                                               }
