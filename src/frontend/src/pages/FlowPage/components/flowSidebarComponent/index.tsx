@@ -75,24 +75,6 @@ export function FlowSidebarComponent() {
     );
   }, [dataFilter]);
 
-  // Initialize Fuse instance
-  useEffect(() => {
-    const options = {
-      keys: ["display_name", "description", "type"],
-      threshold: 0.3,
-    };
-
-    const fuseData = Object.entries(data).flatMap(([category, items]) =>
-      Object.entries(items).map(([key, value]) => ({
-        ...value,
-        category,
-        key,
-      })),
-    );
-
-    setFuse(new Fuse(fuseData, options));
-  }, [data]);
-
   useEffect(() => {
     filterComponents();
   }, [data, search, filterType, getFilterEdge, showBeta, showLegacy]);
@@ -172,8 +154,6 @@ export function FlowSidebarComponent() {
           (cat) => Object.keys(filteredData[cat]).length > 0,
         ),
       );
-    } else {
-      setOpenCategories([]);
     }
   };
 
@@ -213,10 +193,26 @@ export function FlowSidebarComponent() {
   useEffect(() => {
     if (getFilterEdge.length !== 0) {
       setSearch("");
+    } else {
+      setOpenCategories([]);
     }
   }, [getFilterEdge, data]);
 
   useEffect(() => {
+    const options = {
+      keys: ["display_name", "description", "type"],
+      threshold: 0.3,
+    };
+
+    const fuseData = Object.entries(data).flatMap(([category, items]) =>
+      Object.entries(items).map(([key, value]) => ({
+        ...value,
+        category,
+        key,
+      })),
+    );
+
+    setFuse(new Fuse(fuseData, options));
     handleSearchInput(search);
   }, [data]);
 
