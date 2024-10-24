@@ -55,23 +55,27 @@ export default function CollectionPage(): JSX.Element {
   return (
     <>
       <div className="flex h-full w-full flex-row">
-        {showFolderModal && (
-          <aside className="flex h-full w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r px-4">
-            <FolderSidebarNav
-              handleChangeFolder={(id: string) => {
-                navigate(`all/folder/${id}`);
-              }}
-              handleDeleteFolder={(item) => {
-                setFolderToEdit(item);
-                setOpenDeleteFolderModal(true);
-              }}
-            />
-          </aside>
-        )}
+        <aside
+          className={`flex h-full w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r px-4 lg:inline ${
+            showFolderModal ? "" : "hidden"
+          }`}
+        >
+          <FolderSidebarNav
+            handleChangeFolder={(id: string) => {
+              navigate(`all/folder/${id}`);
+            }}
+            handleDeleteFolder={(item) => {
+              setFolderToEdit(item);
+              setOpenDeleteFolderModal(true);
+            }}
+          />
+        </aside>
+
         <div className="relative h-screen w-full overflow-y-auto pb-5">
           <Outlet />
         </div>
       </div>
+
       <ModalsComponent
         openModal={openModal}
         setOpenModal={setOpenModal}

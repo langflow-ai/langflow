@@ -42,7 +42,7 @@ const HeaderComponent = ({
           onClick={() => setShowFolderModal(!showFolderModal)}
         >
           <ForwardedIconComponent
-            name="panel-right-open"
+            name={showFolderModal ? "panel-right-open" : "panel-right-close"}
             aria-hidden="true"
             className="h-5 w-5 dark:text-zinc-400 lg:hidden"
           />
