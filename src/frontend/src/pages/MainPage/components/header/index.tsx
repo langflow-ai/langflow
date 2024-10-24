@@ -44,7 +44,7 @@ const HeaderComponent = ({
           <ForwardedIconComponent
             name={showFolderModal ? "panel-right-open" : "panel-right-close"}
             aria-hidden="true"
-            className="h-5 w-5 dark:text-zinc-400 lg:hidden"
+            className="h-5 w-5 text-zinc-500 dark:text-zinc-400 lg:hidden"
           />
         </Button>
 

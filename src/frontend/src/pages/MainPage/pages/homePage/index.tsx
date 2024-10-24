@@ -78,7 +78,7 @@ const HomePage = ({ type }: HomePageProps) => {
           {flowType === "flows" ? (
             <>
               {view === "grid" ? (
-                <div className="mt-8 grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+                <div className="mt-8 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {filteredFlows.map((flow) => (
                     <GridComponent key={flow.id} flowData={flow} />
                   ))}
