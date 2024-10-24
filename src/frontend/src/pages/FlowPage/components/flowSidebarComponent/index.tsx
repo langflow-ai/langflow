@@ -160,6 +160,9 @@ export function FlowSidebarComponent() {
         ),
       );
     }
+    if (search === "" && getFilterEdge.length === 0) {
+      setOpenCategories([]);
+    }
   };
 
   function handleSearchInput(e: string) {
@@ -198,8 +201,6 @@ export function FlowSidebarComponent() {
   useEffect(() => {
     if (getFilterEdge.length !== 0) {
       setSearch("");
-    } else {
-      setOpenCategories([]);
     }
   }, [getFilterEdge, data]);
 
