@@ -3,6 +3,7 @@ from collections import deque
 from typing import TYPE_CHECKING
 
 import pytest
+
 from langflow.components.helpers import MemoryComponent
 from langflow.components.inputs import ChatInput
 from langflow.components.models import OpenAIModelComponent

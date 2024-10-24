@@ -357,12 +357,12 @@ class ConfigResponse(BaseModel):
     max_file_size_upload: int
 
 
-class SidebarCategory(BaseModel):
+class SidebarComponents(BaseModel):
     display_name: str
     name: str
     icon: str
-    beta: bool = False
 
 
-class SidebarCategoriesResponse(BaseModel):
-    categories: list[SidebarCategory]
+class SidebarComponentsResponse(BaseModel):
+    categories: list[SidebarComponents]
+    bundles: list[SidebarComponents]
