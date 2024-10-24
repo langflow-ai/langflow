@@ -45,6 +45,7 @@ from langflow.services.deps import (
     get_task_service,
     get_telemetry_service,
 )
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.constants import SIDEBAR_CATEGORIES
 from langflow.utils.version import get_version_info
@@ -629,7 +630,8 @@ def get_config():
         from langflow.services.deps import get_settings_service
 
         settings_service: SettingsService = get_settings_service()
-        return settings_service.settings.model_dump()
+
+        return {"feature_flags": FEATURE_FLAGS.model_dump(), **settings_service.settings.model_dump()}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
