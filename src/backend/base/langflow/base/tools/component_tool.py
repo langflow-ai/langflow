@@ -47,6 +47,8 @@ def build_description(component: Component, output: Output) -> str:
 
 def _build_output_function(component: Component, output_method: Callable):
     def output_function(*args, **kwargs):
+        # set the component with the arguments
+        # set functionality was updatedto handle list of components and other values separately
         component.set(*args, **kwargs)
         return output_method()
 
