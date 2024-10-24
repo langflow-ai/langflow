@@ -266,7 +266,7 @@ wheels = [
 
 [[package]]
 name = "astra-assistants"
-version = "2.2.2"
+version = "2.2.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -281,9 +281,16 @@ dependencies = [
     { name = "tree-sitter" },
     { name = "tree-sitter-python" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b9/a1/2a0baaa257b4de12dccf2c18e1cfad29d3f860321f11ad500d334254f67d/astra_assistants-2.2.2.tar.gz", hash = "sha256:523758c87599ad17d083c99dce77ecd2eda17f967f43c3269e6cd85751ee15a6", size = 67554 }
+sdist = { url = "https://files.pythonhosted.org/packages/71/2c/13922eca2cae8a950cd0d18955e7ee5c993944afe0eab10379cf94131bac/astra_assistants-2.2.5.tar.gz", hash = "sha256:6735646ea61420e4a9d9a5204c3cc69e6420b15d58ee16ff4240eca9ceaf127a", size = 67657 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fb/2f/d69cfe69dfe5bf37d17fa5b47e2ecd001195d04b2a25702968cb32a1e8e4/astra_assistants-2.2.2-py3-none-any.whl", hash = "sha256:0a99968ec7b913f30152d3942488a91ffd207dd4f3333d2af18417c3f2b0a800", size = 78332 },
+    { url = "https://files.pythonhosted.org/packages/8d/26/165b492b4f4242510af640b8357d65384203dddd62f902083afaaf8b5938/astra_assistants-2.2.5-py3-none-any.whl", hash = "sha256:475193aa43d9bf8c5f9c9f0eb7e116f495d9345225a2fa25aff9bd21043c3788", size = 78408 },
+]
+
+[package.optional-dependencies]
+tools = [
+    { name = "astrapy" },
+    { name = "e2b" },
+    { name = "e2b-code-interpreter" },
 ]
 
 [[package]]
@@ -3540,7 +3547,7 @@ version = "1.0.19.post1"
 source = { editable = "." }
 dependencies = [
     { name = "assemblyai" },
-    { name = "astra-assistants" },
+    { name = "astra-assistants", extra = ["tools"] },
     { name = "beautifulsoup4" },
     { name = "boto3" },
     { name = "certifi" },
@@ -3676,7 +3683,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "assemblyai", specifier = ">=0.33.0" },
-    { name = "astra-assistants", specifier = "~=2.2.2" },
+    { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.5" },
     { name = "beautifulsoup4", specifier = ">=4.12.2" },
     { name = "boto3", specifier = "~=1.34.162" },
     { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
