@@ -19,7 +19,7 @@ export type ChatMessageType = {
   icon?: string;
   category?: string;
   meta_data?: any;
-  content_blocks?: ContentBlockError[];
+  content_blocks?: ContentBlock[];
 };
 
 export type ChatOutputType = {
@@ -48,11 +48,10 @@ export type FlowPoolObjectType = {
 };
 
 export interface ContentBlock {
-
+  component: string;
 }
 
 export interface ContentBlockError extends ContentBlock {
-  component: string;
   field?: string;
   reason?: string;
   solution?: string;

@@ -65,6 +65,9 @@ export default function ChatView({
           edit: message.edit,
           background_color: message.background_color || "",
           text_color: message.text_color || "",
+          content_blocks: message.content_blocks || [],
+          category: message.category || "",
+          meta_data: message.meta_data || {},
         };
       });
     const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {

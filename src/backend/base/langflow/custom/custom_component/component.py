@@ -701,11 +701,10 @@ class Component(CustomComponent):
             return await self._build_without_tracing()
         except Exception as e:
             reason = e.__class__.__name__
-            if hasattr(e, "body") and hasattr(e.body, "message"):
-                reason = e.body.message
+            if hasattr(e, "body") and "message" in e.body:
+                reason = e.body.get("message")
             elif hasattr(e, "code"):
                 reason = e.code
-
             import traceback
 
             message = Message(

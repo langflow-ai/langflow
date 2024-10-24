@@ -198,41 +198,41 @@ export default function ChatMessage({
 
   // Add this before the default return statement
   if (chat.category === "error") {
-    chat.content_blocks?.map((block: ContentBlockError) => {
-      return (
-        <div className="flex-max-width py-6 pl-28 pr-9">
-          <div className="mr-3 mt-1 flex w-11/12 pb-3">
-            <div className="flex w-full gap-4">
-              <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-muted p-5">
-                <span>
-                  <div className="text-3xl -ml-1">⛓️</div>
-                </span>
+    const block = chat.content_blocks?.[0] as ContentBlockError;
+    return (
+      <div className="flex-max-width py-6 pl-28 pr-9">
+        <div className="mr-3 mt-1 flex w-11/12 pb-3">
+          <div className="flex w-full gap-4">
+            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-muted p-5">
+              <span>
+                <div className="text-3xl -ml-1">⛓️</div>
+              </span>
+            </div>
+            <div className="w-full rounded-md dark:bg-red-950 border bg-red-50 border-red-500 dark:border-red-900 p-4 text-foreground">
+              <div className="mb-2 flex gap-2 items-center">
+                <ForwardedIconComponent className="h-6 w-6 text-destructive" name="OctagonAlert" />
+                <span className="">An error stopped your flow.</span>
               </div>
-              <div className="w-full rounded-md dark:bg-red-950 border bg-red-50 border-red-500 dark:border-red-900 p-4 text-foreground">
-                <div className="mb-2 flex gap-2 items-center">
-                  <ForwardedIconComponent className="h-6 w-6 text-destructive" name="OctagonAlert" />
-                  <span className="">An error stopped your flow.</span>
-                </div>
-                <div className="mb-4">
-                  <h3 className="font-semibold pb-3">Error details:</h3>
-                  <p className="pb-1">Component: {block.component}</p>
-                  <p className="pb-1">Field: {block.field}</p>
-                  <p className="pb-1">Reason: {block.reason}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold pb-3">Steps to fix:</h3>
-                  <ol className="list-decimal pl-5">
-                    <li>Check the component settings</li>
-                    <li>Ensure all required fields are filled</li>
-                    <li>Re-run your flow</li>
-                  </ol>
-                </div>
+              <div className="mb-4">
+                <h3 className="font-semibold pb-3">Error details:</h3>
+                <p className="pb-1">Component: {block.component}</p>
+                {block.field && <p className="pb-1">Field: {block.field}</p>}
+                {block.reason && <p className="">Reason: {block.reason}</p>}
               </div>
+              {block.solution && <div>
+                <h3 className="font-semibold pb-3">Steps to fix:</h3>
+                <ol className="list-decimal pl-5">
+                  <li>Check the component settings</li>
+                  <li>Ensure all required fields are filled</li>
+                  <li>Re-run your flow</li>
+                </ol>
+              </div>
+              }
             </div>
           </div>
         </div>
-      );
-    });
+      </div>
+    );
   }
 
   return (
