@@ -21,6 +21,10 @@ class MessageBase(SQLModel):
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
 
+    meta_data: dict | None = Field(default=None, sa_column=Column(JSON))
+    category: str = Field(sa_column=Column(Text))
+    content_blocks: list[dict] | None = Field(default=None, sa_column=Column(JSON))
+
     @field_validator("files", mode="before")
     @classmethod
     def validate_files(cls, value):
@@ -63,6 +67,9 @@ class MessageBase(SQLModel):
             files=message.files or [],
             timestamp=timestamp,
             flow_id=flow_id,
+            meta_data=message.meta_data.json(),
+            category=message.category,
+            content_blocks=[i.json() for i in message.content_blocks],
         )
 
 
