@@ -126,7 +126,7 @@ export default function NodeOutputField({
     <div
       ref={ref}
       className={cn(
-        "relative mt-1 flex h-11 w-full flex-wrap items-center justify-between bg-secondary px-5 py-2",
+        "relative mt-1 flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
         lastOutput ? "rounded-b-[11px]" : "",
       )}
     >
@@ -208,7 +208,7 @@ export default function NodeOutputField({
                     {
                       <IconComponent
                         className={cn(
-                          "h-5 w-5 rounded-md text-placeholder",
+                          "text-placeholder h-5 w-5 rounded-md",
                           displayOutputPreview && !unknownOutput
                             ? "hover:text-foreground"
                             : "cursor-not-allowed text-muted-foreground opacity-60",
