@@ -631,7 +631,7 @@ def get_config():
 
         settings_service: SettingsService = get_settings_service()
 
-        return {"feature_flags": FEATURE_FLAGS.model_dump(), **settings_service.settings.model_dump()}
+        return {"feature_flags": FEATURE_FLAGS, **settings_service.settings.model_dump()}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
