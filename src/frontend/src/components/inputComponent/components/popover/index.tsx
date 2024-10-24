@@ -65,7 +65,7 @@ const CustomInputPopover = ({
       <PopoverAnchor>
         <div
           className={cn(
-            "primary-input border-1 placeholder:text-placeholder flex h-full min-h-[43px] flex-wrap items-center px-3",
+            "primary-input border-1 flex h-full min-h-[43px] flex-wrap items-center px-3 placeholder:text-placeholder",
             editNode && "min-h-7 p-0",
             editNode && disabled && "min-h-5 border-muted p-0",
             disabled && "bg-muted text-muted",
@@ -96,7 +96,7 @@ const CustomInputPopover = ({
               className={cn(
                 "flex items-center gap-1 truncate bg-muted",
                 nodeStyle &&
-                  "font-jetbrains rounded-[3px] bg-emerald-100 px-1 text-emerald-700 hover:bg-emerald-200",
+                  "rounded-[3px] bg-emerald-100 px-1 font-jetbrains text-emerald-700 hover:bg-emerald-200",
               )}
             >
               <div className="max-w-36 truncate">{selectedOption}</div>
