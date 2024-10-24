@@ -19,7 +19,7 @@ export default function CollectionPage(): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
   const folders = useFolderStore((state) => state.folders);
-
+  const showFolderModal = useFolderStore((state) => state.showFolderModal);
   const queryClient = useQueryClient();
 
   // cleanup the query cache when the component unmounts
@@ -54,9 +54,9 @@ export default function CollectionPage(): JSX.Element {
 
   return (
     <>
-      <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-y-0">
-        {true && (
-          <aside className="hidden h-full w-fit flex-col space-y-6 border-r px-4 lg:flex">
+      <div className="flex h-full w-full flex-row">
+        {showFolderModal && (
+          <aside className="flex h-full w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r px-4">
             <FolderSidebarNav
               handleChangeFolder={(id: string) => {
                 navigate(`all/folder/${id}`);
@@ -65,11 +65,10 @@ export default function CollectionPage(): JSX.Element {
                 setFolderToEdit(item);
                 setOpenDeleteFolderModal(true);
               }}
-              className="w-[20vw] max-w-[288px]"
             />
           </aside>
         )}
-        <div className="relative h-full w-full">
+        <div className="relative h-screen w-full overflow-y-auto pb-5">
           <Outlet />
         </div>
       </div>

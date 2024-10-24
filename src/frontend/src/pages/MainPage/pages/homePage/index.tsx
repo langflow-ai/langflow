@@ -62,16 +62,14 @@ const HomePage = ({ type }: HomePageProps) => {
   return (
     <>
       {data.flows?.length > 0 ? (
-        <div className="mx-5">
+        <div className="mx-5 mb-5 mt-10">
           <HeaderComponent
-            currentFlows={currentFlows}
             folderName={data.name}
             flowType={flowType}
             setFlowType={setFlowType}
             view={view}
             setView={setView}
             setNewProjectModal={setNewProjectModal}
-            setCurrentFlows={setCurrentFlows}
             search={search}
             setSearch={setSearch}
           />
@@ -86,7 +84,7 @@ const HomePage = ({ type }: HomePageProps) => {
                   ))}
                 </div>
               ) : (
-                <div className="mt-8 flex h-full flex-col">
+                <div className="mt-8 flex flex-col">
                   {filteredFlows.map((flow) => (
                     <ListComponent key={flow.id} flowData={flow} />
                   ))}

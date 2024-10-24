@@ -380,7 +380,7 @@ const SideBarFoldersButtonsComponent = ({
     <>
       <HeaderButtons />
 
-      <div className="flex gap-2 overflow-auto lg:h-[70vh] lg:flex-col">
+      <div className="flex h-[70vh] flex-col gap-2 overflow-auto">
         <>
           {!loading ? (
             folders.map((item, index) => {
