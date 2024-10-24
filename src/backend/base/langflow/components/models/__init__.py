@@ -1,15 +1,15 @@
-from .AIMLModel import AIMLModelComponent
-from .AmazonBedrockModel import AmazonBedrockComponent
-from .AnthropicModel import AnthropicModelComponent
-from .AzureOpenAIModel import AzureChatOpenAIComponent
-from .BaiduQianfanChatModel import QianfanChatEndpointComponent
-from .CohereModel import CohereComponent
-from .GoogleGenerativeAIModel import GoogleGenerativeAIComponent
-from .HuggingFaceModel import HuggingFaceEndpointsComponent
-from .OllamaModel import ChatOllamaComponent
-from .OpenAIModel import OpenAIModelComponent
-from .PerplexityModel import PerplexityComponent
-from .VertexAiModel import ChatVertexAIComponent
+from .aiml import AIMLModelComponent
+from .amazon_bedrock import AmazonBedrockComponent
+from .anthropic import AnthropicModelComponent
+from .azure_openai import AzureChatOpenAIComponent
+from .baidu_qianfan_chat import QianfanChatEndpointComponent
+from .cohere import CohereComponent
+from .google_generative_ai import GoogleGenerativeAIComponent
+from .huggingface import HuggingFaceEndpointsComponent
+from .ollama import ChatOllamaComponent
+from .openai import OpenAIModelComponent
+from .perplexity import PerplexityComponent
+from .vertexai import ChatVertexAIComponent
 
 __all__ = [
     "AIMLModelComponent",

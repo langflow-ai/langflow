@@ -68,7 +68,7 @@ class AnthropicModelComponent(LCModelComponent):
         try:
             output = ChatAnthropic(
                 model=model,
-                anthropic_api_key=(SecretStr(anthropic_api_key) if anthropic_api_key else None),
+                anthropic_api_key=(SecretStr(anthropic_api_key).get_secret_value() if anthropic_api_key else None),
                 max_tokens_to_sample=max_tokens,
                 temperature=temperature,
                 anthropic_api_url=anthropic_api_url,

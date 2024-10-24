@@ -144,7 +144,7 @@ export default function CodeTabsComponent({
             </div>
           ) : tab.name.toLowerCase() === "tweaks" ? (
             <>
-              <TweaksComponent open={open} />
+              <TweaksComponent open={open ?? false} />
             </>
           ) : null}
         </TabsContent>

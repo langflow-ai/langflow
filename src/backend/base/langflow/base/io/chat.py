@@ -44,7 +44,7 @@ class ChatComponent(Component):
     def _update_stored_message(self, message_id: str, complete_message: str) -> Message:
         message_table = update_message(message_id=message_id, message={"text": complete_message})
         updated_message = Message(**message_table.model_dump())
-        self.vertex._added_message = updated_message
+        self.vertex.added_message = updated_message
         return updated_message
 
     def _process_chunk(self, chunk: str, complete_message: str, message: Message, message_id: str) -> str:

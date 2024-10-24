@@ -227,3 +227,21 @@ textarea[class^="ag-"]:focus {
     0 0;
   transition-duration: 1.5s;
 }
+
+span.token {
+  display: inline-block;
+  max-width: 100%;
+}
+
+code {
+  max-width: 100%;
+  display: inline-block;
+  width: 100%;
+  /* bg ignored now */
+  background-color: var(--canvas);
+}
+
+pre {
+  /* bg ignored now */
+  background-color: var(--canvas);
+}

@@ -1,3 +1,3 @@
-from .AstraDB import AstraVectorStoreComponent
+from .astradb import AstraVectorStoreComponent
 
 __all__ = ["AstraVectorStoreComponent"]

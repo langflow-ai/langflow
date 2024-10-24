@@ -18,6 +18,8 @@ from grandalf.graphs import Vertex as GrandalfVertex
 from grandalf.layouts import SugiyamaLayout
 from grandalf.routing import EdgeViewer, route_with_lines
 
+MINIMUM_EDGE_VIEW_POINTS = 2
+
 
 class VertexViewer:
     """Class to define vertex box boundaries that will be accounted for during graph building by grandalf."""
@@ -41,8 +43,12 @@ class AsciiCanvas:
     """Class for drawing in ASCII."""
 
     def __init__(self, cols, lines) -> None:
-        assert cols > 1
-        assert lines > 1
+        if cols <= 1:
+            msg = "cols must be greater than 1"
+            raise ValueError(msg)
+        if lines <= 1:
+            msg = "lines must be greater than 1"
+            raise ValueError(msg)
         self.cols = cols
         self.lines = lines
         self.canvas = [[" "] * cols for _ in range(lines)]
@@ -60,9 +66,15 @@ class AsciiCanvas:
 
     def point(self, x, y, char) -> None:
         """Create a point on ASCII canvas."""
-        assert len(char) == 1
-        assert 0 <= x < self.cols
-        assert 0 <= y < self.lines
+        if len(char) != 1:
+            msg = "char must be a single character"
+            raise ValueError(msg)
+        if x < 0 or x >= self.cols:
+            msg = "x is out of bounds"
+            raise ValueError(msg)
+        if y < 0 or y >= self.lines:
+            msg = "y is out of bounds"
+            raise ValueError(msg)
         self.canvas[y][x] = char
 
     def line(self, x0, y0, x1, y1, char) -> None:
@@ -92,8 +104,12 @@ class AsciiCanvas:
 
     def box(self, x0, y0, width, height) -> None:
         """Create a box on ASCII canvas."""
-        assert width > 1
-        assert height > 1
+        if width <= 1:
+            msg = "width must be greater than 1"
+            raise ValueError(msg)
+        if height <= 1:
+            msg = "height must be greater than 1"
+            raise ValueError(msg)
         width -= 1
         height -= 1
 
@@ -161,7 +177,9 @@ def draw_graph(vertexes, edges, *, return_ascii=True):
     canvas = AsciiCanvas(canvas_cols, canvas_lines)
 
     for edge in sug.g.sE:
-        assert len(edge.view._pts) > 1
+        if len(edge.view._pts) < MINIMUM_EDGE_VIEW_POINTS:
+            msg = "edge.view._pts must have at least 2 points"
+            raise ValueError(msg)
         for index in range(1, len(edge.view._pts)):
             start = edge.view._pts[index - 1]
             end = edge.view._pts[index]

@@ -113,7 +113,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
         if self.projection_fields != "*":
             url += f'&fields={urllib.parse.quote(self.projection_fields.replace(" ", ""))}'
 
-        res = requests.request("GET", url=url, headers=headers)
+        res = requests.request("GET", url=url, headers=headers, timeout=10)
 
         if int(res.status_code) >= HTTPStatus.BAD_REQUEST:
             return res.text

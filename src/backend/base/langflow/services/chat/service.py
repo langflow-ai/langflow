@@ -14,7 +14,7 @@ class ChatService(Service):
     name = "chat_service"
 
     def __init__(self) -> None:
-        self._async_cache_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+        self.async_cache_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
         self._sync_cache_locks: dict[str, RLock] = defaultdict(RLock)
         self.cache_service = get_cache_service()
 
@@ -28,7 +28,7 @@ class ChatService(Service):
             threading.Lock or asyncio.Lock: The lock associated with the given key.
         """
         if isinstance(self.cache_service, AsyncBaseCacheService):
-            return self._async_cache_locks[key]
+            return self.async_cache_locks[key]
         return self._sync_cache_locks[key]
 
     async def _perform_cache_operation(
