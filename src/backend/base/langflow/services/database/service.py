@@ -44,6 +44,11 @@ class DatabaseService(Service):
         self.script_location = langflow_dir / "alembic"
         self.alembic_cfg_path = langflow_dir / "alembic.ini"
         self.engine = self._create_engine()
+        if self.settings_service.settings.alembic_log_file.startswith('/'):
+            # Then, the log file path is overridden by an absolute path, and we should use it directly.
+            self.alembic_log_path = Path(self.settings_service.settings.alembic_log_file)
+        else:
+            self.alembic_log_path = Path(f"{langflow_dir}/{self.settings_service.settings.alembic_log_file}")
 
     def reload_engine(self) -> None:
         self.engine = self._create_engine()
@@ -178,7 +183,7 @@ class DatabaseService(Service):
         # which is a buffer
         # I don't want to output anything
         # subprocess.DEVNULL is an int
-        with (self.script_location / "alembic.log").open("w", encoding="utf-8") as buffer:
+        with self.alembic_log_path.open("w", encoding="utf-8") as buffer:
             alembic_cfg = Config(stdout=buffer)
             # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
