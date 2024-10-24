@@ -37,7 +37,7 @@ import { useStoreApi } from "reactflow";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { APIClassType, APIObjectType } from "../../../../types/api";
+import { APIClassType } from "../../../../types/api";
 import { SidebarFilterComponent } from "../extraSidebarComponent/sidebarFilterComponent";
 import sensitiveSort from "../extraSidebarComponent/utils/sensitive-sort";
 import ShortcutDisplay from "../nodeToolbarComponent/shortcutDisplay";
@@ -95,56 +95,74 @@ export function FlowSidebarComponent() {
 
   useEffect(() => {
     filterComponents();
-  }, [data, search, filterType, getFilterEdge]);
+  }, [data, search, filterType, getFilterEdge, showBeta, showLegacy]);
 
   const filterComponents = () => {
     let filteredData = cloneDeep(data);
 
     // Apply search filter
-    if (search) {
-      if (fuse) {
-        const results = fuse.search(search);
-        filteredData = {};
-        results.forEach((result) => {
-          const { category, key, ...item } = result.item;
-          if (!filteredData[category]) {
-            filteredData[category] = {};
-          }
-          filteredData[category][key] = item;
-        });
-      }
+    if (search && fuse) {
+      const results = fuse.search(search);
+      filteredData = Object.fromEntries(
+        Object.entries(data).map(([category, items]) => {
+          const categoryResults = results.filter(
+            (result) => result.item.category === category,
+          );
+          const filteredItems = Object.fromEntries(
+            categoryResults.map((result) => [result.item.key, result.item]),
+          );
+          return [category, filteredItems];
+        }),
+      );
     }
 
     // Apply edge filter
     if (getFilterEdge?.length > 0) {
-      let ret = {};
-      Object.keys(data).forEach((d: keyof APIObjectType) => {
-        ret[d] = {};
-        if (getFilterEdge.some((x) => x.family === d)) {
-          ret[d] = data[d];
+      filteredData = Object.fromEntries(
+        Object.entries(filteredData).map(([family, familyData]) => {
+          const edgeFilter = getFilterEdge.find((x) => x.family === family);
+          if (!edgeFilter) return [family, {}];
 
-          const filtered = getFilterEdge
-            .filter((x) => x.family === d)
-            .pop()
-            .type.split(",");
+          const filteredTypes = edgeFilter.type
+            .split(",")
+            .map((t) => t.trim())
+            .filter((t) => t !== "");
 
-          for (let i = 0; i < filtered.length; i++) {
-            filtered[i] = filtered[i].trimStart();
-          }
+          if (filteredTypes.length === 0) return [family, familyData];
 
-          if (filtered.some((x) => x !== "")) {
-            let keys = Object.keys(data[d]).filter((nd) =>
-              filtered.includes(nd),
-            );
-            Object.keys(data[d]).forEach((element) => {
-              if (!keys.includes(element)) {
-                delete ret[d][element];
-              }
-            });
-          }
-        }
-      });
-      filteredData = ret;
+          const filteredFamilyData = Object.fromEntries(
+            Object.entries(familyData).filter(([key]) =>
+              filteredTypes.includes(key),
+            ),
+          );
+
+          return [family, filteredFamilyData];
+        }),
+      );
+    }
+
+    // Apply beta filter
+    if (!showBeta) {
+      filteredData = Object.fromEntries(
+        Object.entries(filteredData).map(([category, items]) => [
+          category,
+          Object.fromEntries(
+            Object.entries(items).filter(([_, value]) => !value.beta),
+          ),
+        ]),
+      );
+    }
+
+    // Apply legacy filter
+    if (!showLegacy) {
+      filteredData = Object.fromEntries(
+        Object.entries(filteredData).map(([category, items]) => [
+          category,
+          Object.fromEntries(
+            Object.entries(items).filter(([_, value]) => !value.legacy),
+          ),
+        ]),
+      );
     }
 
     setFilterData(filteredData);
@@ -157,8 +175,6 @@ export function FlowSidebarComponent() {
     } else {
       setOpenCategories([]);
     }
-
-    setSearch(search);
   };
 
   function handleSearchInput(e: string) {
