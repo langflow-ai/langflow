@@ -12,7 +12,7 @@ export function SidebarFilterComponent({
   resetFilters: () => void;
 }) {
   return (
-    <div className="mb-0.5 flex w-full items-center justify-between rounded border bg-muted p-1 px-2 text-xs font-medium text-primary">
+    <div className="bg-accent-indigo text-accent-indigo-foreground mb-0.5 flex w-full items-center justify-between rounded border p-2 text-sm">
       <div className="flex flex-1 items-center gap-1.5">
         <ForwardedIconComponent
           name="ListFilter"
