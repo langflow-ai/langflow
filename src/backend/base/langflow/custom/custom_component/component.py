@@ -441,15 +441,12 @@ class Component(CustomComponent):
         else:
             self._set_parameter_or_attribute(key, value)
 
-
-
     def _process_connection_or_parameters(self, key, value) -> None:
         # if value is a list, process it as a whole
         if isinstance(value, list):
             # Serialize each item in the list if necessary
             serialized_list = [
-                self._serialize_value(item) if not isinstance(item, Component) else item
-                for item in value
+                self._serialize_value(item) if not isinstance(item, Component) else item for item in value
             ]
             # Pass the entire list to _process_connection_or_parameter
             self._process_connection_or_parameter(key, serialized_list)
