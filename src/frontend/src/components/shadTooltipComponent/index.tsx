@@ -10,6 +10,7 @@ export default function ShadTooltip({
   styleClasses,
   delayDuration = 500,
   open,
+  align,
   setOpen,
 }: ShadToolTipType): JSX.Element {
   return content ? (
@@ -21,9 +22,13 @@ export default function ShadTooltip({
     >
       <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
       <TooltipContent
-        className={cn("max-w-96", styleClasses)}
+        className={cn(
+          "max-w-96 bg-tooltip text-tooltip-foreground",
+          styleClasses,
+        )}
         side={side}
         avoidCollisions={false}
+        align={align}
         sticky="always"
       >
         {content}

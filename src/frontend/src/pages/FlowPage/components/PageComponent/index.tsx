@@ -1,5 +1,9 @@
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
+import CanvasControls, {
+  CustomControlButton,
+} from "@/components/canvasControlsComponent";
+import FlowToolbar from "@/components/flowToolbarComponent";
 import IconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
@@ -31,8 +35,11 @@ import ReactFlow, {
   Edge,
   NodeDragHandler,
   OnSelectionChangeParams,
+  Panel,
   SelectionDragHandler,
   updateEdge,
+  useReactFlow,
+  useViewport,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
@@ -116,6 +123,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [isHighlightingCursor, setIsHighlightingCursor] = useState(false);
+
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const { zoom } = useViewport();
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -617,25 +627,20 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
           >
             <Background className="" />
             {!view && (
-              <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border">
-                <ControlButton
-                  data-testid="add_note"
-                  onClick={() => {
-                    setIsAddingNote(true);
-                  }}
-                  className="postion react-flow__controls absolute -top-10"
-                >
-                  <ShadTooltip content="Add note">
-                    <div>
-                      <IconComponent
-                        name="SquarePen"
-                        aria-hidden="true"
-                        className="scale-125"
-                      />
-                    </div>
-                  </ShadTooltip>
-                </ControlButton>
-              </Controls>
+              <>
+                <CanvasControls>
+                  <CustomControlButton
+                    iconName="sticky-note"
+                    tooltipText="Add Note"
+                    onClick={() => {
+                      setIsAddingNote(true);
+                    }}
+                    iconClasses="text-primary"
+                    testId="add_note"
+                  />
+                </CanvasControls>
+                <FlowToolbar />
+              </>
             )}
             <SelectionMenu
               lastSelection={lastSelection}
