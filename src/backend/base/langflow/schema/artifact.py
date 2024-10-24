@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from langflow.schema.data import Data
 from langflow.schema.message import Message
-from langflow.schema.schema import recursive_serialize_or_str
+from langflow.schema.serialize import recursive_serialize_or_str
 
 
 class ArtifactType(str, Enum):
