@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { useAddComponent } from "@/hooks/useAddComponent";
@@ -33,6 +34,8 @@ export const SidebarDraggableComponent = forwardRef(
       onDragStart,
       apiClass,
       official,
+      beta,
+      legacy,
     }: {
       sectionName: string;
       apiClass: APIClassType;
@@ -43,6 +46,8 @@ export const SidebarDraggableComponent = forwardRef(
       color: string;
       onDragStart: DragEventHandler<HTMLDivElement>;
       official: boolean;
+      beta: boolean;
+      legacy: boolean;
     },
     ref,
   ) => {
@@ -119,10 +124,30 @@ export const SidebarDraggableComponent = forwardRef(
             }}
           >
             <ForwardedIconComponent name={icon} className="h-5 w-5 shrink-0" />
-            <span className="flex-1 truncate text-sm font-semibold">
-              {display_name}
-            </span>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-1 items-center overflow-hidden">
+              <span className="truncate text-sm font-semibold">
+                {display_name}
+              </span>
+              {beta && (
+                <Badge
+                  variant="pinkStatic"
+                  size="sq"
+                  className="ml-1.5 shrink-0"
+                >
+                  BETA
+                </Badge>
+              )}
+              {legacy && (
+                <Badge
+                  variant="secondaryStatic"
+                  size="sq"
+                  className="ml-1.5 shrink-0"
+                >
+                  LEGACY
+                </Badge>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"

@@ -351,6 +351,14 @@ export function FlowSidebarComponent() {
                                                 ? false
                                                 : true
                                             }
+                                            beta={
+                                              dataFilter[item.name][SBItemName]
+                                                .beta ?? false
+                                            }
+                                            legacy={
+                                              dataFilter[item.name][SBItemName]
+                                                .legacy ?? false
+                                            }
                                           />
                                         </ShadTooltip>
                                       ))}
