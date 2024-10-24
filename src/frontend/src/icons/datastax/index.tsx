@@ -7,5 +7,5 @@ export const DataStaxIcon = forwardRef<
   React.PropsWithChildren<{}>
 >((props, ref) => {
   const isDark = useDarkStore((state) => state.dark);
-  return <SvgDatastax ref={ref} {...props} color={isDark ? "#fff" : "#000"} />;
+  return <SvgDatastax ref={ref} {...props} color={!isDark} />;
 });
