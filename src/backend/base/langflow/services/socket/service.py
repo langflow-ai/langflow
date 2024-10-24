@@ -1,20 +1,18 @@
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import socketio
 from loguru import logger
 
 from langflow.services.base import Service
+from langflow.services.cache.base import AsyncBaseCacheService, CacheService
 from langflow.services.deps import get_chat_service
 from langflow.services.socket.utils import build_vertex, get_vertices
-
-if TYPE_CHECKING:
-    from langflow.services.cache.service import CacheService
 
 
 class SocketIOService(Service):
     name = "socket_service"
 
-    def __init__(self, cache_service: "CacheService"):
+    def __init__(self, cache_service: CacheService | AsyncBaseCacheService):
         self.cache_service = cache_service
 
     def init(self, sio: socketio.AsyncServer) -> None:
@@ -63,11 +61,14 @@ class SocketIOService(Service):
             set_cache=self.set_cache,
         )
 
-    def get_cache(self, sid: str) -> Any:
+    async def get_cache(self, sid: str) -> Any:
         """Get the cache for a client."""
-        return self.cache_service.get(sid)
+        value = self.cache_service.get(sid)
+        if isinstance(self.cache_service, AsyncBaseCacheService):
+            return await value
+        return value
 
-    def set_cache(self, sid: str, build_result: Any) -> bool:
+    async def set_cache(self, sid: str, build_result: Any) -> bool:
         """Set the cache for a client."""
         # client_id is the flow id but that already exists in the cache
         # so we need to change it to something else
@@ -76,5 +77,8 @@ class SocketIOService(Service):
             "result": build_result,
             "type": type(build_result),
         }
-        self.cache_service.upsert(sid, result_dict)
+        result = self.cache_service.upsert(sid, result_dict)
+        if isinstance(self.cache_service, AsyncBaseCacheService):
+            await result
+            return await self.cache_service.contains(sid)
         return sid in self.cache_service
