@@ -223,30 +223,32 @@ export function FlowSidebarComponent() {
               </Button>
             </CollapsibleTrigger>
           </div>
-          <CollapsibleContent className="mt-4 flex flex-col gap-7 border-b pb-7">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium">
-                  Show{" "}
-                  <Badge variant="pinkStatic" size="sq">
-                    BETA
-                  </Badge>{" "}
-                  Components
-                </span>
+          <CollapsibleContent>
+            <div className="mt-5 flex flex-col gap-7 border-b pb-7">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium">
+                    Show{" "}
+                    <Badge variant="pinkStatic" size="sq">
+                      BETA
+                    </Badge>{" "}
+                    Components
+                  </span>
+                </div>
+                <Switch checked={showBeta} onCheckedChange={setShowBeta} />
               </div>
-              <Switch checked={showBeta} onCheckedChange={setShowBeta} />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium">
-                  Show{" "}
-                  <Badge variant="secondaryStatic" size="sq">
-                    LEGACY
-                  </Badge>{" "}
-                  Components
-                </span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium">
+                    Show{" "}
+                    <Badge variant="secondaryStatic" size="sq">
+                      LEGACY
+                    </Badge>{" "}
+                    Components
+                  </span>
+                </div>
+                <Switch checked={showLegacy} onCheckedChange={setShowLegacy} />
               </div>
-              <Switch checked={showLegacy} onCheckedChange={setShowLegacy} />
             </div>
           </CollapsibleContent>
         </Collapsible>
