@@ -92,13 +92,13 @@ class Message(Data):
     def serialize_timestamp(self, value):
         return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").astimezone(timezone.utc)
 
-    @field_serializer("meta_data")
-    def serializer_meta_data(self, value):
-        return {}
+    #@field_serializer("meta_data")
+    #def serializer_meta_data(self, value):
+    #    return {}
 
-    @field_serializer("content_blocks")
-    def serializer_content_blocks(self, value):
-        return []
+    #@field_serializer("content_blocks")
+    #def serializer_content_blocks(self, value):
+    #    return []
 
     @field_validator("files", mode="before")
     @classmethod
@@ -313,6 +313,10 @@ class MessageResponse(DefaultModel):
     text: str
     files: list[str] = []
     edit: bool
+
+    meta_data: MetaData | None = None
+    category: str | None = None
+    content_blocks: list[ContentBlock] | None = None
 
     @field_validator("files", mode="before")
     @classmethod
