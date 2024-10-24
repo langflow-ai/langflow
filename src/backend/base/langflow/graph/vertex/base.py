@@ -227,6 +227,7 @@ class Vertex:
             self.output = self.data["node"]["base_classes"]
 
         self.display_name: str = self.data["node"].get("display_name", self.id.split("-")[0])
+        self.icon: str = self.data["node"].get("icon", self.id.split("-")[0])
 
         self.description: str = self.data["node"].get("description", "")
         self.frozen: bool = self.data["node"].get("frozen", False)

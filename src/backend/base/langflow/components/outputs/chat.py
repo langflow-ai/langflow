@@ -58,11 +58,16 @@ class ChatOutput(ChatComponent):
     ]
 
     def message_response(self) -> Message:
+        source_id = self.vertex.incoming_edges[0].source_id
+        _display = self.graph.get_vertex(source_id).display_name
+        _icon = self.graph.get_vertex(source_id).icon
+
         message = Message(
             text=self.input_value,
             sender=self.sender,
             sender_name=self.sender_name,
             session_id=self.session_id,
+            meta_data={"source": _display, "icon": _icon},
         )
         if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = self.store_message(
