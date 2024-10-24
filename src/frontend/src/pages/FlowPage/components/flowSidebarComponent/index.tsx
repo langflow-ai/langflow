@@ -1,5 +1,6 @@
 import Fuse from "fuse.js";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook"; // Import useHotkeys
 
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
@@ -33,7 +34,6 @@ import { useStoreStore } from "@/stores/storeStore";
 import { nodeColors } from "@/utils/styleUtils";
 import { removeCountFromString } from "@/utils/utils";
 import { cloneDeep } from "lodash";
-import { useStoreApi } from "reactflow";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -45,6 +45,12 @@ import SidebarDraggableComponent from "./components/sidebarDraggableComponent";
 
 export function FlowSidebarComponent() {
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useHotkeys("/", (event) => {
+    event.preventDefault();
+    searchInputRef.current?.focus();
+  });
 
   const { data: categories, isLoading } = useGetCategoriesQuery();
 
@@ -54,7 +60,6 @@ export function FlowSidebarComponent() {
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const hasStore = useStoreStore((state) => state.hasStore);
   const filterType = useFlowStore((state) => state.filterType);
-  const store = useStoreApi();
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
@@ -220,6 +225,20 @@ export function FlowSidebarComponent() {
     return data?.["custom_component"]?.["CustomComponent"] ?? null;
   }, [data]);
 
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLDivElement>,
+    name: string,
+  ) => {
+    if ((e.key === "Enter" || e.key === " ") && categories) {
+      e.preventDefault();
+      setOpenCategories((prev) =>
+        prev.includes(name)
+          ? prev.filter((cat) => cat !== name)
+          : [...prev, name],
+      );
+    }
+  };
+
   return (
     <Sidebar>
       <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
@@ -273,6 +292,7 @@ export function FlowSidebarComponent() {
             className="absolute inset-y-0 left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-primary"
           />
           <Input
+            ref={searchInputRef}
             type="search"
             className="w-full rounded-lg bg-background pl-8 text-sm"
             onFocus={() => setIsInputFocused(true)}
@@ -314,7 +334,7 @@ export function FlowSidebarComponent() {
                         </SidebarMenuItem>
                       ))
                     : categories?.categories.map(
-                        (item) =>
+                        (item, catIndex) =>
                           dataFilter[item.name] &&
                           Object.keys(dataFilter[item.name]).length > 0 && (
                             <Collapsible
@@ -332,7 +352,13 @@ export function FlowSidebarComponent() {
                               <SidebarMenuItem>
                                 <CollapsibleTrigger asChild>
                                   <SidebarMenuButton asChild>
-                                    <div className="flex cursor-pointer items-center gap-2">
+                                    <div
+                                      tabIndex={0}
+                                      onKeyDown={(e) =>
+                                        handleKeyDown(e, item.name)
+                                      }
+                                      className="flex cursor-pointer items-center gap-2"
+                                    >
                                       <ForwardedIconComponent
                                         name={item.icon}
                                         className="h-4 w-4 text-muted-foreground group-data-[state=open]/collapsible:text-pink-600 group-data-[state=open]/collapsible:dark:text-pink-400"

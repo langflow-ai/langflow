@@ -89,6 +89,14 @@ export const SidebarDraggableComponent = forwardRef(
           break;
       }
     }
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        addComponent(apiClass, itemName);
+      }
+    };
+
     return (
       <Select
         onValueChange={handleSelectChange}
@@ -104,6 +112,9 @@ export const SidebarDraggableComponent = forwardRef(
           }}
           key={itemName}
           data-tooltip-id={itemName}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+          className="rounded-md outline-none ring-ring focus-visible:ring-2"
         >
           <div
             data-testid={sectionName + display_name}
@@ -151,12 +162,13 @@ export const SidebarDraggableComponent = forwardRef(
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground hover:text-primary"
+                tabIndex={-1}
+                className="text-muted-foreground hover:text-primary group-focus/draggable:text-primary"
                 onClick={() => addComponent(apiClass, itemName)}
               >
                 <ForwardedIconComponent
                   name="Plus"
-                  className="h-4 w-4 shrink-0 opacity-0 transition-all group-hover/draggable:opacity-100"
+                  className="h-4 w-4 shrink-0 opacity-0 transition-all group-hover/draggable:opacity-100 group-focus/draggable:opacity-100"
                 />
               </Button>
               <div ref={popoverRef}>
@@ -164,7 +176,7 @@ export const SidebarDraggableComponent = forwardRef(
                   name="GripVertical"
                   className="h-4 w-4 shrink-0 text-muted-foreground"
                 />
-                <SelectTrigger></SelectTrigger>
+                <SelectTrigger tabIndex={-1}></SelectTrigger>
                 <SelectContent
                   position="popper"
                   side="bottom"
