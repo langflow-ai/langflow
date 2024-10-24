@@ -4,6 +4,7 @@ import Perplexity from "@/icons/Perplexity/Perplexity";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { AthenaIcon } from "@/icons/athena/index";
+import { DataStaxIcon } from "@/icons/datastax";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import {
   AlertCircle,
@@ -667,4 +668,5 @@ export const nodeIconsLucide: iconsType = {
   TavilyIcon,
   DuckDuckGo: DuckDuckGoIcon,
   OpenSearch,
+  DataStax: DataStaxIcon,
 };

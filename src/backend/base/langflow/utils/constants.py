@@ -201,3 +201,14 @@ SIDEBAR_CATEGORIES = [
     {"display_name": "Toolkits", "name": "toolkits", "icon": "Package2"},
     {"display_name": "Tools", "name": "tools", "icon": "Hammer"},
 ]
+
+SIDEBAR_BUNDLES = [
+    {"display_name": "NVIDIA", "name": "nvidia_bundle", "icon": "NvidiaIcon"},
+    {"display_name": "Assembly AI", "name": "assemblyai_bundle", "icon": "AssemblyAIIcon"},
+    {"display_name": "Google", "name": "google_bundle", "icon": "GoogleIcon"},
+    {"display_name": "DataStax", "name": "datastax_bundle", "icon": "DataStaxIcon"},
+    {"display_name": "Notion", "name": "notion_bundle", "icon": "NotionIcon"},
+    {"display_name": "Anthropic", "name": "anthropic_bundle", "icon": "AnthropicIcon"},
+    {"display_name": "Cohere", "name": "cohere_bundle", "icon": "CohereIcon"},
+    {"display_name": "LangChain", "name": "langchain_bundle", "icon": "LangChainIcon"},
+]
