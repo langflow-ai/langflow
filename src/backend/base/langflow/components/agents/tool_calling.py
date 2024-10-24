@@ -1,15 +1,15 @@
 from langchain.agents import create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 from langflow.base.agents.agent import LCToolsAgentComponent
-from langflow.inputs import MultilineInput
+from langflow.inputs import MessageTextInput, MultilineInput
 from langflow.inputs.inputs import DataInput, HandleInput
 from langflow.schema import Data
 
 
 class ToolCallingAgentComponent(LCToolsAgentComponent):
     display_name: str = "Tool Calling Agent"
-    description: str = "Agent that uses tools"
+    description: str = "An agent designed to utilize various tools seamlessly within workflows."
     icon = "LangChain"
     beta = True
     name = "ToolCallingAgent"
@@ -20,31 +20,30 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         MultilineInput(
             name="system_prompt",
             display_name="System Prompt",
-            info="System prompt for the agent.",
-            value="You are a helpful assistant",
+            info="Initial instructions and context provided to guide the agent's behavior.",
+            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
         ),
-        MultilineInput(
-            name="user_prompt", display_name="Prompt", info="This prompt must contain 'input' key.", value="{input}"
+        MessageTextInput(
+            name="input_value",
+            display_name="User Input",
+            info="The input provided by the user for the agent to process.",
         ),
-        DataInput(name="chat_history", display_name="Chat History", is_list=True, advanced=True),
+        DataInput(name="chat_history", display_name="Conversation History", is_list=True, advanced=True),
     ]
 
     def get_chat_history_data(self) -> list[Data] | None:
         return self.chat_history
 
     def create_agent_runnable(self):
-        if "input" not in self.user_prompt:
-            msg = "Prompt must contain 'input' key."
-            raise ValueError(msg)
         messages = [
             ("system", self.system_prompt),
             ("placeholder", "{chat_history}"),
-            HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=["input"], template=self.user_prompt)),
+            ("human", self.input_value),
             ("placeholder", "{agent_scratchpad}"),
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
         try:
             return create_tool_calling_agent(self.llm, self.tools, prompt)
         except NotImplementedError as e:
-            message = f"{self.display_name} does not support tool calling." "Please try using a compatible model."
+            message = f"{self.display_name} does not support tool calling. Please try using a compatible model."
             raise NotImplementedError(message) from e
