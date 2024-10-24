@@ -53,6 +53,7 @@ export type DropDownComponent = {
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
+  name?: string;
 };
 export type ParameterComponentType = {
   selected?: boolean;
