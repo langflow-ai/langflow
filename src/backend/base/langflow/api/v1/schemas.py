@@ -350,7 +350,7 @@ class FlowDataRequest(BaseModel):
 
 
 class ConfigResponse(BaseModel):
-    feature_flags: dict
+    feature_flags: FeatureFlags
     frontend_timeout: int
     auto_saving: bool
     auto_saving_interval: int
