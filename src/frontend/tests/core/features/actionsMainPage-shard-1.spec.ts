@@ -77,8 +77,14 @@ test("select and delete a flow", async ({ page }) => {
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
+  await page.waitForTimeout(1000);
+
   await page.getByTestId("checkbox-component").first().click();
+  await page.waitForTimeout(500);
+
   await page.getByTestId("icon-Trash2").click();
+  await page.waitForTimeout(500);
+
   await page.getByText("Delete").last().click();
 
   await page.waitForTimeout(1000);

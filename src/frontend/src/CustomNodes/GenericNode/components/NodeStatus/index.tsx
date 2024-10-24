@@ -19,7 +19,7 @@ import { VertexBuildTypeAPI } from "@/types/api";
 import { NodeDataType } from "@/types/flow";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames } from "@/utils/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IconComponent from "../../../../components/genericIconComponent";
 
@@ -93,8 +93,8 @@ export default function NodeStatus({
 
   const getBaseBorderClass = (selected) => {
     let className = selected
-      ? "border ring ring-[0.5px] ring-selected border-selected hover:shadow-node"
-      : "border hover:shadow-node";
+      ? " border-[2px] border-foreground hover:shadow-node"
+      : "border-[2px] hover:shadow-node";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     return frozen ? frozenClass : className;
   };
@@ -108,7 +108,7 @@ export default function NodeStatus({
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
       validationStatus,
-      isDark,
+      isBuilding,
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
@@ -143,9 +143,21 @@ export default function NodeStatus({
     }
   }, [buildStatus, isBuilding]);
 
+  const divRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const runClass = "justify-left flex font-normal text-muted-foreground";
+
+  const handleClickRun = () => {
+    if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
+    setValidationStatus(null);
+    buildFlow({ stopNodeId: nodeId });
+    track("Flow Build - Clicked", { stopNodeId: nodeId });
+  };
+
   return (
     <>
-      <div className="flex flex-shrink-0 items-center gap-2">
+      <div className="flex flex-shrink-0 items-center gap-1">
         <ShadTooltip
           content={
             buildStatus === BuildStatus.BUILDING ? (
@@ -163,13 +175,13 @@ export default function NodeStatus({
                     </div>
                   )}
                   {lastRunTime && (
-                    <div className="justify-left flex font-normal text-muted-foreground">
+                    <div className={runClass}>
                       <div>{RUN_TIMESTAMP_PREFIX}</div>
                       <div className="ml-1 text-status-blue">{lastRunTime}</div>
                     </div>
                   )}
                 </div>
-                <div className="justify-left flex font-normal text-muted-foreground">
+                <div className={runClass}>
                   <div>Duration:</div>
                   <div className="ml-1 text-status-blue">
                     {validationStatus?.data.duration}
@@ -182,27 +194,28 @@ export default function NodeStatus({
         >
           <div className="cursor-help">{iconStatus}</div>
         </ShadTooltip>
-        {showNode && (
-          <Button
-            onClick={() => {
-              if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
-              setValidationStatus(null);
-              buildFlow({ stopNodeId: nodeId });
-              track("Flow Build - Clicked", { stopNodeId: nodeId });
-            }}
-            unstyled
-            className="group p-1"
+        <ShadTooltip content={"Run component"} contrastTooltip>
+          <div
+            ref={divRef}
+            className="button-run-bg"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onClick={handleClickRun}
           >
-            <div data-testid={`button_run_` + display_name.toLowerCase()}>
-              <IconComponent
-                name="Play"
-                className={
-                  "h-5 w-5 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100"
-                }
-              />
-            </div>
-          </Button>
-        )}
+            {showNode && (
+              <Button unstyled className="group">
+                <div data-testid={`button_run_` + display_name.toLowerCase()}>
+                  <IconComponent
+                    name="Play"
+                    className={`play-button-icon ${
+                      isHovered ? "text-foreground" : "text-placeholder"
+                    }`}
+                  />
+                </div>
+              </Button>
+            )}
+          </div>
+        </ShadTooltip>
       </div>
     </>
   );

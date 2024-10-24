@@ -95,7 +95,15 @@
     --note-amber-opacity: #78350f80;
     --note-red-opacity: #7f1d1d80;
 
+    --emerald-success: 160.1 84.1% 39.4%;
+    --accent-emerald-foreground: 161.4 93.5% 30.4%;
+    --placeholder: 240 5% 64.9%;
+    --hard-zinc: 240 5.2% 33.9%;
+    --smooth-red: 0 93.3% 94.1%;
     --radius: 0.5rem;
+
+    --accent-pink: 327.3 73.3% 97.1%;
+    --accent-pink-foreground: 333.3 71.4% 50.6%;
   }
 
   .dark {
@@ -191,5 +199,13 @@
 
     --chat-bot-icon: #235d70;
     --chat-user-icon: #4f3d6e;
+
+    --emerald-success: 160.1 84.1% 39.4%;
+    --accent-emerald-foreground: 161.4 93.5% 30.4%;
+    --placeholder: 240 5% 64.9%;
+    --hard-zinc: 240 5.2% 33.9% --smooth-red: 0 93.3% 94.1%;
+
+    --accent-pink: 327.3 73.3% 97.1%;
+    --accent-pink-foreground: 333.3 71.4% 50.6%;
   }
 }

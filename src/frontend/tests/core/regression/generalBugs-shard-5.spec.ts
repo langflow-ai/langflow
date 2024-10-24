@@ -300,7 +300,7 @@ test("should be able to see output preview from grouped components and connect c
 
   await page
     .getByPlaceholder("Type something...", { exact: true })
-    .nth(6)
+    .nth(4)
     .fill(thirdRandomName);
   await page.waitForTimeout(500);
 
@@ -312,7 +312,7 @@ test("should be able to see output preview from grouped components and connect c
 
   await page
     .getByPlaceholder("Type something...", { exact: true })
-    .nth(4)
+    .nth(2)
     .fill("-");
 
   await page.waitForTimeout(500);

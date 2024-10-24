@@ -16,7 +16,6 @@ const useIconStatus = (
       validationStatus.valid);
   const conditionError = buildStatus === BuildStatus.ERROR;
   const conditionInactive = buildStatus === BuildStatus.INACTIVE;
-
   const renderIconStatus = () => {
     if (buildStatus === BuildStatus.BUILDING) {
       return (
@@ -26,30 +25,40 @@ const useIconStatus = (
           size={20}
         />
       );
-    } else {
-      return (
-        <>
-          {conditionSuccess ? (
-            <Checkmark
-              className="h-6 w-6 stroke-2 text-status-green transition-all"
-              isVisible={true}
-            />
-          ) : conditionError ? (
-            <Xmark
-              isVisible={true}
-              className="h-6 w-6 fill-current stroke-2 text-status-red"
-            />
-          ) : conditionInactive ? (
-            <ForwardedIconComponent
-              name="CircleOff"
-              className="h-5 w-5 text-muted-foreground"
-            />
-          ) : (
-            <></>
-          )}
-        </>
-      );
     }
+
+    const iconConditions = [
+      {
+        condition: conditionSuccess,
+        icon: (
+          <Checkmark
+            className="h-4 w-4 stroke-2 text-emerald-success transition-all"
+            isVisible={true}
+          />
+        ),
+      },
+      {
+        condition: conditionError,
+        icon: (
+          <Xmark
+            isVisible={true}
+            className="h-4 w-4 fill-current stroke-2 text-destructive"
+          />
+        ),
+      },
+      {
+        condition: conditionInactive,
+        icon: (
+          <ForwardedIconComponent
+            name="CircleOff"
+            className="h-4 w-4 text-muted-foreground"
+          />
+        ),
+      },
+    ];
+
+    const activeIcon = iconConditions.find(({ condition }) => condition)?.icon;
+    return activeIcon || null;
   };
 
   return renderIconStatus();

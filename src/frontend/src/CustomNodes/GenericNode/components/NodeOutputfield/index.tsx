@@ -34,6 +34,7 @@ export default function NodeOutputField({
   type,
   outputName,
   outputProxy,
+  lastOutput,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const nodes = useFlowStore((state) => state.nodes);
@@ -124,27 +125,43 @@ export default function NodeOutputField({
   ) : (
     <div
       ref={ref}
-      className="relative mt-1 flex w-full flex-wrap items-center justify-between bg-primary-foreground px-5 py-2"
+      className={cn(
+        "relative mt-1 flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
+        lastOutput ? "rounded-b-[11px]" : "",
+      )}
     >
       <>
         <div className="flex w-full items-center justify-end truncate text-sm">
-          <div className="flex flex-1">
-            <Button
-              disabled={disabledOutput}
-              unstyled
-              onClick={() => handleUpdateOutputHide()}
-              data-testid={`input-inspection-${title.toLowerCase()}`}
-            >
-              <IconComponent
-                className={cn(
-                  "h-4 w-4",
-                  disabledOutput ? "text-muted-foreground" : "",
-                )}
-                strokeWidth={1.5}
-                name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
-              />
-            </Button>
-          </div>
+          <ShadTooltip
+            content={
+              disabledOutput
+                ? null
+                : data.node?.outputs![index].hidden
+                  ? "Show output"
+                  : "Hide output"
+            }
+            contrastTooltip
+          >
+            <div className="flex flex-1">
+              <Button
+                disabled={disabledOutput}
+                unstyled
+                onClick={() => handleUpdateOutputHide()}
+                data-testid={`input-inspection-${title.toLowerCase()}`}
+              >
+                <IconComponent
+                  className={cn(
+                    "h-4 w-4",
+                    disabledOutput
+                      ? "text-placeholder opacity-60"
+                      : "text-placeholder hover:text-foreground",
+                  )}
+                  strokeWidth={1.5}
+                  name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
+                />
+              </Button>
+            </div>
+          </ShadTooltip>
 
           {data.node?.frozen && (
             <div className="pr-1">
@@ -168,11 +185,12 @@ export default function NodeOutputField({
               />
             </span>
             <ShadTooltip
+              contrastTooltip
               content={
                 displayOutputPreview
                   ? unknownOutput
                     ? "Output can't be displayed"
-                    : "Inspect Output"
+                    : "Inspect output"
                   : "Please build the component first"
               }
             >
@@ -183,28 +201,23 @@ export default function NodeOutputField({
                   outputName={internalOutputName}
                 >
                   <Button
-                    unstyled
                     disabled={!displayOutputPreview || unknownOutput}
                     data-testid={`output-inspection-${title.toLowerCase()}`}
+                    unstyled
                   >
-                    {errorOutput ? (
+                    {
                       <IconComponent
-                        className={classNames(
-                          "h-5 w-5 rounded-md text-status-red",
-                        )}
-                        name={"X"}
-                      />
-                    ) : (
-                      <IconComponent
-                        className={classNames(
-                          "h-5 w-5 rounded-md",
+                        className={cn(
+                          "h-5 w-5 rounded-md text-placeholder",
                           displayOutputPreview && !unknownOutput
-                            ? "hover:text-medium-indigo"
-                            : "cursor-not-allowed text-muted-foreground",
+                            ? "hover:text-foreground"
+                            : "cursor-not-allowed text-muted-foreground opacity-60",
+                          errorOutput ? "text-destructive" : "",
                         )}
                         name={"ScanEye"}
+                        strokeWidth={2}
                       />
-                    )}
+                    }
                   </Button>
                 </OutputModal>
               </div>

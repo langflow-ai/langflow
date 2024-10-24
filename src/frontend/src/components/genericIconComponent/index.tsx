@@ -18,6 +18,7 @@ export const ForwardedIconComponent = memo(
         strokeWidth,
         id = "",
         skipFallback = false,
+        dataTestId = "",
       }: IconComponentProps,
       ref,
     ) => {
@@ -62,7 +63,9 @@ export const ForwardedIconComponent = memo(
             className={className}
             style={style}
             ref={ref}
-            data-testid={id ? `${id}-${name}` : `icon-${name}`}
+            data-testid={
+              dataTestId ? dataTestId : id ? `${id}-${name}` : `icon-${name}`
+            }
           />
         </Suspense>
       );

@@ -41,6 +41,7 @@ export type InputComponentType = {
   objectOptions?: Array<{ name: string; id: string }>;
   isObjectOption?: boolean;
   onChangeFolderName?: (e: any) => void;
+  nodeStyle?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -52,6 +53,7 @@ export type DropDownComponent = {
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
+  name?: string;
 };
 export type ParameterComponentType = {
   selected?: boolean;
@@ -88,6 +90,7 @@ export type NodeOutputFieldComponentType = {
   type: string | undefined;
   outputName?: string;
   outputProxy?: OutputFieldProxyType;
+  lastOutput?: boolean;
 };
 
 export type NodeInputFieldComponentType = {
@@ -244,6 +247,7 @@ export type ShadToolTipType = {
   children?: ReactElement;
   delayDuration?: number;
   styleClasses?: string;
+  contrastTooltip?: boolean;
 };
 
 export type TextHighlightType = {
@@ -267,6 +271,7 @@ export type IconComponentProps = {
   strokeWidth?: number;
   id?: string;
   skipFallback?: boolean;
+  dataTestId?: string;
 };
 
 export type InputProps = {
@@ -616,10 +621,12 @@ export type textModalPropsType = {
   setValue: (value: string) => void;
   value: string;
   disabled?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
   readonly?: boolean;
   password?: boolean;
   changeVisibility?: () => void;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type newFlowModalPropsType = {

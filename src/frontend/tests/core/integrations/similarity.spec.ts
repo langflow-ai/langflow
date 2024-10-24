@@ -217,15 +217,23 @@ test("user must be able to check similarity between embedding texts", async ({
     .first()
     .fill("langflow");
 
-  await page
+  const firstApiKeyInput = page
     .getByTestId("popover-anchor-input-openai_api_key")
-    .nth(0)
-    .fill(process.env.OPENAI_API_KEY ?? "");
+    .nth(0);
+  const secondApiKeyInput = page
+    .getByTestId("popover-anchor-input-openai_api_key")
+    .nth(1);
 
-  await page
-    .getByTestId("popover-anchor-input-openai_api_key")
-    .nth(1)
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  const isFirstInputVisible = await firstApiKeyInput.isVisible();
+  const isSecondInputVisible = await secondApiKeyInput.isVisible();
+
+  if (isFirstInputVisible) {
+    await firstApiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
+
+  if (isSecondInputVisible) {
+    await secondApiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
   await page
     .getByTestId("inputlist_str_filter_criteria_0")

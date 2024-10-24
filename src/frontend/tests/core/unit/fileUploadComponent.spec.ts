@@ -51,7 +51,7 @@ test("should be able to upload a file", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   const fileChooserPromise = page.waitForEvent("filechooser");
-  await page.getByTestId("icon-FileSearch2").click();
+  await page.getByTestId("button_upload_file").click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(
     path.join(__dirname, "../../assets/test_file.txt"),

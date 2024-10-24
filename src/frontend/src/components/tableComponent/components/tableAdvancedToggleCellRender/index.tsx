@@ -43,7 +43,6 @@ export default function TableAdvancedToggleCellRender({
               handleOnNewValue={handleOnNewValue}
               editNode={true}
               showToogle
-              size="small"
               id={"show" + parameterId}
             />
           </div>

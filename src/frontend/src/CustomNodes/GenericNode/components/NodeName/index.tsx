@@ -8,10 +8,14 @@ export default function NodeName({
   display_name,
   selected,
   nodeId,
+  showNode,
+  beta,
 }: {
   display_name?: string;
   selected: boolean;
   nodeId: string;
+  showNode: boolean;
+  beta: boolean;
 }) {
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(display_name);
@@ -28,7 +32,7 @@ export default function NodeName({
   }, [display_name]);
 
   return inputName ? (
-    <div className="w-full">
+    <div className="m-[1px] w-full">
       <InputComponent
         onBlur={() => {
           setInputName(false);
@@ -67,9 +71,13 @@ export default function NodeName({
             event.preventDefault();
           }}
           data-testid={"title-" + display_name}
-          className="nodoubleclick w-full cursor-text truncate text-primary"
+          className="nodoubleclick w-full cursor-text truncate font-medium text-primary"
         >
-          {display_name}
+          <div className="flex items-center gap-1">
+            <span className="max-w-36 truncate">{display_name}</span>
+
+            {beta && showNode && <div className="beta-badge">BETA</div>}
+          </div>
         </div>
       </ShadTooltip>
     </div>

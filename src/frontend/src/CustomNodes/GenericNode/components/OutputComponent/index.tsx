@@ -24,7 +24,7 @@ export default function OutputComponent({
   };
 
   return displayProxy(
-    <span className={cn(frozen ? "text-ice" : "")}>{name}</span>,
+    <span className={cn("font-medium", frozen ? "text-ice" : "")}>{name}</span>,
   );
 
   // ! DEACTIVATED UNTIL BETTER IMPLEMENTATION

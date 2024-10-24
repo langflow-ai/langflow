@@ -98,7 +98,6 @@ const useSaveFlow = () => {
             );
           } else {
             setSaveLoading(false);
-            reject(new Error("Can't save empty flow"));
           }
         } else {
           setErrorData({

@@ -66,9 +66,12 @@ test("Simple Agent", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+
+  if (isApiKeyInputVisible) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
@@ -101,11 +104,11 @@ test("Simple Agent", async ({ page }) => {
 
   expect(page.getByText("User")).toBeVisible();
 
-  expect(page.locator(".language-python")).toBeVisible();
+  expect(page.getByTestId("div-chat-message")).toBeVisible();
 
   let pythonWords = await page.getByText("4 + 4").count();
 
-  expect(pythonWords).toBe(3);
+  expect(pythonWords).toBe(2);
 
   await page
     .getByPlaceholder("Send a message...")

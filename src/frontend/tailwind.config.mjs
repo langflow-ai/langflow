@@ -11,6 +11,7 @@ const config = {
   variants: {
     extend: {
       display: ["group-hover"],
+      textColor: ["group-increment-hover", "group-decrement-hover"],
     },
   },
   darkMode: ["class"],
@@ -98,6 +99,8 @@ const config = {
         "status-gray": "var(--status-gray)",
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
+        "accent-pink": "hsl(var(--accent-pink))",
+        "accent-pink-foreground": "hsl(var(--accent-pink-foreground))",
         filter: {
           foreground: "var(--filter-foreground)",
           background: "var(--filter-background)",
@@ -109,7 +112,7 @@ const config = {
         },
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
-        canvas: "var(--canvas)",
+        canvas: "hsl(var(--canvas))",
         ice: "var(--ice)",
         selected: "var(--selected)",
         hover: "var(--hover)",
@@ -119,6 +122,13 @@ const config = {
         "node-selected": "hsl(var(--node-selected))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        "emerald-success": "hsl(var(--emerald-success))",
+        "accent-emerald-foreground": "hsl(var(--accent-emerald-foreground))",
+        "emerald-smooth": "hsl(var(--emaral-smooth))",
+        "emerald-hard": "hsl(var(--emeral-hard))",
+        placeholder: "hsl(var(--placeholder))",
+        "hard-zinc": "hsl(var(--hard-zinc))",
+        "smooth-red": "hsl(var(--smooth-red))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -172,7 +182,24 @@ const config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", ...fontFamily.sans],
+        sans: [
+          "Inter",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "Noto Sans",
+          "sans-serif",
+          "Apple Color Emoji",
+          "Segoe UI Emoji",
+          "Segoe UI Symbol",
+          "Noto Color Emoji",
+        ],
+        jetbrains: ["JetBrains Mono", "monospace"],
       },
       boxShadow: {
         "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.5)",
@@ -290,6 +317,10 @@ const config = {
     }),
     tailwindcssTypography,
     tailwindcssDottedBackground,
+    plugin(({ addVariant }) => {
+      addVariant("group-increment-hover", ":merge(.group-increment):hover &");
+      addVariant("group-decrement-hover", ":merge(.group-decrement):hover &");
+    }),
   ],
 };
 

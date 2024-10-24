@@ -1,3 +1,4 @@
+import { BuildStatus } from "@/constants/enums";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -7,7 +8,11 @@ import IconComponent, {
 } from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
-import { TOOLTIP_OUTDATED_NODE } from "../../constants/constants";
+import {
+  TOOLTIP_HIDDEN_OUTPUTS,
+  TOOLTIP_OPEN_HIDDEN_OUTPUTS,
+  TOOLTIP_OUTDATED_NODE,
+} from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
@@ -17,7 +22,6 @@ import { useTypesStore } from "../../stores/typesStore";
 import { OutputFieldType } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
-import { nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
 import { getNodeInputColors } from "../helpers/get-node-input-colors";
 import { getNodeOutputColors } from "../helpers/get-node-output-colors";
@@ -61,8 +65,6 @@ export default function GenericNode({
     setIsUserEdited,
     updateNodeInternals,
   );
-
-  const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
 
   if (!data.node!.template) {
     setErrorData({
@@ -137,10 +139,15 @@ export default function GenericNode({
 
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
-  const renderOutputParameter = (output: OutputFieldType, idx: number) => {
+  const renderOutputParameter = (
+    output: OutputFieldType,
+    idx: number,
+    lastOutput: boolean,
+  ) => {
     return (
       <NodeOutputField
         index={idx}
+        lastOutput={lastOutput}
         selected={selected}
         key={
           scapedJSONStringfy({
@@ -260,20 +267,15 @@ export default function GenericNode({
       <div
         className={cn(
           borderColor,
-          showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full",
+          showNode ? "w-80 rounded-xl" : "w-26 h-26 rounded-full",
           "generic-node-div group/node",
         )}
       >
-        {data.node?.beta && showNode && (
-          <div className="beta-badge-wrapper">
-            <div className="beta-badge-content">BETA</div>
-          </div>
-        )}
-        <div>
+        <div className="grid gap-3 truncate text-wrap border-b p-4 leading-5">
           <div
             data-testid={"div-generic-node"}
             className={
-              "generic-node-div-title " +
+              "generic-node-div-title justify-between" +
               (!showNode
                 ? " relative h-24 w-24 rounded-full"
                 : " justify-between rounded-t-lg")
@@ -298,7 +300,10 @@ export default function GenericNode({
                     display_name={data.node?.display_name}
                     nodeId={data.id}
                     selected={selected}
+                    showNode={showNode}
+                    beta={data.node?.beta ?? false}
                   />
+
                   {isOutdated && !isUserEdited && (
                     <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
                       <Button
@@ -328,6 +333,7 @@ export default function GenericNode({
                       data.node!.outputs?.findIndex(
                         (out) => out.name === shownOutputs[0].name,
                       ) ?? 0,
+                      false,
                     )}
                 </>
               )}
@@ -344,16 +350,19 @@ export default function GenericNode({
               />
             )}
           </div>
-        </div>
-
-        {showNode && (
-          <div className="relative pb-8 pt-5">
-            {/* increase height!! */}
+          <div>
             <NodeDescription
               description={data.node?.description}
               nodeId={data.id}
               selected={selected}
             />
+          </div>
+        </div>
+
+        {showNode && (
+          <div className="relative">
+            {/* increase height!! */}
+
             <>
               {renderInputParameter}
               <div
@@ -372,6 +381,7 @@ export default function GenericNode({
                     data.node!.outputs?.findIndex(
                       (out) => out.name === output.name,
                     ) ?? idx,
+                    idx === shownOutputs.length - 1,
                   ),
                 )}
               <div
@@ -379,41 +389,48 @@ export default function GenericNode({
               >
                 <div className="block">
                   {data.node!.outputs &&
-                    data.node!.outputs.map((output, idx) =>
-                      renderOutputParameter(
+                    data.node!.outputs.map((output, idx) => {
+                      return renderOutputParameter(
                         output,
                         data.node!.outputs?.findIndex(
                           (out) => out.name === output.name,
                         ) ?? idx,
-                      ),
-                    )}
+                        idx === (data.node!.outputs?.length ?? 0) - 1,
+                      );
+                    })}
                 </div>
               </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (
-                <div
-                  className={cn(
-                    "absolute left-0 right-0 flex justify-center",
-                    (shownOutputs && shownOutputs.length > 0) ||
-                      showHiddenOutputs
-                      ? "bottom-5"
-                      : "bottom-1.5",
-                  )}
+                <ShadTooltip
+                  content={
+                    showHiddenOutputs
+                      ? TOOLTIP_HIDDEN_OUTPUTS
+                      : TOOLTIP_OPEN_HIDDEN_OUTPUTS
+                  }
+                  contrastTooltip
                 >
-                  <Button
-                    unstyled
-                    className="left-0 right-0 rounded-full border bg-background"
-                    onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
+                  <div
+                    className={cn(
+                      "absolute left-0 right-0 flex justify-center",
+                      (shownOutputs && shownOutputs.length > 0) ||
+                        showHiddenOutputs
+                        ? "bottom-[-0.8rem]"
+                        : "bottom-[-0.8rem]",
+                    )}
                   >
-                    <ForwardedIconComponent
-                      name={"ChevronDown"}
-                      strokeWidth={1.5}
-                      className={cn(
-                        "h-5 w-5 pt-px text-muted-foreground group-hover:text-medium-indigo group-hover/node:opacity-100",
-                        showHiddenOutputs ? "rotate-180 transform" : "",
-                      )}
-                    />
-                  </Button>
-                </div>
+                    <Button
+                      unstyled
+                      className="group flex h-6 w-6 items-center justify-center rounded-full border bg-background hover:border-foreground hover:text-foreground"
+                      onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
+                    >
+                      <ForwardedIconComponent
+                        name={showHiddenOutputs ? "EyeOff" : "Eye"}
+                        strokeWidth={1.5}
+                        className="h-4 w-4 text-placeholder group-hover:text-foreground"
+                      />
+                    </Button>
+                  </div>
+                </ShadTooltip>
               )}
             </>
           </div>

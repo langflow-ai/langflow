@@ -8,7 +8,7 @@ class CustomComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
     documentation: str = "http://docs.langflow.org/components/custom"
-    icon = "custom_components"
+    icon = "code"
     name = "CustomComponent"
 
     inputs = [

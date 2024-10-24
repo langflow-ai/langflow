@@ -8,7 +8,7 @@ from langflow.schema import Data
 
 class FileComponent(Component):
     display_name = "File"
-    description = "A generic file loader."
+    description = "Load a file to be used in your project."
     icon = "file-text"
     name = "File"
 

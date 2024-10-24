@@ -60,7 +60,6 @@ export default function NodeDescription({
   return (
     <div
       className={cn(
-        "generic-node-desc",
         !inputDescription ? "overflow-auto" : "",
         hasScroll ? "nowheel" : "",
         charLimit ? "px-2" : "",
@@ -128,6 +127,7 @@ export default function NodeDescription({
         </>
       ) : (
         <div
+          data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
             "nodoubleclick generic-node-desc-text h-full cursor-text word-break-break-word dark:text-note-placeholder",
@@ -144,7 +144,7 @@ export default function NodeDescription({
             <Markdown
               linkTarget="_blank"
               className={cn(
-                "markdown prose flex h-full w-full flex-col text-primary word-break-break-word note-node-markdown dark:prose-invert",
+                "markdown prose flex h-full w-full flex-col text-sm leading-5 text-muted-foreground word-break-break-word dark:prose-invert",
                 mdClassName,
               )}
             >

@@ -69,7 +69,9 @@ test("TextAreaModalComponent", async ({ page }) => {
       "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
     );
 
-  await page.getByTestId("textarea_str_text-ExternalLink").click();
+  await page
+    .getByTestId("button_open_text_area_modal_textarea_str_text")
+    .click();
 
   await page.waitForTimeout(500);
 

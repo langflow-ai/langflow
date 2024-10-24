@@ -652,3 +652,15 @@ export function isSupportedNodeTypes(type: string) {
 export function getNodeRenderType(MIMEtype: string) {
   return DRAG_EVENTS_CUSTOM_TYPESS[MIMEtype];
 }
+
+export const formatPlaceholderName = (name) => {
+  const formattedName = name
+    .split("_")
+    .map((word: string) => word.toLowerCase())
+    .join(" ");
+
+  const firstWord = formattedName.split(" ")[0];
+  const prefix = /^[aeiou]/i.test(firstWord) ? "an" : "a";
+
+  return `Select ${prefix} ${formattedName}`;
+};
