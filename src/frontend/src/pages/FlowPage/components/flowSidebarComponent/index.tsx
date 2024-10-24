@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -25,6 +26,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import { Switch } from "@/components/ui/switch";
 import { useGetCategoriesQuery } from "@/controllers/API/queries/categories/use-get-categories";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { useStoreStore } from "@/stores/storeStore";
@@ -62,6 +64,10 @@ export function FlowSidebarComponent() {
   const [fuse, setFuse] = useState<Fuse<any> | null>(null);
 
   const [openCategories, setOpenCategories] = useState<string[]>([]);
+
+  const [showConfig, setShowConfig] = useState(false);
+  const [showBeta, setShowBeta] = useState(true);
+  const [showLegacy, setShowLegacy] = useState(true);
 
   const hasResults = useMemo(() => {
     return Object.values(dataFilter).some(
@@ -205,15 +211,45 @@ export function FlowSidebarComponent() {
   return (
     <Sidebar>
       <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
-        <div className="flex w-full items-center justify-between">
-          <h3 className="text-sm font-semibold">Components</h3>
-          <Button variant="ghost" size="icon">
-            <ForwardedIconComponent
-              name="SlidersHorizontal"
-              className="h-4 w-4 text-muted-foreground"
-            />
-          </Button>
-        </div>
+        <Collapsible open={showConfig} onOpenChange={setShowConfig}>
+          <div className="flex w-full items-center justify-between">
+            <h3 className="text-sm font-semibold">Components</h3>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <ForwardedIconComponent
+                  name="SlidersHorizontal"
+                  className="h-4 w-4 text-muted-foreground"
+                />
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent className="mt-4 flex flex-col gap-7 border-b pb-7">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium">
+                  Show{" "}
+                  <Badge variant="pinkStatic" size="sq">
+                    BETA
+                  </Badge>{" "}
+                  Components
+                </span>
+              </div>
+              <Switch checked={showBeta} onCheckedChange={setShowBeta} />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium">
+                  Show{" "}
+                  <Badge variant="secondaryStatic" size="sq">
+                    LEGACY
+                  </Badge>{" "}
+                  Components
+                </span>
+              </div>
+              <Switch checked={showLegacy} onCheckedChange={setShowLegacy} />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
         <div className="relative w-full flex-1">
           <ForwardedIconComponent
             name="Search"
