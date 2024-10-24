@@ -271,11 +271,6 @@ export default function GenericNode({
           "generic-node-div group/node",
         )}
       >
-        {data.node?.beta && showNode && (
-          <div className="beta-badge-wrapper">
-            <div className="beta-badge-content">BETA</div>
-          </div>
-        )}
         <div className="grid gap-3 truncate text-wrap border-b p-4 leading-5">
           <div
             data-testid={"div-generic-node"}
@@ -305,7 +300,10 @@ export default function GenericNode({
                     display_name={data.node?.display_name}
                     nodeId={data.id}
                     selected={selected}
+                    showNode={showNode}
+                    beta={data.node?.beta ?? false}
                   />
+
                   {isOutdated && !isUserEdited && (
                     <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
                       <Button
@@ -428,7 +426,7 @@ export default function GenericNode({
                       <ForwardedIconComponent
                         name={showHiddenOutputs ? "EyeOff" : "Eye"}
                         strokeWidth={1.5}
-                        className="h-4 w-4 text-placeholder group-hover:text-foreground"
+                        className="text-placeholder h-4 w-4 group-hover:text-foreground"
                       />
                     </Button>
                   </div>

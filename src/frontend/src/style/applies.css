@@ -1206,7 +1206,7 @@
   }
 
   .bg-lucide-icon {
-    @apply flex h-8 w-8 items-center justify-center rounded-sm bg-secondary p-[6px];
+    @apply flex h-8 w-8 items-center justify-center rounded-sm bg-muted p-[6px];
   }
 
   .integration-icon {
@@ -1218,11 +1218,11 @@
   }
 
   .disabled-state {
-    @apply pointer-events-none bg-secondary text-hard-zinc;
+    @apply text-hard-zinc pointer-events-none bg-secondary;
   }
 
   .background-fade-input {
-    @apply absolute right-[0.9px] h-6 w-7  bg-background
+    @apply absolute right-[0.9px] h-6 w-7 bg-background;
   }
 
   .gradient-fade-input {
@@ -1230,7 +1230,7 @@
   }
 
   .background-fade-input-edit-node {
-    @apply absolute right-[0.9px] h-4 w-7  bg-background
+    @apply absolute right-[0.9px] h-4 w-7 bg-background;
   }
 
   .gradient-fade-input-edit-node {
@@ -1247,6 +1247,10 @@
     @apply top-[-23px];
   }
   .popover-input {
-    @apply  h-fit w-fit flex-1 border-none bg-transparent p-0 shadow-none outline-none ring-0 ring-offset-0 placeholder:text-muted-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50
+    @apply h-fit w-fit flex-1 border-none bg-transparent p-0 shadow-none outline-none ring-0 ring-offset-0 placeholder:text-muted-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .beta-badge {
+    @apply bg-accent-pink text-accent-pink-foreground flex h-6 w-11 items-center justify-center rounded-lg p-2 text-center text-xs font-medium;
   }
 }
