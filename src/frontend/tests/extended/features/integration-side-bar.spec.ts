@@ -8,7 +8,9 @@ test("user should be able to see integrations in the sidebar if mvp_components i
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        mvp_components: true,
+        feature_flags: {
+          mvp_components: true,
+        },
       }),
       headers: {
         "content-type": "application/json",
@@ -53,7 +55,9 @@ test("user should NOT be able to see integrations in the sidebar if mvp_componen
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        mvp_components: false,
+        feature_flags: {
+          mvp_components: false,
+        },
       }),
       headers: {
         "content-type": "application/json",
