@@ -140,7 +140,7 @@ export default function ChatView({
           ))
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center">
-            <div className="flex flex-col items-center justify-center bg-background p-8">
+            <div className="flex flex-col items-center justify-center p-8">
               <span className="pb-5 text-4xl">⛓️</span>
               <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
                 New chat

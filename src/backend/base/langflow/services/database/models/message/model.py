@@ -62,7 +62,7 @@ class MessageBase(SQLModel):
 
         meta_data = message.meta_data.json() if hasattr(message.meta_data, "json") else message.meta_data
 
-        content_blocks = [] # [i.json() for i in message.content_blocks]
+        content_blocks = []  # [i.json() for i in message.content_blocks]
         for i in content_blocks:
             content = i.json() if hasattr(i, "json") else i
             content_blocks.append(content)

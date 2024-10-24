@@ -75,7 +75,6 @@ class Message(Data):
     category: str | None = None
     content_blocks: list[ContentBlock] | None = None
 
-
     @field_validator("flow_id", mode="before")
     @classmethod
     def validate_flow_id(cls, value):

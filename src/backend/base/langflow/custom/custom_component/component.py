@@ -700,29 +700,35 @@ class Component(CustomComponent):
                 return await self._build_with_tracing()
             return await self._build_without_tracing()
         except Exception as e:
+            reason = e.body.message if hasattr(e, "body") and hasattr(e.body, "message") else e.code
             import traceback
-            message = Message(**{
-                "sender": "qualquer sender",
-                "sender_name": "qualquer sender name",
-                "session_id": "",
-                "meta_data": {
-                    "text_color": "",
-                    "background_color": "#ff00ff",
-                    "edited": True,
-                    "source": "qualquer origem",
-                    "icon": "qualquer icone",
-                    "allow_markdown": True,
-                    "targets": [],
-                },
-                "category": "error",
-                "content_blocks": [{
-                    "component": self.display_name,
-                    "field": "qualquer outra coisa",
-                    "reason": e.__class__.__name__,
-                    "solution": "qualquer solucao",
-                    "traceback": traceback.print_exc(),
-                }],
-            })
+
+            message = Message(
+                **{
+                    "sender": self.display_name,
+                    "sender_name": self.display_name,
+                    "text": reason,
+                    "meta_data": {
+                        "text_color": "red",
+                        "background_color": "red",
+                        "edited": False,
+                        "source": self.display_name,
+                        "icon": "error",
+                        "allow_markdown": False,
+                        "targets": [],
+                    },
+                    "category": "error",
+                    "content_blocks": [
+                        {
+                            "component": self.display_name,
+                            "field": str(e.field) if hasattr(e, "field") else None,
+                            "reason": reason,
+                            "solution": str(e.solution) if hasattr(e, "solution") else None,
+                            "tracback": traceback.print_exc(),
+                        }
+                    ],
+                }
+            )
             self.send_message(message)
             raise e
 

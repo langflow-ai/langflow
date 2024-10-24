@@ -84,6 +84,7 @@ def add_messagetables(messages: list[MessageTable], session: Session):
             logger.exception(e)
             raise
     import json
+
     new_messages = []
     for i in messages:
         i.meta_data = json.loads(i.meta_data) if i.meta_data else {}

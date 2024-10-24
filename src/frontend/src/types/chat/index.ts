@@ -16,9 +16,10 @@ export type ChatMessageType = {
   sender_name?: string;
   session?: string;
   edit?: boolean;
-  background_color: string;
-  text_color: string;
   icon?: string;
+  category?: string;
+  meta_data?: any;
+  content_blocks?: ContentBlockError[];
 };
 
 export type ChatOutputType = {
@@ -47,10 +48,15 @@ export type FlowPoolObjectType = {
 };
 
 export interface ContentBlock {
-  title: string;
-  content: string | Record<string, unknown> | unknown[];
-  allow_markdown: boolean;
-  media_url?: string[] | null;
+
+}
+
+export interface ContentBlockError extends ContentBlock {
+  component: string;
+  field?: string;
+  reason?: string;
+  solution?: string;
+  tracback?: string;
 }
 
 export interface PlaygroundEvent {

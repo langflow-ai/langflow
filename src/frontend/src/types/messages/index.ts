@@ -1,3 +1,5 @@
+import { ContentBlock } from "../chat";
+
 type Message = {
   flow_id: string;
   text: string;
@@ -10,6 +12,9 @@ type Message = {
   edit: boolean;
   background_color: string;
   text_color: string;
+  category?: string;
+  meta_data?: any;
+  content_blocks?: ContentBlock[];
 };
 
 export type { Message };
