@@ -90,7 +90,7 @@ class SubFlowComponent(Component):
     async def generate_results(self) -> list[Data]:
         tweaks: dict = {}
         for field in self._attributes:
-            if field != "flow_name":
+            if field != "flow_name" and "|" in field:
                 [node, name] = field.split("|")
                 if node not in tweaks:
                     tweaks[node] = {}
