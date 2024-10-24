@@ -422,19 +422,21 @@ export function FlowSidebarComponent() {
         )}
       </SidebarContent>
       <SidebarFooter className="border-t p-4 py-3">
-        <SidebarMenuButton asChild>
-          <a href="https://langflow.store/" target="_blank" rel="noreferrer">
-            <div className="flex items-center gap-2">
-              <ForwardedIconComponent
-                name="Store"
-                className="h-4 w-4 text-muted-foreground"
-              />
-              <span className="group-data-[state=open]/collapsible:font-semibold">
-                Discover more components
-              </span>
-            </div>
-          </a>
-        </SidebarMenuButton>
+        {hasStore && (
+          <SidebarMenuButton asChild>
+            <a href="https://langflow.store/" target="_blank" rel="noreferrer">
+              <div className="flex items-center gap-2">
+                <ForwardedIconComponent
+                  name="Store"
+                  className="h-4 w-4 text-muted-foreground"
+                />
+                <span className="group-data-[state=open]/collapsible:font-semibold">
+                  Discover more components
+                </span>
+              </div>
+            </a>
+          </SidebarMenuButton>
+        )}
         <SidebarMenuButton asChild>
           <Button
             unstyled
