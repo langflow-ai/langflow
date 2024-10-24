@@ -19,7 +19,7 @@ router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
 
 @router.get("/")
-def get_api_keys_route(
+async def get_api_keys_route(
     db: DbSession,
     current_user: CurrentActiveUser,
 ) -> ApiKeysResponse:
@@ -33,7 +33,7 @@ def get_api_keys_route(
 
 
 @router.post("/")
-def create_api_key_route(
+async def create_api_key_route(
     req: ApiKeyCreate,
     current_user: CurrentActiveUser,
     db: DbSession,
@@ -46,7 +46,7 @@ def create_api_key_route(
 
 
 @router.delete("/{api_key_id}", dependencies=[Depends(auth_utils.get_current_active_user)])
-def delete_api_key_route(
+async def delete_api_key_route(
     api_key_id: UUID,
     db: DbSession,
 ):
@@ -58,7 +58,7 @@ def delete_api_key_route(
 
 
 @router.post("/store")
-def save_store_api_key(
+async def save_store_api_key(
     api_key_request: ApiKeyCreateRequest,
     response: Response,
     current_user: CurrentActiveUser,
@@ -90,17 +90,3 @@ def save_store_api_key(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     return {"detail": "API Key saved"}
-
-
-@router.delete("/store")
-def delete_store_api_key(
-    current_user: CurrentActiveUser,
-    db: DbSession,
-):
-    try:
-        current_user.store_api_key = None
-        db.commit()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-
-    return {"detail": "API Key deleted"}

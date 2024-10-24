@@ -23,7 +23,7 @@ router = APIRouter(tags=["Users"], prefix="/users")
 
 
 @router.post("/", response_model=UserRead, status_code=201)
-def add_user(
+async def add_user(
     user: UserCreate,
     session: DbSession,
 ) -> User:
@@ -46,7 +46,7 @@ def add_user(
 
 
 @router.get("/whoami", response_model=UserRead)
-def read_current_user(
+async def read_current_user(
     current_user: CurrentActiveUser,
 ) -> User:
     """Retrieve the current user's data."""
@@ -54,7 +54,7 @@ def read_current_user(
 
 
 @router.get("/", dependencies=[Depends(get_current_active_superuser)])
-def read_all_users(
+async def read_all_users(
     *,
     skip: int = 0,
     limit: int = 10,
@@ -74,7 +74,7 @@ def read_all_users(
 
 
 @router.patch("/{user_id}", response_model=UserRead)
-def patch_user(
+async def patch_user(
     user_id: UUID,
     user_update: UserUpdate,
     user: CurrentActiveUser,
@@ -101,7 +101,7 @@ def patch_user(
 
 
 @router.patch("/{user_id}/reset-password", response_model=UserRead)
-def reset_password(
+async def reset_password(
     user_id: UUID,
     user_update: UserUpdate,
     user: CurrentActiveUser,
@@ -124,7 +124,7 @@ def reset_password(
 
 
 @router.delete("/{user_id}")
-def delete_user(
+async def delete_user(
     user_id: UUID,
     current_user: Annotated[User, Depends(get_current_active_superuser)],
     session: DbSession,

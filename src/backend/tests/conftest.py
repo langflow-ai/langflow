@@ -385,6 +385,44 @@ async def logged_in_headers(client, active_user):
 
 
 @pytest.fixture
+def active_super_user(client):  # noqa: ARG001
+    db_manager = get_db_service()
+    with db_manager.with_session() as session:
+        user = User(
+            username="activeuser",
+            password=get_password_hash("testpassword"),
+            is_active=True,
+            is_superuser=True,
+        )
+        if active_user := session.exec(select(User).where(User.username == user.username)).first():
+            user = active_user
+        else:
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+        user = UserRead.model_validate(user, from_attributes=True)
+    yield user
+    # Clean up
+    # Now cleanup transactions, vertex_build
+    with db_manager.with_session() as session:
+        user = session.get(User, user.id)
+        _delete_transactions_and_vertex_builds(session, user)
+        session.delete(user)
+
+        session.commit()
+
+
+@pytest.fixture
+async def logged_in_headers_super_user(client, active_super_user):
+    login_data = {"username": active_super_user.username, "password": "testpassword"}
+    response = await client.post("api/v1/login", data=login_data)
+    assert response.status_code == 200
+    tokens = response.json()
+    a_token = tokens["access_token"]
+    return {"Authorization": f"Bearer {a_token}"}
+
+
+@pytest.fixture
 def flow(
     client,  # noqa: ARG001
     json_flow: str,

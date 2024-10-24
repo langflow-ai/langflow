@@ -548,7 +548,7 @@ async def create_upload_file(
 
 # get endpoint to return version of langflow
 @router.get("/version")
-def get_version():
+async def get_version():
     return get_version_info()
 
 
@@ -624,7 +624,7 @@ async def custom_component_update(
 
 
 @router.get("/config", response_model=ConfigResponse)
-def get_config():
+async def get_config():
     try:
         from langflow.services.deps import get_settings_service
 
@@ -635,5 +635,5 @@ def get_config():
 
 
 @router.get("/sidebar_categories")
-def get_sidebar_categories() -> SidebarCategoriesResponse:
+async def get_sidebar_categories() -> SidebarCategoriesResponse:
     return SidebarCategoriesResponse(categories=SIDEBAR_CATEGORIES)
