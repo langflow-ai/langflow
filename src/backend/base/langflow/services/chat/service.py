@@ -13,9 +13,9 @@ class ChatService(Service):
 
     name = "chat_service"
 
-    def __init__(self):
-        self._async_cache_locks = defaultdict(asyncio.Lock)
-        self._sync_cache_locks = defaultdict(RLock)
+    def __init__(self) -> None:
+        self.async_cache_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+        self._sync_cache_locks: dict[str, RLock] = defaultdict(RLock)
         self.cache_service = get_cache_service()
 
     def _get_lock(self, key: str):
@@ -28,7 +28,7 @@ class ChatService(Service):
             threading.Lock or asyncio.Lock: The lock associated with the given key.
         """
         if isinstance(self.cache_service, AsyncBaseCacheService):
-            return self._async_cache_locks[key]
+            return self.async_cache_locks[key]
         return self._sync_cache_locks[key]
 
     async def _perform_cache_operation(
@@ -101,7 +101,7 @@ class ChatService(Service):
         """
         return await self._perform_cache_operation("get", key, lock=lock or self._get_lock(key))
 
-    async def clear_cache(self, key: str, lock: asyncio.Lock | None = None):
+    async def clear_cache(self, key: str, lock: asyncio.Lock | None = None) -> None:
         """Clear the cache for a client.
 
         Args:

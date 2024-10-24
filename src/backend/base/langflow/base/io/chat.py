@@ -29,7 +29,7 @@ class ChatComponent(Component):
         self.status = stored_message
         return stored_message
 
-    def _send_message_event(self, message: Message):
+    def _send_message_event(self, message: Message) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
             self._event_manager.on_message(data=message.data)
 
@@ -44,7 +44,7 @@ class ChatComponent(Component):
     def _update_stored_message(self, message_id: str, complete_message: str) -> Message:
         message_table = update_message(message_id=message_id, message={"text": complete_message})
         updated_message = Message(**message_table.model_dump())
-        self.vertex._added_message = updated_message
+        self.vertex.added_message = updated_message
         return updated_message
 
     def _process_chunk(self, chunk: str, complete_message: str, message: Message, message_id: str) -> str:
@@ -107,7 +107,7 @@ class ChatComponent(Component):
             return Message.from_data(input_value)
         return Message(text=input_value, sender=sender, sender_name=sender_name, files=files, session_id=session_id)
 
-    def _send_messages_events(self, messages):
+    def _send_messages_events(self, messages) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
             for stored_message in messages:
                 self._event_manager.on_message(data=stored_message.data)

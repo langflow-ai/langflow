@@ -18,7 +18,7 @@ from langflow.schema.table import Column, TableSchema
 class FieldTypes(str, Enum):
     TEXT = "str"
     INTEGER = "int"
-    PASSWORD = "str"  # noqa: PIE796
+    PASSWORD = "str"  # noqa: PIE796, S105
     FLOAT = "float"
     BOOLEAN = "bool"
     DICT = "dict"

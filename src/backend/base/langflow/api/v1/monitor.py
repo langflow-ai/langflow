@@ -3,8 +3,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import delete
-from sqlmodel import Session, col, select
+from sqlmodel import col, select
 
+from langflow.api.utils import DbSession
 from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
@@ -15,16 +16,12 @@ from langflow.services.database.models.vertex_builds.crud import (
     get_vertex_builds_by_flow_id,
 )
 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
-from langflow.services.deps import get_session
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 
-@router.get("/builds", response_model=VertexBuildMapModel)
-async def get_vertex_builds(
-    flow_id: Annotated[UUID, Query()],
-    session: Annotated[Session, Depends(get_session)],
-):
+@router.get("/builds")
+async def get_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> VertexBuildMapModel:
     try:
         vertex_builds = get_vertex_builds_by_flow_id(session, flow_id)
         return VertexBuildMapModel.from_list_of_dicts(vertex_builds)
@@ -33,25 +30,22 @@ async def get_vertex_builds(
 
 
 @router.delete("/builds", status_code=204)
-async def delete_vertex_builds(
-    flow_id: Annotated[UUID, Query()],
-    session: Annotated[Session, Depends(get_session)],
-):
+async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> None:
     try:
         delete_vertex_builds_by_flow_id(session, flow_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/messages", response_model=list[MessageResponse])
+@router.get("/messages")
 async def get_messages(
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
     flow_id: Annotated[str | None, Query()] = None,
     session_id: Annotated[str | None, Query()] = None,
     sender: Annotated[str | None, Query()] = None,
     sender_name: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
-):
+) -> list[MessageResponse]:
     try:
         stmt = select(MessageTable)
         if flow_id:
@@ -72,10 +66,7 @@ async def get_messages(
 
 
 @router.delete("/messages", status_code=204, dependencies=[Depends(get_current_active_user)])
-async def delete_messages(
-    message_ids: list[UUID],
-    session: Annotated[Session, Depends(get_session)],
-):
+async def delete_messages(message_ids: list[UUID], session: DbSession) -> None:
     try:
         session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]
         session.commit()
@@ -87,7 +78,7 @@ async def delete_messages(
 async def update_message(
     message_id: UUID,
     message: MessageUpdate,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
 ):
     try:
         db_message = session.get(MessageTable, message_id)
@@ -113,13 +104,12 @@ async def update_message(
 @router.patch(
     "/messages/session/{old_session_id}",
     dependencies=[Depends(get_current_active_user)],
-    response_model=list[MessageResponse],
 )
 async def update_session_id(
     old_session_id: str,
     new_session_id: Annotated[str, Query(..., description="The new session ID to update to")],
-    session: Annotated[Session, Depends(get_session)],
-):
+    session: DbSession,
+) -> list[MessageResponse]:
     try:
         # Get all messages with the old session ID
         stmt = select(MessageTable).where(MessageTable.session_id == old_session_id)
@@ -151,7 +141,7 @@ async def update_session_id(
 @router.delete("/messages/session/{session_id}", status_code=204)
 async def delete_messages_session(
     session_id: str,
-    session: Annotated[Session, Depends(get_session)],
+    session: DbSession,
 ):
     try:
         session.exec(
@@ -166,11 +156,11 @@ async def delete_messages_session(
     return {"message": "Messages deleted successfully"}
 
 
-@router.get("/transactions", response_model=list[TransactionReadResponse])
+@router.get("/transactions")
 async def get_transactions(
     flow_id: Annotated[UUID, Query()],
-    session: Annotated[Session, Depends(get_session)],
-):
+    session: DbSession,
+) -> list[TransactionReadResponse]:
     try:
         transactions = get_transactions_by_flow_id(session, flow_id)
         return [

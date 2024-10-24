@@ -24,7 +24,7 @@ def get_patched_openai_client(shared_component_cache):
 
 
 url = "https://raw.githubusercontent.com/BerriAI/litellm/refs/heads/main/model_prices_and_context_window.json"
-response = requests.get(url)
+response = requests.get(url, timeout=10)
 data = json.loads(response.text)
 
 # Extract the model names into a Python list
@@ -36,7 +36,7 @@ tool_names = []
 tools_and_names = {}
 
 
-def tools_from_package(your_package):
+def tools_from_package(your_package) -> None:
     # Iterate over all modules in the package
     package_name = your_package.__name__
     for module_info in pkgutil.iter_modules(your_package.__path__):

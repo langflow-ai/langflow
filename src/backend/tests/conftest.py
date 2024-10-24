@@ -12,11 +12,11 @@ from uuid import UUID
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
-from base.langflow.components.inputs.ChatInput import ChatInput
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.graph.graph.base import Graph
+from langflow.components.inputs import ChatInput
+from langflow.graph import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
@@ -118,7 +118,7 @@ async def async_client() -> AsyncGenerator:
     from langflow.main import create_app
 
     app = create_app()
-    async with AsyncClient(app=app, base_url="http://testserver") as client:
+    async with AsyncClient(app=app, base_url="http://testserver", http2=True) as client:
         yield client
 
 
@@ -306,7 +306,7 @@ async def client_fixture(
         # app.dependency_overrides[get_session] = get_session_override
         async with (
             LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
-            AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client,
+            AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True) as client,
         ):
             yield client
         # app.dependency_overrides.clear()

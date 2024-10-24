@@ -45,5 +45,5 @@ class BaseMemoryComponent(CustomComponent):
 
     def add_message(
         self, sender: str, sender_name: str, text: str, session_id: str, metadata: dict | None = None, **kwargs
-    ):
+    ) -> None:
         raise NotImplementedError
