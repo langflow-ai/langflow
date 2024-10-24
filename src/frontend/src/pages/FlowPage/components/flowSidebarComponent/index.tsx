@@ -227,10 +227,13 @@ export function FlowSidebarComponent() {
           <div className="flex w-full items-center justify-between">
             <h3 className="text-sm font-semibold">Components</h3>
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button
+                variant={showConfig ? "ghostActive" : "ghost"}
+                size="iconMd"
+              >
                 <ForwardedIconComponent
                   name="SlidersHorizontal"
-                  className="h-4 w-4 text-muted-foreground"
+                  className="h-4 w-4"
                 />
               </Button>
             </CollapsibleTrigger>
