@@ -193,7 +193,7 @@ export default function ChatMessage({
     );
   };
   const editedFlag = chat.edit ? (
-    <span className="text-sm text-chat-trigger-disabled">(Edited)</span>
+    <div className="text-sm text-muted-foreground">(Edited)</div>
   ) : null;
 
   // Add this before the default return statement
@@ -362,13 +362,13 @@ export default function ChatMessage({
                                 />
                               ) : (
                                 <>
-                                  <div className="flex w-full gap-2">
+                                  <div className="flex w-full gap-2 items-baseline">
                                     <Markdown
                                       remarkPlugins={[remarkGfm]}
                                       linkTarget="_blank"
                                       rehypePlugins={[rehypeMathjax]}
                                       className={cn(
-                                        "markdown prose flex w-full max-w-full flex-col word-break-break-word dark:prose-invert",
+                                        "markdown prose flex w-fit items-baseline max-w-full flex-col word-break-break-word dark:prose-invert",
                                         isEmpty
                                           ? "text-chat-trigger-disabled"
                                           : "text-primary",
@@ -376,7 +376,7 @@ export default function ChatMessage({
                                       components={{
                                         p({ node, ...props }) {
                                           return (
-                                            <span className="inline-block max-w-full">
+                                            <span className="inline-block max-w-full w-fit">
                                               {props.children}
                                             </span>
                                           );
@@ -439,8 +439,8 @@ export default function ChatMessage({
                                         ? EMPTY_OUTPUT_SEND_MESSAGE
                                         : chatMessage}
                                     </Markdown>
-                                  </div>
                                   {editedFlag}
+                                  </div>
                                 </>
                               )}
                             </div>
@@ -524,7 +524,7 @@ export default function ChatMessage({
                       ) : (
                         <>
                           <div
-                            className={`flex w-full gap-2 whitespace-pre-wrap break-words ${isEmpty
+                            className={`flex items-baseline w-full gap-2 whitespace-pre-wrap break-words ${isEmpty
                               ? "text-chat-trigger-disabled"
                               : "text-primary"
                               }`}
@@ -533,8 +533,8 @@ export default function ChatMessage({
                             {isEmpty
                               ? EMPTY_INPUT_SEND_MESSAGE
                               : decodedMessage}
-                          </div>
                           {editedFlag}
+                          </div>
                         </>
                       )}
                       {chat.files && (
