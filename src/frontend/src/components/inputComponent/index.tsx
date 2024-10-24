@@ -182,7 +182,7 @@ export default function InputComponent({
                 nodeStyle!,
               )}
               className={cn(
-                disabled ? "text-placeholder cursor-grab" : "cursor-pointer",
+                disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
                 "h-4 w-4",
               )}
               aria-hidden="true"
