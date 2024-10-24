@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import inspect
-import json
 from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
@@ -442,28 +441,13 @@ class Component(CustomComponent):
             self._set_parameter_or_attribute(key, value)
 
     def _process_connection_or_parameters(self, key, value) -> None:
-        # if value is a list, process it as a whole
-        if isinstance(value, list):
-            # Serialize each item in the list if necessary
-            serialized_list = [
-                self._serialize_value(item) if not isinstance(item, Component) else item for item in value
-            ]
-            # Pass the entire list to _process_connection_or_parameter
-            self._process_connection_or_parameter(key, serialized_list)
+        # if value is a list of components, we need to process each component
+        # Note this update make sure it is not a list str | int | float | bool | type(None)
+        if isinstance(value, list) and not any(isinstance(val, str | int | float | bool | type(None)) for val in value):
+            for val in value:
+                self._process_connection_or_parameter(key, val)
         else:
-            # Process single value
-            self._process_connection_or_parameter(key, self._serialize_value(value))
-
-    def _serialize_value(self, value):
-        """Helper function to serialize non-serializable values."""
-        if isinstance(value, dict):
-            try:
-                return json.dumps(value)
-            except TypeError:
-                return json.dumps({k: str(v) for k, v in value.items()})
-        elif not isinstance(value, str | int | float | bool | type(None)):
-            return str(value)
-        return value
+            self._process_connection_or_parameter(key, value)
 
     def _get_or_create_input(self, key):
         try:
