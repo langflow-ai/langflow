@@ -17,7 +17,7 @@ from langflow.api.v1.schemas import (
     CustomComponentResponse,
     InputValueRequest,
     RunResponse,
-    SidebarCategoriesResponse,
+    SidebarComponentsResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
     UpdateCustomComponentRequest,
@@ -47,7 +47,7 @@ from langflow.services.deps import (
 )
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
-from langflow.utils.constants import SIDEBAR_CATEGORIES
+from langflow.utils.constants import SIDEBAR_BUNDLES, SIDEBAR_CATEGORIES
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -636,6 +636,6 @@ def get_config():
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.get("/sidebar_categories")
-def get_sidebar_categories() -> SidebarCategoriesResponse:
-    return SidebarCategoriesResponse(categories=SIDEBAR_CATEGORIES)
+@router.get("/sidebar_components")
+async def get_sidebar_components() -> SidebarComponentsResponse:
+    return SidebarComponentsResponse(categories=SIDEBAR_CATEGORIES, bundles=SIDEBAR_BUNDLES)
