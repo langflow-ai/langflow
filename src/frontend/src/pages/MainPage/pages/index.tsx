@@ -1,33 +1,25 @@
 import FolderSidebarNav from "@/components/folderSidebarComponent";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
-import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+import { useFolderStore } from "@/stores/foldersStore";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import DropdownButton from "../../../../components/dropdownButtonComponent";
-import PageLayout from "../../../../components/pageLayout";
-import {
-  MY_COLLECTION_DESC,
-  USER_PROJECTS_HEADER,
-} from "../../../../constants/constants";
-import { useFolderStore } from "../../../../stores/foldersStore";
-import ModalsComponent from "../../components/modalsComponent";
-import useDropdownOptions from "../../hooks/use-dropdown-options";
+import ModalsComponent from "../components/modalsComponent";
 
-export default function HomePage(): JSX.Element {
+export default function CollectionPage(): JSX.Element {
   const location = useLocation();
-  const pathname = location.pathname;
   const [openModal, setOpenModal] = useState(false);
   const [openDeleteFolderModal, setOpenDeleteFolderModal] = useState(false);
-  const is_component = pathname.includes("/components");
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
   const navigate = useCustomNavigate();
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
+  const folders = useFolderStore((state) => state.folders);
+  const showFolderModal = useFolderStore((state) => state.showFolderModal);
   const queryClient = useQueryClient();
 
   // cleanup the query cache when the component unmounts
@@ -35,11 +27,6 @@ export default function HomePage(): JSX.Element {
   useEffect(() => {
     return () => queryClient.removeQueries({ queryKey: ["useGetFolder"] });
   }, []);
-
-  const dropdownOptions = useDropdownOptions({
-    navigate,
-    is_component,
-  });
 
   const { mutate } = useDeleteFolders();
 
@@ -65,22 +52,14 @@ export default function HomePage(): JSX.Element {
     );
   };
 
-  const isFetchingFolders = !!useIsFetching({
-    queryKey: ["useGetFolders"],
-    exact: false,
-  });
-
-  const isFetchingFolder = !!useIsFetching({
-    queryKey: ["useGetFolder"],
-    exact: false,
-  });
-
-  const isLoadingFolder = isFetchingFolders || isFetchingFolder;
-
   return (
     <>
-      <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-y-0">
-        <aside className="hidden h-full w-fit flex-col space-y-6 border-r px-4 lg:flex">
+      <div className="flex h-full w-full flex-row">
+        <aside
+          className={`flex h-full w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r px-4 lg:inline ${
+            showFolderModal ? "" : "hidden"
+          }`}
+        >
           <FolderSidebarNav
             handleChangeFolder={(id: string) => {
               navigate(`all/folder/${id}`);
@@ -89,33 +68,14 @@ export default function HomePage(): JSX.Element {
               setFolderToEdit(item);
               setOpenDeleteFolderModal(true);
             }}
-            className="w-[20vw] max-w-[288px]"
           />
         </aside>
-        <PageLayout
-          title={USER_PROJECTS_HEADER}
-          description={MY_COLLECTION_DESC}
-          button={
-            <div className="flex gap-2">
-              <DropdownButton
-                firstButtonName="New Project"
-                onFirstBtnClick={() => {
-                  setOpenModal(true);
-                  track("New Project Button Clicked");
-                }}
-                options={dropdownOptions}
-                plusButton={true}
-                dropdownOptions={false}
-                isFetchingFolders={isLoadingFolder}
-              />
-            </div>
-          }
-        >
-          <div className="relative h-full w-full flex-1">
-            <Outlet />
-          </div>
-        </PageLayout>
+
+        <div className="relative h-screen w-full overflow-y-auto pb-5">
+          <Outlet />
+        </div>
       </div>
+
       <ModalsComponent
         openModal={openModal}
         setOpenModal={setOpenModal}

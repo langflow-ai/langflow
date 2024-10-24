@@ -20,8 +20,8 @@ import { AppWrapperPage } from "./pages/AppWrapperPage";
 import { DashboardWrapperPage } from "./pages/DashboardWrapperPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
-import MyCollectionComponent from "./pages/MainPage/components/myCollectionComponent";
-import HomePage from "./pages/MainPage/pages/mainPage";
+import CollectionPage from "./pages/MainPage/pages";
+import HomePage from "./pages/MainPage/pages/homePage";
 import SettingsPage from "./pages/SettingsPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
@@ -60,48 +60,36 @@ const router = createBrowserRouter(
           >
             <Route path="" element={<AppAuthenticatedPage />}>
               <Route path="" element={<DashboardWrapperPage />}>
-                <Route path="" element={<HomePage />}>
+                <Route path="" element={<CollectionPage />}>
                   <Route
                     index
                     element={<CustomNavigate replace to={"all"} />}
                   />
                   <Route
                     path="flows/"
-                    element={<MyCollectionComponent key="flows" type="flow" />}
+                    element={<HomePage key="flows" type="flow" />}
                   >
                     <Route
                       path="folder/:folderId"
-                      element={
-                        <MyCollectionComponent key="flows" type="flow" />
-                      }
+                      element={<HomePage key="flows" type="flow" />}
                     />
                   </Route>
                   <Route
                     path="components/"
-                    element={
-                      <MyCollectionComponent
-                        key="components"
-                        type="component"
-                      />
-                    }
+                    element={<HomePage key="components" type="component" />}
                   >
                     <Route
                       path="folder/:folderId"
-                      element={
-                        <MyCollectionComponent
-                          key="components"
-                          type="component"
-                        />
-                      }
+                      element={<HomePage key="components" type="component" />}
                     />
                   </Route>
                   <Route
                     path="all/"
-                    element={<MyCollectionComponent key="all" type="all" />}
+                    element={<HomePage key="all" type="all" />}
                   >
                     <Route
                       path="folder/:folderId"
-                      element={<MyCollectionComponent key="all" type="all" />}
+                      element={<HomePage key="all" type="all" />}
                     />
                   </Route>
                 </Route>
