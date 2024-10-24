@@ -26,8 +26,8 @@ async def test_get_config(client: AsyncClient):
     assert "max_file_size_upload" in result.keys(), "The dictionary must contain a key called 'max_file_size_upload'"
 
 
-async def test_get_sidebar_categories(client: AsyncClient):
-    response = await client.get("api/v1/sidebar_categories")
+async def test_get_sidebar_components(client: AsyncClient):
+    response = await client.get("api/v1/sidebar_components")
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK
@@ -35,3 +35,6 @@ async def test_get_sidebar_categories(client: AsyncClient):
     assert "categories" in result.keys(), "The dictionary must contain a key called 'categories'"
     assert len(result["categories"]) > 0, "The categories list must not be empty"
     assert isinstance(result["categories"], list), "The categories must be a list"
+    assert "bundles" in result.keys(), "The dictionary must contain a key called 'bundles'"
+    assert isinstance(result["bundles"], list), "The bundles must be a list"
+    assert len(result["bundles"]) > 0, "The bundles list must not be empty"
