@@ -13,4 +13,6 @@ export type UtilityStoreType = {
   setFlowsPagination: (pagination: Pagination) => void;
   tags: Tag[];
   setTags: (tags: Tag[]) => void;
+  featureFlags: Record<string, any>;
+  setFeatureFlags: (featureFlags: Record<string, any>) => void;
 };
