@@ -45,7 +45,7 @@ class ContentBlock(BaseModel):
     field: str | None = None
     reason: str | None = None
     solution: str | None = None
-    tracback: str | None = None
+    traceback: str | None = None
 
     def to_dict(self):
         return self.model_dump()

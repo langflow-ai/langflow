@@ -700,6 +700,7 @@ class Component(CustomComponent):
                 return await self._build_with_tracing()
             return await self._build_without_tracing()
         except Exception as e:
+            import traceback
             message = Message(**{
                 "sender": "qualquer sender",
                 "sender_name": "qualquer sender name",
@@ -715,11 +716,11 @@ class Component(CustomComponent):
                 },
                 "category": "error",
                 "content_blocks": [{
-                    "component": "qualquer coisa",
+                    "component": self.display_name,
                     "field": "qualquer outra coisa",
-                    "reason": "qualquer razao",
+                    "reason": e.__class__.__name__,
                     "solution": "qualquer solucao",
-                    "tracback": "qualquer tracback",
+                    "traceback": traceback.print_exc(),
                 }],
             })
             self.send_message(message)

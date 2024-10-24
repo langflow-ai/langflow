@@ -59,6 +59,14 @@ class MessageBase(SQLModel):
         # If the text is not a string, it means it could be
         # async iterator so we simply add it as an empty string
         message_text = "" if not isinstance(message.text, str) else message.text
+
+        meta_data = message.meta_data.json() if hasattr(message.meta_data, "json") else message.meta_data
+
+        content_blocks = [] # [i.json() for i in message.content_blocks]
+        for i in content_blocks:
+            content = i.json() if hasattr(i, "json") else i
+            content_blocks.append(content)
+
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
@@ -67,9 +75,9 @@ class MessageBase(SQLModel):
             files=message.files or [],
             timestamp=timestamp,
             flow_id=flow_id,
-            meta_data=message.meta_data.json(),
+            meta_data=meta_data,
             category=message.category,
-            content_blocks=[i.json() for i in message.content_blocks],
+            content_blocks=content_blocks,
         )
 
 
