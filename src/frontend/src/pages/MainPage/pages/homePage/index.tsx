@@ -57,6 +57,7 @@ const HomePage = ({ type }: HomePageProps) => {
       {true ? (
         <div className="mx-5">
           <HeaderComponent
+            folderName={data.name}
             flowType={flowType}
             setFlowType={setFlowType}
             view={view}

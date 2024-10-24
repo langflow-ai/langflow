@@ -9,9 +9,11 @@ interface HeaderComponentProps {
   view: "list" | "grid";
   setView: (view: "list" | "grid") => void;
   setNewProjectModal: (newProjectModal: boolean) => void;
+  folderName: string;
 }
 
 const HeaderComponent = ({
+  folderName,
   flowType,
   setFlowType,
   view,
@@ -22,7 +24,7 @@ const HeaderComponent = ({
 
   return (
     <>
-      <div className="pb-8 pt-10 text-xl font-semibold">My Flows</div>
+      <div className="pb-8 pt-10 text-xl font-semibold">{folderName}</div>
       <div className="flex pb-8">
         <Button
           unstyled
