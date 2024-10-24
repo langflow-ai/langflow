@@ -1,8 +1,8 @@
 from typing import Any
 
 from astrapy import Collection, DataAPIClient, Database
-from langchain.pydantic_v1 import BaseModel, Field, create_model
 from langchain_core.tools import StructuredTool
+from pydantic import BaseModel, Field, create_model
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import DictInput, IntInput, SecretStrInput, StrInput

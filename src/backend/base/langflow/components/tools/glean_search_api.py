@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 
 import httpx
 from langchain.tools import StructuredTool
-from langchain_core.pydantic_v1 import BaseModel
+from pydantic import BaseModel
 from pydantic.v1 import Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent

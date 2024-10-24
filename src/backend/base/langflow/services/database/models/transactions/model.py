@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import field_serializer, field_validator
+from pydantic import ConfigDict, field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -12,6 +12,10 @@ from langflow.utils.util_strings import truncate_long_strings
 
 
 class TransactionBase(SQLModel):
+    # Needed for Column(JSON)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     vertex_id: str = Field(nullable=False)
     target_id: str | None = Field(default=None)
@@ -20,10 +24,6 @@ class TransactionBase(SQLModel):
     status: str = Field(nullable=False)
     error: str | None = Field(default=None)
     flow_id: UUID = Field(foreign_key="flow.id")
-
-    # Needed for Column(JSON)
-    class Config:
-        arbitrary_types_allowed = True
 
     @field_validator("flow_id", mode="before")
     @classmethod

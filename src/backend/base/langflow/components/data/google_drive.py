@@ -4,6 +4,7 @@ from json.decoder import JSONDecodeError
 from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from langchain_google_community import GoogleDriveLoader
+from pydantic import ConfigDict
 
 from langflow.custom import Component
 from langflow.helpers.data import docs_to_data
@@ -36,6 +37,9 @@ class GoogleDriveComponent(Component):
 
     def load_documents(self) -> Data:
         class CustomGoogleDriveLoader(GoogleDriveLoader):
+            model_config = ConfigDict(
+                arbitrary_types_allowed=True,
+            )
             creds: Credentials | None = None
             """Credentials object to be passed directly."""
 
@@ -45,9 +49,6 @@ class GoogleDriveComponent(Component):
                     return self.creds
                 msg = "No credentials provided."
                 raise ValueError(msg)
-
-            class Config:
-                arbitrary_types_allowed = True
 
         json_string = self.json_string
 

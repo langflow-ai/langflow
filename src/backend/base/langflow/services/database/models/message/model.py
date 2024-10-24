@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import field_validator
+from pydantic import ConfigDict, field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -67,6 +67,9 @@ class MessageBase(SQLModel):
 
 
 class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
     __tablename__ = "message"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     flow_id: UUID | None = Field(default=None, foreign_key="flow.id")
@@ -83,8 +86,6 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         return value
 
     # Needed for Column(JSON)
-    class Config:
-        arbitrary_types_allowed = True
 
 
 class MessageRead(MessageBase):
