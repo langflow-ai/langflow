@@ -415,7 +415,7 @@ export default function GenericNode({
                       (shownOutputs && shownOutputs.length > 0) ||
                         showHiddenOutputs
                         ? "bottom-[-0.8rem]"
-                        : "bottom-1.5",
+                        : "bottom-[-0.8rem]",
                     )}
                   >
                     <Button
