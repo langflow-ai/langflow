@@ -50,6 +50,7 @@ test("user should be able to see integrations in the sidebar if mvp_components i
 test("user should NOT be able to see integrations in the sidebar if mvp_components is false", async ({
   page,
 }) => {
+  await page.waitForTimeout(4000);
   await page.route("**/api/v1/config", (route) => {
     route.fulfill({
       status: 200,
