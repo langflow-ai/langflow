@@ -213,7 +213,7 @@ async def delete_folder(
     current_user: CurrentActiveUser,
 ):
     try:
-        flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)).all()
+        flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Flow.user_id == current_user.id)).all()
         if len(flows) > 0:
             for flow in flows:
                 await cascade_delete_flow(session, flow)
