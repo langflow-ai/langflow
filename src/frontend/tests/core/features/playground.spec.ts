@@ -137,6 +137,8 @@ test("fresh start playground", async ({ page }) => {
     .filter({ hasText: /^Usermessage 1$/ })
     .getByTestId("icon-pencil")
     .click();
+  await page.waitForTimeout(500);
+
   await page.getByTestId("textarea").fill("edit_1");
   await page.getByTestId("save-button").click();
   await page.getByTestId("chat-message-User-edit_1").click();
@@ -147,6 +149,8 @@ test("fresh start playground", async ({ page }) => {
     .filter({ hasText: /^Useredit_1$/ })
     .getByTestId("icon-pencil")
     .click();
+  await page.waitForTimeout(500);
+
   await page.getByTestId("textarea").fill("cancel_edit");
   await page.getByTestId("cancel-button").click();
   await page.getByTestId("chat-message-User-edit_1").click();
@@ -157,6 +161,8 @@ test("fresh start playground", async ({ page }) => {
     .filter({ hasText: /^Useredit_1$/ })
     .getByTestId("icon-pencil")
     .click();
+  await page.waitForTimeout(500);
+
   await page.getByTestId("textarea").fill("cancel_edit_blur");
   await page
     .getByLabel("Playground")
@@ -164,6 +170,8 @@ test("fresh start playground", async ({ page }) => {
     .filter({ hasText: "ChatDefault" })
     .nth(2)
     .click();
+  await page.waitForTimeout(500);
+
   await page.getByTestId("chat-message-User-edit_1").click();
   //check edit bot message
   await page
@@ -176,6 +184,8 @@ test("fresh start playground", async ({ page }) => {
     .filter({ hasText: /^AImessage 1$/ })
     .getByTestId("icon-pencil")
     .click();
+  await page.waitForTimeout(500);
+
   await page.getByTestId("textarea").fill("edit_bot_1");
   await page.getByTestId("save-button").click();
   await page.getByText("edit_bot_1").click();
@@ -186,6 +196,8 @@ test("fresh start playground", async ({ page }) => {
     .filter({ hasText: /^AIedit_bot_1$/ })
     .getByTestId("icon-pencil")
     .click();
+  await page.waitForTimeout(500);
+
   await page.getByTestId("textarea").fill("edit_bot_cancel");
   await page.getByTestId("cancel-button").click();
   await page.getByText("edit_bot_1").click();
@@ -196,6 +208,8 @@ test("fresh start playground", async ({ page }) => {
     .filter({ hasText: /^AIedit_bot_1$/ })
     .getByTestId("icon-pencil")
     .click();
+  await page.waitForTimeout(500);
+
   await page.getByTestId("textarea").fill("edit_bot_blur_cancel");
   await page
     .getByLabel("Playground")
@@ -203,6 +217,8 @@ test("fresh start playground", async ({ page }) => {
     .filter({ hasText: "ChatDefault" })
     .nth(2)
     .click();
+  await page.waitForTimeout(500);
+
   await page.getByText("edit_bot_1").click();
   // check table messages view
   await page.getByRole("combobox").click();
@@ -216,6 +232,8 @@ test("fresh start playground", async ({ page }) => {
     .getByLabel("Chat", { exact: true })
     .getByTestId("icon-Check")
     .click();
+  await page.waitForTimeout(500);
+
   await page.getByLabel("Chat", { exact: true }).getByText("new name").click();
   // check cancel rename
   await page.getByRole("combobox").click();
@@ -242,11 +260,13 @@ test("fresh start playground", async ({ page }) => {
 
   // check new chat
   await page.getByRole("button", { name: "New Chat" }).click();
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(1000);
   await page.getByText("👋 Langflow Chat").click();
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("second session");
   await page.keyboard.press("Enter");
+  await page.waitForTimeout(500);
+
   await page.getByTestId("chat-message-User-second session").click();
   await page
     .getByTestId("chat-message-AI-second session")
