@@ -1,9 +1,19 @@
 from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from langflow.base.io.chat import ChatComponent
 from langflow.inputs import BoolInput
-from langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output
+from langflow.io import (
+    DropdownInput,
+    FileInput,
+    MessageTextInput,
+    MultilineInput,
+    Output,
+)
 from langflow.schema.message import Message
-from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
+from langflow.utils.constants import (
+    MESSAGE_SENDER_AI,
+    MESSAGE_SENDER_NAME_USER,
+    MESSAGE_SENDER_USER,
+)
 
 
 class ChatInput(ChatComponent):
@@ -55,18 +65,40 @@ class ChatInput(ChatComponent):
             advanced=True,
             is_list=True,
         ),
+        MessageTextInput(
+            name="background_color",
+            display_name="Background Color",
+            info="The background color of the icon.",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="chat_icon",
+            display_name="Icon",
+            info="The icon of the message.",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="text_color",
+            display_name="Text Color",
+            info="The text color of the name",
+            advanced=True,
+        ),
     ]
     outputs = [
         Output(display_name="Message", name="message", method="message_response"),
     ]
 
     def message_response(self) -> Message:
+        _background_color = self.background_color
+        _text_color = self.text_color
+        _icon = self.chat_icon
         message = Message(
             text=self.input_value,
             sender=self.sender,
             sender_name=self.sender_name,
             session_id=self.session_id,
             files=self.files,
+            meta_data={"background_color": _background_color, "text_color": _text_color, "icon": _icon},
         )
         if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = self.store_message(

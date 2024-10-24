@@ -234,6 +234,7 @@ export default function ChatMessage({
       </div>
     );
   }
+  console.log(chat);
 
   return (
     <>
@@ -250,35 +251,49 @@ export default function ChatMessage({
                 "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl",
                 !chat.isSend ? "bg-chat-bot-icon" : "bg-muted-foreground",
               )}
+              style={chat.meta_data?.background_color ? { backgroundColor: chat.meta_data.background_color } : {}}
             >
               {!chat.isSend ? (
                 <div>
                   {chat.meta_data?.icon ? (
-                    chat.meta_data.icon.match(/[\uD83C-\uDBFF\uDC00-\uDFFF]/) ? (
-                    <span className="absolute scale-[60%]">{chat.meta_data.icon}</span>
+                    chat.meta_data.icon.match(/[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/) ? (
+                      <span className="">{chat.meta_data.icon}</span>
+                    ) : (
+                      <ForwardedIconComponent
+                        name={chat.meta_data.icon}
+                      />
+                    )
                   ) : (
-                    <ForwardedIconComponent
-                      name={chat.meta_data.icon}
+                    <img
+                      src={Robot}
+                      className="absolute scale-[60%] bottom-0 left-0"
+                      alt={"robot_image"}
                     />
-                  )
-                ) : (
-                  <img
-                    src={Robot}
-                    className="absolute scale-[60%]"
-                    alt={"robot_image"}
-                  />
-                )}
-              </div>
+                  )}
+                </div>
               ) : (
                 <div className="absolute scale-[80%]">
-                  <ProfileIcon />
+                  {chat.meta_data?.icon ? (
+                    chat.meta_data.icon.match(/[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/) ? (
+                      <div className="">{chat.meta_data.icon}</div>
+                    ) : (
+                      <ForwardedIconComponent
+                        name={chat.meta_data.icon}
+                      />
+                    )
+                  ) : (
+                    <ProfileIcon />
+                  )}
                 </div>
               )}
             </div>
             <div className="flex w-[94%] flex-col">
               <div>
                 <div
-                  className="flex items-baseline gap-3 max-w-full truncate pb-2 font-semibold"
+                  className={cn(
+                    "flex items-baseline gap-3 max-w-full truncate pb-2 font-semibold",
+                  )}
+                  style={chat.meta_data?.text_color ? { color: chat.meta_data.text_color } : {}}
                   data-testid={
                     "sender_name_" + chat.sender_name?.toLocaleLowerCase()
                   }
@@ -389,7 +404,6 @@ export default function ChatMessage({
                                               if (content[0] === "▍") {
                                                 return (
                                                   <span className="form-modal-markdown-span">
-                                                    ���
                                                   </span>
                                                 );
                                               }
