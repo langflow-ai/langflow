@@ -276,11 +276,11 @@ export default function GenericNode({
             <div className="beta-badge-content">BETA</div>
           </div>
         )}
-        <div className="grid gap-3 border-b p-4">
+        <div className="grid gap-3 truncate text-wrap border-b p-4 leading-5">
           <div
             data-testid={"div-generic-node"}
             className={
-              "generic-node-div-title " +
+              "generic-node-div-title justify-between" +
               (!showNode
                 ? " relative h-24 w-24 rounded-full"
                 : " justify-between rounded-t-lg")
@@ -428,7 +428,7 @@ export default function GenericNode({
                       <ForwardedIconComponent
                         name={showHiddenOutputs ? "EyeOff" : "Eye"}
                         strokeWidth={1.5}
-                        className="h-4 w-4 text-placeholder group-hover:text-foreground"
+                        className="text-placeholder h-4 w-4 group-hover:text-foreground"
                       />
                     </Button>
                   </div>
