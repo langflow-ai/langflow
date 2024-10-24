@@ -1,18 +1,16 @@
-import useAuthStore from "@/stores/authStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
-import { useQueryFunctionType } from "@/types/api";
+import { useMutationFunctionType } from "@/types/api";
 import { GlobalVariable } from "@/types/global_variables";
-import { UseQueryResult } from "@tanstack/react-query";
+import { UseMutationOptions, UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-export const useGetGlobalVariables: useQueryFunctionType<
-  undefined,
-  GlobalVariable[]
+export const useGetGlobalVariablesMutation: useMutationFunctionType<
+  undefined
 > = (options?) => {
-  const { query } = UseRequestProcessor();
+  const { mutate } = UseRequestProcessor();
 
   const setGlobalVariablesEntries = useGlobalVariablesStore(
     (state) => state.setGlobalVariablesEntries,
@@ -21,24 +19,15 @@ export const useGetGlobalVariables: useQueryFunctionType<
     (state) => state.setUnavailableFields,
   );
 
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
   const getGlobalVariablesFn = async (): Promise<GlobalVariable[]> => {
-    if (!isAuthenticated) return [];
     const res = await api.get(`${getURL("VARIABLES")}/`);
     setGlobalVariablesEntries(res.data.map((entry) => entry.name));
     setUnavailableFields(getUnavailableFields(res.data));
     return res.data;
   };
 
-  const queryResult: UseQueryResult<GlobalVariable[], any> = query(
-    ["useGetGlobalVariables"],
-    getGlobalVariablesFn,
-    {
-      refetchOnWindowFocus: false,
-      ...options,
-    },
-  );
+  const mutation: UseMutationResult<undefined, Error, GlobalVariable[]> =
+    mutate(["useGetGlobalVariables"], getGlobalVariablesFn, options);
 
-  return queryResult;
+  return mutation;
 };

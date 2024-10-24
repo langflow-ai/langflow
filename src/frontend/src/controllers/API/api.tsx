@@ -3,10 +3,9 @@ import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-header
 import useAuthStore from "@/stores/authStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import * as fetchIntercept from "fetch-intercept";
-import { useContext, useEffect } from "react";
+import { useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { BuildStatus } from "../../constants/enums";
-import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
@@ -21,7 +20,14 @@ const cookies = new Cookies();
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  let { accessToken, authenticationErrorCount } = useContext(AuthContext);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const authenticationErrorCount = useAuthStore(
+    (state) => state.authenticationErrorCount,
+  );
+  const setAuthenticationErrorCount = useAuthStore(
+    (state) => state.setAuthenticationErrorCount,
+  );
+
   const { mutate: mutationLogout } = useLogout();
   const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
   const isLoginPage = location.pathname.includes("login");
@@ -149,10 +155,10 @@ function ApiInterceptor() {
   function checkErrorCount() {
     if (isLoginPage) return;
 
-    authenticationErrorCount = authenticationErrorCount + 1;
+    setAuthenticationErrorCount(authenticationErrorCount + 1);
 
     if (authenticationErrorCount > 3) {
-      authenticationErrorCount = 0;
+      setAuthenticationErrorCount(0);
       mutationLogout();
       return false;
     }
@@ -169,9 +175,9 @@ function ApiInterceptor() {
     }
     mutationRenewAccessToken(undefined, {
       onSuccess: async () => {
-        authenticationErrorCount = 0;
+        setAuthenticationErrorCount(0);
         await remakeRequest(error);
-        authenticationErrorCount = 0;
+        setAuthenticationErrorCount(0);
       },
       onError: (error) => {
         console.error(error);
