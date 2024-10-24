@@ -18,7 +18,13 @@ export type ChatMessageType = {
   edit?: boolean;
   icon?: string;
   category?: string;
-  meta_data?: any;
+  meta_data?: {
+    source?: string;
+    edited?: boolean;
+    icon?: string;
+    background_color?: string;
+    text_color?: string;
+  };
   content_blocks?: ContentBlock[];
 };
 

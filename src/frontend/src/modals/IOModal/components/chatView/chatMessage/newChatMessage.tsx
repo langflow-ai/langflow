@@ -273,7 +273,11 @@ export default function ChatMessage({
                 >
                   {chat.sender_name}
                 </div>
-                {/* TODO: ADD MODEL RELATED NAME */}
+                {chat.meta_data?.source && (
+                  <div className="text-xs text-muted-foreground">
+                    {chat.meta_data?.source}
+                  </div>
+                )}
               </div>
               {!chat.isSend ? (
                 <div className="form-modal-chat-text-position flex-grow">
