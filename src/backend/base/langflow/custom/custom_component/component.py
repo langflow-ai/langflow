@@ -695,9 +695,35 @@ class Component(CustomComponent):
     async def build_results(
         self,
     ):
-        if self._tracing_service:
-            return await self._build_with_tracing()
-        return await self._build_without_tracing()
+        try:
+            if self._tracing_service:
+                return await self._build_with_tracing()
+            return await self._build_without_tracing()
+        except Exception as e:
+            message = Message(**{
+                "sender": "qualquer sender",
+                "sender_name": "qualquer sender name",
+                "session_id": "",
+                "meta_data": {
+                    "text_color": "",
+                    "background_color": "#ff00ff",
+                    "edited": True,
+                    "source": "qualquer origem",
+                    "icon": "qualquer icone",
+                    "allow_markdown": True,
+                    "targets": [],
+                },
+                "category": "error",
+                "content_blocks": [{
+                    "component": "qualquer coisa",
+                    "field": "qualquer outra coisa",
+                    "reason": "qualquer razao",
+                    "solution": "qualquer solucao",
+                    "tracback": "qualquer tracback",
+                }],
+            })
+            self.send_message(message)
+            raise e
 
     async def _build_results(self):
         _results = {}
@@ -875,7 +901,7 @@ class Component(CustomComponent):
             raise ValueError(msg)
 
         stored_message = messages[0]
-        self._send_message_event(stored_message, **kwargs)
+        self._send_message_event(stored_message, **{})
         return stored_message
 
     def _send_message_event(self, message: Message, **kwargs):
