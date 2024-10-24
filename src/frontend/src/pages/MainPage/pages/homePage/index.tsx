@@ -54,7 +54,7 @@ const HomePage = ({ type }: HomePageProps) => {
 
   return (
     <>
-      {data.flows.length !== 0 ? (
+      {true ? (
         <div className="mx-5">
           <HeaderComponent
             flowType={flowType}

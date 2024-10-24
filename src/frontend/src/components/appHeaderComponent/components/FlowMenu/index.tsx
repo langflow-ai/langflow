@@ -312,7 +312,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
           styleClasses="cursor-default"
         >
           <div className="ml-2 flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-            <div className="flex cursor-default items-center gap-2 text-sm text-zinc-500 transition-all">
+            <div className="flex cursor-default items-center gap-2 truncate text-sm text-zinc-500 transition-all">
               <div>{printByBuildStatus()}</div>
             </div>
             <button

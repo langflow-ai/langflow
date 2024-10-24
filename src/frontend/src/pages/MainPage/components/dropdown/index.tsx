@@ -30,7 +30,7 @@ const DropdownComponent = () => {
       </DropdownMenuItem>
       <DropdownMenuItem
         onClick={() => {}}
-        className="cursor-pointer text-red-500"
+        className="cursor-pointer text-red-500 focus:text-red-500 dark:text-red-500 dark:focus:text-red-500"
       >
         <ForwardedIconComponent
           name="trash"

@@ -96,13 +96,13 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
           </div>
 
           <div className="flex flex-col justify-start">
-            <div className="flex items-baseline gap-2">
-              <div className="text-lg font-semibold">{flowData.name}</div>
+            <div className="flex items-baseline max-md:flex-col">
+              <div className="pr-2 text-lg font-semibold">{flowData.name}</div>
               <div className="item-baseline text-xs text-zinc-500 dark:text-zinc-300">
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
-            <div className="line-clamp-2 flex text-sm text-zinc-800 dark:text-white">
+            <div className="line-clamp-2 flex text-sm text-zinc-800 truncate-doubleline dark:text-white">
               {flowData.description}
             </div>
           </div>
@@ -119,7 +119,11 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 border-none"
+              >
                 <ForwardedIconComponent
                   name="ellipsis"
                   aria-hidden="true"

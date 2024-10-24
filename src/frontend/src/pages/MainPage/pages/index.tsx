@@ -55,7 +55,7 @@ export default function CollectionPage(): JSX.Element {
   return (
     <>
       <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-y-0">
-        {folders.length >= 0 && (
+        {true && (
           <aside className="hidden h-full w-fit flex-col space-y-6 border-r px-4 lg:flex">
             <FolderSidebarNav
               handleChangeFolder={(id: string) => {

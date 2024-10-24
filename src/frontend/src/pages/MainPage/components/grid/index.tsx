@@ -89,16 +89,22 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
               className="h-5 w-5 dark:text-black"
             />
           </div>
-          <div className="flex w-full items-center justify-between">
-            <div>
-              <div className="text-lg font-semibold">{flowData.name}</div>
-              <div className="text-xs text-zinc-500">
+          <div className="flex w-full min-w-0 items-center justify-between">
+            <div className="flex min-w-0 flex-col">
+              <div className="truncate text-lg font-semibold">
+                {flowData.name}
+              </div>
+              <div className="truncate text-xs text-zinc-500">
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 border-none"
+                >
                   <ForwardedIconComponent
                     name="ellipsis"
                     aria-hidden="true"

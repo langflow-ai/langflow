@@ -30,7 +30,7 @@ const HeaderComponent = ({
           className={`border-b ${
             flowType === "flows"
               ? "border-b-2 border-black font-semibold dark:border-white dark:text-white"
-              : "text-zinc-500"
+              : "border-zinc-400 text-zinc-500"
           } px-3 pb-1`}
         >
           Flows
@@ -40,7 +40,7 @@ const HeaderComponent = ({
           className={`border-b ${
             flowType === "components"
               ? "border-b-2 border-black font-semibold dark:border-white dark:text-white"
-              : "text-zinc-500"
+              : "border-zinc-400 text-zinc-500"
           } px-3 pb-1`}
           onClick={() => setFlowType("components")}
         >
@@ -60,10 +60,11 @@ const HeaderComponent = ({
           <div className="px-py flex rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-900 dark:bg-zinc-900">
             <Button
               unstyled
-              className={`m-[2px] rounded-lg border p-2 ${
+              size="icon"
+              className={`my-[2px] ml-[2px] rounded-lg border p-2 ${
                 view === "list"
                   ? "border-zinc-100 bg-white text-black shadow-md dark:border-zinc-900 dark:bg-black dark:text-white"
-                  : "border-zinc-100 bg-zinc-100 text-zinc-500 dark:border-zinc-900 dark:bg-black dark:bg-zinc-900"
+                  : "border-zinc-100 bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:border-zinc-900 dark:bg-black dark:bg-zinc-900 dark:hover:bg-zinc-800"
               }`}
               onClick={() => setView("list")}
             >
@@ -75,10 +76,11 @@ const HeaderComponent = ({
             </Button>
             <Button
               unstyled
-              className={`m-[2px] rounded-lg border p-2 ${
+              size="icon"
+              className={`my-[2px] mr-[2px] rounded-lg border p-2 ${
                 view === "grid"
                   ? "border-zinc-100 bg-white text-black shadow-md dark:border-zinc-900 dark:bg-black dark:text-white"
-                  : "border-zinc-100 bg-zinc-100 text-zinc-500 dark:border-zinc-900 dark:bg-black dark:bg-zinc-900"
+                  : "border-zinc-100 bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:border-zinc-900 dark:bg-black dark:bg-zinc-900 dark:hover:bg-zinc-800"
               }`}
               onClick={() => setView("grid")}
             >
