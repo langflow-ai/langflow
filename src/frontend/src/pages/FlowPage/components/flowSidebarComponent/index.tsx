@@ -11,6 +11,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Disclosure,
+  DisclosureContent,
+  DisclosureTrigger,
+} from "@/components/ui/disclosure";
 import { Input } from "@/components/ui/input";
 import {
   Sidebar,
@@ -24,8 +29,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSkeleton,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { Switch } from "@/components/ui/switch";
 import { useGetCategoriesQuery } from "@/controllers/API/queries/categories/use-get-categories";
@@ -72,7 +75,7 @@ export function FlowSidebarComponent() {
 
   const [showConfig, setShowConfig] = useState(false);
   const [showBeta, setShowBeta] = useState(true);
-  const [showLegacy, setShowLegacy] = useState(true);
+  const [showLegacy, setShowLegacy] = useState(false);
 
   const hasResults = useMemo(() => {
     return Object.values(dataFilter).some(
@@ -160,10 +163,13 @@ export function FlowSidebarComponent() {
         ),
       );
     }
+  };
+
+  useEffect(() => {
     if (search === "" && getFilterEdge.length === 0) {
       setOpenCategories([]);
     }
-  };
+  }, [search, getFilterEdge]);
 
   function handleSearchInput(e: string) {
     setSearch(e);
@@ -243,10 +249,10 @@ export function FlowSidebarComponent() {
   return (
     <Sidebar>
       <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
-        <Collapsible open={showConfig} onOpenChange={setShowConfig}>
+        <Disclosure open={showConfig} onOpenChange={setShowConfig}>
           <div className="flex w-full items-center justify-between">
             <h3 className="text-sm font-semibold">Components</h3>
-            <CollapsibleTrigger asChild>
+            <DisclosureTrigger>
               <Button
                 variant={showConfig ? "ghostActive" : "ghost"}
                 size="iconMd"
@@ -256,10 +262,10 @@ export function FlowSidebarComponent() {
                   className="h-4 w-4"
                 />
               </Button>
-            </CollapsibleTrigger>
+            </DisclosureTrigger>
           </div>
-          <CollapsibleContent>
-            <div className="mt-5 flex flex-col gap-7 border-b pb-7">
+          <DisclosureContent>
+            <div className="flex flex-col gap-7 border-b pb-7 pt-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <span className="text-sm font-medium">
@@ -285,8 +291,8 @@ export function FlowSidebarComponent() {
                 <Switch checked={showLegacy} onCheckedChange={setShowLegacy} />
               </div>
             </div>
-          </CollapsibleContent>
-        </Collapsible>
+          </DisclosureContent>
+        </Disclosure>
         <div className="relative w-full flex-1">
           <ForwardedIconComponent
             name="Search"
@@ -335,7 +341,7 @@ export function FlowSidebarComponent() {
                         </SidebarMenuItem>
                       ))
                     : categories?.categories.map(
-                        (item, catIndex) =>
+                        (item) =>
                           dataFilter[item.name] &&
                           Object.keys(dataFilter[item.name]).length > 0 && (
                             <Collapsible
@@ -461,36 +467,120 @@ export function FlowSidebarComponent() {
                           <SidebarMenuSkeleton />
                         </SidebarMenuItem>
                       ))
-                    : categories?.categories
-                        .filter((item, index) => index < 2)
-                        .map((item) => (
-                          <Collapsible className="group/collapsible">
-                            <SidebarMenuItem>
-                              <CollapsibleTrigger asChild>
-                                <SidebarMenuButton asChild>
-                                  <div className="flex items-center gap-2">
-                                    <ForwardedIconComponent
-                                      name={item.icon}
-                                      className="h-4 w-4 text-muted-foreground group-data-[state=open]/collapsible:text-primary"
-                                    />
-                                    <span className="group-data-[state=open]/collapsible:font-semibold">
-                                      {item.display_name}
-                                    </span>
-                                    <ForwardedIconComponent
-                                      name="ChevronRight"
-                                      className="h-4 w-4 text-muted-foreground transition-all group-data-[state=open]/collapsible:rotate-90"
-                                    />
+                    : categories?.bundles.map(
+                        (item) =>
+                          dataFilter[item.name] &&
+                          Object.keys(dataFilter[item.name]).length > 0 && (
+                            <Collapsible
+                              key={item.name}
+                              className="group/collapsible"
+                              open={openCategories.includes(item.name)}
+                              onOpenChange={(isOpen) => {
+                                setOpenCategories((prev) =>
+                                  isOpen
+                                    ? [...prev, item.name]
+                                    : prev.filter((cat) => cat !== item.name),
+                                );
+                              }}
+                            >
+                              <SidebarMenuItem>
+                                <CollapsibleTrigger asChild>
+                                  <SidebarMenuButton asChild>
+                                    <div
+                                      tabIndex={0}
+                                      onKeyDown={(e) =>
+                                        handleKeyDown(e, item.name)
+                                      }
+                                      className="flex cursor-pointer items-center gap-2"
+                                    >
+                                      <ForwardedIconComponent
+                                        name={item.icon}
+                                        className="h-4 w-4 text-muted-foreground group-data-[state=open]/collapsible:text-pink-600 group-data-[state=open]/collapsible:dark:text-pink-400"
+                                      />
+                                      <span className="group-data-[state=open]/collapsible:font-semibold">
+                                        {item.display_name}
+                                      </span>
+                                      <ForwardedIconComponent
+                                        name="ChevronRight"
+                                        className="h-4 w-4 text-muted-foreground transition-all group-data-[state=open]/collapsible:rotate-90"
+                                      />
+                                    </div>
+                                  </SidebarMenuButton>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                  <div className="flex flex-col gap-1 py-2">
+                                    {Object.keys(dataFilter[item.name])
+                                      .sort((a, b) =>
+                                        sensitiveSort(
+                                          dataFilter[item.name][a].display_name,
+                                          dataFilter[item.name][b].display_name,
+                                        ),
+                                      )
+                                      .map((SBItemName: string, idx) => (
+                                        <ShadTooltip
+                                          content={
+                                            dataFilter[item.name][SBItemName]
+                                              .display_name
+                                          }
+                                          side="right"
+                                          key={idx}
+                                        >
+                                          <SidebarDraggableComponent
+                                            sectionName={item.name as string}
+                                            apiClass={
+                                              dataFilter[item.name][SBItemName]
+                                            }
+                                            icon={
+                                              dataFilter[item.name][SBItemName]
+                                                .icon ??
+                                              item.icon ??
+                                              "Unknown"
+                                            }
+                                            key={idx}
+                                            onDragStart={(event) =>
+                                              onDragStart(event, {
+                                                type: removeCountFromString(
+                                                  SBItemName,
+                                                ),
+                                                node: dataFilter[item.name][
+                                                  SBItemName
+                                                ],
+                                              })
+                                            }
+                                            color={nodeColors[item.name]}
+                                            itemName={SBItemName}
+                                            error={
+                                              !!dataFilter[item.name][
+                                                SBItemName
+                                              ].error
+                                            }
+                                            display_name={
+                                              dataFilter[item.name][SBItemName]
+                                                .display_name
+                                            }
+                                            official={
+                                              dataFilter[item.name][SBItemName]
+                                                .official === false
+                                                ? false
+                                                : true
+                                            }
+                                            beta={
+                                              dataFilter[item.name][SBItemName]
+                                                .beta ?? false
+                                            }
+                                            legacy={
+                                              dataFilter[item.name][SBItemName]
+                                                .legacy ?? false
+                                            }
+                                          />
+                                        </ShadTooltip>
+                                      ))}
                                   </div>
-                                </SidebarMenuButton>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent>
-                                <SidebarMenuSub>
-                                  <SidebarMenuSubItem />
-                                </SidebarMenuSub>
-                              </CollapsibleContent>
-                            </SidebarMenuItem>
-                          </Collapsible>
-                        ))}
+                                </CollapsibleContent>
+                              </SidebarMenuItem>
+                            </Collapsible>
+                          ),
+                      )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
