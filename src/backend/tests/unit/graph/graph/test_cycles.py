@@ -1,21 +1,12 @@
 import os
 
 import pytest
-from langflow.components.agents import (
-    Agent,
-    AgentActionRouter,
-    AgentContextBuilder,
-    DecideActionComponent,
-    GenerateThoughtComponent,
-)
-from langflow.components.agents.execute_action import ExecuteActionComponent
-from langflow.components.agents.write_final_answer import ProvideFinalAnswerComponent
 from langflow.components.inputs import ChatInput
+from langflow.components.inputs.text import TextInputComponent
 from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput, TextOutputComponent
 from langflow.components.prompts import PromptComponent
 from langflow.components.prototypes import ConditionalRouterComponent
-from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.custom import Component
 from langflow.graph import Graph
 from langflow.graph.graph.utils import find_cycle_vertices
@@ -218,121 +209,116 @@ def test_updated_graph_with_prompts():
 
 
 @pytest.mark.api_key_required
-def test_complex_agent_flow():
+def test_updated_graph_with_max_iterations():
     # Chat input initialization
-    chat_input = ChatInput(_id="chat_input").set(input_value="What is 19423 times 12345?")
+    chat_input = ChatInput(_id="chat_input").set(input_value="bacon")
 
-    # OpenAI LLM component
-    openai_component = OpenAIModelComponent(_id="openai").set(api_key=os.getenv("OPENAI_API_KEY"))
-
-    # calculator tool
-    calculator_tool = CalculatorToolComponent(_id="calculator_tool")
-
-    # Agent Context Builder
-    agent_context = AgentContextBuilder(_id="agent_context").set(
-        initial_context=chat_input.message_response,
-        tools=[calculator_tool.build_tool],
-        llm=openai_component.build_model,
+    # First prompt: Guessing game with hints
+    prompt_component_1 = PromptComponent(_id="prompt_component_1").set(
+        template="Try to guess a word. I will give you hints if you get it wrong.\n"
+        "Hint: {hint}\n"
+        "Last try: {last_try}\n"
+        "Answer:",
     )
 
-    # Generate Thought
-    generate_thought = GenerateThoughtComponent(_id="generate_thought").set(agent_context=agent_context.build_context)
-
-    # Decide Action
-    decide_action = DecideActionComponent(_id="decide_action").set(agent_context=generate_thought.generate_thought)
-
-    # Agent Action Router
-    action_router = AgentActionRouter(_id="action_router").set(agent_context=decide_action.decide_action)
-
-    execute_action = ExecuteActionComponent(_id="execute_action").set(agent_context=action_router.route_to_execute_tool)
-
-    # Final Answer
-    loop_prompt = PromptComponent(_id="loop_prompt").set(
-        template="Last Action Result: {last_action_result}\nBased on the actions taken, here's the final answer:",
-        answer=execute_action.execute_action,
+    # First OpenAI LLM component (Processes the guessing prompt)
+    openai_component_1 = OpenAIModelComponent(_id="openai_1").set(
+        input_value=prompt_component_1.build_prompt, api_key=os.getenv("OPENAI_API_KEY")
     )
 
-    generate_thought.set(prompt=loop_prompt.build_prompt)
-
-    final_answer = ProvideFinalAnswerComponent(_id="final_answer").set(
-        agent_context=action_router.route_to_final_answer
+    # Conditional router based on agent response
+    router = ConditionalRouterComponent(_id="router").set(
+        input_text=openai_component_1.text_response,
+        match_text=chat_input.message_response,
+        operator="contains",
+        message=openai_component_1.text_response,
     )
 
-    # Chat output
-    chat_output = ChatOutput(_id="chat_output").set(input_value=final_answer.get_final_answer)
+    # Second prompt: After the last try, provide a new hint
+    prompt_component_2 = PromptComponent(_id="prompt_component_2")
+    prompt_component_2.set(
+        template="Given the following word and the following last try. Give the guesser a new hint.\n"
+        "Last try: {last_try}\n"
+        "Word: {word}\n"
+        "Hint:",
+        word=chat_input.message_response,
+        last_try=router.false_response,
+    )
 
-    # Build the graph
-    graph = Graph(chat_input, chat_output)
+    # Second OpenAI component (handles the router's response)
+    openai_component_2 = OpenAIModelComponent(_id="openai_2")
+    openai_component_2.set(input_value=prompt_component_2.build_prompt, api_key=os.getenv("OPENAI_API_KEY"))
+
+    prompt_component_1.set(hint=openai_component_2.text_response, last_try=router.false_response)
+
+    # chat output for the final OpenAI response
+    chat_output_1 = ChatOutput(_id="chat_output_1")
+    chat_output_1.set(input_value=router.true_response)
+
+    # Build the graph without concatenate
+    graph = Graph(chat_input, chat_output_1)
 
     # Assertions for graph cyclicity and correctness
-    if graph.is_cyclic is False:
-        pytest.fail("This graph should contain cycles.")
+    assert graph.is_cyclic is True, "Graph should contain cycles."
 
     # Run and validate the execution of the graph
     results = []
-    max_iterations = 10
+    max_iterations = 20
     snapshots = [graph.get_snapshot()]
 
-    for result in graph.start(max_iterations=max_iterations):
-        snapshots.append(graph.get_snapshot())
-        results.append(result)
-
-    if len(snapshots) <= 1:
-        pytest.fail("Graph should have more than one snapshot")
-
-    # Extract the vertex IDs for analysis
-    results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
-    expected_ids = [
-        "chat_input",
-        "openai",
-        "calculator_tool",
-        "agent_context",
-        "generate_thought",
-        "decide_action",
-        "action_router",
-        "execute_action",
-        "loop_prompt",
-        "final_answer",
-        "chat_output",
-    ]
-
-    for expected_id in expected_ids:
-        assert expected_id in results_ids, f"Expected component {expected_id} not in results: {results_ids}"
-
-    assert results_ids[-1] == "chat_output", "Last executed component should be chat_output"
-
-
-async def test_agent_component():
-    chat_input = ChatInput(_id="chat_input").set(input_value="What is 19423 times 12345?")
-    openai_component = OpenAIModelComponent(_id="openai").set(api_key=os.getenv("OPENAI_API_KEY"))
-    calculator_tool = CalculatorToolComponent(_id="calculator_tool")
-    agent_context = AgentContextBuilder(_id="agent_context").set(
-        initial_context=chat_input.message_response,
-        tools=[calculator_tool.build_tool],
-        llm=openai_component.build_model,
-    )
-    agent_component = Agent(_id="agent").set(
-        agent_context=agent_context.build_context,
-        llm=openai_component.build_model,
-        tools=[calculator_tool.build_tool],
-        max_iterations=10,
-        verbose=True,
-        system_prompt="You are a helpful assistant.",
-        user_prompt="What is 19423 times 12345?",
-        loop_prompt="Last Action Result: {last_action_result}\nBased on the actions taken, here's the final answer:",
-    )
-
-    graph = Graph(chat_input, agent_component)
-    assert graph.is_cyclic is True
-
-    # Run and validate the execution of the graph
-    results = []
-    max_iterations = 10
-    snapshots = [graph.get_snapshot()]
-
-    async for result in graph.async_start(max_iterations=max_iterations):
+    for result in graph.start(max_iterations=max_iterations, config={"output": {"cache": False}}):
         snapshots.append(graph.get_snapshot())
         results.append(result)
 
     assert len(snapshots) > 2, "Graph should have more than one snapshot"
-    assert len(results) > 0, "Graph should have more than one result"
+    # Extract the vertex IDs for analysis
+    results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
+    assert "chat_output_1" in results_ids, f"Expected outputs not in results: {results_ids}"
+
+
+def test_conditional_router_max_iterations():
+    # Chat input initialization
+    text_input = TextInputComponent(_id="text_input")
+
+    # Conditional router setup with a condition that will never match
+    router = ConditionalRouterComponent(_id="router").set(
+        input_text=text_input.text_response,
+        match_text="bacon",
+        operator="equals",
+        message="This message should not be routed to true_result",
+        max_iterations=5,
+        default_route="true_result",
+    )
+
+    # Chat output for the true route
+    text_input.set(input_value=router.false_response)
+
+    # Chat output for the false route
+    chat_output_false = ChatOutput(_id="chat_output_false")
+    chat_output_false.set(input_value=router.true_response)
+
+    # Build the graph
+    graph = Graph(text_input, chat_output_false)
+
+    # Assertions for graph cyclicity and correctness
+    assert graph.is_cyclic is True, "Graph should contain cycles."
+
+    # Run and validate the execution of the graph
+    results = []
+    snapshots = [graph.get_snapshot()]
+    previous_iteration = graph.context.get("router_iteration", 0)
+    for result in graph.start(max_iterations=20, config={"output": {"cache": False}}):
+        snapshots.append(graph.get_snapshot())
+        results.append(result)
+        if hasattr(result, "vertex") and result.vertex.id == "router":
+            current_iteration = graph.context.get("router_iteration", 0)
+            assert current_iteration == previous_iteration + 1, "Iteration should increment by 1"
+            previous_iteration = current_iteration
+
+    # Check if the max_iterations logic is working
+    router_id = router._id.lower()
+    assert graph.context.get(f"{router_id}_iteration", 0) == 5, "Router should stop after max_iterations"
+
+    # Extract the vertex IDs for analysis
+    results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
+    assert "chat_output_false" in results_ids, f"Expected outputs not in results: {results_ids}"
