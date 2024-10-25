@@ -13,4 +13,5 @@ export type GetCodeType = {
   isAuth: boolean;
   tweaksBuildedObject: {};
   endpointName?: string | null;
+  activeTweaks: boolean;
 };
