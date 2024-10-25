@@ -56,7 +56,7 @@ export default function CollectionPage(): JSX.Element {
     <>
       <div className="flex h-full w-full flex-row">
         <aside
-          className={`flex h-full w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r px-4 lg:inline ${
+          className={`flex h-full w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r bg-zinc-100 px-4 dark:bg-zinc-900 lg:inline ${
             showFolderModal ? "" : "hidden"
           }`}
         >
@@ -70,8 +70,7 @@ export default function CollectionPage(): JSX.Element {
             }}
           />
         </aside>
-
-        <div className="relative h-screen w-full overflow-y-auto pb-5">
+        <div className="relative h-screen w-full overflow-y-auto">
           <Outlet />
         </div>
       </div>

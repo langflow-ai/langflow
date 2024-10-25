@@ -1,4 +1,5 @@
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
+import { LoadingPage } from "@/pages/LoadingPage";
 import { useFolderStore } from "@/stores/foldersStore";
 import { FlowType } from "@/types/flow";
 import { useEffect, useState } from "react";
@@ -13,7 +14,10 @@ type HomePageProps = {
   type: string;
 };
 const HomePage = ({ type }: HomePageProps) => {
-  const [view, setView] = useState<"list" | "grid">("list");
+  const [view, setView] = useState<"list" | "grid">(() => {
+    const savedView = localStorage.getItem("view");
+    return savedView === "grid" || savedView === "list" ? savedView : "list";
+  });
   const [flowType, setFlowType] = useState<"flows" | "components">("flows");
   const [newProjectModal, setNewProjectModal] = useState<boolean>(false);
   const { folderId } = useParams();
@@ -52,12 +56,20 @@ const HomePage = ({ type }: HomePageProps) => {
   };
 
   useEffect(() => {
+    localStorage.setItem("view", view);
+  }, [view]);
+
+  useEffect(() => {
     setCurrentFlows(data.flows);
   }, [data.flows]);
 
   const filteredFlows = currentFlows.filter((flow) =>
     flow.name.toLowerCase().includes(search.toLowerCase()),
   );
+
+  if (isFetching) {
+    return <LoadingPage overlay={true} />;
+  }
 
   return (
     <>

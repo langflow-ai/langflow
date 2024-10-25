@@ -87,13 +87,14 @@ const HeaderComponent = ({
             onChange={(e) => setSearch(e.target.value)}
           />
           <div className="px-py mr-2 flex rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800">
+            {/* Use currentView prop to decide the current active view */}
             <Button
               unstyled
               size="icon"
-              className={`my-[2px] ml-[2px] rounded-lg border p-2 ${
+              className={`my-[2px] ml-[2px] rounded-lg p-2 ${
                 view === "list"
                   ? "bg-white text-black shadow-md dark:bg-black dark:text-white"
-                  : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-black dark:bg-zinc-800 dark:hover:bg-zinc-800"
+                  : "bg-zinc-100 text-zinc-500 dark:bg-black dark:bg-zinc-800 dark:hover:bg-zinc-800"
               }`}
               onClick={() => setView("list")}
             >
@@ -106,10 +107,10 @@ const HeaderComponent = ({
             <Button
               unstyled
               size="icon"
-              className={`my-[2px] mr-[2px] rounded-lg border p-2 ${
+              className={`my-[2px] mr-[2px] rounded-lg p-2 ${
                 view === "grid"
                   ? "bg-white text-black shadow-md dark:bg-black dark:text-white"
-                  : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-black dark:bg-zinc-800 dark:hover:bg-zinc-800"
+                  : "bg-zinc-100 text-zinc-500 dark:bg-black dark:bg-zinc-800 dark:hover:bg-zinc-800"
               }`}
               onClick={() => setView("grid")}
             >
