@@ -64,6 +64,7 @@ const CustomInputPopover = ({
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
         <div
+          data-testid={`anchor-${id}`}
           className={cn(
             "primary-input border-1 flex h-full min-h-[43px] flex-wrap items-center px-3 placeholder:text-placeholder",
             editNode && "min-h-7 p-0",
