@@ -46,9 +46,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
     return inputs.length > 0 || outputs.length > 0;
   }
 
-  const handlePlaygroundClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handlePlaygroundClick = () => {
     track("Playground Button Clicked", { flowId: flowData.id });
     setLoadingPlayground(true);
 
@@ -100,11 +98,11 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
     <>
       <div
         key={flowData.id}
-        className="my-2 flex justify-between rounded-lg border border-zinc-100 p-5 hover:border-zinc-200 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-700"
+        className="my-2 flex h-[110px] justify-between rounded-lg border border-zinc-100 p-5 hover:border-zinc-200 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-700"
       >
         {/* left side */}
         <div
-          className="flex cursor-pointer items-center gap-2"
+          className="flex min-w-0 cursor-pointer items-center gap-2"
           onClick={handleClick}
         >
           {/* Icon */}
@@ -118,10 +116,12 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
             />
           </div>
 
-          <div className="flex flex-col justify-start">
-            <div className="flex items-baseline max-md:flex-col">
-              <div className="pr-2 text-lg font-semibold">{flowData.name}</div>
-              <div className="item-baseline text-xs text-zinc-500 dark:text-zinc-400">
+          <div className="flex min-w-0 flex-col justify-start">
+            <div className="line-clamp-1 flex min-w-0 items-baseline truncate max-md:flex-col">
+              <div className="flex w-full truncate pr-2 text-lg font-semibold">
+                <span className="truncate">{flowData.name}</span>
+              </div>
+              <div className="item-baseline flex text-xs text-zinc-500 dark:text-zinc-400">
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
@@ -136,8 +136,12 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
           <Button
             variant="outline"
             disabled={loadingPlayground || !hasPlayground(flowData)}
-            onClick={handlePlaygroundClick}
-            className="dark:hover:border-white dark:hover:bg-transparent"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handlePlaygroundClick();
+            }}
+            className="hidden sm:block"
           >
             Playground
           </Button>
@@ -163,6 +167,9 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
               <DropdownComponent
                 flowData={flowData}
                 setOpenDelete={setOpenDelete}
+                handlePlaygroundClick={() => {
+                  handlePlaygroundClick();
+                }}
               />
             </DropdownMenuContent>
           </DropdownMenu>

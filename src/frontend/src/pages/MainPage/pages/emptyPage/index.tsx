@@ -31,7 +31,6 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
     window.addEventListener("mousemove", handleMouseMove);
     move();
 
-    // Cleanup event listener on component unmount
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
     };

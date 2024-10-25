@@ -46,9 +46,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
     return inputs.length > 0 || outputs.length > 0;
   }
 
-  const handlePlaygroundClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handlePlaygroundClick = () => {
     track("Playground Button Clicked", { flowId: flowData.id });
     setLoadingPlayground(true);
 
@@ -157,9 +155,12 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         <div className="flex justify-end pt-[24px]">
           <Button
             disabled={loadingPlayground || !hasPlayground(flowData)}
-            onClick={handlePlaygroundClick}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handlePlaygroundClick();
+            }}
             variant="outline"
-            className="dark:hover:border-white dark:hover:bg-transparent"
           >
             Playground
           </Button>

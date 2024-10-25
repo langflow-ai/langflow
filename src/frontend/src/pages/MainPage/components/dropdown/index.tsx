@@ -9,11 +9,13 @@ import useSelectOptionsChange from "../componentsComponent/hooks/use-select-opti
 type DropdownComponentProps = {
   flowData: FlowType;
   setOpenDelete: (open: boolean) => void;
+  handlePlaygroundClick?: () => void;
 };
 
 const DropdownComponent = ({
   flowData,
   setOpenDelete,
+  handlePlaygroundClick,
 }: DropdownComponentProps) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -82,6 +84,22 @@ const DropdownComponent = ({
         />
         Edit details
       </DropdownMenuItem> */}
+      {handlePlaygroundClick && (
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            handlePlaygroundClick();
+          }}
+          className="cursor-pointer sm:hidden"
+        >
+          <ForwardedIconComponent
+            name="play"
+            aria-hidden="true"
+            className="mr-2 h-4 w-4"
+          />
+          Playground
+        </DropdownMenuItem>
+      )}
       <DropdownMenuItem
         onClick={(e) => {
           e.stopPropagation();
