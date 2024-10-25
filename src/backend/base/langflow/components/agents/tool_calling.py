@@ -1,8 +1,8 @@
 from langchain.agents import create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate
 
 from langflow.base.agents.agent import LCToolsAgentComponent
-from langflow.inputs import MessageTextInput, MultilineInput
+from langflow.inputs import MessageTextInput
 from langflow.inputs.inputs import DataInput, HandleInput
 from langflow.schema import Data
 
@@ -17,7 +17,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
     inputs = [
         *LCToolsAgentComponent._base_inputs,
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
-        MultilineInput(
+        MessageTextInput(
             name="system_prompt",
             display_name="System Prompt",
             info="Initial instructions and context provided to guide the agent's behavior.",
@@ -35,15 +35,18 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         return self.chat_history
 
     def create_agent_runnable(self):
+        if "input" not in self.user_prompt:
+            msg = "Prompt must contain 'input' key."
+            raise ValueError(msg)
         messages = [
             ("system", self.system_prompt),
             ("placeholder", "{chat_history}"),
-            ("human", self.input_value),
+            HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=["input"], template=self.user_prompt)),
             ("placeholder", "{agent_scratchpad}"),
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
         try:
-            return create_tool_calling_agent(self.llm, self.tools, prompt)
+            return create_tool_calling_agent(self.llm, self.tools or [], prompt)
         except NotImplementedError as e:
-            message = f"{self.display_name} does not support tool calling. Please try using a compatible model."
+            message = f"{self.display_name} does not support tool calling." "Please try using a compatible model."
             raise NotImplementedError(message) from e
