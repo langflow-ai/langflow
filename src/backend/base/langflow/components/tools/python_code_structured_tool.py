@@ -10,7 +10,14 @@ from pydantic.v1.fields import Undefined
 from typing_extensions import override
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs.inputs import BoolInput, DropdownInput, FieldTypes, HandleInput, MessageTextInput, MultilineInput
+from langflow.inputs.inputs import (
+    BoolInput,
+    DropdownInput,
+    FieldTypes,
+    HandleInput,
+    MessageTextInput,
+    MultilineInput,
+)
 from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
@@ -36,6 +43,7 @@ class PythonCodeStructuredTool(LCToolComponent):
     name = "PythonCodeStructuredTool"
     icon = "🐍"
     field_order = ["name", "description", "tool_code", "return_direct", "tool_function"]
+    legacy: bool = True
 
     inputs = [
         MultilineInput(
@@ -47,7 +55,12 @@ class PythonCodeStructuredTool(LCToolComponent):
             real_time_refresh=True,
             refresh_button=True,
         ),
-        MessageTextInput(name="tool_name", display_name="Tool Name", info="Enter the name of the tool.", required=True),
+        MessageTextInput(
+            name="tool_name",
+            display_name="Tool Name",
+            info="Enter the name of the tool.",
+            required=True,
+        ),
         MessageTextInput(
             name="tool_description",
             display_name="Description",
@@ -85,7 +98,9 @@ class PythonCodeStructuredTool(LCToolComponent):
     ]
 
     @override
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+    def update_build_config(
+        self, build_config: dotdict, field_value: Any, field_name: str | None = None
+    ) -> dotdict:
         if field_name is None:
             return build_config
 
@@ -137,9 +152,7 @@ class PythonCodeStructuredTool(LCToolComponent):
         for from_module in modules["from_imports"]:
             for alias in from_module.names:
                 import_code += f"global {alias.name}\n"
-            import_code += (
-                f"from {from_module.module} import {', '.join([alias.name for alias in from_module.names])}\n"
-            )
+            import_code += f"from {from_module.module} import {', '.join([alias.name for alias in from_module.names])}\n"
         exec(import_code, globals())
         exec(self.tool_code, globals(), _local_namespace)
 
@@ -192,7 +205,10 @@ class PythonCodeStructuredTool(LCToolComponent):
                 schema_annotation = Any
             schema_fields[field_name] = (
                 schema_annotation,
-                Field(default=func_arg.get("default", Undefined), description=field_description),
+                Field(
+                    default=func_arg.get("default", Undefined),
+                    description=field_description,
+                ),
             )
 
         if "temp_annotation_type" in _globals:
@@ -200,7 +216,9 @@ class PythonCodeStructuredTool(LCToolComponent):
 
         python_code_tool_schema = None
         if schema_fields:
-            python_code_tool_schema = create_model("PythonCodeToolSchema", **schema_fields)
+            python_code_tool_schema = create_model(
+                "PythonCodeToolSchema", **schema_fields
+            )
 
         return StructuredTool.from_function(
             func=_local[self.tool_function].run,
@@ -210,20 +228,30 @@ class PythonCodeStructuredTool(LCToolComponent):
             return_direct=self.return_direct,
         )
 
-    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
+    def post_code_processing(
+        self, new_frontend_node: dict, current_frontend_node: dict
+    ):
         """This function is called after the code validation is done."""
-        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
-        frontend_node["template"] = self.update_build_config(
-            frontend_node["template"], frontend_node["template"]["tool_code"]["value"], "tool_code"
+        frontend_node = super().post_code_processing(
+            new_frontend_node, current_frontend_node
         )
-        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
+        frontend_node["template"] = self.update_build_config(
+            frontend_node["template"],
+            frontend_node["template"]["tool_code"]["value"],
+            "tool_code",
+        )
+        frontend_node = super().post_code_processing(
+            new_frontend_node, current_frontend_node
+        )
         for key in frontend_node["template"]:
             if key in self.DEFAULT_KEYS:
                 continue
             frontend_node["template"] = self.update_build_config(
                 frontend_node["template"], frontend_node["template"][key]["value"], key
             )
-            frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
+            frontend_node = super().post_code_processing(
+                new_frontend_node, current_frontend_node
+            )
         return frontend_node
 
     def _parse_code(self, code: str) -> tuple[list[dict], list[dict]]:
@@ -285,8 +313,13 @@ class PythonCodeStructuredTool(LCToolComponent):
                     annotation_line = annotation_line[: arg.annotation.end_col_offset]
                     annotation_line = annotation_line[arg.annotation.col_offset :]
                     func_arg["annotation"] = annotation_line
-                    if isinstance(func_arg["annotation"], str) and func_arg["annotation"].count("=") > 0:
-                        func_arg["annotation"] = "=".join(func_arg["annotation"].split("=")[:-1]).strip()
+                    if (
+                        isinstance(func_arg["annotation"], str)
+                        and func_arg["annotation"].count("=") > 0
+                    ):
+                        func_arg["annotation"] = "=".join(
+                            func_arg["annotation"].split("=")[:-1]
+                        ).strip()
                 if isinstance(func["args"], list):
                     func["args"].append(func_arg)
             functions.append(func)
@@ -307,7 +340,9 @@ class PythonCodeStructuredTool(LCToolComponent):
     def _get_value(self, value: Any, annotation: Any) -> Any:
         return value if isinstance(value, annotation) else value["value"]
 
-    def _find_arg(self, named_functions: dict, func_name: str, arg_name: str) -> dict | None:
+    def _find_arg(
+        self, named_functions: dict, func_name: str, arg_name: str
+    ) -> dict | None:
         for arg in named_functions[func_name]["args"]:
             if arg["name"] == arg_name:
                 return arg

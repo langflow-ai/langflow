@@ -11,6 +11,7 @@ class MetalRetrieverComponent(CustomComponent):
     display_name: str = "Metal Retriever"
     description: str = "Retriever that uses the Metal API."
     name = "MetalRetriever"
+    legacy: bool = True
 
     def build_config(self):
         return {

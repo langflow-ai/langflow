@@ -382,3 +382,4 @@ class SidebarCategory(BaseModel):
 
 class SidebarCategoriesResponse(BaseModel):
     categories: list[SidebarCategory]
+    bundles: list[SidebarCategory]

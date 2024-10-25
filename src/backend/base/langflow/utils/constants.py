@@ -211,3 +211,19 @@ SIDEBAR_CATEGORIES = [
     {"display_name": "Toolkits", "name": "toolkits", "icon": "Package2"},
     {"display_name": "Tools", "name": "tools", "icon": "Hammer"},
 ]
+
+SIDEBAR_BUNDLES = [
+    {"display_name": "CrewAI", "name": "crewai", "icon": "CrewAi"},
+    {"display_name": "LangChain", "name": "langchain_utilities", "icon": "LangChain"},
+    {"display_name": "AssemblyAI", "name": "assemblyai", "icon": "AssemblyAI"},
+    {
+        "display_name": "Astra Assistants",
+        "name": "astra_assistants",
+        "icon": "Sparkles",
+    },
+    {"display_name": "Google", "name": "google", "icon": "Google"},
+    {"display_name": "Firecrawl", "name": "firecrawl", "icon": "FirecrawlCrawlApi"},
+    {"display_name": "Notion", "name": "Notion", "icon": "Notion"},
+    {"display_name": "NVIDIA", "name": "nvidia", "icon": "NVIDIA"},
+    {"display_name": "Vectara", "name": "vectara", "icon": "Vectara"},
+]

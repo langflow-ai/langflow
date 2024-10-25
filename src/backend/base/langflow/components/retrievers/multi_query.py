@@ -9,6 +9,7 @@ class MultiQueryRetrieverComponent(CustomComponent):
     description = "Initialize from llm using default template."
     documentation = "https://python.langchain.com/docs/modules/data_connection/retrievers/how_to/MultiQueryRetriever"
     name = "MultiQueryRetriever"
+    legacy: bool = True
 
     def build_config(self):
         return {
@@ -44,6 +45,10 @@ class MultiQueryRetrieverComponent(CustomComponent):
         parser_key: str = "lines",
     ) -> MultiQueryRetriever:
         if not prompt:
-            return MultiQueryRetriever.from_llm(llm=llm, retriever=retriever, parser_key=parser_key)
+            return MultiQueryRetriever.from_llm(
+                llm=llm, retriever=retriever, parser_key=parser_key
+            )
         prompt_template = PromptTemplate.from_template(prompt)
-        return MultiQueryRetriever.from_llm(llm=llm, retriever=retriever, prompt=prompt_template, parser_key=parser_key)
+        return MultiQueryRetriever.from_llm(
+            llm=llm, retriever=retriever, prompt=prompt_template, parser_key=parser_key
+        )

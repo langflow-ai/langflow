@@ -156,6 +156,7 @@
             ],
             "frozen": false,
             "icon": "layout-template",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -288,6 +289,7 @@
             ],
             "frozen": false,
             "icon": "braces",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -425,6 +427,7 @@
             ],
             "frozen": false,
             "icon": "prompts",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -667,6 +670,7 @@
             ],
             "frozen": false,
             "icon": "ChatOutput",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -869,6 +873,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [

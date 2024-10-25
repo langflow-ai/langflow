@@ -3,7 +3,10 @@ from typing import cast
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain_cohere import CohereRerank
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from langflow.base.vectorstores.model import (
+    LCVectorStoreComponent,
+    check_cached_vector_store,
+)
 from langflow.field_typing import Retriever, VectorStore
 from langflow.io import (
     DropdownInput,
@@ -22,6 +25,7 @@ class CohereRerankComponent(LCVectorStoreComponent):
     description = "Rerank documents using the Cohere API and a retriever."
     name = "CohereRerank"
     icon = "Cohere"
+    legacy: bool = True
 
     inputs = [
         MultilineInput(
@@ -47,7 +51,9 @@ class CohereRerankComponent(LCVectorStoreComponent):
             value="langflow",
             advanced=True,
         ),
-        HandleInput(name="retriever", display_name="Retriever", input_types=["Retriever"]),
+        HandleInput(
+            name="retriever", display_name="Retriever", input_types=["Retriever"]
+        ),
     ]
 
     outputs = [
@@ -70,12 +76,16 @@ class CohereRerankComponent(LCVectorStoreComponent):
             top_n=self.top_n,
             user_agent=self.user_agent,
         )
-        retriever = ContextualCompressionRetriever(base_compressor=cohere_reranker, base_retriever=self.retriever)
+        retriever = ContextualCompressionRetriever(
+            base_compressor=cohere_reranker, base_retriever=self.retriever
+        )
         return cast(Retriever, retriever)
 
     async def search_documents(self) -> list[Data]:  # type: ignore[override]
         retriever = self.build_base_retriever()
-        documents = await retriever.ainvoke(self.search_query, config={"callbacks": self.get_langchain_callbacks()})
+        documents = await retriever.ainvoke(
+            self.search_query, config={"callbacks": self.get_langchain_callbacks()}
+        )
         data = self.to_data(documents)
         self.status = data
         return data
