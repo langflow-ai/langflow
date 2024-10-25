@@ -253,7 +253,7 @@ jobs:
           push: true
           file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.docker_tags }}
-          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          platforms: linux/arm64
           provenance: false
 
       - name: Login to Github Container Registry
@@ -269,7 +269,7 @@ jobs:
           push: true
           file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.ghcr_tags }}
-          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          platforms: linux/arm64
           provenance: false
 
   build_components:
@@ -334,6 +334,8 @@ jobs:
             LANGFLOW_IMAGE=${{ matrix.langflow_image }}
           file: ${{ matrix.dockerfile }}
           tags: ${{ matrix.tags }}
+          # Add platform support for arm64
+          platforms: linux/amd64,linux/arm64
           # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
           provenance: false
 
@@ -357,3 +359,4 @@ jobs:
       - name: Restart HuggingFace Spaces Build
         run: |
           uv run ./scripts/factory_restart_space.py --space "Langflow/Langflow" --token ${{ secrets.HUGGINGFACE_API_TOKEN }}
+
