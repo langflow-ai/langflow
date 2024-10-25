@@ -239,7 +239,7 @@ async def read_flow(
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
-def update_flow(
+async def update_flow(
     *,
     session: DbSession,
     flow_id: UUID,
