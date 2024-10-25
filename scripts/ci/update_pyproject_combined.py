@@ -8,8 +8,8 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 
 from update_pyproject_version import update_pyproject_version
-from update_pyproject_name import update_pyproject_name, update_uv_dep
-from update_uv_dependency import update_dependency
+from update_pyproject_name import update_pyproject_name, update_uv_dep as update_name_uv_dep
+from update_uv_dependency import update_uv_dep as update_version_uv_dep
 
 def main():
     """
@@ -35,7 +35,7 @@ def main():
         
         # Update base package
         update_pyproject_name("src/backend/base/pyproject.toml", "langflow-base-nightly")
-        update_uv_dep("pyproject.toml", "langflow-base-nightly")
+        update_name_uv_dep("pyproject.toml", "langflow-base-nightly")
         # Update version in base pyproject.toml
         update_pyproject_version(base_tag, "src/backend/base/pyproject.toml")
         
@@ -48,11 +48,12 @@ def main():
         
         # Update main package
         update_pyproject_name("pyproject.toml", "langflow-nightly")
-        update_uv_dep("pyproject.toml", "langflow-nightly")
+        update_name_uv_dep("pyproject.toml", "langflow-nightly")
         # Update version in main pyproject.toml
         update_pyproject_version(main_tag, "pyproject.toml")
-        # Update dependency version
-        update_dependency(base_tag)
+        # Update dependency version (strip 'v' prefix if present)
+        base_version = base_tag.lstrip("v")
+        update_version_uv_dep(base_version)
         
     else:
         print(f"Unknown mode: {mode}")
