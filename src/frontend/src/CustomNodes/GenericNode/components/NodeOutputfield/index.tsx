@@ -212,7 +212,7 @@ export default function NodeOutputField({
                           "icon-size",
                           displayOutputPreview && !unknownOutput
                             ? "text-placeholder-foreground hover:text-foreground"
-                            : "text-placeholder-foreground cursor-not-allowed opacity-60",
+                            : "cursor-not-allowed text-placeholder-foreground opacity-60",
                           errorOutput ? "text-destructive" : "",
                         )}
                         name={"ScanEye"}
