@@ -155,9 +155,11 @@ export default function InputComponent({
           className={cn(
             password && selectedOption === "" ? "right-8" : "right-0",
             "absolute inset-y-0 flex items-center pr-2.5",
+            disabled && "opacity-50 cursor-not-allowed",
           )}
         >
           <button
+            disabled={disabled}
             onClick={(e) => {
               setShowOptions(!showOptions);
               e.preventDefault();
@@ -168,6 +170,7 @@ export default function InputComponent({
                 ? "text-medium-indigo"
                 : "text-muted-foreground",
               "hover:text-accent-foreground",
+              disabled && "cursor-not-allowed",
             )}
           >
             <ForwardedIconComponent
