@@ -99,7 +99,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
       <div
         key={flowData.id}
         onClick={handleClick}
-        className="my-1 flex cursor-pointer flex-col rounded-lg border border-zinc-100 p-5 hover:border-zinc-200 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-700"
+        className="my-1 flex cursor-pointer flex-col rounded-lg border border-zinc-100 p-5 hover:border-zinc-200 hover:shadow-sm dark:border-zinc-800 dark:hover:border-muted-foreground"
       >
         <div className="flex w-full items-center gap-2">
           <div
@@ -125,12 +125,12 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-10 w-10 border-none dark:hover:bg-zinc-800"
+                  className="group ml-2 h-10 w-10 border-none dark:hover:bg-zinc-800"
                 >
                   <ForwardedIconComponent
                     name="ellipsis"
                     aria-hidden="true"
-                    className="h-5 w-5 dark:text-zinc-400"
+                    className="h-5 w-5 group-hover:text-white dark:text-zinc-400"
                   />
                 </Button>
               </DropdownMenuTrigger>

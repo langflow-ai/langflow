@@ -108,7 +108,7 @@ export const HeaderMenuItems = ({
       leaveTo="transform opacity-0 scale-95"
     >
       <Menu.Items
-        className={`absolute dark:bg-black ${positionClass} z-[999] mt-2 w-[20rem] origin-top-right rounded-md bg-[white] shadow-lg ring-1 ring-black/5 focus:outline-none`}
+        className={`absolute dark:bg-black ${positionClass} z-[999] mt-2 w-[20rem] origin-top-right rounded-md border bg-[white] shadow-lg ring-1 ring-black/5 focus:outline-none dark:border-zinc-800`}
       >
         {children}
       </Menu.Items>

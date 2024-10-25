@@ -98,13 +98,11 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
     <>
       <div
         key={flowData.id}
-        className="my-2 flex h-[110px] justify-between rounded-lg border border-zinc-100 p-5 hover:border-zinc-200 hover:shadow-sm dark:border-zinc-800 dark:hover:border-zinc-700"
+        onClick={handleClick}
+        className="my-2 flex h-[110px] cursor-pointer justify-between rounded-lg border border-zinc-100 p-5 hover:border-zinc-200 hover:shadow-sm dark:border-zinc-800 dark:hover:border-muted-foreground"
       >
         {/* left side */}
-        <div
-          className="flex min-w-0 cursor-pointer items-center gap-2"
-          onClick={handleClick}
-        >
+        <div className="flex min-w-0 cursor-pointer items-center gap-2">
           {/* Icon */}
           <div
             className={`item-center mr-3 flex justify-center rounded-lg border ${flowData.icon_bg_color || "bg-purple-300"} p-3`}
