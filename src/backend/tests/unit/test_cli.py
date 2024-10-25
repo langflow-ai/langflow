@@ -15,14 +15,19 @@ def default_settings():
 def test_components_path(runner, default_settings, tmp_path):
     # create a "components" folder
     temp_dir = tmp_path / "components"
+    temp_dir.mkdir(exist_ok=True)
 
-    result = runner.invoke(
-        app,
-        ["run", "--components-path", str(temp_dir), *default_settings],
-    )
-    assert result.exit_code == 0, result.stdout
-    settings_service = deps.get_settings_service()
-    assert str(temp_dir) in settings_service.settings.components_path
+    try:
+        result = runner.invoke(
+            app,
+            ["run", "--components-path", str(temp_dir), *default_settings],
+        )
+        assert result.exit_code == 0, result.stdout
+        settings_service = deps.get_settings_service()
+        assert str(temp_dir) in settings_service.settings.components_path
+    finally:
+        # Ensure any open resources are properly closed
+        deps.close_resources()
 
 
 @pytest.mark.usefixtures("client")
