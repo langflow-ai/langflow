@@ -20,6 +20,9 @@ export default function CollectionPage(): JSX.Element {
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
   const folders = useFolderStore((state) => state.folders);
   const showFolderModal = useFolderStore((state) => state.showFolderModal);
+  const setShowFolderModal = useFolderStore(
+    (state) => state.setShowFolderModal,
+  );
   const queryClient = useQueryClient();
 
   // cleanup the query cache when the component unmounts
@@ -70,7 +73,16 @@ export default function CollectionPage(): JSX.Element {
             }}
           />
         </aside>
-        <div className="relative h-screen w-full overflow-y-auto">
+        <div
+          className={`relative h-screen w-full overflow-y-auto ${
+            showFolderModal ? "opacity-80 blur-[2px]" : ""
+          }`}
+          onClick={() => {
+            if (showFolderModal) {
+              setShowFolderModal(false);
+            }
+          }}
+        >
           <Outlet />
         </div>
       </div>

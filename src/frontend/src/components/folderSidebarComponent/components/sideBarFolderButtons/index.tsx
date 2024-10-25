@@ -25,7 +25,9 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { handleKeyDown } from "../../../../utils/reactflowUtils";
 import { cn } from "../../../../utils/utils";
-import IconComponent from "../../../genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../genericIconComponent";
 import { Button, buttonVariants } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import useFileDrop from "../../hooks/use-on-file-drop";
@@ -56,6 +58,10 @@ const SideBarFoldersButtonsComponent = ({
     pathname.split("/").length < (ENABLE_CUSTOM_PARAM ? 5 : 4);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folderIdDragging = useFolderStore((state) => state.folderIdDragging);
+  const showFolderModal = useFolderStore((state) => state.showFolderModal);
+  const setShowFolderModal = useFolderStore(
+    (state) => state.setShowFolderModal,
+  );
 
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
@@ -252,7 +258,16 @@ const SideBarFoldersButtonsComponent = ({
     isDeletingFolder;
 
   const HeaderButtons = () => (
-    <div className="mt-4 flex shrink-0 items-center justify-between gap-1">
+    <div className="my-4 flex shrink-0 items-center justify-between gap-1">
+      <Button
+        variant="ghost"
+        className="h-7 w-7 border-0 text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white lg:hidden"
+        size="icon"
+        onClick={() => setShowFolderModal(!showFolderModal)}
+        data-testid="upload-folder-button"
+      >
+        <IconComponent name="panel-right-open" className="h-4 w-4" />
+      </Button>
       <div className="flex-1 text-sm font-semibold">Folders</div>
       <UploadFolderButton
         onClick={handleUploadFlowsToFolder}
