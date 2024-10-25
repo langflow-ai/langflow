@@ -116,7 +116,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
 
           <div className="flex min-w-0 flex-col justify-start">
             <div className="line-clamp-1 flex min-w-0 items-baseline truncate max-md:flex-col">
-              <div className="flex truncate pr-2 text-lg font-semibold max-md:w-full">
+              <div className="text-md flex truncate pr-2 font-semibold max-md:w-full">
                 <span className="truncate">{flowData.name}</span>
               </div>
               <div className="item-baseline flex text-xs text-zinc-500 dark:text-zinc-400">
