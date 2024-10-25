@@ -20,11 +20,9 @@ import { VertexBuildTypeAPI } from "@/types/api";
 import { NodeDataType } from "@/types/flow";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames } from "@/utils/utils";
-import { Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IconComponent from "../../../../components/genericIconComponent";
-import { useBuildStatus } from "../../hooks/use-get-build-status";
 
 export default function NodeStatus({
   nodeId,

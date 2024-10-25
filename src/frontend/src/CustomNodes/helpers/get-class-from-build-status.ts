@@ -9,7 +9,6 @@ export const getSpecificClassFromBuildStatus = (
 ): string => {
   let isInvalid = validationStatus && !validationStatus.valid;
   const currentNodeBuilding = currentNodeId === validationStatus?.id;
-  console.log(currentNodeId, validationStatus?.id);
 
   if (isInvalid || buildStatus === BuildStatus.ERROR) {
     return "border-destructive border-[1.5px]";
