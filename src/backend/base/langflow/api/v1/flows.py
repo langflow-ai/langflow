@@ -226,7 +226,7 @@ def _read_flow(
 
 
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
-def read_flow(
+async def read_flow(
     *,
     session: DbSession,
     flow_id: UUID,
