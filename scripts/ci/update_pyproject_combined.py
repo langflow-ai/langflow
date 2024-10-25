@@ -36,8 +36,8 @@ def main():
         # Update base package
         update_pyproject_name("src/backend/base/pyproject.toml", "langflow-base-nightly")
         update_name_uv_dep("pyproject.toml", "langflow-base-nightly")
-        # Update version in base pyproject.toml
-        update_pyproject_version(base_tag, "src/backend/base/pyproject.toml")
+        # Update version in base pyproject.toml - fixed argument order
+        update_pyproject_version("src/backend/base/pyproject.toml", base_tag)
         
     elif mode == "main":
         if len(sys.argv) != 4:
@@ -49,8 +49,8 @@ def main():
         # Update main package
         update_pyproject_name("pyproject.toml", "langflow-nightly")
         update_name_uv_dep("pyproject.toml", "langflow-nightly")
-        # Update version in main pyproject.toml
-        update_pyproject_version(main_tag, "pyproject.toml")
+        # Update version in main pyproject.toml - fixed argument order
+        update_pyproject_version("pyproject.toml", main_tag)
         # Update dependency version (strip 'v' prefix if present)
         base_version = base_tag.lstrip("v")
         update_version_uv_dep(base_version)
