@@ -437,7 +437,7 @@ export default function GenericNode({
                       <ForwardedIconComponent
                         name={showHiddenOutputs ? "EyeOff" : "Eye"}
                         strokeWidth={1.5}
-                        className="text-placeholder-foreground h-4 w-4 group-hover:text-foreground"
+                        className="h-4 w-4 text-placeholder-foreground group-hover:text-foreground"
                       />
                     </Button>
                   </div>
