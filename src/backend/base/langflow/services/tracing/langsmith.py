@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
-from typing_extensions import override
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
@@ -63,15 +62,14 @@ class LangSmithTracer(BaseTracer):
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         return True
 
-    @override
     def add_trace(
         self,
-        trace_id: str,
+        trace_id: str,  # noqa: ARG002
         trace_name: str,
         trace_type: str,
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
-        vertex: Vertex | None = None,
+        vertex: Vertex | None = None,  # noqa: ARG002
     ) -> None:
         if not self._ready or not self._run_tree:
             return
@@ -117,10 +115,9 @@ class LangSmithTracer(BaseTracer):
             value = str(value)
         return value
 
-    @override
     def end_trace(
         self,
-        trace_id: str,
+        trace_id: str,  # noqa: ARG002
         trace_name: str,
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
