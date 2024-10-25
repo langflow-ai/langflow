@@ -226,7 +226,7 @@ export default function SliderComponent({
       <div className="text mt-2 grid grid-cols-2 gap-x-2 text-sm">
         <div className="flex items-center">
           <IconComponent
-            className="text-placeholder-foreground mr-1 h-4 w-4"
+            className="mr-1 h-4 w-4 text-placeholder-foreground"
             name={minLabelIcon}
             aria-hidden="true"
           />
@@ -239,7 +239,7 @@ export default function SliderComponent({
             {maxLabel}
           </span>
           <IconComponent
-            className="text-placeholder-foreground ml-1 h-4 w-4"
+            className="ml-1 h-4 w-4 text-placeholder-foreground"
             name={maxLabelIcon}
             aria-hidden="true"
           />

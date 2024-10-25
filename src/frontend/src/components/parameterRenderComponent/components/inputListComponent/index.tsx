@@ -96,7 +96,7 @@ export default function InputListComponent({
               <IconComponent
                 name={index === 0 ? "Plus" : "Trash2"}
                 className={cn(
-                  "text-placeholder-foreground h-4 w-6",
+                  "h-4 w-6 text-placeholder-foreground",
                   !disabled && "hover:cursor-pointer hover:text-foreground",
                   index === 0
                     ? "group-hover:text-foreground"
