@@ -177,7 +177,7 @@
     @apply flex gap-2;
   }
   .primary-input {
-    @apply placeholder:text-placeholder-foreground form-input block w-full truncate rounded-md border-[1px] border-border bg-background px-3 text-left text-sm shadow-sm focus-within:border-[1.5px] hover:border-muted-foreground focus:border-[1.75px] focus:border-foreground focus:placeholder-transparent focus:ring-0 focus-visible:border-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
+    @apply placeholder:text-placeholder-foreground form-input block w-full truncate rounded-md border-[1px] border-border bg-background px-3 text-left text-sm shadow-sm focus-within:border-[1.5px] hover:border-muted-foreground focus:border-[1.75px] focus:border-foreground focus:placeholder-transparent focus:ring-0 focus-visible:border-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .skeleton-card {

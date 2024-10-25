@@ -60,6 +60,8 @@ export default function TextAreaComponent({
   updateVisibility,
   password,
 }: InputProps<string, TextAreaComponentType>): JSX.Element {
+  console.log(value);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -114,7 +116,7 @@ export default function TextAreaComponent({
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.iconTop,
           disabled
-            ? "bg-muted text-placeholder-foreground"
+            ? "text-placeholder-foreground bg-muted"
             : "bg-background text-foreground",
         )}
       />
