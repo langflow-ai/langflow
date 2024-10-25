@@ -96,7 +96,7 @@ const HomePage = ({ type }: HomePageProps) => {
                   ))}
                 </div>
               ) : (
-                <div className="mt-8 flex flex-col">
+                <div className="mt-7 flex flex-col">
                   {filteredFlows.map((flow) => (
                     <ListComponent key={flow.id} flowData={flow} />
                   ))}

@@ -77,7 +77,7 @@ const HeaderComponent = ({
 
       {/* Search and filters */}
       <div className="flex justify-between">
-        <div className="flex w-full lg:w-6/12 xl:w-5/12">
+        <div className="flex w-full xl:w-5/12">
           <Input
             icon="search"
             type="search"
@@ -91,7 +91,7 @@ const HeaderComponent = ({
             <Button
               unstyled
               size="icon"
-              className={`my-[2px] ml-[2px] rounded-lg p-2 ${
+              className={`group my-[2px] ml-[2px] rounded-lg p-2 ${
                 view === "list"
                   ? "bg-white text-black shadow-md dark:bg-black dark:text-white"
                   : "bg-zinc-100 text-zinc-500 dark:bg-black dark:bg-zinc-800 dark:hover:bg-zinc-800"
@@ -101,13 +101,13 @@ const HeaderComponent = ({
               <ForwardedIconComponent
                 name="menu"
                 aria-hidden="true"
-                className="h-4 w-4"
+                className="h-4 w-4 group-hover:text-black dark:group-hover:text-white"
               />
             </Button>
             <Button
               unstyled
               size="icon"
-              className={`my-[2px] mr-[2px] rounded-lg p-2 ${
+              className={`group my-[2px] mr-[2px] rounded-lg p-2 ${
                 view === "grid"
                   ? "bg-white text-black shadow-md dark:bg-black dark:text-white"
                   : "bg-zinc-100 text-zinc-500 dark:bg-black dark:bg-zinc-800 dark:hover:bg-zinc-800"
@@ -117,7 +117,7 @@ const HeaderComponent = ({
               <ForwardedIconComponent
                 name="layout-grid"
                 aria-hidden="true"
-                className="h-4 w-4"
+                className="h-4 w-4 group-hover:text-black dark:group-hover:text-white"
               />
             </Button>
           </div>

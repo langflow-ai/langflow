@@ -99,7 +99,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
       <div
         key={flowData.id}
         onClick={handleClick}
-        className="my-2 flex h-[110px] cursor-pointer justify-between rounded-lg border border-zinc-100 p-5 hover:border-zinc-200 hover:shadow-sm dark:border-zinc-800 dark:hover:border-muted-foreground"
+        className="my-2 flex h-[110px] cursor-pointer justify-between rounded-lg border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground"
       >
         {/* left side */}
         <div className="flex min-w-0 cursor-pointer items-center gap-2">
@@ -148,12 +148,12 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-10 w-10 border-none dark:hover:bg-zinc-800"
+                className="group h-10 w-10 border-none dark:hover:bg-zinc-700"
               >
                 <ForwardedIconComponent
                   name="ellipsis"
                   aria-hidden="true"
-                  className="h-5 w-5 dark:text-zinc-400"
+                  className="h-5 w-5 dark:text-zinc-400 dark:group-hover:text-white"
                 />
               </Button>
             </DropdownMenuTrigger>
