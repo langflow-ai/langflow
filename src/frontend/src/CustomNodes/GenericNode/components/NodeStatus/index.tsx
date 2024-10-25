@@ -208,7 +208,9 @@ export default function NodeStatus({
                   <IconComponent
                     name="Play"
                     className={`play-button-icon ${
-                      isHovered ? "text-foreground" : "text-placeholder"
+                      isHovered
+                        ? "text-foreground"
+                        : "text-placeholder-foreground"
                     }`}
                   />
                 </div>

@@ -28,13 +28,13 @@ function RefreshButton({
     className,
     disabled ? "cursor-not-allowed" : "",
     !editNode ? "py-2.5 px-3" : "px-2 py-1",
-    "group text-placeholder p-1 h-6 w-6",
+    "group text-placeholder-foreground p-1 h-6 w-6",
   );
 
   // icon class name should take into account the disabled state and the loading state
   const disabledIconTextClass = disabled ? "text-muted-foreground" : "";
   const iconClassName = cn(
-    "h-4 w-4 animate-wiggle group-hover:text-primary text-placeholder",
+    "h-4 w-4 animate-wiggle group-hover:text-primary text-placeholder-foreground",
     disabledIconTextClass,
   );
 

@@ -66,7 +66,7 @@ const CustomInputPopover = ({
         <div
           data-testid={`anchor-${id}`}
           className={cn(
-            "primary-input border-1 flex h-full min-h-[43px] flex-wrap items-center px-3 placeholder:text-placeholder",
+            "primary-input border-1 placeholder:text-placeholder-foreground flex h-full min-h-[43px] flex-wrap items-center px-3",
             editNode && "min-h-7 p-0",
             editNode && disabled && "min-h-5 border-muted p-0",
             disabled && "bg-muted text-muted",
@@ -119,11 +119,12 @@ const CustomInputPopover = ({
               disabled={disabled}
               required={required}
               className={cn(
-                "popover-input",
+                "popover-input truncate pr-4",
                 editNode && "px-3",
                 editNode && disabled && "h-fit w-fit",
                 disabled &&
                   "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
+                password && "pr-10",
               )}
               placeholder={
                 selectedOptions?.length > 0 || selectedOption ? "" : placeholder

@@ -177,7 +177,7 @@
     @apply flex gap-2;
   }
   .primary-input {
-    @apply placeholder:text-placeholder form-input block w-full truncate rounded-md border-border bg-background px-3 text-left text-sm shadow-sm hover:border-muted-foreground focus:border-muted focus:placeholder-transparent focus:ring-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
+    @apply placeholder:text-placeholder-foreground form-input block w-full truncate rounded-md border-border bg-background px-3 text-left text-sm shadow-sm hover:border-muted-foreground focus:border-muted focus:placeholder-transparent focus:ring-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .skeleton-card {
@@ -194,7 +194,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply placeholder:text-placeholder form-input block w-full rounded-md border-border bg-background px-3 text-left shadow-sm hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
+    @apply placeholder:text-placeholder-foreground form-input block w-full rounded-md border-border bg-background px-3 text-left shadow-sm hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
   }
 
   .input-edit-node {
@@ -1218,7 +1218,7 @@
   }
 
   .disabled-state {
-    @apply text-hard-zinc pointer-events-none bg-secondary;
+    @apply pointer-events-none bg-secondary text-hard-zinc;
   }
 
   .background-fade-input {
@@ -1251,6 +1251,6 @@
   }
 
   .beta-badge {
-    @apply bg-accent-pink text-accent-pink-foreground flex h-6 w-11 items-center justify-center rounded-lg p-2 text-center text-xs font-medium;
+    @apply flex h-6 w-11 items-center justify-center rounded-lg bg-accent-pink p-2 text-center text-xs font-medium text-accent-pink-foreground;
   }
 }

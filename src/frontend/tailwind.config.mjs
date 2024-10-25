@@ -129,6 +129,7 @@ const config = {
         placeholder: "hsl(var(--placeholder))",
         "hard-zinc": "hsl(var(--hard-zinc))",
         "smooth-red": "hsl(var(--smooth-red))",
+        "placeholder-foreground": "hsl(var(--placeholder-foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",

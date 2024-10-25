@@ -100,7 +100,7 @@ export default function InputFileComponent({
                 type="text"
                 className={cn(
                   "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
-                  !value && "text-placeholder",
+                  !value && "text-placeholder-foreground",
                   editNode && "h-6",
                 )}
                 value={value || "Upload a file..."}

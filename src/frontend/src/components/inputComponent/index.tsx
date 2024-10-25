@@ -170,7 +170,7 @@ export default function InputComponent({
             className={cn(
               onChange && setSelectedOption && selectedOption !== ""
                 ? "text-accent-emerald-foreground"
-                : "text-muted-foreground",
+                : "text-placeholder-foreground",
               !disabled && "hover:text-foreground",
             )}
           >
@@ -209,12 +209,12 @@ export default function InputComponent({
           {pwdVisible ? (
             <ForwardedIconComponent
               name="Eye"
-              className="relative top-[1px] h-5 w-5 text-muted-foreground hover:text-foreground"
+              className="text-placeholder-foreground relative top-[1px] h-5 w-5 hover:text-foreground"
             />
           ) : (
             <ForwardedIconComponent
               name="EyeOff"
-              className="relative top-[1px] h-5 w-5 text-muted-foreground hover:text-foreground"
+              className="text-placeholder-foreground relative top-[1px] h-5 w-5 hover:text-foreground"
             />
           )}
         </button>

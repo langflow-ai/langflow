@@ -98,7 +98,7 @@ export default function CodeAreaComponent({
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
-          disabled ? "text-placeholder" : "text-foreground",
+          disabled ? "text-placeholder-foreground" : "text-foreground",
         )}
       />
     </>

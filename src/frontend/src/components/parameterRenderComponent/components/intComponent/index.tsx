@@ -70,7 +70,7 @@ export default function IntComponent({
   };
 
   const iconClassName =
-    "text-placeholder h-3 w-3 group-increment-hover:text-primary group-decrement-hover:text-primary transition-colors";
+    "text-placeholder-foreground h-3 w-3 group-increment-hover:text-primary group-decrement-hover:text-primary transition-colors";
   const stepperClassName = " w-5 rounded-r-sm border-l-[1px]";
   const incrementStepperClassName =
     " border-b-[1px] hover:rounded-tr-[5px] hover:bg-muted group-increment";

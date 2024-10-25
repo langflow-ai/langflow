@@ -49,7 +49,7 @@ export default function InputListComponent({
   };
 
   const getButtonClassName = () =>
-    classNames(disabled ? "text-hard-zinc" : "text-placeholder");
+    classNames(disabled ? "text-hard-zinc" : "text-placeholder-foreground");
 
   const getTestId = (type, index) =>
     `input-list-${type}-btn${editNode ? "-edit" : ""}_${componentName}-${index}`;
@@ -96,7 +96,7 @@ export default function InputListComponent({
               <IconComponent
                 name={index === 0 ? "Plus" : "Trash2"}
                 className={cn(
-                  "h-4 w-6 text-placeholder",
+                  "text-placeholder-foreground h-4 w-6",
                   !disabled && "hover:cursor-pointer hover:text-foreground",
                   index === 0
                     ? "group-hover:text-foreground"

@@ -102,7 +102,7 @@ export default function PromptAreaComponent({
           editNode
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.normalTop,
-          disabled ? "text-placeholder" : "text-foreground",
+          disabled ? "text-placeholder-foreground" : "text-foreground",
         )}
       />
     </>

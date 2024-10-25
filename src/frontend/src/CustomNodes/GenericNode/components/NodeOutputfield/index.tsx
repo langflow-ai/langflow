@@ -153,8 +153,8 @@ export default function NodeOutputField({
                   className={cn(
                     "h-4 w-4",
                     disabledOutput
-                      ? "text-placeholder opacity-60"
-                      : "text-placeholder hover:text-foreground",
+                      ? "text-placeholder-foreground opacity-60"
+                      : "text-placeholder-foreground hover:text-foreground",
                   )}
                   strokeWidth={1.5}
                   name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
@@ -208,7 +208,7 @@ export default function NodeOutputField({
                     {
                       <IconComponent
                         className={cn(
-                          "h-5 w-5 rounded-md text-placeholder",
+                          "text-placeholder-foreground h-5 w-5 rounded-md",
                           displayOutputPreview && !unknownOutput
                             ? "hover:text-foreground"
                             : "cursor-not-allowed text-muted-foreground opacity-60",
