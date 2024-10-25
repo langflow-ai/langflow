@@ -35,7 +35,7 @@ router = APIRouter(prefix="/flows", tags=["Flows"])
 
 
 @router.post("/", response_model=FlowRead, status_code=201)
-def create_flow(
+async def create_flow(
     *,
     session: DbSession,
     flow: FlowCreate,
