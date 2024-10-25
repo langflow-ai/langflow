@@ -2,6 +2,7 @@ import InputComponent from "@/components/inputComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import { cn } from "@/utils/utils";
 import { useEffect, useState } from "react";
 
 export default function NodeName({
@@ -74,7 +75,12 @@ export default function NodeName({
           className="nodoubleclick w-full cursor-text truncate font-medium text-primary"
         >
           <div className="flex items-center gap-2">
-            <span className="max-w-36 truncate text-[14px]">
+            <span
+              className={cn(
+                "max-w-36 truncate text-[14px]",
+                beta && "max-w-28",
+              )}
+            >
               {display_name}
             </span>
 

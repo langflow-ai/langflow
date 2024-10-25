@@ -272,7 +272,7 @@ export default function GenericNode({
         className={cn(
           borderColor,
           showNode ? "w-80 rounded-xl" : "w-26 h-26 rounded-full",
-          "generic-node-div group/node",
+          "generic-node-div group/node pb-4",
         )}
       >
         {BuildStatus.BUILDING === buildStatus && (
@@ -435,7 +435,7 @@ export default function GenericNode({
                       <ForwardedIconComponent
                         name={showHiddenOutputs ? "EyeOff" : "Eye"}
                         strokeWidth={1.5}
-                        className="h-4 w-4 text-placeholder-foreground group-hover:text-foreground"
+                        className="text-placeholder-foreground h-4 w-4 group-hover:text-foreground"
                       />
                     </Button>
                   </div>

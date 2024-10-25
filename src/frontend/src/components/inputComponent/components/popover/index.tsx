@@ -15,7 +15,7 @@ import {
 import { cn } from "@/utils/utils";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { X } from "lucide-react";
-import React from "react";
+import React, { useState } from "react";
 
 const CustomInputPopover = ({
   id,
@@ -45,6 +45,8 @@ const CustomInputPopover = ({
   autoFocus,
   className,
 }) => {
+  const [isFocused, setIsFocused] = useState(false);
+
   const PopoverContentInput = editNode
     ? PopoverContent
     : PopoverContentWithoutPortal;
@@ -66,10 +68,11 @@ const CustomInputPopover = ({
         <div
           data-testid={`anchor-${id}`}
           className={cn(
-            "primary-input border-1 flex h-full min-h-[43px] flex-wrap items-center px-3 placeholder:text-placeholder-foreground",
+            "primary-input border-1 placeholder:text-placeholder-foreground flex h-full min-h-[38px] flex-wrap items-center px-3",
             editNode && "min-h-7 p-0",
             editNode && disabled && "min-h-5 border-muted p-0",
             disabled && "bg-muted text-muted",
+            isFocused && "border-foreground hover:border-foreground",
           )}
           onClick={() => {
             if (!nodeStyle && !disabled) {
@@ -110,11 +113,15 @@ const CustomInputPopover = ({
 
           {!selectedOption && (
             <input
+              onFocus={() => setIsFocused(true)}
               autoFocus={autoFocus}
               id={id}
               ref={refInput}
               type={!pwdVisible && password ? "password" : "text"}
-              onBlur={onInputLostFocus}
+              onBlur={() => {
+                onInputLostFocus?.();
+                setIsFocused(false);
+              }}
               value={value || ""}
               disabled={disabled}
               required={required}

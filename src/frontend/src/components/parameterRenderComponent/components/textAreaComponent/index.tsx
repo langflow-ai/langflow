@@ -48,7 +48,7 @@ const externalLinkIconClasses = {
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
   editNodeTop: "top-[-1.4rem] h-5",
   normalTop: "top-[-2.1rem] h-7 bg-blue-300",
-  iconTop: "top-[-1.6rem]",
+  iconTop: "top-[-1.7rem]",
 };
 
 export default function TextAreaComponent({
@@ -60,8 +60,6 @@ export default function TextAreaComponent({
   updateVisibility,
   password,
 }: InputProps<string, TextAreaComponentType>): JSX.Element {
-  console.log(value);
-
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -110,7 +108,7 @@ export default function TextAreaComponent({
         dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
         name={disabled ? "lock" : "Scan"}
         className={cn(
-          "bg-background",
+          "cursor-pointer bg-background",
           externalLinkIconClasses.icon,
           editNode
             ? externalLinkIconClasses.editNodeTop

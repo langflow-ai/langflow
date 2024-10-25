@@ -113,7 +113,7 @@ export default function NodeInputField({
       {displayHandle && Handle}
       <div
         className={cn(
-          "flex w-full flex-col gap-2.5",
+          "flex w-full flex-col gap-2",
           isFlexView ? "flex-row" : "flex-col",
         )}
       >
@@ -141,7 +141,10 @@ export default function NodeInputField({
             <span className={"text-status-red"}>{required ? "*" : ""}</span>
             <div>
               {info !== "" && (
-                <ShadTooltip content={<NodeInputInfo info={info} />}>
+                <ShadTooltip
+                  contrastTooltip
+                  content={<NodeInputInfo info={info} />}
+                >
                   {/* put div to avoid bug that does not display tooltip */}
                   <div className="cursor-help">
                     <IconComponent
