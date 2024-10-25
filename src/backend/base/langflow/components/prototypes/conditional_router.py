@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.io import BoolInput, DropdownInput, MessageInput, MessageTextInput, Output
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageInput, MessageTextInput, Output
 from langflow.schema.message import Message
 
 
@@ -8,6 +8,10 @@ class ConditionalRouterComponent(Component):
     description = "Routes an input message to a corresponding output based on text comparison."
     icon = "equal"
     name = "ConditionalRouter"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__iteration_updated = False
 
     inputs = [
         MessageTextInput(
@@ -40,12 +44,29 @@ class ConditionalRouterComponent(Component):
             display_name="Message",
             info="The message to pass through either route.",
         ),
+        IntInput(
+            name="max_iterations",
+            display_name="Max Iterations",
+            info="The maximum number of iterations for the conditional router.",
+            value=10,
+        ),
+        DropdownInput(
+            name="default_route",
+            display_name="Default Route",
+            options=["true_result", "false_result"],
+            info="The default route to take when max iterations are reached.",
+            value="false_result",
+            advanced=True,
+        ),
     ]
 
     outputs = [
         Output(display_name="True Route", name="true_result", method="true_response"),
         Output(display_name="False Route", name="false_result", method="false_response"),
     ]
+
+    def _pre_run_setup(self):
+        self.__iteration_updated = False
 
     def evaluate_condition(self, input_text: str, match_text: str, operator: str, *, case_sensitive: bool) -> bool:
         if not case_sensitive:
@@ -64,12 +85,24 @@ class ConditionalRouterComponent(Component):
             return input_text.endswith(match_text)
         return False
 
+    def iterate_and_stop_once(self, route_to_stop: str):
+        if not self.__iteration_updated:
+            _id = self._id.lower()
+            self.update_ctx({f"{_id}_iteration": self.ctx.get(f"{_id}_iteration", 0) + 1})
+            self.__iteration_updated = True
+            _id = self._id.lower()
+            if self.ctx.get(f"{_id}_iteration", 0) >= self.max_iterations and route_to_stop == self.default_route:
+                # We need to stop the other route
+                route_to_stop = "true_result" if route_to_stop == "false_result" else "false_result"
+            self.stop(route_to_stop)
+
     def true_response(self) -> Message:
         result = self.evaluate_condition(
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
         )
         if result:
             self.status = self.message
+            self.iterate_and_stop_once("false_result")
             return self.message
         self.stop("true_result")
         return None  # type: ignore[return-value]
@@ -80,6 +113,7 @@ class ConditionalRouterComponent(Component):
         )
         if not result:
             self.status = self.message
+            self.iterate_and_stop_once("true_result")
             return self.message
         self.stop("false_result")
         return None  # type: ignore[return-value]
