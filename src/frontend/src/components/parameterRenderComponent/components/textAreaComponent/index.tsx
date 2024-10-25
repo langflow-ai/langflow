@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import ComponentTextModal from "@/modals/textAreaModal";
 import { useRef, useState } from "react";
@@ -114,7 +113,7 @@ export default function TextAreaComponent({
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.iconTop,
           disabled
-            ? "bg-muted text-placeholder-foreground"
+            ? "text-placeholder-foreground bg-muted"
             : "bg-background text-foreground",
         )}
       />
