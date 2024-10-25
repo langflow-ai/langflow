@@ -124,7 +124,7 @@ async def create_flow(
 
 
 @router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
-def read_flows(
+async def read_flows(
     *,
     current_user: CurrentActiveUser,
     session: DbSession,
