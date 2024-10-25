@@ -6,6 +6,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IApiQueryResponse {
   categories: Array<SidebarCategory>;
+  bundles: Array<SidebarCategory>;
 }
 
 export const useGetCategoriesQuery: useQueryFunctionType<
