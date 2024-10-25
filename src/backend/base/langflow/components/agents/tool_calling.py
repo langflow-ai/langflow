@@ -1,5 +1,5 @@
 from langchain.agents import create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MessageTextInput
@@ -25,10 +25,10 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         ),
         MessageTextInput(
             name="input_value",
-            display_name="User Input",
+            display_name="Input",
             info="The input provided by the user for the agent to process.",
         ),
-        DataInput(name="chat_history", display_name="Conversation History", is_list=True, advanced=True),
+        DataInput(name="chat_history", display_name="Chat Memory", is_list=True, advanced=True),
     ]
 
     def get_chat_history_data(self) -> list[Data] | None:
@@ -41,7 +41,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         messages = [
             ("system", self.system_prompt),
             ("placeholder", "{chat_history}"),
-            HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=["input"], template=self.user_prompt)),
+            ("human", self.input_value),
             ("placeholder", "{agent_scratchpad}"),
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
