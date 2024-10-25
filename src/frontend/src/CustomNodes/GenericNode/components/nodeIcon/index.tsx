@@ -2,6 +2,7 @@ import { useTypesStore } from "@/stores/typesStore";
 import { nodeColors, nodeIconsLucide } from "@/utils/styleUtils";
 import emojiRegex from "emoji-regex";
 
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { checkLucideIcons } from "@/CustomNodes/helpers/check-lucide-icons";
 import { cn } from "@/utils/utils";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -39,7 +40,11 @@ export function NodeIcon({
     if (isLucideIcon) {
       return (
         <div className="bg-lucide-icon text-foreground">
-          <IconComponent name={iconName} className={iconClassName} />
+          <IconComponent
+            strokeWidth={ICON_STROKE_WIDTH}
+            name={iconName}
+            className={iconClassName}
+          />
         </div>
       );
     }

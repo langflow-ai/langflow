@@ -42,10 +42,16 @@ const config = {
           "0%, 100%": { transform: "scale(100%)" },
           "50%": { transform: "scale(120%)" },
         },
+        "border-beam": {
+          "100%": {
+            "offset-distance": "100%",
+          },
+        },
       },
       animation: {
         wiggle: "wiggle 150ms ease-in-out 1",
         "slow-wiggle": "wiggle 500ms ease-in-out 1",
+        "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
       },
       colors: {
         "frozen-blue": "rgba(128, 190, 219, 0.86)", // Custom blue color for the frozen effect

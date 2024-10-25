@@ -24,6 +24,7 @@ import { Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IconComponent from "../../../../components/genericIconComponent";
+import { useBuildStatus } from "../../hooks/use-get-build-status";
 
 export default function NodeStatus({
   nodeId,
@@ -33,6 +34,7 @@ export default function NodeStatus({
   frozen,
   showNode,
   data,
+  buildStatus,
 }: {
   nodeId: string;
   display_name: string;
@@ -41,6 +43,7 @@ export default function NodeStatus({
   frozen?: boolean;
   showNode: boolean;
   data: NodeDataType;
+  buildStatus: BuildStatus;
 }) {
   const nodeId_ = data.node?.flow?.data
     ? (findLastNode(data.node?.flow.data!)?.id ?? nodeId)
@@ -48,29 +51,7 @@ export default function NodeStatus({
   const [validationString, setValidationString] = useState<string>("");
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
-  const buildStatus = useFlowStore((state) => {
-    if (data.node?.flow && data.node.flow.data?.nodes) {
-      const flow = data.node.flow;
-      const nodes = flow.data?.nodes; // check all the build status of the nodes in the flow
-      const buildStatus_: BuildStatus[] = [];
-      //@ts-ignore
-      for (const node of nodes) {
-        buildStatus_.push(state.flowBuildStatus[node.id]?.status);
-      }
-      if (buildStatus_.every((status) => status === BuildStatus.BUILT)) {
-        return BuildStatus.BUILT;
-      }
-      if (buildStatus_.some((status) => status === BuildStatus.BUILDING)) {
-        return BuildStatus.BUILDING;
-      }
-      if (buildStatus_.some((status) => status === BuildStatus.ERROR)) {
-        return BuildStatus.ERROR;
-      } else {
-        return BuildStatus.TO_BUILD;
-      }
-    }
-    return state.flowBuildStatus[nodeId]?.status;
-  });
+
   const lastRunTime = useFlowStore(
     (state) => state.flowBuildStatus[nodeId_]?.timestamp,
   );
@@ -79,7 +60,6 @@ export default function NodeStatus({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setNode = useFlowStore((state) => state.setNode);
   const version = useDarkStore((state) => state.version);
-  const isDark = useDarkStore((state) => state.dark);
 
   function handlePlayWShortcut() {
     if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
@@ -94,9 +74,10 @@ export default function NodeStatus({
   useUpdateValidationStatus(nodeId_, flowPool, setValidationStatus);
 
   const getBaseBorderClass = (selected) => {
-    let className = selected
-      ? " border-[2px] border-foreground hover:shadow-node"
-      : "border-[2px] hover:shadow-node";
+    let className =
+      selected && !isBuilding
+        ? " border-[1.5px] border-foreground hover:shadow-node"
+        : "border-[1.5px] hover:shadow-node";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     return frozen ? frozenClass : className;
   };
@@ -111,6 +92,7 @@ export default function NodeStatus({
       buildStatus,
       validationStatus,
       isBuilding,
+      nodeId,
     );
 
     const baseBorderClass = getBaseBorderClass(selected);

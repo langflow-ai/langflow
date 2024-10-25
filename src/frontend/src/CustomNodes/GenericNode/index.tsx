@@ -1,3 +1,4 @@
+import { BorderBeam } from "@/components/ui/border-beams";
 import { BuildStatus } from "@/constants/enums";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useMemo, useState } from "react";
@@ -35,6 +36,7 @@ import NodeName from "./components/NodeName";
 import NodeOutputField from "./components/NodeOutputfield";
 import NodeStatus from "./components/NodeStatus";
 import { NodeIcon } from "./components/nodeIcon";
+import { useBuildStatus } from "./hooks/use-get-build-status";
 
 export default function GenericNode({
   data,
@@ -261,6 +263,8 @@ export default function GenericNode({
         ),
     );
 
+  const buildStatus = useBuildStatus(data, data.id);
+
   return (
     <>
       {memoizedNodeToolbarComponent}
@@ -271,6 +275,10 @@ export default function GenericNode({
           "generic-node-div group/node",
         )}
       >
+        {BuildStatus.BUILDING === buildStatus && (
+          <BorderBeam className="z-50" borderWidth={1.5} />
+        )}
+
         <div className="grid gap-3 truncate text-wrap border-b p-4 leading-5">
           <div
             data-testid={"div-generic-node"}
@@ -347,6 +355,7 @@ export default function GenericNode({
                 nodeId={data.id}
                 selected={selected}
                 setBorderColor={setBorderColor}
+                buildStatus={buildStatus}
               />
             )}
           </div>
@@ -426,7 +435,7 @@ export default function GenericNode({
                       <ForwardedIconComponent
                         name={showHiddenOutputs ? "EyeOff" : "Eye"}
                         strokeWidth={1.5}
-                        className="h-4 w-4 text-placeholder-foreground group-hover:text-foreground"
+                        className="text-placeholder-foreground h-4 w-4 group-hover:text-foreground"
                       />
                     </Button>
                   </div>
