@@ -206,8 +206,8 @@ jobs:
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
             elif [[ "${{ inputs.release_type }}" == "main-ep" ]]; then
               # LANGFLOW-MAIN (ENTRYPOINT) RELEASE
-              echo "docker_tags=langflowai/langflow-ep${nightly_suffix}:1.0.19.post104,langflowai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
-              echo "ghcr_tags=ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:1.0.19.post104,ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "docker_tags=langflowai/langflow-ep${nightly_suffix}:1.0.19.post105,langflowai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:1.0.19.post105,ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push_ep.Dockerfile" >> $GITHUB_OUTPUT
             elif [[ "${{ inputs.release_type }}" == "main" ]]; then
               # LANGFLOW-MAIN RELEASE
