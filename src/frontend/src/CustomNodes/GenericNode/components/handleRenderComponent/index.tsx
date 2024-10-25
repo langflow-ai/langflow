@@ -1,6 +1,6 @@
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
@@ -182,8 +182,72 @@ export default function HandleRenderComponent({
           ")",
     [filterPresent, openHandle, ownHandle, dark, colors],
   );
-
+  const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
+
+  useEffect(() => {
+    if (isHovered) {
+      const styleSheet = document.createElement("style");
+      styleSheet.setAttribute("id", `pulse-${nodeId}`);
+      styleSheet.textContent = `
+        @keyframes pulseNeon {
+          0% {
+            box-shadow: 0 0 0 1px #fff,
+                        0 0 2px ${colors[0]},
+                        0 0 4px ${colors[0]},
+                        0 0 6px ${colors[0]},
+                        0 0 8px ${colors[0]},
+                        0 0 10px ${colors[0]},
+                        0 0 15px ${colors[0]},
+                        0 0 20px ${colors[0]};
+          }
+          50% {
+            box-shadow: 0 0 0 1px #fff,
+                        0 0 4px ${colors[0]},
+                        0 0 8px ${colors[0]},
+                        0 0 12px ${colors[0]},
+                        0 0 16px ${colors[0]},
+                        0 0 20px ${colors[0]},
+                        0 0 25px ${colors[0]},
+                        0 0 30px ${colors[0]};
+          }
+          100% {
+            box-shadow: 0 0 0 1px #fff,
+                        0 0 2px ${colors[0]},
+                        0 0 4px ${colors[0]},
+                        0 0 6px ${colors[0]},
+                        0 0 8px ${colors[0]},
+                        0 0 10px ${colors[0]},
+                        0 0 15px ${colors[0]},
+                        0 0 20px ${colors[0]};
+          }
+        }
+      `;
+      document.head.appendChild(styleSheet);
+
+      return () => {
+        const existingStyle = document.getElementById(`pulse-${nodeId}`);
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+      };
+    }
+  }, [isHovered, colors, nodeId]);
+
+  const getNeonShadow = (color: string, isHovered: boolean) => {
+    if (!isHovered) return "none";
+    return [
+      "0 0 0 1px #fff", // White ring
+      `0 0 2px ${color}`, // Tight inner glow
+      `0 0 4px ${color}`, // Dense inner
+      `0 0 6px ${color}`, // Medium inner
+      `0 0 8px ${color}`, // Medium spread
+      `0 0 10px ${color}`, // Outer spread
+      `0 0 15px ${color}`, // Far spread
+      `0 0 20px ${color}`, // Furthest spread
+    ].join(", ");
+  };
+
   return (
     <div>
       <ShadTooltip
@@ -216,7 +280,7 @@ export default function HandleRenderComponent({
             isValidConnection(connection, nodes, edges)
           }
           className={classNames(
-            `group/handle z-20 h-6 w-6 rounded-full border-none bg-transparent transition-all`,
+            `group/handle z-20 h-10 w-10 rounded-full border-none bg-transparent transition-all`,
           )}
           onClick={() => {
             setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
@@ -239,43 +303,20 @@ export default function HandleRenderComponent({
               document.addEventListener("mouseup", handleMouseUp);
             }
           }}
-        >
-          <div
-            className={cn(
-              "pointer-events-none absolute left-1/2 top-[50%] z-30 flex h-0 w-0 -translate-x-1/2 translate-y-[-50%] items-center justify-center rounded-full bg-background transition-all group-hover/handle:bg-transparent",
-              filterPresent
-                ? openHandle || ownHandle
-                  ? cn(
-                      "h-4 w-4",
-                      ownHandle ? "bg-transparent" : "bg-background",
-                    )
-                  : ""
-                : "group-hover/node:h-4 group-hover/node:w-4",
-            )}
-          ></div>
-          <div
-            className="pointer-events-none absolute left-1/2 top-[50%] z-10 flex h-3 w-3 -translate-x-1/2 translate-y-[-50%] items-center justify-center rounded-full opacity-50 transition-all"
-            style={{
-              background: handleColor,
-            }}
-          />
-          <div
-            data-testid={`gradient-handle-${testIdComplement}-${title.toLowerCase()}-${
-              !showNode ? (left ? "target" : "source") : left ? "left" : "right"
-            }`}
-            className={classNames(
-              `pointer-events-none absolute left-1/2 top-[50%] z-10 flex -translate-x-1/2 translate-y-[-50%] items-center justify-center rounded-full transition-all`,
-              filterPresent
-                ? openHandle || ownHandle
-                  ? cn("h-5 w-5")
-                  : cn("h-1.5 w-1.5")
-                : cn("h-1.5 w-1.5 group-hover/node:h-5 group-hover/node:w-5"),
-            )}
-            style={{
-              background: handleColor,
-            }}
-          />
-        </Handle>
+          style={{
+            background: handleColor,
+            width: "10px",
+            height: "10px",
+            border: "none",
+            transition: "all 0.2s",
+            boxShadow: getNeonShadow(colors[0], isHovered),
+            animation: isHovered
+              ? "pulseNeon 0.7s ease-in-out infinite"
+              : "none",
+          }}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        ></Handle>
       </ShadTooltip>
     </div>
   );

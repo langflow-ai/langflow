@@ -274,7 +274,8 @@ export async function buildFlowVertices({
             buildResults.push(true);
           }
         }
-        useFlowStore.getState().clearEdgesRunningByNodes();
+
+        await useFlowStore.getState().clearEdgesRunningByNodes();
 
         if (buildData.next_vertices_ids) {
           if (isStringArray(buildData.next_vertices_ids)) {

@@ -19,11 +19,12 @@ const useIconStatus = (
   const renderIconStatus = () => {
     if (buildStatus === BuildStatus.BUILDING) {
       return (
-        <Loading
-          data-testid="loading_icon"
-          className="mr-1 text-medium-indigo"
-          size={20}
-        />
+        // <Loading
+        //   data-testid="loading_icon"
+        //   className="mr-1 text-medium-indigo"
+        //   size={20}
+        // />
+        <></>
       );
     }
 
