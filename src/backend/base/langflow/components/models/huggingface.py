@@ -124,7 +124,6 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:
         task = self.task or None
         huggingfacehub_api_token = self.huggingfacehub_api_token
-        print(huggingfacehub_api_token)
         model_kwargs = self.model_kwargs or {}
         max_new_tokens = self.max_new_tokens
         top_k = self.top_k or None
