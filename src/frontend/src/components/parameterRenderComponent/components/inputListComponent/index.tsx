@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import _ from "lodash";
 import { classNames, cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
@@ -102,7 +103,7 @@ export default function InputListComponent({
                     ? "group-hover:text-foreground"
                     : "group-hover:text-destructive",
                 )}
-                strokeWidth={1.125}
+                strokeWidth={ICON_STROKE_WIDTH}
               />
             </Button>
           </div>

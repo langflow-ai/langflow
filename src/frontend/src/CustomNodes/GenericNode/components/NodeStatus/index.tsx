@@ -5,6 +5,7 @@ import useValidationStatusString from "@/CustomNodes/hooks/use-validation-status
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
+  ICON_STROKE_WIDTH,
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
@@ -19,6 +20,7 @@ import { VertexBuildTypeAPI } from "@/types/api";
 import { NodeDataType } from "@/types/flow";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames } from "@/utils/utils";
+import { Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -197,7 +199,7 @@ export default function NodeStatus({
         <ShadTooltip content={"Run component"} contrastTooltip>
           <div
             ref={divRef}
-            className="button-run-bg"
+            className="button-run-bg hit-area-icon"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={handleClickRun}
@@ -212,6 +214,7 @@ export default function NodeStatus({
                         ? "text-foreground"
                         : "text-placeholder-foreground"
                     }`}
+                    strokeWidth={ICON_STROKE_WIDTH}
                   />
                 </div>
               </Button>

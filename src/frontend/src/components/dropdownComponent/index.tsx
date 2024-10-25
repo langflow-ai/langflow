@@ -101,7 +101,7 @@ export default function Dropdown({
         <ForwardedIconComponent
           name="ChevronsUpDown"
           className={cn(
-            "text-placeholder-foreground ml-2 h-4 w-4 shrink-0",
+            "ml-2 h-4 w-4 shrink-0 text-foreground",
             disabled
               ? "hover:text-placeholder-foreground"
               : "hover:text-foreground",

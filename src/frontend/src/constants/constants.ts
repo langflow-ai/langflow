@@ -958,3 +958,5 @@ export const GRADIENT_CLASS =
   "linear-gradient(to right, hsl(var(--background) / 0.3), hsl(var(--background)))";
 
 export const RECEIVING_INPUT_VALUE = "Receiving input";
+
+export const ICON_STROKE_WIDTH = 1.25;

@@ -1198,7 +1198,7 @@
   }
 
   .play-button-icon {
-    @apply h-4 w-4 fill-current transition-all group-hover/node:opacity-100;
+    @apply h-4 w-4 transition-all group-hover/node:opacity-100;
   }
 
   .lucide-icon {

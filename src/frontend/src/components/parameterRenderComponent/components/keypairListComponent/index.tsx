@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -113,7 +114,7 @@ const KeypairListComponent = ({
               ? "group-hover:text-foreground"
               : "group-hover:text-destructive",
           )}
-          strokeWidth={1.125}
+          strokeWidth={ICON_STROKE_WIDTH}
         />
       </button>
     );

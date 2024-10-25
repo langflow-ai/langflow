@@ -1,3 +1,4 @@
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import IconComponent from "../../components/genericIconComponent";
 import { cn } from "../../utils/utils";
 import { Button } from "./button";
@@ -53,7 +54,7 @@ function RefreshButton({
         name={"RefreshCcw"}
         className={iconClassName}
         id={id + "-icon"}
-        strokeWidth={1.125}
+        strokeWidth={ICON_STROKE_WIDTH}
       />
     </Button>
   );
