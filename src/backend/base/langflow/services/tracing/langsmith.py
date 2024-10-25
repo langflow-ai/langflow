@@ -72,7 +72,7 @@ class LangSmithTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
-    ):
+    ) -> None:
         if not self._ready or not self._run_tree:
             return
         processed_inputs = {}
@@ -158,7 +158,7 @@ class LangSmithTracer(BaseTracer):
         outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         if not self._ready or not self._run_tree:
             return
         self._run_tree.add_metadata({"inputs": inputs})
