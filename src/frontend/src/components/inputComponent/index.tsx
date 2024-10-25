@@ -1,3 +1,4 @@
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import * as Form from "@radix-ui/react-form";
 import { useEffect, useRef, useState } from "react";
 import { InputComponentType } from "../../types/components";
@@ -183,8 +184,9 @@ export default function InputComponent({
               )}
               className={cn(
                 disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
-                "h-4 w-4",
+                "icon-size",
               )}
+              strokeWidth={ICON_STROKE_WIDTH}
               aria-hidden="true"
             />
           </button>
@@ -209,12 +211,12 @@ export default function InputComponent({
           {pwdVisible ? (
             <ForwardedIconComponent
               name="Eye"
-              className="relative top-[1px] h-5 w-5 text-placeholder-foreground hover:text-foreground"
+              className="text-placeholder-foreground relative top-[1px] h-5 w-5 hover:text-foreground"
             />
           ) : (
             <ForwardedIconComponent
               name="EyeOff"
-              className="relative top-[1px] h-5 w-5 text-placeholder-foreground hover:text-foreground"
+              className="text-placeholder-foreground relative top-[1px] h-5 w-5 hover:text-foreground"
             />
           )}
         </button>

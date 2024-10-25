@@ -11,6 +11,7 @@ import { default as IconComponent } from "../../../../components/genericIconComp
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
   FLEX_VIEW_TYPES,
+  ICON_STROKE_WIDTH,
   LANGFLOW_SUPPORTED_TYPES,
 } from "../../../../constants/constants";
 import useFlowStore from "../../../../stores/flowStore";
@@ -145,7 +146,7 @@ export default function NodeInputField({
                   <div className="cursor-help">
                     <IconComponent
                       name="Info"
-                      strokeWidth={2}
+                      strokeWidth={ICON_STROKE_WIDTH}
                       className="relative bottom-px ml-1 h-3 w-3 text-placeholder"
                     />
                   </div>

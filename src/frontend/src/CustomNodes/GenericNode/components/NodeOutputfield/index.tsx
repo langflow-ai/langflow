@@ -1,3 +1,4 @@
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { cloneDeep } from "lodash";
 import { useEffect, useRef } from "react";
 import { useUpdateNodeInternals } from "reactflow";
@@ -151,12 +152,12 @@ export default function NodeOutputField({
               >
                 <IconComponent
                   className={cn(
-                    "h-4 w-4",
+                    "icon-size",
                     disabledOutput
                       ? "text-placeholder-foreground opacity-60"
                       : "text-placeholder-foreground hover:text-foreground",
                   )}
-                  strokeWidth={1.5}
+                  strokeWidth={ICON_STROKE_WIDTH}
                   name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
                 />
               </Button>
@@ -208,14 +209,14 @@ export default function NodeOutputField({
                     {
                       <IconComponent
                         className={cn(
-                          "h-5 w-5 rounded-md text-placeholder-foreground",
+                          "icon-size",
                           displayOutputPreview && !unknownOutput
-                            ? "hover:text-foreground"
-                            : "cursor-not-allowed text-muted-foreground opacity-60",
+                            ? "text-placeholder-foreground hover:text-foreground"
+                            : "text-placeholder-foreground cursor-not-allowed opacity-60",
                           errorOutput ? "text-destructive" : "",
                         )}
                         name={"ScanEye"}
-                        strokeWidth={2}
+                        strokeWidth={ICON_STROKE_WIDTH}
                       />
                     }
                   </Button>

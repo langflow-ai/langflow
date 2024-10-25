@@ -1,3 +1,4 @@
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { cn } from "@/utils/utils";
 import {
   NumberDecrementStepper,
@@ -100,10 +101,16 @@ export default function IntComponent({
         />
         <NumberInputStepper className={stepperClassName}>
           <NumberIncrementStepper className={incrementStepperClassName}>
-            <PlusIcon className={iconClassName} />
+            <PlusIcon
+              className={iconClassName}
+              strokeWidth={ICON_STROKE_WIDTH}
+            />
           </NumberIncrementStepper>
           <NumberDecrementStepper className={decrementStepperClassName}>
-            <MinusIcon className={iconClassName} />
+            <MinusIcon
+              className={iconClassName}
+              strokeWidth={ICON_STROKE_WIDTH}
+            />
           </NumberDecrementStepper>
         </NumberInputStepper>
       </NumberInput>
