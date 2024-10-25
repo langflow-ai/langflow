@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import DictAreaModal from "../../../../modals/dictAreaModal";
 import { classNames, cn, toTitleCase } from "../../../../utils/utils";
 import ForwardedIconComponent from "../../../genericIconComponent";
@@ -41,13 +42,13 @@ export default function DictComponent({
               variant="primary"
               size="sm"
               className={cn(
-                "w-full font-normal",
+                "hover:bg-mute w-full font-medium text-primary",
                 editNode ? "h-fit px-3 py-0.5" : "",
               )}
               data-testid="dict-input"
             >
               <ForwardedIconComponent
-                strokeWidth={2}
+                strokeWidth={ICON_STROKE_WIDTH}
                 name="Code"
                 className="h-4 w-4"
               />
