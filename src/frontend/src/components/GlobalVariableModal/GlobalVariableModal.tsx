@@ -141,7 +141,9 @@ export default function GlobalVariableModal({
           aria-hidden="true"
         />
       </BaseModal.Header>
-      <BaseModal.Trigger disable={disabled} asChild={asChild}>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger disable={disabled} asChild={asChild}>
+        {children}
+      </BaseModal.Trigger>
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col gap-4 align-middle">
           <Label>Variable Name</Label>

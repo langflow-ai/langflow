@@ -155,7 +155,7 @@ export default function InputComponent({
           className={cn(
             password && selectedOption === "" ? "right-8" : "right-0",
             "absolute inset-y-0 flex items-center pr-2.5",
-            disabled && "opacity-50 cursor-not-allowed",
+            disabled && "cursor-not-allowed opacity-50",
           )}
         >
           <button
