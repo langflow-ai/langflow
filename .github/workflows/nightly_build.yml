@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        shell: bash -x
+        shell: bash -ex -o pipefail {0}
     permissions:
       # Required to create tag
       contents: write
