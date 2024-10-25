@@ -11,10 +11,10 @@ def default_settings():
     ]
 
 
-@pytest.mark.usefixtures("client")
 def test_components_path(runner, default_settings, tmp_path):
     # create a "components" folder
     temp_dir = tmp_path / "components"
+    temp_dir.mkdir(exist_ok=True)
 
     result = runner.invoke(
         app,
