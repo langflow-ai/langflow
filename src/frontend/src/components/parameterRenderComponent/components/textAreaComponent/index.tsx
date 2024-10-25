@@ -116,7 +116,7 @@ export default function TextAreaComponent({
             ? externalLinkIconClasses.editNodeTop
             : externalLinkIconClasses.iconTop,
           disabled
-            ? "text-placeholder-foreground bg-muted"
+            ? "bg-muted text-placeholder-foreground"
             : "bg-background text-foreground",
         )}
       />
