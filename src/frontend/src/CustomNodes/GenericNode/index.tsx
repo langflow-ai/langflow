@@ -264,6 +264,7 @@ export default function GenericNode({
     );
 
   const buildStatus = useBuildStatus(data, data.id);
+  const hasOutputs = data.node?.outputs && data.node?.outputs.length > 0;
 
   return (
     <>
@@ -272,7 +273,8 @@ export default function GenericNode({
         className={cn(
           borderColor,
           showNode ? "w-80 rounded-xl" : "w-26 h-26 rounded-full",
-          "generic-node-div group/node pb-4",
+          "generic-node-div group/node",
+          !hasOutputs && "pb-4",
         )}
       >
         {BuildStatus.BUILDING === buildStatus && (
