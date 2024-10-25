@@ -39,3 +39,19 @@ async def test_create_flow(client: AsyncClient, logged_in_headers):
     assert "updated_at" in result.keys(), "The result must have a 'updated_at' key"
     assert "user_id" in result.keys(), "The result must have a 'user_id' key"
     assert "webhook" in result.keys(), "The result must have a 'webhook' key"
+
+
+async def test_read_flows(client: AsyncClient, logged_in_headers):
+    params = {
+        "remove_example_flows": False,
+        "components_only": False,
+        "get_all": True,
+        "header_flows": False,
+        "page": 1,
+        "size": 50
+    }
+    response = await client.get("api/v1/flows/", params=params, headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert isinstance(result, list), "The result must be a list"
