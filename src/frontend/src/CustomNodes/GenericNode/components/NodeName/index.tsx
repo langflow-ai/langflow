@@ -74,7 +74,9 @@ export default function NodeName({
           className="nodoubleclick w-full cursor-text truncate font-medium text-primary"
         >
           <div className="flex items-center gap-2">
-            <span className="max-w-36 truncate">{display_name}</span>
+            <span className="max-w-36 truncate text-[14px]">
+              {display_name}
+            </span>
 
             {beta && showNode && <div className="beta-badge">BETA</div>}
           </div>

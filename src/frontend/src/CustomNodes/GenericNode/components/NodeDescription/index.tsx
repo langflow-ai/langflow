@@ -114,7 +114,7 @@ export default function NodeDescription({
           {charLimit && (
             <div
               className={cn(
-                "text-left text-xs",
+                "text-left text-[13px]",
                 (nodeDescription?.length ?? 0) >= charLimit
                   ? "text-error"
                   : "text-primary",
@@ -130,7 +130,7 @@ export default function NodeDescription({
           data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-text word-break-break-word dark:text-note-placeholder",
+            "nodoubleclick generic-node-desc-text h-full cursor-text text-[13px] word-break-break-word dark:text-note-placeholder",
             description === "" || !description ? "font-light italic" : "",
           )}
           onDoubleClick={(e) => {
@@ -144,7 +144,7 @@ export default function NodeDescription({
             <Markdown
               linkTarget="_blank"
               className={cn(
-                "markdown prose flex h-full w-full flex-col text-sm leading-5 text-muted-foreground word-break-break-word dark:prose-invert",
+                "markdown prose flex h-full w-full flex-col text-[13px] leading-5 text-muted-foreground word-break-break-word dark:prose-invert",
                 mdClassName,
               )}
             >

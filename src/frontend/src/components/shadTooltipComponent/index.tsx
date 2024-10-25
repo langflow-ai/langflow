@@ -21,7 +21,9 @@ const ShadTooltip: React.FC<ShadToolTipType> = ({
   const tooltipContentClass = cn(
     "max-w-96",
     styleClasses,
-    contrastTooltip ? "bg-black text-white dark:bg-white dark:text-black" : "",
+    contrastTooltip
+      ? "bg-foreground text-background dark:bg-background dark:text-foreground"
+      : "",
   );
 
   return (

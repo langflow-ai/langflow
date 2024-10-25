@@ -12,7 +12,7 @@ export default function ShortcutDisplay({
     <div className="flex justify-center">
       <span> {name} </span>
       <span
-        className={`ml-3 flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-lg text-muted-foreground`}
+        className={`ml-3 flex items-center rounded-sm bg-primary-hover px-1.5 py-[0.1em] text-lg text-muted`}
       >
         <RenderIcons filteredShortcut={fixedShortcut} />
       </span>
