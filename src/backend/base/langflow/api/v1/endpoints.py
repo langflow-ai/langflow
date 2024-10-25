@@ -57,7 +57,7 @@ from langflow.services.deps import (
     get_telemetry_service,
 )
 from langflow.services.telemetry.schema import RunPayload
-from langflow.utils.constants import SIDEBAR_CATEGORIES
+from langflow.utils.constants import SIDEBAR_BUNDLES, SIDEBAR_CATEGORIES
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -712,4 +712,6 @@ def get_config():
 
 @router.get("/sidebar_categories")
 def get_sidebar_categories() -> SidebarCategoriesResponse:
-    return SidebarCategoriesResponse(categories=SIDEBAR_CATEGORIES)
+    return SidebarCategoriesResponse(
+        categories=SIDEBAR_CATEGORIES, bundles=SIDEBAR_BUNDLES
+    )
