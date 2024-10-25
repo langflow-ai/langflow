@@ -253,7 +253,7 @@ jobs:
           push: true
           file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.docker_tags }}
-          platforms: linux/arm64
+          platforms: linux/amd64,linux/arm64
           provenance: false
 
       - name: Login to Github Container Registry
@@ -269,7 +269,7 @@ jobs:
           push: true
           file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.ghcr_tags }}
-          platforms: linux/arm64
+          platforms: linux/amd64,linux/arm64
           provenance: false
 
   build_components:
