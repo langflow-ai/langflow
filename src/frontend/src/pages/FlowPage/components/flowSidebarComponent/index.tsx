@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Switch } from "@/components/ui/switch";
 import { useGetCategoriesQuery } from "@/controllers/API/queries/categories/use-get-categories";
+import { CustomLink } from "@/customization/components/custom-link";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { useStoreStore } from "@/stores/storeStore";
 import { nodeColors } from "@/utils/styleUtils";
@@ -602,7 +603,7 @@ export function FlowSidebarComponent() {
       <SidebarFooter className="border-t p-4 py-3">
         {hasStore && (
           <SidebarMenuButton asChild>
-            <a href="https://langflow.store/" target="_blank" rel="noreferrer">
+            <CustomLink to="/store">
               <div className="flex items-center gap-2">
                 <ForwardedIconComponent
                   name="Store"
@@ -612,7 +613,7 @@ export function FlowSidebarComponent() {
                   Discover more components
                 </span>
               </div>
-            </a>
+            </CustomLink>
           </SidebarMenuButton>
         )}
         <SidebarMenuButton asChild>
