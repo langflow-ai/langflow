@@ -1196,7 +1196,7 @@
 /* Gradient background */
 .text-container {
   z-index: 50;
-  width: 100vw;
+  width: 100%;
   height: 99vh;
   display: flex;
   position: absolute;
@@ -1204,8 +1204,6 @@
   left: 0;
   justify-content: center;
   align-items: center;
-  color: white;
-  opacity: 0.8;
   user-select: none;
   text-shadow: 1px 1px rgba(0, 0, 0, 0.1);
 }
