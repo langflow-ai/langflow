@@ -1253,4 +1253,12 @@
   .beta-badge {
     @apply flex h-6 w-11 items-center justify-center rounded-lg bg-accent-pink p-2 text-center text-xs font-medium text-accent-pink-foreground;
   }
+
+  .icon-size {
+    @apply h-[18px] w-[18px];
+  }
+
+  .hit-area-icon {
+    @apply h-[32px] w-[32px] rounded-md;
+  }
 }

@@ -78,7 +78,7 @@ export default function InputListComponent({
           <div
             onClick={index === 0 ? addNewInput : (e) => removeInput(index, e)}
             className={cn(
-              "group flex h-6 w-6 items-center justify-center rounded-sm",
+              "hit-area-icon group flex items-center justify-center text-center",
               disabled
                 ? "pointer-events-none bg-background hover:bg-background"
                 : "",
@@ -89,20 +89,20 @@ export default function InputListComponent({
           >
             <Button
               unstyled
-              className={getButtonClassName()}
+              className={cn("hit-area-icon", getButtonClassName())}
               data-testid={getTestId(index === 0 ? "plus" : "minus", index)}
               disabled={disabled}
             >
               <IconComponent
                 name={index === 0 ? "Plus" : "Trash2"}
                 className={cn(
-                  "text-placeholder-foreground h-4 w-6",
+                  "icon-size justify-self-center text-muted-foreground",
                   !disabled && "hover:cursor-pointer hover:text-foreground",
                   index === 0
                     ? "group-hover:text-foreground"
                     : "group-hover:text-destructive",
                 )}
-                strokeWidth={2}
+                strokeWidth={1.125}
               />
             </Button>
           </div>

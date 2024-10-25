@@ -85,9 +85,6 @@ const KeypairListComponent = ({
       ? addNewKeyValuePair
       : () => removeKeyValuePair(index);
     const iconName = isFirstItem ? "Plus" : "Trash2";
-    const testId = isFirstItem
-      ? getTestId("plusbtn", index)
-      : getTestId("minusbtn", index);
 
     return (
       <button
@@ -100,7 +97,7 @@ const KeypairListComponent = ({
         }
         data-testid={id}
         className={cn(
-          "group flex h-6 w-6 items-center justify-center rounded-sm",
+          "hit-area-icon group flex items-center justify-center",
           disabled
             ? "pointer-events-none bg-background hover:bg-background"
             : "",
@@ -110,13 +107,13 @@ const KeypairListComponent = ({
         <IconComponent
           name={iconName}
           className={cn(
-            "text-placeholder-foreground h-4 w-6",
+            "icon-size justify-self-center text-muted-foreground",
             !disabled && "hover:cursor-pointer hover:text-foreground",
             isFirstItem
               ? "group-hover:text-foreground"
               : "group-hover:text-destructive",
           )}
-          strokeWidth={2}
+          strokeWidth={1.125}
         />
       </button>
     );
@@ -144,7 +141,9 @@ const KeypairListComponent = ({
           placeholder="Type a value..."
           onChange={(event) => handleChangeValue(event, index)}
         />
-        {isList && renderActionButton(index)}
+        <div className="hit-area-icon">
+          {isList && renderActionButton(index)}
+        </div>
       </div>
     ));
 
