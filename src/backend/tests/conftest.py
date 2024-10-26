@@ -32,6 +32,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
+from tests import blockbuster
 from tests.api_keys import get_openai_api_key
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
 
 
 load_dotenv()
+blockbuster.init()
 
 
 def pytest_configure(config):
