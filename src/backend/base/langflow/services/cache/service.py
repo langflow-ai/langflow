@@ -139,9 +139,13 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         with lock or self._lock:
             self._cache.clear()
 
-    def __contains__(self, key) -> bool:
+    def contains(self, key) -> bool:
         """Check if the key is in the cache."""
         return key in self._cache
+
+    def __contains__(self, key) -> bool:
+        """Check if the key is in the cache."""
+        return self.contains(key)
 
     def __getitem__(self, key):
         """Retrieve an item from the cache using the square bracket notation."""
@@ -274,11 +278,11 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
         """Clear all items from the cache."""
         await self._client.flushdb()
 
-    def __contains__(self, key) -> bool:
+    async def contains(self, key) -> bool:
         """Check if the key is in the cache."""
         if key is None:
             return False
-        return bool(asyncio.run(self._client.exists(str(key))))
+        return bool(await self._client.exists(str(key)))
 
     def __repr__(self) -> str:
         """Return a string representation of the RedisCache instance."""
@@ -364,5 +368,5 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
             value = existing_value
         await self.set(key, value)
 
-    def __contains__(self, key) -> bool:
+    async def contains(self, key) -> bool:
         return key in self.cache
