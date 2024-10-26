@@ -21,7 +21,7 @@ on:
       ref:
         required: false
         type: string
-        description: "Ref to check out. If not specified, will default the main version or current branch."
+        description: "Ref to check out. If not specified, will default to the main version or current branch."
 
   workflow_dispatch:
     inputs:
@@ -44,7 +44,7 @@ on:
       ref:
         required: false
         type: string
-        description: "Ref to check out. If not specified, will default the main version or current branch."
+        description: "Ref to check out. If not specified, will default to the main version or current branch."
 
 
 env:
