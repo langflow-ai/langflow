@@ -87,8 +87,8 @@ class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):
             value = existing_value
         await self.set(key, value)
 
-    def __contains__(self, key) -> bool:
-        return asyncio.run(asyncio.to_thread(self.cache.__contains__, key))
+    async def contains(self, key) -> bool:
+        return await asyncio.to_thread(self.cache.__contains__, key)
 
     async def teardown(self) -> None:
         # Clean up the cache directory

@@ -60,6 +60,17 @@ class CacheService(Service, Generic[LockType]):
         """Clear all items from the cache."""
 
     @abc.abstractmethod
+    def contains(self, key) -> bool:
+        """Check if the key is in the cache.
+
+        Args:
+            key: The key of the item to check.
+
+        Returns:
+            True if the key is in the cache, False otherwise.
+        """
+
+    @abc.abstractmethod
     def __contains__(self, key) -> bool:
         """Check if the key is in the cache.
 
@@ -147,7 +158,7 @@ class AsyncBaseCacheService(Service, Generic[AsyncLockType]):
         """Clear all items from the cache."""
 
     @abc.abstractmethod
-    def __contains__(self, key) -> bool:
+    async def contains(self, key) -> bool:
         """Check if the key is in the cache.
 
         Args:

@@ -50,7 +50,7 @@ async def build_vertex(
     set_cache: Callable,
 ) -> None:
     try:
-        cache = get_cache(flow_id)
+        cache = await get_cache(flow_id)
         graph = cache.get("result")
 
         if not isinstance(graph, Graph):
@@ -86,7 +86,7 @@ async def build_vertex(
             valid = False
             result_dict = ResultDataResponse(results={})
             artifacts = {}
-        set_cache(flow_id, graph)
+        await set_cache(flow_id, graph)
         log_vertex_build(
             flow_id=flow_id,
             vertex_id=vertex_id,
