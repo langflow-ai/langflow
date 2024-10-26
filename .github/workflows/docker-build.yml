@@ -59,7 +59,7 @@ jobs:
       version: ${{ steps.get-version-input.outputs.version || steps.get-version-base.outputs.version || steps.get-version-main.outputs.version }}
     steps:
       - name: Verify a main version exists
-        if: ${{ inputs.main_version != '' }}
+        if: ${{ inputs.main_version == '' }}
         run: |
           # due to our how we split packages, we need to have a main version to check out. 
           echo "Must specify a main version to check out."
