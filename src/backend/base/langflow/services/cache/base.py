@@ -23,7 +23,7 @@ class CacheService(Service, Generic[LockType]):
             lock: A lock to use for the operation.
 
         Returns:
-            The value associated with the key, or None if the key is not found.
+            The value associated with the key, or CACHE_MISS if the key is not found.
         """
 
     @abc.abstractmethod
@@ -121,7 +121,7 @@ class AsyncBaseCacheService(Service, Generic[AsyncLockType]):
             lock: A lock to use for the operation.
 
         Returns:
-            The value associated with the key, or None if the key is not found.
+            The value associated with the key, or CACHE_MISS if the key is not found.
         """
 
     @abc.abstractmethod

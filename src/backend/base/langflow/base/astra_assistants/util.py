@@ -10,6 +10,8 @@ import requests
 from astra_assistants import OpenAIWithDefaultKey, patch
 from astra_assistants.tools.tool_interface import ToolInterface
 
+from langflow.services.cache.utils import CacheMiss
+
 client_lock = threading.Lock()
 client = None
 
@@ -17,7 +19,7 @@ client = None
 def get_patched_openai_client(shared_component_cache):
     os.environ["ASTRA_ASSISTANTS_QUIET"] = "true"
     client = shared_component_cache.get("client")
-    if client is None:
+    if isinstance(client, CacheMiss):
         client = patch(OpenAIWithDefaultKey())
         shared_component_cache.set("client", client)
     return client

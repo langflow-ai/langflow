@@ -63,5 +63,5 @@ class ChatService(Service):
             lock (Optional[asyncio.Lock], optional): The lock to use for the cache operation. Defaults to None.
         """
         if isinstance(self.cache_service, AsyncBaseCacheService):
-            return await self.cache_service.get(key, lock=lock or self.async_cache_locks[key])
+            return await self.cache_service.delete(key, lock=lock or self.async_cache_locks[key])
         return await asyncio.to_thread(self.cache_service.delete, key, lock=lock or self._sync_cache_locks[key])

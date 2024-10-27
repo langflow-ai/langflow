@@ -1356,7 +1356,7 @@ class Graph:
                 if get_cache is not None:
                     cached_result = await get_cache(key=vertex.id)
                 else:
-                    cached_result = None
+                    cached_result = CacheMiss()
                 if isinstance(cached_result, CacheMiss):
                     should_build = True
                 else:

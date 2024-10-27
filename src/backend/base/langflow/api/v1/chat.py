@@ -40,6 +40,7 @@ from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
+from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_telemetry_service
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
@@ -493,7 +494,7 @@ async def build_vertex(
     error_message = None
     try:
         cache = await chat_service.get_cache(flow_id_str)
-        if not cache:
+        if isinstance(cache, CacheMiss):
             # If there's no cache
             logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
             graph: Graph = await build_graph_from_db(
@@ -621,7 +622,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
             yield str(StreamData(event="error", data={"error": str(exc)}))
             return
 
-        if not cache:
+        if isinstance(cache, CacheMiss):
             # If there's no cache
             msg = f"No cache found for {flow_id}."
             logger.error(msg)

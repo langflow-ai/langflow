@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import importlib
 import inspect
 from typing import TYPE_CHECKING
@@ -95,9 +94,7 @@ class ServiceManager:
                 continue
             logger.debug(f"Teardown service {service.name}")
             try:
-                result = service.teardown()
-                if asyncio.iscoroutine(result):
-                    await result
+                await service.teardown()
             except Exception as exc:  # noqa: BLE001
                 logger.exception(exc)
         self.services = {}
