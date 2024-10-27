@@ -510,7 +510,7 @@ class Component(CustomComponent):
             if asyncio.iscoroutinefunction(_input.value):
                 self._inputs[key].value = await _input.value()
             elif callable(_input.value):
-                self._inputs[key].value = await asyncio.to_thread(_input.value())
+                self._inputs[key].value = await asyncio.to_thread(_input.value)
 
         self.set_attributes({})
 
