@@ -632,7 +632,6 @@ async def test_load_flows(client: TestClient):
     assert response.json()["folder_id"] is not None
 
 
-@pytest.mark.usefixtures("client")
 def test_sqlite_pragmas():
     db_service = get_db_service()
 
