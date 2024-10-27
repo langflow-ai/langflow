@@ -707,58 +707,6 @@ class Graph:
 
         return vertex_outputs
 
-    def run(
-        self,
-        inputs: list[dict[str, str]],
-        *,
-        input_components: list[list[str]] | None = None,
-        types: list[InputType | None] | None = None,
-        outputs: list[str] | None = None,
-        session_id: str | None = None,
-        stream: bool = False,
-        fallback_to_env_vars: bool = False,
-    ) -> list[RunOutputs]:
-        """Run the graph with the given inputs and return the outputs.
-
-        Args:
-            inputs (Dict[str, str]): A dictionary of input values.
-            input_components (Optional[list[str]]): A list of input components.
-            types (Optional[list[str]]): A list of types.
-            outputs (Optional[list[str]]): A list of output components.
-            session_id (Optional[str]): The session ID.
-            stream (bool): Whether to stream the outputs.
-            fallback_to_env_vars (bool): Whether to fallback to environment variables.
-
-        Returns:
-            List[RunOutputs]: A list of RunOutputs objects representing the outputs.
-        """
-        # run the async function in a sync way
-        # this could be used in a FastAPI endpoint
-        # so we should take care of the event loop
-        coro = self.arun(
-            inputs=inputs,
-            inputs_components=input_components,
-            types=types,
-            outputs=outputs,
-            session_id=session_id,
-            stream=stream,
-            fallback_to_env_vars=fallback_to_env_vars,
-        )
-
-        try:
-            # Attempt to get the running event loop; if none, an exception is raised
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            # If there's no running event loop, use asyncio.run
-            return asyncio.run(coro)
-
-        # If the event loop is closed, use asyncio.run
-        if loop.is_closed():
-            return asyncio.run(coro)
-
-        # If there's an existing, open event loop, use it to run the async function
-        return loop.run_until_complete(coro)
-
     async def arun(
         self,
         inputs: list[dict[str, str]],
