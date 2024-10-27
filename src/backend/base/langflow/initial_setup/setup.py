@@ -3,7 +3,6 @@ import json
 import shutil
 import time
 from collections import defaultdict
-from collections.abc import Awaitable
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
@@ -600,12 +599,7 @@ def find_existing_flow(session, flow_id, flow_endpoint_name):
     return None
 
 
-async def create_or_update_starter_projects(get_all_components_coro: Awaitable[dict]) -> None:
-    try:
-        all_types_dict = await get_all_components_coro
-    except Exception:
-        logger.exception("Error loading components")
-        raise
+def create_or_update_starter_projects(all_types_dict: dict) -> None:
     with session_scope() as session:
         new_folder = create_starter_folder(session)
         starter_projects = load_starter_projects()
