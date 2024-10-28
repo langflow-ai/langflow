@@ -245,7 +245,7 @@ export default function ChatMessage({
             <div
               className={cn(
                 "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
-                !chat.isSend ? "bg-chat-bot-icon" : "border border-border",
+                !chat.isSend ? "bg-muted" : "border border-border",
               )}
               style={chat.meta_data?.background_color ? { backgroundColor: chat.meta_data.background_color } : {}}
             >
@@ -296,7 +296,7 @@ export default function ChatMessage({
                 >
                   {chat.sender_name}
                   {chat.meta_data?.source && (
-                    <div className="text-xs text-muted-foreground">
+                    <div className="font-normal text-[14px] text-muted-foreground">
                       {chat.meta_data?.source}
                     </div>
                   )}
