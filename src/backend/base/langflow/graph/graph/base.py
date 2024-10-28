@@ -4,6 +4,8 @@ import asyncio
 import contextlib
 import copy
 import json
+import queue
+import threading
 import uuid
 from collections import defaultdict, deque
 from collections.abc import Generator, Iterable
@@ -12,7 +14,6 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
-import nest_asyncio
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildError
@@ -378,26 +379,81 @@ class Graph:
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
     ) -> Generator:
+        """Starts the graph execution synchronously by creating a new event loop in a separate thread.
+
+        Args:
+            inputs: Optional list of input dictionaries
+            max_iterations: Optional maximum number of iterations
+            config: Optional configuration dictionary
+            event_manager: Optional event manager
+
+        Returns:
+            Generator yielding results from graph execution
+        """
         if self.is_cyclic and max_iterations is None:
             msg = "You must specify a max_iterations if the graph is cyclic"
             raise ValueError(msg)
+
         if config is not None:
             self.__apply_config(config)
-        # ! Change this ASAP
-        nest_asyncio.apply()
-        loop = asyncio.get_event_loop()
-        async_gen = self.async_start(inputs, max_iterations, event_manager)
-        async_gen_task = asyncio.ensure_future(anext(async_gen))
 
-        while True:
+        # Create a queue for passing results and errors between threads
+        result_queue: queue.Queue[VertexBuildResult | Exception | None] = queue.Queue()
+
+        # Function to run async code in separate thread
+        def run_async_code():
+            # Create new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
             try:
-                result = loop.run_until_complete(async_gen_task)
-                yield result
-                if isinstance(result, Finish):
-                    return
-                async_gen_task = asyncio.ensure_future(anext(async_gen))
-            except StopAsyncIteration:
+                # Run the async generator
+                async_gen = self.async_start(inputs, max_iterations, event_manager)
+
+                while True:
+                    try:
+                        # Get next result from async generator
+                        result = loop.run_until_complete(anext(async_gen))
+                        result_queue.put(result)
+
+                        if isinstance(result, Finish):
+                            break
+
+                    except StopAsyncIteration:
+                        break
+                    except ValueError as e:
+                        # Put the exception in the queue
+                        result_queue.put(e)
+                        break
+
+            finally:
+                # Ensure all pending tasks are completed
+                pending = asyncio.all_tasks(loop)
+                if pending:
+                    # Create a future to gather all pending tasks
+                    cleanup_future = asyncio.gather(*pending, return_exceptions=True)
+                    loop.run_until_complete(cleanup_future)
+
+                # Close the loop
+                loop.close()
+                # Signal completion
+                result_queue.put(None)
+
+        # Start thread for async execution
+        thread = threading.Thread(target=run_async_code)
+        thread.start()
+
+        # Yield results from queue
+        while True:
+            result = result_queue.get()
+            if result is None:
                 break
+            if isinstance(result, Exception):
+                raise result
+            yield result
+
+        # Wait for thread to complete
+        thread.join()
 
     def _add_edge(self, edge: EdgeData) -> None:
         self.add_edge(edge)
@@ -1471,7 +1527,7 @@ class Graph:
             else:
                 next_runnable_vertices.add(v_id)
 
-        return list(next_runnable_vertices)
+        return sorted(next_runnable_vertices)
 
     async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: Vertex, *, cache: bool = True) -> list[str]:
         v_id = vertex.id
@@ -2011,7 +2067,7 @@ class Graph:
         for successor_id in self.run_manager.run_map.get(vertex_id, []):
             runnable_vertices.extend(self.find_runnable_predecessors_for_successor(successor_id))
 
-        return runnable_vertices
+        return sorted(runnable_vertices)
 
     def find_runnable_predecessors_for_successor(self, vertex_id: str) -> list[str]:
         runnable_vertices = []
