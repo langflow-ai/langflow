@@ -91,6 +91,7 @@ const config = {
         "medium-high-indigo": "var(--medium-high-indigo)",
         "medium-indigo": "var(--medium-indigo)",
         "medium-low-gray": "var(--medium-low-gray)",
+        "note-amber": "var(--note-amber)",
         "status-green": "var(--status-green)",
         "status-red": "var(--status-red)",
         "status-yellow": "var(--status-yellow)",
@@ -108,6 +109,7 @@ const config = {
         },
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
+        canvas: "var(--canvas)",
         ice: "var(--ice)",
         selected: "var(--selected)",
         hover: "var(--hover)",
@@ -120,10 +122,12 @@ const config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          hover: "hsl(var(--primary-hover))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
+          hover: "hsl(var(--secondary-hover))",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
@@ -137,6 +141,18 @@ const config = {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        "accent-emerald": {
+          DEFAULT: "hsl(var(--accent-emerald))",
+          foreground: "hsl(var(--accent-emerald-foreground))",
+        },
+        "accent-indigo": {
+          DEFAULT: "hsl(var(--accent-indigo))",
+          foreground: "hsl(var(--accent-indigo-foreground))",
+        },
+        "accent-pink": {
+          DEFAULT: "hsl(var(--accent-pink))",
+          foreground: "hsl(var(--accent-pink-foreground))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -144,6 +160,10 @@ const config = {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        tooltip: {
+          DEFAULT: "hsl(var(--tooltip))",
+          foreground: "hsl(var(--tooltip-foreground))",
         },
       },
       borderRadius: {

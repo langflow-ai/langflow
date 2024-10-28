@@ -81,7 +81,9 @@ class GoogleDriveComponent(Component):
             msg = f"Error loading documents: {e}"
             raise ValueError(msg) from e
 
-        assert len(docs) == 1, "Expected a single document to be loaded."
+        if len(docs) != 1:
+            msg = "Expected a single document to be loaded."
+            raise ValueError(msg)
 
         data = docs_to_data(docs)
         # Return the loaded documents

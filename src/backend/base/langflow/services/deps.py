@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
     from sqlmodel import Session
 
-    from langflow.services.cache.service import CacheService
+    from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
     from langflow.services.plugins.service import PluginService
@@ -188,7 +188,7 @@ def session_scope() -> Generator[Session, None, None]:
             raise
 
 
-def get_cache_service() -> CacheService:
+def get_cache_service() -> CacheService | AsyncBaseCacheService:
     """Retrieves the cache service from the service manager.
 
     Returns:

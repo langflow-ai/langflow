@@ -58,7 +58,7 @@ async def run_graph_internal(
     return run_outputs, session_id_str
 
 
-def run_graph(
+async def run_graph(
     graph: Graph,
     input_value: str,
     input_type: str,
@@ -104,9 +104,9 @@ def run_graph(
         components.append(input_value_request.components or [])
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
         types.append(input_value_request.type)
-    return graph.run(
+    return await graph.arun(
         inputs_list,
-        input_components=components,
+        inputs_components=components,
         types=types,
         outputs=outputs or [],
         stream=False,

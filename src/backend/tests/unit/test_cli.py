@@ -11,10 +11,10 @@ def default_settings():
     ]
 
 
-@pytest.mark.usefixtures("client")
 def test_components_path(runner, default_settings, tmp_path):
     # create a "components" folder
     temp_dir = tmp_path / "components"
+    temp_dir.mkdir(exist_ok=True)
 
     result = runner.invoke(
         app,
@@ -25,7 +25,6 @@ def test_components_path(runner, default_settings, tmp_path):
     assert str(temp_dir) in settings_service.settings.components_path
 
 
-@pytest.mark.usefixtures("client")
 def test_superuser(runner):
     result = runner.invoke(app, ["superuser"], input="admin\nadmin\n")
     assert result.exit_code == 0, result.stdout
