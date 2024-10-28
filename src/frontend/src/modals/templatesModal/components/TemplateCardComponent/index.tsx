@@ -23,6 +23,7 @@ export default function TemplateCardComponent({
   return (
     <div
       className="group flex cursor-pointer flex-col gap-4 overflow-hidden"
+      tabIndex={1}
       onClick={onClick}
     >
       <div
