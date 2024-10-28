@@ -39,12 +39,7 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import (
-    get_session_service,
-    get_settings_service,
-    get_task_service,
-    get_telemetry_service,
-)
+from langflow.services.deps import get_session_service, get_settings_service, get_task_service, get_telemetry_service
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.constants import SIDEBAR_CATEGORIES
@@ -617,10 +612,15 @@ async def custom_component_update(
             field_value=code_request.field_value,
             field_name=code_request.field,
         )
+        component_node["template"] = updated_build_config
+        cc_instance.run_and_validate_update_outputs(
+            frontend_node=component_node,
+            field_name=code_request.field,
+            field_value=code_request.field_value,
+        )
+
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    component_node["template"] = updated_build_config
     return component_node
 
 
