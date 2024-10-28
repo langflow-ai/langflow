@@ -251,7 +251,7 @@ export default function ExtraSidebar(): JSX.Element {
               <div key={index}></div>
             ),
           )}
-        {(ENABLE_INTEGRATIONS || featureFlags.mvp_components) && (
+        {(ENABLE_INTEGRATIONS || featureFlags?.mvp_components) && (
           <ParentDisclosureComponent
             defaultOpen={true}
             key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
