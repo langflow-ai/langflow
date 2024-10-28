@@ -138,3 +138,34 @@ async def test_update_flow(client: AsyncClient, logged_in_headers):
     assert "user_id" in result.keys(), "The result must have a 'user_id' key"
     assert "webhook" in result.keys(), "The result must have a 'webhook' key"
     assert result["name"] == updated_name, "The name must be updated"
+
+
+async def test_create_flows(client: AsyncClient, logged_in_headers):
+    amount_flows = 10
+    basic_case = {
+        "description": "string",
+        "icon": "string",
+        "icon_bg_color": "#ff00ff",
+        "gradient": "string",
+        "data": {},
+        "is_component": False,
+        "webhook": False,
+        "tags": [
+            "string"
+        ],
+        "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    }
+    cases = []
+    for i in range(amount_flows):
+        case = basic_case.copy()
+        case["name"] = f"string_{i}"
+        case["endpoint_name"] = f"string_{i}"
+        cases.append(case)
+
+    response = await client.post("api/v1/flows/batch/", json={"flows": cases}, headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert isinstance(result, list), "The result must be a list"
+    assert len(result) == amount_flows, "The result must have the same amount of flows"
