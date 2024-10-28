@@ -320,7 +320,7 @@ async def delete_flow(
 
 
 @router.post("/batch/", response_model=list[FlowRead], status_code=201)
-def create_flows(
+async def create_flows(
     *,
     session: DbSession,
     flow_list: FlowListCreate,
