@@ -109,10 +109,7 @@ The following table lists the environment variables supported by Langflow.
 
 | Variable | Values | Default | Description |
 |----------|--------|---------|-------------|
-| `BACKEND_URL` | String | `http://localhost:7860/` | Value must finish with slash (`/`). |
 | `DO_NOT_TRACK` | Boolean | `False` | If enabled, Langflow will not track telemetry. |
-| `LANGCHAIN_API_KEY` | String | - | No description available. |
-| `LANGCHAIN_PROJECT` | String | `Langflow` | No description available. |
 | `LANGFLOW_AUTO_LOGIN` |  |  | Set AUTO_LOGIN to false if you want to disable auto login and use the login form to login. LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD must be set if AUTO_LOGIN is set to false. |
 | `LANGFLOW_AUTO_SAVING` | Boolean | `true` | Enable flow auto-saving.<br/>See `--auto-saving` option. |
 | `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the interval for flow auto-saving in milliseconds.<br/>See `--auto-saving-interval` option. |
@@ -122,17 +119,13 @@ The following table lists the environment variables supported by Langflow.
 | `LANGFLOW_CONFIG_DIR` | String |  | Set the Langflow configuration directory where files, logs, and the Langflow database are stored. |
 | `LANGFLOW_DATABASE_URL` | String | None | Set the database URL for Langflow. If you don't provide one, Langflow uses an SQLite database. |
 | `LANGFLOW_DEV` | Boolean | `false` | Run Langflow in development mode (may contain bugs).<br/>See `--dev` option. |
-| `LANGFLOW_DOWNLOAD_WEBHOOK_UR` |  |  | No description available. |
 | `LANGFLOW_FALLBACK_TO_ENV_VAR` | Boolean | `true` | If enabled, [global variables](../Settings/settings-global-variables.md) set in the Langflow UI fall back to an environment variable with the same name when Langflow fails to retrieve the variable value. |
 | `LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. This is for development purposes only.<br/>See `--frontend-path` option. |
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for the health check.<br/>See `--health-check-max-retries` option. |
 | `LANGFLOW_HOST` | String | `127.0.0.1` | The host on which the Langflow server will run.<br/>See `--host` option. |
 | `LANGFLOW_LANGCHAIN_CACHE` | `InMemoryCache`<br/>`SQLiteCache` | `InMemoryCache` | Type of cache to use.<br/>See `--cache` option. |
-| `LANGFLOW_LIKE_WEBHOOK_URL` |  |  | No description available. |
-| `LANGFLOW_LOG_ENV` | String | `` | No description available. |
 | `LANGFLOW_LOG_FILE` | String | `logs/langflow.log` | Set the path to the log file for Langflow.<br/>See `--log-file` option. |
 | `LANGFLOW_LOG_LEVEL` | String | `critical` | Set the logging level.<br/>See `--log-level` option. |
-| `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | integer | `0` | No description available. |
 | `LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `100` | Set the maximum file size for the upload in megabytes.<br/>See `--max-file-size-upload` option. |
 | `LANGFLOW_OPEN_BROWSER` | Boolean | `true` | Open the system web browser on startup.<br/> See `--open-browser` option. |
 | `LANGFLOW_PORT` | Integer | `7860` | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use.<br/>See `--port` option. |
@@ -151,18 +144,21 @@ The following table lists the environment variables supported by Langflow.
 | `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` | String | None | Comma-separated list of environment variables to get from the environment and store as [global variables](../Settings/settings-global-variables.md). |
 | `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds.<br/>See `--worker-timeout` option. |
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes.<br/>See `--workers` option. |
+
+
+<!-- Temporarily removed the following variables from the table above:
+| Variable | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `ASTRA_ENHANCED` | Boolean | `false` | No description available. |
+| `BACKEND_URL` | String | `http://localhost:7860/` | Value must finish with slash (`/`). |
+| `LANGCHAIN_API_KEY` | String | - | No description available. |
+| `LANGCHAIN_PROJECT` | String | `Langflow` | No description available. |
+| `LANGFLOW_DOWNLOAD_WEBHOOK_UR` |  |  | No description available. |
+| `LANGFLOW_LIKE_WEBHOOK_URL` |  |  | No description available. |
 | `LANGFUSE_HOST` | String | `-` | No description available. |
 | `LANGFUSE_PUBLIC_KEY` | String | `-` | No description available. |
 | `LANGFUSE_SECRET_KEY` | String | `-` | No description available. |
 | `OPENAI_API_KEY` | String | - | No description available. |
 | `RABBITMQ_DEFAULT_PASS` | String | `langflow` | No description available. |
 | `RABBITMQ_DEFAULT_USER` | String | `langflow` | RabbitMQ. |
-| `RESULT_BACKEND` | String | `redis://localhost:6379/0` | No description available. |
-
-
-## Removed
-
-| Variable | Values | Default | Required | Description |
-|----------|--------|---------|----------|-------------|
-| `ASTRA_ENHANCED` | Boolean | `false` | No | No description available. |
-
+| `RESULT_BACKEND` | String | `redis://localhost:6379/0` | No description available. | -->
