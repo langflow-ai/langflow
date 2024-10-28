@@ -54,7 +54,7 @@ async def test_delete_api_key_route(client: AsyncClient, logged_in_headers, acti
     assert "detail" in result, "The dictionary must contain a key called 'detail'"
 
 
-async def test_save_store_api_key(client: AsyncClient, logged_in_headers, active_user):
+async def test_save_store_api_key(client: AsyncClient, logged_in_headers):
     basic_case = {"api_key": "string"}
     response = await client.post("api/v1/api_key/store", json=basic_case, headers=logged_in_headers)
     result = response.json()
