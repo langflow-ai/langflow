@@ -51,7 +51,7 @@ export default function GetStartedComponent() {
       <BaseModal.Header description="Start building with templates that highlight Langflow's capabilities across Chatbot, RAG, and Agent use cases.">
         Get Started
       </BaseModal.Header>
-      <div className="grid flex-1 grid-cols-3 gap-4">
+      <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
         {cardData.map((card, index) => (
           <TemplateGetStartedCardComponent key={index} {...card} />
         ))}

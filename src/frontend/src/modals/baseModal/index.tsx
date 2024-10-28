@@ -80,7 +80,7 @@ const Header: React.FC<{
       <DialogTitle className="line-clamp-1 flex items-center pb-0.5">
         {children}
       </DialogTitle>
-      <DialogDescription className="line-clamp-2">
+      <DialogDescription className="line-clamp-3">
         {description}
       </DialogDescription>
     </DialogHeader>

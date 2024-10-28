@@ -1,3 +1,4 @@
+import ForwardedIconComponent from "@/components/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -44,7 +45,7 @@ export default function TemplatesModal({
     <BaseModal size="templates" open={open} setOpen={setOpen} className="p-0">
       <BaseModal.Content overflowHidden className="flex flex-col p-0">
         <div className="flex h-full">
-          <div className="flex w-60 flex-col gap-4 p-6 pl-4">
+          <div className="flex w-48 flex-col gap-4 p-6 pl-4 md:w-52 lg:w-60">
             {categories.map((category, index) => (
               <div key={index} className="flex flex-col gap-2">
                 <h2
@@ -72,7 +73,7 @@ export default function TemplatesModal({
               />
             )}
             <BaseModal.Footer>
-              <div className="flex w-full items-center justify-between pb-4">
+              <div className="flex w-full flex-col justify-between gap-4 pb-4 sm:flex-row sm:items-center">
                 <div className="flex flex-col items-start justify-center">
                   <div className="font-semibold">Start from scratch</div>
                   <div className="text-sm text-muted-foreground">
@@ -90,8 +91,13 @@ export default function TemplatesModal({
                   }}
                   size="sm"
                   data-testid="blank-flow"
+                  className="shrink-0"
                 >
-                  Create Blank Project
+                  <ForwardedIconComponent
+                    name="Plus"
+                    className="h-4 w-4 shrink-0"
+                  />
+                  Blank Flow
                 </Button>
               </div>
             </BaseModal.Footer>
