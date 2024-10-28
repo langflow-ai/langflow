@@ -9,7 +9,7 @@ from threading import Lock, Semaphore
 from typing import TypedDict
 
 import orjson
-from loguru import logger, _defaults
+from loguru import _defaults, logger
 from loguru._error_interceptor import ErrorInterceptor
 from loguru._file_sink import FileSink
 from loguru._simple_sinks import AsyncSink
@@ -146,8 +146,7 @@ class AsyncFileSink(AsyncSink):
             path=file,
             rotation="10 MB",  # Log rotation based on file size
         )
-        super().__init__(self.write_async, None,
-                         ErrorInterceptor(_defaults.LOGURU_CATCH, -1))
+        super().__init__(self.write_async, None, ErrorInterceptor(_defaults.LOGURU_CATCH, -1))
 
     async def complete(self):
         await asyncio.to_thread(self._sink.stop)
