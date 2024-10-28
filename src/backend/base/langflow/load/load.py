@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from dotenv import load_dotenv
+from loguru import logger
 
 from langflow.graph import Graph
 from langflow.graph.schema import RunOutputs
@@ -43,7 +44,7 @@ def load_flow_from_json(
     """
     # If input is a file path, load JSON from the file
     log_file_path = Path(log_file) if log_file else None
-    configure(log_level=log_level, log_file=log_file_path, disable=disable_logs)
+    configure(log_level=log_level, log_file=log_file_path, disable=disable_logs, async_file=True)
 
     # override env variables with .env file
     if env_file:
@@ -119,7 +120,7 @@ async def arun_flow_from_json(
         cache=cache,
         disable_logs=disable_logs,
     )
-    return await run_graph(
+    result = await run_graph(
         graph=graph,
         session_id=session_id,
         input_value=input_value,
@@ -128,6 +129,8 @@ async def arun_flow_from_json(
         output_component=output_component,
         fallback_to_env_vars=fallback_to_env_vars,
     )
+    await logger.complete()
+    return result
 
 
 def run_flow_from_json(

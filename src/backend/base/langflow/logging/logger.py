@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -8,7 +9,10 @@ from threading import Lock, Semaphore
 from typing import TypedDict
 
 import orjson
-from loguru import logger
+from loguru import _defaults, logger
+from loguru._error_interceptor import ErrorInterceptor
+from loguru._file_sink import FileSink
+from loguru._simple_sinks import AsyncSink
 from platformdirs import user_cache_dir
 from rich.logging import RichHandler
 from typing_extensions import NotRequired
@@ -136,12 +140,30 @@ class LogConfig(TypedDict):
     log_env: NotRequired[str]
 
 
+class AsyncFileSink(AsyncSink):
+    def __init__(self, file):
+        self._sink = FileSink(
+            path=file,
+            rotation="10 MB",  # Log rotation based on file size
+        )
+        super().__init__(self.write_async, None, ErrorInterceptor(_defaults.LOGURU_CATCH, -1))
+
+    async def complete(self):
+        await asyncio.to_thread(self._sink.stop)
+        for task in self._tasks:
+            await self._complete_task(task)
+
+    async def write_async(self, message):
+        await asyncio.to_thread(self._sink.write, message)
+
+
 def configure(
     *,
     log_level: str | None = None,
     log_file: Path | None = None,
     disable: bool | None = False,
     log_env: str | None = None,
+    async_file: bool = False,
 ) -> None:
     if disable and log_level is None and log_file is None:
         logger.disable("langflow")
@@ -187,14 +209,12 @@ def configure(
             log_file = cache_dir / "langflow.log"
             logger.debug(f"Log file: {log_file}")
         try:
-            log_file = Path(log_file)
             log_file.parent.mkdir(parents=True, exist_ok=True)
 
             logger.add(
-                sink=str(log_file),
+                sink=AsyncFileSink(log_file) if async_file else log_file,
                 level=log_level.upper(),
                 format=log_format,
-                rotation="10 MB",  # Log rotation based on file size
                 serialize=True,
             )
         except Exception:  # noqa: BLE001
