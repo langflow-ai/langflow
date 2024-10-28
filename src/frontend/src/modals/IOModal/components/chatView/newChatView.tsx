@@ -13,6 +13,7 @@ import ChatInput from "./chatInput/newChatInput";
 import ChatMessage from "./chatMessage/newChatMessage";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import { TextShimmer } from "@/components/ui/TextShimmer";
+import LogoIcon from "./chatMessage/components/chatLogoIcon";
 
 export default function ChatView({
   sendMessage,
@@ -171,11 +172,7 @@ export default function ChatView({
           {!lockChat && (
             <div className="mr-3 mt-1 flex w-11/12 pb-3">
               <div className="flex w-full gap-4 rounded-md p-2">
-                <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-muted p-5">
-                  <span>
-                    <div className="text-3xl -ml-1">⛓️</div>
-                  </span>
-                </div>
+              <LogoIcon/>
                 <div className="flex items-center">
                   <div>
                     <TextShimmer className="" duration={1}>
