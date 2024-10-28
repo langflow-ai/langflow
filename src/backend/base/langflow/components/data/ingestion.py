@@ -241,9 +241,7 @@ class IngestionComponent(Component):
         my_collection = my_wrapper._connect()
 
         # Call the find operation
-        cursor = my_collection.find(
-            filter={"metadata.metadata.filename": self.file}
-        )  # TODO: limit on rows?
+        cursor = my_collection.find(filter={"metadata.metadata.filename": self.file})  # TODO: limit on rows?
         raw_data = list(cursor)
         data = [Data(data=result, text=result["content"]) for result in raw_data]
 
