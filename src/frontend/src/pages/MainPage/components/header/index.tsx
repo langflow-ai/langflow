@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useFolderStore } from "@/stores/foldersStore";
+import { debounce } from "lodash";
+import { useCallback, useEffect, useState } from "react";
 
 interface HeaderComponentProps {
   flowType: "flows" | "components";
@@ -11,115 +13,107 @@ interface HeaderComponentProps {
   view: "list" | "grid";
   setView: (view: "list" | "grid") => void;
   setNewProjectModal: (newProjectModal: boolean) => void;
-  folderName: string;
-  search: string;
-  setSearch: React.Dispatch<React.SetStateAction<string>>;
+  folderName?: string;
+  setSearch: (search: string) => void;
 }
 
 const HeaderComponent = ({
-  folderName,
+  folderName = "",
   flowType,
   setFlowType,
   view,
   setView,
   setNewProjectModal,
-  search,
   setSearch,
 }: HeaderComponentProps) => {
   const navigate = useCustomNavigate();
-  const showFolderModal = useFolderStore((state) => state.showFolderModal);
-  const setShowFolderModal = useFolderStore(
-    (state) => state.setShowFolderModal,
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const { showFolderModal, setShowFolderModal } = useFolderStore();
+
+  // Debounce the setSearch function from the parent
+  const debouncedSetSearch = useCallback(
+    debounce((value: string) => {
+      setSearch(value);
+    }, 1000),
+    [setSearch],
   );
+
+  useEffect(() => {
+    debouncedSetSearch(debouncedSearch);
+
+    return () => {
+      debouncedSetSearch.cancel(); // Cleanup on unmount
+    };
+  }, [debouncedSearch, debouncedSetSearch]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDebouncedSearch(e.target.value);
+  };
 
   return (
     <>
       <div className="flex items-center pb-8 text-xl font-semibold">
         <Button
           variant="ghost"
-          className="mr-2"
+          className="mr-2 lg:hidden"
           size="icon"
           onClick={() => setShowFolderModal(!showFolderModal)}
         >
           <ForwardedIconComponent
             name={showFolderModal ? "panel-right-open" : "panel-right-close"}
             aria-hidden="true"
-            className="h-5 w-5 text-zinc-500 dark:text-zinc-400 lg:hidden"
+            className="h-5 w-5 text-zinc-500 dark:text-zinc-400"
           />
         </Button>
-
         {folderName}
       </div>
       <div className="flex pb-8">
-        <Button
-          unstyled
-          onClick={() => setFlowType("flows")}
-          className={`border-b ${
-            flowType === "flows"
-              ? "border-b-2 border-black font-semibold dark:border-white dark:text-white"
-              : "border-zinc-400 text-zinc-400"
-          } px-3 pb-1`}
-        >
-          Flows
-        </Button>
-        <Button
-          unstyled
-          className={`border-b ${
-            flowType === "components"
-              ? "border-b-2 border-black font-semibold dark:border-white dark:text-white"
-              : "border-zinc-400 text-zinc-400"
-          } px-3 pb-1`}
-          onClick={() => setFlowType("components")}
-        >
-          Components
-        </Button>
+        {["flows", "components"].map((type) => (
+          <Button
+            key={type}
+            unstyled
+            onClick={() => setFlowType(type as "flows" | "components")}
+            className={`border-b ${
+              flowType === type
+                ? "border-b-2 border-black font-semibold dark:border-white dark:text-white"
+                : "border-zinc-400 text-zinc-400"
+            } px-3 pb-1`}
+          >
+            {type.charAt(0).toUpperCase() + type.slice(1)}
+          </Button>
+        ))}
       </div>
-
       {/* Search and filters */}
       <div className="flex justify-between">
         <div className="flex w-full xl:w-5/12">
           <Input
             icon="search"
             type="search"
-            placeholder="Search flows..."
+            placeholder={`Search ${flowType}...`}
             className="mr-2"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={debouncedSearch}
+            onChange={handleSearch}
           />
           <div className="px-py mr-2 flex rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800">
-            {/* Use currentView prop to decide the current active view */}
-            <Button
-              unstyled
-              size="icon"
-              className={`group my-[2px] ml-[2px] rounded-lg p-2 ${
-                view === "list"
-                  ? "bg-white text-black shadow-md dark:bg-black dark:text-white"
-                  : "bg-zinc-100 text-zinc-500 dark:bg-black dark:bg-zinc-800 dark:hover:bg-zinc-800"
-              }`}
-              onClick={() => setView("list")}
-            >
-              <ForwardedIconComponent
-                name="menu"
-                aria-hidden="true"
-                className="h-4 w-4 group-hover:text-black dark:group-hover:text-white"
-              />
-            </Button>
-            <Button
-              unstyled
-              size="icon"
-              className={`group my-[2px] mr-[2px] rounded-lg p-2 ${
-                view === "grid"
-                  ? "bg-white text-black shadow-md dark:bg-black dark:text-white"
-                  : "bg-zinc-100 text-zinc-500 dark:bg-black dark:bg-zinc-800 dark:hover:bg-zinc-800"
-              }`}
-              onClick={() => setView("grid")}
-            >
-              <ForwardedIconComponent
-                name="layout-grid"
-                aria-hidden="true"
-                className="h-4 w-4 group-hover:text-black dark:group-hover:text-white"
-              />
-            </Button>
+            {["list", "grid"].map((viewType) => (
+              <Button
+                key={viewType}
+                unstyled
+                size="icon"
+                className={`group mx-[2px] my-[2px] rounded-lg p-2 ${
+                  view === viewType
+                    ? "bg-white text-black shadow-md dark:bg-black dark:text-white"
+                    : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:hover:bg-zinc-800"
+                }`}
+                onClick={() => setView(viewType as "list" | "grid")}
+              >
+                <ForwardedIconComponent
+                  name={viewType === "list" ? "menu" : "layout-grid"}
+                  aria-hidden="true"
+                  className="h-4 w-4 group-hover:text-black dark:group-hover:text-white"
+                />
+              </Button>
+            ))}
           </div>
         </div>
         <div className="flex gap-2">
