@@ -111,9 +111,9 @@ export const MenuBar = ({}: {}): JSX.Element => {
     <div className="flex items-center">
       <div className="header-menu-bar">
         {currentFolder?.name && (
-          <>
+          <div className="hidden min-[710px]:flex">
             <div
-              className="cursor-pointer whitespace-nowrap font-normal text-zinc-500 dark:text-zinc-400"
+              className="cursor-pointer truncate font-normal text-zinc-500 dark:text-zinc-400"
               onClick={() => {
                 navigate("/");
               }}
@@ -121,7 +121,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               {currentFolder?.name}
             </div>
             <div className="px-2 font-normal text-zinc-500">/</div>
-          </>
+          </div>
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -312,8 +312,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
           styleClasses="cursor-default"
         >
           <div className="ml-2 flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-            <div className="flex cursor-default items-center gap-2 truncate text-sm text-zinc-500 transition-all">
-              <div>{printByBuildStatus()}</div>
+            <div className="flex hidden cursor-default items-center gap-2 truncate text-sm text-zinc-500 transition-all sm:flex">
+              <div className="w-full truncate">{printByBuildStatus()}</div>
             </div>
             <button
               data-testid="stop_building_button"
@@ -325,7 +325,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className={
                 isBuilding
-                  ? "flex items-center gap-1.5 text-status-red transition-all"
+                  ? "flex hidden items-center gap-1.5 text-status-red transition-all sm:flex"
                   : "hidden"
               }
             >

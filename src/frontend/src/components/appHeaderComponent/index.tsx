@@ -26,7 +26,7 @@ export default function AppHeader(): JSX.Element {
   return (
     <div className="relative flex items-center border-b px-4 py-1.5 dark:bg-black">
       {/* Left Section */}
-      <div className="flex w-full items-center gap-2 xl:max-w-[325px] 2xl:max-w-[475px]">
+      <div className="flex w-0 items-center gap-2 lg:w-[20vw] xl:max-w-[325px] 2xl:max-w-[475px]">
         <Button
           unstyled
           onClick={() => navigate("/")}
@@ -50,7 +50,7 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Middle Section */}
-      <div className="mx-auto flex items-center px-5">
+      <div className="ml-4 mr-auto flex items-center px-5 lg:mx-auto lg:max-lg:w-full">
         <FlowMenu />
       </div>
 
