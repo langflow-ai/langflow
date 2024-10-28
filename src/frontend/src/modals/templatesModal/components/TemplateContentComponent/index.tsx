@@ -81,7 +81,7 @@ export default function TemplateContentComponent({
       </div>
       <div
         ref={scrollContainerRef}
-        className="flex flex-1 flex-col gap-6 overflow-auto"
+        className="flex flex-1 flex-col gap-6 overflow-auto scrollbar-hide"
       >
         {currentTabItem && (
           <TemplateCategoryComponent
