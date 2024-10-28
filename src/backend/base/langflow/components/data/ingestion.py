@@ -19,7 +19,7 @@ from unstructured_ingest.v2.processes.partitioner import PartitionerConfig
 
 from langflow.base.data.utils import TEXT_FILE_TYPES
 from langflow.custom import Component
-from langflow.inputs import FileInput, SecretStrInput, StrInput
+from langflow.inputs import DropdownInput, FileInput, SecretStrInput, StrInput
 from langflow.io import Output
 from langflow.schema import Data
 
@@ -30,13 +30,6 @@ class IngestionComponent(Component):
     name = "Ingestion"
 
     inputs = [
-        FileInput(
-            name="path",
-            display_name="Path",
-            file_types=TEXT_FILE_TYPES,
-            info=f"Supported file types: {', '.join(TEXT_FILE_TYPES)}",
-            required=True,
-        ),
         SecretStrInput(
             name="api_endpoint",
             display_name="Astra DB API Endpoint",
@@ -57,12 +50,27 @@ class IngestionComponent(Component):
             info="The name of the collection within Astra DB where the vectors will be stored.",
             required=True,
         ),
+        DropdownInput(
+            name="file",
+            display_name="File in Astra DB",
+            info="Select an ingested file from Astra DB to output as Data",
+            options=[],
+            refresh_button=True,
+        ),
+        FileInput(
+            name="path",
+            display_name="File to Ingest to Astra DB",
+            file_types=TEXT_FILE_TYPES,
+            info=f"Supported file types: {', '.join(TEXT_FILE_TYPES)}",
+            required=False,
+        ),
         SecretStrInput(
             name="unstructured_api_key",
             display_name="Unstructured API Key",
             info="Authentication token for accessing the Unstructured Serverless API",
             value="UNSTRUCTURED_API_KEY",
             required=False,
+            advanced=True,
         ),
         SecretStrInput(
             name="embedding_api_key",
@@ -70,12 +78,47 @@ class IngestionComponent(Component):
             info="Embedding Provider token for generating embeddings.",
             value="EMBEDDING_API_KEY",
             required=False,
+            advanced=True,
         ),
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="ingest_wrapper"),
+        Output(display_name="File Result", name="file_result", method="file_wrapper"),
+        Output(display_name="Ingest Result", name="ingest_result", method="ingest_wrapper"),
     ]
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        my_wrapper = self.AstraDBCollectionWrapper(
+            astra_db_api_endpoint=self.api_endpoint,
+            astra_db_application_token=self.token,
+            collection_name=self.collection_name,
+            unstructured_api_key=self.unstructured_api_key,
+            embedding_api_key=self.embedding_api_key,
+        )
+
+        my_collection = my_wrapper._connect()
+
+        distinct_files = my_collection.distinct("metadata.metadata.filename")
+
+        if "file" in build_config:
+            del build_config["file"]
+
+        new_parameter = DropdownInput(
+            name="file",
+            display_name="File in Astra DB",
+            info="Select an ingested file from Astra DB to output as Data",
+            options=distinct_files,
+            refresh_button=True,
+        ).to_dict()
+
+        items = list(build_config.items())
+        items.insert(3, ("file", new_parameter))
+
+        # Clear the original dictionary and update with the modified items
+        build_config.clear()
+        build_config.update(items)
+
+        return build_config
 
     class AstraDBCollectionWrapper(BaseModel):
         """Wrapper around an Astra DB Collection."""
@@ -163,6 +206,10 @@ class IngestionComponent(Component):
         )
 
     def ingest_wrapper(self) -> Data:
+        if not self.path:
+            self.status = "No new file ingested"
+            return self.status
+
         # Get the inputs
         my_wrapper = self._build_wrapper(
             self.api_endpoint,
@@ -173,19 +220,33 @@ class IngestionComponent(Component):
         )
 
         # Ingest the file
-        my_wrapper.ingest_file(self.path)
+        result = my_wrapper.ingest_file(self.path)
+
+        # Set the status
+        self.status = result
+
+        return result
+
+    def file_wrapper(self) -> Data:
+        # Get the inputs
+        my_wrapper = self._build_wrapper(
+            self.api_endpoint,
+            self.token,
+            self.collection_name,
+            self.unstructured_api_key,
+            self.embedding_api_key,
+        )
 
         # Get the Astra DB Data
         my_collection = my_wrapper._connect()
 
         # Call the find operation
         cursor = my_collection.find(
-            filter={"metadata.metadata.data_source.record_locator.path": self.path}
+            filter={"metadata.metadata.filename": self.file}
         )  # TODO: limit on rows?
         raw_data = list(cursor)
         data = [Data(data=result, text=result["content"]) for result in raw_data]
 
-        # Set the status
-        self.status = data or "No data"
+        self.status = data
 
-        return data or Data()
+        return data
