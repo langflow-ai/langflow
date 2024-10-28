@@ -56,6 +56,20 @@ export function FlowSidebarComponent() {
     searchInputRef.current?.focus();
   });
 
+  // Add this new useHotkeys hook
+  useHotkeys(
+    "esc",
+    (event) => {
+      event.preventDefault();
+      searchInputRef.current?.blur();
+    },
+    {
+      // Only enable this hotkey when the input is focused
+      enableOnFormTags: true,
+      enabled: isInputFocused,
+    },
+  );
+
   const { data: categories, isLoading } = useGetCategoriesQuery();
 
   const data = useTypesStore((state) => state.data);
