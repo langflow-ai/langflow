@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import platform
+import sys
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -136,7 +137,10 @@ class TelemetryService(Service):
             await task
         except asyncio.CancelledError:
             current_task = asyncio.current_task()
-            if current_task and current_task.cancelling() > 0:
+            if sys.version_info >= (3, 11):
+                if current_task and current_task.cancelling() > 0:
+                    raise
+            elif current_task and hasattr(current_task, "_must_cancel") and current_task._must_cancel:
                 raise
 
     async def stop(self) -> None:
