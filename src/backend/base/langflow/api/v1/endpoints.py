@@ -613,11 +613,12 @@ async def custom_component_update(
             field_name=code_request.field,
         )
         component_node["template"] = updated_build_config
-        cc_instance.run_and_validate_update_outputs(
-            frontend_node=component_node,
-            field_name=code_request.field,
-            field_value=code_request.field_value,
-        )
+        if isinstance(cc_instance, Component):
+            cc_instance.run_and_validate_update_outputs(
+                frontend_node=component_node,
+                field_name=code_request.field,
+                field_value=code_request.field_value,
+            )
 
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
