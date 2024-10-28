@@ -22,6 +22,7 @@ import { EditMessageButton } from "./components/editMessageButton/newMessageOpti
 import EditMessageField from "./components/editMessageField/newEditMessageField";
 import FileCardWrapper from "./components/fileCardWrapper";
 import { ContentBlockError } from "@/types/chat";
+import LogoIcon from "./components/chatLogoIcon";
 
 export default function ChatMessage({
   chat,
@@ -202,11 +203,7 @@ export default function ChatMessage({
       <div className="flex-max-width py-6 pl-32 pr-9">
         <div className="mr-3 mt-1 flex w-11/12 pb-3">
           <div className="flex w-full gap-4 rounded-md p-2">
-            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-muted p-5">
-              <span>
-                <div className="text-3xl -ml-1">⛓️</div>
-              </span>
-            </div>
+            <LogoIcon/>
             <div className="w-full rounded-md bg-error-red border border-error-red-border p-4 text-foreground">
               <div className="mb-2 flex gap-2 items-center">
                 <ForwardedIconComponent className="h-6 w-6 text-destructive" name="OctagonAlert" />
@@ -247,13 +244,13 @@ export default function ChatMessage({
           >
             <div
               className={cn(
-                "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl",
-                !chat.isSend ? "bg-chat-bot-icon" : "bg-muted-foreground",
+                "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
+                !chat.isSend ? "bg-chat-bot-icon" : "border border-border",
               )}
               style={chat.meta_data?.background_color ? { backgroundColor: chat.meta_data.background_color } : {}}
             >
               {!chat.isSend ? (
-                <div>
+                <div className="flex h-[18px] w-[18px] items-center justify-center">
                   {chat.meta_data?.icon ? (
                     chat.meta_data.icon.match(/[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/) ? (
                       <span className="">{chat.meta_data.icon}</span>
@@ -271,7 +268,7 @@ export default function ChatMessage({
                   )}
                 </div>
               ) : (
-                <div className="absolute scale-[80%]">
+                <div className="flex h-[18px] w-[18px] items-center justify-center">
                   {chat.meta_data?.icon ? (
                     chat.meta_data.icon.match(/[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/) ? (
                       <div className="">{chat.meta_data.icon}</div>
