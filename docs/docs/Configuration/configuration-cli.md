@@ -26,9 +26,9 @@ python -m langflow [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|------|-----------|-------------|
-| `--install-completion` | *Not applicable* | *Not applicable* | Install auto-completion for the current shell. |
-| `--show-completion` | *Not applicable* | *Not applicable* | Show the location of the auto-completion config file ( if installed). |
-| `--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
+| <a id="install-completion"></a>`--install-completion` | *Not applicable* | *Not applicable* | Install auto-completion for the current shell. |
+| <a id="show-completion"></a>`--show-completion` | *Not applicable* | *Not applicable* | Show the location of the auto-completion config file ( if installed). |
+| <a id="help"></a>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
 ### langflow api-key
 
@@ -44,8 +44,8 @@ python -m langflow api-key [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| `--log-level` | `critical` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | Set the logging level. |
-| `--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
+| <a id="api-key-log-level"></a>`--log-level` | `critical` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | Set the logging level. |
+| <a id="api-key-help"></a>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
 ### langflow copy-db
 
@@ -67,7 +67,7 @@ python -m langflow copy-db
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| `--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
+| <a id="copy-db-help"></a>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
 ### langflow migration
 
@@ -83,9 +83,9 @@ python -m langflow migration [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| `--test` | `true` | [Boolean](#boolean) | Run migrations in test mode. Use `--no-test` to disable test mode. |
-| `--fix` | `false` (`--no-fix`) | [Boolean](#boolean) | Fix migrations. This is a destructive operation, and all affected data will be deleted. Only use this option if you know what you are doing. |
-| `--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
+| <a id="migration-test"></a>`--test` | `true` | [Boolean](#boolean) | Run migrations in test mode. Use `--no-test` to disable test mode. |
+| <a id="migration-fix"></a>`--fix` | `false` (`--no-fix`) | [Boolean](#boolean) | Fix migrations. This is a destructive operation, and all affected data will be deleted. Only use this option if you know what you are doing. |
+| <a id="migration-help"></a>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
 
 ### langflow run
@@ -102,26 +102,26 @@ python -m langflow run [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| `--host` | `127.0.0.1` | String | The host on which the Langflow server will run.<br/>See [`LANGFLOW_HOST` variable](./environment-variables.md#LANGFLOW_HOST). |
-| `--workers` | `1` | Integer | Number of worker processes.<br/>See `LANGFLOW_WORKERS` variable. |
-| `--worker-timeout` | `300` | Integer | Worker timeout in seconds.<br/>See `LANGFLOW_WORKER_TIMEOUT` variable. |
-| `--port` | `7860` | Integer | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use.<br/>See `LANGFLOW_PORT` variable. |
-| `--components-path` | `langflow/components` | String | Path to the directory containing custom components.<br/>See `LANGFLOW_COMPONENTS_PATH` variable. |
-| `--env-file` | Not set | String | Path to the `.env` file containing environment variables.<br/>See [Import environment variables from a .env file](./environment-variables.md#configure-variables-env-file). |
-| `--log-level` | `critical` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | Set the logging level.<br/>See `LANGFLOW_LOG_LEVEL` variable. |
-| `--log-file` | `logs/langflow.log` | String | Set the path to the log file for Langflow.<br/>See `LANGFLOW_LOG_FILE` variable. |
-| `--cache` | `InMemoryCache` | `InMemoryCache`<br/>`SQLiteCache` | Type of cache to use.<br/>See `LANGFLOW_LANGCHAIN_CACHE` variable. |
-| `--dev` | `false` (`--no-dev`) | [Boolean](#boolean) | Run Langflow in development mode (may contain bugs).<br/>See `LANGFLOW_DEV` variable. |
-| `--frontend-path` | `./frontend` | String | Path to the frontend directory containing build files. This is for development purposes only.<br/>See `LANGFLOW_FRONTEND_PATH` variable. |
-| `--open-browser` | `true` | [Boolean](#boolean) | Open the system web browser on startup.. Use `--no-open-browser` to disable opening the system web browser on startup.<br/> See `LANGFLOW_OPEN_BROWSER` variable. |
-| `--remove-api-keys` | `false` (`--no-remove-api-keys`) | [Boolean](#boolean) | Remove API keys from the projects saved in the database.<br/> See `LANGFLOW_REMOVE_API_KEYS` variable. |
-| `--backend-only` | `false` (`--no-backend-only`) | [Boolean](#boolean) | Only run Langflow's backend server (no frontend).<br/>See `LANGFLOW_BACKEND_ONLY` variable. |
-| `--store` | `true` | [Boolean](#boolean) | Enable the Langflow Store features. Use `--no-store` to disable the Langflow Store features.<br/>See `LANGFLOW_STORE` variable. |
-| `--auto-saving` | `true` | [Boolean](#boolean) | Enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving.<br/>See `LANGFLOW_AUTO_SAVING` variable. |
-| `--auto-saving-interval` | `1000` | Integer | Set the interval for flow auto-saving in milliseconds.<br/>See `LANGFLOW_AUTO_SAVING_INTERVAL` variable. |
-| `--health-check-max-retries` | `5` | Integer | Set the maximum number of retries for the health check. Use `--no-health-check-max-retries` to disable the maximum number of retries for the health check.<br/>See `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` variable. |
-| `--max-file-size-upload` | `100` | Integer | Set the maximum file size for the upload in megabytes.<br/>See `LANGFLOW_MAX_FILE_SIZE_UPLOAD` variable. |
-| `--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
+| <a id="run-host"></a>`--host` | `127.0.0.1` | String | The host on which the Langflow server will run.<br/>See [`LANGFLOW_HOST` variable](./environment-variables.md#LANGFLOW_HOST). |
+| <a id="run-workers"></a>`--workers` | `1` | Integer | Number of worker processes.<br/>See `LANGFLOW_WORKERS` variable. |
+| <a id="run-worker-timeout"></a>`--worker-timeout` | `300` | Integer | Worker timeout in seconds.<br/>See `LANGFLOW_WORKER_TIMEOUT` variable. |
+| <a id="run-port"></a>`--port` | `7860` | Integer | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use.<br/>See `LANGFLOW_PORT` variable. |
+| <a id="run-components-path"></a>`--components-path` | `langflow/components` | String | Path to the directory containing custom components.<br/>See `LANGFLOW_COMPONENTS_PATH` variable. |
+| <a id="run-env-file"></a>`--env-file` | Not set | String | Path to the `.env` file containing environment variables.<br/>See [Import environment variables from a .env file](./environment-variables.md#configure-variables-env-file). |
+| <a id="run-log-level"></a>`--log-level` | `critical` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | Set the logging level.<br/>See `LANGFLOW_LOG_LEVEL` variable. |
+| <a id="run-log-file"></a>`--log-file` | `logs/langflow.log` | String | Set the path to the log file for Langflow.<br/>See `LANGFLOW_LOG_FILE` variable. |
+| <a id="run-cache"></a>`--cache` | `InMemoryCache` | `InMemoryCache`<br/>`SQLiteCache` | Type of cache to use.<br/>See `LANGFLOW_LANGCHAIN_CACHE` variable. |
+| <a id="run-dev"></a>`--dev` | `false` (`--no-dev`) | [Boolean](#boolean) | Run Langflow in development mode (may contain bugs).<br/>See `LANGFLOW_DEV` variable. |
+| <a id="run-frontend-path"></a>`--frontend-path` | `./frontend` | String | Path to the frontend directory containing build files. This is for development purposes only.<br/>See `LANGFLOW_FRONTEND_PATH` variable. |
+| <a id="run-open-browser"></a>`--open-browser` | `true` | [Boolean](#boolean) | Open the system web browser on startup.. Use `--no-open-browser` to disable opening the system web browser on startup.<br/> See `LANGFLOW_OPEN_BROWSER` variable. |
+| <a id="run-remove-api-keys"></a>`--remove-api-keys` | `false` (`--no-remove-api-keys`) | [Boolean](#boolean) | Remove API keys from the projects saved in the database.<br/> See `LANGFLOW_REMOVE_API_KEYS` variable. |
+| <a id="run-backend-only"></a>`--backend-only` | `false` (`--no-backend-only`) | [Boolean](#boolean) | Only run Langflow's backend server (no frontend).<br/>See `LANGFLOW_BACKEND_ONLY` variable. |
+| <a id="run-store"></a>`--store` | `true` | [Boolean](#boolean) | Enable the Langflow Store features. Use `--no-store` to disable the Langflow Store features.<br/>See `LANGFLOW_STORE` variable. |
+| <a id="run-auto-saving"></a>`--auto-saving` | `true` | [Boolean](#boolean) | Enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving.<br/>See `LANGFLOW_AUTO_SAVING` variable. |
+| <a id="run-auto-saving-interval"></a>`--auto-saving-interval` | `1000` | Integer | Set the interval for flow auto-saving in milliseconds.<br/>See `LANGFLOW_AUTO_SAVING_INTERVAL` variable. |
+| <a id="run-health-check-max-retries"></a>`--health-check-max-retries` | `5` | Integer | Set the maximum number of retries for the health check. Use `--no-health-check-max-retries` to disable the maximum number of retries for the health check.<br/>See `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` variable. |
+| <a id="run-max-file-size-upload"></a>`--max-file-size-upload` | `100` | Integer | Set the maximum file size for the upload in megabytes.<br/>See `LANGFLOW_MAX_FILE_SIZE_UPLOAD` variable. |
+| <a id="run-help"></a>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
 ### langflow superuser
 
@@ -137,9 +137,9 @@ python -m langflow superuser [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| `--username` | Required | String | Specify the name for the superuser.<br/>See `LANGFLOW_SUPERUSER` variable. |
-| `--password` | Required | String | Specify the password for the superuser.<br/>See `LANGFLOW_SUPERUSER_PASSWORD` variable. |
-| `--log-level` | `critical` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | Set the logging level. |
+| <a id="superuser-username"></a>`--username` | Required | String | Specify the name for the superuser.<br/>See `LANGFLOW_SUPERUSER` variable. |
+| <a id="superuser-password"></a>`--password` | Required | String | Specify the password for the superuser.<br/>See `LANGFLOW_SUPERUSER_PASSWORD` variable. |
+| <a id="superuser-log-level"></a>`--log-level` | `critical` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | Set the logging level. |
 
 ## Precedence
 
