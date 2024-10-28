@@ -28,7 +28,7 @@ export default function EditMessageField({
     <div className="flex h-fit w-full flex-col bg-muted">
       <Textarea
         ref={textareaRef}
-        className="h-mx-full w-full resize-none border-0 rounded-none shadow-none bg-muted focus:ring-0"
+        className="max-h-[400px] w-full resize-none border-0 rounded-none shadow-none bg-muted focus:ring-0"
         // onBlur={() => {
         //   if (!isButtonClicked) {
         //     onCancel();
@@ -65,7 +65,7 @@ export default function EditMessageField({
           </Button>
         </div>
         <div>
-          <span className="mr-4 text-sm text-muted-foreground">
+          <span className="mr-4 text-[13px] font-medium text-muted-foreground">
             Editing messages will update the memory but won't restart the
             conversation.
           </span>
