@@ -202,36 +202,36 @@ async def process_agent_events(agent_executor: AsyncIterator[dict[str, Any]], lo
         match event["event"]:
             case "on_chain_start":
                 if event["data"].get("input"):
-                    log_callback(f"🚀 Agent initiated with input: {event['data'].get('input')}", name="Agent Start")
+                    log_callback(f"Agent initiated with input: {event['data'].get('input')}", name="🚀 Agent Start")
 
             case "on_chain_end":
                 data_output = event["data"].get("output", {})
                 if data_output and "output" in data_output:
                     final_output = data_output["output"]
-                    log_callback(f"✅ Agent completed. Final output: {final_output}", name="Agent End")
+                    log_callback(f"{final_output}", name="✅ Agent End")
                 elif data_output and "agent_scratchpad" in data_output and data_output["agent_scratchpad"]:
-                    log_callback(f"🔍 Agent scratchpad: {data_output['agent_scratchpad']}", name="Agent Scratchpad")
+                    log_callback(f"{data_output['agent_scratchpad']}", name="🔍 Agent Scratchpad")
 
             case "on_tool_start":
                 log_callback(
-                    f"🔧 Initiating tool: '{event['name']}' with inputs: {event['data'].get('input')}",
-                    name="Tool Start",
+                    f"Initiating tool: '{event['name']}' with inputs: {event['data'].get('input')}",
+                    name="🔧 Tool Start",
                 )
 
             case "on_tool_end":
-                log_callback(f"🏁 Tool '{event['name']}' execution completed", name="Tool End")
-                log_callback(f"📊 Tool output: {event['data'].get('output')}", name="Tool Output")
+                log_callback(f"Tool '{event['name']}' execution completed", name="🏁 Tool End")
+                log_callback(f"{event['data'].get('output')}", name="📊 Tool Output")
 
             case "on_tool_error":
                 tool_name = event.get("name", "Unknown tool")
                 error_message = event["data"].get("error", "Unknown error")
-                log_callback(f"❌ Tool '{tool_name}' failed with error: {error_message}", name="Tool Error")
+                log_callback(f"Tool '{tool_name}' failed with error: {error_message}", name="❌ Tool Error")
 
                 if "stack_trace" in event["data"]:
-                    log_callback(f"🔍 Stack trace: {event['data']['stack_trace']}", name="Tool Error")
+                    log_callback(f"{event['data']['stack_trace']}", name="🔍 Tool Error")
 
                 if "recovery_attempt" in event["data"]:
-                    log_callback(f"🔄 Recovery attempt: {event['data']['recovery_attempt']}", name="Tool Error")
+                    log_callback(f"{event['data']['recovery_attempt']}", name="🔄 Tool Error")
 
             case _:
                 # Handle any other event types or ignore them
