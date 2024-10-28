@@ -52,7 +52,7 @@ export default function TemplateCardComponent({
         <div>
           <div className="flex w-full items-center justify-between">
             <h3
-              className="line-clamp-3 text-lg font-semibold"
+              className="line-clamp-3 font-semibold"
               data-testid={`template_${convertTestName(example.name)}`}
             >
               {example.name}
