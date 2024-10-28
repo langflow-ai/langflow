@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import status
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
 from langflow.graph.schema import RunOutputs
 from langflow.initial_setup.setup import load_starter_projects
@@ -10,7 +10,7 @@ from langflow.load import run_flow_from_json
 
 
 @pytest.mark.api_key_required
-async def test_run_flow_with_caching_success(client: TestClient, starter_project, created_api_key):
+async def test_run_flow_with_caching_success(client: AsyncClient, starter_project, created_api_key):
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
     payload = {
@@ -28,7 +28,7 @@ async def test_run_flow_with_caching_success(client: TestClient, starter_project
 
 
 @pytest.mark.api_key_required
-async def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_key):
+async def test_run_flow_with_caching_invalid_flow_id(client: AsyncClient, created_api_key):
     invalid_flow_id = uuid4()
     headers = {"x-api-key": created_api_key.api_key}
     payload = {"input_value": "", "input_type": "text", "output_type": "text", "tweaks": {}, "stream": False}
@@ -40,7 +40,7 @@ async def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created
 
 
 @pytest.mark.api_key_required
-async def test_run_flow_with_caching_invalid_input_format(client: TestClient, starter_project, created_api_key):
+async def test_run_flow_with_caching_invalid_input_format(client: AsyncClient, starter_project, created_api_key):
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
     payload = {"input_value": {"key": "value"}, "input_type": "text", "output_type": "text", "tweaks": {}}
