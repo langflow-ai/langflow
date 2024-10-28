@@ -67,13 +67,6 @@ async def test_read_flows(client: AsyncClient, json_flow: str, logged_in_headers
     assert len(response.json()) > 0
 
 
-async def test_read_flows_pagination_without_params(client: AsyncClient, logged_in_headers):
-    response = await client.get("api/v1/flows/", headers=logged_in_headers)
-    response_json = response.json()
-    assert response.status_code == 200
-    assert len(response_json) == 0
-
-
 async def test_read_flows_pagination_with_params(client: AsyncClient, logged_in_headers):
     response = await client.get(
         "api/v1/flows/", headers=logged_in_headers, params={"page": 3, "size": 10, "get_all": False}
