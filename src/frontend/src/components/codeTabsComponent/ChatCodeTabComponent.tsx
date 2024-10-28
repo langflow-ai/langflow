@@ -45,7 +45,6 @@ export default function SimplifiedCodeTabComponent({
           ) : (
             <IconComponent name="Copy" className="h-4 w-4" />
           )}
-          Copy
         </Button>
       </div>
       <SyntaxHighlighter
