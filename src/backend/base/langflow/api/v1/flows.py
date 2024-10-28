@@ -462,7 +462,13 @@ def read_basic_examples(
             return []
 
         # Get all flows in the starter folder
-        return session.exec(select(Flow).where(Flow.folder_id == starter_folder.id)).all()
+        flows = session.exec(select(Flow).where(Flow.folder_id == starter_folder.id)).all()
+
+        # Ensure the response is JSON
+        if not isinstance(flows, list):
+            raise HTTPException(status_code=500, detail="Invalid response format")
+
+        return flows
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

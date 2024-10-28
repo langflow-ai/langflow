@@ -8,9 +8,24 @@ import memoryChatbotBg from "../../../../assets/memory-chatbot-bg.png";
 import multiAgentBg from "../../../../assets/multi-agent-bg.png";
 import vectorRagBg from "../../../../assets/vector-rag-bg.png";
 import TemplateGetStartedCardComponent from "../TemplateGetStartedCardComponent";
+import { useState, useEffect } from "react";
+import { useAlertStore } from "@/stores/alertStore";
 
 export default function GetStartedComponent() {
   const examples = useFlowsManagerStore((state) => state.examples);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [validExamples, setValidExamples] = useState([]);
+
+  useEffect(() => {
+    if (Array.isArray(examples)) {
+      setValidExamples(examples);
+    } else {
+      setErrorData({
+        title: "Error",
+        message: "Failed to load examples. Please try again later.",
+      });
+    }
+  }, [examples]);
 
   // Define the card data
   const cardData: CardData[] = [
@@ -22,7 +37,7 @@ export default function GetStartedComponent() {
       title: "Memory Chatbot",
       description:
         "Get hands-on with Langflow by building a simple RAGbot that uses memory.",
-      flow: examples.find((example) => example.name === "Memory Chatbot"),
+      flow: validExamples.find((example) => example.name === "Memory Chatbot"),
     },
     {
       bgImage: vectorRagBg,
@@ -32,7 +47,7 @@ export default function GetStartedComponent() {
       title: "Vector RAG",
       description:
         "Ingest data into a native vector store and efficiently retrieve it.",
-      flow: examples.find((example) => example.name === "Vector Store RAG"),
+      flow: validExamples.find((example) => example.name === "Vector Store RAG"),
     },
     {
       bgImage: multiAgentBg,
@@ -40,7 +55,7 @@ export default function GetStartedComponent() {
       icon: "MessagesSquare",
       category: "Agents",
       title: "Multi-Agent",
-      flow: examples.find((example) => example.name === "Dynamic Agent"),
+      flow: validExamples.find((example) => example.name === "Dynamic Agent"),
       description:
         "Deploy a team of agents with a Manager-Worker structure to tackle complex tasks.",
     },
