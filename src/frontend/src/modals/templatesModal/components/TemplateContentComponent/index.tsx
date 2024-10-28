@@ -83,30 +83,12 @@ export default function TemplateContentComponent({
         ref={scrollContainerRef}
         className="flex flex-1 flex-col gap-6 overflow-auto"
       >
-        {currentTab === "all-templates" ? (
-          categories.map(
-            (value) =>
-              filteredExamples.filter((example) =>
-                example.tags?.includes(value.id),
-              ).length > 0 && (
-                <TemplateCategoryComponent
-                  key={value.id}
-                  currentTab={value}
-                  examples={filteredExamples.filter((example) =>
-                    example.tags?.includes(value.id),
-                  )}
-                  onCardClick={handleCardClick}
-                />
-              ),
-          )
-        ) : currentTabItem ? (
+        {currentTabItem && (
           <TemplateCategoryComponent
             currentTab={currentTabItem}
             examples={filteredExamples}
             onCardClick={handleCardClick}
           />
-        ) : (
-          <></>
         )}
       </div>
     </div>
