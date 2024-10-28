@@ -74,41 +74,43 @@ const HomePage = ({ type }: HomePageProps) => {
   return (
     <>
       {data.flows?.length > 0 ? (
-        <div className="mx-5 mb-5 mt-10">
-          <HeaderComponent
-            folderName={data.name}
-            flowType={flowType}
-            setFlowType={setFlowType}
-            view={view}
-            setView={setView}
-            setNewProjectModal={setNewProjectModal}
-            search={search}
-            setSearch={setSearch}
-          />
+        <div className="xl:container">
+          <div className="mx-5 mb-5 mt-10">
+            <HeaderComponent
+              folderName={data.name}
+              flowType={flowType}
+              setFlowType={setFlowType}
+              view={view}
+              setView={setView}
+              setNewProjectModal={setNewProjectModal}
+              search={search}
+              setSearch={setSearch}
+            />
 
-          {/* Flows */}
-          {flowType === "flows" ? (
-            <>
-              {view === "grid" ? (
-                <div className="mt-8 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredFlows.map((flow) => (
-                    <GridComponent key={flow.id} flowData={flow} />
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-7 flex flex-col">
-                  {filteredFlows.map((flow) => (
-                    <ListComponent key={flow.id} flowData={flow} />
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <></>
-          )}
+            {/* Flows */}
+            {flowType === "flows" ? (
+              <>
+                {view === "grid" ? (
+                  <div className="mt-8 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredFlows.map((flow) => (
+                      <GridComponent key={flow.id} flowData={flow} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-7 flex flex-col">
+                    {filteredFlows.map((flow) => (
+                      <ListComponent key={flow.id} flowData={flow} />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <></>
+            )}
+          </div>
         </div>
       ) : (
-        <EmptyPage setOpenModal={setNewProjectModal} />
+        <EmptyPage setOpenModal={setNewProjectModal} folderName={data.name} />
       )}
       <ModalsComponent
         openModal={newProjectModal}

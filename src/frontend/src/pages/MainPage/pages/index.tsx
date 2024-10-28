@@ -74,7 +74,7 @@ export default function CollectionPage(): JSX.Element {
           />
         </aside>
         <div
-          className={`relative mx-auto w-full xl:container ${
+          className={`relative mx-auto w-full ${
             showFolderModal ? "opacity-80 blur-[2px]" : ""
           }`}
           onClick={() => {

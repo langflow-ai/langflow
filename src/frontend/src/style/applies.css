@@ -1217,7 +1217,7 @@
   --color4: 244, 128, 255;
   --color5: 117, 40, 252;
   --color-interactive: 140, 100, 255;
-  --circle-size: 80%;
+  --circle-size: 50%;
   --blending: hard-light;
 }
 
@@ -1371,8 +1371,8 @@
       no-repeat;
     mix-blend-mode: var(--blending);
 
-    width: calc(var(--circle-size) * 2);
-    height: calc(var(--circle-size) * 2);
+    width: calc(var(--circle-size) * 1.5);
+    height: calc(var(--circle-size) * 1.5);
     top: calc(50% - var(--circle-size));
     left: calc(50% - var(--circle-size));
 

@@ -4,9 +4,10 @@ import LangflowEmptyIcon from "../../assets/LangflowEmptyIcon.svg?react";
 
 type EmptyPageProps = {
   setOpenModal: (open: boolean) => void;
+  folderName: string;
 };
 
-export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
+export const EmptyPage = ({ setOpenModal, folderName }: EmptyPageProps) => {
   useEffect(() => {
     const interBubble = document.querySelector<HTMLDivElement>(".interactive");
     if (!interBubble) return;
@@ -39,6 +40,9 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
   return (
     <div className="m-0 p-0">
       <div className="text-container">
+        <div className="absolute left-10 top-10 text-2xl font-semibold text-white">
+          {folderName}
+        </div>
         <div className="relative z-20 flex h-full w-full flex-col items-center justify-center gap-2">
           <LangflowEmptyIcon />
           <h3 className="pt-5 text-2xl font-semibold text-white">
