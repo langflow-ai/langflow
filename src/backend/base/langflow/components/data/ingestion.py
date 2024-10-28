@@ -61,28 +61,21 @@ class IngestionComponent(Component):
         Output(display_name="Ingest Result", name="ingest_result", method="ingest_wrapper"),
     ]
 
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
         if field_name in ["api_endpoint", "token"] and self.api_endpoint and self.token:
-            print("HELLO!!!!")
             my_wrapper = self._build_wrapper(
                 api_endpoint=self.api_endpoint,
                 token=self.token,
             )
-            print("AAA")
 
             my_database = my_wrapper._database()
-            print("BBB")
 
             if "collection_name" in build_config:
                 del build_config["collection_name"]
 
-            print("CCCC")
-
             collection_options = my_database.list_collection_names()
             # collection_default = collection_options[0] if collection_options else None
 
-            print("DDD")
-            print(self.data_mode)
             param_0 = DropdownInput(
                 name="collection_name",
                 display_name="Astra DB Collection Name",
@@ -91,8 +84,6 @@ class IngestionComponent(Component):
                 real_time_refresh=True,
                 value=None,
             ).to_dict()
-            print("EEE")
-            print(self.data_mode)
 
             items = list(build_config.items())
             items.insert(len(items) - 1, ("collection_name", param_0))
@@ -103,12 +94,9 @@ class IngestionComponent(Component):
 
         elif field_name == "data_mode" and hasattr(self, "collection_name"):
             if self.data_mode == "Read":
-                print("WTF")
                 for key in ["path", "unstructured_api_key", "embedding_api_key"]:
                     if key in build_config:
                         del build_config[key]
-
-                print("Ok")
 
                 my_wrapper = self._build_wrapper(
                     api_endpoint=self.api_endpoint,
@@ -116,12 +104,8 @@ class IngestionComponent(Component):
                     collection_name=self.collection_name,
                 )
 
-                print("Bye")
-
                 my_collection = my_wrapper._collection()
                 distinct_files = my_collection.distinct("metadata.metadata.filename")
-
-                print("Hi")
 
                 param_1 = DropdownInput(
                     name="file",
