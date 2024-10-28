@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
 
 import nanoid
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.custom.tree_visitor import RequiredInputsVisitor
@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
+    from langflow.schema import dotdict
     from langflow.schema.log import LoggableType
 
 
@@ -104,7 +105,7 @@ class Component(CustomComponent):
         if self.outputs is not None:
             self.map_outputs(self.outputs)
         # Set output types
-        self._set_output_types()
+        self._set_output_types(self._outputs_map.values())
         self.set_class_code()
         self._set_output_required_inputs()
 
@@ -310,14 +311,57 @@ class Component(CustomComponent):
         self._validate_inputs(params)
         self._validate_outputs()
 
-    def _set_output_types(self) -> None:
-        for output in self._outputs_map.values():
-            if output.method is None:
-                msg = f"Output {output.name} does not have a method"
-                raise ValueError(msg)
-            return_types = self._get_method_return_type(output.method)
-            output.add_types(return_types)
-            output.set_selected()
+    def update_inputs(
+        self,
+        build_config: dotdict,
+        field_value: Any,
+        field_name: str | None = None,
+    ):
+        return self.update_build_config(build_config, field_value, field_name)
+
+    def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
+        frontend_node = self.update_outputs(frontend_node, field_name, field_value)
+        return self._validate_frontend_node(frontend_node)
+
+    def _validate_frontend_node(self, frontend_node: dict):
+        # Check if all outputs are either Output or a valid Output model
+        for index, output in enumerate(frontend_node["outputs"]):
+            if isinstance(output, dict):
+                try:
+                    _output = Output(**output)
+                    self._set_output_return_type(_output)
+                    _output_dict = _output.model_dump()
+                except ValidationError as e:
+                    msg = f"Invalid output: {e}"
+                    raise ValueError(msg) from e
+            elif isinstance(output, Output):
+                # we need to serialize it
+                self._set_output_return_type(output)
+                _output_dict = output.model_dump()
+            else:
+                msg = f"Invalid output type: {type(output)}"
+                raise TypeError(msg)
+            frontend_node["outputs"][index] = _output_dict
+        return frontend_node
+
+    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002
+        """Default implementation for updating outputs based on field changes.
+
+        Subclasses can override this to modify outputs based on field_name and field_value.
+        """
+        return frontend_node
+
+    def _set_output_types(self, outputs: list[Output]) -> None:
+        for output in outputs:
+            self._set_output_return_type(output)
+
+    def _set_output_return_type(self, output: Output) -> None:
+        if output.method is None:
+            msg = f"Output {output.name} does not have a method"
+            raise ValueError(msg)
+        return_types = self._get_method_return_type(output.method)
+        output.add_types(return_types)
+        output.set_selected()
 
     def _set_output_required_inputs(self) -> None:
         for output in self.outputs:
