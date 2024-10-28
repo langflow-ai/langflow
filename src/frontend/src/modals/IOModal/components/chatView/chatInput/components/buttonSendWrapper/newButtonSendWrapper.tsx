@@ -62,19 +62,19 @@ const ButtonSendWrapper = ({
       unstyled
     >
       <Case condition={showStopButton}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 text-[14px] font-medium">
           Stop
-          <Loading className="text-black" />
+          <Loading/>
         </div>
       </Case>
 
-      <Case condition={showPlayButton}>
+      {/* <Case condition={showPlayButton}>
         <IconComponent
           name="Zap"
           className="form-modal-play-icon"
           aria-hidden="true"
         />
-      </Case>
+      </Case> */}
 
       <Case condition={showSendButton}>
         <div className="flex items-center gap-2 font-medium text-[14px]">Send</div>
