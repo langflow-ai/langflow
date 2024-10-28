@@ -44,11 +44,15 @@ class DatabaseService(Service):
         self.script_location = langflow_dir / "alembic"
         self.alembic_cfg_path = langflow_dir / "alembic.ini"
         self.engine = self._create_engine()
-        if self.settings_service.settings.alembic_log_file.startswith("/"):
-            # Then, the log file path is overridden by an absolute path, and we should use it directly.
-            self.alembic_log_path = Path(self.settings_service.settings.alembic_log_file)
+        alembic_log_file = self.settings_service.settings.alembic_log_file
+
+        # Check if the provided path is absolute, cross-platform.
+        if Path(alembic_log_file).is_absolute():
+            # Use the absolute path directly.
+            self.alembic_log_path = Path(alembic_log_file)
         else:
-            self.alembic_log_path = Path(f"{langflow_dir}/{self.settings_service.settings.alembic_log_file}")
+            # Construct the path using the langflow directory.
+            self.alembic_log_path = Path(langflow_dir) / alembic_log_file
 
     def reload_engine(self) -> None:
         self.engine = self._create_engine()
