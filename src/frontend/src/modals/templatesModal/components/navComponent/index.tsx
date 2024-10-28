@@ -15,6 +15,7 @@ export function Nav({ links, currentTab, onClick }: NavProps) {
             key={index}
             onClick={() => onClick?.(link.id)}
             className="group"
+            tabIndex={1}
           >
             <ForwardedIconComponent
               name={link.icon}
