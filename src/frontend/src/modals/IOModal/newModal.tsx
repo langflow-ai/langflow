@@ -343,31 +343,31 @@ export default function IOModal({
                   {inputs.some(
                     (input) => input.id === selectedViewField.id,
                   ) && (
-                    <IOFieldView
-                      type={InputOutput.INPUT}
-                      left={false}
-                      fieldType={selectedViewField.type!}
-                      fieldId={selectedViewField.id!}
-                    />
-                  )}
+                      <IOFieldView
+                        type={InputOutput.INPUT}
+                        left={false}
+                        fieldType={selectedViewField.type!}
+                        fieldId={selectedViewField.id!}
+                      />
+                    )}
                   {outputs.some(
                     (output) => output.id === selectedViewField.id,
                   ) && (
-                    <IOFieldView
-                      type={InputOutput.OUTPUT}
-                      left={false}
-                      fieldType={selectedViewField.type!}
-                      fieldId={selectedViewField.id!}
-                    />
-                  )}
+                      <IOFieldView
+                        type={InputOutput.OUTPUT}
+                        left={false}
+                        fieldType={selectedViewField.type!}
+                        fieldId={selectedViewField.id!}
+                      />
+                    )}
                   {sessions.some(
                     (session) => session === selectedViewField.id,
                   ) && (
-                    <SessionView
-                      session={selectedViewField.id}
-                      id={currentFlowId}
-                    />
-                  )}
+                      <SessionView
+                        session={selectedViewField.id}
+                        id={currentFlowId}
+                      />
+                    )}
                 </div>
               </div>
             )}
@@ -377,13 +377,15 @@ export default function IOModal({
                 selectedViewField ? "hidden" : "",
               )}
             >
-              {visibleSession && (
-                <div className="mb-4 h-[5%] text-xl font-semibold">
-                  {visibleSession === currentFlowId
-                    ? "Default Session"
-                    : `${visibleSession}`}
-                </div>
-              )}
+              <div className="mb-4 h-[5%] text-xl font-semibold">
+                {(visibleSession && sessions.length > 0) &&
+                  <div>
+                    {visibleSession === currentFlowId
+                      ? "Default Session"
+                      : `${visibleSession}`}
+                  </div>
+                }
+              </div>
               {haveChat ? (
                 <div className={visibleSession ? "h-[95%]" : "h-full"}>
                   <ChatView
