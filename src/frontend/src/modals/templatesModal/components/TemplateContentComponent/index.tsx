@@ -76,7 +76,7 @@ export default function TemplateContentComponent({
           placeholder="Search..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full rounded-lg bg-background pl-8 lg:w-3/4"
+          className="w-3/4 rounded-lg bg-background pl-8 lg:w-2/3"
         />
       </div>
       <div
