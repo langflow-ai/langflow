@@ -43,12 +43,8 @@ test("should copy code from playground modal", async ({ page }) => {
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat output");
   await page.waitForTimeout(1000);
 
   await page
@@ -62,8 +58,8 @@ test("should copy code from playground modal", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat input");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat input");
   await page.waitForTimeout(1000);
 
   await page
@@ -72,8 +68,8 @@ test("should copy code from playground modal", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("openai");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("openai");
   await page.waitForTimeout(1000);
 
   await page.getByTitle("fit view").click();
@@ -238,16 +234,13 @@ test("playground button should be enabled or disabled", async ({ page }) => {
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
 
   expect(await page.getByTestId("playground-btn-flow").isDisabled());
 
   expect(await page.getByText("Langflow Chat").isHidden());
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat output");
 
   await page.waitForTimeout(1000);
 

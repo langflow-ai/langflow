@@ -41,19 +41,9 @@ test("TextInputOutputComponent", async ({ page }) => {
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
 
-  const focusElementsOnBoard = async ({ page }) => {
-    const focusElements = await page.getByTestId("extended-disclosure");
-    focusElements.click();
-  };
-
-  await focusElementsOnBoard({ page });
-
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("text input");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("text input");
   await page.waitForTimeout(1000);
 
   await page
@@ -62,8 +52,8 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("openai");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("openai");
   await page.waitForTimeout(1000);
 
   await page
@@ -120,8 +110,8 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Release the mouse
   await page.mouse.up();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("text output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("text output");
 
   await page
     .getByTestId("outputsText Output")

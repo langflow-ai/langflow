@@ -31,9 +31,8 @@ test("user must be able to check similarity between embedding texts", async ({
 
   //first component
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("openai");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("openai");
   // await page.waitForTimeout(1000);
 
   await page
@@ -70,9 +69,8 @@ test("user must be able to check similarity between embedding texts", async ({
 
   //third component
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("text embedder");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("text embedder");
   // await page.waitForTimeout(1000);
 
   await page
@@ -109,9 +107,8 @@ test("user must be able to check similarity between embedding texts", async ({
 
   //fifth component
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("embedding similarity");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("embedding similarity");
   // await page.waitForTimeout(1000);
 
   await page
@@ -131,9 +128,8 @@ test("user must be able to check similarity between embedding texts", async ({
 
   //sisxth component
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("parse data");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("parse data");
   // await page.waitForTimeout(1000);
 
   await page
@@ -153,9 +149,8 @@ test("user must be able to check similarity between embedding texts", async ({
 
   //seventh component
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("text output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("text output");
   // await page.waitForTimeout(1000);
 
   await page
@@ -173,9 +168,8 @@ test("user must be able to check similarity between embedding texts", async ({
 
   await page.mouse.up();
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("filter data");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("filter data");
   // await page.waitForTimeout(1000);
 
   await page

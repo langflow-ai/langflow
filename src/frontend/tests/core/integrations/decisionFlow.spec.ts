@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -111,21 +111,17 @@ test("should create a flow with decision", async ({ page }) => {
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
   //---------------------------------- CHAT INPUT
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat input");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat input");
   await page.waitForTimeout(500);
   await page
     .getByTestId("inputsChat Input")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   //---------------------------------- CREATE LIST
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("list");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("list");
   await page.waitForTimeout(500);
   await page
     .getByTestId("helpersCreate List")
@@ -158,8 +154,8 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("inputlist_str_texts_2").last().fill("not cool..");
 
   //---------------------------------- PARSE DATA
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("parse data");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("parse data");
   await page.waitForTimeout(500);
 
   await page
@@ -170,8 +166,8 @@ test("should create a flow with decision", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   //---------------------------------- PASS
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("pass");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("pass");
   await page.waitForTimeout(500);
   await page
     .getByTestId("prototypesPass")
@@ -185,30 +181,30 @@ test("should create a flow with decision", async ({ page }) => {
     .getByTestId("prototypesPass")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- PROMPT
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("prompt");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("prompt");
   await page.waitForTimeout(500);
   await page
     .getByTestId("promptsPrompt")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- OPENAI
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("openai");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("openai");
   await page.waitForTimeout(500);
   await page
     .getByTestId("modelsOpenAI")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   //---------------------------------- CONDITIONAL ROUTER
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("conditional router");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("conditional router");
   await page.waitForTimeout(500);
   await page
     .getByTestId("prototypesConditional Router")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- CHAT OUTPUT
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat output");
   await page.waitForTimeout(500);
   await page
     .getByTestId("outputsChat Output")

@@ -30,12 +30,8 @@ test("User must be able to stop building from inside Playground", async ({
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 1000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("custom");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("custom");
 
   await page.waitForTimeout(1000);
 
@@ -49,8 +45,8 @@ test("User must be able to stop building from inside Playground", async ({
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat output");
 
   await page.waitForTimeout(1000);
 

@@ -32,13 +32,8 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(3000);
 
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 100000,
-  });
-
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("api request");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("api request");
 
   await page.waitForTimeout(1000);
   await page
@@ -71,6 +66,12 @@ test("user must see on handle click the possibility connections - LLMChain", asy
         .isVisible();
     });
 
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-legacy-switch").click();
+  await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
+  await page.getByTestId("sidebar-options-trigger").click();
+
   await expect(page.getByTestId("disclosure-inputs")).toBeVisible();
   await expect(page.getByTestId("disclosure-outputs")).toBeVisible();
   await expect(page.getByTestId("disclosure-prompts")).toBeVisible();
@@ -89,7 +90,7 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(page.getByTestId("chainsConversationChain")).toBeVisible();
   await expect(page.getByTestId("prototypesConditional Router")).toBeVisible();
 
-  await page.getByPlaceholder("Search").click();
+  await page.getByTestId("sidebar-filter-reset").click();
 
   await expect(page.getByTestId("inputsChat Input")).not.toBeVisible();
   await expect(page.getByTestId("outputsChat Output")).not.toBeVisible();
