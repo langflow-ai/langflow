@@ -1,5 +1,12 @@
+from pathlib import Path
+
 from fastapi import status
 from httpx import AsyncClient
+from langflow.api.v1.schemas import UpdateCustomComponentRequest
+
+
+def get_dynamic_output_component_code():
+    return Path("src/backend/tests/data/dynamic_output_component.py").read_text(encoding="utf-8")
 
 
 async def test_get_version(client: AsyncClient):
@@ -34,3 +41,21 @@ async def test_get_sidebar_components(client: AsyncClient):
     assert "categories" in result, "The dictionary must contain a key called 'categories'"
     assert len(result["categories"]) > 0, "The categories list must not be empty"
     assert isinstance(result["categories"], list), "The categories must be a list"
+
+
+async def test_update_component_outputs(client: AsyncClient, logged_in_headers: dict):
+    code = get_dynamic_output_component_code()
+    frontend_node = {"outputs": []}
+    request = UpdateCustomComponentRequest(
+        code=code,
+        frontend_node=frontend_node,
+        field="show_output",
+        field_value=True,
+        template={},
+    )
+    response = await client.post("api/v1/custom_component/update", json=request.model_dump(), headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    output_names = [output["name"] for output in result["outputs"]]
+    assert "tool_output" in output_names
