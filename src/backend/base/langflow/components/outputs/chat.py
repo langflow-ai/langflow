@@ -84,9 +84,12 @@ class ChatOutput(ChatComponent):
     ]
 
     def message_response(self) -> Message:
-        source_id = self.vertex.incoming_edges[0].source_id
-        _display = self.graph.get_vertex(source_id).display_name
-        _icon = self.graph.get_vertex(source_id).icon
+        _display = None
+        _icon = None
+        if self.vertex.incoming_edges:
+            source_id = self.vertex.incoming_edges[0].source_id
+            _display = self.graph.get_vertex(source_id).display_name
+            _icon = self.graph.get_vertex(source_id).icon
         _background_color = self.background_color
         _text_color = self.text_color
         if self.chat_icon:
