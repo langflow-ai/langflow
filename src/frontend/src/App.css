@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -181,3 +182,4 @@ body {
   z-index: 1000 !important;
   border-radius: 20% !important;
 }
+

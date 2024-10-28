@@ -393,6 +393,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
     // 👇 make dragging a node undoable
+
     takeSnapshot();
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
@@ -405,6 +406,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
+
     takeSnapshot();
   }, [takeSnapshot]);
 
@@ -602,7 +604,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onSelectionDragStart={onSelectionDragStart}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
-            connectionRadius={25}
+            connectionRadius={30}
             edgeTypes={edgeTypes}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}

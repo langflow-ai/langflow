@@ -288,7 +288,7 @@ export default function HandleRenderComponent({
             isValidConnection(connection, nodes, edges)
           }
           className={classNames(
-            `group/handle z-20 h-10 w-10 rounded-full border-none bg-transparent transition-all`,
+            `group/handle z-20 h-12 w-12 rounded-full border-none bg-transparent transition-all`, // Increased from h-10 w-10 to h-12 w-12
           )}
           onClick={() => {
             setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
@@ -313,8 +313,8 @@ export default function HandleRenderComponent({
           }}
           style={{
             background: handleColor,
-            width: "10px",
-            height: "10px",
+            width: "14px",
+            height: "14px",
             border: "none",
             transition: "all 0.2s",
             boxShadow: getNeonShadow(colors[0], isHovered || openHandle),
