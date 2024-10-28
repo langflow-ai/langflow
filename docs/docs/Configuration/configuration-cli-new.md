@@ -8,9 +8,9 @@ slug: /configuration-cli-new
 
 The Langflow command line interface (Langflow CLI) is the main interface for managing and running the Langflow server.
 
-## Commands reference
+## CLI command options
 
-The following sections list the available CLI commands and their options, as well as any corresponding [environment variables](./environment-variables.md).
+The following sections describe the available CLI commands and their options, as well as their corresponding [environment variables](./environment-variables.md).
 
 ### langflow
 
@@ -83,9 +83,9 @@ python -m langflow migration [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| `--test` | `true` | BOOLEAN | Run migrations in test mode. Use `--no-test` to disable test mode. |
-| `--fix` | `false` (`--no-fix`) | BOOLEAN | Fix migrations. This is a destructive operation, and all affected data will be deleted. Only use this option if you know what you are doing. |
-| `--help` | *Not applicable* | *Not applicable* | Displays information about the command usage and its options and arguments. |
+| `--test` | `true` | Boolean | Run migrations in test mode. Use `--no-test` to disable test mode. |
+| `--fix` | `false` (`--no-fix`) | Boolean | Fix migrations. This is a destructive operation, and all affected data will be deleted. Only use this option if you know what you are doing. |
+| `--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
 
 ### langflow run
@@ -102,26 +102,26 @@ python -m langflow run [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| `--host` | `127.0.0.1` | TEXT | Host to bind the Langflow server to.<br/>See `LANGFLOW_HOST` variable. |
-| `--workers` | `1` | INTEGER | Number of worker processes.<br/>See `LANGFLOW_WORKERS` variable. |
-| `--worker-timeout` | `60` | INTEGER | Worker timeout in seconds.<br/>See `LANGFLOW_WORKER_TIMEOUT` variable. |
-| `--port` | `7860` | INTEGER | Port to listen on. The server automatically selects a free port if the specified port is in use.<br/>See `LANGFLOW_PORT` variable. |
-| `--components-path` | `./components`? | PATH | Path to the directory containing custom components.<br/>See `LANGFLOW_COMPONENTS_PATH` variable. |
-| `--env-file` | Not set | PATH | Path to the `.env` file containing environment variables.<br/>See [Import environment variables from a .env file](./environment-variables.md#configure-variables-env-file). |
+| `--host` | `127.0.0.1` | String | The host on which the Langflow server will run.<br/>See `LANGFLOW_HOST` variable. |
+| `--workers` | `1` | Integer | Number of worker processes.<br/>See `LANGFLOW_WORKERS` variable. |
+| `--worker-timeout` | `300` | Integer | Worker timeout in seconds.<br/>See `LANGFLOW_WORKER_TIMEOUT` variable. |
+| `--port` | `7860` | Integer | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use.<br/>See `LANGFLOW_PORT` variable. |
+| `--components-path` | `langflow/components` | String | Path to the directory containing custom components.<br/>See `LANGFLOW_COMPONENTS_PATH` variable. |
+| `--env-file` | Not set | String | Path to the `.env` file containing environment variables.<br/>See [Import environment variables from a .env file](./environment-variables.md#configure-variables-env-file). |
 | `--log-level` | `critical` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | Set the logging level.<br/>See `LANGFLOW_LOG_LEVEL` variable. |
-| `--log-file` | `logs/langflow.log` | PATH | Path to the log file.<br/>See `LANGFLOW_LOG_FILE` variable. |
-| `--cache` | `SQLiteCache` | `InMemoryCache`<br/>`SQLiteCache` | Type of cache to use.<br/>See `LANGFLOW_LANGCHAIN_CACHE` variable. |
-| `--dev` | `false` (`--no-dev`) | BOOLEAN | Run Langflow in development mode (may contain bugs).<br/>See `LANGFLOW_DEV` variable. |
-| `--frontend-path` | `./frontend`? | TEXT | Path to the frontend directory containing build files. This is for development purposes only.<br/>See `LANGFLOW_FRONTEND_PATH` variable. |
-| `--open-browser` | `true` | BOOLEAN | Open the system web browser after starting the Langflow server. Use `--no-open-browser` to disable opening the system web browser after starting the Langflow server.<br/> See `LANGFLOW_OPEN_BROWSER` variable. |
-| `--remove-api-keys` | `false` (`--no-remove-api-keys`) | BOOLEAN | Remove API keys from the projects saved in the database.<br/> See `LANGFLOW_REMOVE_API_KEYS` variable. |
-| `--backend-only` | `false` (`--no-backend-only`) | BOOLEAN | Only run Langflow's backend server (no frontend).<br/>See `LANGFLOW_BACKEND_ONLY` variable. |
-| `--store` | `true` | BOOLEAN | Enable the Langflow Store features. Use `--no-store` to disable the Langflow Store features.<br/>See `LANGFLOW_STORE` variable. |
-| `--auto-saving` | `true` | BOOLEAN | Enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving.<br/>See `LANGFLOW_AUTO_SAVING` variable. |
-| `--auto-saving-interval` | `1000` | INTEGER | Set the interval for flow auto-saving in milliseconds.<br/>See `LANGFLOW_AUTO_SAVING_INTERVAL` variable. |
-| `--health-check-max-retries` | `5` | INTEGER | Set the maximum number of retries for the health check. Use `--no-health-check-max-retries` to disable the maximum number of retries for the health check.<br/>See `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` variable. |
-| `--max-file-size-upload` | `100` | INTEGER | Set the maximum file size for the upload in megabytes.<br/>See `LANGFLOW_MAX_FILE_SIZE_UPLOAD` variable. |
-| `--help` | *Not applicable* | *Not applicable* | Displays information about the command usage and its options and arguments. |
+| `--log-file` | `logs/langflow.log` | String | Set the path to the log file for Langflow.<br/>See `LANGFLOW_LOG_FILE` variable. |
+| `--cache` | `InMemoryCache` | `InMemoryCache`<br/>`SQLiteCache` | Type of cache to use.<br/>See `LANGFLOW_LANGCHAIN_CACHE` variable. |
+| `--dev` | `false` (`--no-dev`) | Boolean | Run Langflow in development mode (may contain bugs).<br/>See `LANGFLOW_DEV` variable. |
+| `--frontend-path` | `./frontend` | String | Path to the frontend directory containing build files. This is for development purposes only.<br/>See `LANGFLOW_FRONTEND_PATH` variable. |
+| `--open-browser` | `true` | Boolean | Open the system web browser on startup.. Use `--no-open-browser` to disable opening the system web browser on startup.<br/> See `LANGFLOW_OPEN_BROWSER` variable. |
+| `--remove-api-keys` | `false` (`--no-remove-api-keys`) | Boolean | Remove API keys from the projects saved in the database.<br/> See `LANGFLOW_REMOVE_API_KEYS` variable. |
+| `--backend-only` | `false` (`--no-backend-only`) | Boolean | Only run Langflow's backend server (no frontend).<br/>See `LANGFLOW_BACKEND_ONLY` variable. |
+| `--store` | `true` | Boolean | Enable the Langflow Store features. Use `--no-store` to disable the Langflow Store features.<br/>See `LANGFLOW_STORE` variable. |
+| `--auto-saving` | `true` | Boolean | Enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving.<br/>See `LANGFLOW_AUTO_SAVING` variable. |
+| `--auto-saving-interval` | `1000` | Integer | Set the interval for flow auto-saving in milliseconds.<br/>See `LANGFLOW_AUTO_SAVING_INTERVAL` variable. |
+| `--health-check-max-retries` | `5` | Integer | Set the maximum number of retries for the health check. Use `--no-health-check-max-retries` to disable the maximum number of retries for the health check.<br/>See `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` variable. |
+| `--max-file-size-upload` | `100` | Integer | Set the maximum file size for the upload in megabytes.<br/>See `LANGFLOW_MAX_FILE_SIZE_UPLOAD` variable. |
+| `--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
 ### langflow superuser
 
@@ -137,8 +137,8 @@ python -m langflow superuser [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| `--username` | Required | TEXT | Specify the name for the superuser.<br/>See `LANGFLOW_SUPERUSER` variable. |
-| `--password` | Required | TEXT | Specify the password for the superuser.<br/>See `LANGFLOW_SUPERUSER_PASSWORD` variable. |
+| `--username` | Required | String | Specify the name for the superuser.<br/>See `LANGFLOW_SUPERUSER` variable. |
+| `--password` | Required | String | Specify the password for the superuser.<br/>See `LANGFLOW_SUPERUSER_PASSWORD` variable. |
 | `--log-level` | `critical` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | Set the logging level. |
 
 ## Precedence
@@ -147,7 +147,7 @@ Langflow CLI options override the values of corresponding [environment variables
 
 For example, if you have `LANGFLOW_PORT=7860` defined as an environment variable, but you run the CLI with `--port 7880`, then Langflow will set the port to **`7880`** (the value passed with the CLI).
 
-## Value types
+## Assign values
 
 There are two ways you can assign a value to a CLI option.
 You can write the option flag and its value with a single space between them: `--option value`.
