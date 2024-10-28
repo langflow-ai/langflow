@@ -87,11 +87,9 @@ class ConditionalRouterComponent(Component):
 
     def iterate_and_stop_once(self, route_to_stop: str):
         if not self.__iteration_updated:
-            _id = self._id.lower()
-            self.update_ctx({f"{_id}_iteration": self.ctx.get(f"{_id}_iteration", 0) + 1})
+            self.update_ctx({f"{self._id}_iteration": self.ctx.get(f"{self._id}_iteration", 0) + 1})
             self.__iteration_updated = True
-            _id = self._id.lower()
-            if self.ctx.get(f"{_id}_iteration", 0) >= self.max_iterations and route_to_stop == self.default_route:
+            if self.ctx.get(f"{self._id}_iteration", 0) >= self.max_iterations and route_to_stop == self.default_route:
                 # We need to stop the other route
                 route_to_stop = "true_result" if route_to_stop == "false_result" else "false_result"
             self.stop(route_to_stop)
