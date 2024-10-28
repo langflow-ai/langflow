@@ -13,7 +13,7 @@ Langflow lets you configure a number of settings using environment variables.
 
 ## Configure environment variables
 
-Langflow recognizes supported environment variables from the following sources:
+Langflow recognizes [supported environment variables](#supported-variables) from the following sources:
 
 - Environment variables that you've set in your terminal.
 - Environment variables that you've imported from a `.env` file using the `--env-file` option in the Langflow CLI.
@@ -64,7 +64,7 @@ If it detects a supported environment variable, then it automatically adopts the
     VARIABLE_NAME='VALUE'
     ```
 
-    :::info
+    :::tip
     The Langflow project includes a [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file to help you get started.
     You can copy the contents of this file into your own `.env` file and replace the example values with your own preferred settings.
     :::
@@ -103,7 +103,7 @@ That means, if you happen to set the same environment variable in both your term
 [Langflow CLI options](./configuration-cli.md) override the value of corresponding environment variables defined in the `.env` file as well as any environment variables set in your terminal.
 :::
 
-## Supported environment variables
+## Supported environment variables {#supported-variables}
 
 The following table lists the environment variables supported by Langflow.
 
