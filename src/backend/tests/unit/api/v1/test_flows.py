@@ -169,3 +169,12 @@ async def test_create_flows(client: AsyncClient, logged_in_headers):
     assert response.status_code == status.HTTP_201_CREATED
     assert isinstance(result, list), "The result must be a list"
     assert len(result) == amount_flows, "The result must have the same amount of flows"
+
+
+async def test_read_basic_examples(client: AsyncClient, logged_in_headers):
+    response = await client.get("api/v1/flows/basic_examples/", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert isinstance(result, list), "The result must be a list"
+    assert len(result) > 0, "The result must have at least one flow"
