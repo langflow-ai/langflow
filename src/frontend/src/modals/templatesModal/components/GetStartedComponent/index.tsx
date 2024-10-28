@@ -27,7 +27,7 @@ export default function GetStartedComponent() {
     {
       bgImage: vectorRagBg,
       spiralImage: vectorRagSpiral,
-      icon: "MessagesSquare",
+      icon: "Database",
       category: "Vector RAG",
       title: "Vector RAG",
       description:
@@ -37,7 +37,7 @@ export default function GetStartedComponent() {
     {
       bgImage: multiAgentBg,
       spiralImage: multiAgentSpiral,
-      icon: "MessagesSquare",
+      icon: "Bot",
       category: "Agents",
       title: "Multi-Agent",
       flow: examples.find((example) => example.name === "Dynamic Agent"),
