@@ -43,7 +43,7 @@ export interface TemplateCardComponentProps {
 }
 
 export interface NavProps {
-  links: NavItem[];
+  categories: Category[];
   currentTab: string;
-  onClick?: (id: string) => void;
+  setCurrentTab: (id: string) => void;
 }

@@ -1,41 +1,60 @@
 import ForwardedIconComponent from "@/components/genericIconComponent";
-import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/utils/utils";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
 import { NavProps } from "../../../../types/templates/types";
 
-export function Nav({ links, currentTab, onClick }: NavProps) {
+export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
   return (
-    <div className="group flex flex-col gap-4">
-      <nav className="grid">
-        {links.map((link, index) => (
-          <Button
-            variant={link.id === currentTab ? "menu-active" : "menu"}
-            size="sm"
-            key={index}
-            onClick={() => onClick?.(link.id)}
-            className="group"
-            tabIndex={1}
-          >
-            <ForwardedIconComponent
-              name={link.icon}
-              className={cn(
-                "mr-2 h-4 w-4 stroke-2 text-muted-foreground",
-                link.id === currentTab && "x-gradient",
-              )}
-            />
-            <span
-              data-testid={`side_nav_options_${convertTestName(link.title)}`}
-              className={cn(
-                "flex-1 text-left font-normal text-secondary-foreground",
-                link.id === currentTab && "font-medium text-primary",
-              )}
+    <Sidebar>
+      <SidebarContent className="gap-0 p-2">
+        {categories.map((category, index) => (
+          <SidebarGroup key={index}>
+            <SidebarGroupLabel
+              className={`${
+                index === 0
+                  ? "mb-3 text-lg font-semibold leading-none tracking-tight text-primary"
+                  : "mb-1 text-sm font-semibold text-muted-foreground"
+              }`}
+              data-testid={index === 0 ? "modal-title" : undefined}
             >
-              {link.title}
-            </span>
-          </Button>
+              {category.title}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {category.items.map((link) => (
+                  <SidebarMenuItem key={link.id}>
+                    <SidebarMenuButton
+                      tabIndex={1}
+                      variant="menu"
+                      onClick={() => setCurrentTab(link.id)}
+                      isActive={currentTab === link.id}
+                      data-testid={`side_nav_options_${link.title.toLowerCase().replace(/\s+/g, "_")}`}
+                    >
+                      <ForwardedIconComponent
+                        name={link.icon}
+                        className={`mr-2 h-4 w-4 stroke-2 ${
+                          currentTab === link.id
+                            ? "x-gradient"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                      <span>{link.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         ))}
-      </nav>
-    </div>
+      </SidebarContent>
+    </Sidebar>
   );
 }
