@@ -32,7 +32,7 @@ python -m langflow [OPTIONS]
 
 ### langflow api-key
 
-Create an API key for the default superuser if the `LANGFLOW_AUTO_LOGIN` environment variable is set to `true`.
+Create an API key for the default superuser if the [`LANGFLOW_AUTO_LOGIN` environment variable] is set to `true`.
 
 ```bash
 langflow api-key [OPTIONS]
@@ -83,8 +83,8 @@ python -m langflow migration [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| `--test` | `true` | Boolean | Run migrations in test mode. Use `--no-test` to disable test mode. |
-| `--fix` | `false` (`--no-fix`) | Boolean | Fix migrations. This is a destructive operation, and all affected data will be deleted. Only use this option if you know what you are doing. |
+| `--test` | `true` | [Boolean](#boolean) | Run migrations in test mode. Use `--no-test` to disable test mode. |
+| `--fix` | `false` (`--no-fix`) | [Boolean](#boolean) | Fix migrations. This is a destructive operation, and all affected data will be deleted. Only use this option if you know what you are doing. |
 | `--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
 
@@ -102,7 +102,7 @@ python -m langflow run [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| `--host` | `127.0.0.1` | String | The host on which the Langflow server will run.<br/>See `LANGFLOW_HOST` variable. |
+| `--host` | `127.0.0.1` | String | The host on which the Langflow server will run.<br/>See [`LANGFLOW_HOST` variable](./environment-variables.md#LANGFLOW_HOST). |
 | `--workers` | `1` | Integer | Number of worker processes.<br/>See `LANGFLOW_WORKERS` variable. |
 | `--worker-timeout` | `300` | Integer | Worker timeout in seconds.<br/>See `LANGFLOW_WORKER_TIMEOUT` variable. |
 | `--port` | `7860` | Integer | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use.<br/>See `LANGFLOW_PORT` variable. |
@@ -111,13 +111,13 @@ python -m langflow run [OPTIONS]
 | `--log-level` | `critical` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | Set the logging level.<br/>See `LANGFLOW_LOG_LEVEL` variable. |
 | `--log-file` | `logs/langflow.log` | String | Set the path to the log file for Langflow.<br/>See `LANGFLOW_LOG_FILE` variable. |
 | `--cache` | `InMemoryCache` | `InMemoryCache`<br/>`SQLiteCache` | Type of cache to use.<br/>See `LANGFLOW_LANGCHAIN_CACHE` variable. |
-| `--dev` | `false` (`--no-dev`) | Boolean | Run Langflow in development mode (may contain bugs).<br/>See `LANGFLOW_DEV` variable. |
+| `--dev` | `false` (`--no-dev`) | [Boolean](#boolean) | Run Langflow in development mode (may contain bugs).<br/>See `LANGFLOW_DEV` variable. |
 | `--frontend-path` | `./frontend` | String | Path to the frontend directory containing build files. This is for development purposes only.<br/>See `LANGFLOW_FRONTEND_PATH` variable. |
-| `--open-browser` | `true` | Boolean | Open the system web browser on startup.. Use `--no-open-browser` to disable opening the system web browser on startup.<br/> See `LANGFLOW_OPEN_BROWSER` variable. |
-| `--remove-api-keys` | `false` (`--no-remove-api-keys`) | Boolean | Remove API keys from the projects saved in the database.<br/> See `LANGFLOW_REMOVE_API_KEYS` variable. |
-| `--backend-only` | `false` (`--no-backend-only`) | Boolean | Only run Langflow's backend server (no frontend).<br/>See `LANGFLOW_BACKEND_ONLY` variable. |
-| `--store` | `true` | Boolean | Enable the Langflow Store features. Use `--no-store` to disable the Langflow Store features.<br/>See `LANGFLOW_STORE` variable. |
-| `--auto-saving` | `true` | Boolean | Enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving.<br/>See `LANGFLOW_AUTO_SAVING` variable. |
+| `--open-browser` | `true` | [Boolean](#boolean) | Open the system web browser on startup.. Use `--no-open-browser` to disable opening the system web browser on startup.<br/> See `LANGFLOW_OPEN_BROWSER` variable. |
+| `--remove-api-keys` | `false` (`--no-remove-api-keys`) | [Boolean](#boolean) | Remove API keys from the projects saved in the database.<br/> See `LANGFLOW_REMOVE_API_KEYS` variable. |
+| `--backend-only` | `false` (`--no-backend-only`) | [Boolean](#boolean) | Only run Langflow's backend server (no frontend).<br/>See `LANGFLOW_BACKEND_ONLY` variable. |
+| `--store` | `true` | [Boolean](#boolean) | Enable the Langflow Store features. Use `--no-store` to disable the Langflow Store features.<br/>See `LANGFLOW_STORE` variable. |
+| `--auto-saving` | `true` | [Boolean](#boolean) | Enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving.<br/>See `LANGFLOW_AUTO_SAVING` variable. |
 | `--auto-saving-interval` | `1000` | Integer | Set the interval for flow auto-saving in milliseconds.<br/>See `LANGFLOW_AUTO_SAVING_INTERVAL` variable. |
 | `--health-check-max-retries` | `5` | Integer | Set the maximum number of retries for the health check. Use `--no-health-check-max-retries` to disable the maximum number of retries for the health check.<br/>See `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` variable. |
 | `--max-file-size-upload` | `100` | Integer | Set the maximum file size for the upload in megabytes.<br/>See `LANGFLOW_MAX_FILE_SIZE_UPLOAD` variable. |
@@ -155,7 +155,7 @@ Or, you can write them using an equals sign (`=`) between the option flag and th
 
 Values that contain spaces must be surrounded by quotation marks: `--option 'Value with Spaces'` or `--option='Value with Spaces'`.
 
-### Boolean values
+### Boolean values {#boolean}
 
 Boolean options turn a behavior on or off, and therefore accept no arguments.
 To activate a boolean option, type it on the command line.
