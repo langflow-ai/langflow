@@ -40,16 +40,9 @@ test("user should interact with link component", async ({ context, page }) => {
   });
   await page.getByTestId("blank-flow").click();
 
-  await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("custom component");
-
   await page.waitForTimeout(1000);
 
-  await page
-    .locator('//*[@id="helpersCustom Component"]')
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+  await page.getByTestId("sidebar-custom-component-button").click();
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
 

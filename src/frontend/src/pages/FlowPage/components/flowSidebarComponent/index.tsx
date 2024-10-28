@@ -635,6 +635,7 @@ export function FlowSidebarComponent() {
                 addComponent(customComponent, "CustomComponent");
               }
             }}
+            data-testid="sidebar-custom-component-button"
             className="flex items-center gap-2"
           >
             <ForwardedIconComponent

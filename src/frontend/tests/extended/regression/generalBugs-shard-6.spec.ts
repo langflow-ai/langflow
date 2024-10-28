@@ -28,13 +28,7 @@ test("should be able to see error when something goes wrong on Code Modal", asyn
 
   await page.getByTestId("blank-flow").click();
 
-  await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("custom component");
-  await page.waitForTimeout(1000);
-
-  await page
-    .getByTestId("helpersCustom Component")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.getByTestId("sidebar-custom-component-button").click();
 
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
