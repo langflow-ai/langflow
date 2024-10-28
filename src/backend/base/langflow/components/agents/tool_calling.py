@@ -35,9 +35,6 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         return self.chat_history
 
     def create_agent_runnable(self):
-        if "input" not in self.user_prompt:
-            msg = "Prompt must contain 'input' key."
-            raise ValueError(msg)
         messages = [
             ("system", self.system_prompt),
             ("placeholder", "{chat_history}"),
