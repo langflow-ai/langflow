@@ -107,57 +107,57 @@ That means, if you happen to set the same environment variable in both your term
 
 The following table lists the environment variables supported by Langflow.
 
-| Variable | Values | Default | Required | Description |
-|----------|--------|---------|----------|-------------|
-| `BACKEND_URL` | String | `http://localhost:7860/` |  | Value must finish with slash (`/`). |
-| `DO_NOT_TRACK` | Boolean | `False` | No | If enabled, Langflow will not track telemetry. |
-| `LANGCHAIN_API_KEY` | String | - | Yes | No description available. |
-| `LANGCHAIN_PROJECT` | String | `Langflow` | No | No description available. |
-| `LANGFLOW_AUTO_LOGIN` |  |  |  | Set AUTO_LOGIN to false if you want to disable auto login and use the login form to login. LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD must be set if AUTO_LOGIN is set to false. |
-| `LANGFLOW_AUTO_SAVING` | Boolean | `true` |  | Enable flow auto-saving.<br/>See `--auto-saving` option. |
-| `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` |  | Set the interval for flow auto-saving in milliseconds.<br/>See `--auto-saving-interval` option. |
-| `LANGFLOW_BACKEND_ONLY` | Boolean | `false` |  | Only run Langflow's backend server (no frontend).<br/>See `--backend-only` option. |
-| `LANGFLOW_CACHE_TYPE` | `async`<br/>`redis`<br/>`memory`<br/>`disck`<br/>`critical` | `async` |  | Set the cache type for Langflow.<br/>If you set the type to `redis`, then you must also set the following environment variables: `LANGFLOW_REDIS_HOST`, `LANGFLOW_REDIS_PORT`, `LANGFLOW_REDIS_DB`, and `LANGFLOW_REDIS_CACHE_EXPIRE`. |
-| `LANGFLOW_COMPONENTS_PATH` | String | `langflow/components` | Yes | Path to the directory containing custom components.<br/>See `--components-path` option. |
-| `LANGFLOW_CONFIG_DIR` | String |  |  | Set the Langflow configuration directory where files, logs, and the Langflow database are stored. |
-| `LANGFLOW_DATABASE_URL` | String | None | Yes | Set the database URL for Langflow. If you don't provide one, Langflow uses an SQLite database. |
-| `LANGFLOW_DEV` | Boolean | `false` |  | Run Langflow in development mode (may contain bugs).<br/>See `--dev` option. |
-| `LANGFLOW_DOWNLOAD_WEBHOOK_UR` |  |  |  | No description available. |
-| `LANGFLOW_FALLBACK_TO_ENV_VAR` | Boolean | `true` |  | If enabled, [global variables](../Settings/settings-global-variables.md) set in the Langflow UI fall back to an environment variable with the same name when Langflow fails to retrieve the variable value. |
-| `LANGFLOW_FRONTEND_PATH` | String | `./frontend` |  | Path to the frontend directory containing build files. This is for development purposes only.<br/>See `--frontend-path` option. |
-| `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` |  | Set the maximum number of retries for the health check.<br/>See `--health-check-max-retries` option. |
-| `LANGFLOW_HOST` | String | `127.0.0.1` |  | The host on which the Langflow server will run.<br/>See `--host` option. |
-| `LANGFLOW_LANGCHAIN_CACHE` | `InMemoryCache`<br/>`SQLiteCache` | `InMemoryCache` | Yes | Type of cache to use.<br/>See `--cache` option. |
-| `LANGFLOW_LIKE_WEBHOOK_URL` |  |  |  | No description available. |
-| `LANGFLOW_LOG_ENV` | String | `` | No | No description available. |
-| `LANGFLOW_LOG_FILE` | String | `logs/langflow.log` | No | Set the path to the log file for Langflow.<br/>See `--log-file` option. |
-| `LANGFLOW_LOG_LEVEL` | String | `critical` | Yes | Set the logging level.<br/>See `--log-level` option. |
-| `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | integer | `0` | No | No description available. |
-| `LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `100` |  | Set the maximum file size for the upload in megabytes.<br/>See `--max-file-size-upload` option. |
-| `LANGFLOW_OPEN_BROWSER` | Boolean | `true` |  | Open the system web browser on startup.<br/> See `--open-browser` option. |
-| `LANGFLOW_PORT` | Integer | `7860` |  | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use.<br/>See `--port` option. |
-| `LANGFLOW_PROMETHEUS_ENABLED` | Boolean | `false` |  | Expose Prometheus metrics. |
-| `LANGFLOW_PROMETHEUS_PORT` | Integer | `9090` | Yes | Set the port on which Langflow exposes Prometheus metrics. |
-| `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` |  | See `LANGFLOW_CACHE_TYPE` variable. |
-| `LANGFLOW_REDIS_DB ` | Integer | `0` |  | See `LANGFLOW_CACHE_TYPE` variable. |
-| `LANGFLOW_REDIS_HOST` | String | `localhost` | Yes | See `LANGFLOW_CACHE_TYPE` variable. |
-| `LANGFLOW_REDIS_PORT` | String | `6379` | Yes | See `LANGFLOW_CACHE_TYPE` variable. |
-| `LANGFLOW_REMOVE_API_KEYS` | Boolean | `false` |  | Remove API keys from the projects saved in the database.<br/> See `--remove-api-keys` option. |
-| `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` | Boolean | `false` |  | Save the Langflow database in `LANGFLOW_CONFIG_DIR` instead of in the Langflow package directory. Note, when this variable is set to default (`false`), the database isn't shared between different virtual environments and the database is deleted when you uninstall Langflow. |
-| `LANGFLOW_STORE` | Boolean | `true` |  | Enable the Langflow Store.<br/>See `--store` option. |
-| `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` | Boolean | `true` |  | Store environment variables as Global Variables in the database. |
-| `LANGFLOW_SUPERUSER` |  |  |  | Specify the name for the superuser.<br/>See `--username` option. |
-| `LANGFLOW_SUPERUSER_PASSWORD` |  |  |  | Specify the password for the superuser.<br/>See `--password` option. |
-| `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` | String | None |  | Comma-separated list of environment variables to get from the environment and store as [global variables](../Settings/settings-global-variables.md). |
-| `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` |  | Worker timeout in seconds.<br/>See `--worker-timeout` option. |
-| `LANGFLOW_WORKERS` | Integer | `1` |  | Number of worker processes.<br/>See `--workers` option. |
-| `LANGFUSE_HOST` | String | `-` | No | No description available. |
-| `LANGFUSE_PUBLIC_KEY` | String | `-` | No | No description available. |
-| `LANGFUSE_SECRET_KEY` | String | `-` | No | No description available. |
-| `OPENAI_API_KEY` | String | - | Yes | No description available. |
-| `RABBITMQ_DEFAULT_PASS` | String | `langflow` | No | No description available. |
-| `RABBITMQ_DEFAULT_USER` | String | `langflow` | No | RabbitMQ. |
-| `RESULT_BACKEND` | String | `redis://localhost:6379/0` | No | No description available. |
+| Variable | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `BACKEND_URL` | String | `http://localhost:7860/` | Value must finish with slash (`/`). |
+| `DO_NOT_TRACK` | Boolean | `False` | If enabled, Langflow will not track telemetry. |
+| `LANGCHAIN_API_KEY` | String | - | No description available. |
+| `LANGCHAIN_PROJECT` | String | `Langflow` | No description available. |
+| `LANGFLOW_AUTO_LOGIN` |  |  | Set AUTO_LOGIN to false if you want to disable auto login and use the login form to login. LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD must be set if AUTO_LOGIN is set to false. |
+| `LANGFLOW_AUTO_SAVING` | Boolean | `true` | Enable flow auto-saving.<br/>See `--auto-saving` option. |
+| `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the interval for flow auto-saving in milliseconds.<br/>See `--auto-saving-interval` option. |
+| `LANGFLOW_BACKEND_ONLY` | Boolean | `false` | Only run Langflow's backend server (no frontend).<br/>See `--backend-only` option. |
+| `LANGFLOW_CACHE_TYPE` | `async`<br/>`redis`<br/>`memory`<br/>`disck`<br/>`critical` | `async` | Set the cache type for Langflow.<br/>If you set the type to `redis`, then you must also set the following environment variables: `LANGFLOW_REDIS_HOST`, `LANGFLOW_REDIS_PORT`, `LANGFLOW_REDIS_DB`, and `LANGFLOW_REDIS_CACHE_EXPIRE`. |
+| `LANGFLOW_COMPONENTS_PATH` | String | `langflow/components` | Path to the directory containing custom components.<br/>See `--components-path` option. |
+| `LANGFLOW_CONFIG_DIR` | String |  | Set the Langflow configuration directory where files, logs, and the Langflow database are stored. |
+| `LANGFLOW_DATABASE_URL` | String | None | Set the database URL for Langflow. If you don't provide one, Langflow uses an SQLite database. |
+| `LANGFLOW_DEV` | Boolean | `false` | Run Langflow in development mode (may contain bugs).<br/>See `--dev` option. |
+| `LANGFLOW_DOWNLOAD_WEBHOOK_UR` |  |  | No description available. |
+| `LANGFLOW_FALLBACK_TO_ENV_VAR` | Boolean | `true` | If enabled, [global variables](../Settings/settings-global-variables.md) set in the Langflow UI fall back to an environment variable with the same name when Langflow fails to retrieve the variable value. |
+| `LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. This is for development purposes only.<br/>See `--frontend-path` option. |
+| `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for the health check.<br/>See `--health-check-max-retries` option. |
+| `LANGFLOW_HOST` | String | `127.0.0.1` | The host on which the Langflow server will run.<br/>See `--host` option. |
+| `LANGFLOW_LANGCHAIN_CACHE` | `InMemoryCache`<br/>`SQLiteCache` | `InMemoryCache` | Type of cache to use.<br/>See `--cache` option. |
+| `LANGFLOW_LIKE_WEBHOOK_URL` |  |  | No description available. |
+| `LANGFLOW_LOG_ENV` | String | `` | No description available. |
+| `LANGFLOW_LOG_FILE` | String | `logs/langflow.log` | Set the path to the log file for Langflow.<br/>See `--log-file` option. |
+| `LANGFLOW_LOG_LEVEL` | String | `critical` | Set the logging level.<br/>See `--log-level` option. |
+| `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | integer | `0` | No description available. |
+| `LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `100` | Set the maximum file size for the upload in megabytes.<br/>See `--max-file-size-upload` option. |
+| `LANGFLOW_OPEN_BROWSER` | Boolean | `true` | Open the system web browser on startup.<br/> See `--open-browser` option. |
+| `LANGFLOW_PORT` | Integer | `7860` | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use.<br/>See `--port` option. |
+| `LANGFLOW_PROMETHEUS_ENABLED` | Boolean | `false` | Expose Prometheus metrics. |
+| `LANGFLOW_PROMETHEUS_PORT` | Integer | `9090` | Set the port on which Langflow exposes Prometheus metrics. |
+| `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` | See `LANGFLOW_CACHE_TYPE` variable. |
+| `LANGFLOW_REDIS_DB ` | Integer | `0` | See `LANGFLOW_CACHE_TYPE` variable. |
+| `LANGFLOW_REDIS_HOST` | String | `localhost` | See `LANGFLOW_CACHE_TYPE` variable. |
+| `LANGFLOW_REDIS_PORT` | String | `6379` | See `LANGFLOW_CACHE_TYPE` variable. |
+| `LANGFLOW_REMOVE_API_KEYS` | Boolean | `false` | Remove API keys from the projects saved in the database.<br/> See `--remove-api-keys` option. |
+| `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` | Boolean | `false` | Save the Langflow database in `LANGFLOW_CONFIG_DIR` instead of in the Langflow package directory. Note, when this variable is set to default (`false`), the database isn't shared between different virtual environments and the database is deleted when you uninstall Langflow. |
+| `LANGFLOW_STORE` | Boolean | `true` | Enable the Langflow Store.<br/>See `--store` option. |
+| `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` | Boolean | `true` | Store environment variables as Global Variables in the database. |
+| `LANGFLOW_SUPERUSER` |  |  | Specify the name for the superuser.<br/>See `--username` option. |
+| `LANGFLOW_SUPERUSER_PASSWORD` |  |  | Specify the password for the superuser.<br/>See `--password` option. |
+| `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` | String | None | Comma-separated list of environment variables to get from the environment and store as [global variables](../Settings/settings-global-variables.md). |
+| `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds.<br/>See `--worker-timeout` option. |
+| `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes.<br/>See `--workers` option. |
+| `LANGFUSE_HOST` | String | `-` | No description available. |
+| `LANGFUSE_PUBLIC_KEY` | String | `-` | No description available. |
+| `LANGFUSE_SECRET_KEY` | String | `-` | No description available. |
+| `OPENAI_API_KEY` | String | - | No description available. |
+| `RABBITMQ_DEFAULT_PASS` | String | `langflow` | No description available. |
+| `RABBITMQ_DEFAULT_USER` | String | `langflow` | RabbitMQ. |
+| `RESULT_BACKEND` | String | `redis://localhost:6379/0` | No description available. |
 
 
 ## Removed
