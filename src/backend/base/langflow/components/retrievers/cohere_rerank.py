@@ -51,9 +51,7 @@ class CohereRerankComponent(LCVectorStoreComponent):
             value="langflow",
             advanced=True,
         ),
-        HandleInput(
-            name="retriever", display_name="Retriever", input_types=["Retriever"]
-        ),
+        HandleInput(name="retriever", display_name="Retriever", input_types=["Retriever"]),
     ]
 
     outputs = [
@@ -76,16 +74,12 @@ class CohereRerankComponent(LCVectorStoreComponent):
             top_n=self.top_n,
             user_agent=self.user_agent,
         )
-        retriever = ContextualCompressionRetriever(
-            base_compressor=cohere_reranker, base_retriever=self.retriever
-        )
+        retriever = ContextualCompressionRetriever(base_compressor=cohere_reranker, base_retriever=self.retriever)
         return cast(Retriever, retriever)
 
     async def search_documents(self) -> list[Data]:  # type: ignore[override]
         retriever = self.build_base_retriever()
-        documents = await retriever.ainvoke(
-            self.search_query, config={"callbacks": self.get_langchain_callbacks()}
-        )
+        documents = await retriever.ainvoke(self.search_query, config={"callbacks": self.get_langchain_callbacks()})
         data = self.to_data(documents)
         self.status = data
         return data

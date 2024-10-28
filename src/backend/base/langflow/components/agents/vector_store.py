@@ -29,6 +29,4 @@ class VectorStoreAgentComponent(LCAgentComponent):
 
     def build_agent(self) -> AgentExecutor:
         toolkit = VectorStoreToolkit(vectorstore_info=self.vectorstore, llm=self.llm)
-        return create_vectorstore_agent(
-            llm=self.llm, toolkit=toolkit, **self.get_agent_kwargs()
-        )
+        return create_vectorstore_agent(llm=self.llm, toolkit=toolkit, **self.get_agent_kwargs())

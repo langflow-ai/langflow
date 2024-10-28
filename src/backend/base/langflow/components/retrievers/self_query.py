@@ -57,9 +57,7 @@ class SelfQueryRetrieverComponent(Component):
     ]
 
     def retrieve_documents(self) -> list[Data]:
-        metadata_field_infos = [
-            AttributeInfo(**value.data) for value in self.attribute_infos
-        ]
+        metadata_field_infos = [AttributeInfo(**value.data) for value in self.attribute_infos]
         self_query_retriever = SelfQueryRetriever.from_llm(
             llm=self.llm,
             vectorstore=self.vectorstore,
@@ -76,9 +74,7 @@ class SelfQueryRetrieverComponent(Component):
             msg = f"Query type {type(self.query)} not supported."
             raise TypeError(msg)
 
-        documents = self_query_retriever.invoke(
-            input=input_text, config={"callbacks": self.get_langchain_callbacks()}
-        )
+        documents = self_query_retriever.invoke(input=input_text, config={"callbacks": self.get_langchain_callbacks()})
         data = [Data.from_document(document) for document in documents]
         self.status = data
         return data

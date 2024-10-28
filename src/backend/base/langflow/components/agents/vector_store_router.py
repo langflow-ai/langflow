@@ -30,6 +30,4 @@ class VectorStoreRouterAgentComponent(LCAgentComponent):
 
     def build_agent(self) -> AgentExecutor:
         toolkit = VectorStoreRouterToolkit(vectorstores=self.vectorstores, llm=self.llm)
-        return create_vectorstore_router_agent(
-            llm=self.llm, toolkit=toolkit, **self.get_agent_kwargs()
-        )
+        return create_vectorstore_router_agent(llm=self.llm, toolkit=toolkit, **self.get_agent_kwargs())

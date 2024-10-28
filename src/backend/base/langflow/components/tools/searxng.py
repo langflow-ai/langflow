@@ -52,9 +52,7 @@ class SearXNGToolComponent(LCToolComponent):
         Output(display_name="Tool", name="result_tool", method="build_tool"),
     ]
 
-    def update_build_config(
-        self, build_config: dotdict, field_value: Any, field_name: str | None = None
-    ) -> dotdict:
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name is None:
             return build_config
 
@@ -64,9 +62,7 @@ class SearXNGToolComponent(LCToolComponent):
         try:
             url = f"{field_value}/config"
 
-            response = requests.get(
-                url=url, headers=self.search_headers.copy(), timeout=10
-            )
+            response = requests.get(url=url, headers=self.search_headers.copy(), timeout=10)
             data = None
             if response.headers.get("Content-Encoding") == "zstd":
                 data = json.loads(response.content)
@@ -97,9 +93,7 @@ class SearXNGToolComponent(LCToolComponent):
                 if not SearxSearch._categories and not categories:
                     msg = "No categories provided."
                     raise ValueError(msg)
-                all_categories = SearxSearch._categories + list(
-                    set(categories) - set(SearxSearch._categories)
-                )
+                all_categories = SearxSearch._categories + list(set(categories) - set(SearxSearch._categories))
                 try:
                     url = f"{SearxSearch._url}/"
                     headers = SearxSearch._headers.copy()
@@ -115,9 +109,7 @@ class SearXNGToolComponent(LCToolComponent):
                         timeout=10,
                     ).json()
 
-                    num_results = min(
-                        SearxSearch._max_results, len(response["results"])
-                    )
+                    num_results = min(SearxSearch._max_results, len(response["results"]))
                     return [response["results"][i] for i in range(num_results)]
                 except Exception as e:  # noqa: BLE001
                     logger.opt(exception=True).debug("Error running SearXNG Search")

@@ -113,9 +113,7 @@ class FrontendNode(BaseModel):
         pass
 
     def set_base_classes_from_outputs(self) -> None:
-        self.base_classes = [
-            output_type for output in self.outputs for output_type in output.types
-        ]
+        self.base_classes = [output_type for output in self.outputs for output_type in output.types]
 
     def validate_component(self) -> None:
         self.validate_name_overlap()
@@ -155,9 +153,7 @@ class FrontendNode(BaseModel):
         error_message = ""
         if output_overlap:
             output_overlap_str = ", ".join(f"'{x}'" for x in output_overlap)
-            error_message += (
-                f"Output names {output_overlap_str} are reserved attributes.\n"
-            )
+            error_message += f"Output names {output_overlap_str} are reserved attributes.\n"
         if input_overlap:
             input_overlap_str = ", ".join(f"'{x}'" for x in input_overlap)
             error_message += f"Input names {input_overlap_str} are reserved attributes."

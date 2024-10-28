@@ -53,32 +53,21 @@ class SQLGeneratorComponent(LCChainComponent):
     outputs = [Output(display_name="Text", name="text", method="invoke_chain")]
 
     def invoke_chain(self) -> Message:
-        prompt_template = (
-            PromptTemplate.from_template(template=self.prompt) if self.prompt else None
-        )
+        prompt_template = PromptTemplate.from_template(template=self.prompt) if self.prompt else None
 
         if self.top_k < 1:
             msg = "Top K must be greater than 0."
             raise ValueError(msg)
 
         if not prompt_template:
-            sql_query_chain = create_sql_query_chain(
-                llm=self.llm, db=self.db, k=self.top_k
-            )
+            sql_query_chain = create_sql_query_chain(llm=self.llm, db=self.db, k=self.top_k)
         else:
             # Check if {question} is in the prompt
-            if (
-                "{question}" not in prompt_template.template
-                or "question" not in prompt_template.input_variables
-            ):
+            if "{question}" not in prompt_template.template or "question" not in prompt_template.input_variables:
                 msg = "Prompt must contain `{question}` to be used with Natural Language to SQL."
                 raise ValueError(msg)
-            sql_query_chain = create_sql_query_chain(
-                llm=self.llm, db=self.db, prompt=prompt_template, k=self.top_k
-            )
-        query_writer: Runnable = sql_query_chain | {
-            "query": lambda x: x.replace("SQLQuery:", "").strip()
-        }
+            sql_query_chain = create_sql_query_chain(llm=self.llm, db=self.db, prompt=prompt_template, k=self.top_k)
+        query_writer: Runnable = sql_query_chain | {"query": lambda x: x.replace("SQLQuery:", "").strip()}
         response = query_writer.invoke(
             {"question": self.input_value},
             config={"callbacks": self.get_langchain_callbacks()},

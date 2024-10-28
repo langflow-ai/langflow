@@ -8,9 +8,7 @@ from langflow.inputs import HandleInput, MultilineInput
 class LLMCheckerChainComponent(LCChainComponent):
     display_name = "LLMCheckerChain"
     description = "Chain for question-answering with self-verification."
-    documentation = (
-        "https://python.langchain.com/docs/modules/chains/additional/llm_checker"
-    )
+    documentation = "https://python.langchain.com/docs/modules/chains/additional/llm_checker"
     name = "LLMCheckerChain"
     legacy: bool = True
 

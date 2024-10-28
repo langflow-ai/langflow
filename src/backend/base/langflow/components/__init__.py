@@ -1,12 +1,12 @@
 from . import (
     agents,
     chains,
+    custom_component,
     documentloaders,
     embeddings,
     helpers,
     inputs,
     link_extractors,
-    custom_component,
     memories,
     models,
     outputs,

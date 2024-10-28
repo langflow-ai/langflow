@@ -42,6 +42,4 @@ class JsonAgentComponent(LCAgentComponent):
             spec = JsonSpec.from_file(path)
         toolkit = JsonToolkit(spec=spec)
 
-        return create_json_agent(
-            llm=self.llm, toolkit=toolkit, **self.get_agent_kwargs()
-        )
+        return create_json_agent(llm=self.llm, toolkit=toolkit, **self.get_agent_kwargs())

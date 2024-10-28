@@ -19,16 +19,12 @@ from langflow.services.database.models.base import orjson_dumps
 
 class JSONDocumentBuilder(CustomComponent):
     display_name: str = "JSON Document Builder"
-    description: str = (
-        "Build a Document containing a JSON object using a key and another Document page content."
-    )
+    description: str = "Build a Document containing a JSON object using a key and another Document page content."
     name = "JSONDocumentBuilder"
     legacy: bool = True
 
     output_types: list[str] = ["Document"]
-    documentation: str = (
-        "https://docs.langflow.org/components/utilities#json-document-builder"
-    )
+    documentation: str = "https://docs.langflow.org/components/utilities#json-document-builder"
 
     field_config = {
         "key": {"display_name": "Key"},
@@ -43,15 +39,10 @@ class JSONDocumentBuilder(CustomComponent):
         documents = None
         if isinstance(document, list):
             documents = [
-                Document(
-                    page_content=orjson_dumps({key: doc.page_content}, indent_2=False)
-                )
-                for doc in document
+                Document(page_content=orjson_dumps({key: doc.page_content}, indent_2=False)) for doc in document
             ]
         elif isinstance(document, Document):
-            documents = Document(
-                page_content=orjson_dumps({key: document.page_content}, indent_2=False)
-            )
+            documents = Document(page_content=orjson_dumps({key: document.page_content}, indent_2=False))
         else:
             msg = f"Expected Document or list of Documents, got {type(document)}"
             raise TypeError(msg)
