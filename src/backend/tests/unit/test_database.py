@@ -8,7 +8,7 @@ from httpx import AsyncClient
 
 from langflow.api.v1.schemas import FlowListCreate, ResultDataResponse
 from langflow.graph.utils import log_transaction, log_vertex_build
-from langflow.initial_setup.setup import load_flows_from_directory, load_starter_projects
+from langflow.initial_setup.setup import load_starter_projects
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
