@@ -20,7 +20,7 @@ export function Nav({ links, currentTab, onClick }: NavProps) {
               name={link.icon}
               className={cn(
                 "mr-2 h-4 w-4 stroke-2 text-muted-foreground",
-                link.id === currentTab && "text-pink-400",
+                link.id === currentTab && "x-gradient",
               )}
             />
             <span

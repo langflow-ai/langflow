@@ -1191,4 +1191,8 @@
   .color-option-container {
     @apply w-fit;
   }
+
+  .x-gradient {
+    @apply stroke-[url(#x-gradient)] bg-blend-hard-light;
+  }
 }
