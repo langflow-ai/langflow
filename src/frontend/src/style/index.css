@@ -88,7 +88,8 @@
     --note-indigo: #e0e7ff;
     --note-emerald: #d1fae5;
     --note-red: #fee2e2;
-
+    --error-red:0,86%,97%; /*hsla(0, 86%, 97%)*/
+    --error-red-border: 0,96%,89%; /*hsla(0,96%,89%)*/
     --note-default-opacity: #f1f5f980;
     --note-indigo-opacity: #312e8180;
     --note-emerald-opacity: #064e3b80;
@@ -130,7 +131,10 @@
     --accent-pink-foreground: 329 86% 70%; /* hsl(329, 86%, 70%) */
     --note-amber: 46 97% 65%; /* hsl(46, 97%, 65%) */
     --tooltip: 0 0% 100%; /* hsl(0, 0%, 100%) */
+
     --tooltip-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --error-red:0,75%,15%; /*hsla(0, 75%, 15%)*/
+    --error-red-border: 0,70%,35%; /*hsla(0,70%,35%)*/
 
     --note-default: #0f172a;
     --note-indigo: #312e81;
