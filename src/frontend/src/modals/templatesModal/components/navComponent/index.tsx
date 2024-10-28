@@ -25,7 +25,10 @@ export function Nav({ links, currentTab, onClick }: NavProps) {
             />
             <span
               data-testid={`side_nav_options_${convertTestName(link.title)}`}
-              className="flex-1 text-left text-primary"
+              className={cn(
+                "flex-1 text-left font-normal text-secondary-foreground",
+                link.id === currentTab && "font-medium text-primary",
+              )}
             >
               {link.title}
             </span>
