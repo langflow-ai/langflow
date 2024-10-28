@@ -319,7 +319,7 @@ export default function HandleRenderComponent({
             transition: "all 0.2s",
             boxShadow: getNeonShadow(colors[0], isHovered || openHandle),
             animation:
-              (isHovered || openHandle) && !isNullHandle
+              isHovered || openHandle
                 ? "pulseNeon 0.7s ease-in-out infinite"
                 : "none",
           }}
