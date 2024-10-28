@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import os
 import platform
 from datetime import datetime, timezone
@@ -112,7 +111,7 @@ class TelemetryService(Service):
     async def log_package_component(self, payload: ComponentPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "component"))
 
-    async def start(self) -> None:
+    def start(self) -> None:
         if self.running or self.do_not_track:
             return
         try:
@@ -131,6 +130,15 @@ class TelemetryService(Service):
         except Exception:  # noqa: BLE001
             logger.exception("Error flushing logs")
 
+    async def _cancel_task(self, task: asyncio.Task, cancel_msg: str) -> None:
+        task.cancel(cancel_msg)
+        try:
+            await task
+        except asyncio.CancelledError:
+            current_task = asyncio.current_task()
+            if current_task and current_task.cancelling() > 0:
+                raise
+
     async def stop(self) -> None:
         if self.do_not_track or self._stopping:
             return
@@ -140,9 +148,9 @@ class TelemetryService(Service):
             await self.flush()
             self.running = False
             if self.worker_task:
-                self.worker_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await self.worker_task
+                await self._cancel_task(self.worker_task, "Cancel telemetry worker task")
+            if self.log_package_version_task:
+                await self._cancel_task(self.log_package_version_task, "Cancel telemetry log package version task")
             await self.client.aclose()
         except Exception:  # noqa: BLE001
             logger.exception("Error stopping tracing service")

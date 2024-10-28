@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import asyncio
 import inspect
 from copy import deepcopy
 from textwrap import dedent
@@ -442,7 +443,8 @@ class Component(CustomComponent):
 
     def _process_connection_or_parameters(self, key, value) -> None:
         # if value is a list of components, we need to process each component
-        if isinstance(value, list):
+        # Note this update make sure it is not a list str | int | float | bool | type(None)
+        if isinstance(value, list) and not any(isinstance(val, str | int | float | bool | type(None)) for val in value):
             for val in value:
                 self._process_connection_or_parameter(key, val)
         else:
@@ -505,11 +507,10 @@ class Component(CustomComponent):
     async def _run(self):
         # Resolve callable inputs
         for key, _input in self._inputs.items():
-            if callable(_input.value):
-                result = _input.value()
-                if inspect.iscoroutine(result):
-                    result = await result
-                self._inputs[key].value = result
+            if asyncio.iscoroutinefunction(_input.value):
+                self._inputs[key].value = await _input.value()
+            elif callable(_input.value):
+                self._inputs[key].value = await asyncio.to_thread(_input.value)
 
         self.set_attributes({})
 
@@ -717,10 +718,11 @@ class Component(CustomComponent):
                         _results[output.name] = output.value
                         result = output.value
                     else:
-                        result = method()
                         # If the method is asynchronous, we need to await it
                         if inspect.iscoroutinefunction(method):
-                            result = await result
+                            result = await method()
+                        else:
+                            result = await asyncio.to_thread(method)
                         if (
                             self._vertex is not None
                             and isinstance(result, Message)
