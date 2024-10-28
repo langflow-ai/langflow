@@ -442,7 +442,7 @@ async def download_multiple_file(
 
 
 @router.get("/basic_examples/", response_model=list[FlowRead], status_code=200)
-def read_basic_examples(
+async def read_basic_examples(
     *,
     session: DbSession,
 ):
