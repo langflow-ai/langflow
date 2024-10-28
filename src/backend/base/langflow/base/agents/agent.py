@@ -13,6 +13,7 @@ from langflow.field_typing import Text
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.schema import Data
+from langflow.schema.log import LogFunctionType
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
@@ -112,39 +113,6 @@ class LCAgentComponent(Component):
 
         return cast(str, result)
 
-    async def process_agent_events(self, agent_executor: AsyncIterator[dict[str, Any]]) -> str:
-        final_output = ""
-        async for event in agent_executor:
-            match event["event"]:
-                case "on_chain_start":
-                    self.log(f"🚀 Agent initiated with input: {event['data'].get('input')}")
-
-                case "on_chain_end":
-                    data_output = event["data"].get("output", {})
-                    if data_output and "output" in data_output:
-                        final_output = data_output["output"]
-                        self.log(f"✅ Agent completed. Final output: {final_output}")
-                    elif data_output and "agent_scratchpad" in data_output and data_output["agent_scratchpad"]:
-                        self.log(f"🔍 Agent scratchpad: {data_output['agent_scratchpad']}")
-
-                case "on_chat_model_stream":
-                    content = event["data"]["chunk"].content
-                    if content:
-                        self.log(f"💬 Model stream: {content}")
-
-                case "on_tool_start":
-                    self.log(f"🔧 Initiating tool: '{event['name']}' with inputs: {event['data'].get('input')}")
-
-                case "on_tool_end":
-                    self.log(f"🏁 Tool '{event['name']}' execution completed")
-                    self.log(f"📊 Tool output: {event['data'].get('output')}")
-
-                case _:
-                    # Handle any other event types or ignore them
-                    pass
-
-        return final_output
-
     async def handle_chain_start(self, event: dict[str, Any]) -> None:
         if event["name"] == "Agent":
             self.log(f"Starting agent: {event['name']} with input: {event['data'].get('input')}")
@@ -199,12 +167,13 @@ class LCToolsAgentComponent(LCAgentComponent):
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
-        result = await self.process_agent_events(
+        result = await process_agent_events(
             runnable.astream_events(
                 input_dict,
                 config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
                 version="v2",
-            )
+            ),
+            self.log,
         )
 
         self.status = result
@@ -213,3 +182,59 @@ class LCToolsAgentComponent(LCAgentComponent):
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
+
+
+# Add this function near the top of the file, after the imports
+
+
+async def process_agent_events(agent_executor: AsyncIterator[dict[str, Any]], log_callback: LogFunctionType) -> str:
+    """Process agent events and return the final output.
+
+    Args:
+        agent_executor: An async iterator of agent events
+        log_callback: A callable function for logging messages
+
+    Returns:
+        str: The final output from the agent
+    """
+    final_output = ""
+    async for event in agent_executor:
+        match event["event"]:
+            case "on_chain_start":
+                if event["data"].get("input"):
+                    log_callback(f"🚀 Agent initiated with input: {event['data'].get('input')}", name="Agent Start")
+
+            case "on_chain_end":
+                data_output = event["data"].get("output", {})
+                if data_output and "output" in data_output:
+                    final_output = data_output["output"]
+                    log_callback(f"✅ Agent completed. Final output: {final_output}", name="Agent End")
+                elif data_output and "agent_scratchpad" in data_output and data_output["agent_scratchpad"]:
+                    log_callback(f"🔍 Agent scratchpad: {data_output['agent_scratchpad']}", name="Agent Scratchpad")
+
+            case "on_tool_start":
+                log_callback(
+                    f"🔧 Initiating tool: '{event['name']}' with inputs: {event['data'].get('input')}",
+                    name="Tool Start",
+                )
+
+            case "on_tool_end":
+                log_callback(f"🏁 Tool '{event['name']}' execution completed", name="Tool End")
+                log_callback(f"📊 Tool output: {event['data'].get('output')}", name="Tool Output")
+
+            case "on_tool_error":
+                tool_name = event.get("name", "Unknown tool")
+                error_message = event["data"].get("error", "Unknown error")
+                log_callback(f"❌ Tool '{tool_name}' failed with error: {error_message}", name="Tool Error")
+
+                if "stack_trace" in event["data"]:
+                    log_callback(f"🔍 Stack trace: {event['data']['stack_trace']}", name="Tool Error")
+
+                if "recovery_attempt" in event["data"]:
+                    log_callback(f"🔄 Recovery attempt: {event['data']['recovery_attempt']}", name="Tool Error")
+
+            case _:
+                # Handle any other event types or ignore them
+                pass
+
+    return final_output
