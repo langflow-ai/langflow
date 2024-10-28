@@ -1,6 +1,7 @@
 import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
+import { Button } from "@/components/ui/button";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import CodeAreaModal from "@/modals/codeAreaModal";
@@ -310,7 +311,7 @@ export default function NodeToolbarComponent({
 
   return (
     <>
-      <div className="w-26 noflow nowheel nopan nodelete nodrag h-10">
+      <div className="w-26 noflow nowheel nopan nodelete nodrag h-8">
         <span className="isolate inline-flex rounded-md border-[1px] border-border shadow-sm">
           {hasCode && (
             <ShadTooltip
@@ -324,15 +325,19 @@ export default function NodeToolbarComponent({
               }
               side="top"
             >
-              <button
+              <Button
                 className="relative inline-flex items-center rounded-l-md bg-background px-2 py-2 text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                 onClick={() => {
                   setOpenModal(!openModal);
                 }}
                 data-testid="code-button-modal"
+                unstyled
               >
-                <IconComponent name="Code" className="h-4 w-4" />
-              </button>
+                <div className="flex items-center gap-1">
+                  <IconComponent name="Code" className="h-4 w-4" />
+                  <span className="text-[13px]">Code</span>
+                </div>
+              </Button>
             </ShadTooltip>
           )}
           {nodeLength > 0 && (
@@ -348,17 +353,21 @@ export default function NodeToolbarComponent({
               }
               side="top"
             >
-              <button
+              <Button
                 className={`${
                   isGroup ? "rounded-l-md" : ""
-                } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
+                } node-toolbar-buttons`}
                 onClick={() => {
                   setShowModalAdvanced(true);
                 }}
                 data-testid="advanced-button-modal"
+                unstyled
               >
-                <IconComponent name="Settings2" className="h-4 w-4" />
-              </button>
+                <div className="flex items-center gap-2">
+                  <IconComponent name="SlidersHorizontal" className="h-4 w-4" />
+                  <span className="text-[13px]">Controls</span>
+                </div>
+              </Button>
             </ShadTooltip>
           )}
 
@@ -373,10 +382,8 @@ export default function NodeToolbarComponent({
             }
             side="top"
           >
-            <button
-              className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-              )}
+            <Button
+              className={classNames("node-toolbar-buttons")}
               onClick={(event) => {
                 event.preventDefault();
                 takeSnapshot();
@@ -385,16 +392,50 @@ export default function NodeToolbarComponent({
                   stopNodeId: data.id,
                 });
               }}
+              unstyled
             >
-              <IconComponent
-                name="FreezeAll"
-                className={cn(
-                  "h-4 w-4 transition-all",
-                  // TODO UPDATE THIS COLOR TO BE A VARIABLE
-                  frozen ? "animate-wiggle text-ice" : "",
-                )}
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <IconComponent
+                  name="FreezeAll"
+                  className={cn(
+                    "h-4 w-4 transition-all",
+                    frozen ? "animate-wiggle text-ice" : "",
+                  )}
+                />
+                <span className="text-[13px]">Freeze Path</span>
+              </div>
+            </Button>
+          </ShadTooltip>
+
+          <ShadTooltip
+            contrastTooltip
+            content={
+              <ShortcutDisplay
+                {...shortcuts.find(
+                  ({ name }) => name.toLowerCase() === "copy",
+                )!}
               />
-            </button>
+            }
+            side="top"
+          >
+            <Button
+              className={classNames("node-toolbar-buttons")}
+              onClick={(event) => {
+                event.preventDefault();
+                handleSelectChange("copy");
+              }}
+              unstyled
+            >
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <IconComponent
+                  name="Copy"
+                  className={cn(
+                    "h-4 w-4 transition-all",
+                    frozen ? "animate-wiggle text-ice" : "",
+                  )}
+                />
+              </div>
+            </Button>
           </ShadTooltip>
 
           <Select onValueChange={handleSelectChange} value="">
@@ -403,9 +444,7 @@ export default function NodeToolbarComponent({
                 <div>
                   <div
                     data-testid="more-options-modal"
-                    className={classNames(
-                      "relative -ml-px inline-flex h-8 w-[2rem] items-center rounded-r-md bg-background text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-                    )}
+                    className={classNames("more-option-button-toolbar")}
                   >
                     <IconComponent
                       name="MoreHorizontal"
