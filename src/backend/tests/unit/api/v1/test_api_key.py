@@ -8,9 +8,9 @@ async def test_create_folder(client: AsyncClient, logged_in_headers):
 
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, dict), "The result must be a dictionary"
-    assert "api_keys" in result.keys(), "The dictionary must contain a key called 'api_keys'"
-    assert "user_id" in result.keys(), "The dictionary must contain a key called 'user_id'"
-    assert "total_count" in result.keys(), "The dictionary must contain a key called 'total_count'"
+    assert "api_keys" in result, "The dictionary must contain a key called 'api_keys'"
+    assert "user_id" in result, "The dictionary must contain a key called 'user_id'"
+    assert "total_count" in result, "The dictionary must contain a key called 'total_count'"
 
 
 async def test_create_api_key_route(client: AsyncClient, logged_in_headers, active_user):
@@ -26,13 +26,13 @@ async def test_create_api_key_route(client: AsyncClient, logged_in_headers, acti
 
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, dict), "The result must be a dictionary"
-    assert "api_key" in result.keys(), "The dictionary must contain a key called 'api_key'"
-    assert "id" in result.keys(), "The dictionary must contain a key called 'id'"
-    assert "is_active" in result.keys(), "The dictionary must contain a key called 'is_active'"
-    assert "last_used_at" in result.keys(), "The dictionary must contain a key called 'last_used_at'"
-    assert "name" in result.keys(), "The dictionary must contain a key called 'name'"
-    assert "total_uses" in result.keys(), "The dictionary must contain a key called 'total_uses'"
-    assert "user_id" in result.keys(), "The dictionary must contain a key called 'user_id'"
+    assert "api_key" in result, "The dictionary must contain a key called 'api_key'"
+    assert "id" in result, "The dictionary must contain a key called 'id'"
+    assert "is_active" in result, "The dictionary must contain a key called 'is_active'"
+    assert "last_used_at" in result, "The dictionary must contain a key called 'last_used_at'"
+    assert "name" in result, "The dictionary must contain a key called 'name'"
+    assert "total_uses" in result, "The dictionary must contain a key called 'total_uses'"
+    assert "user_id" in result, "The dictionary must contain a key called 'user_id'"
 
 
 async def test_delete_api_key_route(client: AsyncClient, logged_in_headers, active_user):
@@ -51,7 +51,7 @@ async def test_delete_api_key_route(client: AsyncClient, logged_in_headers, acti
 
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, dict), "The result must be a dictionary"
-    assert "detail" in result.keys(), "The dictionary must contain a key called 'detail'"
+    assert "detail" in result, "The dictionary must contain a key called 'detail'"
 
 
 async def test_save_store_api_key(client: AsyncClient, logged_in_headers, active_user):
@@ -61,4 +61,4 @@ async def test_save_store_api_key(client: AsyncClient, logged_in_headers, active
 
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, dict), "The result must be a dictionary"
-    assert "detail" in result.keys(), "The dictionary must contain a key called 'detail'"
+    assert "detail" in result, "The dictionary must contain a key called 'detail'"

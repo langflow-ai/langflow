@@ -13,8 +13,8 @@ pprint(var)
 
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, dict), "The result must be a dictionary"
-    assert "imports" in result.keys(), "The result must have an 'imports' key"
-    assert "function" in result.keys(), "The result must have a 'function' key"
+    assert "imports" in result, "The result must have an 'imports' key"
+    assert "function" in result, "The result must have a 'function' key"
 
 
 async def test_post_validate_prompt(client: AsyncClient):
@@ -52,5 +52,5 @@ async def test_post_validate_prompt(client: AsyncClient):
 
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, dict), "The result must be a dictionary"
-    assert "frontend_node" in result.keys(), "The result must have a 'frontend_node' key"
-    assert "input_variables" in result.keys(), "The result must have an 'input_variables' key"
+    assert "frontend_node" in result, "The result must have a 'frontend_node' key"
+    assert "input_variables" in result, "The result must have an 'input_variables' key"

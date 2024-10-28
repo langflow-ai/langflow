@@ -19,10 +19,10 @@ async def test_create_folder(client: AsyncClient, logged_in_headers, basic_case)
 
     assert response.status_code == status.HTTP_201_CREATED
     assert isinstance(result, dict), "The result must be a dictionary"
-    assert "name" in result.keys(), "The dictionary must contain a key called 'name'"
-    assert "description" in result.keys(), "The dictionary must contain a key called 'description'"
-    assert "id" in result.keys(), "The dictionary must contain a key called 'id'"
-    assert "parent_id" in result.keys(), "The dictionary must contain a key called 'parent_id'"
+    assert "name" in result, "The dictionary must contain a key called 'name'"
+    assert "description" in result, "The dictionary must contain a key called 'description'"
+    assert "id" in result, "The dictionary must contain a key called 'id'"
+    assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
 
 
 async def test_read_folders(client: AsyncClient, logged_in_headers):
@@ -42,10 +42,10 @@ async def test_read_folder(client: AsyncClient, logged_in_headers, basic_case):
 
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, dict), "The result must be a dictionary"
-    assert "name" in result.keys(), "The dictionary must contain a key called 'name'"
-    assert "description" in result.keys(), "The dictionary must contain a key called 'description'"
-    assert "id" in result.keys(), "The dictionary must contain a key called 'id'"
-    assert "parent_id" in result.keys(), "The dictionary must contain a key called 'parent_id'"
+    assert "name" in result, "The dictionary must contain a key called 'name'"
+    assert "description" in result, "The dictionary must contain a key called 'description'"
+    assert "id" in result, "The dictionary must contain a key called 'id'"
+    assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
 
 
 async def test_update_folder(client: AsyncClient, logged_in_headers, basic_case):
@@ -58,7 +58,7 @@ async def test_update_folder(client: AsyncClient, logged_in_headers, basic_case)
 
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, dict), "The result must be a dictionary"
-    assert "name" in result.keys(), "The dictionary must contain a key called 'name'"
-    assert "description" in result.keys(), "The dictionary must contain a key called 'description'"
-    assert "id" in result.keys(), "The dictionary must contain a key called 'id'"
-    assert "parent_id" in result.keys(), "The dictionary must contain a key called 'parent_id'"
+    assert "name" in result, "The dictionary must contain a key called 'name'"
+    assert "description" in result, "The dictionary must contain a key called 'description'"
+    assert "id" in result, "The dictionary must contain a key called 'id'"
+    assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
