@@ -83,8 +83,8 @@ const HomePage = ({ type }: HomePageProps) => {
   return (
     <>
       {data.flows?.length > 0 ? (
-        <div className="w-full xl:container">
-          <div className="mx-5 mb-5 mt-10">
+        <div className="flex h-full w-full flex-col justify-between xl:container">
+          <div className="mx-5 mb-5 mt-10 flex flex-col justify-start">
             <HeaderComponent
               folderName={data.name}
               flowType={flowType}
@@ -117,8 +117,8 @@ const HomePage = ({ type }: HomePageProps) => {
               <></>
             )}
           </div>
-          {!isFetching && data?.flows?.length > 0 && (
-            <div className="relative py-6">
+          {!isFetching && data.pagination.total > 10 && (
+            <div className="relative flex justify-end px-3 py-6">
               <PaginatorComponent
                 storeComponent={true}
                 pageIndex={data.pagination.page}

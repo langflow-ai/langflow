@@ -57,34 +57,32 @@ export default function CollectionPage(): JSX.Element {
 
   return (
     <>
-      <div className="flex h-screen w-full flex-row">
-        <aside
-          className={`flex w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r bg-zinc-100 px-4 dark:bg-zinc-900 lg:inline ${
-            showFolderModal ? "" : "hidden"
-          }`}
-        >
-          <FolderSidebarNav
-            handleChangeFolder={(id: string) => {
-              navigate(`all/folder/${id}`);
-            }}
-            handleDeleteFolder={(item) => {
-              setFolderToEdit(item);
-              setOpenDeleteFolderModal(true);
-            }}
-          />
-        </aside>
-        <div
-          className={`relative mx-auto h-full w-full overflow-y-auto ${
-            showFolderModal ? "opacity-80 blur-[2px]" : ""
-          }`}
-          onClick={() => {
-            if (showFolderModal) {
-              setShowFolderModal(false);
-            }
+      <aside
+        className={`flex w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r bg-zinc-100 px-4 dark:bg-zinc-900 lg:inline ${
+          showFolderModal ? "" : "hidden"
+        }`}
+      >
+        <FolderSidebarNav
+          handleChangeFolder={(id: string) => {
+            navigate(`all/folder/${id}`);
           }}
-        >
-          <Outlet />
-        </div>
+          handleDeleteFolder={(item) => {
+            setFolderToEdit(item);
+            setOpenDeleteFolderModal(true);
+          }}
+        />
+      </aside>
+      <div
+        className={`relative mx-auto h-full w-full overflow-y-auto ${
+          showFolderModal ? "opacity-80 blur-[2px]" : ""
+        }`}
+        onClick={() => {
+          if (showFolderModal) {
+            setShowFolderModal(false);
+          }
+        }}
+      >
+        <Outlet />
       </div>
 
       <ModalsComponent

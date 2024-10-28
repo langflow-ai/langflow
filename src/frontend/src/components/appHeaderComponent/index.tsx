@@ -24,7 +24,7 @@ export default function AppHeader(): JSX.Element {
   useTheme();
 
   return (
-    <div className="relative flex h-[62px] items-center border-b px-5 py-2.5 dark:bg-black">
+    <div className="fixed left-0 top-0 z-10 flex h-[62px] w-full items-center border-b px-5 py-2.5 dark:bg-black">
       {/* Left Section */}
       <div className="flex w-0 items-center gap-2 lg:w-[20vw] xl:max-w-[325px] 2xl:max-w-[475px]">
         <Button
