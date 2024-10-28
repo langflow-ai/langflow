@@ -10,6 +10,7 @@ import {
   STATUS_BUILD,
   STATUS_BUILDING,
   STATUS_INACTIVE,
+  TOOLTIP_OUTDATED_NODE,
 } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
 import { track } from "@/customization/utils/analytics";
@@ -33,6 +34,10 @@ export default function NodeStatus({
   showNode,
   data,
   buildStatus,
+  isOutdated,
+  isUserEdited,
+  handleUpdateCode,
+  loadingUpdate,
 }: {
   nodeId: string;
   display_name: string;
@@ -42,6 +47,10 @@ export default function NodeStatus({
   showNode: boolean;
   data: NodeDataType;
   buildStatus: BuildStatus;
+  isOutdated: boolean;
+  isUserEdited: boolean;
+  handleUpdateCode: () => void;
+  loadingUpdate: boolean;
 }) {
   const nodeId_ = data.node?.flow?.data
     ? (findLastNode(data.node?.flow.data!)?.id ?? nodeId)
@@ -140,6 +149,21 @@ export default function NodeStatus({
   return (
     <>
       <div className="flex flex-shrink-0 items-center gap-1">
+        {isOutdated && !isUserEdited && (
+          <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
+            <Button
+              onClick={handleUpdateCode}
+              unstyled
+              className={"hit-area-icon button-run-bg group p-1"}
+              loading={loadingUpdate}
+            >
+              <IconComponent
+                name="AlertTriangle"
+                className="icon-size text-placeholder-foreground group-hover:fill-status-yellow group-hover:text-foreground"
+              />
+            </Button>
+          </ShadTooltip>
+        )}
         <ShadTooltip
           content={
             buildStatus === BuildStatus.BUILDING ? (
@@ -176,6 +200,7 @@ export default function NodeStatus({
         >
           <div className="cursor-help">{iconStatus}</div>
         </ShadTooltip>
+
         <ShadTooltip content={"Run component"} contrastTooltip>
           <div
             ref={divRef}

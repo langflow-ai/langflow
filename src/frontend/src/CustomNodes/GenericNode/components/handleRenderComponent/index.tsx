@@ -237,14 +237,14 @@ export default function HandleRenderComponent({
   const getNeonShadow = (color: string, isHovered: boolean) => {
     if (!isHovered) return "none";
     return [
-      "0 0 0 1px #fff", // White ring
-      `0 0 2px ${color}`, // Tight inner glow
-      `0 0 4px ${color}`, // Dense inner
-      `0 0 6px ${color}`, // Medium inner
-      `0 0 8px ${color}`, // Medium spread
-      `0 0 10px ${color}`, // Outer spread
-      `0 0 15px ${color}`, // Far spread
-      `0 0 20px ${color}`, // Furthest spread
+      "0 0 0 1px #fff",
+      `0 0 2px ${color}`,
+      `0 0 4px ${color}`,
+      `0 0 6px ${color}`,
+      `0 0 8px ${color}`,
+      `0 0 10px ${color}`,
+      `0 0 15px ${color}`,
+      `0 0 20px ${color}`,
     ].join(", ");
   };
 
@@ -309,10 +309,11 @@ export default function HandleRenderComponent({
             height: "10px",
             border: "none",
             transition: "all 0.2s",
-            boxShadow: getNeonShadow(colors[0], isHovered),
-            animation: isHovered
-              ? "pulseNeon 0.7s ease-in-out infinite"
-              : "none",
+            boxShadow: getNeonShadow(colors[0], isHovered || filterOpenHandle),
+            animation:
+              isHovered || filterOpenHandle
+                ? "pulseNeon 0.7s ease-in-out infinite"
+                : "none",
           }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}

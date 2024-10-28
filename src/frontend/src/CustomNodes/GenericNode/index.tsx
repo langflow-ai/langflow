@@ -313,22 +313,6 @@ export default function GenericNode({
                     showNode={showNode}
                     beta={data.node?.beta ?? false}
                   />
-
-                  {isOutdated && !isUserEdited && (
-                    <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
-                      <Button
-                        onClick={handleUpdateCode}
-                        unstyled
-                        className={"group p-1"}
-                        loading={loadingUpdate}
-                      >
-                        <IconComponent
-                          name="AlertTriangle"
-                          className="h-5 w-5 fill-status-yellow text-muted"
-                        />
-                      </Button>
-                    </ShadTooltip>
-                  )}
                 </div>
               )}
             </div>
@@ -358,6 +342,10 @@ export default function GenericNode({
                 selected={selected}
                 setBorderColor={setBorderColor}
                 buildStatus={buildStatus}
+                isOutdated={isOutdated}
+                isUserEdited={isUserEdited}
+                handleUpdateCode={handleUpdateCode}
+                loadingUpdate={loadingUpdate}
               />
             )}
           </div>

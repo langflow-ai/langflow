@@ -63,31 +63,26 @@ export default function NodeName({
     </div>
   ) : (
     <div className="group flex w-full items-center gap-1">
-      <ShadTooltip content={display_name}>
-        <div
-          onDoubleClick={(event) => {
-            setInputName(true);
-            takeSnapshot();
-            event.stopPropagation();
-            event.preventDefault();
-          }}
-          data-testid={"title-" + display_name}
-          className="nodoubleclick w-full cursor-text truncate font-medium text-primary"
-        >
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "max-w-36 truncate text-[14px]",
-                beta && "max-w-28",
-              )}
-            >
-              {display_name}
-            </span>
+      <div
+        onDoubleClick={(event) => {
+          setInputName(true);
+          takeSnapshot();
+          event.stopPropagation();
+          event.preventDefault();
+        }}
+        data-testid={"title-" + display_name}
+        className="nodoubleclick w-full cursor-text truncate font-medium text-primary"
+      >
+        <div className="flex items-center gap-2">
+          <span
+            className={cn("max-w-36 truncate text-[14px]", beta && "max-w-28")}
+          >
+            {display_name}
+          </span>
 
-            {beta && showNode && <div className="beta-badge">BETA</div>}
-          </div>
+          {beta && showNode && <div className="beta-badge">BETA</div>}
         </div>
-      </ShadTooltip>
+      </div>
     </div>
   );
 }
