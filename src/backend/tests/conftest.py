@@ -15,7 +15,6 @@ from asgi_lifespan import LifespanManager
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.components.inputs import ChatInput
 from langflow.graph import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
@@ -522,7 +521,9 @@ async def added_webhook_test(client, json_webhook_test, logged_in_headers):
 
 
 @pytest.fixture
-async def flow_component(client: AsyncClient, logged_in_headers):
+async def flow_component(client: TestClient, logged_in_headers):
+    from langflow.components.inputs import ChatInput
+
     chat_input = ChatInput()
     graph = Graph(start=chat_input, end=chat_input)
     graph_dict = graph.dump(name="Chat Input Component")
