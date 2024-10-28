@@ -12,7 +12,7 @@ export interface Category {
 }
 
 export interface CardData {
-  bgImage: string;
+  bg: string;
   spiralImage: string;
   icon: string;
   category: string;

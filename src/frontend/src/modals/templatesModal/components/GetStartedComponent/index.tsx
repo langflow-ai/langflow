@@ -4,9 +4,6 @@ import { CardData } from "@/types/templates/types";
 import memoryChatbotSpiral from "../../../../assets/artwork-spiral-1-def.svg";
 import vectorRagSpiral from "../../../../assets/artwork-spiral-2-def.svg";
 import multiAgentSpiral from "../../../../assets/artwork-spiral-3-def.svg";
-import memoryChatbotBg from "../../../../assets/memory-chatbot-bg.png";
-import multiAgentBg from "../../../../assets/multi-agent-bg.png";
-import vectorRagBg from "../../../../assets/vector-rag-bg.png";
 import TemplateGetStartedCardComponent from "../TemplateGetStartedCardComponent";
 
 export default function GetStartedComponent() {
@@ -15,7 +12,7 @@ export default function GetStartedComponent() {
   // Define the card data
   const cardData: CardData[] = [
     {
-      bgImage: memoryChatbotBg,
+      bg: "linear-gradient(145deg, #7CC0FF 0%, #96B9FF 50%, #CAA5FF 100%)",
       spiralImage: memoryChatbotSpiral,
       icon: "MessagesSquare",
       category: "Chatbot",
@@ -25,7 +22,7 @@ export default function GetStartedComponent() {
       flow: examples.find((example) => example.name === "Memory Chatbot"),
     },
     {
-      bgImage: vectorRagBg,
+      bg: "linear-gradient(145deg,  #388295 0%, #52B0C4 50%, #7CAB64 100%)",
       spiralImage: vectorRagSpiral,
       icon: "Database",
       category: "Vector RAG",
@@ -35,7 +32,7 @@ export default function GetStartedComponent() {
       flow: examples.find((example) => example.name === "Vector Store RAG"),
     },
     {
-      bgImage: multiAgentBg,
+      bg: "linear-gradient(145deg, #DB52C2 0%, #DC4F88 50%, #FFA395 100%)",
       spiralImage: multiAgentSpiral,
       icon: "Bot",
       category: "Agents",
