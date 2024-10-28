@@ -117,18 +117,20 @@ class LCAgentComponent(Component):
         async for event in agent_executor:
             match event["event"]:
                 case "on_chain_start":
-                    if event["name"] == "Agent":
-                        self.log(f"🚀 Agent initiated with input: {event['data'].get('input')}")
+                    self.log(f"🚀 Agent initiated with input: {event['data'].get('input')}")
 
                 case "on_chain_end":
-                    if event["name"] == "Agent":
-                        final_output = event["data"].get("output", {}).get("output", "")
+                    data_output = event["data"].get("output", {})
+                    if data_output and "output" in data_output:
+                        final_output = data_output["output"]
                         self.log(f"✅ Agent completed. Final output: {final_output}")
+                    elif data_output and "agent_scratchpad" in data_output and data_output["agent_scratchpad"]:
+                        self.log(f"🔍 Agent scratchpad: {data_output['agent_scratchpad']}")
 
                 case "on_chat_model_stream":
                     content = event["data"]["chunk"].content
                     if content:
-                        self.log(f"💬 Model stream: {content}", end="|")
+                        self.log(f"💬 Model stream: {content}")
 
                 case "on_tool_start":
                     self.log(f"🔧 Initiating tool: '{event['name']}' with inputs: {event['data'].get('input')}")
@@ -150,11 +152,6 @@ class LCAgentComponent(Component):
     async def handle_chain_end(self, event: dict[str, Any]) -> None:
         if event["name"] == "Agent":
             self.log(f"Done agent: {event['name']} with output: {event['data'].get('output', {}).get('output', '')}")
-
-    async def handle_chat_model_stream(self, event: dict[str, Any]) -> None:
-        content = event["data"]["chunk"].content
-        if content:
-            self.log(content, end="|")
 
     async def handle_tool_start(self, event: dict[str, Any]) -> None:
         self.log(f"Starting tool: {event['name']} with inputs: {event['data'].get('input')}")
