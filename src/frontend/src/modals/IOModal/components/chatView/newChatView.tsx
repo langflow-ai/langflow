@@ -11,6 +11,7 @@ import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatInput from "./chatInput/newChatInput";
 import ChatMessage from "./chatMessage/newChatMessage";
+import { TextEffectPerChar } from "@/components/ui/textAnimation";
 
 export default function ChatView({
   sendMessage,
@@ -154,7 +155,9 @@ export default function ChatView({
                 New chat
               </h3>
               <p className="text-lg text-muted-foreground">
+                <TextEffectPerChar>
                 Test your flow with a chat prompt
+                </TextEffectPerChar>
               </p>
               </div>
             </div>
