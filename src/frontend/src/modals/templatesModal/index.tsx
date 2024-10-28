@@ -45,7 +45,7 @@ export default function TemplatesModal({
     <BaseModal size="templates" open={open} setOpen={setOpen} className="p-0">
       <BaseModal.Content overflowHidden className="flex flex-col p-0">
         <div className="flex h-full">
-          <SidebarProvider width="15rem" defaultOpen>
+          <SidebarProvider width="15rem" defaultOpen={false}>
             <Nav
               categories={categories}
               currentTab={currentTab}
