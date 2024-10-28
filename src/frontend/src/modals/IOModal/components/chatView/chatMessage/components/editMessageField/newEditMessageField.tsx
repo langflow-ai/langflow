@@ -13,6 +13,7 @@ export default function EditMessageField({
 }) {
   const [message, setMessage] = useState(initialMessage);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // used before to onBlur function, leave it here because in the future we may want this functionality again
   const [isButtonClicked, setIsButtonClicked] = useState(false);
   const adjustTextareaHeight = () => {
     if (textareaRef.current) {
@@ -25,7 +26,7 @@ export default function EditMessageField({
   }, []);
 
   return (
-    <div className="flex h-fit w-full flex-col bg-muted">
+    <div className="flex h-fit w-full flex-col rounded-md bg-muted px-4 py-2">
       <Textarea
         ref={textareaRef}
         className="max-h-[400px] w-full resize-none border-0 rounded-none shadow-none bg-muted focus:ring-0"
@@ -39,7 +40,8 @@ export default function EditMessageField({
         onChange={(e) => setMessage(e.target.value)}
       />
       <div className="flex w-full flex-row-reverse justify-between">
-        <div className="flex flex-row-reverse gap-2">
+        <div className="flex w-full flex-row-reverse justify-between items-center">
+          <div className="flex flex-row-reverse gap-2">
           <Button
             data-testid="save-button"
             onMouseDown={() => setIsButtonClicked(true)}
@@ -63,12 +65,14 @@ export default function EditMessageField({
           >
             Cancel
           </Button>
-        </div>
-        <div>
-          <span className="mr-4 text-[13px] font-medium text-muted-foreground">
+
+          </div>
+          <div className="word-break-break-word text-[13px] font-medium text-muted-foreground">
             Editing messages will update the memory but won't restart the
             conversation.
-          </span>
+          </div>
+        </div>
+        <div>
         </div>
       </div>
     </div>

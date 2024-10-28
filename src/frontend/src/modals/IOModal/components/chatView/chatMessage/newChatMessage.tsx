@@ -238,8 +238,8 @@ export default function ChatMessage({
         <div className={"mr-3 mt-1 flex w-11/12 pb-3"}>
           <div
             className={cn(
-              "group relative flex w-full gap-4 rounded-md p-2 hover:bg-muted",
-              editMessage ? "bg-muted" : "",
+              "group relative flex w-full gap-4 rounded-md p-2",
+              editMessage ? "" : "hover:bg-muted",
             )}
           >
             <div
