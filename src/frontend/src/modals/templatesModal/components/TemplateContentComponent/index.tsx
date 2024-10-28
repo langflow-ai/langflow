@@ -85,7 +85,6 @@ export default function TemplateContentComponent({
       >
         {currentTabItem && (
           <TemplateCategoryComponent
-            currentTab={currentTabItem}
             examples={filteredExamples}
             onCardClick={handleCardClick}
           />

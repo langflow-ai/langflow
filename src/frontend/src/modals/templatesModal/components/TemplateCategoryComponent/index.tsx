@@ -2,7 +2,6 @@ import { TemplateCategoryProps } from "../../../../types/templates/types";
 import TemplateExampleCard from "../TemplateCardComponent";
 
 export function TemplateCategoryComponent({
-  currentTab,
   examples,
   onCardClick,
 }: TemplateCategoryProps) {

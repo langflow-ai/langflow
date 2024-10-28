@@ -22,7 +22,6 @@ export interface CardData {
 }
 
 export interface TemplateCategoryProps {
-  currentTab: NavItem;
   examples: any[];
   onCardClick: (example: any) => void;
 }
