@@ -357,7 +357,7 @@ async def upload_file(
         flow.user_id = current_user.id
         if folder_id:
             flow.folder_id = folder_id
-        response = create_flow(session=session, flow=flow, current_user=current_user)
+        response = await create_flow(session=session, flow=flow, current_user=current_user)
         response_list.append(response)
 
     return response_list
