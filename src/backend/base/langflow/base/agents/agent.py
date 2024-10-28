@@ -2,6 +2,7 @@ from abc import abstractmethod
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, cast
 
+from fastapi.encoders import jsonable_encoder
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
 from langchain_core.runnables import Runnable
@@ -210,7 +211,9 @@ async def process_agent_events(agent_executor: AsyncIterator[dict[str, Any]], lo
                     final_output = data_output["output"]
                     log_callback(f"{final_output}", name="✅ Agent End")
                 elif data_output and "agent_scratchpad" in data_output and data_output["agent_scratchpad"]:
-                    log_callback(f"{data_output['agent_scratchpad']}", name="🔍 Agent Scratchpad")
+                    agent_scratchpad_messages = data_output["agent_scratchpad"]
+                    json_encoded_messages = jsonable_encoder(agent_scratchpad_messages)
+                    log_callback(json_encoded_messages, name="🔍 Agent Scratchpad")
 
             case "on_tool_start":
                 log_callback(
