@@ -66,18 +66,20 @@ test("user must see on handle click the possibility connections - LLMChain", asy
         .isVisible();
     });
 
-  await page.getByTestId("sidebar-options-trigger").click();
-  await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
-  await page.getByTestId("sidebar-legacy-switch").click();
-  await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
-  await page.getByTestId("sidebar-options-trigger").click();
-
   await expect(page.getByTestId("disclosure-inputs")).toBeVisible();
   await expect(page.getByTestId("disclosure-outputs")).toBeVisible();
   await expect(page.getByTestId("disclosure-prompts")).toBeVisible();
   await expect(page.getByTestId("disclosure-models")).toBeVisible();
   await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
   await expect(page.getByTestId("disclosure-agents")).toBeVisible();
+  await expect(page.getByTestId("disclosure-chains")).not.toBeVisible();
+
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-legacy-switch").click();
+  await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
+  await page.getByTestId("sidebar-options-trigger").click();
+
   await expect(page.getByTestId("disclosure-chains")).toBeVisible();
   await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
 
@@ -89,6 +91,16 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(page.getByTestId("agentsCSVAgent")).toBeVisible();
   await expect(page.getByTestId("chainsConversationChain")).toBeVisible();
   await expect(page.getByTestId("prototypesConditional Router")).toBeVisible();
+
+  await expect(page.getByTestId("helpersCurrent Date")).toBeVisible();
+
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-beta-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-beta-switch").click();
+  await expect(page.getByTestId("sidebar-beta-switch")).not.toBeChecked();
+  await page.getByTestId("sidebar-options-trigger").click();
+
+  await expect(page.getByTestId("helpersCurrent Date")).not.toBeVisible();
 
   await page.getByTestId("sidebar-filter-reset").click();
 
@@ -118,7 +130,16 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(page.getByTestId("helpersChat Memory")).toBeVisible();
   await expect(page.getByTestId("vectorstoresAstra DB")).toBeVisible();
   await expect(page.getByTestId("toolsSearch API")).toBeVisible();
+  await expect(page.getByTestId("prototypesSub Flow")).not.toBeVisible();
+
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-beta-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-beta-switch").click();
+  await expect(page.getByTestId("sidebar-beta-switch")).toBeChecked();
+  await page.getByTestId("sidebar-options-trigger").click();
+
   await expect(page.getByTestId("prototypesSub Flow")).toBeVisible();
+
   await expect(
     page.getByTestId("retrieversSelf Query Retriever"),
   ).toBeVisible();
