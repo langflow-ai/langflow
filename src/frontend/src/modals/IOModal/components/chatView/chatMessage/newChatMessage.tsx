@@ -195,20 +195,19 @@ export default function ChatMessage({
   const editedFlag = chat.edit ? (
     <div className="text-sm text-muted-foreground">(Edited)</div>
   ) : null;
-
   // Add this before the default return statement
   if (chat.category === "error") {
-    const block = chat.content_blocks?.[0] as ContentBlockError;
+    const block = (chat.content_blocks?.[0]??{}) as ContentBlockError;
     return (
-      <div className="flex-max-width py-6 pl-28 pr-9">
+      <div className="flex-max-width py-6 pl-32 pr-9">
         <div className="mr-3 mt-1 flex w-11/12 pb-3">
-          <div className="flex w-full gap-4">
+          <div className="flex w-full gap-4 rounded-md p-2">
             <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-muted p-5">
               <span>
                 <div className="text-3xl -ml-1">⛓️</div>
               </span>
             </div>
-            <div className="w-full rounded-md dark:bg-red-950 border bg-red-50 border-red-500 dark:border-red-900 p-4 text-foreground">
+            <div className="w-full rounded-md bg-error-red border border-error-red-border p-4 text-foreground">
               <div className="mb-2 flex gap-2 items-center">
                 <ForwardedIconComponent className="h-6 w-6 text-destructive" name="OctagonAlert" />
                 <span className="">An error stopped your flow.</span>
