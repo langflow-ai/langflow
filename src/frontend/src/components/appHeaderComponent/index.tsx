@@ -24,7 +24,7 @@ export default function AppHeader(): JSX.Element {
   useTheme();
 
   return (
-    <div className="relative flex items-center border-b px-4 py-1.5 dark:bg-black">
+    <div className="relative flex h-[62px] items-center border-b px-5 dark:bg-black">
       {/* Left Section */}
       <div className="flex w-0 items-center gap-2 lg:w-[20vw] xl:max-w-[325px] 2xl:max-w-[475px]">
         <Button
@@ -36,7 +36,7 @@ export default function AppHeader(): JSX.Element {
           {ENABLE_DATASTAX_LANGFLOW ? (
             <ShortDataStaxLogo className="fill-black dark:fill-[white]" />
           ) : ENABLE_NEW_LOGO ? (
-            <ShortLangFlowIcon className="fill-black dark:fill-[white]" />
+            <ShortLangFlowIcon className="h-5 w-5 fill-black dark:fill-[white]" />
           ) : (
             <span className="fill-black text-2xl dark:fill-white">⛓️</span>
           )}
@@ -67,14 +67,10 @@ export default function AppHeader(): JSX.Element {
             >
               <GithubStarComponent />
             </Button>
-            <Separator
-              orientation="vertical"
-              className="hidden h-7 dark:border-zinc-700 2xl:inline"
-            />
           </>
         )}
         <AlertDropdown>
-          <ShadTooltip content="Notifications" side="bottom">
+          <ShadTooltip content="Notifications and errors" side="bottom">
             <Button variant="ghost" className="relative">
               <span
                 className={
@@ -83,7 +79,7 @@ export default function AppHeader(): JSX.Element {
               />
               <ForwardedIconComponent
                 name="bell"
-                className="side-bar-button-size"
+                className="side-bar-button-size h-[18px] w-[18px]"
                 aria-hidden="true"
               />
               <span className="hidden whitespace-nowrap lg:inline">
@@ -94,7 +90,7 @@ export default function AppHeader(): JSX.Element {
         </AlertDropdown>
         {!ENABLE_DATASTAX_LANGFLOW && (
           <>
-            <ShadTooltip content="Store" side="bottom">
+            <ShadTooltip content="Go to LangflowStore" side="bottom">
               <Button
                 variant="ghost"
                 className="flex items-center text-sm font-medium"
@@ -103,7 +99,7 @@ export default function AppHeader(): JSX.Element {
               >
                 <ForwardedIconComponent
                   name="Store"
-                  className="side-bar-button-size"
+                  className="side-bar-button-size h-[18px] w-[18px]"
                 />
                 <span className="hidden whitespace-nowrap lg:inline">
                   Store
@@ -131,7 +127,7 @@ export default function AppHeader(): JSX.Element {
               >
                 <ForwardedIconComponent
                   name="book-open-text"
-                  className="side-bar-button-size"
+                  className="side-bar-button-size h-[18px] w-[18px]"
                   aria-hidden="true"
                 />
                 Docs
@@ -146,7 +142,7 @@ export default function AppHeader(): JSX.Element {
               >
                 <ForwardedIconComponent
                   name="Settings"
-                  className="side-bar-button-size"
+                  className="side-bar-button-size h-[18px] w-[18px]"
                 />
                 Settings
               </Button>

@@ -1,8 +1,9 @@
+import PaginatorComponent from "@/components/paginatorComponent";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { LoadingPage } from "@/pages/LoadingPage";
 import { useFolderStore } from "@/stores/foldersStore";
 import { FlowType } from "@/types/flow";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import GridComponent from "../../components/grid";
 import HeaderComponent from "../../components/header";
@@ -67,6 +68,14 @@ const HomePage = ({ type }: HomePageProps) => {
     flow.name.toLowerCase().includes(search.toLowerCase()),
   );
 
+  const handlePageChange = useCallback(
+    (newPageIndex: number, newPageSize: number) => {
+      setPageIndex(newPageIndex);
+      setPageSize(newPageSize);
+    },
+    [],
+  );
+
   if (isFetching) {
     return <LoadingPage overlay={true} />;
   }
@@ -74,7 +83,7 @@ const HomePage = ({ type }: HomePageProps) => {
   return (
     <>
       {data.flows?.length > 0 ? (
-        <div className="xl:container">
+        <div className="w-full xl:container">
           <div className="mx-5 mb-5 mt-10">
             <HeaderComponent
               folderName={data.name}
@@ -108,6 +117,19 @@ const HomePage = ({ type }: HomePageProps) => {
               <></>
             )}
           </div>
+          {!isFetching && data?.flows?.length > 0 && (
+            <div className="relative py-6">
+              <PaginatorComponent
+                storeComponent={true}
+                pageIndex={data.pagination.page}
+                pageSize={data.pagination.size}
+                rowsCount={[10, 20, 50, 100]}
+                totalRowsCount={data.pagination.total ?? 0}
+                paginate={handlePageChange}
+                pages={data.pagination.pages}
+              ></PaginatorComponent>
+            </div>
+          )}
         </div>
       ) : (
         <EmptyPage setOpenModal={setNewProjectModal} folderName={data.name} />

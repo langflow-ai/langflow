@@ -51,7 +51,9 @@ export const AccountMenu = () => {
           {ENABLE_DATASTAX_LANGFLOW && <CustomHeaderMenuItemsTitle />}
           <HeaderMenuItemsSection>
             <div className="flex h-[46px] w-full items-center justify-between pl-2">
-              <div className="text-sm text-zinc-500">Version {version}</div>
+              <div className="text-xs font-medium text-zinc-500">
+                Version {version}
+              </div>
               <ThemeButtons />
             </div>
             {ENABLE_DATASTAX_LANGFLOW ? (
@@ -106,10 +108,10 @@ export const AccountMenu = () => {
               </HeaderMenuItemLink>
             )}
             <HeaderMenuItemLink newPage href="https://twitter.com/langflow_ai">
-              Follow {ENABLE_DATASTAX_LANGFLOW ? "Langflow" : "us"} on X
+              Follow Langflow on X
             </HeaderMenuItemLink>
             <HeaderMenuItemLink newPage href="https://discord.gg/EqksyE2EX9">
-              Join our Discord
+              Join the Langflow Discord
             </HeaderMenuItemLink>
           </HeaderMenuItemsSection>
           <HeaderMenuItemsSection>
