@@ -105,7 +105,7 @@ class Component(CustomComponent):
         if self.outputs is not None:
             self.map_outputs(self.outputs)
         # Set output types
-        self._set_output_types(self._outputs_map.values())
+        self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
         self._set_output_required_inputs()
 
