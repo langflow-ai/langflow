@@ -31,7 +31,7 @@ class Concatenate(Component):
 
 def test_cycle_in_graph():
     chat_input = ChatInput(_id="chat_input")
-    router = ConditionalRouterComponent(_id="router")
+    router = ConditionalRouterComponent(_id="router", default_route="true_result")
     chat_input.set(input_value=router.false_response)
     concat_component = Concatenate(_id="concatenate")
     concat_component.set(text=chat_input.message_response)
@@ -59,7 +59,6 @@ def test_cycle_in_graph():
         snapshots.append(graph._snapshot())
         results.append(result)
     results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
-    assert results_ids[-2:] == ["text_output", "chat_output"]
     assert len(results_ids) > len(graph.vertices), snapshots
     # Check that chat_output and text_output are the last vertices in the results
     assert results_ids == [
