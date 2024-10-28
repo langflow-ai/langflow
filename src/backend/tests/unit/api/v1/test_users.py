@@ -1,16 +1,9 @@
-from unittest import mock
-from uuid import uuid4
-
-import pytest
 from fastapi import status
 from httpx import AsyncClient
 
 
 async def test_add_user(client: AsyncClient):
-    basic_case = {
-        "username": "string",
-        "password": "string"
-    }
+    basic_case = {"username": "string", "password": "string"}
     response = await client.post("api/v1/users/", json=basic_case)
     result = response.json()
 
@@ -55,10 +48,7 @@ async def test_read_all_users(client: AsyncClient, logged_in_headers_super_user)
 async def test_patch_user(client: AsyncClient, logged_in_headers_super_user):
     name = "string"
     updated_name = "string2"
-    basic_case = {
-        "username": name,
-        "password": "string"
-    }
+    basic_case = {"username": name, "password": "string"}
     _response = await client.post("api/v1/users/", json=basic_case)
     _id = _response.json()["id"]
     basic_case["username"] = updated_name
@@ -80,10 +70,7 @@ async def test_patch_user(client: AsyncClient, logged_in_headers_super_user):
 
 async def test_reset_password(client: AsyncClient, logged_in_headers, active_user):
     _id = str(active_user.id)
-    basic_case = {
-        "username": "string",
-        "password": "new_password"
-    }
+    basic_case = {"username": "string", "password": "new_password"}
     response = await client.patch(f"api/v1/users/{_id}/reset-password", json=basic_case, headers=logged_in_headers)
     result = response.json()
 
@@ -100,10 +87,7 @@ async def test_reset_password(client: AsyncClient, logged_in_headers, active_use
 
 
 async def test_delete_user(client: AsyncClient, logged_in_headers_super_user):
-    basic_case = {
-        "username": "string",
-        "password": "string"
-    }
+    basic_case = {"username": "string", "password": "string"}
     _response = await client.post("api/v1/users/", json=basic_case)
     _id = _response.json()["id"]
     response = await client.delete(f"api/v1/users/{_id}", headers=logged_in_headers_super_user)

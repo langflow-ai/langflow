@@ -14,11 +14,9 @@ async def test_create_flow(client: AsyncClient, logged_in_headers):
         "is_component": False,
         "webhook": False,
         "endpoint_name": "string",
-        "tags": [
-            "string"
-        ],
+        "tags": ["string"],
         "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     }
     response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
     result = response.json()
@@ -48,13 +46,14 @@ async def test_read_flows(client: AsyncClient, logged_in_headers):
         "get_all": True,
         "header_flows": False,
         "page": 1,
-        "size": 50
+        "size": 50,
     }
     response = await client.get("api/v1/flows/", params=params, headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, list), "The result must be a list"
+
 
 async def test_read_flow(client: AsyncClient, logged_in_headers):
     basic_case = {
@@ -67,11 +66,9 @@ async def test_read_flow(client: AsyncClient, logged_in_headers):
         "is_component": False,
         "webhook": False,
         "endpoint_name": "string",
-        "tags": [
-            "string"
-        ],
+        "tags": ["string"],
         "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     }
     _response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
     _id = _response.json()["id"]
@@ -108,11 +105,9 @@ async def test_update_flow(client: AsyncClient, logged_in_headers):
         "is_component": False,
         "webhook": False,
         "endpoint_name": "string",
-        "tags": [
-            "string"
-        ],
+        "tags": ["string"],
         "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     }
     basic_case["name"] = name
     _response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
@@ -150,11 +145,9 @@ async def test_create_flows(client: AsyncClient, logged_in_headers):
         "data": {},
         "is_component": False,
         "webhook": False,
-        "tags": [
-            "string"
-        ],
+        "tags": ["string"],
         "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     }
     cases = []
     for i in range(amount_flows):
