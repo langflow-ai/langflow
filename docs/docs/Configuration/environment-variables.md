@@ -107,17 +107,17 @@ That means, if you happen to set the same environment variable in both your term
 
 The following table lists the environment variables supported by Langflow.
 
-| Variable | Values | Default | Description |
-|----------|--------|---------|-------------|
-| `DO_NOT_TRACK` | Boolean | `False` | If enabled, Langflow will not track telemetry. |
-| `LANGFLOW_AUTO_LOGIN` |  |  | Set AUTO_LOGIN to false if you want to disable auto login and use the login form to login. LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD must be set if AUTO_LOGIN is set to false. |
+| Variable | Format / Values | Default | Description |
+|----------|---------------|---------|-------------|
+| `DO_NOT_TRACK` | Boolean | `false` | If enabled, Langflow will not track telemetry. |
+| `LANGFLOW_AUTO_LOGIN` | Boolean | `true` | Enable automatic login for Langflow. Set to `false` to disable automatic login and require the login form to log into the Langflow UI. Setting to `false` requires `LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD` to be set. |
 | `LANGFLOW_AUTO_SAVING` | Boolean | `true` | Enable flow auto-saving.<br/>See `--auto-saving` option. |
 | `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the interval for flow auto-saving in milliseconds.<br/>See `--auto-saving-interval` option. |
 | `LANGFLOW_BACKEND_ONLY` | Boolean | `false` | Only run Langflow's backend server (no frontend).<br/>See `--backend-only` option. |
 | `LANGFLOW_CACHE_TYPE` | `async`<br/>`redis`<br/>`memory`<br/>`disck`<br/>`critical` | `async` | Set the cache type for Langflow.<br/>If you set the type to `redis`, then you must also set the following environment variables: `LANGFLOW_REDIS_HOST`, `LANGFLOW_REDIS_PORT`, `LANGFLOW_REDIS_DB`, and `LANGFLOW_REDIS_CACHE_EXPIRE`. |
 | `LANGFLOW_COMPONENTS_PATH` | String | `langflow/components` | Path to the directory containing custom components.<br/>See `--components-path` option. |
 | `LANGFLOW_CONFIG_DIR` | String |  | Set the Langflow configuration directory where files, logs, and the Langflow database are stored. |
-| `LANGFLOW_DATABASE_URL` | String | None | Set the database URL for Langflow. If you don't provide one, Langflow uses an SQLite database. |
+| `LANGFLOW_DATABASE_URL` | String |  | Set the database URL for Langflow. If you don't provide one, Langflow uses an SQLite database. |
 | `LANGFLOW_DEV` | Boolean | `false` | Run Langflow in development mode (may contain bugs).<br/>See `--dev` option. |
 | `LANGFLOW_FALLBACK_TO_ENV_VAR` | Boolean | `true` | If enabled, [global variables](../Settings/settings-global-variables.md) set in the Langflow UI fall back to an environment variable with the same name when Langflow fails to retrieve the variable value. |
 | `LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. This is for development purposes only.<br/>See `--frontend-path` option. |
@@ -125,7 +125,7 @@ The following table lists the environment variables supported by Langflow.
 | `LANGFLOW_HOST` | String | `127.0.0.1` | The host on which the Langflow server will run.<br/>See `--host` option. |
 | `LANGFLOW_LANGCHAIN_CACHE` | `InMemoryCache`<br/>`SQLiteCache` | `InMemoryCache` | Type of cache to use.<br/>See `--cache` option. |
 | `LANGFLOW_LOG_FILE` | String | `logs/langflow.log` | Set the path to the log file for Langflow.<br/>See `--log-file` option. |
-| `LANGFLOW_LOG_LEVEL` | String | `critical` | Set the logging level.<br/>See `--log-level` option. |
+| `LANGFLOW_LOG_LEVEL` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | `critical` | Set the logging level.<br/>See `--log-level` option. |
 | `LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `100` | Set the maximum file size for the upload in megabytes.<br/>See `--max-file-size-upload` option. |
 | `LANGFLOW_OPEN_BROWSER` | Boolean | `true` | Open the system web browser on startup.<br/> See `--open-browser` option. |
 | `LANGFLOW_PORT` | Integer | `7860` | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use.<br/>See `--port` option. |
@@ -138,10 +138,10 @@ The following table lists the environment variables supported by Langflow.
 | `LANGFLOW_REMOVE_API_KEYS` | Boolean | `false` | Remove API keys from the projects saved in the database.<br/> See `--remove-api-keys` option. |
 | `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` | Boolean | `false` | Save the Langflow database in `LANGFLOW_CONFIG_DIR` instead of in the Langflow package directory. Note, when this variable is set to default (`false`), the database isn't shared between different virtual environments and the database is deleted when you uninstall Langflow. |
 | `LANGFLOW_STORE` | Boolean | `true` | Enable the Langflow Store.<br/>See `--store` option. |
-| `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` | Boolean | `true` | Store environment variables as Global Variables in the database. |
-| `LANGFLOW_SUPERUSER` |  |  | Specify the name for the superuser.<br/>See `--username` option. |
-| `LANGFLOW_SUPERUSER_PASSWORD` |  |  | Specify the password for the superuser.<br/>See `--password` option. |
-| `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` | String | None | Comma-separated list of environment variables to get from the environment and store as [global variables](../Settings/settings-global-variables.md). |
+| `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` | Boolean | `true` | Store environment variables as [global variables](../Settings/settings-global-variables.md) in the database. |
+| `LANGFLOW_SUPERUSER` | String | Not set | Set the name for the superuser.<br/>See `--username` option. |
+| `LANGFLOW_SUPERUSER_PASSWORD` | String | Not set | Set the password for the superuser.<br/>See `--password` option. |
+| `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` | String | Not set | Comma-separated list of environment variables to get from the environment and store as [global variables](../Settings/settings-global-variables.md). |
 | `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds.<br/>See `--worker-timeout` option. |
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes.<br/>See `--workers` option. |
 
