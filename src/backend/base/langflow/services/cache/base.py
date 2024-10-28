@@ -23,7 +23,7 @@ class CacheService(Service, Generic[LockType]):
             lock: A lock to use for the operation.
 
         Returns:
-            The value associated with the key, or None if the key is not found.
+            The value associated with the key, or CACHE_MISS if the key is not found.
         """
 
     @abc.abstractmethod
@@ -58,6 +58,17 @@ class CacheService(Service, Generic[LockType]):
     @abc.abstractmethod
     def clear(self, lock: LockType | None = None):
         """Clear all items from the cache."""
+
+    @abc.abstractmethod
+    def contains(self, key) -> bool:
+        """Check if the key is in the cache.
+
+        Args:
+            key: The key of the item to check.
+
+        Returns:
+            True if the key is in the cache, False otherwise.
+        """
 
     @abc.abstractmethod
     def __contains__(self, key) -> bool:
@@ -110,7 +121,7 @@ class AsyncBaseCacheService(Service, Generic[AsyncLockType]):
             lock: A lock to use for the operation.
 
         Returns:
-            The value associated with the key, or None if the key is not found.
+            The value associated with the key, or CACHE_MISS if the key is not found.
         """
 
     @abc.abstractmethod
@@ -147,7 +158,7 @@ class AsyncBaseCacheService(Service, Generic[AsyncLockType]):
         """Clear all items from the cache."""
 
     @abc.abstractmethod
-    def __contains__(self, key) -> bool:
+    async def contains(self, key) -> bool:
         """Check if the key is in the cache.
 
         Args:
