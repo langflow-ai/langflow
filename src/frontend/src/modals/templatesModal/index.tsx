@@ -89,6 +89,7 @@ export default function TemplatesModal({
                     });
                     track("New Flow Created", { template: "Blank Flow" });
                   }}
+                  tabIndex={1}
                   size="sm"
                   data-testid="blank-flow"
                   className="shrink-0"

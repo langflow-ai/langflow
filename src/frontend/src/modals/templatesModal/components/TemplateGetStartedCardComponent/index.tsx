@@ -36,9 +36,18 @@ export default function TemplateGetStartedCardComponent({
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   return (
     <div
-      className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-3xl border"
+      className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring"
+      tabIndex={1}
+      onKeyDown={handleKeyDown}
       onClick={handleClick}
     >
       <div
@@ -55,7 +64,7 @@ export default function TemplateGetStartedCardComponent({
         <img
           src={spiralImage}
           alt={`${title} Spiral`}
-          className="h-full w-full object-cover opacity-25 transition-all duration-300 group-hover:scale-[102%] group-hover:opacity-60"
+          className="h-full w-full object-cover opacity-25 transition-all duration-300 group-hover:scale-[102%] group-hover:opacity-60 group-focus-visible:scale-[102%] group-focus-visible:opacity-60"
         />
       </div>
       <div className="card-shine-effect absolute inset-2 flex h-[calc(100%-16px)] min-w-[calc(100%-16px)] flex-col items-start gap-4 rounded-2xl p-4 py-6 text-white">
@@ -69,7 +78,7 @@ export default function TemplateGetStartedCardComponent({
           <h3 className="line-clamp-3 text-xl font-bold">{title}</h3>
           <ForwardedIconComponent
             name="ArrowRight"
-            className="mr-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100"
+            className="mr-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100 group-focus-visible:translate-x-3 group-focus-visible:opacity-100"
           />
         </div>
 
