@@ -83,11 +83,23 @@ export default function TemplateContentComponent({
         ref={scrollContainerRef}
         className="flex flex-1 flex-col gap-6 overflow-auto scrollbar-hide"
       >
-        {currentTabItem && (
+        {currentTabItem && filteredExamples.length > 0 ? (
           <TemplateCategoryComponent
             examples={filteredExamples}
             onCardClick={handleCardClick}
           />
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center p-4 text-center">
+            <ForwardedIconComponent
+              name="Search"
+              className="mb-4 h-8 w-8 text-muted-foreground"
+            />
+            <h3 className="mb-2 text-lg font-semibold">No results found</h3>
+            <p className="text-sm text-muted-foreground">
+              Try adjusting your search or filter to find what you're looking
+              for.
+            </p>
+          </div>
         )}
       </div>
     </div>
