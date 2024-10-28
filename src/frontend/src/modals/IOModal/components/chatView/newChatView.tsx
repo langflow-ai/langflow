@@ -12,6 +12,7 @@ import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatInput from "./chatInput/newChatInput";
 import ChatMessage from "./chatMessage/newChatMessage";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
+import { TextShimmer } from "@/components/ui/TextShimmer";
 
 export default function ChatView({
   sendMessage,
@@ -164,12 +165,12 @@ export default function ChatView({
           </div>
         )}
         <div
-          className={lockChat ? "flex-max-width px-2 py-6 pl-32 pr-9" : ""}
+          className={!lockChat ? "flex-max-width py-6 pl-32 pr-9" : ""}
           ref={ref}
         >
-          {lockChat && (
-            <div className={"mr-3 mt-1 flex w-full overflow-hidden pb-3"}>
-              <div className="flex w-full gap-4">
+          {!lockChat && (
+            <div className="mr-3 mt-1 flex w-11/12 pb-3">
+              <div className="flex w-full gap-4 rounded-md p-2">
                 <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-muted p-5">
                   <span>
                     <div className="text-3xl -ml-1">⛓️</div>
@@ -177,10 +178,9 @@ export default function ChatView({
                 </div>
                 <div className="flex items-center">
                   <div>
-                    <span className="animate-pulse text-muted-foreground">
+                    <TextShimmer className="" duration={1}>
                       Flow running...
-                    </span>
-                    {/* TODO: ADD MODEL RELATED NAME */}
+                    </TextShimmer>
                   </div>
                 </div>
               </div>
