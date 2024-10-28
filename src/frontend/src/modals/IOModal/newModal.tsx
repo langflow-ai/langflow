@@ -267,7 +267,7 @@ export default function IOModal({
                           name="MessagesSquare"
                           className="h-6 w-6 text-ring"
                         />
-                        <div className="font-semibold">Chat</div>
+                        <div className="font-normal text-[13px]">Chat</div>
                       </div>
                       <Button
                         variant="ghost"
@@ -377,7 +377,7 @@ export default function IOModal({
                 selectedViewField ? "hidden" : "",
               )}
             >
-              <div className="mb-4 h-[5%] text-xl font-semibold">
+              <div className="mb-4 h-[5%] text-[16px] font-semibold">
                 {(visibleSession && sessions.length > 0) &&
                   <div>
                     {visibleSession === currentFlowId

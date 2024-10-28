@@ -287,7 +287,7 @@ export default function ChatMessage({
               <div>
                 <div
                   className={cn(
-                    "flex items-baseline gap-3 max-w-full truncate pb-2 font-semibold",
+                    "flex items-baseline gap-3 max-w-full truncate pb-2 text-[14px] font-semibold",
                   )}
                   style={chat.meta_data?.text_color ? { color: chat.meta_data.text_color } : {}}
                   data-testid={
