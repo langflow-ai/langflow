@@ -94,6 +94,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        configure(async_file=True)
         # Startup message
         if version:
             rprint(f"[bold green]Starting Langflow v{version}...[/bold green]")
@@ -113,6 +114,7 @@ def get_lifespan(*, fix_migration=False, version=None):
         # Shutdown message
         rprint("[bold red]Shutting down Langflow...[/bold red]")
         await teardown_services()
+        await logger.complete()
 
     return lifespan
 
