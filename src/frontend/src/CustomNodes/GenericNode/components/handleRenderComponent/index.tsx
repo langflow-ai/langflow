@@ -1,5 +1,6 @@
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
+import { log } from "console";
 import { useEffect, useMemo, useState } from "react";
 import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
@@ -133,6 +134,7 @@ export default function HandleRenderComponent({
     () => filterOpenHandle || draggingOpenHandle,
     [filterOpenHandle, draggingOpenHandle],
   );
+
   const filterPresent = useMemo(
     () => handleDragging || filterType,
     [handleDragging, filterType],
@@ -160,12 +162,14 @@ export default function HandleRenderComponent({
     [left, myId, nodeId, tooltipTitle, colors],
   );
 
+  const isNullHandle = filterPresent && !(openHandle || ownHandle);
+
   const handleColor = useMemo(
     () =>
-      filterPresent && !(openHandle || ownHandle)
+      isNullHandle
         ? dark
-          ? "conic-gradient(#374151 0deg 360deg)"
-          : "conic-gradient(#cbd5e1 0deg 360deg)"
+          ? "conic-gradient(#27272a 0deg 360deg)"
+          : "conic-gradient(#f4f4f5 0deg 360deg)"
         : "conic-gradient(" +
           colors
             .concat(colors[0])
@@ -182,11 +186,14 @@ export default function HandleRenderComponent({
           ")",
     [filterPresent, openHandle, ownHandle, dark, colors],
   );
+
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
 
   useEffect(() => {
-    if (isHovered) {
+    if (isNullHandle) return;
+
+    if (isHovered || openHandle) {
       const styleSheet = document.createElement("style");
       styleSheet.setAttribute("id", `pulse-${nodeId}`);
       styleSheet.textContent = `
@@ -235,7 +242,8 @@ export default function HandleRenderComponent({
   }, [isHovered, colors, nodeId]);
 
   const getNeonShadow = (color: string, isHovered: boolean) => {
-    if (!isHovered) return "none";
+    if (isNullHandle) return "none";
+    if (!isHovered && !openHandle) return "none";
     return [
       "0 0 0 1px #fff",
       `0 0 2px ${color}`,
@@ -309,9 +317,9 @@ export default function HandleRenderComponent({
             height: "10px",
             border: "none",
             transition: "all 0.2s",
-            boxShadow: getNeonShadow(colors[0], isHovered || filterOpenHandle),
+            boxShadow: getNeonShadow(colors[0], isHovered || openHandle),
             animation:
-              isHovered || filterOpenHandle
+              (isHovered || openHandle) && !isNullHandle
                 ? "pulseNeon 0.7s ease-in-out infinite"
                 : "none",
           }}

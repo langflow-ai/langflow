@@ -18,7 +18,7 @@ export default function HandleTooltipComponent({
   const tooltips = tooltipTitle.split("\n");
   const plural = tooltips.length > 1 ? "s" : "";
   return (
-    <div className="py-1.5 font-medium text-background">
+    <div className="font-medium">
       {isSameNode ? (
         "Can't connect to the same node"
       ) : (
@@ -26,14 +26,13 @@ export default function HandleTooltipComponent({
           {isConnecting ? (
             isCompatible ? (
               <span>
-                <span className="font-semibold text-background">Connect</span>{" "}
-                to
+                <span className="font-semibold">Connect</span> to
               </span>
             ) : (
               <span>Incompatible with</span>
             )
           ) : (
-            <span className="text-background">
+            <span className="text-xs">
               {isInput
                 ? `Input${plural} type${plural}`
                 : `Output${plural} type${plural}`}
@@ -42,8 +41,11 @@ export default function HandleTooltipComponent({
           )}
           {tooltips.map((word, index) => (
             <div
-              className="rounded-sm px-1.5 text-background"
-              style={{ backgroundColor: colors[index] }}
+              className="rounded-sm px-1.5 text-xs font-medium"
+              style={{
+                backgroundColor: `${colors[index]}40`, // Add 40 (25%) opacity to background
+                color: colors[index], // Keep text the same color but solid
+              }}
               data-testid={`${isInput ? "input" : "output"}-tooltip-${convertTestName(word)}`}
             >
               {word}
@@ -53,7 +55,7 @@ export default function HandleTooltipComponent({
         </div>
       )}
       {!isConnecting && (
-        <div className="mt-2 flex flex-col gap-0.5 text-xs text-background">
+        <div className="mt-2 flex flex-col gap-0.5 text-xs">
           <div>
             <b>Drag</b> to connect compatible {!isInput ? "inputs" : "outputs"}
           </div>
