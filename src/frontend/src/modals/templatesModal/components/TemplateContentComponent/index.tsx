@@ -66,7 +66,7 @@ export default function TemplateContentComponent({
 
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-hidden">
-      <div className="relative flex-1 p-px md:grow-0">
+      <div className="relative flex-1 grow-0 p-px">
         <ForwardedIconComponent
           name="Search"
           className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
