@@ -13,6 +13,7 @@ export default function getJsApiCode({
   isAuth,
   tweaksBuildedObject,
   endpointName,
+  activeTweaks,
 }: GetCodeType): string {
   let tweaksString = "{}";
   if (tweaksBuildedObject)
@@ -23,7 +24,7 @@ export default function getJsApiCode({
         this.baseURL = baseURL;
         this.apiKey = apiKey;
     }
-  
+
     async post(endpoint, body, headers = {"Content-Type": "application/json"}) {
       if (this.apiKey) {
             headers["Authorization"] = \`Bearer \${this.apiKey}\`;
@@ -35,7 +36,7 @@ export default function getJsApiCode({
                 headers: headers,
                 body: JSON.stringify(body)
             });
-  
+
             const responseMessage = await response.json();
             if (!response.ok) {
                 throw new Error(\`\${response.status} \${response.statusText} - \${JSON.stringify(responseMessage)}\`);
@@ -46,12 +47,12 @@ export default function getJsApiCode({
             throw error;
         }
     }
-  
+
     async initiateSession(flowId, inputValue, inputType = 'chat', outputType = 'chat', stream = false, tweaks = {}) {
         const endpoint = \`/api/v1/run/\${flowId}?stream=\${stream}\`;
-        return this.post(endpoint, { input_value: inputValue, input_type: inputType, output_type: outputType, tweaks: tweaks });
+        return this.post(endpoint, { ${activeTweaks ? "" : "input_value: inputValue, "}input_type: inputType, output_type: outputType, tweaks: tweaks });
     }
-  
+
     async handleStream(streamUrl, onUpdate, onClose, onError) {
       try {
         const response = await fetch(streamUrl);
@@ -66,7 +67,7 @@ export default function getJsApiCode({
           }
           const chunk = decoder.decode(value);
           const lines = chunk.split(\'\\n\').filter(line => line.trim() !== '');
-          
+
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               try {
@@ -83,7 +84,7 @@ export default function getJsApiCode({
         onError(error);
       }
     }
-  
+
     async runFlow(flowIdOrName, inputValue, inputType = 'chat', outputType = 'chat', tweaks, stream = false, onUpdate, onClose, onError) {
         try {
             const initResponse = await this.initiateSession(flowIdOrName, inputValue, inputType, outputType, stream, tweaks);
@@ -98,13 +99,13 @@ export default function getJsApiCode({
         }
     }
   }
-  
+
   async function main(inputValue, inputType = 'chat', outputType = 'chat', stream = false) {
     const flowIdOrName = '${endpointName || flowId}';
     const langflowClient = new LangflowClient('${window.location.protocol}//${window.location.host}',
           ${isAuth ? "'your-api-key'" : "null"});
     const tweaks = ${tweaksString};
-  
+
     try {
         const response = await langflowClient.runFlow(
             flowIdOrName,
@@ -117,19 +118,19 @@ export default function getJsApiCode({
             (message) => console.log("Stream Closed:", message), // onClose
             (error) => console.error("Stream Error:", error) // onError
         );
-  
+
         if (!stream && response) {
             const flowOutputs = response.outputs[0];
             const firstComponentOutputs = flowOutputs.outputs[0];
             const output = firstComponentOutputs.outputs.message;
-  
+
             console.log("Final Output:", output.message.text);
         }
     } catch (error) {
         console.error('Main Error:', error.message);
     }
   }
-  
+
   const args = process.argv.slice(2);
   main(
     args[0], // inputValue

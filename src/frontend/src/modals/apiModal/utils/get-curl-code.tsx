@@ -12,6 +12,7 @@ export function getCurlRunCode({
   isAuth,
   tweaksBuildedObject,
   endpointName,
+  activeTweaks,
 }: GetCodeType): string {
   let tweaksString = "{}";
   const inputs = useFlowStore.getState().inputs;
@@ -28,7 +29,7 @@ export function getCurlRunCode({
     -H 'Content-Type: application/json'\\${
       !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
     }
-    -d '{"input_value": "message",
+    -d '{${!activeTweaks ? `"input_value": "message",` : ""}
     "output_type": ${hasChatOutput ? '"chat"' : '"text"'},
     "input_type": ${hasChatInput ? '"chat"' : '"text"'},
     "tweaks": ${tweaksString}}'
