@@ -86,7 +86,6 @@ class IngestionComponent(Component):
         unstructured_api_key: str = Field(None, alias="unstructured_api_key")
         embedding_api_key: str = Field(None, alias="embedding_api_key")
 
-
         def __repr__(self):
             return (
                 f"AstraDBCollectionWrapper("
@@ -144,7 +143,7 @@ class IngestionComponent(Component):
                 uploader_config=AstraDBUploaderConfig(
                     collection_name=self.collection_name,
                     embedding_dimension=embedding_dimension,
-                )
+                ),
             ).run()
 
     def _build_wrapper(
@@ -181,10 +180,7 @@ class IngestionComponent(Component):
 
         # Call the find operation
         cursor = my_collection.find(
-            filter={
-                "metadata.metadata.data_source.record_locator.path":
-                self.path
-            }
+            filter={"metadata.metadata.data_source.record_locator.path": self.path}
         )  # TODO: limit on rows?
         raw_data = list(cursor)
         data = [Data(data=result, text=result["content"]) for result in raw_data]
