@@ -40,9 +40,7 @@ def get_optional_user_store_api_key(user: CurrentActiveUser):
 
 
 @router.get("/check/")
-async def check_if_store_is_enabled(
-    settings_service=Depends(get_settings_service),
-):
+async def check_if_store_is_enabled():
     return {
         "enabled": get_settings_service().settings.store,
     }
