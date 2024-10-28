@@ -257,6 +257,7 @@ export function FlowSidebarComponent() {
               <Button
                 variant={showConfig ? "ghostActive" : "ghost"}
                 size="iconMd"
+                data-testid="sidebar-options-trigger"
               >
                 <ForwardedIconComponent
                   name="SlidersHorizontal"
@@ -277,7 +278,11 @@ export function FlowSidebarComponent() {
                     Components
                   </span>
                 </div>
-                <Switch checked={showBeta} onCheckedChange={setShowBeta} />
+                <Switch
+                  checked={showBeta}
+                  onCheckedChange={setShowBeta}
+                  data-testid="sidebar-beta-switch"
+                />
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -289,7 +294,11 @@ export function FlowSidebarComponent() {
                     Components
                   </span>
                 </div>
-                <Switch checked={showLegacy} onCheckedChange={setShowLegacy} />
+                <Switch
+                  checked={showLegacy}
+                  onCheckedChange={setShowLegacy}
+                  data-testid="sidebar-legacy-switch"
+                />
               </div>
             </div>
           </DisclosureContent>
@@ -302,6 +311,7 @@ export function FlowSidebarComponent() {
           <Input
             ref={searchInputRef}
             type="search"
+            data-testid="sidebar-search-input"
             className="w-full rounded-lg bg-background pl-8 text-sm"
             onFocus={() => setIsInputFocused(true)}
             onBlur={() => setIsInputFocused(false)}
@@ -361,6 +371,7 @@ export function FlowSidebarComponent() {
                                 <CollapsibleTrigger asChild>
                                   <SidebarMenuButton asChild>
                                     <div
+                                      data-testid={`disclosure-${item.display_name.toLocaleLowerCase()}`}
                                       tabIndex={0}
                                       onKeyDown={(e) =>
                                         handleKeyDown(e, item.name)
