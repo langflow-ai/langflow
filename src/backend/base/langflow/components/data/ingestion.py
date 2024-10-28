@@ -19,7 +19,7 @@ from unstructured_ingest.v2.processes.partitioner import PartitionerConfig
 
 from langflow.base.data.utils import TEXT_FILE_TYPES
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, FileInput, SecretStrInput, StrInput
+from langflow.inputs import DropdownInput, FileInput, SecretStrInput
 from langflow.io import Output
 from langflow.schema import Data
 
