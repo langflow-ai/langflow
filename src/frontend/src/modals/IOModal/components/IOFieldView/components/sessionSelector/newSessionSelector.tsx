@@ -191,10 +191,6 @@ export default function SessionSelector({
                   <IconComponent name="Scroll" className="mr-2 h-4 w-4" />
                   Message logs
                 </div>
-                <IconComponent
-                  name="ArrowUpRight"
-                  className="absolute right-2 h-4 w-4"
-                />
               </div>
             </SelectItem>
             <SelectItem
