@@ -158,8 +158,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             else:
                 resource = Resource.create({"service.name": "langflow"})
                 metric_readers = []
-                self.prometheus_enabled = prometheus_enabled
-                if self.prometheus_enabled:
+                if prometheus_enabled:
                     metric_readers.append(PrometheusMetricReader())
 
                 self._meter_provider = MeterProvider(resource=resource, metric_readers=metric_readers)
