@@ -1,5 +1,4 @@
 from langchain_pinecone import Pinecone
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
@@ -12,7 +11,8 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import Data
-
+from typing import List, Union
+import numpy as np
 
 class PineconeVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Pinecone"
@@ -20,7 +20,6 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
     documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pinecone/"
     name = "Pinecone"
     icon = "Pinecone"
-
     inputs = [
         StrInput(name="index_name", display_name="Index Name", required=True),
         StrInput(name="namespace", display_name="Namespace", info="Namespace for the index."),
@@ -55,44 +54,85 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    def _force_float32(self, value):
+        """Convert any numeric type to Python float."""
+        return float(np.float32(value))
+
+    class Float32Embeddings:
+        """Wrapper class to ensure float32 embeddings."""
+        def __init__(self, base_embeddings, parent):
+            self.base_embeddings = base_embeddings
+            self.parent = parent
+
+        def embed_documents(self, texts):
+            embeddings = self.base_embeddings.embed_documents(texts)
+            if isinstance(embeddings, np.ndarray):
+                return [[self.parent._force_float32(x) for x in vec] for vec in embeddings]
+            return [[self.parent._force_float32(x) for x in vec] for vec in embeddings]
+
+        def embed_query(self, text):
+            embedding = self.base_embeddings.embed_query(text)
+            if isinstance(embedding, np.ndarray):
+                return [self.parent._force_float32(x) for x in embedding]
+            return [self.parent._force_float32(x) for x in embedding]
+
     @check_cached_vector_store
     def build_vector_store(self) -> Pinecone:
-        from langchain_pinecone._utilities import DistanceStrategy
-        from langchain_pinecone.vectorstores import Pinecone
+        """Build and return a Pinecone vector store instance."""
+        try:
+            from langchain_pinecone._utilities import DistanceStrategy
+            
+            # Wrap the embedding model to ensure float32 output
+            wrapped_embeddings = self.Float32Embeddings(self.embedding, self)
 
-        distance_strategy = self.distance_strategy.replace(" ", "_").upper()
-        _distance_strategy = DistanceStrategy[distance_strategy]
+            # Convert distance strategy
+            distance_strategy = self.distance_strategy.replace(" ", "_").upper()
+            distance_strategy = DistanceStrategy[distance_strategy]
 
-        pinecone = Pinecone(
-            index_name=self.index_name,
-            embedding=self.embedding,
-            text_key=self.text_key,
-            namespace=self.namespace,
-            distance_strategy=_distance_strategy,
-            pinecone_api_key=self.pinecone_api_key,
-        )
+            # Initialize Pinecone instance with wrapped embeddings
+            pinecone = Pinecone(
+                index_name=self.index_name,
+                embedding=wrapped_embeddings,  # Use wrapped embeddings
+                text_key=self.text_key,
+                namespace=self.namespace,
+                distance_strategy=distance_strategy,
+                pinecone_api_key=self.pinecone_api_key,
+            )
 
-        documents = []
-        for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
-                documents.append(_input.to_lc_document())
-            else:
-                documents.append(_input)
+            # Process documents if any
+            documents = []
+            if self.ingest_data:
+                for doc in self.ingest_data:
+                    if isinstance(doc, Data):
+                        documents.append(doc.to_lc_document())
+                    else:
+                        documents.append(doc)
+                
+                if documents:
+                    # Add documents using wrapped embeddings
+                    pinecone.add_documents(documents)
 
-        if documents:
-            pinecone.add_documents(documents)
-        return pinecone
+            return pinecone
 
-    def search_documents(self) -> list[Data]:
-        vector_store = self.build_vector_store()
+        except Exception as e:
+            raise ValueError(f"Error building Pinecone vector store: {str(e)}")
 
-        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
+    def search_documents(self) -> List[Data]:
+        """Search documents in the vector store."""
+        try:
+            vector_store = self.build_vector_store()
+            
+            if not self.search_query or not isinstance(self.search_query, str) or not self.search_query.strip():
+                return []
+
             docs = vector_store.similarity_search(
                 query=self.search_query,
                 k=self.number_of_results,
             )
-
+            
             data = docs_to_data(docs)
             self.status = data
             return data
-        return []
+
+        except Exception as e:
+            raise ValueError(f"Error searching documents: {str(e)}")
