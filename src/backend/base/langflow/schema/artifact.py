@@ -1,4 +1,4 @@
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from enum import Enum
 
 from fastapi.encoders import jsonable_encoder
@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from langflow.schema.data import Data
 from langflow.schema.message import Message
-from langflow.schema.schema import recursive_serialize_or_str
+from langflow.schema.serialize import recursive_serialize_or_str
 
 
 class ArtifactType(str, Enum):
@@ -51,6 +51,13 @@ def get_artifact_type(value, build_result=None) -> str:
     return result.value
 
 
+def encode_callable(obj: Callable):
+    return obj.__name__ if hasattr(obj, "__name__") else str(obj)
+
+
+CUSTOM_ENCODERS = {Callable: encode_callable}
+
+
 def post_process_raw(raw, artifact_type: str):
     if artifact_type == ArtifactType.STREAM.value:
         raw = ""
@@ -65,10 +72,10 @@ def post_process_raw(raw, artifact_type: str):
     elif artifact_type == ArtifactType.UNKNOWN.value and raw is not None:
         if isinstance(raw, BaseModel | dict):
             try:
-                raw = jsonable_encoder(raw)
+                raw = jsonable_encoder(raw, custom_encoder=CUSTOM_ENCODERS)
                 artifact_type = ArtifactType.OBJECT.value
             except Exception:  # noqa: BLE001
-                logger.opt(exception=True).debug("Error converting to json")
+                logger.opt(exception=True).debug(f"Error converting to json: {raw} ({type(raw)})")
                 raw = "Built Successfully ✨"
         else:
             raw = "Built Successfully ✨"

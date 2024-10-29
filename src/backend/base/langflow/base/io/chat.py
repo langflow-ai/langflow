@@ -121,10 +121,10 @@ class ChatComponent(Component):
 
             # Check for different possible model name keys
             node_template = data.get("node", {}).get("template", {})
-            _display = (
+            return (
                 node_template.get("model_name", {}).get("value")
                 or node_template.get("model_id", {}).get("value")
                 or node_template.get("model", {}).get("value")
                 or _display
             )
-            return _display
+        return None

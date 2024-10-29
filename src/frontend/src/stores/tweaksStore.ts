@@ -98,6 +98,7 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
       isAuth: autoLogin,
       tweaksBuildedObject: tweak,
       endpointName: flow?.endpoint_name,
+      activeTweaks: get().activeTweaks,
     };
 
     if (getCodes) {
