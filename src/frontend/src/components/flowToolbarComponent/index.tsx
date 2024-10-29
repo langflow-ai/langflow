@@ -79,7 +79,7 @@ export default function FlowToolbar(): JSX.Element {
           <button
             disabled={!hasApiKey || !validApiKey || !hasStore}
             className={classNames(
-              "relative inline-flex h-full w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-accent",
+              "share-button",
               !hasApiKey || !validApiKey || !hasStore
                 ? "text-muted-foreground"
                 : "",
