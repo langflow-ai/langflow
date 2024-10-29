@@ -20,6 +20,7 @@ from langflow.custom.eval import eval_custom_component_code
 from langflow.custom.schema import MissingDefault
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.custom import format_type
+from langflow.inputs.inputs import BoolInput
 from langflow.schema import dotdict
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
@@ -356,8 +357,23 @@ def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code):
         field_type="code",
         is_list=False,
     )
-    frontend_node.template.add_field(code_field)
+    frontend_node.template.upsert_field("code", code_field)
 
+    return frontend_node
+
+
+def add_tool_mode_field(
+    frontend_node: CustomComponentFrontendNode,
+    default_value: bool = False,  # noqa: FBT001 FBT002
+) -> CustomComponentFrontendNode:
+    tool_mode_field = BoolInput(
+        name="tool_mode",
+        display_name="Tool Mode",
+        value=default_value,
+        real_time_refresh=True,
+        advanced=True,
+    )
+    frontend_node.template.upsert_field("tool_mode", tool_mode_field)
     return frontend_node
 
 
