@@ -258,29 +258,6 @@ export default function HandleRenderComponent({
   const handleRef = useRef<HTMLDivElement>(null);
   const invisibleDivRef = useRef<HTMLDivElement>(null);
 
-  const forwardEvent = (event: React.MouseEvent, eventType: string) => {
-    if (handleRef.current) {
-      const rect = handleRef.current.getBoundingClientRect();
-
-      // Create a new mouse event with the same properties
-      const newEvent = new MouseEvent(eventType, {
-        bubbles: true,
-        cancelable: true,
-        view: window,
-        clientX: rect.left + rect.width / 2,
-        clientY: rect.top + rect.height / 2,
-        button: event.button,
-        buttons: event.buttons,
-        ctrlKey: event.ctrlKey,
-        altKey: event.altKey,
-        shiftKey: event.shiftKey,
-        metaKey: event.metaKey,
-      });
-
-      handleRef.current.dispatchEvent(newEvent);
-    }
-  };
-
   return (
     <div>
       <ShadTooltip
@@ -340,8 +317,8 @@ export default function HandleRenderComponent({
             }}
             style={{
               background: handleColor,
-              width: "14px",
-              height: "14px",
+              width: isHovered ? "18px" : "12px",
+              height: isHovered ? "18px" : "12px",
               transition: "all 0.2s",
               boxShadow: getNeonShadow(colors[0], isHovered || openHandle),
               animation:
@@ -355,28 +332,24 @@ export default function HandleRenderComponent({
           />
           <div
             ref={invisibleDivRef}
-            className="absolute -translate-y-1/2 cursor-crosshair"
+            className={classNames(
+              "noflow nowheel nopan noselect absolute -translate-y-1/2 cursor-crosshair",
+            )}
             style={{
-              width: "32px",
-              height: "32px",
+              width: "28px",
+              height: "28px",
               top: "50%",
               left: !left ? "7px" : "-38px",
               position: "absolute",
               zIndex: 30,
             }}
-            onMouseDown={(e) => {
-              forwardEvent(e, "mousedown");
-              // Keep original behavior
-              if (e.button === 0) {
-                setHandleDragging(currentFilter);
-                document.addEventListener("mouseup", handleMouseUp);
-              }
+            onClick={(e) => {
+              handleRef.current?.dispatchEvent(
+                new MouseEvent("mousedown", { bubbles: true }),
+              );
+              e.stopPropagation();
+              e.preventDefault();
             }}
-            onMouseUp={(e) => {
-              forwardEvent(e, "mouseup");
-              setOpenTooltip(false);
-            }}
-            onClick={(e) => forwardEvent(e, "click")}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onContextMenu={(event) => {
