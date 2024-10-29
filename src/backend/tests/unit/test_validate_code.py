@@ -3,11 +3,11 @@ from unittest import mock
 
 import pytest
 from langflow.utils.validate import (
+    create_class,
     create_function,
     execute_function,
     extract_function_name,
     validate_code,
-    create_class,
 )
 from requests.exceptions import MissingSchema
 
