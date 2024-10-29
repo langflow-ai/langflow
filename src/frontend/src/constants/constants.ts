@@ -718,6 +718,8 @@ export const SAVED_HOVER = "Last saved: ";
 export const RUN_TIMESTAMP_PREFIX = "Last Run: ";
 export const STARTER_FOLDER_NAME = "Starter Projects";
 export const PRIORITY_SIDEBAR_ORDER = [
+  "dataAvailability",
+  "coprocessors",
   "saved_components",
   "inputs",
   "outputs",

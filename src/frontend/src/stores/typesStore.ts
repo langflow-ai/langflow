@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import { getAll } from "../controllers/API";
-import { APIDataType } from "../types/api";
+import { APIDataType, APIObjectType } from "../types/api";
 import { TypesStoreType } from "../types/zustand/types";
+import { newData } from './data';
+
 import {
   extractFieldsFromComponenents,
   templatesGenerator,
@@ -26,7 +28,7 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
       const setLoading = useFlowsManagerStore.getState().setIsLoading;
       getAll(force_refresh)
         .then((response) => {
-          const data = response?.data;
+          const data = newData as any as APIObjectType;
           set((old) => ({
             types: typesGenerator(data),
             data: { ...old.data, ...data },

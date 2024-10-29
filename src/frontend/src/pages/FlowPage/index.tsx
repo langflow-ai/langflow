@@ -175,7 +175,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
             </main>
           </div>
         )}
-        {ENABLE_BRANDING && version && (
+        {false && version && (
           <a
             target={"_blank"}
             href="https://medium.com/logspace/langflow-datastax-better-together-1b7462cebc4d"

@@ -366,6 +366,8 @@ export const nodeNames: { [char: string]: string } = {
   output_parsers: "Output Parsers",
   custom_components: "Custom",
   link_extractors: "Link Extractors",
+  coprocessors: "ZK Coprocessors",
+  dataAvailability: "Data Availability",
   unknown: "Other",
 };
 
