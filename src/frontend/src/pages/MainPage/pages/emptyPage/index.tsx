@@ -1,13 +1,19 @@
+import ForwardedIconComponent from "@/components/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useEffect, useRef } from "react";
 import LangflowEmptyIcon from "../../assets/LangflowEmptyIcon.svg?react";
 
 type EmptyPageProps = {
   setOpenModal: (open: boolean) => void;
+  setShowFolderModal: (open: boolean) => void;
   folderName: string;
 };
 
-export const EmptyPage = ({ setOpenModal, folderName }: EmptyPageProps) => {
+export const EmptyPage = ({
+  setOpenModal,
+  setShowFolderModal,
+  folderName,
+}: EmptyPageProps) => {
   const interBubbleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,15 +54,29 @@ export const EmptyPage = ({ setOpenModal, folderName }: EmptyPageProps) => {
   return (
     <div className="m-0 p-0">
       <div className="text-container">
-        <div className="absolute left-10 top-10 text-2xl font-semibold text-white">
-          {folderName}
-        </div>
+        {folderName && (
+          <div className="absolute left-10 top-10 flex items-center text-2xl font-semibold dark:text-white">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowFolderModal(true)}
+              className="mr-2 bg-transparent lg:hidden"
+            >
+              <ForwardedIconComponent
+                name="panel-left-open"
+                aria-hidden="true"
+                className="h-5 w-5 text-zinc-500 dark:text-zinc-400"
+              />
+            </Button>
+            {folderName}
+          </div>
+        )}
         <div className="relative z-20 flex w-full flex-col items-center justify-center gap-2">
           <LangflowEmptyIcon />
-          <h3 className="pt-5 text-2xl font-semibold text-white">
+          <h3 className="pt-5 text-2xl font-semibold dark:text-white">
             Start building
           </h3>
-          <p className="pb-2 text-sm text-white">
+          <p className="pb-2 text-sm dark:text-white">
             Begin with a template, or start from scratch.
           </p>
           <Button onClick={() => setOpenModal(true)}>New Project</Button>

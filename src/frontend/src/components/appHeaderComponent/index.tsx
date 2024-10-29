@@ -24,7 +24,7 @@ export default function AppHeader(): JSX.Element {
   useTheme();
 
   return (
-    <div className="fixed left-0 top-0 z-10 flex h-[62px] w-full items-center border-b px-5 py-2.5 dark:bg-black">
+    <div className="fixed left-0 top-0 z-[1] flex h-[62px] w-full items-center border-b px-5 py-2.5 dark:bg-black">
       {/* Left Section */}
       <div className="flex w-0 items-center gap-2 lg:w-[20vw] xl:max-w-[325px] 2xl:max-w-[475px]">
         <Button
@@ -70,7 +70,11 @@ export default function AppHeader(): JSX.Element {
           </>
         )}
         <AlertDropdown>
-          <ShadTooltip content="Notifications and errors" side="bottom">
+          <ShadTooltip
+            content="Notifications and errors"
+            side="bottom"
+            styleClasses="z-10"
+          >
             <Button variant="ghost" className="relative">
               <span
                 className={
@@ -90,7 +94,11 @@ export default function AppHeader(): JSX.Element {
         </AlertDropdown>
         {!ENABLE_DATASTAX_LANGFLOW && (
           <>
-            <ShadTooltip content="Go to LangflowStore" side="bottom">
+            <ShadTooltip
+              content="Go to LangflowStore"
+              side="bottom"
+              styleClasses="z-10"
+            >
               <Button
                 variant="ghost"
                 className="flex items-center text-sm font-medium"
@@ -114,7 +122,7 @@ export default function AppHeader(): JSX.Element {
         )}
         {ENABLE_DATASTAX_LANGFLOW && (
           <>
-            <ShadTooltip content="Docs" side="bottom">
+            <ShadTooltip content="Docs" side="bottom" styleClasses="z-10">
               <Button
                 variant="ghost"
                 className="flex text-sm font-medium"
@@ -133,7 +141,7 @@ export default function AppHeader(): JSX.Element {
                 Docs
               </Button>
             </ShadTooltip>
-            <ShadTooltip content="Settings" side="bottom">
+            <ShadTooltip content="Settings" side="bottom" styleClasses="z-10">
               <Button
                 data-testid="user-profile-settings"
                 variant="ghost"

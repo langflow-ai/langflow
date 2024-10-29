@@ -1209,6 +1209,19 @@
 }
 
 :root {
+  --color-bg1: rgb(255, 255, 255);
+  --color-bg2: rgb(240, 240, 240);
+  --color1: 255, 50, 118;
+  --color2: 244, 128, 255;
+  --color3: 117, 40, 252;
+  --color4: 244, 128, 255;
+  --color5: 117, 40, 252;
+  --color-interactive: 140, 100, 255;
+  --circle-size: 50%;
+  --blending: hard-light;
+}
+
+.dark {
   --color-bg1: rgb(0, 0, 0);
   --color-bg2: rgb(0, 0, 0);
   --color1: 255, 50, 118;

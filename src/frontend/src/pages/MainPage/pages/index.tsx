@@ -12,7 +12,6 @@ import ModalsComponent from "../components/modalsComponent";
 import EmptyPage from "./emptyPage";
 
 export default function CollectionPage(): JSX.Element {
-  const location = useLocation();
   const [openModal, setOpenModal] = useState(false);
   const [openDeleteFolderModal, setOpenDeleteFolderModal] = useState(false);
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
@@ -23,14 +22,13 @@ export default function CollectionPage(): JSX.Element {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
-  const folders = useFolderStore((state) => state.folders);
   const showFolderModal = useFolderStore((state) => state.showFolderModal);
   const setShowFolderModal = useFolderStore(
     (state) => state.setShowFolderModal,
   );
   const queryClient = useQueryClient();
 
-  const { data: folderData, isFetching } = useGetFolderQuery({
+  const { data: allfolderData, isFetching } = useGetFolderQuery({
     id: folderId ?? myCollectionId!,
   });
 
@@ -68,12 +66,18 @@ export default function CollectionPage(): JSX.Element {
     <>
       <aside
         className={`flex w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r bg-zinc-100 px-4 dark:bg-zinc-900 lg:inline ${
-          showFolderModal ? "" : "hidden"
+          showFolderModal ||
+          (allfolderData &&
+            allfolderData?.flows?.items?.length > 0 &&
+            !isFetching)
+            ? ""
+            : "hidden"
         }`}
       >
         <FolderSidebarNav
           handleChangeFolder={(id: string) => {
             navigate(`all/folder/${id}`);
+            setShowFolderModal(false);
           }}
           handleDeleteFolder={(item) => {
             setFolderToEdit(item);
@@ -87,19 +91,24 @@ export default function CollectionPage(): JSX.Element {
           className={`relative mx-auto h-full w-full overflow-y-scroll ${
             showFolderModal ? "opacity-80 blur-[2px]" : ""
           }`}
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
+
             if (showFolderModal) {
               setShowFolderModal(false);
             }
           }}
         >
-          {folderData?.flows?.items?.length === 0 ? (
+          {allfolderData &&
+          allfolderData?.flows?.items?.length > 0 &&
+          !isFetching ? (
+            <Outlet />
+          ) : (
             <EmptyPage
               setOpenModal={setOpenModal}
-              folderName={folderData?.folder?.name ?? ""}
+              setShowFolderModal={setShowFolderModal}
+              folderName={allfolderData?.folder?.name ?? ""}
             />
-          ) : (
-            <Outlet />
           )}
         </div>
       ) : (

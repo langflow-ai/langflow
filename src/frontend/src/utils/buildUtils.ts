@@ -200,8 +200,7 @@ export async function buildFlowVertices({
         onBuildStart(ids.map((id) => ({ id: id, reference: id })));
       ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
     };
-    console.log("type", type);
-    console.log("data", data);
+
     switch (type) {
       case "vertices_sorted": {
         const verticesToRun = data.to_run;
@@ -302,7 +301,6 @@ export async function buildFlowVertices({
       }
       case "error": {
         const errorMessage = data.error;
-        console.log(data);
         onBuildError!("Error Running Flow", [errorMessage], []);
         buildResults.push(false);
         useFlowStore.getState().setIsBuilding(false);

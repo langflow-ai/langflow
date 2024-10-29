@@ -278,7 +278,7 @@ const SideBarFoldersButtonsComponent = ({
   );
 
   const AddFolderButton = ({ onClick, disabled }) => (
-    <ShadTooltip content="Create new folder">
+    <ShadTooltip content="Create new folder" styleClasses="z-10">
       <Button
         variant="ghost"
         size="icon"
@@ -293,7 +293,7 @@ const SideBarFoldersButtonsComponent = ({
   );
 
   const UploadFolderButton = ({ onClick, disabled }) => (
-    <ShadTooltip content="Upload a folder">
+    <ShadTooltip content="Upload a folder" styleClasses="z-10">
       <Button
         variant="ghost"
         className="h-7 w-7 border-0 text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
@@ -472,7 +472,11 @@ const SideBarFoldersButtonsComponent = ({
                       onValueChange={(value) => handleSelectChange(value, item)}
                       value=""
                     >
-                      <ShadTooltip content="Options" side="right">
+                      <ShadTooltip
+                        content="Options"
+                        side="right"
+                        styleClasses="z-10"
+                      >
                         <SelectTrigger
                           className="w-fit"
                           id={`options-trigger-${item.name}`}
