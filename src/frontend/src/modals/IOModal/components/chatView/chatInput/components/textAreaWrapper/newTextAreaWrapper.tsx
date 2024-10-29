@@ -29,9 +29,7 @@ const TextAreaWrapper = ({
     }
   };
 
-  const lockClass = noInput
-    ? "form-modal-no-input"
-    : "form-modal-lock-false";
+  const lockClass = noInput ? "form-modal-no-input" : "form-modal-lock-false";
 
   const fileClass = files.length > 0 ? "!rounded-t-none border-t-0" : "";
 

@@ -164,7 +164,7 @@ export default function ChatInput({
   if (noInput) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center">
-        <div className="flex flex-col items-center justify-center gap-3 bg-muted p-2 w-full rounded-md border border-input py-4">
+        <div className="flex w-full flex-col items-center justify-center gap-3 rounded-md border border-input bg-muted p-2 py-4">
           <Button
             className="font-semibold"
             onClick={() => {
@@ -193,7 +193,7 @@ export default function ChatInput({
 
   return (
     <div className="flex w-full flex-col-reverse">
-      <div className="flex w-full flex-col rounded-md border hover:border-muted-foreground focus:border-[1.5px] focus:border-primary border-input p-4">
+      <div className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.5px] focus:border-primary">
         <TextAreaWrapper
           checkSendingOk={checkSendingOk}
           send={send}

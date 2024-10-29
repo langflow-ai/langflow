@@ -253,7 +253,7 @@ export default function IOModal({
               sidebarOpen ? "w-1/5" : "w-16",
             )}
           >
-            <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted dark:bg-background p-6 text-center custom-scroll">
+            <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-6 text-center custom-scroll dark:bg-background">
               <div className="flex items-center gap-2 pb-8">
                 <Button
                   variant="ghost"
@@ -276,7 +276,7 @@ export default function IOModal({
                           name="MessagesSquare"
                           className="h-6 w-6 text-ring"
                         />
-                        <div className="font-normal text-[13px]">Chat</div>
+                        <div className="text-[13px] font-normal">Chat</div>
                       </div>
                       <Button
                         variant="ghost"
@@ -326,7 +326,7 @@ export default function IOModal({
               )}
             </div>
           </div>
-          <div className="flex h-full min-w-96 flex-grow dark:bg-accent bg-background">
+          <div className="flex h-full min-w-96 flex-grow bg-background dark:bg-accent">
             {selectedViewField && (
               <div
                 className={cn(
@@ -352,31 +352,31 @@ export default function IOModal({
                   {inputs.some(
                     (input) => input.id === selectedViewField.id,
                   ) && (
-                      <IOFieldView
-                        type={InputOutput.INPUT}
-                        left={false}
-                        fieldType={selectedViewField.type!}
-                        fieldId={selectedViewField.id!}
-                      />
-                    )}
+                    <IOFieldView
+                      type={InputOutput.INPUT}
+                      left={false}
+                      fieldType={selectedViewField.type!}
+                      fieldId={selectedViewField.id!}
+                    />
+                  )}
                   {outputs.some(
                     (output) => output.id === selectedViewField.id,
                   ) && (
-                      <IOFieldView
-                        type={InputOutput.OUTPUT}
-                        left={false}
-                        fieldType={selectedViewField.type!}
-                        fieldId={selectedViewField.id!}
-                      />
-                    )}
+                    <IOFieldView
+                      type={InputOutput.OUTPUT}
+                      left={false}
+                      fieldType={selectedViewField.type!}
+                      fieldId={selectedViewField.id!}
+                    />
+                  )}
                   {sessions.some(
                     (session) => session === selectedViewField.id,
                   ) && (
-                      <SessionView
-                        session={selectedViewField.id}
-                        id={currentFlowId}
-                      />
-                    )}
+                    <SessionView
+                      session={selectedViewField.id}
+                      id={currentFlowId}
+                    />
+                  )}
                 </div>
               </div>
             )}
@@ -387,13 +387,13 @@ export default function IOModal({
               )}
             >
               <div className="mb-4 h-[5%] text-[16px] font-semibold">
-                {(visibleSession && sessions.length > 0) &&
+                {visibleSession && sessions.length > 0 && (
                   <div>
                     {visibleSession === currentFlowId
                       ? "Default Session"
                       : `${visibleSession}`}
                   </div>
-                }
+                )}
               </div>
               {haveChat ? (
                 <div className={visibleSession ? "h-[95%]" : "h-full"}>

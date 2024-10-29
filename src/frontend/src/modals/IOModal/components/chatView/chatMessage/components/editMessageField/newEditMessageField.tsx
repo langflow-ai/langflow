@@ -29,7 +29,7 @@ export default function EditMessageField({
     <div className="flex h-fit w-full flex-col rounded-md bg-muted px-4 py-2">
       <Textarea
         ref={textareaRef}
-        className="max-h-[400px] w-full resize-none border-0 rounded-none shadow-none bg-muted focus:ring-0"
+        className="max-h-[400px] w-full resize-none rounded-none border-0 bg-muted shadow-none focus:ring-0"
         // onBlur={() => {
         //   if (!isButtonClicked) {
         //     onCancel();
@@ -40,40 +40,38 @@ export default function EditMessageField({
         onChange={(e) => setMessage(e.target.value)}
       />
       <div className="flex w-full flex-row-reverse justify-between">
-        <div className="flex w-full flex-row-reverse justify-between items-center">
+        <div className="flex w-full flex-row-reverse items-center justify-between">
           <div className="flex flex-row-reverse gap-2">
-          <Button
-            data-testid="save-button"
-            onMouseDown={() => setIsButtonClicked(true)}
-            onClick={() => {
-              onEdit(message);
-              setIsButtonClicked(false);
-            }}
-            className="mt-2 bg-foreground"
-          >
-            Save
-          </Button>
-          <Button
-            variant={"secondary"}
-            data-testid="cancel-button"
-            onMouseDown={() => setIsButtonClicked(true)}
-            onClick={() => {
-              onCancel();
-              setIsButtonClicked(false);
-            }}
-            className="mt-2 bg-border"
-          >
-            Cancel
-          </Button>
-
+            <Button
+              data-testid="save-button"
+              onMouseDown={() => setIsButtonClicked(true)}
+              onClick={() => {
+                onEdit(message);
+                setIsButtonClicked(false);
+              }}
+              className="mt-2 bg-foreground"
+            >
+              Save
+            </Button>
+            <Button
+              variant={"secondary"}
+              data-testid="cancel-button"
+              onMouseDown={() => setIsButtonClicked(true)}
+              onClick={() => {
+                onCancel();
+                setIsButtonClicked(false);
+              }}
+              className="mt-2 bg-border"
+            >
+              Cancel
+            </Button>
           </div>
-          <div className="word-break-break-word text-[13px] font-medium text-muted-foreground">
+          <div className="text-[13px] font-medium text-muted-foreground word-break-break-word">
             Editing messages will update the memory but won't restart the
             conversation.
           </div>
         </div>
-        <div>
-        </div>
+        <div></div>
       </div>
     </div>
   );

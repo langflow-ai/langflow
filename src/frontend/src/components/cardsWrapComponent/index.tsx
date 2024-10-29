@@ -1,7 +1,7 @@
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { cn } from "../../utils/utils";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 
 export default function CardsWrapComponent({
   onFileDrop,
@@ -34,13 +34,21 @@ export default function CardsWrapComponent({
 
   const dragOver = (e) => {
     e.preventDefault();
-    if (e.dataTransfer.types.some((types) => types === "Files") && onFileDrop && !isIOModalOpen) {
+    if (
+      e.dataTransfer.types.some((types) => types === "Files") &&
+      onFileDrop &&
+      !isIOModalOpen
+    ) {
       setIsDragging(true);
     }
   };
 
   const dragEnter = (e) => {
-    if (e.dataTransfer.types.some((types) => types === "Files") && onFileDrop && !isIOModalOpen) {
+    if (
+      e.dataTransfer.types.some((types) => types === "Files") &&
+      onFileDrop &&
+      !isIOModalOpen
+    ) {
       setIsDragging(true);
     }
     e.preventDefault();

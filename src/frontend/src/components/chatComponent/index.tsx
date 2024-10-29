@@ -12,8 +12,8 @@ import { useShortcutsStore } from "../../stores/shortcuts";
 import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
-import { Separator } from "../ui/separator";
 import ShadTooltip from "../shadTooltipComponent";
+import { Separator } from "../ui/separator";
 const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 
 export default function FlowToolbar(): JSX.Element {
@@ -180,10 +180,11 @@ export default function FlowToolbar(): JSX.Element {
             )}
             <div className="flex items-center gap-2">
               <div
-                className={`side-bar-button ${!hasApiKey || !validApiKey || !hasStore
+                className={`side-bar-button ${
+                  !hasApiKey || !validApiKey || !hasStore
                     ? "cursor-not-allowed"
                     : "cursor-pointer"
-                  }`}
+                }`}
               >
                 {ModalMemo}
               </div>

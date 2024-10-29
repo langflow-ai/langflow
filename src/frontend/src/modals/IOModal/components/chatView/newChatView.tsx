@@ -1,19 +1,19 @@
+import { TextEffectPerChar } from "@/components/ui/textAnimation";
+import { TextShimmer } from "@/components/ui/TextShimmer";
 import { useDeleteBuilds } from "@/controllers/API/queries/_builds";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useEffect, useRef, useState } from "react";
-import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import useFlowStore from "../../../../stores/flowStore";
 import { ChatMessageType } from "../../../../types/chat";
 import { chatViewProps } from "../../../../types/components";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatInput from "./chatInput/newChatInput";
-import ChatMessage from "./chatMessage/newChatMessage";
-import { TextEffectPerChar } from "@/components/ui/textAnimation";
-import { TextShimmer } from "@/components/ui/TextShimmer";
 import LogoIcon from "./chatMessage/components/chatLogoIcon";
+import ChatMessage from "./chatMessage/newChatMessage";
 
 export default function ChatView({
   sendMessage,
@@ -146,21 +146,21 @@ export default function ChatView({
           ))
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center">
-            <div className="flex flex-col gap-4 items-center justify-center p-8">
+            <div className="flex flex-col items-center justify-center gap-4 p-8">
               <img
                 src="/src/assets/logo.svg"
                 alt="Chain logo"
-                className="w-[40px] h-[40px] scale-[1.5]"
+                className="h-[40px] w-[40px] scale-[1.5]"
               />
               <div className="flex flex-col items-center justify-center">
                 <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
-                New chat
-              </h3>
-              <p className="text-lg text-muted-foreground">
-                <TextEffectPerChar>
-                Test your flow with a chat prompt
-                </TextEffectPerChar>
-              </p>
+                  New chat
+                </h3>
+                <p className="text-lg text-muted-foreground">
+                  <TextEffectPerChar>
+                    Test your flow with a chat prompt
+                  </TextEffectPerChar>
+                </p>
               </div>
             </div>
           </div>
@@ -173,17 +173,17 @@ export default function ChatView({
             !(chatHistory[chatHistory.length - 1].category === "error") && (
               <div className="mr-3 mt-1 flex w-11/12 pb-3">
                 <div className="flex w-full gap-4 rounded-md p-2">
-              <LogoIcon/>
-                <div className="flex items-center">
-                  <div>
-                    <TextShimmer className="" duration={1}>
-                      Flow running...
-                    </TextShimmer>
+                  <LogoIcon />
+                  <div className="flex items-center">
+                    <div>
+                      <TextShimmer className="" duration={1}>
+                        Flow running...
+                      </TextShimmer>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       </div>
       <div className="m-auto w-5/6">

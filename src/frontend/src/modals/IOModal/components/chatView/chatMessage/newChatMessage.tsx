@@ -2,6 +2,7 @@ import { ProfileIcon } from "@/components/appHeaderComponent/components/ProfileI
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { ContentBlockError } from "@/types/chat";
 import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
@@ -9,7 +10,9 @@ import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import Robot from "../../../../../assets/robot.png";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent/ChatCodeTabComponent";
-import IconComponent, { ForwardedIconComponent } from "../../../../../components/genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../../components/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
 import {
   EMPTY_INPUT_SEND_MESSAGE,
@@ -18,11 +21,10 @@ import {
 import useAlertStore from "../../../../../stores/alertStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
+import LogoIcon from "./components/chatLogoIcon";
 import { EditMessageButton } from "./components/editMessageButton/newMessageOptions";
 import EditMessageField from "./components/editMessageField/newEditMessageField";
 import FileCardWrapper from "./components/fileCardWrapper";
-import { ContentBlockError } from "@/types/chat";
-import LogoIcon from "./components/chatLogoIcon";
 
 export default function ChatMessage({
   chat,
@@ -148,13 +150,13 @@ export default function ChatMessage({
   const convertFiles = (
     files:
       | (
-        | string
-        | {
-          path: string;
-          type: string;
-          name: string;
-        }
-      )[]
+          | string
+          | {
+              path: string;
+              type: string;
+              name: string;
+            }
+        )[]
       | undefined,
   ) => {
     if (!files) return [];
@@ -198,32 +200,36 @@ export default function ChatMessage({
   ) : null;
   // Add this before the default return statement
   if (chat.category === "error") {
-    const block = (chat.content_blocks?.[0]??{}) as ContentBlockError;
+    const block = (chat.content_blocks?.[0] ?? {}) as ContentBlockError;
     return (
       <div className="flex-max-width py-6 pl-32 pr-9">
         <div className="mr-3 mt-1 flex w-11/12 pb-3">
           <div className="flex w-full gap-4 rounded-md p-2">
-            <LogoIcon/>
-            <div className="w-full rounded-md bg-error-red border border-error-red-border p-4 text-foreground">
-              <div className="mb-2 flex gap-2 items-center">
-                <ForwardedIconComponent className="h-6 w-6 text-destructive" name="OctagonAlert" />
+            <LogoIcon />
+            <div className="w-full rounded-md border border-error-red-border bg-error-red p-4 text-foreground">
+              <div className="mb-2 flex items-center gap-2">
+                <ForwardedIconComponent
+                  className="h-6 w-6 text-destructive"
+                  name="OctagonAlert"
+                />
                 <span className="">An error stopped your flow.</span>
               </div>
               <div className="mb-4">
-                <h3 className="font-semibold pb-3">Error details:</h3>
+                <h3 className="pb-3 font-semibold">Error details:</h3>
                 <p className="pb-1">Component: {block.component}</p>
                 {block.field && <p className="pb-1">Field: {block.field}</p>}
                 {block.reason && <p className="">Reason: {block.reason}</p>}
               </div>
-              {block.solution && <div>
-                <h3 className="font-semibold pb-3">Steps to fix:</h3>
-                <ol className="list-decimal pl-5">
-                  <li>Check the component settings</li>
-                  <li>Ensure all required fields are filled</li>
-                  <li>Re-run your flow</li>
-                </ol>
-              </div>
-              }
+              {block.solution && (
+                <div>
+                  <h3 className="pb-3 font-semibold">Steps to fix:</h3>
+                  <ol className="list-decimal pl-5">
+                    <li>Check the component settings</li>
+                    <li>Ensure all required fields are filled</li>
+                    <li>Re-run your flow</li>
+                  </ol>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -245,22 +251,26 @@ export default function ChatMessage({
                 "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
                 !chat.isSend ? "bg-muted" : "border border-border",
               )}
-              style={chat.meta_data?.background_color ? { backgroundColor: chat.meta_data.background_color } : {}}
+              style={
+                chat.meta_data?.background_color
+                  ? { backgroundColor: chat.meta_data.background_color }
+                  : {}
+              }
             >
               {!chat.isSend ? (
                 <div className="flex h-[18px] w-[18px] items-center justify-center">
                   {chat.meta_data?.icon ? (
-                    chat.meta_data.icon.match(/[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/) ? (
+                    chat.meta_data.icon.match(
+                      /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
+                    ) ? (
                       <span className="">{chat.meta_data.icon}</span>
                     ) : (
-                      <ForwardedIconComponent
-                        name={chat.meta_data.icon}
-                      />
+                      <ForwardedIconComponent name={chat.meta_data.icon} />
                     )
                   ) : (
                     <img
                       src={Robot}
-                      className="absolute scale-[60%] bottom-0 left-0"
+                      className="absolute bottom-0 left-0 scale-[60%]"
                       alt={"robot_image"}
                     />
                   )}
@@ -268,12 +278,12 @@ export default function ChatMessage({
               ) : (
                 <div className="flex h-[18px] w-[18px] items-center justify-center">
                   {chat.meta_data?.icon ? (
-                    chat.meta_data.icon.match(/[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/) ? (
+                    chat.meta_data.icon.match(
+                      /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
+                    ) ? (
                       <div className="">{chat.meta_data.icon}</div>
                     ) : (
-                      <ForwardedIconComponent
-                        name={chat.meta_data.icon}
-                      />
+                      <ForwardedIconComponent name={chat.meta_data.icon} />
                     )
                   ) : (
                     <ProfileIcon />
@@ -285,16 +295,20 @@ export default function ChatMessage({
               <div>
                 <div
                   className={cn(
-                    "flex items-baseline gap-3 max-w-full truncate pb-2 text-[14px] font-semibold",
+                    "flex max-w-full items-baseline gap-3 truncate pb-2 text-[14px] font-semibold",
                   )}
-                  style={chat.meta_data?.text_color ? { color: chat.meta_data.text_color } : {}}
+                  style={
+                    chat.meta_data?.text_color
+                      ? { color: chat.meta_data.text_color }
+                      : {}
+                  }
                   data-testid={
                     "sender_name_" + chat.sender_name?.toLocaleLowerCase()
                   }
                 >
                   {chat.sender_name}
                   {chat.meta_data?.source && (
-                    <div className="font-normal text-[14px] text-muted-foreground">
+                    <div className="text-[14px] font-normal text-muted-foreground">
                       {chat.meta_data?.source}
                     </div>
                   )}
@@ -356,13 +370,13 @@ export default function ChatMessage({
                                 />
                               ) : (
                                 <>
-                                  <div className="flex w-full gap-2 items-baseline">
+                                  <div className="flex w-full items-baseline gap-2">
                                     <Markdown
                                       remarkPlugins={[remarkGfm]}
                                       linkTarget="_blank"
                                       rehypePlugins={[rehypeMathjax]}
                                       className={cn(
-                                        "markdown prose font-normal text-[14px] flex w-fit items-baseline max-w-full flex-col word-break-break-word dark:prose-invert",
+                                        "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
                                         isEmpty
                                           ? "text-chat-trigger-disabled"
                                           : "text-primary",
@@ -370,7 +384,7 @@ export default function ChatMessage({
                                       components={{
                                         p({ node, ...props }) {
                                           return (
-                                            <span className="inline-block max-w-full w-fit">
+                                            <span className="inline-block w-fit max-w-full">
                                               {props.children}
                                             </span>
                                           );
@@ -397,8 +411,7 @@ export default function ChatMessage({
                                             if (content.length) {
                                               if (content[0] === "▍") {
                                                 return (
-                                                  <span className="form-modal-markdown-span">
-                                                  </span>
+                                                  <span className="form-modal-markdown-span"></span>
                                                 );
                                               }
                                             }
@@ -433,7 +446,7 @@ export default function ChatMessage({
                                         ? EMPTY_OUTPUT_SEND_MESSAGE
                                         : chatMessage}
                                     </Markdown>
-                                  {editedFlag}
+                                    {editedFlag}
                                   </div>
                                 </>
                               )}
@@ -462,7 +475,7 @@ export default function ChatMessage({
                       </button>
                       <span
                         className={cn(
-                          "prose word-break-break-word font-normal text-[14px] dark:prose-invert",
+                          "prose text-[14px] font-normal word-break-break-word dark:prose-invert",
                           !isEmpty
                             ? "text-primary"
                             : "text-chat-trigger-disabled",
@@ -470,35 +483,35 @@ export default function ChatMessage({
                       >
                         {promptOpen
                           ? template?.split("\n")?.map((line, index) => {
-                            const regex = /{([^}]+)}/g;
-                            let match;
-                            let parts: Array<JSX.Element | string> = [];
-                            let lastIndex = 0;
-                            while ((match = regex.exec(line)) !== null) {
-                              // Push text up to the match
-                              if (match.index !== lastIndex) {
-                                parts.push(
-                                  line.substring(lastIndex, match.index),
-                                );
-                              }
-                              // Push div with matched text
-                              if (chat.message[match[1]]) {
-                                parts.push(
-                                  <span className="chat-message-highlight">
-                                    {chat.message[match[1]]}
-                                  </span>,
-                                );
-                              }
+                              const regex = /{([^}]+)}/g;
+                              let match;
+                              let parts: Array<JSX.Element | string> = [];
+                              let lastIndex = 0;
+                              while ((match = regex.exec(line)) !== null) {
+                                // Push text up to the match
+                                if (match.index !== lastIndex) {
+                                  parts.push(
+                                    line.substring(lastIndex, match.index),
+                                  );
+                                }
+                                // Push div with matched text
+                                if (chat.message[match[1]]) {
+                                  parts.push(
+                                    <span className="chat-message-highlight">
+                                      {chat.message[match[1]]}
+                                    </span>,
+                                  );
+                                }
 
-                              // Update last index
-                              lastIndex = regex.lastIndex;
-                            }
-                            // Push text after the last match
-                            if (lastIndex !== line.length) {
-                              parts.push(line.substring(lastIndex));
-                            }
-                            return <p>{parts}</p>;
-                          })
+                                // Update last index
+                                lastIndex = regex.lastIndex;
+                              }
+                              // Push text after the last match
+                              if (lastIndex !== line.length) {
+                                parts.push(line.substring(lastIndex));
+                              }
+                              return <p>{parts}</p>;
+                            })
                           : isEmpty
                             ? EMPTY_INPUT_SEND_MESSAGE
                             : chatMessage}
@@ -518,16 +531,17 @@ export default function ChatMessage({
                       ) : (
                         <>
                           <div
-                            className={`flex items-baseline w-full font-normal text-[14px] gap-2 whitespace-pre-wrap break-words ${isEmpty
-                              ? "text-chat-trigger-disabled"
-                              : "text-primary"
-                              }`}
+                            className={`flex w-full items-baseline gap-2 whitespace-pre-wrap break-words text-[14px] font-normal ${
+                              isEmpty
+                                ? "text-chat-trigger-disabled"
+                                : "text-primary"
+                            }`}
                             data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                           >
                             {isEmpty
                               ? EMPTY_INPUT_SEND_MESSAGE
                               : decodedMessage}
-                          {editedFlag}
+                            {editedFlag}
                           </div>
                         </>
                       )}
@@ -552,7 +566,7 @@ export default function ChatMessage({
                     onCopy={() => {
                       navigator.clipboard.writeText(chatMessage);
                     }}
-                    onDelete={() => { }}
+                    onDelete={() => {}}
                     onEdit={() => setEditMessage(true)}
                     className="h-fit group-hover:visible"
                   />
