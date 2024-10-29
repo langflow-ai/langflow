@@ -32,7 +32,7 @@ export default function SimplifiedCodeTabComponent({
 
   return (
     <div className="dark flex w-full flex-col overflow-hidden rounded-md text-left">
-      <div className="flex w-full items-center justify-between bg-muted px-4 py-2">
+      <div className="flex w-full items-center justify-between bg-accent rounded-t-md border border-border px-4 py-2">
         <span className="text-sm font-semibold text-white dar">{language}</span>
         <Button
           variant="ghost"
@@ -50,7 +50,7 @@ export default function SimplifiedCodeTabComponent({
       <SyntaxHighlighter
         language={language.toLowerCase()}
         style={oneDark}
-        className="!mt-0 h-full w-full overflow-scroll !rounded-b-md !rounded-t-none text-left !custom-scroll"
+        className="!mt-0 h-full w-full overflow-scroll border border-border !rounded-b-md !rounded-t-none text-left !custom-scroll"
       >
         {code}
       </SyntaxHighlighter>
