@@ -31,11 +31,14 @@ import {
   SidebarMenuSkeleton,
 } from "@/components/ui/sidebar";
 import { Switch } from "@/components/ui/switch";
-import { useGetCategoriesQuery } from "@/controllers/API/queries/categories/use-get-categories";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { useStoreStore } from "@/stores/storeStore";
-import { nodeColors } from "@/utils/styleUtils";
+import {
+  nodeColors,
+  SIDEBAR_BUNDLES,
+  SIDEBAR_CATEGORIES,
+} from "@/utils/styleUtils";
 import { removeCountFromString } from "@/utils/utils";
 import { cloneDeep } from "lodash";
 import useAlertStore from "../../../../stores/alertStore";
@@ -70,7 +73,8 @@ export function FlowSidebarComponent() {
     },
   );
 
-  const { data: categories, isLoading } = useGetCategoriesQuery();
+  const categories = SIDEBAR_CATEGORIES;
+  const bundles = SIDEBAR_BUNDLES;
 
   const data = useTypesStore((state) => state.data);
   const templates = useTypesStore((state) => state.templates);
@@ -251,7 +255,7 @@ export function FlowSidebarComponent() {
     e: React.KeyboardEvent<HTMLDivElement>,
     name: string,
   ) => {
-    if ((e.key === "Enter" || e.key === " ") && categories) {
+    if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       setOpenCategories((prev) =>
         prev.includes(name)
@@ -359,13 +363,13 @@ export function FlowSidebarComponent() {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {isLoading
+                  {!data
                     ? Array.from({ length: 5 }).map((_, index) => (
                         <SidebarMenuItem key={index}>
                           <SidebarMenuSkeleton />
                         </SidebarMenuItem>
                       ))
-                    : categories?.categories.map(
+                    : categories.map(
                         (item) =>
                           dataFilter[item.name] &&
                           Object.keys(dataFilter[item.name]).length > 0 && (
@@ -487,13 +491,13 @@ export function FlowSidebarComponent() {
               <SidebarGroupLabel>Bundles</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {isLoading
+                  {!data
                     ? Array.from({ length: 5 }).map((_, index) => (
                         <SidebarMenuItem key={index}>
                           <SidebarMenuSkeleton />
                         </SidebarMenuItem>
                       ))
-                    : categories?.bundles.map(
+                    : bundles.map(
                         (item) =>
                           dataFilter[item.name] &&
                           Object.keys(dataFilter[item.name]).length > 0 && (
