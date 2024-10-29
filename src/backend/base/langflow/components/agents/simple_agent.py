@@ -9,6 +9,7 @@ from langflow.io import (
     MessageTextInput,
     Output,
 )
+from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
 
@@ -29,6 +30,7 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
         "2024-02-15-preview",
         "2024-03-01-preview",
     ]
+
     openai_inputs = [
         component_input
         for component_input in OpenAIModelComponent().inputs
@@ -48,18 +50,17 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
         DropdownInput(
             name="agent_llm",
             display_name="Language Model Type",
-            options=["Custom", "Azure OpenAI", "OpenAI"],
+            options=["Azure OpenAI", "OpenAI"],
             value="OpenAI",
             real_time_refresh=True,
+            input_types=["LanguageModel"],
+            refresh_button=True
         ),
         *openai_inputs,
     ]
     outputs = [Output(name="response", display_name="Response", method="get_response")]
 
     async def get_response(self) -> Message:
-        # Chat input initialization
-
-        # Default OpenAI Model Component
         llm_model = self.get_llm()
         if llm_model is None:
             msg = "No language model selected"
@@ -72,85 +73,52 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
         return await agent.message_response()
 
     def get_llm(self):
-        if self.agent_llm == "OpenAI":
-            return (
-                OpenAIModelComponent()
-                .set(
-                    **{
-                        component_input.name: getattr(self, component_input.name)
-                        for component_input in self.openai_inputs
-                    }
-                )
-                .build_model()
-            )
-        if self.agent_llm == "Azure OpenAI":
-            return (
-                AzureChatOpenAIComponent()
-                .set(
-                    **{
-                        component_input.name: getattr(self, f"azure_param_{component_input.name}")
-                        for component_input in self.azure_inputs
-                    }
-                )
-                .build_model()
-            )
-        if self.agent_llm == "Custom":
-            return self.llm_custom
-        return None
+        try:
+            if self.agent_llm == "OpenAI":
+                return self._build_llm_model(OpenAIModelComponent(), self.openai_inputs)
+            if self.agent_llm == "Azure OpenAI":
+                return self._build_llm_model(AzureChatOpenAIComponent(), self.azure_inputs, prefix="azure_param_")
+        except Exception as e:
+            msg = f"Error building {self.agent_llm} language model"
+            raise ValueError(msg) from e
+        return self.agent_llm
 
-    def insert_in_dict(self, build_config, field_name, new_parameters):
-        # Insert the new key-value pair after the found key
-        for new_field_name, new_parameter in new_parameters.items():
-            # Get all the items as a list of tuples (key, value)
-            items = list(build_config.items())
+    def _build_llm_model(self, component, inputs, prefix=""):
+        return component.set(
+            **{component_input.name: getattr(self, f"{prefix}{component_input.name}") for component_input in inputs}
+        ).build_model()
 
-            # Find the index of the key to insert after
-            idx = len(items)
-            for i, (key, _value) in enumerate(items):
-                if key == field_name:
-                    idx = i + 1
-                    break
+    def delete_fields(self, build_config, fields):
+        for field in fields:
+            build_config.pop(field, None)
 
-            items.insert(idx, (new_field_name, new_parameter))
-
-            # Clear the original dictionary and update with the modified items
-            build_config.clear()
-            build_config.update(items)
-
-        return build_config
-
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+    def update_build_config(self, build_config: dotdict, field_value: str, field_name: str | None = None):
         if field_name == "agent_llm":
-            openai_fields = {component.name: component for component in self.openai_inputs}
-            azure_fields = {f"azure_param_{component.name}": component for component in self.azure_inputs}
-            if field_value == "OpenAI":
-                for field in [key for key in build_config if key.startswith("azure_param_")]:
-                    if field in build_config:
-                        del build_config[field]
-                for field in openai_fields:
-                    if field in build_config:
-                        del build_config[field]
-                if "llm_custom" in build_config:
-                    del build_config["llm_custom"]
+            openai_fields = {component_input.name: component_input for component_input in self.openai_inputs}
+            azure_fields = {
+                f"azure_param_{component_input.name}": component_input for component_input in self.azure_inputs
+            }
 
-                self.insert_in_dict(build_config, "agent_llm", openai_fields)
+            if field_value == "OpenAI":
+                self.delete_fields(build_config, {**azure_fields})
+                if not any(field in build_config for field in openai_fields):
+                    build_config.update(openai_fields)
+
             elif field_value == "Azure OpenAI":
-                for field in openai_fields:
-                    if field in build_config:
-                        del build_config[field]
-                if "llm_custom" in build_config:
-                    del build_config["llm_custom"]
-                self.insert_in_dict(build_config, "agent_llm", azure_fields)
+                self.delete_fields(build_config, {**openai_fields})
+                build_config.update(azure_fields)
             elif field_value == "Custom":
-                for field in openai_fields:
-                    if field in build_config:
-                        del build_config[field]
-                for field in azure_fields:
-                    if field in build_config:
-                        del build_config[field]
-                llm_custom_fields = HandleInput(
-                    name="llm_custom", display_name="Language Model", input_types=["LanguageModel"], required=False
-                ).to_dict()
-                self.insert_in_dict(build_config, "agent_llm", {"llm_custom": llm_custom_fields})
-            build_config["agent_llm"]["value"] = field_value
+                self.delete_fields(build_config, {**openai_fields})
+                self.delete_fields(build_config, {**azure_fields})
+
+        default_keys = ["code", "_type", "agent_llm", "tools", "input_value"]
+        missing_keys = [key for key in default_keys if key not in build_config]
+        if missing_keys:
+            msg = f"Missing required keys in build_config: {missing_keys}"
+            raise ValueError(msg)
+        #debug code
+        for key, value in build_config.items():
+            if isinstance(value, dict) and value.get("input_types") is None and key not in ["code", "_type"]:
+                msg = f"Component {key} has no input types specified"
+                raise ValueError(msg)
         return build_config
