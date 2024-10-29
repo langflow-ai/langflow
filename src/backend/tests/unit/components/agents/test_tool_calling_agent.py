@@ -1,13 +1,8 @@
 import os
 
 from langflow.components.agents.tool_calling import ToolCallingAgentComponent
-from langflow.components.inputs.chat import ChatInput
 from langflow.components.models.openai import OpenAIModelComponent
-from langflow.components.outputs import ChatOutput
 from langflow.components.tools.calculator import CalculatorToolComponent
-from langflow.graph.graph.base import Graph
-from langflow.graph.state.model import create_state_model
-from loguru import logger
 
 
 async def test_tool_calling_agent_component():

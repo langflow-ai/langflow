@@ -22,10 +22,8 @@ async def test_simple_agent_with_calculator():
         api_key=api_key,
         model_name="gpt-4o",
         llm_type="OpenAI",
-        temperature=temperature
+        temperature=temperature,
     )
 
     response = await agent.get_response()
     assert "4" in response.data.get("text")
-
-
