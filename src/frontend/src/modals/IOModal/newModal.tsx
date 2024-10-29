@@ -38,6 +38,7 @@ export default function IOModal({
   isPlayground,
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
+  const setIOModalOpen = useFlowsManagerStore((state) => state.setIOModalOpen);
   const inputs = useFlowStore((state) => state.inputs).filter(
     (input) => input.type !== "ChatInput",
   );
@@ -70,6 +71,13 @@ export default function IOModal({
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
     currentFlowId,
   );
+
+  useEffect(() => {
+    setIOModalOpen(open);
+    return () => {
+      setIOModalOpen(false);
+    };
+  }, [open]);
 
   function handleDeleteSession(session_id: string) {
     deleteSessionFunction(
