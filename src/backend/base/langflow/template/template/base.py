@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from typing import cast
 
+from loguru import logger
 from pydantic import BaseModel, Field, model_serializer
 
 from langflow.inputs.inputs import InputTypes
@@ -72,6 +73,8 @@ class Template(BaseModel):
         return self.model_dump(by_alias=True, exclude_none=True, exclude={"fields"})
 
     def add_field(self, field: Input) -> None:
+        if field.name in [field.name for field in self.fields]:
+            logger.warning(f"Field {field.name} already exists in template {self.type_name}")
         self.fields.append(field)
 
     def get_field(self, field_name: str) -> Input:
