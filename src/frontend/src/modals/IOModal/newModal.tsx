@@ -177,8 +177,9 @@ export default function IOModal({
     if (chatInput) {
       setNode(chatInput.id, (node: NodeType) => {
         const newNode = { ...node };
-
-        newNode.data.node!.template["input_value"].value = chatValue;
+        if (newNode.data.node?.template) {
+          newNode.data.node!.template["input_value"].value = chatValue;
+        }
         return newNode;
       });
     }

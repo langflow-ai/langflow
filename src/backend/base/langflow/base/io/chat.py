@@ -111,3 +111,20 @@ class ChatComponent(Component):
         if hasattr(self, "_event_manager") and self._event_manager:
             for stored_message in messages:
                 self._event_manager.on_message(data=stored_message.data)
+
+    def get_connected_model_name(self):
+        if self.vertex.incoming_edges:
+            source_id = self.vertex.incoming_edges[0].source_id
+            _source_vertex = self.graph.get_vertex(source_id)
+            _display = _source_vertex.display_name
+            data = _source_vertex.data
+
+            # Check for different possible model name keys
+            node_template = data.get("node", {}).get("template", {})
+            _display = (
+                node_template.get("model_name", {}).get("value")
+                or node_template.get("model_id", {}).get("value")
+                or node_template.get("model", {}).get("value")
+                or _display
+            )
+            return _display

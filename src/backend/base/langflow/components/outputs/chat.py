@@ -88,8 +88,9 @@ class ChatOutput(ChatComponent):
         _icon = None
         if self.vertex.incoming_edges:
             source_id = self.vertex.incoming_edges[0].source_id
-            _display = self.graph.get_vertex(source_id).display_name
-            _icon = self.graph.get_vertex(source_id).icon
+            _source_vertex = self.graph.get_vertex(source_id)
+            _display = self.get_connected_model_name()
+            _icon = _source_vertex.icon
         _background_color = self.background_color
         _text_color = self.text_color
         if self.chat_icon:
