@@ -22,7 +22,7 @@ const ShadTooltip: React.FC<ShadToolTipType> = ({
     "max-w-96  self-center content-center",
     styleClasses,
     contrastTooltip
-      ? "bg-foreground text-background dark:bg-background dark:text-foreground text-[12px]"
+      ? "bg-foreground text-background dark:bg-foreground dark:text-background text-[12px]"
       : "",
   );
 
