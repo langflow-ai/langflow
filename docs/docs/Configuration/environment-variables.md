@@ -144,21 +144,3 @@ The following table lists the environment variables supported by Langflow.
 | <a id="LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT"></a>`LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` | String | Not set | Comma-separated list of environment variables to get from the environment and store as [global variables](../Settings/settings-global-variables.md). |
 | <a id="LANGFLOW_WORKER_TIMEOUT"></a>`LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds.<br/>See [`--worker-timeout` option](./configuration-cli.md#run-worker-timeout). |
 | <a id="LANGFLOW_WORKERS"></a>`LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes.<br/>See [`--workers` option](./configuration-cli.md#run-workers). |
-
-
-<!-- Temporarily removed the following variables from the table above:
-| Variable | Values | Default | Description |
-|----------|--------|---------|-------------|
-| `ASTRA_ENHANCED` | Boolean | `false` | No description available. |
-| `BACKEND_URL` | String | `http://localhost:7860/` | Value must finish with slash (`/`). |
-| `LANGCHAIN_API_KEY` | String | - | No description available. |
-| `LANGCHAIN_PROJECT` | String | `Langflow` | No description available. |
-| `LANGFLOW_DOWNLOAD_WEBHOOK_UR` |  |  | No description available. |
-| `LANGFLOW_LIKE_WEBHOOK_URL` |  |  | No description available. |
-| `LANGFUSE_HOST` | String | `-` | No description available. |
-| `LANGFUSE_PUBLIC_KEY` | String | `-` | No description available. |
-| `LANGFUSE_SECRET_KEY` | String | `-` | No description available. |
-| `OPENAI_API_KEY` | String | - | No description available. |
-| `RABBITMQ_DEFAULT_PASS` | String | `langflow` | No description available. |
-| `RABBITMQ_DEFAULT_USER` | String | `langflow` | RabbitMQ. |
-| `RESULT_BACKEND` | String | `redis://localhost:6379/0` | No description available. | -->
