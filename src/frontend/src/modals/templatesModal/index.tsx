@@ -51,7 +51,7 @@ export default function TemplatesModal({
               currentTab={currentTab}
               setCurrentTab={setCurrentTab}
             />
-            <main className="flex flex-1 flex-col gap-8 overflow-hidden p-6">
+            <main className="flex flex-1 flex-col gap-4 overflow-hidden p-6 md:gap-8">
               {currentTab === "get-started" ? (
                 <GetStartedComponent />
               ) : (
