@@ -25,6 +25,7 @@ import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IconComponent from "../../../../components/genericIconComponent";
+import { normalizeTimeString } from "./utils/format-run-time";
 
 export default function NodeStatus({
   nodeId,
@@ -216,7 +217,7 @@ export default function NodeStatus({
               <div className="mr-1 flex gap-1 rounded-sm bg-emerald-50 px-1 font-jetbrains text-[11px] font-bold text-emerald-500">
                 <Check className="h-4 w-4 items-center self-center" />
                 <span>
-                  {validationStatus?.data?.duration?.replace(" ", "")}
+                  {normalizeTimeString(validationStatus?.data?.duration)}
                 </span>
               </div>
             ) : (
