@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import uaParser from "ua-parser-js";
 
 test("user must be able to stop a building", async ({ page }) => {
   await page.goto("/");
@@ -18,6 +19,14 @@ test("user must be able to stop a building", async ({ page }) => {
     await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
+  }
+
+  const getUA = await page.evaluate(() => navigator.userAgent);
+  const userAgentInfo = uaParser(getUA);
+  let control = "Control";
+
+  if (userAgentInfo.os.name.includes("Mac")) {
+    control = "Meta";
   }
 
   await page.getByTestId("blank-flow").click();
@@ -198,7 +207,62 @@ test("user must be able to stop a building", async ({ page }) => {
   await page.getByTestId("int_int_chunk_size").fill("2");
   await page.getByTestId("int_int_chunk_overlap").fill("1");
 
-  await page.getByTestId("button_run_chat output").click();
+  const timerCode = `
+# from langflow.field_typing import Data
+from langflow.custom import Component
+from langflow.io import MessageTextInput, Output
+from langflow.schema import Data
+import time
+
+class CustomComponent(Component):
+    display_name = "Custom Component"
+    description = "Use as a template to create your own component."
+    documentation: str = "http://docs.langflow.org/components/custom"
+    icon = "custom_components"
+    name = "CustomComponent"
+
+    inputs = [
+        MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
+    ]
+
+    outputs = [
+        Output(display_name="Output", name="output", method="build_output"),
+    ]
+
+    def build_output(self) -> Data:
+        time.sleep(10000)
+        data = Data(value=self.input_value)
+        self.status = data
+        return data
+  `;
+
+  await page.getByTestId("extended-disclosure").click();
+  await page.getByPlaceholder("Search").click();
+  await page.getByPlaceholder("Search").fill("custom component");
+
+  await page.waitForTimeout(1000);
+
+  await page
+    .locator('//*[@id="helpersCustom Component"]')
+    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.mouse.up();
+  await page.mouse.down();
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+
+  await page.getByTestId("title-Custom Component").first().click();
+
+  await page.waitForTimeout(500);
+  await page.getByTestId("code-button-modal").click();
+  await page.waitForTimeout(500);
+
+  await page.locator("textarea").last().press(`${control}+a`);
+  await page.keyboard.press("Backspace");
+  await page.locator("textarea").last().fill(timerCode);
+  await page.locator('//*[@id="checkAndSaveBtn"]').click();
+  await page.waitForTimeout(500);
+
+  await page.getByTestId("button_run_custom component").click();
 
   await page.waitForSelector("text=Building", {
     timeout: 100000,
@@ -228,7 +292,7 @@ test("user must be able to stop a building", async ({ page }) => {
     timeout: 100000,
   });
 
-  await page.getByTestId("button_run_chat output").click();
+  await page.getByTestId("button_run_custom component").click();
 
   await page.waitForSelector("text=Building", {
     timeout: 100000,
@@ -264,7 +328,7 @@ test("user must be able to stop a building", async ({ page }) => {
     timeout: 100000,
   });
 
-  await page.getByTestId("button_run_chat output").click();
+  await page.getByTestId("button_run_custom component").click();
 
   await page.waitForSelector('[data-testid="loading_icon"]', {
     timeout: 100000,

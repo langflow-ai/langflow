@@ -22,6 +22,7 @@ from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
+from langflow.services.settings.feature_flags import FeatureFlags
 from langflow.services.tracing.schema import Log
 from langflow.utils.util_strings import truncate_long_strings
 
@@ -367,6 +368,7 @@ class FlowDataRequest(BaseModel):
 
 
 class ConfigResponse(BaseModel):
+    feature_flags: FeatureFlags
     frontend_timeout: int
     auto_saving: bool
     auto_saving_interval: int
