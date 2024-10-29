@@ -99,7 +99,9 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
       <div
         key={flowData.id}
         onClick={handleClick}
-        className="my-2 flex h-[110px] cursor-pointer justify-between rounded-lg border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground"
+        className={`my-2 flex h-[110px] ${
+          isComponent ? "cursor-default" : "cursor-pointer"
+        } justify-between rounded-lg border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground`}
       >
         {/* left side */}
         <div className="flex min-w-0 cursor-pointer items-center gap-2">
@@ -131,18 +133,22 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
 
         {/* right side */}
         <div className="ml-5 flex items-center gap-2">
-          <Button
-            variant="outline"
-            disabled={loadingPlayground || !hasPlayground(flowData)}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handlePlaygroundClick();
-            }}
-            className="hidden sm:block"
-          >
-            Playground
-          </Button>
+          {flowData.is_component ? (
+            <></>
+          ) : (
+            <Button
+              variant="outline"
+              disabled={loadingPlayground || !hasPlayground(flowData)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handlePlaygroundClick();
+              }}
+              className="hidden sm:block"
+            >
+              Playground
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

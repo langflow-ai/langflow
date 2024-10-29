@@ -99,7 +99,9 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
       <div
         key={flowData.id}
         onClick={handleClick}
-        className="my-1 flex cursor-pointer flex-col rounded-lg border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground"
+        className={`my-1 flex flex-col rounded-lg border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground ${
+          isComponent ? "cursor-default" : "cursor-pointer"
+        }`}
       >
         <div className="flex w-full items-center gap-2">
           <div
@@ -153,17 +155,21 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         </div>
 
         <div className="flex justify-end pt-[24px]">
-          <Button
-            disabled={loadingPlayground || !hasPlayground(flowData)}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handlePlaygroundClick();
-            }}
-            variant="outline"
-          >
-            Playground
-          </Button>
+          {flowData.is_component ? (
+            <></>
+          ) : (
+            <Button
+              disabled={loadingPlayground || !hasPlayground(flowData)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handlePlaygroundClick();
+              }}
+              variant="outline"
+            >
+              Playground
+            </Button>
+          )}
         </div>
       </div>
       {openPlayground && (

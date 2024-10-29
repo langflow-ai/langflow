@@ -85,25 +85,47 @@ const HomePage = ({ type }) => {
             setSearch={onSearch}
           />
 
-          <div className="mt-6">
-            {data && data.pagination.total > 0 ? (
-              view === "grid" ? (
-                <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {data.flows.map((flow) => (
-                    <GridComponent key={flow.id} flowData={flow} />
-                  ))}
-                </div>
+          {flowType === "flows" ? (
+            <div className="mt-6">
+              {data && data.pagination.total > 0 ? (
+                view === "grid" ? (
+                  <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {data.flows.map((flow) => (
+                      <GridComponent key={flow.id} flowData={flow} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col">
+                    {data.flows.map((flow) => (
+                      <ListComponent key={flow.id} flowData={flow} />
+                    ))}
+                  </div>
+                )
               ) : (
-                <div className="flex flex-col">
-                  {data.flows.map((flow) => (
-                    <ListComponent key={flow.id} flowData={flow} />
-                  ))}
-                </div>
-              )
-            ) : (
-              <div>No items found.</div> // TODO: add empty state
-            )}
-          </div>
+                <div>No items found.</div> // TODO: add empty state
+              )}
+            </div>
+          ) : (
+            <div className="mt-6">
+              {data && data.pagination.total > 0 ? (
+                view === "grid" ? (
+                  <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {data.flows.map((flow) => (
+                      <GridComponent key={flow.id} flowData={flow} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col">
+                    {data.flows.map((flow) => (
+                      <ListComponent key={flow.id} flowData={flow} />
+                    ))}
+                  </div>
+                )
+              ) : (
+                <div>No items found.</div> // TODO: add empty state
+              )}
+            </div>
+          )}
         </div>
 
         {!isFetching && data.pagination.total >= 10 && (
