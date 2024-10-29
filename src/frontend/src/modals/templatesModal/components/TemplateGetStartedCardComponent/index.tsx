@@ -74,7 +74,7 @@ export default function TemplateGetStartedCardComponent({
           </span>
         </div>
         <div className="flex w-full items-center justify-between">
-          <h3 className="line-clamp-3 text-lg font-bold">{title}</h3>
+          <h3 className="line-clamp-3 text-lg font-bold lg:text-xl">{title}</h3>
           <ForwardedIconComponent
             name="ArrowRight"
             className="mr-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100 group-focus-visible:translate-x-3 group-focus-visible:opacity-100"
