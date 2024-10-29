@@ -72,8 +72,6 @@ export const SidebarDraggableComponent = forwardRef(
 
     function handleSelectChange(value: string) {
       switch (value) {
-        case "share":
-          break;
         case "download":
           const type = removeCountFromString(itemName);
           downloadNode(
