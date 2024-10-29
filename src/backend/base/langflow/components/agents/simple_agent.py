@@ -19,17 +19,6 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
     icon = "workflow"
     beta = True
     name = "SimpleAgent"
-    AZURE_OPENAI_API_VERSIONS = [
-        "2024-06-01",
-        "2024-07-01-preview",
-        "2024-08-01-preview",
-        "2024-09-01-preview",
-        "2024-10-01-preview",
-        "2023-05-15",
-        "2023-12-01-preview",
-        "2024-02-15-preview",
-        "2024-03-01-preview",
-    ]
 
     openai_inputs = [
         component_input
@@ -50,11 +39,11 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
         DropdownInput(
             name="agent_llm",
             display_name="Language Model Type",
-            options=["Azure OpenAI", "OpenAI"],
+            options=["Azure OpenAI", "OpenAI", "Custom"],
             value="OpenAI",
             real_time_refresh=True,
-            input_types=["LanguageModel"],
-            refresh_button=True
+            refresh_button=True,
+            input_types=[],
         ),
         *openai_inputs,
     ]
@@ -103,22 +92,41 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
                 self.delete_fields(build_config, {**azure_fields})
                 if not any(field in build_config for field in openai_fields):
                     build_config.update(openai_fields)
+                build_config["agent_llm"]["input_types"] = []
+                build_config = self.update_input_types(build_config)
 
             elif field_value == "Azure OpenAI":
                 self.delete_fields(build_config, {**openai_fields})
                 build_config.update(azure_fields)
+                build_config["agent_llm"]["input_types"] = []
+                build_config = self.update_input_types(build_config)
             elif field_value == "Custom":
                 self.delete_fields(build_config, {**openai_fields})
                 self.delete_fields(build_config, {**azure_fields})
-
-        default_keys = ["code", "_type", "agent_llm", "tools", "input_value"]
-        missing_keys = [key for key in default_keys if key not in build_config]
-        if missing_keys:
-            msg = f"Missing required keys in build_config: {missing_keys}"
-            raise ValueError(msg)
-        #debug code
-        for key, value in build_config.items():
-            if isinstance(value, dict) and value.get("input_types") is None and key not in ["code", "_type"]:
-                msg = f"Component {key} has no input types specified"
+                new_component = DropdownInput(
+                    name="agent_llm",
+                    display_name="Language Model",
+                    options=["Azure OpenAI", "OpenAI", "Custom"],
+                    value="Custom",
+                    real_time_refresh=True,
+                    input_types=["LanguageModel"],
+                )
+                build_config.update({"agent_llm": new_component.to_dict()})
+                build_config = self.update_input_types(build_config)
+            default_keys = ["code", "_type", "agent_llm", "tools", "input_value"]
+            missing_keys = [key for key in default_keys if key not in build_config]
+            if missing_keys:
+                msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
+        return build_config
+
+    def update_input_types(self, build_config):
+        for key, value in build_config.items():
+            # Check if the value is a dictionary
+            if isinstance(value, dict):
+                if value.get("input_types") is None:
+                    build_config[key]["input_types"] = []
+            # Check if the value has an attribute 'input_types' and it is None
+            elif hasattr(value, "input_types") and value.input_types is None:
+                value.input_types = []
         return build_config
