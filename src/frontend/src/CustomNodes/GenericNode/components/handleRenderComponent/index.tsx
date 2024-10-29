@@ -286,7 +286,7 @@ export default function HandleRenderComponent({
       <ShadTooltip
         open={openTooltip}
         setOpen={setOpenTooltip}
-        styleClasses="tooltip-fixed-width custom-scroll nowheel"
+        styleClasses="tooltip-fixed-width custom-scroll nowheel bottom-2 relative"
         delayDuration={1000}
         contrastTooltip
         content={
