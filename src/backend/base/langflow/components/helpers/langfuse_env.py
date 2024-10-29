@@ -1,7 +1,7 @@
 import os
 
 from langflow.custom import Component
-from langflow.io import DictInput, Output
+from langflow.io import Output
 from langflow.schema import Data
 
 
@@ -34,7 +34,6 @@ class EnvVarSetter(Component):
             value="LANGFUSE_HOST",
             required=True,
         ),
-
     ]
 
     outputs = [
@@ -46,11 +45,10 @@ class EnvVarSetter(Component):
     ]
 
     def build_output(self) -> Data:
-
         # Set environment variables
-        os.environ['LANGFUSE_SECRET_KEY'] = self.secretkey
-        os.environ['LANGFUSE_PUBLIC_KEY'] = self.publickey
-        os.environ['LANGFUSE_HOST'] = self.host
+        os.environ["LANGFUSE_SECRET_KEY"] = self.secretkey
+        os.environ["LANGFUSE_PUBLIC_KEY"] = self.publickey
+        os.environ["LANGFUSE_HOST"] = self.host
 
         success_message = "Environment variables set successfully"
 
