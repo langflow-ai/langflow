@@ -6,7 +6,7 @@ import { LoadingPage } from "@/pages/LoadingPage";
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation, useParams } from "react-router-dom";
 import ModalsComponent from "../components/modalsComponent";
 import EmptyPage from "./emptyPage";
@@ -64,27 +64,26 @@ export default function CollectionPage(): JSX.Element {
 
   return (
     <>
-      <aside
-        className={`flex w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r bg-zinc-100 px-4 dark:bg-zinc-900 lg:inline ${
-          showFolderModal ||
-          (allfolderData &&
-            allfolderData?.flows?.items?.length > 0 &&
-            !isFetching)
-            ? ""
-            : "hidden"
-        }`}
-      >
-        <FolderSidebarNav
-          handleChangeFolder={(id: string) => {
-            navigate(`all/folder/${id}`);
-            setShowFolderModal(false);
-          }}
-          handleDeleteFolder={(item) => {
-            setFolderToEdit(item);
-            setOpenDeleteFolderModal(true);
-          }}
-        />
-      </aside>
+      {allfolderData &&
+        allfolderData?.flows?.items?.length > 0 &&
+        !isFetching && (
+          <aside
+            className={`flex w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r bg-zinc-100 px-4 dark:bg-zinc-900 lg:inline ${
+              showFolderModal ? "" : "hidden"
+            }`}
+          >
+            <FolderSidebarNav
+              handleChangeFolder={(id: string) => {
+                navigate(`all/folder/${id}`);
+                setShowFolderModal(false);
+              }}
+              handleDeleteFolder={(item) => {
+                setFolderToEdit(item);
+                setOpenDeleteFolderModal(true);
+              }}
+            />
+          </aside>
+        )}
 
       {!isFetching ? (
         <div
@@ -107,7 +106,11 @@ export default function CollectionPage(): JSX.Element {
             <EmptyPage
               setOpenModal={setOpenModal}
               setShowFolderModal={setShowFolderModal}
-              folderName={allfolderData?.folder?.name ?? ""}
+              folderName={
+                allfolderData && allfolderData?.flows?.items?.length > 0
+                  ? allfolderData?.folder?.name || ""
+                  : ""
+              }
             />
           )}
         </div>
