@@ -1,4 +1,6 @@
+import numpy as np
 from langchain_pinecone import Pinecone
+
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
@@ -11,8 +13,6 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import Data
-from typing import List, Union
-import numpy as np
 
 
 class PineconeVectorStoreComponent(LCVectorStoreComponent):
@@ -61,6 +61,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
 
     class Float32Embeddings:
         """Wrapper class to ensure float32 embeddings."""
+
         def __init__(self, base_embeddings, parent):
             self.base_embeddings = base_embeddings
             self.parent = parent
@@ -82,7 +83,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
         """Build and return a Pinecone vector store instance."""
         try:
             from langchain_pinecone._utilities import DistanceStrategy
-            
+
             # Wrap the embedding model to ensure float32 output
             wrapped_embeddings = self.Float32Embeddings(self.embedding, self)
 
@@ -111,18 +112,18 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
                         documents.append(doc.to_lc_document())
                     else:
                         documents.append(doc)
-                
+
                 if documents:
                     pinecone.add_documents(documents)
 
             return pinecone
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         """Search documents in the vector store."""
         try:
             if not self.search_query or not isinstance(self.search_query, str) or not self.search_query.strip():
                 return []
-                
+
             vector_store = self.build_vector_store()
             docs = vector_store.similarity_search(
                 query=self.search_query,
