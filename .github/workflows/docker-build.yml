@@ -215,7 +215,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.get-version.outputs.version || github.ref }}
+          ref: ${{ needs.get-version.outputs.version && format('v{0}', needs.get-version.outputs.version) || github.ref }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
