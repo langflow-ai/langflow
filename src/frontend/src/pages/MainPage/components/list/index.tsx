@@ -158,6 +158,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
               <Button
                 variant="outline"
                 size="icon"
+                data-testid="home-dropdown-menu"
                 className="group h-10 w-10 border-none dark:hover:bg-zinc-700"
               >
                 <ForwardedIconComponent

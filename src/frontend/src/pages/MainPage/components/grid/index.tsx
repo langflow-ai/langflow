@@ -126,6 +126,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
+                  data-testid="home-dropdown-menu"
                   size="icon"
                   className="group ml-2 h-10 w-10 border-none dark:hover:bg-zinc-700"
                 >

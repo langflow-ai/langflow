@@ -28,7 +28,7 @@ test("should be able to share a component on the store by clicking on the share 
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -63,7 +63,7 @@ test("should be able to share a component on the store by clicking on the share 
   await page.getByTestId("icon-ChevronLeft").first().click();
   await page.waitForTimeout(1000);
 
-  await page.getByText("New Project", { exact: true }).click();
+  await page.getByText("New Flow", { exact: true }).click();
 
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();

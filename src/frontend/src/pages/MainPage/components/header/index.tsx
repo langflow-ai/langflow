@@ -52,7 +52,10 @@ const HeaderComponent = ({
 
   return (
     <>
-      <div className="flex items-center pb-8 text-xl font-semibold">
+      <div
+        className="flex items-center pb-8 text-xl font-semibold"
+        data-testid="mainpage_title"
+      >
         <Button
           variant="ghost"
           className="mr-2 lg:hidden"
@@ -72,6 +75,7 @@ const HeaderComponent = ({
           <Button
             key={type}
             unstyled
+            id={`${type}-btn`}
             onClick={() => setFlowType(type as "flows" | "components")}
             className={`border-b ${
               flowType === type
@@ -88,6 +92,7 @@ const HeaderComponent = ({
         <div className="flex w-full xl:w-5/12">
           <Input
             icon="search"
+            data-testid="search-store-input"
             type="search"
             placeholder={`Search ${flowType}...`}
             className="mr-2"
@@ -130,7 +135,11 @@ const HeaderComponent = ({
             </Button>
           </ShadTooltip>
           <ShadTooltip content="New Flow" side="bottom">
-            <Button variant="default" onClick={() => setNewProjectModal(true)}>
+            <Button
+              variant="default"
+              onClick={() => setNewProjectModal(true)}
+              id="new-project-btn"
+            >
               <ForwardedIconComponent
                 name="plus"
                 aria-hidden="true"

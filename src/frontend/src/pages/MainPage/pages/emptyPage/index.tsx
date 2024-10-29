@@ -85,7 +85,9 @@ export const EmptyPage = ({
           <p className="pb-2 text-sm dark:text-white">
             Begin with a template, or start from scratch.
           </p>
-          <Button onClick={() => setOpenModal(true)}>New Project</Button>
+          <Button id="new-project-btn" onClick={() => setOpenModal(true)}>
+            New Flow
+          </Button>
         </div>
       </div>
       <div className="gradient-bg">

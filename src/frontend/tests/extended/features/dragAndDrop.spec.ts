@@ -17,7 +17,7 @@ test.describe("drag and drop test", () => {
     }
 
     while (modalCount === 0) {
-      await page.getByText("New Project", { exact: true }).click();
+      await page.getByText("New Flow", { exact: true }).click();
       await page.waitForTimeout(3000);
       modalCount = await page.getByTestId("modal-title")?.count();
     }
