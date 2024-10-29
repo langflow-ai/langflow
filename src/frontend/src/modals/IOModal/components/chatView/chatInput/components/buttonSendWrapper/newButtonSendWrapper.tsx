@@ -9,7 +9,7 @@ import { classNames } from "../../../../../../../utils/utils";
 const BUTTON_STATES = {
   NO_INPUT: "bg-high-indigo text-background",
   HAS_CHAT_VALUE: "text-primary",
-  SHOW_STOP: "bg-mutedh text-white cursor-pointer",
+  SHOW_STOP: "bg-muted hover:bg-secondary-hover cursor-pointer",
   DEFAULT: "bg-primary text-background",
 };
 
@@ -62,7 +62,7 @@ const ButtonSendWrapper = ({
       unstyled
     >
       <Case condition={showStopButton}>
-        <div className="flex items-center gap-2 text-[14px] font-medium">
+        <div className="flex items-center gap-2 rounded-md text-[14px] font-medium">
           Stop
           <Loading />
         </div>
