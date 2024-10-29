@@ -208,7 +208,9 @@ export default function NodeStatus({
             {conditionSuccess ? (
               <div className="mr-1 flex gap-1 rounded-sm bg-emerald-50 px-1 font-jetbrains text-[11px] font-bold text-emerald-500">
                 <Check className="h-4 w-4 items-center self-center" />
-                <span>{validationStatus?.data.duration?.replace(" ", "")}</span>
+                <span>
+                  {validationStatus?.data?.duration?.replace(" ", "")}
+                </span>
               </div>
             ) : (
               iconStatus

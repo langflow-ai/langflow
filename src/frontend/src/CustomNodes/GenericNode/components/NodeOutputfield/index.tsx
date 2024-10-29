@@ -133,36 +133,38 @@ export default function NodeOutputField({
     >
       <>
         <div className="flex w-full items-center justify-end truncate text-sm">
-          <ShadTooltip
-            content={
-              disabledOutput
-                ? null
-                : data.node?.outputs![index].hidden
-                  ? "Show output"
-                  : "Hide output"
-            }
-            contrastTooltip
-          >
-            <div className="flex flex-1">
-              <Button
-                disabled={disabledOutput}
-                unstyled
-                onClick={() => handleUpdateOutputHide()}
-                data-testid={`input-inspection-${title.toLowerCase()}`}
+          <div className="flex flex-1">
+            <Button
+              disabled={disabledOutput}
+              unstyled
+              onClick={() => handleUpdateOutputHide()}
+              data-testid={`input-inspection-${title.toLowerCase()}`}
+            >
+              <ShadTooltip
+                content={
+                  disabledOutput
+                    ? null
+                    : data.node?.outputs![index].hidden
+                      ? "Show output"
+                      : "Hide output"
+                }
+                contrastTooltip
               >
-                <IconComponent
-                  className={cn(
-                    "icon-size",
-                    disabledOutput
-                      ? "text-placeholder-foreground opacity-60"
-                      : "text-placeholder-foreground hover:text-foreground",
-                  )}
-                  strokeWidth={ICON_STROKE_WIDTH}
-                  name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
-                />
-              </Button>
-            </div>
-          </ShadTooltip>
+                <div>
+                  <IconComponent
+                    className={cn(
+                      "icon-size",
+                      disabledOutput
+                        ? "text-placeholder-foreground opacity-60"
+                        : "text-placeholder-foreground hover:text-foreground",
+                    )}
+                    strokeWidth={ICON_STROKE_WIDTH}
+                    name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
+                  />
+                </div>
+              </ShadTooltip>
+            </Button>
+          </div>
 
           {data.node?.frozen && (
             <div className="pr-1">
