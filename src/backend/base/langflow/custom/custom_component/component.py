@@ -19,7 +19,6 @@ from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
-from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -40,6 +39,7 @@ if TYPE_CHECKING:
 
 
 _ComponentToolkit = None
+_BoolInput = None
 
 
 def _get_component_toolkit():
@@ -49,6 +49,15 @@ def _get_component_toolkit():
 
         _ComponentToolkit = ComponentToolkit
     return _ComponentToolkit
+
+
+def _get_bool_input():
+    global _BoolInput  # noqa: PLW0603
+    if _BoolInput is None:
+        from langflow.inputs.inputs import BoolInput
+
+        _BoolInput = BoolInput
+    return _BoolInput
 
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
@@ -62,6 +71,7 @@ class Component(CustomComponent):
     _output_logs: dict[str, Log] = {}
     _current_output: str = ""
     _metadata: dict = {}
+    _code: str | None = None
 
     def __init__(self, **kwargs) -> None:
         # if key starts with _ it is a config
@@ -94,8 +104,7 @@ class Component(CustomComponent):
         self.__config = config
         self._reset_all_output_values()
         super().__init__(**config)
-        if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_output") and self.add_tool_output:
-            self._append_tool_output()
+        self.add_tool_field()
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
@@ -108,6 +117,22 @@ class Component(CustomComponent):
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
         self._set_output_required_inputs()
+
+    def add_tool_field(self):
+        if not self.inputs:
+            self.inputs = []
+        bool_input = _get_bool_input()
+        self.inputs.append(
+            bool_input(
+                name="tool_mode",
+                display_name="Tool Mode",
+                value=self.add_tool_output,
+                real_time_refresh=True,
+                advanced=True,
+            )
+        )
+        if self.add_tool_output:
+            self._append_tool_output()
 
     def set_event_manager(self, event_manager: EventManager | None = None) -> None:
         self._event_manager = event_manager
@@ -321,6 +346,15 @@ class Component(CustomComponent):
 
     def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
         frontend_node = self.update_outputs(frontend_node, field_name, field_value)
+        # This is related to the tool mode feature.
+        # We are adding a tool mode input to all Component subclasses
+        # which then adds a Tool output to all components if set to true.
+        if (field_name != "tool_mode" and frontend_node.get("template", {}).get("tool_mode", False)) or (
+            field_name == "tool_mode" and field_value is True
+        ):
+            self._append_tool_output_to_frontend_node(frontend_node)
+        else:
+            self._remove_tool_output_from_frontend_node(frontend_node)
         return self._validate_frontend_node(frontend_node)
 
     def _validate_frontend_node(self, frontend_node: dict):
@@ -879,3 +913,13 @@ class Component(CustomComponent):
     def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
             self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
+
+    def _append_tool_output_to_frontend_node(self, frontend_node: dict) -> None:
+        output_names = [output["name"] for output in frontend_node["outputs"]]
+        if TOOL_OUTPUT_NAME not in output_names:
+            frontend_node["outputs"].append(
+                Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"])
+            )
+
+    def _remove_tool_output_from_frontend_node(self, frontend_node: dict) -> None:
+        frontend_node["outputs"] = [output for output in frontend_node["outputs"] if output["name"] != TOOL_OUTPUT_NAME]
