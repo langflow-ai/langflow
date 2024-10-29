@@ -169,9 +169,10 @@ export default function ChatView({
           className={lockChat ? "flex-max-width py-6 pl-32 pr-9" : ""}
           ref={ref}
         >
-          {lockChat && (
-            <div className="mr-3 mt-1 flex w-11/12 pb-3">
-              <div className="flex w-full gap-4 rounded-md p-2">
+          {lockChat &&
+            !(chatHistory[chatHistory.length - 1].category === "error") && (
+              <div className="mr-3 mt-1 flex w-11/12 pb-3">
+                <div className="flex w-full gap-4 rounded-md p-2">
               <LogoIcon/>
                 <div className="flex items-center">
                   <div>
