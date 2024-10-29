@@ -45,7 +45,7 @@ export function getCustomParameterTitle({
   title: string;
   nodeId: string;
 }) {
-  return title;
+  return <span className="text-[13px]">{title}</span>;
 }
 
 export function CustomParameterLabel({

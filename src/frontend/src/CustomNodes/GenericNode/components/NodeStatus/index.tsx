@@ -20,7 +20,7 @@ import { useShortcutsStore } from "@/stores/shortcuts";
 import { VertexBuildTypeAPI } from "@/types/api";
 import { NodeDataType } from "@/types/flow";
 import { findLastNode } from "@/utils/reactflowUtils";
-import { classNames } from "@/utils/utils";
+import { classNames, cn } from "@/utils/utils";
 import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -152,6 +152,13 @@ export default function NodeStatus({
     track("Flow Build - Clicked", { stopNodeId: nodeId });
   };
 
+  const iconName = BuildStatus.BUILDING === buildStatus ? "Loader2" : "Play";
+  const iconClasses = cn(
+    "play-button-icon",
+    isHovered ? "text-foreground" : "text-placeholder-foreground",
+    BuildStatus.BUILDING === buildStatus && "animate-spin",
+  );
+
   return (
     <>
       <div className="flex flex-shrink-0 items-center gap-1">
@@ -230,12 +237,8 @@ export default function NodeStatus({
               <Button unstyled className="group">
                 <div data-testid={`button_run_` + display_name.toLowerCase()}>
                   <IconComponent
-                    name="Play"
-                    className={`play-button-icon ${
-                      isHovered
-                        ? "text-foreground"
-                        : "text-placeholder-foreground"
-                    }`}
+                    name={iconName}
+                    className={iconClasses}
                     strokeWidth={ICON_STROKE_WIDTH}
                   />
                 </div>

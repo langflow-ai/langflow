@@ -278,7 +278,13 @@ export default function GenericNode({
         )}
       >
         {BuildStatus.BUILDING === buildStatus && (
-          <BorderBeam className="z-10" borderWidth={3.5} size={350} />
+          <BorderBeam
+            colorFrom="hsl(var(--foreground))"
+            colorTo="hsl(var(--foreground))"
+            className="z-10"
+            borderWidth={1.5}
+            size={350}
+          />
         )}
 
         <div className="grid gap-3 truncate text-wrap border-b p-4 leading-5">
