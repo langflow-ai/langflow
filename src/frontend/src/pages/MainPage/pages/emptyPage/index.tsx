@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import LangflowEmptyIcon from "../../assets/LangflowEmptyIcon.svg?react";
 
 type EmptyPageProps = {
@@ -8,9 +8,13 @@ type EmptyPageProps = {
 };
 
 export const EmptyPage = ({ setOpenModal, folderName }: EmptyPageProps) => {
+  const interBubbleRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const interBubble = document.querySelector<HTMLDivElement>(".interactive");
-    if (!interBubble) return;
+    const interBubble = interBubbleRef.current;
+    const aside = document.querySelector("aside"); // Adjust this selector to target your aside
+
+    if (!interBubble || !aside) return;
 
     let curX = 0;
     let curY = 0;
@@ -25,7 +29,11 @@ export const EmptyPage = ({ setOpenModal, folderName }: EmptyPageProps) => {
     };
 
     const handleMouseMove = (event: MouseEvent) => {
-      tgX = event.clientX;
+      const asideRect = aside.getBoundingClientRect();
+      const asideWidth = asideRect.width;
+
+      // Adjust for the aside's dynamic width
+      tgX = event.clientX - asideWidth;
       tgY = event.clientY;
     };
 
@@ -74,12 +82,12 @@ export const EmptyPage = ({ setOpenModal, folderName }: EmptyPageProps) => {
           </defs>
         </svg>
         <div className="gradients-container">
-          <div className="g1"></div>
-          <div className="g2"></div>
-          <div className="g3"></div>
-          <div className="g4"></div>
-          <div className="g5"></div>
-          <div className="interactive"></div>
+          <div className="g1" />
+          <div className="g2" />
+          <div className="g3" />
+          <div className="g4" />
+          <div className="g5" />
+          <div className="interactive" ref={interBubbleRef} />
         </div>
       </div>
     </div>

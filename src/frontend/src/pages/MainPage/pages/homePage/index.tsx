@@ -2,7 +2,7 @@ import CardsWrapComponent from "@/components/cardsWrapComponent";
 import PaginatorComponent from "@/components/paginatorComponent";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { useFolderStore } from "@/stores/foldersStore";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import GridComponent from "../../components/grid";
 import HeaderComponent from "../../components/header";
@@ -16,7 +16,6 @@ const HomePage = ({ type }) => {
     return savedView === "grid" || savedView === "list" ? savedView : "list";
   });
   const [newProjectModal, setNewProjectModal] = useState(false);
-  const folders = useFolderStore((state) => state.folders);
   const { folderId } = useParams();
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -86,10 +85,10 @@ const HomePage = ({ type }) => {
             setSearch={onSearch}
           />
 
-          <div className="mt-8">
+          <div className="mt-6">
             {data && data.pagination.total > 0 ? (
               view === "grid" ? (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {data.flows.map((flow) => (
                     <GridComponent key={flow.id} flowData={flow} />
                   ))}

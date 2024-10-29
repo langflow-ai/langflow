@@ -1,12 +1,15 @@
 import FolderSidebarNav from "@/components/folderSidebarComponent";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
+import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { LoadingPage } from "@/pages/LoadingPage";
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useParams } from "react-router-dom";
 import ModalsComponent from "../components/modalsComponent";
+import EmptyPage from "./emptyPage";
 
 export default function CollectionPage(): JSX.Element {
   const location = useLocation();
@@ -14,6 +17,8 @@ export default function CollectionPage(): JSX.Element {
   const [openDeleteFolderModal, setOpenDeleteFolderModal] = useState(false);
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
   const navigate = useCustomNavigate();
+  const { folderId } = useParams();
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -24,6 +29,10 @@ export default function CollectionPage(): JSX.Element {
     (state) => state.setShowFolderModal,
   );
   const queryClient = useQueryClient();
+
+  const { data: folderData, isFetching } = useGetFolderQuery({
+    id: folderId ?? myCollectionId!,
+  });
 
   // cleanup the query cache when the component unmounts
   // prevent unnecessary queries on flow update
@@ -72,18 +81,30 @@ export default function CollectionPage(): JSX.Element {
           }}
         />
       </aside>
-      <div
-        className={`relative mx-auto h-full w-full overflow-y-scroll ${
-          showFolderModal ? "opacity-80 blur-[2px]" : ""
-        }`}
-        onClick={() => {
-          if (showFolderModal) {
-            setShowFolderModal(false);
-          }
-        }}
-      >
-        <Outlet />
-      </div>
+
+      {!isFetching ? (
+        <div
+          className={`relative mx-auto h-full w-full overflow-y-scroll ${
+            showFolderModal ? "opacity-80 blur-[2px]" : ""
+          }`}
+          onClick={() => {
+            if (showFolderModal) {
+              setShowFolderModal(false);
+            }
+          }}
+        >
+          {folderData?.flows?.items?.length === 0 ? (
+            <EmptyPage
+              setOpenModal={setOpenModal}
+              folderName={folderData?.folder?.name ?? ""}
+            />
+          ) : (
+            <Outlet />
+          )}
+        </div>
+      ) : (
+        <LoadingPage />
+      )}
 
       <ModalsComponent
         openModal={openModal}

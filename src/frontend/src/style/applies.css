@@ -1197,7 +1197,7 @@
 .text-container {
   z-index: 50;
   width: 100%;
-  height: 99vh;
+  height: 100%;
   display: flex;
   position: absolute;
   top: 0;
@@ -1258,9 +1258,9 @@
 }
 
 .gradient-bg {
-  width: 100vw;
-  height: 99vh;
-  position: relative;
+  width: 100%;
+  height: 100%;
+  position: absolute;
   overflow: hidden;
   background: linear-gradient(40deg, var(--color-bg1), var(--color-bg2));
   top: 0;
