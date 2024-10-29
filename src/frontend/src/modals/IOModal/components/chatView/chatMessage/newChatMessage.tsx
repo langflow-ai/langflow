@@ -230,8 +230,6 @@ export default function ChatMessage({
       </div>
     );
   }
-  console.log(chat);
-
   return (
     <>
       <div className="flex-max-width px-2 py-6 pl-32 pr-9">
