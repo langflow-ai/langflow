@@ -275,56 +275,94 @@ export default function HandleRenderComponent({
         }
         side={left ? "left" : "right"}
       >
-        <Handle
-          data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
-            !showNode ? (left ? "target" : "source") : left ? "left" : "right"
-          }`}
-          type={left ? "target" : "source"}
-          position={left ? Position.Left : Position.Right}
-          key={myId}
-          id={myId}
-          isValidConnection={(connection) =>
-            isValidConnection(connection, nodes, edges)
-          }
-          className={classNames(
-            `group/handle z-20 h-12 w-12 rounded-full border-none bg-transparent transition-all`, // Increased from h-10 w-10 to h-12 w-12
-          )}
-          onClick={() => {
-            setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
-            setFilterType(currentFilter);
-            if (filterOpenHandle && filterType) {
-              onConnect(getConnection(filterType));
-              setFilterType(undefined);
-              setFilterEdge([]);
+        <div className="relative">
+          <Handle
+            data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
+              !showNode ? (left ? "target" : "source") : left ? "left" : "right"
+            }`}
+            type={left ? "target" : "source"}
+            position={left ? Position.Left : Position.Right}
+            key={myId}
+            id={myId}
+            isValidConnection={(connection) =>
+              isValidConnection(connection, nodes, edges)
             }
-          }}
-          onMouseUp={() => {
-            setOpenTooltip(false);
-          }}
-          onContextMenu={(event) => {
-            event.preventDefault();
-          }}
-          onMouseDown={(event) => {
-            if (event.button === 0) {
-              setHandleDragging(currentFilter);
-              document.addEventListener("mouseup", handleMouseUp);
-            }
-          }}
-          style={{
-            background: handleColor,
-            width: "14px",
-            height: "14px",
-            transition: "all 0.2s",
-            boxShadow: getNeonShadow(colors[0], isHovered || openHandle),
-            animation:
-              (isHovered || openHandle) && !isNullHandle
-                ? "pulseNeon 0.7s ease-in-out infinite"
-                : "none",
-            border: isNullHandle ? "1px solid #fff" : "none",
-          }}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        ></Handle>
+            className={classNames(
+              `group/handle z-20 h-12 w-12 rounded-full border-none bg-transparent transition-all`,
+            )}
+            onClick={() => {
+              setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
+              setFilterType(currentFilter);
+              if (filterOpenHandle && filterType) {
+                onConnect(getConnection(filterType));
+                setFilterType(undefined);
+                setFilterEdge([]);
+              }
+            }}
+            onMouseUp={() => {
+              setOpenTooltip(false);
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+            }}
+            onMouseDown={(event) => {
+              if (event.button === 0) {
+                setHandleDragging(currentFilter);
+                document.addEventListener("mouseup", handleMouseUp);
+              }
+            }}
+            style={{
+              background: handleColor,
+              width: "14px",
+              height: "14px",
+              transition: "all 0.2s",
+              boxShadow: getNeonShadow(colors[0], isHovered || openHandle),
+              animation:
+                (isHovered || openHandle) && !isNullHandle
+                  ? "pulseNeon 0.7s ease-in-out infinite"
+                  : "none",
+              border: isNullHandle ? "1px solid #fff" : "none",
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          />
+          {/* Invisible overlay with larger clickable area */}
+          <div
+            className="absolute -translate-y-1/2"
+            style={{
+              width: "32px",
+              height: "32px",
+              top: "50%",
+              left: left ? "0%" : "100%",
+              cursor: "pointer",
+              position: "absolute",
+              zIndex: 30,
+            }}
+            onClick={(e) => {
+              setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
+              setFilterType(currentFilter);
+              if (filterOpenHandle && filterType) {
+                onConnect(getConnection(filterType));
+                setFilterType(undefined);
+                setFilterEdge([]);
+              }
+            }}
+            onMouseUp={() => {
+              setOpenTooltip(false);
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+            }}
+            onMouseDown={(event) => {
+              if (event.button === 0) {
+                setHandleDragging(currentFilter);
+                document.addEventListener("mouseup", handleMouseUp);
+              }
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          />
+        </div>
       </ShadTooltip>
     </div>
   );
