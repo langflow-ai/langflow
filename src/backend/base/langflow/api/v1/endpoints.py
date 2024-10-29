@@ -45,6 +45,7 @@ from langflow.services.deps import (
     get_task_service,
     get_telemetry_service,
 )
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.constants import SIDEBAR_CATEGORIES
 from langflow.utils.version import get_version_info
@@ -548,7 +549,7 @@ async def create_upload_file(
 
 # get endpoint to return version of langflow
 @router.get("/version")
-def get_version():
+async def get_version():
     return get_version_info()
 
 
@@ -624,16 +625,17 @@ async def custom_component_update(
 
 
 @router.get("/config", response_model=ConfigResponse)
-def get_config():
+async def get_config():
     try:
         from langflow.services.deps import get_settings_service
 
         settings_service: SettingsService = get_settings_service()
-        return settings_service.settings.model_dump()
+
+        return {"feature_flags": FEATURE_FLAGS, **settings_service.settings.model_dump()}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/sidebar_categories")
-def get_sidebar_categories() -> SidebarCategoriesResponse:
+async def get_sidebar_categories() -> SidebarCategoriesResponse:
     return SidebarCategoriesResponse(categories=SIDEBAR_CATEGORIES)
