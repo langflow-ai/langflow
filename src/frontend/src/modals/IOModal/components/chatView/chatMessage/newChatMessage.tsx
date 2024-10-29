@@ -364,7 +364,7 @@ export default function ChatMessage({
                                       linkTarget="_blank"
                                       rehypePlugins={[rehypeMathjax]}
                                       className={cn(
-                                        "markdown prose flex w-fit items-baseline max-w-full flex-col word-break-break-word dark:prose-invert",
+                                        "markdown prose font-normal text-[14px] flex w-fit items-baseline max-w-full flex-col word-break-break-word dark:prose-invert",
                                         isEmpty
                                           ? "text-chat-trigger-disabled"
                                           : "text-primary",
@@ -464,7 +464,7 @@ export default function ChatMessage({
                       </button>
                       <span
                         className={cn(
-                          "prose word-break-break-word dark:prose-invert",
+                          "prose word-break-break-word font-normal text-[14px] dark:prose-invert",
                           !isEmpty
                             ? "text-primary"
                             : "text-chat-trigger-disabled",
@@ -520,7 +520,7 @@ export default function ChatMessage({
                       ) : (
                         <>
                           <div
-                            className={`flex items-baseline w-full gap-2 whitespace-pre-wrap break-words ${isEmpty
+                            className={`flex items-baseline w-full font-normal text-[14px] gap-2 whitespace-pre-wrap break-words ${isEmpty
                               ? "text-chat-trigger-disabled"
                               : "text-primary"
                               }`}
