@@ -1,4 +1,6 @@
 import asyncio
+import functools
+import operator
 from uuid import UUID, uuid4
 
 import pytest
@@ -111,19 +113,35 @@ PROMPT_REQUEST = {
 async def test_get_all(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
+    json_response = response.json()
+
+    # Verify file count
     settings = get_settings_service().settings
     dir_reader = DirectoryReader(settings.components_path[0])
     files = dir_reader.get_files()
-    # json_response is a dict of dicts
-    all_names = [component_name for _, components in response.json().items() for component_name in components]
-    json_response = response.json()
-    # We need to test the custom nodes
-    assert len(all_names) <= len(
-        files
-    )  # Less or equal because we might have some files that don't have the dependencies installed
-    assert "ChatInput" in json_response["inputs"]
-    assert "Prompt" in json_response["prompts"]
-    assert "ChatOutput" in json_response["outputs"]
+
+    # Get component names using list comprehension instead of nested loops
+    all_names: list[str] = functools.reduce(
+        operator.iadd, (list(components.keys()) for components in json_response.values()), []
+    )
+    assert len(all_names) <= len(files)  # Some files may not have dependencies installed
+
+    # Verify required components exist
+    assert all(
+        component in json_response[category]
+        for category, component in {"inputs": "ChatInput", "prompts": "Prompt", "outputs": "ChatOutput"}.items()
+    )
+
+    # Check tool_mode field using list comprehension instead of nested loops
+    components_missing_tool_mode = [
+        f"{category}/{name}"
+        for category, components in json_response.items()
+        for name, component in components.items()
+        if "tool_mode" not in component["template"]
+    ]
+
+    # 13 components inherit from CustomComponent
+    assert len(components_missing_tool_mode) == 13, components_missing_tool_mode
 
 
 async def test_post_validate_code(client: AsyncClient):
