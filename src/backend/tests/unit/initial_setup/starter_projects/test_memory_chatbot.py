@@ -43,6 +43,7 @@ AI: """
     return graph
 
 
+@pytest.mark.usefixtures("client")
 def test_memory_chatbot(memory_chatbot_graph):
     # Now we run step by step
     expected_order = deque(["chat_input", "chat_memory", "prompt", "openai", "chat_output"])
