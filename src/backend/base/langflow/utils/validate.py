@@ -227,6 +227,16 @@ def prepare_global_scope(code, module):
             except ModuleNotFoundError as e:
                 msg = f"Module {node.module} not found. Please install it and try again"
                 raise ModuleNotFoundError(msg) from e
+        elif isinstance(node, ast.ClassDef):
+            # Compile and execute the class definition to properly create the class
+            class_code = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
+            exec(class_code, exec_globals)
+        elif isinstance(node, ast.FunctionDef):
+            function_code = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
+            exec(function_code, exec_globals)
+        elif isinstance(node, ast.Assign):
+            assign_code = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
+            exec(assign_code, exec_globals)
     return exec_globals
 
 
