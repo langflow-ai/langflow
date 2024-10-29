@@ -21,6 +21,7 @@ import { VertexBuildTypeAPI } from "@/types/api";
 import { NodeDataType } from "@/types/flow";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames } from "@/utils/utils";
+import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -59,10 +60,16 @@ export default function NodeStatus({
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
 
+  const conditionSuccess =
+    buildStatus === BuildStatus.BUILT ||
+    (!(!buildStatus || buildStatus === BuildStatus.TO_BUILD) &&
+      validationStatus &&
+      validationStatus.valid);
+
   const lastRunTime = useFlowStore(
     (state) => state.flowBuildStatus[nodeId_]?.timestamp,
   );
-  const iconStatus = useIconStatus(buildStatus, validationStatus);
+  const iconStatus = useIconStatus(buildStatus);
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setNode = useFlowStore((state) => state.setNode);
@@ -99,7 +106,6 @@ export default function NodeStatus({
       buildStatus,
       validationStatus,
       isBuilding,
-      nodeId,
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
@@ -198,7 +204,16 @@ export default function NodeStatus({
           }
           side="bottom"
         >
-          <div className="cursor-help">{iconStatus}</div>
+          <div className="cursor-help">
+            {conditionSuccess ? (
+              <div className="flex gap-1 rounded-sm bg-emerald-50 px-1 font-jetbrains text-[11px] font-bold text-emerald-500">
+                <Check className="h-4 w-4 items-center self-center" />
+                <span>{validationStatus?.data.duration?.replace(" ", "")}</span>
+              </div>
+            ) : (
+              iconStatus
+            )}
+          </div>
         </ShadTooltip>
 
         <ShadTooltip content={"Run component"} contrastTooltip>

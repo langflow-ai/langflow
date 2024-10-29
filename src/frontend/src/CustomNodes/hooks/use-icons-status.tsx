@@ -5,17 +5,10 @@ import Xmark from "../../components/ui/xmark";
 import { BuildStatus } from "../../constants/enums";
 import { VertexBuildTypeAPI } from "../../types/api";
 
-const useIconStatus = (
-  buildStatus: BuildStatus | undefined,
-  validationStatus: VertexBuildTypeAPI | null,
-) => {
-  const conditionSuccess =
-    buildStatus === BuildStatus.BUILT ||
-    (!(!buildStatus || buildStatus === BuildStatus.TO_BUILD) &&
-      validationStatus &&
-      validationStatus.valid);
+const useIconStatus = (buildStatus: BuildStatus | undefined) => {
   const conditionError = buildStatus === BuildStatus.ERROR;
   const conditionInactive = buildStatus === BuildStatus.INACTIVE;
+
   const renderIconStatus = () => {
     if (buildStatus === BuildStatus.BUILDING) {
       return (
@@ -29,15 +22,6 @@ const useIconStatus = (
     }
 
     const iconConditions = [
-      {
-        condition: conditionSuccess,
-        icon: (
-          <Checkmark
-            className="h-4 w-4 stroke-2 text-emerald-success transition-all"
-            isVisible={true}
-          />
-        ),
-      },
       {
         condition: conditionError,
         icon: (

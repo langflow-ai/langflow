@@ -177,7 +177,7 @@
     @apply flex gap-2;
   }
   .primary-input {
-    @apply placeholder:text-muted-foreground form-input block w-full truncate rounded-md border-[1px] border-border bg-background px-3 text-left text-sm shadow-sm focus-within:border-[1.5px] hover:border-muted-foreground focus:border-[1.75px] focus:border-foreground focus:placeholder-transparent focus:ring-0 focus-visible:border-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
+    @apply placeholder:text-muted-foreground form-input block w-full truncate rounded-md border-[1px] border-border bg-background px-3 text-left text-sm focus-within:border-[1.5px] hover:border-muted-foreground focus:border-[1.75px] focus:border-foreground focus:placeholder-transparent focus:ring-0 focus-visible:border-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .skeleton-card {
@@ -1206,7 +1206,7 @@
   }
 
   .bg-lucide-icon {
-    @apply flex h-8 w-8 items-center justify-center rounded-sm bg-muted p-[6px];
+    @apply flex h-8 w-8 items-center justify-center rounded-[6px] bg-muted p-[6px];
   }
 
   .integration-icon {
@@ -1269,4 +1269,5 @@
   .more-option-button-toolbar {
     @apply border-none  relative -ml-px inline-flex h-[38px] w-[2rem] items-center rounded-r-md bg-background text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10;
   }
+
 }
