@@ -26,18 +26,18 @@ class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):
     async def get(self, key, lock: asyncio.Lock | None = None):
         if not lock:
             async with self.lock:
-                return await self._get(key)
+                return await asyncio.to_thread(self._get, key)
         else:
-            return await self._get(key)
+            return await asyncio.to_thread(self._get, key)
 
-    async def _get(self, key):
-        item = await asyncio.to_thread(self.cache.get, key, default=None)
+    def _get(self, key):
+        item = self.cache.get(key, default=None)
         if item:
             if time.time() - item["time"] < self.expiration_time:
-                await asyncio.to_thread(self.cache.touch, key)  # Refresh the expiry time
+                self.cache.touch(key)  # Refresh the expiry time
                 return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
             logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
-            await self._delete(key)  # Log before deleting the expired item
+            self.cache.delete(key)  # Log before deleting the expired item
         return CACHE_MISS
 
     async def set(self, key, value, lock: asyncio.Lock | None = None) -> None:
@@ -81,14 +81,14 @@ class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):
             await self._upsert(key, value)
 
     async def _upsert(self, key, value) -> None:
-        existing_value = await self.get(key)
+        existing_value = await asyncio.to_thread(self._get, key)
         if existing_value is not CACHE_MISS and isinstance(existing_value, dict) and isinstance(value, dict):
             existing_value.update(value)
             value = existing_value
         await self.set(key, value)
 
-    def __contains__(self, key) -> bool:
-        return asyncio.run(asyncio.to_thread(self.cache.__contains__, key))
+    async def contains(self, key) -> bool:
+        return await asyncio.to_thread(self.cache.__contains__, key)
 
     async def teardown(self) -> None:
         # Clean up the cache directory

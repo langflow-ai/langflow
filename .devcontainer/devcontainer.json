@@ -34,6 +34,9 @@
         "GitHub.vscode-pull-request-github"
       ]
     }
+  },
+  "tasks": {
+    "test": "make unit_tests"
   }
 
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
