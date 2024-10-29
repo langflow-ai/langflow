@@ -1,4 +1,6 @@
+import numpy as np
 from langchain_pinecone import Pinecone
+
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
@@ -11,8 +13,7 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import Data
-from typing import List, Union
-import numpy as np
+
 
 class PineconeVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Pinecone"
@@ -60,6 +61,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
 
     class Float32Embeddings:
         """Wrapper class to ensure float32 embeddings."""
+
         def __init__(self, base_embeddings, parent):
             self.base_embeddings = base_embeddings
             self.parent = parent
@@ -81,7 +83,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
         """Build and return a Pinecone vector store instance."""
         try:
             from langchain_pinecone._utilities import DistanceStrategy
-            
+
             # Wrap the embedding model to ensure float32 output
             wrapped_embeddings = self.Float32Embeddings(self.embedding, self)
 
@@ -107,7 +109,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
                         documents.append(doc.to_lc_document())
                     else:
                         documents.append(doc)
-                
+
                 if documents:
                     # Add documents using wrapped embeddings
                     pinecone.add_documents(documents)
@@ -115,13 +117,13 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             return pinecone
 
         except Exception as e:
-            raise ValueError(f"Error building Pinecone vector store: {str(e)}")
+            raise ValueError(f"Error building Pinecone vector store: {e!s}")
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         """Search documents in the vector store."""
         try:
             vector_store = self.build_vector_store()
-            
+
             if not self.search_query or not isinstance(self.search_query, str) or not self.search_query.strip():
                 return []
 
@@ -129,10 +131,10 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
                 query=self.search_query,
                 k=self.number_of_results,
             )
-            
+
             data = docs_to_data(docs)
             self.status = data
             return data
 
         except Exception as e:
-            raise ValueError(f"Error searching documents: {str(e)}")
+            raise ValueError(f"Error searching documents: {e!s}")
