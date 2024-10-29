@@ -237,11 +237,11 @@ pre code {
   max-width: 100%;
   display: inline-block;
   width: 100%;
-  /* Dark mode canvas color */
-  background-color: #18181B !important;
+  /* Background color */
+  background-color: hsl(var(--code-background)) !important;
 }
 
 pre {
-    /* Dark mode canvas color */
-  background-color: #18181B !important;
+  /* Background color */
+  background-color: hsl(var(--code-background)) !important;
 }
