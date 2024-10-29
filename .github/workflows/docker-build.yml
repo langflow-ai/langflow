@@ -103,11 +103,14 @@ jobs:
           ref: ${{ inputs.nightly_tag_main || github.ref }}
           persist-credentials: true
 
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
+
       - name: Get Version from Input
         if: ${{ inputs.version != '' }}
         id: get-version-input
         run: |
-          # Base version cannot have a version input, since you have to specify a valid main tag to checkout. 
+          # Base version cannot have a version input, since you have to specify a valid main tag to checkout.
           if [[ "${{ inputs.release_type }}" == "base" && "${{ inputs.version }}" != '' ]]; then
             echo "Cannot specify version for base release."
             echo "Build type is 'base' and version is non-empty. Exiting the workflow."
@@ -150,6 +153,10 @@ jobs:
         id: get-version-base
         run: |
           version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
+          if [ -z "$version" ]; then
+            echo "Failed to extract version from uv tree output"
+            exit 1
+          fi
           echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Main
@@ -196,7 +203,7 @@ jobs:
               echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
-            else 
+            else
               echo "Invalid release type. Exiting the workflow."
               exit 1
             fi
