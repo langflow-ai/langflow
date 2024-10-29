@@ -191,11 +191,9 @@ export default function HandleRenderComponent({
   const [openTooltip, setOpenTooltip] = useState(false);
 
   useEffect(() => {
-    if (isNullHandle) return;
-
-    if (isHovered || openHandle) {
+    if ((isHovered || openHandle) && !isNullHandle) {
       const styleSheet = document.createElement("style");
-      styleSheet.setAttribute("id", `pulse-${nodeId}`);
+      styleSheet.id = `pulse-${nodeId}`;
       styleSheet.textContent = `
         @keyframes pulseNeon {
           0% {
@@ -231,15 +229,16 @@ export default function HandleRenderComponent({
         }
       `;
       document.head.appendChild(styleSheet);
-
-      return () => {
-        const existingStyle = document.getElementById(`pulse-${nodeId}`);
-        if (existingStyle) {
-          existingStyle.remove();
-        }
-      };
     }
-  }, [isHovered, colors, nodeId]);
+
+    // Cleanup function should always be returned
+    return () => {
+      const existingStyle = document.getElementById(`pulse-${nodeId}`);
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    };
+  }, [isHovered, openHandle, isNullHandle, colors, nodeId]);
 
   const getNeonShadow = (color: string, isHovered: boolean) => {
     if (isNullHandle) return "none";
@@ -321,6 +320,7 @@ export default function HandleRenderComponent({
               (isHovered || openHandle) && !isNullHandle
                 ? "pulseNeon 0.7s ease-in-out infinite"
                 : "none",
+            border: isNullHandle ? "1px solid #fff" : "none",
           }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
