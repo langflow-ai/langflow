@@ -333,12 +333,12 @@ export default function HandleRenderComponent({
           <div
             ref={invisibleDivRef}
             className={cn(
-              "noflow nowheel nopan noselect absolute -right-6 -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",
+              "noflow nowheel nopan noselect -right-4/3 absolute -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full bg-black",
               left && "-left-5 -translate-x-1/2",
             )}
             style={{
-              width: "26px",
-              height: "26px",
+              width: "25px",
+              height: "25px",
               top: "50%",
               position: "absolute",
               zIndex: 30,
