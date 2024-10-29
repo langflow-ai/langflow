@@ -157,6 +157,8 @@ class Settings(BaseSettings):
     """The log level for Langflow."""
     log_file: str | None = "logs/langflow.log"
     """The path to log file for Langflow."""
+    alembic_log_file: str = "alembic/alembic.log"
+    """The path to log file for Alembic for SQLAlchemy."""
     frontend_path: str | None = None
     """The path to the frontend directory containing build files. This is for development purposes only.."""
     open_browser: bool = False
