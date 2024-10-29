@@ -1,7 +1,7 @@
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import { log } from "console";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
@@ -255,12 +255,38 @@ export default function HandleRenderComponent({
     ].join(", ");
   };
 
+  const handleRef = useRef<HTMLDivElement>(null);
+  const invisibleDivRef = useRef<HTMLDivElement>(null);
+
+  const forwardEvent = (event: React.MouseEvent, eventType: string) => {
+    if (handleRef.current) {
+      const rect = handleRef.current.getBoundingClientRect();
+
+      // Create a new mouse event with the same properties
+      const newEvent = new MouseEvent(eventType, {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+        button: event.button,
+        buttons: event.buttons,
+        ctrlKey: event.ctrlKey,
+        altKey: event.altKey,
+        shiftKey: event.shiftKey,
+        metaKey: event.metaKey,
+      });
+
+      handleRef.current.dispatchEvent(newEvent);
+    }
+  };
+
   return (
     <div>
       <ShadTooltip
         open={openTooltip}
         setOpen={setOpenTooltip}
-        styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+        styleClasses="tooltip-fixed-width custom-scroll nowheel"
         delayDuration={1000}
         contrastTooltip
         content={
@@ -273,58 +299,91 @@ export default function HandleRenderComponent({
             isSameNode={sameNode && !ownHandle}
           />
         }
-        side={left ? "left" : "right"}
+        side="top"
       >
-        <Handle
-          data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
-            !showNode ? (left ? "target" : "source") : left ? "left" : "right"
-          }`}
-          type={left ? "target" : "source"}
-          position={left ? Position.Left : Position.Right}
-          key={myId}
-          id={myId}
-          isValidConnection={(connection) =>
-            isValidConnection(connection, nodes, edges)
-          }
-          className={classNames(
-            `group/handle z-20 h-12 w-12 rounded-full border-none bg-transparent transition-all`, // Increased from h-10 w-10 to h-12 w-12
-          )}
-          onClick={() => {
-            setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
-            setFilterType(currentFilter);
-            if (filterOpenHandle && filterType) {
-              onConnect(getConnection(filterType));
-              setFilterType(undefined);
-              setFilterEdge([]);
+        <div className="relative">
+          <Handle
+            ref={handleRef}
+            data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
+              !showNode ? (left ? "target" : "source") : left ? "left" : "right"
+            }`}
+            type={left ? "target" : "source"}
+            position={left ? Position.Left : Position.Right}
+            key={myId}
+            id={myId}
+            isValidConnection={(connection) =>
+              isValidConnection(connection, nodes, edges)
             }
-          }}
-          onMouseUp={() => {
-            setOpenTooltip(false);
-          }}
-          onContextMenu={(event) => {
-            event.preventDefault();
-          }}
-          onMouseDown={(event) => {
-            if (event.button === 0) {
-              setHandleDragging(currentFilter);
-              document.addEventListener("mouseup", handleMouseUp);
-            }
-          }}
-          style={{
-            background: handleColor,
-            width: "14px",
-            height: "14px",
-            transition: "all 0.2s",
-            boxShadow: getNeonShadow(colors[0], isHovered || openHandle),
-            animation:
-              (isHovered || openHandle) && !isNullHandle
-                ? "pulseNeon 0.7s ease-in-out infinite"
-                : "none",
-            border: isNullHandle ? "1px solid #fff" : "none",
-          }}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        ></Handle>
+            className={classNames(
+              `group/handle z-50 h-12 w-12 rounded-full border-none bg-transparent transition-all`,
+            )}
+            onClick={() => {
+              setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
+              setFilterType(currentFilter);
+              if (filterOpenHandle && filterType) {
+                onConnect(getConnection(filterType));
+                setFilterType(undefined);
+                setFilterEdge([]);
+              }
+            }}
+            onMouseUp={() => {
+              setOpenTooltip(false);
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+            }}
+            onMouseDown={(event) => {
+              if (event.button === 0) {
+                setHandleDragging(currentFilter);
+                document.addEventListener("mouseup", handleMouseUp);
+              }
+            }}
+            style={{
+              background: handleColor,
+              width: "14px",
+              height: "14px",
+              transition: "all 0.2s",
+              boxShadow: getNeonShadow(colors[0], isHovered || openHandle),
+              animation:
+                (isHovered || openHandle) && !isNullHandle
+                  ? "pulseNeon 0.7s ease-in-out infinite"
+                  : "none",
+              border: isNullHandle ? "1px solid #fff" : "none",
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          />
+          <div
+            ref={invisibleDivRef}
+            className="absolute -translate-y-1/2 cursor-crosshair"
+            style={{
+              width: "32px",
+              height: "32px",
+              top: "50%",
+              left: !left ? "7px" : "-38px",
+              position: "absolute",
+              zIndex: 30,
+            }}
+            onMouseDown={(e) => {
+              forwardEvent(e, "mousedown");
+              // Keep original behavior
+              if (e.button === 0) {
+                setHandleDragging(currentFilter);
+                document.addEventListener("mouseup", handleMouseUp);
+              }
+            }}
+            onMouseUp={(e) => {
+              forwardEvent(e, "mouseup");
+              setOpenTooltip(false);
+            }}
+            onClick={(e) => forwardEvent(e, "click")}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onContextMenu={(event) => {
+              event.preventDefault();
+            }}
+          />
+        </div>
       </ShadTooltip>
     </div>
   );
