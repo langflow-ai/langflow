@@ -24,8 +24,8 @@ const externalLinkIconClasses = {
     disabled
       ? ""
       : editNode
-        ? "gradient-fade-input-edit-node"
-        : "gradient-fade-input",
+        ? "gradient-fade-input-edit-node "
+        : "gradient-fade-input ",
   background: ({
     disabled,
     editNode,
@@ -36,7 +36,7 @@ const externalLinkIconClasses = {
     disabled
       ? ""
       : editNode
-        ? "background-fade-input-edit-node"
+        ? "background-fade-input-edit-node "
         : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
   editNodeTop: "top-[0.375rem]",

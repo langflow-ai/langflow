@@ -134,6 +134,8 @@ test("should be able to upload a file", async ({ page }) => {
     }
   }
 
+  await page.getByTitle("fit view").click();
+
   await visibleElementHandle.hover();
   await page.mouse.down();
 

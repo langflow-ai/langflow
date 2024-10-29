@@ -46,7 +46,7 @@ const externalLinkIconClasses = {
         : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
   editNodeTop: "top-[-1.4rem] h-5",
-  normalTop: "top-[-2.1rem] h-7 bg-blue-300",
+  normalTop: "top-[-2.1rem] h-7",
   iconTop: "top-[-1.7rem]",
 };
 
