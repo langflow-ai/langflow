@@ -16,8 +16,8 @@ import { FlowType } from "@/types/flow";
 import { getInputsAndOutputs } from "@/utils/storeUtils";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/use-description-modal";
 import { timeElapsed } from "../../utils/time-elapse";
-import useDescriptionModal from "../componentsComponent/hooks/use-description-modal";
 import DropdownComponent from "../dropdown";
 
 const GridComponent = ({ flowData }: { flowData: FlowType }) => {

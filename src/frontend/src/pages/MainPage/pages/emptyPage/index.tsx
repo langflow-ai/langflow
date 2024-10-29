@@ -1,20 +1,23 @@
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { useFolderStore } from "@/stores/foldersStore";
 import { useEffect, useRef } from "react";
 import LangflowEmptyIcon from "../../assets/LangflowEmptyIcon.svg?react";
+import { PaginatedFolderType } from "../../entities";
 
 type EmptyPageProps = {
   setOpenModal: (open: boolean) => void;
   setShowFolderModal: (open: boolean) => void;
-  folderName: string;
+  folderData: PaginatedFolderType | null;
 };
 
 export const EmptyPage = ({
   setOpenModal,
   setShowFolderModal,
-  folderName,
+  folderData,
 }: EmptyPageProps) => {
   const interBubbleRef = useRef<HTMLDivElement>(null);
+  const folders = useFolderStore((state) => state.folders);
 
   useEffect(() => {
     const interBubble = interBubbleRef.current;
@@ -51,26 +54,29 @@ export const EmptyPage = ({
     };
   }, []);
 
+  console.log(folders?.length, "folders");
+
   return (
     <div className="m-0 p-0">
       <div className="text-container">
-        {folderName && (
-          <div className="absolute left-10 top-10 flex items-center text-2xl font-semibold dark:text-white">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowFolderModal(true)}
-              className="mr-2 bg-transparent lg:hidden"
-            >
-              <ForwardedIconComponent
-                name="panel-left-open"
-                aria-hidden="true"
-                className="h-5 w-5 text-zinc-500 dark:text-zinc-400"
-              />
-            </Button>
-            {folderName}
-          </div>
-        )}
+        {(folderData?.folder?.name && folderData?.flows?.items?.length !== 0) ||
+          (folders?.length > 1 && (
+            <div className="absolute left-10 top-10 flex items-center text-2xl font-semibold dark:text-white">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowFolderModal(true)}
+                className="mr-2 bg-transparent lg:hidden"
+              >
+                <ForwardedIconComponent
+                  name="panel-left-open"
+                  aria-hidden="true"
+                  className="h-5 w-5 text-zinc-500 dark:text-zinc-400"
+                />
+              </Button>
+              {folderData?.folder?.name}
+            </div>
+          ))}
         <div className="relative z-20 flex w-full flex-col items-center justify-center gap-2">
           <LangflowEmptyIcon />
           <h3 className="pt-5 text-2xl font-semibold dark:text-white">

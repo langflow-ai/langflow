@@ -3,8 +3,8 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { usePostDownloadMultipleFlows } from "@/controllers/API/queries/flows";
 import useAlertStore from "@/stores/alertStore";
 import { FlowType } from "@/types/flow";
-import useDuplicateFlows from "../componentsComponent/hooks/use-handle-duplicate";
-import useSelectOptionsChange from "../componentsComponent/hooks/use-select-options-change";
+import useDuplicateFlows from "../../oldComponents/componentsComponent/hooks/use-handle-duplicate";
+import useSelectOptionsChange from "../../oldComponents/componentsComponent/hooks/use-select-options-change";
 
 type DropdownComponentProps = {
   flowData: FlowType;

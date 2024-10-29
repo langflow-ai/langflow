@@ -7,8 +7,8 @@ import { useParams } from "react-router-dom";
 import GridComponent from "../../components/grid";
 import HeaderComponent from "../../components/header";
 import ListComponent from "../../components/list";
-import ModalsComponent from "../../components/modalsComponent";
 import useFileDrop from "../../hooks/use-on-file-drop";
+import ModalsComponent from "../../oldComponents/modalsComponent";
 
 const HomePage = ({ type }) => {
   const [view, setView] = useState<"grid" | "list">(() => {

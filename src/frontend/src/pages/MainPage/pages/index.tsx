@@ -6,9 +6,10 @@ import { LoadingPage } from "@/pages/LoadingPage";
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { Outlet, useLocation, useParams } from "react-router-dom";
-import ModalsComponent from "../components/modalsComponent";
+import { useEffect, useState } from "react";
+import { Outlet, useParams } from "react-router-dom";
+import { PaginatedFolderType } from "../entities";
+import ModalsComponent from "../oldComponents/modalsComponent";
 import EmptyPage from "./emptyPage";
 
 export default function CollectionPage(): JSX.Element {
@@ -23,20 +24,27 @@ export default function CollectionPage(): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
   const showFolderModal = useFolderStore((state) => state.showFolderModal);
+  const folders = useFolderStore((state) => state.folders);
   const setShowFolderModal = useFolderStore(
     (state) => state.setShowFolderModal,
   );
   const queryClient = useQueryClient();
 
-  const { data: allfolderData, isFetching } = useGetFolderQuery({
-    id: folderId ?? myCollectionId!,
-  });
-
-  // cleanup the query cache when the component unmounts
-  // prevent unnecessary queries on flow update
   useEffect(() => {
     return () => queryClient.removeQueries({ queryKey: ["useGetFolder"] });
   }, []);
+
+  const { data, isFetching } = useGetFolderQuery({
+    id: folderId ?? myCollectionId!,
+  });
+
+  const [folderData, setFolderData] = useState<PaginatedFolderType | null>(
+    null,
+  );
+
+  useEffect(() => {
+    setFolderData(data ?? null);
+  }, [data]);
 
   const { mutate } = useDeleteFolders();
 
@@ -64,28 +72,26 @@ export default function CollectionPage(): JSX.Element {
 
   return (
     <>
-      {allfolderData &&
-        allfolderData?.flows?.items?.length > 0 &&
-        !isFetching && (
-          <aside
-            className={`flex w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r bg-zinc-100 px-4 dark:bg-zinc-900 lg:inline ${
-              showFolderModal ? "" : "hidden"
-            }`}
-          >
-            <FolderSidebarNav
-              handleChangeFolder={(id: string) => {
-                navigate(`all/folder/${id}`);
-                setShowFolderModal(false);
-              }}
-              handleDeleteFolder={(item) => {
-                setFolderToEdit(item);
-                setOpenDeleteFolderModal(true);
-              }}
-            />
-          </aside>
-        )}
+      {(folderData?.flows?.items?.length !== 0 || folders?.length > 1) && (
+        <aside
+          className={`flex w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r bg-zinc-100 px-4 dark:bg-zinc-900 lg:inline ${
+            showFolderModal ? "" : "hidden"
+          }`}
+        >
+          <FolderSidebarNav
+            handleChangeFolder={(id: string) => {
+              navigate(`all/folder/${id}`);
+              setShowFolderModal(false);
+            }}
+            handleDeleteFolder={(item) => {
+              setFolderToEdit(item);
+              setOpenDeleteFolderModal(true);
+            }}
+          />
+        </aside>
+      )}
 
-      {!isFetching ? (
+      {!isFetching && folderData ? (
         <div
           className={`relative mx-auto h-full w-full overflow-y-scroll ${
             showFolderModal ? "opacity-80 blur-[2px]" : ""
@@ -98,19 +104,13 @@ export default function CollectionPage(): JSX.Element {
             }
           }}
         >
-          {allfolderData &&
-          allfolderData?.flows?.items?.length > 0 &&
-          !isFetching ? (
+          {folderData && folderData?.flows?.items?.length !== 0 ? (
             <Outlet />
           ) : (
             <EmptyPage
               setOpenModal={setOpenModal}
               setShowFolderModal={setShowFolderModal}
-              folderName={
-                allfolderData && allfolderData?.flows?.items?.length > 0
-                  ? allfolderData?.folder?.name || ""
-                  : ""
-              }
+              folderData={folderData}
             />
           )}
         </div>
