@@ -104,7 +104,11 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         } justify-between rounded-lg border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground`}
       >
         {/* left side */}
-        <div className="flex min-w-0 cursor-pointer items-center gap-2">
+        <div
+          className={`flex min-w-0 ${
+            isComponent ? "cursor-default" : "cursor-pointer"
+          } items-center gap-2`}
+        >
           {/* Icon */}
           <div
             className={`item-center mr-3 flex justify-center rounded-lg border ${flowData.icon_bg_color || "bg-purple-300"} p-3`}
