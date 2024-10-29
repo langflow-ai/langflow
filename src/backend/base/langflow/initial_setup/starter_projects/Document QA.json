@@ -260,6 +260,23 @@
                 "trace_as_input": true,
                 "type": "prompt",
                 "value": "Answer user's questions based on the document below:\n\n---\n\n{Document}\n\n---\n\nQuestion:\n{Question}\n\nAnswer:\n"
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -477,6 +494,23 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -672,6 +706,23 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -1005,6 +1056,23 @@
                 "trace_as_metadata": true,
                 "type": "float",
                 "value": 0.1
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -1139,6 +1207,23 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "{text}"
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -1261,6 +1346,23 @@
                 "list": false,
                 "name": "silent_errors",
                 "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,

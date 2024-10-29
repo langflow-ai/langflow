@@ -498,6 +498,23 @@
                 "type": "other",
                 "value": ""
               },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
               "use_cache": {
                 "advanced": true,
                 "display_name": "Cache",
@@ -860,6 +877,23 @@
                 "trace_as_metadata": true,
                 "type": "float",
                 "value": 0.1
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -1054,6 +1088,23 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -1174,6 +1225,23 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               },
               "tools": {
                 "advanced": true,
@@ -1418,6 +1486,23 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Research"
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               },
               "tools": {
                 "advanced": false,
@@ -1677,6 +1762,23 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Manager"
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               },
               "tools": {
                 "advanced": false,
@@ -2047,6 +2149,23 @@
                 "trace_as_metadata": true,
                 "type": "float",
                 "value": 0.1
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -2172,6 +2291,23 @@
                 "trace_as_input": true,
                 "type": "prompt",
                 "value": "User's query:\n{query}\n\nRespond to the user with as much as information as you can about the topic. Delete if needed. If it is just a general query (e.g a greeting) you can respond them directly."
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -2386,6 +2522,23 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -2612,6 +2765,23 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Editor"
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               },
               "tools": {
                 "advanced": false,
@@ -2855,6 +3025,23 @@
                 "trace_as_input": true,
                 "type": "dict",
                 "value": {}
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },

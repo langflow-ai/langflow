@@ -211,6 +211,23 @@
                 "type": "prompt",
                 "value": "{context}\n\nUser: {user_message}\nAI: "
               },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
               "user_message": {
                 "advanced": false,
                 "display_name": "user_message",
@@ -451,6 +468,23 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -784,6 +818,23 @@
                 "trace_as_metadata": true,
                 "type": "float",
                 "value": 0.1
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -979,6 +1030,23 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -1211,6 +1279,23 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "{sender_name}: {text}"
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },

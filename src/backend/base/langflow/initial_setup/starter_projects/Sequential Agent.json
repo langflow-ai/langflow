@@ -508,6 +508,23 @@
                 "type": "other",
                 "value": ""
               },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
               "use_cache": {
                 "advanced": true,
                 "display_name": "Cache",
@@ -869,6 +886,23 @@
                 "trace_as_metadata": true,
                 "type": "float",
                 "value": 0.1
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -1064,6 +1098,23 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               }
             }
           },
@@ -1252,6 +1303,23 @@
                 "type": "prompt",
                 "value": "Topic: {topic}\n\nBuild a document about this document."
               },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
               "topic": {
                 "advanced": false,
                 "display_name": "topic",
@@ -1373,6 +1441,23 @@
                 "type": "prompt",
                 "value": "Topic: {topic}\n\nRevise this document."
               },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
               "topic": {
                 "advanced": false,
                 "display_name": "topic",
@@ -1493,6 +1578,23 @@
                 "trace_as_input": true,
                 "type": "prompt",
                 "value": "Topic: {topic}\n\nBuild a fun blog post about this topic."
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               },
               "topic": {
                 "advanced": false,
@@ -1833,6 +1935,23 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               },
               "tools": {
                 "_input_type": "HandleInput",
@@ -2185,6 +2304,23 @@
                 "type": "str",
                 "value": ""
               },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
               "tools": {
                 "_input_type": "HandleInput",
                 "advanced": false,
@@ -2535,6 +2671,23 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "tool_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Tool Mode",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "tool_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               },
               "tools": {
                 "_input_type": "HandleInput",
