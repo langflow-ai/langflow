@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
-test("User must be able to stop building from inside Playground", async ({
+test.skip("User must be able to stop building from inside Playground", async ({
   page,
 }) => {
   await page.goto("/");

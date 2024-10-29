@@ -73,7 +73,10 @@ const HomePage = ({ type }) => {
       onFileDrop={handleFileDrop}
       dragMessage={`Drag your ${folderName} here`}
     >
-      <div className="flex h-full w-full flex-col justify-between xl:container">
+      <div
+        className="flex h-full w-full flex-col justify-between xl:container"
+        data-testid="cards-wrapper"
+      >
         <div className="mx-5 mb-5 mt-10 flex flex-col justify-start">
           <HeaderComponent
             folderName={folderName}
