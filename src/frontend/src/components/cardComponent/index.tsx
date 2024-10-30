@@ -188,7 +188,6 @@ export default function CollectionCardComponent({
           cleanOnClose={true}
           open={openPlayground}
           setOpen={setOpenPlayground}
-          isPlayground
         >
           <></>
         </IOModal>

@@ -635,6 +635,7 @@ export type IOModalPropsType = {
   disable?: boolean;
   isPlayground?: boolean;
   cleanOnClose?: boolean;
+  canvasOpen?: boolean;
 };
 
 export type buttonBoxPropsType = {

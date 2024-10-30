@@ -30,6 +30,7 @@ export default function IOModal({
   setOpen,
   disable,
   isPlayground,
+  canvasOpen,
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
   const setIOModalOpen = useFlowsManagerStore((state) => state.setIOModalOpen);
@@ -476,13 +477,9 @@ export default function IOModal({
                     lockChat={lockChat}
                     setLockChat={setLockChat}
                     visibleSession={visibleSession}
-                    closeChat={
-                      isPlayground
-                        ? undefined
-                        : () => {
-                            setOpen(false);
-                          }
-                    }
+                    closeChat={!canvasOpen ? undefined : () => {
+                      setOpen(false);
+                    }}
                   />
                 </div>
               ) : (
