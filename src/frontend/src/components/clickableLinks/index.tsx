@@ -2,13 +2,15 @@ interface ClickableLinksProps {
   text: string;
 }
 
-export default function ClickableLinks({ text }: ClickableLinksProps): JSX.Element {
+export default function ClickableLinks({
+  text,
+}: ClickableLinksProps): JSX.Element {
   // Regex to match URLs
   const urlRegex = /(https?:\/\/[^\s]+)/g;
 
   // Split text by URLs and map each part
   const parts = text.split(urlRegex);
-  const matches = Array.from(text.matchAll(urlRegex), m => m[0]);
+  const matches = Array.from(text.matchAll(urlRegex), (m) => m[0]);
 
   return (
     <span>

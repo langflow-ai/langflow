@@ -1,9 +1,13 @@
 import { ProfileIcon } from "@/components/appHeaderComponent/components/ProfileIcon";
+import ClickableLinks from "@/components/clickableLinks";
+import { TextShimmer } from "@/components/ui/TextShimmer";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { ContentBlockError } from "@/types/chat";
 import Convert from "ansi-to-html";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
@@ -25,10 +29,6 @@ import LogoIcon from "./components/chatLogoIcon";
 import { EditMessageButton } from "./components/editMessageButton/newMessageOptions";
 import EditMessageField from "./components/editMessageField/newEditMessageField";
 import FileCardWrapper from "./components/fileCardWrapper";
-import useFlowStore from "@/stores/flowStore";
-import ClickableLinks from "@/components/clickableLinks";
-import { motion, AnimatePresence } from "framer-motion";
-import { TextShimmer } from "@/components/ui/TextShimmer";
 
 export default function ChatMessage({
   chat,
@@ -267,7 +267,9 @@ export default function ChatMessage({
                         {block.component}
                       </span>
                     </p>
-                    {block.field && <p className="pb-1">Field: {block.field}</p>}
+                    {block.field && (
+                      <p className="pb-1">Field: {block.field}</p>
+                    )}
                     {block.reason && (
                       <span className="">
                         Reason: <ClickableLinks text={block.reason} />
