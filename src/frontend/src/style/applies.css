@@ -1263,9 +1263,7 @@
   }
 
   .node-toolbar-buttons {
-    @apply bg-background ring-0 border-none relative -ml-px inline-flex items-center px-[10px] py-2 text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10;
+    @apply bg-background ring-0 border-none relative -ml-px inline-flex items-center px-3 py-2 text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10;
   }
-
-
 
 }

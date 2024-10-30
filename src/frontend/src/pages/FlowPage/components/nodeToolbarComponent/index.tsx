@@ -444,7 +444,7 @@ export default function NodeToolbarComponent({
                 <Button
                   data-testid="more-options-modal"
                   className={classNames(
-                    "node-toolbar-buttons h-[2.1rem] rounded-r-md",
+                    "node-toolbar-buttons h-[2.2rem] rounded-r-md",
                   )}
                   unstyled
                 >

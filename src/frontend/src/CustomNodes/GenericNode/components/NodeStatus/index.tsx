@@ -145,20 +145,39 @@ export default function NodeStatus({
   const [isHovered, setIsHovered] = useState(false);
 
   const runClass = "justify-left flex font-normal text-muted-foreground";
+  const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const handleClickRun = () => {
+    if (BuildStatus.BUILDING === buildStatus && isHovered) {
+      stopBuilding();
+      return;
+    }
     if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
     setValidationStatus(null);
     buildFlow({ stopNodeId: nodeId });
     track("Flow Build - Clicked", { stopNodeId: nodeId });
   };
 
-  const iconName = BuildStatus.BUILDING === buildStatus ? "Loader2" : "Play";
+  const iconName =
+    BuildStatus.BUILDING === buildStatus
+      ? isHovered
+        ? "X"
+        : "Loader2"
+      : "Play";
+
+  // Keep the existing icon classes
   const iconClasses = cn(
     "play-button-icon",
     isHovered ? "text-foreground" : "text-placeholder-foreground",
-    BuildStatus.BUILDING === buildStatus && "animate-spin",
+    BuildStatus.BUILDING === buildStatus && !isHovered && "animate-spin",
   );
+
+  const getTooltipContent = () => {
+    if (BuildStatus.BUILDING === buildStatus && isHovered) {
+      return "Stop build";
+    }
+    return "Run component";
+  };
 
   return (
     <>
@@ -226,7 +245,7 @@ export default function NodeStatus({
           </div>
         </ShadTooltip>
 
-        <ShadTooltip content={"Run component"} contrastTooltip>
+        <ShadTooltip content={getTooltipContent()} contrastTooltip>
           <div
             ref={divRef}
             className="button-run-bg hit-area-icon"

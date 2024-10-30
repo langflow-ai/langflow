@@ -1,6 +1,7 @@
 export function normalizeTimeString(input) {
+  if (!input) return null;
   // Remove any whitespace and convert to lowercase
-  const cleanInput = input.toLowerCase().replace(/\s+/g, "");
+  const cleanInput = input?.toLowerCase()?.replace(/\s+/g, "");
 
   // Different patterns to match
   const patterns = {
