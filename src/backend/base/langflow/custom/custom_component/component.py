@@ -913,7 +913,7 @@ class Component(CustomComponent):
             raise ValueError(msg)
 
         stored_message = messages[0]
-        self._send_message_event(stored_message, **{})
+        self._send_message_event(stored_message)
         return stored_message
 
     def _send_message_event(self, message: Message, **kwargs):
