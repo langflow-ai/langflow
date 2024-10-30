@@ -14,11 +14,11 @@ from langflow.schema.message import Message
 
 
 class SimpleAgentComponent(ToolCallingAgentComponent):
-    display_name: str = "Simple Agent"
-    description: str = "Agent that uses tools"
-    icon = "workflow"
+    display_name: str = "Agent"
+    description: str = "Define the agent's instructions, then enter a task to complete using tools."
+    icon = "bot"
     beta = True
-    name = "SimpleAgent"
+    name = "Agent"
 
     openai_inputs = [
         component_input
@@ -31,22 +31,9 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
         if component_input.name not in [input_field.name for input_field in LCModelComponent._base_inputs]
     ]
     inputs = [
-        *LCToolsAgentComponent._base_inputs,
-        MessageTextInput(
-            name="system_prompt",
-            display_name="System Prompt",
-            info="Initial instructions and context provided to guide the agent's behavior.",
-            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
-        ),
-        MessageTextInput(
-            name="input_value",
-            display_name="Input",
-            info="The input provided by the user for the agent to process.",
-        ),
-        DataInput(name="chat_history", display_name="Chat Memory", is_list=True, advanced=True),
         DropdownInput(
             name="agent_llm",
-            display_name="Language Model Type",
+            display_name="Model Provider",
             options=["Azure OpenAI", "OpenAI", "Custom"],
             value="OpenAI",
             real_time_refresh=True,
@@ -54,6 +41,18 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
             input_types=[],
         ),
         *openai_inputs,
+        MessageTextInput(
+            name="system_prompt",
+            display_name="Agent Instructions",
+            info="Initial instructions and context provided to guide the agent's behavior.",
+            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
+            advanced=False,
+        ),
+        *LCToolsAgentComponent._base_inputs,
+
+        DataInput(name="chat_history", display_name="Chat Memory", is_list=True, advanced=True),
+
+
     ]
     outputs = [Output(name="response", display_name="Response", method="get_response")]
 
