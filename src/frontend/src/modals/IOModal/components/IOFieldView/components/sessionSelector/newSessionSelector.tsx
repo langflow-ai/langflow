@@ -164,21 +164,23 @@ export default function SessionSelector({
           )}
         </div>
         <Select value={""} onValueChange={handleSelectChange}>
-          <SelectTrigger
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-            onFocusCapture={() => {
-              inputRef.current?.focus();
-            }}
-            data-confirm="true"
-            className={cn(
-              "h-8 w-fit border-none bg-transparent p-2 focus:ring-0",
-              isVisible ? "visible" : "invisible group-hover:visible",
-            )}
-          >
-            <IconComponent name="MoreHorizontal" className="h-4 w-4" />
-          </SelectTrigger>
+          <ShadTooltip styleClasses="z-50" side="right" content="Options">
+            <SelectTrigger
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              onFocusCapture={() => {
+                inputRef.current?.focus();
+              }}
+              data-confirm="true"
+              className={cn(
+                "h-8 w-fit border-none bg-transparent p-2 focus:ring-0",
+                isVisible ? "visible" : "invisible group-hover:visible",
+              )}
+            >
+              <IconComponent name="MoreHorizontal" className="h-4 w-4" />
+            </SelectTrigger>
+          </ShadTooltip>
           <SelectContent side="right" align="start" className="p-0">
             <SelectItem
               value="rename"
