@@ -4,14 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
+from langflow.schema.content_block import ContentBlock
 from langflow.schema.utils import timestamp_to_str_validator
-
-
-class ContentBlock(BaseModel):
-    title: str
-    content: str | dict | list  # Flexible content type
-    allow_markdown: bool = Field(default=True)
-    media_url: list[str] | None = None
 
 
 class PlaygroundEvent(BaseModel):
