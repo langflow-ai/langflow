@@ -38,8 +38,8 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
+    from langflow.schema.content_block import ContentBlock
     from langflow.schema.log import LoggableType
-    from langflow.schema.playground_events import ContentBlock
 
 
 _ComponentToolkit = None
@@ -718,7 +718,7 @@ class Component(CustomComponent):
                 sender=self.display_name,
                 sender_name=self.display_name,
                 text=reason,
-                meta_data={
+                properties={
                     "text_color": "red",
                     "background_color": "red",
                     "edited": False,
@@ -882,7 +882,8 @@ class Component(CustomComponent):
 
     def send_message(
         self,
-        message: Message,
+        message: Message | None = None,
+        text: str | None = None,
         background_color: str | None = None,
         text_color: str | None = None,
         icon: str | None = None,
@@ -892,6 +893,8 @@ class Component(CustomComponent):
         *,
         allow_markdown: bool = True,
     ):
+        if message is None:
+            message = Message(text=text)
         if self.graph.session_id and not message.session_id:
             message.session_id = self.graph.session_id
         stored_message = self._store_message(
