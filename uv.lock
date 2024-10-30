@@ -3953,6 +3953,7 @@ local = [
 [package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
+    { name = "pytest-github-actions-annotate-failures" },
 ]
 
 [package.metadata]
@@ -4058,7 +4059,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "asgi-lifespan", specifier = ">=2.1.0" }]
+dev = [
+    { name = "asgi-lifespan", specifier = ">=2.1.0" },
+    { name = "pytest-github-actions-annotate-failures", specifier = ">=0.2.0" },
+]
 
 [[package]]
 name = "langfuse"
