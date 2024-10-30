@@ -27,6 +27,7 @@ from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
 from langflow.utils.async_helpers import run_until_complete
 from langflow.utils.util import find_closest_match
+import re
 
 from .custom_component import CustomComponent
 
@@ -707,9 +708,13 @@ class Component(CustomComponent):
             elif hasattr(e, "code"):
                 reason = e.code
             import traceback
+            sender_id = self.display_name
+            # Remove the ID inside parentheses from trace_name
+            if hasattr(self, "trace_name"):
+                sender_id = re.search(r'\((.*?)\)', self.trace_name).group(1)
 
             message = Message(
-                sender=self.display_name,
+                sender=sender_id,
                 sender_name=self.display_name,
                 text=reason,
                 meta_data={
