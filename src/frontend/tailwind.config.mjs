@@ -293,6 +293,38 @@ const config = {
     }),
     tailwindcssTypography,
     tailwindcssDottedBackground,
+    plugin(function ({ addUtilities, theme, e }) {
+      const colors = theme('colors');
+      const newUtilities = Object.keys(colors).reduce((acc, colorName) => {
+        const colorValue = colors[colorName];
+        if (typeof colorValue === 'string') {
+          acc[`.truncate-faded-${e(colorName)}`] = {
+            position: 'relative',
+            overflow: 'hidden',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              inset: '0 0 0 0',
+              background: `linear-gradient(to right, transparent, ${colorValue})`,
+            },
+          };
+        } else if (typeof colorValue === 'object' && colorValue.DEFAULT) {
+          acc[`.truncate-faded-${e(colorName)}`] = {
+            position: 'relative',
+            overflow: 'hidden',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              inset: '0 0 0 0',
+              background: `linear-gradient(to right, transparent, ${colorValue.DEFAULT})`,
+            },
+          };
+        }
+        return acc;
+      }, {});
+
+      addUtilities(newUtilities, ['responsive', 'hover']);
+    }),
   ],
 };
 
