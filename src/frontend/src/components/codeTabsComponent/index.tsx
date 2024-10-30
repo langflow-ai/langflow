@@ -1,7 +1,7 @@
 import { useTweaksStore } from "@/stores/tweaksStore";
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { tomorrow } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import {
   Tabs,
   TabsContent,
@@ -90,26 +90,27 @@ export default function CodeTabsComponent({
                   dangerouslySetInnerHTML={{ __html: tab.description }}
                 ></div>
               )}
-              <div className="w-full rounded-t-md mt-2 px-4 flex items-center justify-end gap-4 bg-code-block-muted ">
+              <div className="w-full rounded-t-md mt-2 px-4 py-2 flex items-center justify-end gap-4 bg-canvas-dark ">
                 {nodes.length > 0 &&
                   tabs.find((tab) => tab.name.toLowerCase() === "tweaks") &&
                   tabs[activeTab].hasTweaks && (
-                    <div className="flex gap-2 py-2">
+                    <div className="flex items-center gap-2">
                       <Label
-                        className={"relative right-1 top-[4px] text-xs font-medium text-white"}
+                        className={"text-xs font-medium text-white"}
                         htmlFor="tweaks-switch"
                       >
-                        Enable Overrides
+                        Enable Tweaks
                       </Label>
                       <Switch
                         style={{
-                          transform: `scaleX(${0.7}) scaleY(${0.7})`,
+                          transform: `scaleX(${0.85}) scaleY(${0.85})`,
                         }}
                         id="tweaks-switch"
                         onCheckedChange={setActiveTweaks}
                         checked={activeTweaks}
                         autoFocus={false}
                       />
+                      <span className="text-lg text-primary dark:text-primary-foreground">|</span>
                     </div>
                   )}
 
@@ -132,7 +133,7 @@ export default function CodeTabsComponent({
               </div>
               <SyntaxHighlighter
                 language={tab.language}
-                style={oneDark}
+                style={tomorrow}
                 className="!mt-0 !rounded-t-none h-full overflow-auto rounded-sm text-left custom-scroll bg-code-block"
               >
                 {tab.code}

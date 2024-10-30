@@ -109,7 +109,10 @@ const config = {
         },
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
-        canvas: "var(--canvas)",
+        canvas: {
+          DEFAULT: "hsl(var(--canvas))",
+          dark: "hsl(var(--canvas-dark))",
+        },
         ice: "var(--ice)",
         selected: "var(--selected)",
         hover: "var(--hover)",
