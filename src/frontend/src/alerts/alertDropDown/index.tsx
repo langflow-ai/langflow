@@ -1,5 +1,5 @@
 import { Cross2Icon } from "@radix-ui/react-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import {
   Popover,
@@ -29,20 +29,28 @@ export default function AlertDropdown({
 
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    if (!open) {
+      onClose?.();
+    }
+  }, [open]);
+
   return (
     <Popover
       data-testid="notification-dropdown"
       open={open}
       onOpenChange={(target) => {
         setOpen(target);
-        if (target) setNotificationCenter(false);
+        if (target) {
+          setNotificationCenter(false);
+        }
       }}
     >
       <PopoverTrigger>{children}</PopoverTrigger>
       <PopoverContent
         ref={notificationRef}
         data-testid="notification-dropdown-content"
-        className="noflow nowheel nopan nodelete nodrag flex h-[500px] w-[500px] flex-col"
+        className="noflow nowheel nopan nodelete nodrag z-10 flex h-[500px] w-[500px] flex-col"
       >
         <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
           Notifications
@@ -52,7 +60,6 @@ export default function AlertDropdown({
               onClick={() => {
                 setOpen(false);
                 setTimeout(clearNotificationList, 100);
-                onClose?.();
               }}
             >
               <IconComponent name="Trash2" className="h-4 w-4" />
@@ -61,7 +68,6 @@ export default function AlertDropdown({
               className="text-foreground opacity-70 hover:opacity-100"
               onClick={() => {
                 setOpen(false);
-                onClose?.();
               }}
             >
               <Cross2Icon className="h-4 w-4" />

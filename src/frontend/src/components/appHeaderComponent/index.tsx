@@ -49,7 +49,7 @@ export default function AppHeader(): JSX.Element {
   return (
     <div className="fixed left-0 top-0 z-[1] flex h-[62px] w-full items-center justify-between border-b px-5 py-2.5 dark:bg-black">
       {/* Left Section */}
-      <div className="flex min-w-[192px] items-center gap-2 md:min-w-[192px] lg:min-w-[327.5px] xl:min-w-[327.5px] 2xl:min-w-[458px]">
+      <div className="flex w-[192px] flex-none items-center gap-2 md:w-[192px] lg:w-[327.5px] xl:w-[327.5px] 2xl:w-[458px]">
         <Button
           unstyled
           onClick={() => navigate("/")}
@@ -73,12 +73,12 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Middle Section */}
-      <div className="hidden items-center truncate sm:flex">
+      <div className="flex-auto items-center">
         <FlowMenu />
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-2">
+      <div className="flex w-[192px] flex-none items-center gap-2 md:w-[192px] lg:w-[327.5px] xl:w-[327.5px] 2xl:w-[458px]">
         {!ENABLE_DATASTAX_LANGFLOW && (
           <>
             <Button
@@ -198,7 +198,7 @@ export default function AppHeader(): JSX.Element {
             />
           </>
         )}
-        <div className="ml-5 flex">
+        <div className="ml-3 flex">
           <AccountMenu />
         </div>
       </div>

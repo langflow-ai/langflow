@@ -14,7 +14,7 @@ export const HeaderMenu = ({ children }) => (
 );
 
 export const HeaderMenuToggle = ({ children }) => (
-  <Menu.Button className="inline-flex w-full items-center justify-center gap-1 rounded-md py-2 text-sm font-medium text-white hover:bg-accent hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75">
+  <Menu.Button className="inline-flex w-full items-center justify-center gap-1 rounded-md px-2 py-2 text-sm font-medium text-white hover:bg-accent hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75">
     {children}
     <ChevronsUpDown
       className="text-zinc-500"

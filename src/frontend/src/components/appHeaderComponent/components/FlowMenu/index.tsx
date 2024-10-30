@@ -111,10 +111,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
   useHotkeys(changes, handleSave, { preventDefault: true });
 
   return currentFlow && onFlowPage ? (
-    <div className="flex items-baseline">
+    <div className="flex items-baseline justify-center">
       <div className="header-menu-bar">
         {currentFolder?.name && (
-          <div className="hidden min-[825px]:flex">
+          <div className="hidden sm:flex">
             <div
               className="cursor-pointer truncate text-muted-foreground hover:text-primary"
               onClick={() => {
@@ -126,15 +126,16 @@ export const MenuBar = ({}: {}): JSX.Element => {
             <div className="px-2 font-normal text-muted-foreground">/</div>
           </div>
         )}
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="header-menu-bar-display-2 group">
               <div
-                className="header-menu-flow-name-2 flex"
+                className="header-menu-flow-name-2 truncate"
                 data-testid="flow-configuration-button"
               >
                 <div
-                  className="whitespace-nowrap font-semibold group-hover:text-primary dark:text-[white]"
+                  className="flex truncate font-semibold group-hover:text-primary dark:text-[white]"
                   data-testid="flow_name"
                 >
                   {currentFlow.name}
@@ -142,7 +143,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               </div>
               <IconComponent
                 name="ChevronDown"
-                className="w-4 text-muted-foreground group-hover:text-primary"
+                className="flex w-[24px] pr-1 text-muted-foreground group-hover:text-primary"
               />
             </div>
           </DropdownMenuTrigger>
@@ -274,7 +275,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         ></FlowSettingsModal>
         <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
-      <div className="flex items-center">
+      <div className="flex items-center truncate">
         {!autoSaving && (
           <Button
             variant="primary"
