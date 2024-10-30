@@ -299,7 +299,7 @@ export default function HandleRenderComponent({
               isValidConnection(connection, nodes, edges)
             }
             className={classNames(
-              `group/handle z-50 h-12 w-12 rounded-full border-none bg-transparent transition-all`,
+              `group/handle z-50 h-12 w-12 border-none bg-transparent transition-all`,
             )}
             onClick={() => {
               setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
@@ -323,6 +323,24 @@ export default function HandleRenderComponent({
               }
             }}
             style={{
+              width: "32px",
+              height: "32px",
+              top: "50%",
+              position: "absolute",
+              zIndex: 30,
+              background: "transparent",
+              border: "none",
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          />
+          <div
+            ref={invisibleDivRef}
+            className={cn(
+              "noflow nowheel nopan noselect absolute left-3.5 -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",
+              left && "-left-5 -translate-x-1/2",
+            )}
+            style={{
               background: isNullHandle ? "hsl(var(--border))" : handleColor,
               width: "10px",
               height: "10px",
@@ -337,28 +355,10 @@ export default function HandleRenderComponent({
                   : "none",
               border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
             }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-          />
-          <div
-            ref={invisibleDivRef}
-            className={cn(
-              "noflow nowheel nopan noselect -right-4/3 absolute -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",
-              left && "-left-5 -translate-x-1/2",
-            )}
-            style={{
-              width: "25px",
-              height: "25px",
-              top: "50%",
-              position: "absolute",
-              zIndex: 30,
-            }}
             onClick={(e) => {
               handleRef.current?.dispatchEvent(
                 new MouseEvent("mousedown", { bubbles: true }),
               );
-              e.stopPropagation();
-              e.preventDefault();
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
