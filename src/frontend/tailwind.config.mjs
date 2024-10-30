@@ -243,6 +243,10 @@ const config = {
         md: `calc(var(--radius) - 2px)`,
         sm: "calc(var(--radius) - 4px)",
       },
+      borderWidth: {
+        '1.75': '1.75px',
+        '1.5': '1.5px',
+      },
       fontFamily: {
         sans: [
           "Inter",

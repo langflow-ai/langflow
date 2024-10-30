@@ -8,8 +8,8 @@ export const getSpecificClassFromBuildStatus = (
 ): string => {
   let isInvalid = validationStatus && !validationStatus.valid;
 
-  if (isInvalid || buildStatus === BuildStatus.ERROR) {
-    return "border-destructive border-[1.5px]";
+  if ((isInvalid || buildStatus === BuildStatus.ERROR) && !isBuilding) {
+    return "border-destructive border-[1px] ring-[0.75px] ring-destructive";
   } else {
     return "";
   }

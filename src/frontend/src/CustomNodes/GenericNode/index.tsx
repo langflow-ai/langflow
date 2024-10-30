@@ -294,10 +294,10 @@ export default function GenericNode({
         {BuildStatus.BUILDING === buildStatus && (
           <BorderBeam
             colorFrom="hsl(var(--foreground))"
-            colorTo="hsl(var(--foreground))"
+            colorTo="hsl(var(--muted-foreground))"
             className="z-10"
-            borderWidth={1.5}
-            size={350}
+            borderWidth={1.75}
+            size={300}
           />
         )}
         <div>

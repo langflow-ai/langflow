@@ -98,12 +98,11 @@ export default function NodeStatus({
   const getBaseBorderClass = (selected) => {
     let className =
       selected && !isBuilding
-        ? " border-[1.5px] border-foreground hover:shadow-node"
-        : "border-[1.5px] hover:shadow-node";
+        ? " border-[1px] ring-[0.75px] ring-foreground border-foreground hover:shadow-node"
+        : "border-[1px] ring-[0.5px] hover:shadow-node ring-border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     return frozen ? frozenClass : className;
   };
-
   const getNodeBorderClassName = (
     selected: boolean,
     showNode: boolean,
@@ -199,7 +198,7 @@ export default function NodeStatus({
             >
               <IconComponent
                 name="AlertTriangle"
-                className="icon-size text-placeholder-foreground group-hover:fill-status-yellow group-hover:text-foreground"
+                className="icon-size text-placeholder-foreground group-hover:text-foreground"
               />
             </Button>
           </ShadTooltip>
@@ -239,7 +238,7 @@ export default function NodeStatus({
           side="bottom"
         >
           <div className="cursor-help">
-            {conditionSuccess ? (
+            {conditionSuccess && validationStatus?.data?.duration ? (
               <div className="mr-1 flex gap-1 rounded-sm bg-emerald-50 px-1 font-jetbrains text-[11px] font-bold text-emerald-500">
                 <Check className="h-4 w-4 items-center self-center" />
                 <span>

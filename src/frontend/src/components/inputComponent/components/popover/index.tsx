@@ -72,7 +72,8 @@ const CustomInputPopover = ({
             editNode && "min-h-7 p-0",
             editNode && disabled && "min-h-5 border-muted p-0",
             disabled && "bg-muted text-muted",
-            isFocused && "border-foreground hover:border-foreground",
+            isFocused &&
+              "border-foreground ring-1 ring-foreground hover:border-foreground",
           )}
           onClick={() => {
             if (!nodeStyle && !disabled) {
