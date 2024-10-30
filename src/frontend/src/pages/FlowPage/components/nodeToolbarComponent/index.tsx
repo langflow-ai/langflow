@@ -214,7 +214,11 @@ export default function NodeToolbarComponent({
     showconfirmShare,
   ]);
 
+  const [selectedValue, setSelectedValue] = useState(null);
+
   const handleSelectChange = (event) => {
+    setSelectedValue(event);
+
     switch (event) {
       case "save":
         saveComponent();
@@ -283,6 +287,10 @@ export default function NodeToolbarComponent({
         );
         break;
     }
+
+    setTimeout(() => {
+      setSelectedValue(null);
+    }, 100);
   };
 
   const isSaved = flows?.some((flow) =>
@@ -444,7 +452,7 @@ export default function NodeToolbarComponent({
           </ShadTooltip>
         </div>
 
-        <Select onValueChange={handleSelectChange}>
+        <Select onValueChange={handleSelectChange} value={selectedValue}>
           <ShadTooltip content="All" side="bottom" contrastTooltip>
             <SelectTrigger ref={selectTriggerRef}>
               <></>

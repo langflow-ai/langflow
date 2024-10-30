@@ -542,6 +542,7 @@ export type nodeToolbarPropsType = {
   onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
   updateNode: () => void;
+  closeToolbar?: () => void;
 };
 
 export type parsedDataType = {
