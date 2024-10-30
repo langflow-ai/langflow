@@ -61,7 +61,7 @@ export interface ContentBlockError extends ContentBlock {
   field?: string;
   reason?: string;
   solution?: string;
-  tracback?: string;
+  traceback?: string;
 }
 
 export interface PlaygroundEvent {
