@@ -56,7 +56,6 @@ export default function IOModal({
     inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
