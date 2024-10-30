@@ -318,379 +318,374 @@ export default function NodeToolbarComponent({
   return (
     <>
       <div className="noflow nowheel nopan nodelete nodrag">
-        <span className="isolate m-1 inline-flex rounded-md border-[1px] border-border shadow-sm">
-          <div className="flex items-center gap-1 rounded-lg bg-background p-1 shadow-sm">
-            {hasCode && (
-              <ShadTooltip
-                contrastTooltip
-                content={
-                  <ShortcutDisplay
-                    {...shortcuts.find(
-                      ({ name }) => name.split(" ")[0].toLowerCase() === "code",
-                    )!}
-                  />
-                }
-                side="top"
-              >
-                <Button
-                  className="node-toolbar-buttons"
-                  variant="ghost"
-                  onClick={() => {
-                    setOpenModal(!openModal);
-                  }}
-                  data-testid="code-button-modal"
-                >
-                  <IconComponent name="Code" className="h-4 w-4" />
-
-                  <span className="text-[13px] font-medium">Code</span>
-                </Button>
-              </ShadTooltip>
-            )}
-
-            {nodeLength > 0 && (
-              <ShadTooltip
-                contrastTooltip
-                content={
-                  <ShortcutDisplay
-                    {...shortcuts.find(
-                      ({ name }) =>
-                        name.split(" ")[0].toLowerCase() === "advanced",
-                    )!}
-                  />
-                }
-                side="top"
-              >
-                <Button
-                  className="node-toolbar-buttons"
-                  variant="ghost"
-                  onClick={() => {
-                    setShowModalAdvanced(true);
-                  }}
-                  data-testid="advanced-button-modal"
-                >
-                  <IconComponent name="SlidersHorizontal" className="h-4 w-4" />
-                  <span className="text-[13px] font-medium">Controls</span>
-                </Button>
-              </ShadTooltip>
-            )}
-            <ShadTooltip
-              contrastTooltip
-              content={
-                <ShortcutDisplay
-                  {...shortcuts.find(
-                    ({ name }) => name.toLowerCase() === "freeze path",
-                  )!}
-                />
-              }
-              side="top"
-            >
-              <Button
-                className={cn(
-                  "node-toolbar-buttons",
-                  frozen && "text-blue-500",
-                )}
-                variant="ghost"
-                onClick={(event) => {
-                  event.preventDefault();
-                  takeSnapshot();
-                  FreezeAllVertices({
-                    flowId: currentFlowId,
-                    stopNodeId: data.id,
-                  });
-                }}
-              >
-                <IconComponent
-                  name="FreezeAll"
-                  className={cn(
-                    "h-4 w-4 transition-all",
-                    frozen ? "animate-wiggle text-ice" : "",
-                  )}
-                />
-                <span className="text-[13px] font-medium">Freeze Path</span>
-              </Button>
-            </ShadTooltip>
-            <ShadTooltip
-              contrastTooltip
-              content={
-                <ShortcutDisplay
-                  {...shortcuts.find(
-                    ({ name }) => name.toLowerCase() === "copy",
-                  )!}
-                />
-              }
-              side="top"
-            >
-              <Button
-                className="node-toolbar-buttons"
-                variant="ghost"
-                onClick={(event) => {
-                  event.preventDefault();
-                  handleSelectChange("copy");
-                }}
-              >
-                <IconComponent name="Copy" className="h-4 w-4" />
-              </Button>
-            </ShadTooltip>
-            <ShadTooltip content="All" side="top" contrastTooltip>
-              <Button
-                className="node-toolbar-buttons"
-                variant="ghost"
-                onClick={handleButtonClick}
-              >
-                <IconComponent name="MoreHorizontal" className="h-4 w-4" />
-              </Button>
-            </ShadTooltip>
-          </div>
-
-          <Select onValueChange={handleSelectChange}>
-            <ShadTooltip content="All" side="bottom" contrastTooltip>
-              <SelectTrigger ref={selectTriggerRef}>
-                <></>
-              </SelectTrigger>
-            </ShadTooltip>
-            <SelectContent className="relative -left-10 min-w-[14rem]">
-              {hasCode && (
-                <SelectItem value={"code"}>
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Code")?.shortcut!
-                    }
-                    value={"Code"}
-                    icon={"Code"}
-                    dataTestId="code-button-modal"
-                  />
-                </SelectItem>
-              )}
-              {nodeLength > 0 && (
-                <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Advanced Settings")
-                        ?.shortcut!
-                    }
-                    value={"Advanced"}
-                    icon={"Settings2"}
-                    dataTestId="edit-button-modal"
-                  />
-                </SelectItem>
-              )}
-              <SelectItem value={"save"}>
-                <ToolbarSelectItem
-                  shortcut={
-                    shortcuts.find((obj) => obj.name === "Save Component")
-                      ?.shortcut!
-                  }
-                  value={"Save"}
-                  icon={"SaveAll"}
-                  dataTestId="save-button-modal"
-                />
-              </SelectItem>
-              <SelectItem value={"duplicate"}>
-                <ToolbarSelectItem
-                  shortcut={
-                    shortcuts.find((obj) => obj.name === "Duplicate")?.shortcut!
-                  }
-                  value={"Duplicate"}
-                  icon={"Copy"}
-                  dataTestId="copy-button-modal"
-                />
-              </SelectItem>
-              <SelectItem value={"copy"}>
-                <ToolbarSelectItem
-                  shortcut={
-                    shortcuts.find((obj) => obj.name === "Copy")?.shortcut!
-                  }
-                  value={"Copy"}
-                  icon={"Clipboard"}
-                  dataTestId="copy-button-modal"
-                />
-              </SelectItem>
-              {isOutdated && (
-                <SelectItem value={"update"}>
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Update")?.shortcut!
-                    }
-                    value={"Restore"}
-                    icon={"RefreshCcwDot"}
-                    dataTestId="update-button-modal"
-                  />
-                </SelectItem>
-              )}
-              {hasStore && (
-                <SelectItem
-                  value={"Share"}
-                  disabled={!hasApiKey || !validApiKey}
-                >
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Component Share")
-                        ?.shortcut!
-                    }
-                    value={"Share"}
-                    icon={"Share3"}
-                    dataTestId="share-button-modal"
-                  />
-                </SelectItem>
-              )}
-
-              <SelectItem
-                value={"documentation"}
-                disabled={data.node?.documentation === ""}
-              >
-                <ToolbarSelectItem
-                  shortcut={
-                    shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
-                  }
-                  value={"Docs"}
-                  icon={"FileText"}
-                  dataTestId="docs-button-modal"
-                />
-              </SelectItem>
-              {isMinimal && (
-                <SelectItem value={"show"}>
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Minimize")
-                        ?.shortcut!
-                    }
-                    value={showNode ? "Minimize" : "Expand"}
-                    icon={showNode ? "Minimize2" : "Maximize2"}
-                    dataTestId="minimize-button-modal"
-                  />
-                </SelectItem>
-              )}
-              {isGroup && (
-                <SelectItem value="ungroup">
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Group")?.shortcut!
-                    }
-                    value={"Ungroup"}
-                    icon={"Ungroup"}
-                    dataTestId="group-button-modal"
-                  />
-                </SelectItem>
-              )}
-              <SelectItem value="freeze">
-                <ToolbarSelectItem
-                  shortcut={
-                    shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
-                  }
-                  value={"Freeze"}
-                  icon={"Snowflake"}
-                  dataTestId="freeze-button"
-                  style={`${frozen ? " text-ice" : ""} transition-all`}
-                />
-              </SelectItem>
-              <SelectItem value="freezeAll">
-                <ToolbarSelectItem
-                  shortcut={
-                    shortcuts.find((obj) => obj.name === "Freeze Path")
-                      ?.shortcut!
-                  }
-                  value={"Freeze Path"}
-                  icon={"FreezeAll"}
-                  dataTestId="freeze-path-button"
-                  style={`${frozen ? " text-ice" : ""} transition-all`}
-                />
-              </SelectItem>
-              <SelectItem value="Download">
-                <ToolbarSelectItem
-                  shortcut={
-                    shortcuts.find((obj) => obj.name === "Download")?.shortcut!
-                  }
-                  value={"Download"}
-                  icon={"Download"}
-                  dataTestId="download-button-modal"
-                />
-              </SelectItem>
-              <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
-                <div className="font-red flex text-status-red">
-                  <IconComponent
-                    name="Trash2"
-                    className="relative top-0.5 mr-2 h-4 w-4"
-                  />{" "}
-                  <span className="">Delete</span>{" "}
-                  <span
-                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2]`}
-                  >
-                    <IconComponent
-                      name="Delete"
-                      className="h-4 w-4 stroke-2 text-red-400"
-                    ></IconComponent>
-                  </span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          <ConfirmationModal
-            open={showOverrideModal}
-            title={`Replace`}
-            cancelText="Create New"
-            confirmationText="Replace"
-            size={"x-small"}
-            icon={"SaveAll"}
-            index={6}
-            onConfirm={() => {
-              addFlow({
-                flow: flowComponent,
-                override: true,
-              });
-              setSuccessData({ title: `${data.id} successfully overridden!` });
-              setShowOverrideModal(false);
-            }}
-            onClose={() => setShowOverrideModal(false)}
-            onCancel={() => {
-              addFlow({
-                flow: flowComponent,
-                override: true,
-              });
-              setSuccessData({ title: "New component successfully saved!" });
-              setShowOverrideModal(false);
-            }}
-          >
-            <ConfirmationModal.Content>
-              <span>
-                It seems {data.node?.display_name} already exists. Do you want
-                to replace it with the current or create a new one?
-              </span>
-            </ConfirmationModal.Content>
-          </ConfirmationModal>
-          {showModalAdvanced && (
-            <EditNodeModal
-              data={data}
-              open={showModalAdvanced}
-              setOpen={setShowModalAdvanced}
-            />
-          )}
-          {showconfirmShare && (
-            <ShareModal
-              open={showconfirmShare}
-              setOpen={setShowconfirmShare}
-              is_component={true}
-              component={flowComponent!}
-            />
-          )}
+        <div className="flex items-center gap-1 rounded-lg bg-background p-1 shadow-sm">
           {hasCode && (
-            <div className="hidden">
-              {openModal && (
-                <CodeAreaModal
-                  setValue={handleOnNewValue}
-                  open={openModal}
-                  setOpen={setOpenModal}
-                  dynamic={true}
-                  setNodeClass={handleNodeClass}
-                  nodeClass={data.node}
-                  value={data.node?.template[name].value ?? ""}
-                >
-                  <></>
-                </CodeAreaModal>
-              )}
-            </div>
+            <ShadTooltip
+              contrastTooltip
+              content={
+                <ShortcutDisplay
+                  {...shortcuts.find(
+                    ({ name }) => name.split(" ")[0].toLowerCase() === "code",
+                  )!}
+                />
+              }
+              side="top"
+            >
+              <Button
+                className="node-toolbar-buttons"
+                variant="ghost"
+                onClick={() => {
+                  setOpenModal(!openModal);
+                }}
+                data-testid="code-button-modal"
+                size="node-toolbar"
+              >
+                <IconComponent name="Code" className="h-4 w-4" />
+
+                <span className="text-[13px] font-medium">Code</span>
+              </Button>
+            </ShadTooltip>
           )}
-        </span>
+
+          {nodeLength > 0 && (
+            <ShadTooltip
+              contrastTooltip
+              content={
+                <ShortcutDisplay
+                  {...shortcuts.find(
+                    ({ name }) =>
+                      name.split(" ")[0].toLowerCase() === "advanced",
+                  )!}
+                />
+              }
+              side="top"
+            >
+              <Button
+                className="node-toolbar-buttons"
+                variant="ghost"
+                onClick={() => {
+                  setShowModalAdvanced(true);
+                }}
+                data-testid="advanced-button-modal"
+                size="node-toolbar"
+              >
+                <IconComponent name="SlidersHorizontal" className="h-4 w-4" />
+                <span className="text-[13px] font-medium">Controls</span>
+              </Button>
+            </ShadTooltip>
+          )}
+          <ShadTooltip
+            contrastTooltip
+            content={
+              <ShortcutDisplay
+                {...shortcuts.find(
+                  ({ name }) => name.toLowerCase() === "freeze path",
+                )!}
+              />
+            }
+            side="top"
+          >
+            <Button
+              className={cn("node-toolbar-buttons", frozen && "text-blue-500")}
+              variant="ghost"
+              onClick={(event) => {
+                event.preventDefault();
+                takeSnapshot();
+                FreezeAllVertices({
+                  flowId: currentFlowId,
+                  stopNodeId: data.id,
+                });
+              }}
+              size="node-toolbar"
+            >
+              <IconComponent
+                name="FreezeAll"
+                className={cn(
+                  "h-4 w-4 transition-all",
+                  frozen ? "animate-wiggle text-ice" : "",
+                )}
+              />
+              <span className="text-[13px] font-medium">Freeze Path</span>
+            </Button>
+          </ShadTooltip>
+          <ShadTooltip
+            contrastTooltip
+            content={
+              <ShortcutDisplay
+                {...shortcuts.find(
+                  ({ name }) => name.toLowerCase() === "copy",
+                )!}
+              />
+            }
+            side="top"
+          >
+            <Button
+              className="node-toolbar-buttons h-[2.125rem]"
+              variant="ghost"
+              onClick={(event) => {
+                event.preventDefault();
+                handleSelectChange("copy");
+              }}
+              size="node-toolbar"
+            >
+              <IconComponent name="Copy" className="h-4 w-4" />
+            </Button>
+          </ShadTooltip>
+          <ShadTooltip content="All" side="top" contrastTooltip>
+            <Button
+              className="node-toolbar-buttons h-[2.125rem]"
+              variant="ghost"
+              onClick={handleButtonClick}
+              size="node-toolbar"
+            >
+              <IconComponent name="MoreHorizontal" className="h-4 w-4" />
+            </Button>
+          </ShadTooltip>
+        </div>
+
+        <Select onValueChange={handleSelectChange}>
+          <ShadTooltip content="All" side="bottom" contrastTooltip>
+            <SelectTrigger ref={selectTriggerRef}>
+              <></>
+            </SelectTrigger>
+          </ShadTooltip>
+          <SelectContent className="relative -left-10 min-w-[14rem]">
+            {hasCode && (
+              <SelectItem value={"code"}>
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Code")?.shortcut!
+                  }
+                  value={"Code"}
+                  icon={"Code"}
+                  dataTestId="code-button-modal"
+                />
+              </SelectItem>
+            )}
+            {nodeLength > 0 && (
+              <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Advanced Settings")
+                      ?.shortcut!
+                  }
+                  value={"Advanced"}
+                  icon={"Settings2"}
+                  dataTestId="edit-button-modal"
+                />
+              </SelectItem>
+            )}
+            <SelectItem value={"save"}>
+              <ToolbarSelectItem
+                shortcut={
+                  shortcuts.find((obj) => obj.name === "Save Component")
+                    ?.shortcut!
+                }
+                value={"Save"}
+                icon={"SaveAll"}
+                dataTestId="save-button-modal"
+              />
+            </SelectItem>
+            <SelectItem value={"duplicate"}>
+              <ToolbarSelectItem
+                shortcut={
+                  shortcuts.find((obj) => obj.name === "Duplicate")?.shortcut!
+                }
+                value={"Duplicate"}
+                icon={"Copy"}
+                dataTestId="copy-button-modal"
+              />
+            </SelectItem>
+            <SelectItem value={"copy"}>
+              <ToolbarSelectItem
+                shortcut={
+                  shortcuts.find((obj) => obj.name === "Copy")?.shortcut!
+                }
+                value={"Copy"}
+                icon={"Clipboard"}
+                dataTestId="copy-button-modal"
+              />
+            </SelectItem>
+            {isOutdated && (
+              <SelectItem value={"update"}>
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Update")?.shortcut!
+                  }
+                  value={"Restore"}
+                  icon={"RefreshCcwDot"}
+                  dataTestId="update-button-modal"
+                />
+              </SelectItem>
+            )}
+            {hasStore && (
+              <SelectItem value={"Share"} disabled={!hasApiKey || !validApiKey}>
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Component Share")
+                      ?.shortcut!
+                  }
+                  value={"Share"}
+                  icon={"Share3"}
+                  dataTestId="share-button-modal"
+                />
+              </SelectItem>
+            )}
+
+            <SelectItem
+              value={"documentation"}
+              disabled={data.node?.documentation === ""}
+            >
+              <ToolbarSelectItem
+                shortcut={
+                  shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
+                }
+                value={"Docs"}
+                icon={"FileText"}
+                dataTestId="docs-button-modal"
+              />
+            </SelectItem>
+            {isMinimal && (
+              <SelectItem value={"show"}>
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Minimize")?.shortcut!
+                  }
+                  value={showNode ? "Minimize" : "Expand"}
+                  icon={showNode ? "Minimize2" : "Maximize2"}
+                  dataTestId="minimize-button-modal"
+                />
+              </SelectItem>
+            )}
+            {isGroup && (
+              <SelectItem value="ungroup">
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Group")?.shortcut!
+                  }
+                  value={"Ungroup"}
+                  icon={"Ungroup"}
+                  dataTestId="group-button-modal"
+                />
+              </SelectItem>
+            )}
+            <SelectItem value="freeze">
+              <ToolbarSelectItem
+                shortcut={
+                  shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
+                }
+                value={"Freeze"}
+                icon={"Snowflake"}
+                dataTestId="freeze-button"
+                style={`${frozen ? " text-ice" : ""} transition-all`}
+              />
+            </SelectItem>
+            <SelectItem value="freezeAll">
+              <ToolbarSelectItem
+                shortcut={
+                  shortcuts.find((obj) => obj.name === "Freeze Path")?.shortcut!
+                }
+                value={"Freeze Path"}
+                icon={"FreezeAll"}
+                dataTestId="freeze-path-button"
+                style={`${frozen ? " text-ice" : ""} transition-all`}
+              />
+            </SelectItem>
+            <SelectItem value="Download">
+              <ToolbarSelectItem
+                shortcut={
+                  shortcuts.find((obj) => obj.name === "Download")?.shortcut!
+                }
+                value={"Download"}
+                icon={"Download"}
+                dataTestId="download-button-modal"
+              />
+            </SelectItem>
+            <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
+              <div className="font-red flex text-status-red">
+                <IconComponent
+                  name="Trash2"
+                  className="relative top-0.5 mr-2 h-4 w-4"
+                />{" "}
+                <span className="">Delete</span>{" "}
+                <span
+                  className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2]`}
+                >
+                  <IconComponent
+                    name="Delete"
+                    className="h-4 w-4 stroke-2 text-red-400"
+                  ></IconComponent>
+                </span>
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <ConfirmationModal
+          open={showOverrideModal}
+          title={`Replace`}
+          cancelText="Create New"
+          confirmationText="Replace"
+          size={"x-small"}
+          icon={"SaveAll"}
+          index={6}
+          onConfirm={() => {
+            addFlow({
+              flow: flowComponent,
+              override: true,
+            });
+            setSuccessData({ title: `${data.id} successfully overridden!` });
+            setShowOverrideModal(false);
+          }}
+          onClose={() => setShowOverrideModal(false)}
+          onCancel={() => {
+            addFlow({
+              flow: flowComponent,
+              override: true,
+            });
+            setSuccessData({ title: "New component successfully saved!" });
+            setShowOverrideModal(false);
+          }}
+        >
+          <ConfirmationModal.Content>
+            <span>
+              It seems {data.node?.display_name} already exists. Do you want to
+              replace it with the current or create a new one?
+            </span>
+          </ConfirmationModal.Content>
+        </ConfirmationModal>
+        {showModalAdvanced && (
+          <EditNodeModal
+            data={data}
+            open={showModalAdvanced}
+            setOpen={setShowModalAdvanced}
+          />
+        )}
+        {showconfirmShare && (
+          <ShareModal
+            open={showconfirmShare}
+            setOpen={setShowconfirmShare}
+            is_component={true}
+            component={flowComponent!}
+          />
+        )}
+        {hasCode && (
+          <div className="hidden">
+            {openModal && (
+              <CodeAreaModal
+                setValue={handleOnNewValue}
+                open={openModal}
+                setOpen={setOpenModal}
+                dynamic={true}
+                setNodeClass={handleNodeClass}
+                nodeClass={data.node}
+                value={data.node?.template[name].value ?? ""}
+              >
+                <></>
+              </CodeAreaModal>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

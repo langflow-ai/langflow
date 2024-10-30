@@ -30,6 +30,7 @@ const buttonVariants = cva(
         xs: "py-0.5 px-3 rounded-md",
         lg: "h-11 px-8 rounded-md",
         icon: "py-1 px-1 rounded-md",
+        "node-toolbar": "py-[6px] px-[6px] rounded-md",
       },
     },
     defaultVariants: {

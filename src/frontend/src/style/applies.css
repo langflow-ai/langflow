@@ -1263,7 +1263,7 @@
   }
 
   .node-toolbar-buttons {
-    @apply flex items-center gap-1 rounded-lg px-[6px] py-[6px] text-foreground w-max min-w-10
+    @apply flex items-center gap-1 rounded-lg text-foreground w-max min-w-10
 
   }
 
