@@ -452,7 +452,7 @@ export default function NodeToolbarComponent({
           </ShadTooltip>
         </div>
 
-        <Select onValueChange={handleSelectChange} value={selectedValue}>
+        <Select onValueChange={handleSelectChange} value={selectedValue!}>
           <ShadTooltip content="All" side="bottom" contrastTooltip>
             <SelectTrigger ref={selectTriggerRef}>
               <></>
