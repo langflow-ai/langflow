@@ -115,7 +115,7 @@ test("FloatComponent", async ({ page }) => {
     expect(true).toBeTruthy();
 
     await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("edit-button-modal").click();
+    await page.getByTestId("advanced-button-modal").click();
 
     // showtemperature
     await page.locator('//*[@id="showtemperature"]').click();
