@@ -1,9 +1,11 @@
 import ast
 import contextlib
 import importlib
+import warnings
 from types import FunctionType
 from typing import Optional, Union
 
+from langchain_core._api.deprecation import LangChainDeprecationWarning
 from loguru import logger
 from pydantic import ValidationError
 
@@ -221,9 +223,11 @@ def prepare_global_scope(code, module):
                     raise ModuleNotFoundError(msg) from e
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             try:
-                imported_module = importlib.import_module(node.module)
-                for alias in node.names:
-                    exec_globals[alias.name] = getattr(imported_module, alias.name)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", LangChainDeprecationWarning)
+                    imported_module = importlib.import_module(node.module)
+                    for alias in node.names:
+                        exec_globals[alias.name] = getattr(imported_module, alias.name)
             except ModuleNotFoundError as e:
                 msg = f"Module {node.module} not found. Please install it and try again"
                 raise ModuleNotFoundError(msg) from e
