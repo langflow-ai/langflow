@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
+import re
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
@@ -27,7 +28,6 @@ from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
 from langflow.utils.async_helpers import run_until_complete
 from langflow.utils.util import find_closest_match
-import re
 
 from .custom_component import CustomComponent
 
@@ -708,10 +708,11 @@ class Component(CustomComponent):
             elif hasattr(e, "code"):
                 reason = e.code
             import traceback
+
             sender_id = self.display_name
             # Remove the ID inside parentheses from trace_name
             if hasattr(self, "trace_name"):
-                sender_id = re.search(r'\((.*?)\)', self.trace_name).group(1)
+                sender_id = re.search(r"\((.*?)\)", self.trace_name).group(1)
 
             message = Message(
                 sender=self.display_name,
