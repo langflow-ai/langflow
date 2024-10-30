@@ -27,6 +27,8 @@ import EditMessageField from "./components/editMessageField/newEditMessageField"
 import FileCardWrapper from "./components/fileCardWrapper";
 import useFlowStore from "@/stores/flowStore";
 import ClickableLinks from "@/components/clickableLinks";
+import { motion, AnimatePresence } from "framer-motion";
+import { TextShimmer } from "@/components/ui/TextShimmer";
 
 export default function ChatMessage({
   chat,
@@ -53,6 +55,7 @@ export default function ChatMessage({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const chatMessageRef = useRef(chatMessage);
   const [editMessage, setEditMessage] = useState(false);
+  const [showError, setShowError] = useState(false);
 
   useEffect(() => {
     const chatMessageString = chat.message ? chat.message.toString() : "";
@@ -142,6 +145,16 @@ export default function ChatMessage({
     }
   }, [lastMessage, chat]);
 
+  useEffect(() => {
+    if (chat.category === "error") {
+      // Short delay before showing error to allow for loading animation
+      const timer = setTimeout(() => {
+        setShowError(true);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [chat.category]);
+
   let decodedMessage = chatMessage ?? "";
   try {
     decodedMessage = decodeURIComponent(chatMessage);
@@ -208,49 +221,73 @@ export default function ChatMessage({
     return (
       <div className="flex-max-width py-6 pl-32 pr-9">
         <div className="mr-3 mt-1 flex w-11/12 pb-3">
-          <div className="flex w-full gap-4 rounded-md p-2">
-            <LogoIcon />
-            <div className="w-full rounded-md border border-error-red-border bg-error-red p-4 text-foreground">
-              <div className="mb-2 flex items-center gap-2">
-                <ForwardedIconComponent
-                  className="h-6 w-6 text-destructive"
-                  name="OctagonAlert"
-                />
-                <span className="">An error stopped your flow.</span>
-              </div>
-              <div className="mb-4">
-                <h3 className="pb-3 font-semibold">Error details:</h3>
-                <p className="pb-1">
-                  Component:{" "}
-                  <span
-                    className="underline cursor-pointer"
-                    onClick={() => {
-                      fitViewNode(chat.meta_data?.source ?? "");
-                      closeChat?.();
-                    }}
-                  >
-                    {block.component}
-                  </span>
-                </p>
-                {block.field && <p className="pb-1">Field: {block.field}</p>}
-                {block.reason && (
-                  <span className="">
-                    Reason: <ClickableLinks text={block.reason} />
-                  </span>
-                )}
-              </div>
-              {block.solution && (
-                <div>
-                  <h3 className="pb-3 font-semibold">Steps to fix:</h3>
-                  <ol className="list-decimal pl-5">
-                    <li>Check the component settings</li>
-                    <li>Ensure all required fields are filled</li>
-                    <li>Re-run your flow</li>
-                  </ol>
+          <AnimatePresence mode="wait">
+            {!showError && lastMessage ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex w-full gap-4 rounded-md p-2"
+              >
+                <LogoIcon />
+                <div className="flex items-center">
+                  <TextShimmer className="" duration={1}>
+                    Flow running...
+                  </TextShimmer>
                 </div>
-              )}
-            </div>
-          </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="error"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="flex w-full gap-4 rounded-md p-2"
+              >
+                <LogoIcon />
+                <div className="w-full rounded-md border border-error-red-border bg-error-red p-4 text-foreground">
+                  <div className="mb-2 flex items-center gap-2">
+                    <ForwardedIconComponent
+                      className="h-[18px] w-[18px] text-destructive"
+                      name="OctagonAlert"
+                    />
+                    <span className="">An error stopped your flow.</span>
+                  </div>
+                  <div className="mb-4">
+                    <h3 className="pb-3 font-semibold">Error details:</h3>
+                    <p className="pb-1">
+                      Component:{" "}
+                      <span
+                        className="cursor-pointer underline"
+                        onClick={() => {
+                          fitViewNode(chat.meta_data?.source ?? "");
+                          closeChat?.();
+                        }}
+                      >
+                        {block.component}
+                      </span>
+                    </p>
+                    {block.field && <p className="pb-1">Field: {block.field}</p>}
+                    {block.reason && (
+                      <span className="">
+                        Reason: <ClickableLinks text={block.reason} />
+                      </span>
+                    )}
+                  </div>
+                  {block.solution && (
+                    <div>
+                      <h3 className="pb-3 font-semibold">Steps to fix:</h3>
+                      <ol className="list-decimal pl-5">
+                        <li>Check the component settings</li>
+                        <li>Ensure all required fields are filled</li>
+                        <li>Re-run your flow</li>
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     );
