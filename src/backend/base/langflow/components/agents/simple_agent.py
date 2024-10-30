@@ -6,7 +6,6 @@ from langflow.components.models.openai import OpenAIModelComponent
 from langflow.io import (
     DataInput,
     DropdownInput,
-    HandleInput,
     MessageTextInput,
     Output,
 )
@@ -44,7 +43,7 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
             display_name="Input",
             info="The input provided by the user for the agent to process.",
         ),
-        DataInput(name="chat_history", display_name="Chat Memory", is_list=True, advanced=True),    
+        DataInput(name="chat_history", display_name="Chat Memory", is_list=True, advanced=True),
         DropdownInput(
             name="agent_llm",
             display_name="Language Model Type",
@@ -65,7 +64,10 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
             raise ValueError(msg)
 
         agent = ToolCallingAgentComponent().set(
-            llm=llm_model, tools=[self.tools], chat_history=self.chat_history, input_value=self.input_value,
+            llm=llm_model,
+            tools=[self.tools],
+            chat_history=self.chat_history,
+            input_value=self.input_value,
             system_prompt=self.system_prompt,
         )
 
