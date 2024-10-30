@@ -477,9 +477,13 @@ export default function IOModal({
                     lockChat={lockChat}
                     setLockChat={setLockChat}
                     visibleSession={visibleSession}
-                    closeChat={!canvasOpen ? undefined : () => {
-                      setOpen(false);
-                    }}
+                    closeChat={
+                      !canvasOpen
+                        ? undefined
+                        : () => {
+                            setOpen(false);
+                          }
+                    }
                   />
                 </div>
               ) : (
