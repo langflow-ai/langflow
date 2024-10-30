@@ -96,7 +96,7 @@ class ChatOutput(ChatComponent):
             sender=self.sender,
             sender_name=self.sender_name,
             session_id=self.session_id,
-            meta_data={
+            properties={
                 "source": _display,
                 "icon": _icon,
                 "background_color": _background_color,

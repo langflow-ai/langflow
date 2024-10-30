@@ -16,8 +16,10 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from langflow.base.prompts.utils import dict_values_to_string
+from langflow.schema.content_block import ContentBlock
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
+from langflow.schema.properties import Properties
 from langflow.schema.utils import timestamp_to_str_validator  # noqa: TCH001
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
@@ -28,31 +30,6 @@ from langflow.utils.constants import (
 
 if TYPE_CHECKING:
     from langchain_core.prompt_values import ImagePromptValue
-
-
-class MetaData(BaseModel):
-    text_color: str | None = None
-    background_color: str | None = None
-    edited: bool = False
-    source: str | None = None
-    icon: str | None = None
-    allow_markdown: bool = False
-    targets: list = []
-
-
-class ContentBlock(BaseModel):
-    component: str | None = None
-    field: str | None = None
-    reason: str | None = None
-    solution: str | None = None
-    traceback: str | None = None
-
-    def to_dict(self):
-        return self.model_dump()
-
-    @classmethod
-    def from_dict(cls, data):
-        return cls(**data)
 
 
 class Message(Data):
@@ -71,7 +48,7 @@ class Message(Data):
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
 
-    meta_data: MetaData | None = None
+    properties: Properties | None = None
     category: str | None = None
     content_blocks: list[ContentBlock] | None = None
 
@@ -306,7 +283,7 @@ class MessageResponse(DefaultModel):
     files: list[str] = []
     edit: bool
 
-    meta_data: MetaData | None = None
+    properties: Properties | None = None
     category: str | None = None
     content_blocks: list[ContentBlock] | None = None
 

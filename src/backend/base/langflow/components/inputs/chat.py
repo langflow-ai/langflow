@@ -1,19 +1,9 @@
 from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from langflow.base.io.chat import ChatComponent
 from langflow.inputs import BoolInput
-from langflow.io import (
-    DropdownInput,
-    FileInput,
-    MessageTextInput,
-    MultilineInput,
-    Output,
-)
+from langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output
 from langflow.schema.message import Message
-from langflow.utils.constants import (
-    MESSAGE_SENDER_AI,
-    MESSAGE_SENDER_NAME_USER,
-    MESSAGE_SENDER_USER,
-)
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 
 
 class ChatInput(ChatComponent):
@@ -98,7 +88,7 @@ class ChatInput(ChatComponent):
             sender_name=self.sender_name,
             session_id=self.session_id,
             files=self.files,
-            meta_data={"background_color": _background_color, "text_color": _text_color, "icon": _icon},
+            properties={"background_color": _background_color, "text_color": _text_color, "icon": _icon},
         )
         if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = self.store_message(

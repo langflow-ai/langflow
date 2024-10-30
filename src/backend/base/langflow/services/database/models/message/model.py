@@ -21,9 +21,9 @@ class MessageBase(SQLModel):
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
 
-    meta_data: dict | None = Field(default=None, sa_column=Column(JSON))
-    category: str = Field(sa_column=Column(Text))
-    content_blocks: list[dict] | None = Field(default=None, sa_column=Column(JSON))
+    properties: dict | None = Field(default=None)
+    category: str = Field()
+    content_blocks: list[dict] | None = Field(default=None)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -60,10 +60,14 @@ class MessageBase(SQLModel):
         # async iterator so we simply add it as an empty string
         message_text = "" if not isinstance(message.text, str) else message.text
 
-        meta_data = message.meta_data.json() if hasattr(message.meta_data, "json") else message.meta_data
+        properties = (
+            message.properties.model_dump_json()
+            if hasattr(message.properties, "model_dump_json")
+            else message.properties
+        )
         content_blocks = []
-        for i in message.content_blocks or []:
-            content = i.json() if hasattr(i, "json") else i
+        for content_block in message.content_blocks or []:
+            content = content_block.model_dump_json() if hasattr(content_block, "model_dump_json") else content_block
             content_blocks.append(content)
 
         return cls(
@@ -74,7 +78,7 @@ class MessageBase(SQLModel):
             files=message.files or [],
             timestamp=timestamp,
             flow_id=flow_id,
-            meta_data=meta_data,
+            properties=properties,
             category=message.category,
             content_blocks=content_blocks,
         )
@@ -86,6 +90,9 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     flow_id: UUID | None = Field(default=None, foreign_key="flow.id")
     flow: "Flow" = Relationship(back_populates="messages")
     files: list[str] = Field(sa_column=Column(JSON))
+    properties: dict | None = Field(default=None, sa_column=Column(JSON))
+    category: str = Field(sa_column=Column(Text))
+    content_blocks: list[dict] | None = Field(default=None, sa_column=Column(JSON))
 
     @field_validator("flow_id", mode="before")
     @classmethod
