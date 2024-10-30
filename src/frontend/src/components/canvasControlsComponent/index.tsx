@@ -99,7 +99,7 @@ const CanvasControls = ({ children }) => {
         iconName="maximize"
         tooltipText="Fit To Zoom"
         onClick={fitView}
-        testId="fit_to_zoom"
+        testId="fit_view"
       />
       {/* Lock/Unlock */}
       <CustomControlButton

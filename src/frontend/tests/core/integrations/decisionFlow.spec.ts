@@ -220,7 +220,7 @@ test("should create a flow with decision", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //----------------------------------
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await moveElementByX(page, "Chat Output", 500, 1);
   await page.waitForTimeout(500);
@@ -233,7 +233,7 @@ test("should create a flow with decision", async ({ page }) => {
   await moveElementByX(page, "Prompt", 2500, 0);
   await page.waitForTimeout(500);
   await moveElementByX(page, "Pass", 3000, 2);
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Pass", 0, 200, 1);
   await page.waitForTimeout(500);
@@ -250,7 +250,7 @@ test("should create a flow with decision", async ({ page }) => {
   await moveElementByXY(page, "Chat Input", 1000, 200, 0);
 
   await page.waitForTimeout(500);
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   //---------------------------------- EDIT PROMPT
   await page.getByTestId("promptarea_prompt_template").first().click();
