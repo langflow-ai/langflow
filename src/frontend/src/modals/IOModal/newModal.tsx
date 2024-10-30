@@ -352,37 +352,37 @@ export default function IOModal({
                   {inputs.some(
                     (input) => input.id === selectedViewField.id,
                   ) && (
-                      <IOFieldView
-                        type={InputOutput.INPUT}
-                        left={false}
-                        fieldType={selectedViewField.type!}
-                        fieldId={selectedViewField.id!}
-                      />
-                    )}
+                    <IOFieldView
+                      type={InputOutput.INPUT}
+                      left={false}
+                      fieldType={selectedViewField.type!}
+                      fieldId={selectedViewField.id!}
+                    />
+                  )}
                   {outputs.some(
                     (output) => output.id === selectedViewField.id,
                   ) && (
-                      <IOFieldView
-                        type={InputOutput.OUTPUT}
-                        left={false}
-                        fieldType={selectedViewField.type!}
-                        fieldId={selectedViewField.id!}
-                      />
-                    )}
+                    <IOFieldView
+                      type={InputOutput.OUTPUT}
+                      left={false}
+                      fieldType={selectedViewField.type!}
+                      fieldId={selectedViewField.id!}
+                    />
+                  )}
                   {sessions.some(
                     (session) => session === selectedViewField.id,
                   ) && (
-                      <SessionView
-                        session={selectedViewField.id}
-                        id={currentFlowId}
-                      />
-                    )}
+                    <SessionView
+                      session={selectedViewField.id}
+                      id={currentFlowId}
+                    />
+                  )}
                 </div>
               </div>
             )}
             <div
               className={cn(
-                "flex h-full w-full flex-col p-6 justify-between",
+                "flex h-full w-full flex-col justify-between p-6",
                 selectedViewField ? "hidden" : "",
               )}
             >
@@ -394,8 +394,8 @@ export default function IOModal({
                       : `${visibleSession}`}
                   </div>
                 )}
-                <div className={cn(sidebarOpen ? " lg:hidden" : "")}>
-                  <div className="flex items-center gap-2 -mt-4">
+                <div className={cn(sidebarOpen ? "lg:hidden" : "")}>
+                  <div className="-mt-4 flex items-center gap-2">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -409,7 +409,12 @@ export default function IOModal({
                     <div className="font-semibold">Playground</div>
                   </div>
                 </div>
-                <div className={cn(sidebarOpen?"lg:hidden":"","flex items-center justify-center w-8 h-8 absolute right-10 top-2 rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2")}>
+                <div
+                  className={cn(
+                    sidebarOpen ? "lg:hidden" : "",
+                    "absolute right-10 top-2 flex h-8 w-8 items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                  )}
+                >
                   <Button
                     variant="ghost"
                     size="icon"

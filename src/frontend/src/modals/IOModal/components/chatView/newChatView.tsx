@@ -121,7 +121,6 @@ export default function ChatView({
     setIsDragging(false);
   };
 
-
   return (
     <div
       className="flex h-full w-full flex-col rounded-md"
