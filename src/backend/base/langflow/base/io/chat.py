@@ -37,6 +37,7 @@ class ChatComponent(Component):
         return bool(
             hasattr(self, "_event_manager")
             and self._event_manager
+            and hasattr(stored_message, "id")
             and stored_message.id
             and not isinstance(original_message.text, str)
         )
