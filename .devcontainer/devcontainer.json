@@ -2,13 +2,14 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/universal
 {
   "name": "Langflow Dev Container",
-  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "mcr.microsoft.com/devcontainers/python:3.10",
-
+  "build": {
+    "context": "..",
+    "dockerfile": "Dockerfile"
+  },
   // Features to add to the dev container. More info: https://containers.dev/features.
   "features": {
     "ghcr.io/devcontainers/features/node": {},
-    "ghcr.io/devcontainers-contrib/features/poetry": {}
+    "ghcr.io/dhoeric/features/hadolint:1": {}
   },
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
@@ -16,26 +17,35 @@
 
   // Use 'postCreateCommand' to run commands after the container is created.
   "postCreateCommand": "make install_frontend && make install_backend",
-
-  "containerEnv": {
-    "POETRY_VIRTUALENVS_IN_PROJECT": "true"
-  },
+  "postStartCommand": "make init",
 
   // Configure tool-specific properties.
   "customizations": {
     "vscode": {
       "extensions": [
+        "charliermarsh.ruff",
+        "njpwerner.autodocstring",
+        "oderwat.indent-rainbow",
+        "exiasr.hadolint",
         "actboy168.tasks",
         "GitHub.copilot",
         "ms-python.python",
-        "sourcery.sourcery",
         "eamodio.gitlens",
         "ms-vscode.makefile-tools",
         "GitHub.vscode-pull-request-github"
-      ]
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/bin/zsh"
+          }
+        }
+      }
     }
-  }
+  },
 
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
   // "remoteUser": "root"
+  "remoteUser": "vscode"
 }
