@@ -7,7 +7,7 @@ import useAddFlow from "@/hooks/flows/use-add-flow";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
@@ -309,92 +309,96 @@ export default function NodeToolbarComponent({
 
   const hasCode = Object.keys(data.node!.template).includes("code");
 
+  const selectTriggerRef = useRef(null);
+
+  const handleButtonClick = () => {
+    (selectTriggerRef.current! as HTMLElement)?.click();
+  };
+
   return (
     <>
       <div className="noflow nowheel nopan nodelete nodrag">
         <span className="isolate m-1 inline-flex rounded-md border-[1px] border-border shadow-sm">
-          {hasCode && (
-            <ShadTooltip
-              contrastTooltip
-              content={
-                <ShortcutDisplay
-                  {...shortcuts.find(
-                    ({ name }) => name.split(" ")[0].toLowerCase() === "code",
-                  )!}
-                />
-              }
-              side="top"
-            >
-              <Button
-                className="node-toolbar-buttons rounded-l-md"
-                onClick={() => {
-                  setOpenModal(!openModal);
-                }}
-                data-testid="code-button-modal"
-                unstyled
+          <div className="flex items-center gap-1 rounded-lg bg-background p-1 shadow-sm">
+            {hasCode && (
+              <ShadTooltip
+                contrastTooltip
+                content={
+                  <ShortcutDisplay
+                    {...shortcuts.find(
+                      ({ name }) => name.split(" ")[0].toLowerCase() === "code",
+                    )!}
+                  />
+                }
+                side="top"
               >
-                <div className="flex items-center gap-1">
+                <Button
+                  className="node-toolbar-buttons"
+                  variant="ghost"
+                  onClick={() => {
+                    setOpenModal(!openModal);
+                  }}
+                  data-testid="code-button-modal"
+                >
                   <IconComponent name="Code" className="h-4 w-4" />
-                  <span className="text-[13px]">Code</span>
-                </div>
-              </Button>
-            </ShadTooltip>
-          )}
-          {nodeLength > 0 && (
+
+                  <span className="text-[13px] font-medium">Code</span>
+                </Button>
+              </ShadTooltip>
+            )}
+
+            {nodeLength > 0 && (
+              <ShadTooltip
+                contrastTooltip
+                content={
+                  <ShortcutDisplay
+                    {...shortcuts.find(
+                      ({ name }) =>
+                        name.split(" ")[0].toLowerCase() === "advanced",
+                    )!}
+                  />
+                }
+                side="top"
+              >
+                <Button
+                  className="node-toolbar-buttons"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowModalAdvanced(true);
+                  }}
+                  data-testid="advanced-button-modal"
+                >
+                  <IconComponent name="SlidersHorizontal" className="h-4 w-4" />
+                  <span className="text-[13px] font-medium">Controls</span>
+                </Button>
+              </ShadTooltip>
+            )}
             <ShadTooltip
               contrastTooltip
               content={
                 <ShortcutDisplay
                   {...shortcuts.find(
-                    ({ name }) =>
-                      name.split(" ")[0].toLowerCase() === "advanced",
+                    ({ name }) => name.toLowerCase() === "freeze path",
                   )!}
                 />
               }
               side="top"
             >
               <Button
-                className={`${
-                  isGroup ? "rounded-l-md" : ""
-                } node-toolbar-buttons`}
-                onClick={() => {
-                  setShowModalAdvanced(true);
+                className={cn(
+                  "node-toolbar-buttons",
+                  frozen && "text-blue-500",
+                )}
+                variant="ghost"
+                onClick={(event) => {
+                  event.preventDefault();
+                  takeSnapshot();
+                  FreezeAllVertices({
+                    flowId: currentFlowId,
+                    stopNodeId: data.id,
+                  });
                 }}
-                data-testid="advanced-button-modal"
-                unstyled
               >
-                <div className="flex items-center gap-2">
-                  <IconComponent name="SlidersHorizontal" className="h-4 w-4" />
-                  <span className="text-[13px]">Controls</span>
-                </div>
-              </Button>
-            </ShadTooltip>
-          )}
-
-          <ShadTooltip
-            contrastTooltip
-            content={
-              <ShortcutDisplay
-                {...shortcuts.find(
-                  ({ name }) => name.toLowerCase() === "freeze path",
-                )!}
-              />
-            }
-            side="top"
-          >
-            <Button
-              className={classNames("node-toolbar-buttons")}
-              onClick={(event) => {
-                event.preventDefault();
-                takeSnapshot();
-                FreezeAllVertices({
-                  flowId: currentFlowId,
-                  stopNodeId: data.id,
-                });
-              }}
-              unstyled
-            >
-              <div className="flex items-center gap-2 whitespace-nowrap">
                 <IconComponent
                   name="FreezeAll"
                   className={cn(
@@ -402,60 +406,49 @@ export default function NodeToolbarComponent({
                     frozen ? "animate-wiggle text-ice" : "",
                   )}
                 />
-                <span className="text-[13px]">Freeze Path</span>
-              </div>
-            </Button>
-          </ShadTooltip>
-
-          <ShadTooltip
-            contrastTooltip
-            content={
-              <ShortcutDisplay
-                {...shortcuts.find(
-                  ({ name }) => name.toLowerCase() === "copy",
-                )!}
-              />
-            }
-            side="top"
-          >
-            <Button
-              className={classNames("node-toolbar-buttons")}
-              onClick={(event) => {
-                event.preventDefault();
-                handleSelectChange("copy");
-              }}
-              unstyled
-            >
-              <div className="flex items-center gap-2 whitespace-nowrap">
-                <IconComponent
-                  name="Copy"
-                  className={cn(
-                    "h-4 w-4 transition-all",
-                    frozen ? "animate-wiggle text-ice" : "",
-                  )}
+                <span className="text-[13px] font-medium">Freeze Path</span>
+              </Button>
+            </ShadTooltip>
+            <ShadTooltip
+              contrastTooltip
+              content={
+                <ShortcutDisplay
+                  {...shortcuts.find(
+                    ({ name }) => name.toLowerCase() === "copy",
+                  )!}
                 />
-              </div>
-            </Button>
-          </ShadTooltip>
-
-          <Select onValueChange={handleSelectChange} value="">
+              }
+              side="top"
+            >
+              <Button
+                className="node-toolbar-buttons"
+                variant="ghost"
+                onClick={(event) => {
+                  event.preventDefault();
+                  handleSelectChange("copy");
+                }}
+              >
+                <IconComponent name="Copy" className="h-4 w-4" />
+              </Button>
+            </ShadTooltip>
             <ShadTooltip content="All" side="top" contrastTooltip>
-              <SelectTrigger>
-                <Button
-                  data-testid="more-options-modal"
-                  className={classNames(
-                    "node-toolbar-buttons h-[2.2rem] rounded-r-md",
-                  )}
-                  unstyled
-                >
-                  <IconComponent
-                    name="MoreHorizontal"
-                    className="left-2 h-4 w-4"
-                  />
-                </Button>
+              <Button
+                className="node-toolbar-buttons"
+                variant="ghost"
+                onClick={handleButtonClick}
+              >
+                <IconComponent name="MoreHorizontal" className="h-4 w-4" />
+              </Button>
+            </ShadTooltip>
+          </div>
+
+          <Select onValueChange={handleSelectChange}>
+            <ShadTooltip content="All" side="bottom" contrastTooltip>
+              <SelectTrigger ref={selectTriggerRef}>
+                <></>
               </SelectTrigger>
             </ShadTooltip>
-            <SelectContent className="min-w-[14rem]">
+            <SelectContent className="relative -left-10 min-w-[14rem]">
               {hasCode && (
                 <SelectItem value={"code"}>
                   <ToolbarSelectItem

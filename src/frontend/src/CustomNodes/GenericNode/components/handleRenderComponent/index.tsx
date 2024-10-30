@@ -197,7 +197,7 @@ export default function HandleRenderComponent({
       styleSheet.textContent = `
         @keyframes pulseNeon {
           0% {
-            box-shadow: 0 0 0 1px #fff,
+            box-shadow: 0 0 0 2px #fff,
                         0 0 2px ${colors[0]},
                         0 0 4px ${colors[0]},
                         0 0 6px ${colors[0]},
@@ -207,7 +207,7 @@ export default function HandleRenderComponent({
                         0 0 20px ${colors[0]};
           }
           50% {
-            box-shadow: 0 0 0 1px #fff,
+            box-shadow: 0 0 0 2px #fff,
                         0 0 4px ${colors[0]},
                         0 0 8px ${colors[0]},
                         0 0 12px ${colors[0]},
@@ -217,7 +217,7 @@ export default function HandleRenderComponent({
                         0 0 30px ${colors[0]};
           }
           100% {
-            box-shadow: 0 0 0 1px #fff,
+            box-shadow: 0 0 0 2px #fff,
                         0 0 2px ${colors[0]},
                         0 0 4px ${colors[0]},
                         0 0 6px ${colors[0]},
@@ -242,7 +242,7 @@ export default function HandleRenderComponent({
 
   const getNeonShadow = (color: string, isHovered: boolean) => {
     if (isNullHandle) return "none";
-    if (!isHovered && !openHandle) return "none";
+    if (!isHovered && !openHandle) return `0 0 0 4px ${colors[0]}30`;
     return [
       "0 0 0 1px #fff",
       `0 0 2px ${color}`,
@@ -316,16 +316,16 @@ export default function HandleRenderComponent({
               }
             }}
             style={{
-              background: handleColor,
-              width: isHovered ? "18px" : "12px",
-              height: isHovered ? "18px" : "12px",
+              background: isNullHandle ? "hsl(var(--border))" : handleColor,
+              width: "11px",
+              height: "11px",
               transition: "all 0.2s",
               boxShadow: getNeonShadow(colors[0], isHovered || openHandle),
               animation:
                 (isHovered || openHandle) && !isNullHandle
                   ? "pulseNeon 0.7s ease-in-out infinite"
                   : "none",
-              border: isNullHandle ? "1px solid #fff" : "none",
+              border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
