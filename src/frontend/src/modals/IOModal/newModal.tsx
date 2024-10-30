@@ -233,6 +233,27 @@ export default function IOModal({
     }
   }, [open]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) { // 1024px is Tailwind's 'lg' breakpoint
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+
+    // Initial check
+    handleResize();
+
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
   return (
     <BaseModal
       open={open}
