@@ -130,7 +130,7 @@ export default function NodeOutputField({
       ref={ref}
       className={cn(
         "relative mt-1 flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
-        lastOutput ? "rounded-b-[13px]" : "",
+        lastOutput ? "rounded-b-[10px]" : "",
       )}
     >
       <>

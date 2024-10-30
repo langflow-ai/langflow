@@ -333,7 +333,7 @@ test("should create a flow with decision", async ({ page }) => {
 
   await page.getByTestId("title-Pass").nth(1).click();
 
-  await page.getByTestId("advanced-button-modal").click();
+  await page.getByTestId("edit-button-modal").click();
 
   await page
     .getByTestId("popover-anchor-input-input_message-edit")
@@ -346,7 +346,7 @@ test("should create a flow with decision", async ({ page }) => {
 
   await page.getByTestId("title-Pass").nth(0).click();
 
-  await page.getByTestId("advanced-button-modal").click();
+  await page.getByTestId("edit-button-modal").click();
 
   await page
     .getByTestId("popover-anchor-input-input_message-edit")

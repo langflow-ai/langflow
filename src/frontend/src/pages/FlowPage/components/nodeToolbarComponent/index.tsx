@@ -397,7 +397,6 @@ export default function NodeToolbarComponent({
                 });
               }}
               size="node-toolbar"
-              data-testid="more-options-modal"
             >
               <IconComponent
                 name="FreezeAll"
@@ -438,6 +437,7 @@ export default function NodeToolbarComponent({
               variant="ghost"
               onClick={handleButtonClick}
               size="node-toolbar"
+              data-testid="more-options-modal"
             >
               <IconComponent name="MoreHorizontal" className="h-4 w-4" />
             </Button>
@@ -470,8 +470,8 @@ export default function NodeToolbarComponent({
                     shortcuts.find((obj) => obj.name === "Advanced Settings")
                       ?.shortcut!
                   }
-                  value={"Advanced"}
-                  icon={"Settings2"}
+                  value={"Controls"}
+                  icon={"SlidersHorizontal"}
                   dataTestId="edit-button-modal"
                 />
               </SelectItem>

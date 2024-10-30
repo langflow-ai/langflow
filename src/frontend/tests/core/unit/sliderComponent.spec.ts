@@ -91,7 +91,7 @@ test("user should be able to use slider input", async ({ page }) => {
   await page.getByTitle("zoom out").click();
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByText("Advanced", { exact: true }).click();
+  await page.getByText("Controls", { exact: true }).last().click();
   await expect(
     page.getByTestId("default_slider_display_value_advanced"),
   ).toHaveText("19.00");

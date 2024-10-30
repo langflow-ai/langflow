@@ -335,6 +335,9 @@ export default function HandleRenderComponent({
             onMouseLeave={() => setIsHovered(false)}
           />
           <div
+            data-testid={`div-handle-${testIdComplement}-${title.toLowerCase()}-${
+              !showNode ? (left ? "target" : "source") : left ? "left" : "right"
+            }`}
             ref={invisibleDivRef}
             className={cn(
               "noflow nowheel nopan noselect absolute left-3.5 -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",

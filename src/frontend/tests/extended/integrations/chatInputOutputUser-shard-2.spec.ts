@@ -103,12 +103,12 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByTestId("icon-LucideSend").click();
   await page.getByText("Close", { exact: true }).click();
   await page.getByText("Chat Input", { exact: true }).click();
-  await page.getByTestId("advanced-button-modal").click();
+  await page.getByTestId("edit-button-modal").click();
   await page.getByTestId("showsender_name").click();
   await page.getByText("Close").last().click();
 
   await page.getByText("Chat Output", { exact: true }).click();
-  await page.getByTestId("advanced-button-modal").click();
+  await page.getByTestId("edit-button-modal").click();
   await page.getByTestId("showsender_name").click();
   await page.getByText("Close").last().click();
 
