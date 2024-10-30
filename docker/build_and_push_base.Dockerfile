@@ -33,7 +33,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install the project's dependencies using the lockfile and settings
-# Not 100% sure why but we need to mount the root uv.lock and pyproject.toml to build the base with uv
+# We need to mount the root uv.lock and pyproject.toml to build the base with uv because we're still using uv workspaces
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
