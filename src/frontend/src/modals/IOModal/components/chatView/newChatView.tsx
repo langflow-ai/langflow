@@ -165,20 +165,22 @@ export default function ChatView({
           </div>
         )}
         <div
-          className={lockChat ? "w-5/6 max-w-[768px] py-4 word-break-break-word" : ""}
+          className={
+            lockChat ? "w-5/6 max-w-[768px] py-4 word-break-break-word" : ""
+          }
           ref={ref}
         >
           {lockChat &&
             !(chatHistory[chatHistory.length - 1]?.category === "error") && (
-                <div className="flex w-full gap-4 rounded-md p-2">
-                  <LogoIcon />
-                  <div className="flex items-center">
-                    <div>
-                      <TextShimmer className="" duration={1}>
-                        Flow running...
-                      </TextShimmer>
-                    </div>
+              <div className="flex w-full gap-4 rounded-md p-2">
+                <LogoIcon />
+                <div className="flex items-center">
+                  <div>
+                    <TextShimmer className="" duration={1}>
+                      Flow running...
+                    </TextShimmer>
                   </div>
+                </div>
               </div>
             )}
         </div>

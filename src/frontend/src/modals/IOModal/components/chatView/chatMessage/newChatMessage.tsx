@@ -221,78 +221,76 @@ export default function ChatMessage({
     const block = (chat.content_blocks?.[0] ?? {}) as ContentBlockError;
     return (
       <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
-          <AnimatePresence mode="wait">
-            {!showError && lastMessage ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex w-full gap-4 rounded-md p-2"
-              >
-                <LogoIcon />
-                <div className="flex items-center">
-                  <TextShimmer className="" duration={1}>
-                    Flow running...
-                  </TextShimmer>
+        <AnimatePresence mode="wait">
+          {!showError && lastMessage ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex w-full gap-4 rounded-md p-2"
+            >
+              <LogoIcon />
+              <div className="flex items-center">
+                <TextShimmer className="" duration={1}>
+                  Flow running...
+                </TextShimmer>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="flex w-full gap-4 rounded-md p-2"
+            >
+              <LogoIcon />
+              <div className="w-full rounded-md border border-error-red-border bg-error-red p-4 text-foreground">
+                <div className="mb-2 flex items-center gap-2">
+                  <ForwardedIconComponent
+                    className="h-[18px] w-[18px] text-destructive"
+                    name="OctagonAlert"
+                  />
+                  <span className="">An error stopped your flow.</span>
                 </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="flex w-full gap-4 rounded-md p-2"
-              >
-                <LogoIcon />
-                <div className="w-full rounded-md border border-error-red-border bg-error-red p-4 text-foreground">
-                  <div className="mb-2 flex items-center gap-2">
-                    <ForwardedIconComponent
-                      className="h-[18px] w-[18px] text-destructive"
-                      name="OctagonAlert"
-                    />
-                    <span className="">An error stopped your flow.</span>
-                  </div>
-                  <div className="mb-4">
-                    <h3 className="pb-3 font-semibold">Error details:</h3>
-                    <p className="pb-1">
-                      Component:{" "}
-                      <span
-                        className={cn(
-                          "cursor-pointer",
-                          closeChat ? "underline" : "",
-                        )}
-                        onClick={() => {
-                          fitViewNode(chat.meta_data?.source ?? "");
-                          closeChat?.();
-                        }}
-                      >
-                        {block.component}
-                      </span>
-                    </p>
-                    {block.field && (
-                      <p className="pb-1">Field: {block.field}</p>
-                    )}
-                    {block.reason && (
-                      <span className="">
-                        Reason: <ClickableLinks text={block.reason} />
-                      </span>
-                    )}
-                  </div>
-                  {block.solution && (
-                    <div>
-                      <h3 className="pb-3 font-semibold">Steps to fix:</h3>
-                      <ol className="list-decimal pl-5">
-                        <li>Check the component settings</li>
-                        <li>Ensure all required fields are filled</li>
-                        <li>Re-run your flow</li>
-                      </ol>
-                    </div>
+                <div className="mb-4">
+                  <h3 className="pb-3 font-semibold">Error details:</h3>
+                  <p className="pb-1">
+                    Component:{" "}
+                    <span
+                      className={cn(
+                        "cursor-pointer",
+                        closeChat ? "underline" : "",
+                      )}
+                      onClick={() => {
+                        fitViewNode(chat.meta_data?.source ?? "");
+                        closeChat?.();
+                      }}
+                    >
+                      {block.component}
+                    </span>
+                  </p>
+                  {block.field && <p className="pb-1">Field: {block.field}</p>}
+                  {block.reason && (
+                    <span className="">
+                      Reason: <ClickableLinks text={block.reason} />
+                    </span>
                   )}
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                {block.solution && (
+                  <div>
+                    <h3 className="pb-3 font-semibold">Steps to fix:</h3>
+                    <ol className="list-decimal pl-5">
+                      <li>Check the component settings</li>
+                      <li>Ensure all required fields are filled</li>
+                      <li>Re-run your flow</li>
+                    </ol>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -300,340 +298,331 @@ export default function ChatMessage({
   return (
     <>
       <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
+        <div
+          className={cn(
+            "group relative flex w-full gap-4 rounded-md p-2",
+            editMessage ? "" : "hover:bg-muted",
+          )}
+        >
           <div
             className={cn(
-              "group relative flex w-full gap-4 rounded-md p-2",
-              editMessage ? "" : "hover:bg-muted",
+              "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
+              !chat.isSend ? "bg-muted" : "border border-border",
             )}
+            style={
+              chat.meta_data?.background_color
+                ? { backgroundColor: chat.meta_data.background_color }
+                : {}
+            }
           >
-            <div
-              className={cn(
-                "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
-                !chat.isSend ? "bg-muted" : "border border-border",
-              )}
-              style={
-                chat.meta_data?.background_color
-                  ? { backgroundColor: chat.meta_data.background_color }
-                  : {}
-              }
-            >
-              {!chat.isSend ? (
-                <div className="flex h-[18px] w-[18px] items-center justify-center">
-                  {chat.meta_data?.icon ? (
-                    chat.meta_data.icon.match(
-                      /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
-                    ) ? (
-                      <span className="">{chat.meta_data.icon}</span>
-                    ) : (
-                      <ForwardedIconComponent name={chat.meta_data.icon} />
-                    )
+            {!chat.isSend ? (
+              <div className="flex h-[18px] w-[18px] items-center justify-center">
+                {chat.meta_data?.icon ? (
+                  chat.meta_data.icon.match(
+                    /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
+                  ) ? (
+                    <span className="">{chat.meta_data.icon}</span>
                   ) : (
-                    <img
-                      src={Robot}
-                      className="absolute bottom-0 left-0 scale-[60%]"
-                      alt={"robot_image"}
-                    />
-                  )}
-                </div>
-              ) : (
-                <div className="flex h-[18px] w-[18px] items-center justify-center">
-                  {chat.meta_data?.icon ? (
-                    chat.meta_data.icon.match(
-                      /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
-                    ) ? (
-                      <div className="">{chat.meta_data.icon}</div>
-                    ) : (
-                      <ForwardedIconComponent name={chat.meta_data.icon} />
-                    )
+                    <ForwardedIconComponent name={chat.meta_data.icon} />
+                  )
+                ) : (
+                  <img
+                    src={Robot}
+                    className="absolute bottom-0 left-0 scale-[60%]"
+                    alt={"robot_image"}
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="flex h-[18px] w-[18px] items-center justify-center">
+                {chat.meta_data?.icon ? (
+                  chat.meta_data.icon.match(
+                    /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
+                  ) ? (
+                    <div className="">{chat.meta_data.icon}</div>
                   ) : (
-                    <ProfileIcon />
-                  )}
-                </div>
-              )}
+                    <ForwardedIconComponent name={chat.meta_data.icon} />
+                  )
+                ) : (
+                  <ProfileIcon />
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex w-[94%] flex-col">
+            <div>
+              <div
+                className={cn(
+                  "flex max-w-full items-baseline gap-3 truncate pb-2 text-[14px] font-semibold",
+                )}
+                style={
+                  chat.meta_data?.text_color
+                    ? { color: chat.meta_data.text_color }
+                    : {}
+                }
+                data-testid={
+                  "sender_name_" + chat.sender_name?.toLocaleLowerCase()
+                }
+              >
+                {chat.sender_name}
+                {chat.meta_data?.source && (
+                  <div className="text-[14px] font-normal text-muted-foreground">
+                    {chat.meta_data?.source}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex w-[94%] flex-col">
-              <div>
-                <div
-                  className={cn(
-                    "flex max-w-full items-baseline gap-3 truncate pb-2 text-[14px] font-semibold",
-                  )}
-                  style={
-                    chat.meta_data?.text_color
-                      ? { color: chat.meta_data.text_color }
-                      : {}
-                  }
-                  data-testid={
-                    "sender_name_" + chat.sender_name?.toLocaleLowerCase()
-                  }
-                >
-                  {chat.sender_name}
-                  {chat.meta_data?.source && (
-                    <div className="text-[14px] font-normal text-muted-foreground">
-                      {chat.meta_data?.source}
+            {!chat.isSend ? (
+              <div className="form-modal-chat-text-position flex-grow">
+                <div className="form-modal-chat-text">
+                  {hidden && chat.thought && chat.thought !== "" && (
+                    <div
+                      onClick={(): void => setHidden((prev) => !prev)}
+                      className="form-modal-chat-icon-div"
+                    >
+                      <IconComponent
+                        name="MessageSquare"
+                        className="form-modal-chat-icon"
+                      />
                     </div>
                   )}
-                </div>
-              </div>
-              {!chat.isSend ? (
-                <div className="form-modal-chat-text-position flex-grow">
-                  <div className="form-modal-chat-text">
-                    {hidden && chat.thought && chat.thought !== "" && (
+                  {chat.thought && chat.thought !== "" && !hidden && (
+                    <SanitizedHTMLWrapper
+                      className="form-modal-chat-thought"
+                      content={convert.toHtml(chat.thought ?? "")}
+                      onClick={() => setHidden((prev) => !prev)}
+                    />
+                  )}
+                  {chat.thought && chat.thought !== "" && !hidden && <br></br>}
+                  <div className="flex w-full flex-col">
+                    <div
+                      className="flex w-full flex-col dark:text-white"
+                      data-testid="div-chat-message"
+                    >
                       <div
-                        onClick={(): void => setHidden((prev) => !prev)}
-                        className="form-modal-chat-icon-div"
+                        data-testid={
+                          "chat-message-" + chat.sender_name + "-" + chatMessage
+                        }
+                        className="flex w-full flex-col"
                       >
-                        <IconComponent
-                          name="MessageSquare"
-                          className="form-modal-chat-icon"
-                        />
-                      </div>
-                    )}
-                    {chat.thought && chat.thought !== "" && !hidden && (
-                      <SanitizedHTMLWrapper
-                        className="form-modal-chat-thought"
-                        content={convert.toHtml(chat.thought ?? "")}
-                        onClick={() => setHidden((prev) => !prev)}
-                      />
-                    )}
-                    {chat.thought && chat.thought !== "" && !hidden && (
-                      <br></br>
-                    )}
-                    <div className="flex w-full flex-col">
-                      <div
-                        className="flex w-full flex-col dark:text-white"
-                        data-testid="div-chat-message"
-                      >
-                        <div
-                          data-testid={
-                            "chat-message-" +
-                            chat.sender_name +
-                            "-" +
-                            chatMessage
-                          }
-                          className="flex w-full flex-col"
-                        >
-                          {chatMessage === "" && lockChat ? (
-                            <IconComponent
-                              name="MoreHorizontal"
-                              className="h-8 w-8 animate-pulse"
-                            />
-                          ) : (
-                            <div className="w-full">
-                              {editMessage ? (
-                                <EditMessageField
-                                  key={`edit-message-${chat.id}`}
-                                  message={decodedMessage}
-                                  onEdit={(message) => {
-                                    handleEditMessage(message);
-                                  }}
-                                  onCancel={() => setEditMessage(false)}
-                                />
-                              ) : (
-                                <>
-                                  <div className="flex w-full items-baseline gap-2">
-                                    <Markdown
-                                      remarkPlugins={[remarkGfm]}
-                                      linkTarget="_blank"
-                                      rehypePlugins={[rehypeMathjax]}
-                                      className={cn(
-                                        "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
-                                        isEmpty
-                                          ? "text-chat-trigger-disabled"
-                                          : "text-primary",
-                                      )}
-                                      components={{
-                                        p({ node, ...props }) {
-                                          return (
-                                            <span className="inline-block w-fit max-w-full">
-                                              {props.children}
-                                            </span>
-                                          );
-                                        },
-                                        pre({ node, ...props }) {
-                                          return <>{props.children}</>;
-                                        },
-                                        code: ({
-                                          node,
-                                          inline,
-                                          className,
-                                          children,
-                                          ...props
-                                        }) => {
-                                          let content = children as string;
-                                          if (
-                                            Array.isArray(children) &&
-                                            children.length === 1 &&
-                                            typeof children[0] === "string"
-                                          ) {
-                                            content = children[0] as string;
-                                          }
-                                          if (typeof content === "string") {
-                                            if (content.length) {
-                                              if (content[0] === "▍") {
-                                                return (
-                                                  <span className="form-modal-markdown-span"></span>
-                                                );
-                                              }
+                        {chatMessage === "" && lockChat ? (
+                          <IconComponent
+                            name="MoreHorizontal"
+                            className="h-8 w-8 animate-pulse"
+                          />
+                        ) : (
+                          <div className="w-full">
+                            {editMessage ? (
+                              <EditMessageField
+                                key={`edit-message-${chat.id}`}
+                                message={decodedMessage}
+                                onEdit={(message) => {
+                                  handleEditMessage(message);
+                                }}
+                                onCancel={() => setEditMessage(false)}
+                              />
+                            ) : (
+                              <>
+                                <div className="flex w-full items-baseline gap-2">
+                                  <Markdown
+                                    remarkPlugins={[remarkGfm]}
+                                    linkTarget="_blank"
+                                    rehypePlugins={[rehypeMathjax]}
+                                    className={cn(
+                                      "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
+                                      isEmpty
+                                        ? "text-chat-trigger-disabled"
+                                        : "text-primary",
+                                    )}
+                                    components={{
+                                      p({ node, ...props }) {
+                                        return (
+                                          <span className="inline-block w-fit max-w-full">
+                                            {props.children}
+                                          </span>
+                                        );
+                                      },
+                                      pre({ node, ...props }) {
+                                        return <>{props.children}</>;
+                                      },
+                                      code: ({
+                                        node,
+                                        inline,
+                                        className,
+                                        children,
+                                        ...props
+                                      }) => {
+                                        let content = children as string;
+                                        if (
+                                          Array.isArray(children) &&
+                                          children.length === 1 &&
+                                          typeof children[0] === "string"
+                                        ) {
+                                          content = children[0] as string;
+                                        }
+                                        if (typeof content === "string") {
+                                          if (content.length) {
+                                            if (content[0] === "▍") {
+                                              return (
+                                                <span className="form-modal-markdown-span"></span>
+                                              );
                                             }
-
-                                            const match = /language-(\w+)/.exec(
-                                              className || "",
-                                            );
-
-                                            return !inline ? (
-                                              <CodeTabsComponent
-                                                language={
-                                                  (match && match[1]) || ""
-                                                }
-                                                code={String(content).replace(
-                                                  /\n$/,
-                                                  "",
-                                                )}
-                                              />
-                                            ) : (
-                                              <code
-                                                className={className}
-                                                {...props}
-                                              >
-                                                {content}
-                                              </code>
-                                            );
                                           }
-                                        },
-                                      }}
-                                    >
-                                      {isEmpty && !chat.stream_url
-                                        ? EMPTY_OUTPUT_SEND_MESSAGE
-                                        : chatMessage}
-                                    </Markdown>
-                                    {editedFlag}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
+
+                                          const match = /language-(\w+)/.exec(
+                                            className || "",
+                                          );
+
+                                          return !inline ? (
+                                            <CodeTabsComponent
+                                              language={
+                                                (match && match[1]) || ""
+                                              }
+                                              code={String(content).replace(
+                                                /\n$/,
+                                                "",
+                                              )}
+                                            />
+                                          ) : (
+                                            <code
+                                              className={className}
+                                              {...props}
+                                            >
+                                              {content}
+                                            </code>
+                                          );
+                                        }
+                                      },
+                                    }}
+                                  >
+                                    {isEmpty && !chat.stream_url
+                                      ? EMPTY_OUTPUT_SEND_MESSAGE
+                                      : chatMessage}
+                                  </Markdown>
+                                  {editedFlag}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="form-modal-chat-text-position flex-grow">
-                  {template ? (
-                    <>
-                      <button
-                        className="form-modal-initial-prompt-btn"
-                        onClick={() => {
-                          setPromptOpen((old) => !old);
-                        }}
-                      >
-                        Display Prompt
-                        <IconComponent
-                          name="ChevronDown"
-                          className={`h-3 w-3 transition-all ${promptOpen ? "rotate-180" : ""}`}
-                        />
-                      </button>
-                      <span
-                        className={cn(
-                          "prose text-[14px] font-normal word-break-break-word dark:prose-invert",
-                          !isEmpty
-                            ? "text-primary"
-                            : "text-chat-trigger-disabled",
-                        )}
-                      >
-                        {promptOpen
-                          ? template?.split("\n")?.map((line, index) => {
-                              const regex = /{([^}]+)}/g;
-                              let match;
-                              let parts: Array<JSX.Element | string> = [];
-                              let lastIndex = 0;
-                              while ((match = regex.exec(line)) !== null) {
-                                // Push text up to the match
-                                if (match.index !== lastIndex) {
-                                  parts.push(
-                                    line.substring(lastIndex, match.index),
-                                  );
-                                }
-                                // Push div with matched text
-                                if (chat.message[match[1]]) {
-                                  parts.push(
-                                    <span className="chat-message-highlight">
-                                      {chat.message[match[1]]}
-                                    </span>,
-                                  );
-                                }
+              </div>
+            ) : (
+              <div className="form-modal-chat-text-position flex-grow">
+                {template ? (
+                  <>
+                    <button
+                      className="form-modal-initial-prompt-btn"
+                      onClick={() => {
+                        setPromptOpen((old) => !old);
+                      }}
+                    >
+                      Display Prompt
+                      <IconComponent
+                        name="ChevronDown"
+                        className={`h-3 w-3 transition-all ${promptOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    <span
+                      className={cn(
+                        "prose text-[14px] font-normal word-break-break-word dark:prose-invert",
+                        !isEmpty
+                          ? "text-primary"
+                          : "text-chat-trigger-disabled",
+                      )}
+                    >
+                      {promptOpen
+                        ? template?.split("\n")?.map((line, index) => {
+                            const regex = /{([^}]+)}/g;
+                            let match;
+                            let parts: Array<JSX.Element | string> = [];
+                            let lastIndex = 0;
+                            while ((match = regex.exec(line)) !== null) {
+                              // Push text up to the match
+                              if (match.index !== lastIndex) {
+                                parts.push(
+                                  line.substring(lastIndex, match.index),
+                                );
+                              }
+                              // Push div with matched text
+                              if (chat.message[match[1]]) {
+                                parts.push(
+                                  <span className="chat-message-highlight">
+                                    {chat.message[match[1]]}
+                                  </span>,
+                                );
+                              }
 
-                                // Update last index
-                                lastIndex = regex.lastIndex;
-                              }
-                              // Push text after the last match
-                              if (lastIndex !== line.length) {
-                                parts.push(line.substring(lastIndex));
-                              }
-                              return <p>{parts}</p>;
-                            })
-                          : isEmpty
-                            ? EMPTY_INPUT_SEND_MESSAGE
-                            : chatMessage}
-                      </span>
-                    </>
-                  ) : (
-                    <div className="flex w-full flex-col">
-                      {editMessage ? (
-                        <EditMessageField
-                          key={`edit-message-${chat.id}`}
-                          message={decodedMessage}
-                          onEdit={(message) => {
-                            handleEditMessage(message);
-                          }}
-                          onCancel={() => setEditMessage(false)}
-                        />
-                      ) : (
-                        <>
-                          <div
-                            className={`flex w-full items-baseline gap-2 whitespace-pre-wrap break-words text-[14px] font-normal ${
-                              isEmpty
-                                ? "text-chat-trigger-disabled"
-                                : "text-primary"
-                            }`}
-                            data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
-                          >
-                            {isEmpty
-                              ? EMPTY_INPUT_SEND_MESSAGE
-                              : decodedMessage}
-                            {editedFlag}
-                          </div>
-                        </>
-                      )}
-                      {chat.files && (
-                        <div className="my-2 flex flex-col gap-5">
-                          {chat.files?.map((file, index) => {
-                            return (
-                              <FileCardWrapper index={index} path={file} />
-                            );
-                          })}
+                              // Update last index
+                              lastIndex = regex.lastIndex;
+                            }
+                            // Push text after the last match
+                            if (lastIndex !== line.length) {
+                              parts.push(line.substring(lastIndex));
+                            }
+                            return <p>{parts}</p>;
+                          })
+                        : isEmpty
+                          ? EMPTY_INPUT_SEND_MESSAGE
+                          : chatMessage}
+                    </span>
+                  </>
+                ) : (
+                  <div className="flex w-full flex-col">
+                    {editMessage ? (
+                      <EditMessageField
+                        key={`edit-message-${chat.id}`}
+                        message={decodedMessage}
+                        onEdit={(message) => {
+                          handleEditMessage(message);
+                        }}
+                        onCancel={() => setEditMessage(false)}
+                      />
+                    ) : (
+                      <>
+                        <div
+                          className={`flex w-full items-baseline gap-2 whitespace-pre-wrap break-words text-[14px] font-normal ${
+                            isEmpty
+                              ? "text-chat-trigger-disabled"
+                              : "text-primary"
+                          }`}
+                          data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
+                        >
+                          {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
+                          {editedFlag}
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            {!editMessage && (
-              <div className="invisible absolute -top-4 right-0 group-hover:visible">
-                <div>
-                  <EditMessageButton
-                    onCopy={() => {
-                      navigator.clipboard.writeText(chatMessage);
-                    }}
-                    onDelete={() => {}}
-                    onEdit={() => setEditMessage(true)}
-                    className="h-fit group-hover:visible"
-                  />
-                </div>
+                      </>
+                    )}
+                    {chat.files && (
+                      <div className="my-2 flex flex-col gap-5">
+                        {chat.files?.map((file, index) => {
+                          return <FileCardWrapper index={index} path={file} />;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
+          {!editMessage && (
+            <div className="invisible absolute -top-4 right-0 group-hover:visible">
+              <div>
+                <EditMessageButton
+                  onCopy={() => {
+                    navigator.clipboard.writeText(chatMessage);
+                  }}
+                  onDelete={() => {}}
+                  onEdit={() => setEditMessage(true)}
+                  className="h-fit group-hover:visible"
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       <div id={lastMessage ? "last-chat-message" : undefined} />
     </>

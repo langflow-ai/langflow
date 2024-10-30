@@ -41,7 +41,7 @@ export default function EditMessageField({
       />
       <div className="flex w-full flex-row-reverse justify-between">
         <div className="flex w-full flex-row-reverse items-center justify-between">
-          <div className="flex flex-row-reverse gap-2 min-w-fit">
+          <div className="flex min-w-fit flex-row-reverse gap-2">
             <Button
               data-testid="save-button"
               onMouseDown={() => setIsButtonClicked(true)}
