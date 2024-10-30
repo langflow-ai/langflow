@@ -7,7 +7,7 @@ import re
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, get_type_hints
+from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
 
 import nanoid
 import yaml
@@ -38,7 +38,6 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
-    from langflow.schema.content_block import ContentBlock
     from langflow.schema.log import LoggableType
 
 
@@ -715,6 +714,7 @@ class Component(CustomComponent):
                 sender_id = re.search(r"\((.*?)\)", self.trace_name).group(1)
 
             message = Message(
+                session_id=self.graph.session_id,
                 sender=self.display_name,
                 sender_name=self.display_name,
                 text=reason,
@@ -728,6 +728,7 @@ class Component(CustomComponent):
                     "targets": [],
                 },
                 category="error",
+                error=True,
                 content_blocks=[
                     {
                         "title": "Error",
@@ -737,7 +738,7 @@ class Component(CustomComponent):
                             "field": str(e.field) if hasattr(e, "field") else None,
                             "reason": reason,
                             "solution": str(e.solution) if hasattr(e, "solution") else None,
-                            "traceback": traceback.print_exc(),
+                            "traceback": traceback.format_exc(),
                         },
                     }
                 ],
@@ -884,31 +885,11 @@ class Component(CustomComponent):
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
             self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
 
-    def send_message(
-        self,
-        message: Message | None = None,
-        text: str | None = None,
-        background_color: str | None = None,
-        text_color: str | None = None,
-        icon: str | None = None,
-        content_blocks: list[ContentBlock] | None = None,
-        format_type: Literal["default", "error", "warning", "info"] = "default",
-        id_: str | None = None,
-        *,
-        allow_markdown: bool = True,
-    ):
-        if message is None:
-            message = Message(text=text)
-        if self.graph.session_id and not message.session_id:
+    def send_message(self, message: Message | None = None, id_: str | None = None):
+        if self.graph.session_id and message is not None and message.session_id is None:
             message.session_id = self.graph.session_id
         stored_message = self._store_message(
-            message,
-            background_color=background_color,
-            text_color=text_color,
-            allow_markdown=allow_markdown,
-            icon=icon,
-            content_blocks=content_blocks,
-            format_type=format_type,
+            message=message,
             id_=id_,
         )
 
@@ -929,12 +910,16 @@ class Component(CustomComponent):
         self._send_message_event(stored_message, **kwargs)
         return stored_message
 
-    def _send_message_event(self, message: Message, **kwargs):
+    def _send_message_event(self, message: Message, id_: str | None = None):
         if hasattr(self, "_event_manager") and self._event_manager:
             data_dict = message.data if hasattr(message, "data") else message.model_dump()
-            data_dict.update({"properties": kwargs})
-            data_dict.pop("category", None)
-            self._event_manager.on_message(data=data_dict)
+            data_dict["id"] = id_
+            category = data_dict.pop("category", None)
+            match category:
+                case "error":
+                    self._event_manager.on_error(data=data_dict)
+                case _:
+                    self._event_manager.on_message(data=data_dict)
 
     def _should_stream_message(self, stored_message: Message, original_message: Message) -> bool:
         return bool(
