@@ -49,10 +49,7 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
             advanced=False,
         ),
         *LCToolsAgentComponent._base_inputs,
-
         DataInput(name="chat_history", display_name="Chat Memory", is_list=True, advanced=True),
-
-
     ]
     outputs = [Output(name="response", display_name="Response", method="get_response")]
 
