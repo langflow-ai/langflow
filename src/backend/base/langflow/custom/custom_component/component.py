@@ -730,11 +730,15 @@ class Component(CustomComponent):
                 category="error",
                 content_blocks=[
                     {
-                        "component": self.display_name,
-                        "field": str(e.field) if hasattr(e, "field") else None,
-                        "reason": reason,
-                        "solution": str(e.solution) if hasattr(e, "solution") else None,
-                        "tracback": traceback.print_exc(),
+                        "title": "Error",
+                        "content": {
+                            "type": "error",
+                            "component": self.display_name,
+                            "field": str(e.field) if hasattr(e, "field") else None,
+                            "reason": reason,
+                            "solution": str(e.solution) if hasattr(e, "solution") else None,
+                            "traceback": traceback.print_exc(),
+                        },
                     }
                 ],
             )
@@ -922,13 +926,14 @@ class Component(CustomComponent):
             raise ValueError(msg)
 
         stored_message = messages[0]
-        self._send_message_event(stored_message)
+        self._send_message_event(stored_message, **kwargs)
         return stored_message
 
     def _send_message_event(self, message: Message, **kwargs):
         if hasattr(self, "_event_manager") and self._event_manager:
-            data_dict = message.data
-            data_dict.update(kwargs)
+            data_dict = message.data if hasattr(message, "data") else message.model_dump()
+            data_dict.update({"properties": kwargs})
+            data_dict.pop("category", None)
             self._event_manager.on_message(data=data_dict)
 
     def _should_stream_message(self, stored_message: Message, original_message: Message) -> bool:
