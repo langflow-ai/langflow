@@ -1,7 +1,5 @@
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import { TextShimmer } from "@/components/ui/TextShimmer";
-import { useDeleteBuilds } from "@/controllers/API/queries/_builds";
-import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useEffect, useRef, useState } from "react";
@@ -171,6 +169,7 @@ export default function ChatView({
           ref={ref}
         >
           {lockChat &&
+            chatHistory.length > 0 &&
             !(chatHistory[chatHistory.length - 1]?.category === "error") && (
               <div className="flex w-full gap-4 rounded-md p-2">
                 <LogoIcon />
