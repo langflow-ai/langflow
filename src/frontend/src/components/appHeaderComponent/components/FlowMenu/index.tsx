@@ -97,7 +97,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
     } else if (saveLoading) {
       return "Saving...";
     }
-    return savedText;
+    // return savedText;
+    return <div className="text-[#059669]">Saved</div>;
   }
 
   const handleSave = () => {
@@ -110,10 +111,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
   useHotkeys(changes, handleSave, { preventDefault: true });
 
   return currentFlow && onFlowPage ? (
-    <div className="flex items-center">
+    <div className="flex items-baseline">
       <div className="header-menu-bar">
         {currentFolder?.name && (
-          <div className="hidden min-[710px]:flex">
+          <div className="hidden min-[825px]:flex">
             <div
               className="cursor-pointer truncate text-muted-foreground hover:text-primary"
               onClick={() => {
@@ -316,12 +317,14 @@ export const MenuBar = ({}: {}): JSX.Element => {
           side="bottom"
           styleClasses="cursor-default z-10"
         >
-          <div className="ml-2 flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
+          <div className="ml-1 flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
             <div className="flex hidden cursor-default items-center gap-2 truncate text-sm text-zinc-500 transition-all sm:flex">
-              <div className="w-full truncate">{printByBuildStatus()}</div>
+              <div className="w-full truncate text-xs">
+                {printByBuildStatus()}
+              </div>
             </div>
             <button
-              data-testid="stop_building_button"
+              data-testid="stop_building_button "
               disabled={!isBuilding}
               onClick={(_) => {
                 if (isBuilding) {
@@ -330,7 +333,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className={
                 isBuilding
-                  ? "flex hidden items-center gap-1.5 text-status-red transition-all sm:flex"
+                  ? "flex hidden items-center gap-1.5 text-xs text-status-red transition-all sm:flex"
                   : "hidden"
               }
             >
