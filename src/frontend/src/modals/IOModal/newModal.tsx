@@ -250,7 +250,7 @@ export default function IOModal({
           <div
             className={cn(
               "flex h-full flex-shrink-0 flex-col justify-start transition-all duration-300",
-              sidebarOpen ? "max-w-[280px] w-1/5" : "w-16",
+              sidebarOpen ? "w-1/5 max-w-[280px]" : "w-16",
             )}
           >
             <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-6 text-center custom-scroll dark:bg-background">
