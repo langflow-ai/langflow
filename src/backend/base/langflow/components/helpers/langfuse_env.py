@@ -1,7 +1,7 @@
 import os
 
 from langflow.custom import Component
-from langflow.io import Output,SecretStrInput
+from langflow.io import Output, SecretStrInput
 from langflow.schema import Data
 
 
