@@ -91,6 +91,7 @@ export type NodeOutputFieldComponentType = {
   outputName?: string;
   outputProxy?: OutputFieldProxyType;
   lastOutput?: boolean;
+  colorName?: string[];
 };
 
 export type NodeInputFieldComponentType = {
@@ -106,6 +107,7 @@ export type NodeInputFieldComponentType = {
   info: string;
   proxy: { field: string; id: string } | undefined;
   showNode: boolean;
+  colorName?: string[];
 };
 
 export type IOJSONInputComponentType = {

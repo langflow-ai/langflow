@@ -12,7 +12,7 @@ import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { nodeColors } from "@/utils/styleUtils";
+import { nodeColors, nodeColorsName } from "@/utils/styleUtils";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
 import _, { cloneDeep } from "lodash";
 import {
@@ -580,8 +580,14 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   );
 
   const handleEdgeClick = (event, edge) => {
-    const color = nodeColors[edge?.data?.targetHandle?.inputTypes[0]] || "#999";
-    document.documentElement.style.setProperty("--selected", color);
+    const color =
+      nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] ||
+      "hsl(var(--foreground))";
+
+    console.log(edge?.data?.targetHandle);
+
+    const innerColor = `hsl(var(--inner-${color}-muted-foreground))`;
+    document.documentElement.style.setProperty("--selected", innerColor);
   };
 
   return (

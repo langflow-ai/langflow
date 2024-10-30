@@ -36,6 +36,7 @@ export default function NodeInputField({
   info = "",
   proxy,
   showNode,
+  colorName,
 }: NodeInputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const nodes = useFlowStore((state) => state.nodes);
@@ -90,6 +91,7 @@ export default function NodeInputField({
       showNode={showNode}
       testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
       nodeId={data.id}
+      colorName={colorName}
     />
   );
 

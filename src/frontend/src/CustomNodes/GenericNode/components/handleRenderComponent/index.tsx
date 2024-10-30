@@ -25,6 +25,7 @@ export default function HandleRenderComponent({
   showNode,
   testIdComplement,
   nodeId,
+  colorName,
 }: {
   left: boolean;
   nodes: any;
@@ -39,7 +40,13 @@ export default function HandleRenderComponent({
   showNode: any;
   testIdComplement?: string;
   nodeId: string;
+  colorName?: string[];
 }) {
+  const handleColorName = colorName?.[0];
+
+  const innerColorName = `inner-${handleColorName}`;
+  const innerForegroundColorName = `${innerColorName}-foreground`;
+
   const setHandleDragging = useFlowStore((state) => state.setHandleDragging);
   const setFilterType = useFlowStore((state) => state.setFilterType);
   const handleDragging = useFlowStore((state) => state.handleDragging);
@@ -168,14 +175,14 @@ export default function HandleRenderComponent({
     () =>
       isNullHandle
         ? dark
-          ? "conic-gradient(#27272a 0deg 360deg)"
-          : "conic-gradient(#f4f4f5 0deg 360deg)"
+          ? "conic-gradient(hsl(var(--inner-gray)) 0deg 360deg)"
+          : "conic-gradient(hsl(var(--inner-gray-foreground)) 0deg 360deg)"
         : "conic-gradient(" +
-          colors
-            .concat(colors[0])
+          colorName!
+            .concat(colorName![0])
             .map(
               (color, index) =>
-                color +
+                `hsl(var(--inner-${color}))` +
                 " " +
                 ((360 / colors.length) * index - 360 / (colors.length * 4)) +
                 "deg " +
@@ -197,34 +204,34 @@ export default function HandleRenderComponent({
       styleSheet.textContent = `
         @keyframes pulseNeon {
           0% {
-            box-shadow: 0 0 0 2px #fff,
-                        0 0 2px ${colors[0]},
-                        0 0 4px ${colors[0]},
-                        0 0 6px ${colors[0]},
-                        0 0 8px ${colors[0]},
-                        0 0 10px ${colors[0]},
-                        0 0 15px ${colors[0]},
-                        0 0 20px ${colors[0]};
+            box-shadow: 0 0 0 2px hsl(var(--border)),
+                        0 0 2px hsl(var(--inner-${colorName![0]})),
+                        0 0 4px hsl(var(--inner-${colorName![0]})),
+                        0 0 6px hsl(var(--inner-${colorName![0]})),
+                        0 0 8px hsl(var(--inner-${colorName![0]})),
+                        0 0 10px hsl(var(--inner-${colorName![0]})),
+                        0 0 15px hsl(var(--inner-${colorName![0]})),
+                        0 0 20px hsl(var(--inner-${colorName![0]}));
           }
           50% {
-            box-shadow: 0 0 0 2px #fff,
-                        0 0 4px ${colors[0]},
-                        0 0 8px ${colors[0]},
-                        0 0 12px ${colors[0]},
-                        0 0 16px ${colors[0]},
-                        0 0 20px ${colors[0]},
-                        0 0 25px ${colors[0]},
-                        0 0 30px ${colors[0]};
+            box-shadow: 0 0 0 2px hsl(var(--border)),
+                        0 0 4px hsl(var(--inner-${colorName![0]})),
+                        0 0 8px hsl(var(--inner-${colorName![0]})),
+                        0 0 12px hsl(var(--inner-${colorName![0]})),
+                        0 0 16px hsl(var(--inner-${colorName![0]})),
+                        0 0 20px hsl(var(--inner-${colorName![0]})),
+                        0 0 25px hsl(var(--inner-${colorName![0]})),
+                        0 0 30px hsl(var(--inner-${colorName![0]}));
           }
           100% {
-            box-shadow: 0 0 0 2px #fff,
-                        0 0 2px ${colors[0]},
-                        0 0 4px ${colors[0]},
-                        0 0 6px ${colors[0]},
-                        0 0 8px ${colors[0]},
-                        0 0 10px ${colors[0]},
-                        0 0 15px ${colors[0]},
-                        0 0 20px ${colors[0]};
+            box-shadow: 0 0 0 2px hsl(var(--border)),
+                        0 0 2px hsl(var(--inner-${colorName![0]})),
+                        0 0 4px hsl(var(--inner-${colorName![0]})),
+                        0 0 6px hsl(var(--inner-${colorName![0]})),
+                        0 0 8px hsl(var(--inner-${colorName![0]})),
+                        0 0 10px hsl(var(--inner-${colorName![0]})),
+                        0 0 15px hsl(var(--inner-${colorName![0]})),
+                        0 0 20px hsl(var(--inner-${colorName![0]}));
           }
         }
       `;
@@ -242,9 +249,9 @@ export default function HandleRenderComponent({
 
   const getNeonShadow = (color: string, isHovered: boolean) => {
     if (isNullHandle) return "none";
-    if (!isHovered && !openHandle) return `0 0 0 4px ${colors[0]}30`;
+    if (!isHovered && !openHandle) return `0 0 0 3px hsl(var(--${color}))`;
     return [
-      "0 0 0 1px #fff",
+      "0 0 0 1px hsl(var(--border))",
       `0 0 2px ${color}`,
       `0 0 4px ${color}`,
       `0 0 6px ${color}`,
@@ -317,10 +324,13 @@ export default function HandleRenderComponent({
             }}
             style={{
               background: isNullHandle ? "hsl(var(--border))" : handleColor,
-              width: "11px",
-              height: "11px",
+              width: "10px",
+              height: "10px",
               transition: "all 0.2s",
-              boxShadow: getNeonShadow(colors[0], isHovered || openHandle),
+              boxShadow: getNeonShadow(
+                innerForegroundColorName,
+                isHovered || openHandle,
+              ),
               animation:
                 (isHovered || openHandle) && !isNullHandle
                   ? "pulseNeon 0.7s ease-in-out infinite"

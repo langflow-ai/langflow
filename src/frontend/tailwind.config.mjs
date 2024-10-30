@@ -182,6 +182,61 @@ const config = {
           DEFAULT: "hsl(var(--tooltip))",
           foreground: "hsl(var(--tooltip-foreground))",
         },
+        "inner-yellow": {
+          DEFAULT: "hsl(var(--inner-yellow))",
+          foreground: "hsl(var(--inner-foreground-yellow))",
+          muted: "hsl(var(--inner-yellow-muted-foreground))",
+          },
+          "inner-blue": {
+          DEFAULT: "hsl(var(--inner-blue))",
+          foreground: "hsl(var(--inner-foreground-blue))",
+          muted: "hsl(var(--inner-blue-muted-foreground))",
+        },
+        "inner-gray": {
+          DEFAULT: "hsl(var(--inner-gray))",
+          foreground: "hsl(var(--inner-foreground-gray))",
+          muted: "hsl(var(--inner-gray-muted-foreground))",
+        },
+        "inner-lime": {
+          DEFAULT: "hsl(var(--inner-lime))",
+          foreground: "hsl(var(--inner-foreground-lime))",
+          muted: "hsl(var(--inner-lime-muted-foreground))",
+        },
+        "inner-red": {
+          DEFAULT: "hsl(var(--inner-red))",
+          foreground: "hsl(var(--inner-foreground-red))",
+          muted: "hsl(var(--inner-red-muted-foreground))",
+        },
+        "inner-violet": {
+          DEFAULT: "hsl(var(--inner-violet))",
+          foreground: "hsl(var(--inner-foreground-violet))",
+          muted: "hsl(var(--inner-violet-muted-foreground))",
+        },
+        "inner-emerald": {
+          DEFAULT: "hsl(var(--inner-emerald))",
+          foreground: "hsl(var(--inner-foreground-emerald))",
+          muted: "hsl(var(--inner-emerald-muted-foreground))",
+        },
+        "inner-fuchsia": {
+          DEFAULT: "hsl(var(--inner-fuchsia))",
+          foreground: "hsl(var(--inner-foreground-fuchsia))",
+          muted: "hsl(var(--inner-fuchsia-muted-foreground))",
+        },
+        "inner-purple": {
+          DEFAULT: "hsl(var(--inner-purple))",
+          foreground: "hsl(var(--inner-foreground-purple))",
+          muted: "hsl(var(--inner-purple-muted-foreground))",
+        },
+        "inner-cyan": {
+          DEFAULT: "hsl(var(--inner-cyan))",
+          foreground: "hsl(var(--inner-foreground-cyan))",
+          muted: "hsl(var(--inner-cyan-muted-foreground))",
+        },
+        "inner-indigo": {
+          DEFAULT: "hsl(var(--inner-indigo))",
+          foreground: "hsl(var(--inner-foreground-indigo))",
+          muted: "hsl(var(--inner-indigo-muted-foreground))",
+        },
       },
       borderRadius: {
         lg: `var(--radius)`,

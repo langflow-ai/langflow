@@ -36,6 +36,7 @@ export default function NodeOutputField({
   outputName,
   outputProxy,
   lastOutput,
+  colorName,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const nodes = useFlowStore((state) => state.nodes);
@@ -118,6 +119,7 @@ export default function NodeOutputField({
       setFilterEdge={setFilterEdge}
       showNode={showNode}
       testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+      colorName={colorName}
     />
   );
 

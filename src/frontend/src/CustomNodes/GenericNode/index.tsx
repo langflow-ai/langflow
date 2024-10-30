@@ -25,7 +25,9 @@ import { NodeDataType } from "../../types/flow";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { getNodeInputColors } from "../helpers/get-node-input-colors";
+import { getNodeInputColorsName } from "../helpers/get-node-input-colors-name";
 import { getNodeOutputColors } from "../helpers/get-node-output-colors";
+import { getNodeOutputColorsName } from "../helpers/get-node-output-colors-name";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import getFieldTitle from "../utils/get-field-title";
@@ -173,6 +175,7 @@ export default function GenericNode({
         type={output.types.join("|")}
         showNode={showNode}
         outputName={output.name}
+        colorName={getNodeOutputColorsName(output, data, types)}
       />
     );
   };
@@ -259,6 +262,11 @@ export default function GenericNode({
             optionalHandle={data.node?.template[templateField].input_types}
             proxy={data.node?.template[templateField].proxy}
             showNode={showNode}
+            colorName={getNodeInputColorsName(
+              data.node?.template[templateField].input_types,
+              data.node?.template[templateField].type,
+              types,
+            )}
           />
         ),
     );
