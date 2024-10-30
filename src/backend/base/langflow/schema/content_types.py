@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Any, Literal, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -42,6 +42,13 @@ class MediaContent(BaseContent):
     caption: str | None = None
 
 
+class JSONContent(BaseContent):
+    """Content type for JSON content."""
+
+    type: Literal["json"] = Field(default="json")
+    data: dict[str, Any]
+
+
 class CodeContent(BaseContent):
     """Content type for code snippets."""
 
@@ -49,3 +56,39 @@ class CodeContent(BaseContent):
     code: str
     language: str
     title: str | None = None
+
+
+class ToolStartContent(BaseContent):
+    """Content type for tool start content."""
+
+    type: Literal["tool_start"] = Field(default="tool_start")
+    tool_name: str
+    tool_input: dict[str, Any]
+
+
+class ToolEndContent(BaseContent):
+    """Content type for tool end content."""
+
+    type: Literal["tool_end"] = Field(default="tool_end")
+    tool_name: str
+    tool_output: Any
+
+
+class ToolErrorContent(BaseContent):
+    """Content type for tool error content."""
+
+    type: Literal["tool_error"] = Field(default="tool_error")
+    tool_name: str
+    tool_error: str
+
+
+ContentTypes: TypeAlias = (
+    ToolStartContent
+    | ToolEndContent
+    | ToolErrorContent
+    | ErrorContent
+    | TextContent
+    | MediaContent
+    | CodeContent
+    | JSONContent
+)
