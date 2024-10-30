@@ -76,6 +76,7 @@ ignore = [
 [tool.uv]
 dev-dependencies = [
     "asgi-lifespan>=2.1.0",
+    "pytest-github-actions-annotate-failures>=0.2.0",
 ]
 
 [build-system]
