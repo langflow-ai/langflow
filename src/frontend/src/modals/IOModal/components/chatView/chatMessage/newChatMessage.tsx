@@ -26,6 +26,7 @@ import { EditMessageButton } from "./components/editMessageButton/newMessageOpti
 import EditMessageField from "./components/editMessageField/newEditMessageField";
 import FileCardWrapper from "./components/fileCardWrapper";
 import useFlowStore from "@/stores/flowStore";
+import ClickableLinks from "@/components/clickableLinks";
 
 export default function ChatMessage({
   chat,
@@ -232,7 +233,11 @@ export default function ChatMessage({
                   </span>
                 </p>
                 {block.field && <p className="pb-1">Field: {block.field}</p>}
-                {block.reason && <p className="">Reason: {block.reason}</p>}
+                {block.reason && (
+                  <span className="">
+                    Reason: <ClickableLinks text={block.reason} />
+                  </span>
+                )}
               </div>
               {block.solution && (
                 <div>
