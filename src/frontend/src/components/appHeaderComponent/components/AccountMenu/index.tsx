@@ -1,3 +1,4 @@
+import ForwardedIconComponent from "@/components/genericIconComponent";
 import { useLogout } from "@/controllers/API/queries/auth";
 import { CustomFeedbackDialog } from "@/customization/components/custom-feedback-dialog";
 import { CustomHeaderMenuItemsTitle } from "@/customization/components/custom-header-menu-items-title";
@@ -50,7 +51,7 @@ export const AccountMenu = () => {
         <HeaderMenuItems position="right">
           {ENABLE_DATASTAX_LANGFLOW && <CustomHeaderMenuItemsTitle />}
           <HeaderMenuItemsSection>
-            <div className="flex h-[46px] w-full items-center justify-between pl-2">
+            <div className="flex h-[46px] w-full items-center justify-between px-3">
               <div className="text-xs font-medium text-zinc-500">
                 Version {version}
               </div>
@@ -62,6 +63,7 @@ export const AccountMenu = () => {
               </HeaderMenuItemLink>
             ) : (
               <HeaderMenuItemButton
+                icon="arrow-right"
                 onClick={() => {
                   navigate("/settings");
                 }}
@@ -116,11 +118,11 @@ export const AccountMenu = () => {
           </HeaderMenuItemsSection>
           <HeaderMenuItemsSection>
             {ENABLE_DATASTAX_LANGFLOW ? (
-              <HeaderMenuItemLink href="/session/logout">
+              <HeaderMenuItemLink href="/session/logout" icon="log-out">
                 Logout
               </HeaderMenuItemLink>
             ) : (
-              <HeaderMenuItemButton onClick={handleLogout}>
+              <HeaderMenuItemButton onClick={handleLogout} icon="log-out">
                 Logout
               </HeaderMenuItemButton>
             )}

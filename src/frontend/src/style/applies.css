@@ -1278,7 +1278,7 @@
   background: linear-gradient(40deg, var(--color-bg1), var(--color-bg2));
   top: 0;
   left: 0;
-  opacity: 0.7;
+  opacity: 0.6;
 
   svg {
     display: none;
@@ -1410,6 +1410,6 @@
     top: -50%;
     left: -50%;
 
-    opacity: 0.7;
+    opacity: 0.6;
   }
 }

@@ -161,7 +161,9 @@ export default function AppHeader(): JSX.Element {
             />
           </>
         )}
-        <AccountMenu />
+        <div className="ml-5 flex">
+          <AccountMenu />
+        </div>
       </div>
     </div>
   );

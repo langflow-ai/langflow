@@ -1,8 +1,9 @@
+import ShortLangFlowIcon from "@/components/appHeaderComponent/assets//ShortLangFlowIcon.svg?react";
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useEffect, useRef } from "react";
-import LangflowEmptyIcon from "../../assets/LangflowEmptyIcon.svg?react";
 import { PaginatedFolderType } from "../../entities";
 
 type EmptyPageProps = {
@@ -78,7 +79,11 @@ export const EmptyPage = ({
             </div>
           ))}
         <div className="relative z-20 flex w-full flex-col items-center justify-center gap-2">
-          <LangflowEmptyIcon />
+          {ENABLE_NEW_LOGO ? (
+            <ShortLangFlowIcon className="h-7 w-7 fill-black dark:fill-[white]" />
+          ) : (
+            <span className="fill-black text-4xl dark:fill-white">⛓️</span>
+          )}
           <h3 className="pt-5 text-2xl font-semibold dark:text-white">
             Start building
           </h3>
