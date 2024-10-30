@@ -166,7 +166,18 @@ body {
 }
 
 .react-flow__edge.running .react-flow__edge-path {
-  stroke: var(--status-blue) !important;
+  stroke: hsl(var(--foreground)) !important;
+  stroke-width: 2px !important;
+}
+
+.react-flow__edge.not-running .react-flow__edge-path {
+  stroke: hsl(var(--foreground)) !important;
+  stroke-width: 1px !important;
+}
+
+.react-flow__edge.runned .react-flow__edge-path {
+  stroke: hsl(var(--foreground)) !important;
+  stroke-width: 2px !important;
 }
 
 .ag-react-container {

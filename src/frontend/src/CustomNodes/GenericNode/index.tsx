@@ -20,7 +20,7 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
-import { OutputFieldType } from "../../types/api";
+import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
@@ -265,6 +265,12 @@ export default function GenericNode({
 
   const buildStatus = useBuildStatus(data, data.id);
   const hasOutputs = data.node?.outputs && data.node?.outputs.length > 0;
+  const [validationStatus, setValidationStatus] =
+    useState<VertexBuildTypeAPI | null>(null);
+  const getValidationStatus = (data) => {
+    setValidationStatus(data);
+    return null;
+  };
 
   return (
     <>
@@ -286,6 +292,13 @@ export default function GenericNode({
             size={350}
           />
         )}
+        <div>
+          {data.node?.beta && showNode && (
+            <div className="h-8 rounded-t-[12px] bg-accent-pink px-4 pt-2 text-[11px] font-medium text-accent-pink-foreground">
+              BETA
+            </div>
+          )}
+        </div>
 
         <div className="grid gap-3 truncate text-wrap border-b p-4 leading-5">
           <div
@@ -317,7 +330,8 @@ export default function GenericNode({
                     nodeId={data.id}
                     selected={selected}
                     showNode={showNode}
-                    beta={data.node?.beta ?? false}
+                    validationStatus={validationStatus}
+                    isOutdated={isOutdated}
                   />
                 </div>
               )}
@@ -352,6 +366,7 @@ export default function GenericNode({
                 isUserEdited={isUserEdited}
                 handleUpdateCode={handleUpdateCode}
                 loadingUpdate={loadingUpdate}
+                getValidationStatus={getValidationStatus}
               />
             )}
           </div>

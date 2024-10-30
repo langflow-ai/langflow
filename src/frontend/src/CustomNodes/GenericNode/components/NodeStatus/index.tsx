@@ -40,6 +40,7 @@ export default function NodeStatus({
   isUserEdited,
   handleUpdateCode,
   loadingUpdate,
+  getValidationStatus,
 }: {
   nodeId: string;
   display_name: string;
@@ -53,6 +54,7 @@ export default function NodeStatus({
   isUserEdited: boolean;
   handleUpdateCode: () => void;
   loadingUpdate: boolean;
+  getValidationStatus: (data) => VertexBuildTypeAPI | null;
 }) {
   const nodeId_ = data.node?.flow?.data
     ? (findLastNode(data.node?.flow.data!)?.id ?? nodeId)
@@ -86,7 +88,12 @@ export default function NodeStatus({
   const flowPool = useFlowStore((state) => state.flowPool);
   useHotkeys(play, handlePlayWShortcut, { preventDefault: true });
   useValidationStatusString(validationStatus, setValidationString);
-  useUpdateValidationStatus(nodeId_, flowPool, setValidationStatus);
+  useUpdateValidationStatus(
+    nodeId_,
+    flowPool,
+    setValidationStatus,
+    getValidationStatus,
+  );
 
   const getBaseBorderClass = (selected) => {
     let className =

@@ -702,6 +702,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           .map((element) => element.reference)
           .filter(Boolean) as string[];
         get().updateBuildStatus(idList, BuildStatus.BUILDING);
+
+        const edges = get().edges;
+        const newEdges = edges.map((edge) => {
+          if (idList.includes(edge.data.targetHandle.id)) {
+            edge.className = "runned";
+          }
+          return edge;
+        });
+        set({ edges: newEdges });
       },
       onValidateNodes: validateSubgraph,
       nodes: get().nodes || undefined,
@@ -725,6 +734,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       if (ids.includes(edge.data.sourceHandle.id)) {
         edge.animated = running;
         edge.className = running ? "running" : "";
+      } else {
+        edge.animated = false;
+        edge.className = "not-running";
       }
       return edge;
     });
