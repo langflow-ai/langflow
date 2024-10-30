@@ -8,7 +8,8 @@ import { classNames } from "../../../../../../../utils/utils";
 const BUTTON_STATES = {
   NO_INPUT: "bg-high-indigo text-background",
   HAS_CHAT_VALUE: "text-primary",
-  SHOW_STOP: "bg-muted hover:bg-secondary-hover dark:hover:bg-input text-foreground cursor-pointer",
+  SHOW_STOP:
+    "bg-muted hover:bg-secondary-hover dark:hover:bg-input text-foreground cursor-pointer",
   DEFAULT:
     "bg-primary text-primary-foreground hover:bg-primary-hover hover:text-secondary",
 };
@@ -77,7 +78,7 @@ const ButtonSendWrapper = ({
       </Case> */}
 
       <Case condition={showSendButton}>
-        <div className="flex w-fit h-fit items-center gap-2 text-[14px] font-medium">
+        <div className="flex h-fit w-fit items-center gap-2 text-[14px] font-medium">
           Send
         </div>
       </Case>

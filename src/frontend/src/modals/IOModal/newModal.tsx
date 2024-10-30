@@ -255,15 +255,19 @@ export default function IOModal({
           >
             <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-6 text-center custom-scroll dark:bg-background">
               <div className="flex items-center gap-2 pb-8">
-                <ShadTooltip styleClasses="z-50" side="right" content="Hide sidebar">
-                <Button
-                  variant="ghost"
-                  className=" flex items-center justify-center !p-0 w-8 h-8"
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                <ShadTooltip
+                  styleClasses="z-50"
+                  side="right"
+                  content="Hide sidebar"
+                >
+                  <Button
+                    variant="ghost"
+                    className="flex h-8 w-8 items-center justify-center !p-0"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
                   >
-                  <IconComponent
-                    name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
-                    className="h-[18px] w-[18px] text-ring"
+                    <IconComponent
+                      name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
+                      className="h-[18px] w-[18px] text-ring"
                     />
                   </Button>
                 </ShadTooltip>
@@ -283,16 +287,16 @@ export default function IOModal({
                       <ShadTooltip styleClasses="z-50" content="New Chat">
                         <div>
                           <Button
-                          variant="ghost"
-                          className=" flex items-center justify-center !p-0 w-8 h-8"
-                          onClick={(_) => {
-                            setvisibleSession(undefined);
+                            variant="ghost"
+                            className="flex h-8 w-8 items-center justify-center !p-0"
+                            onClick={(_) => {
+                              setvisibleSession(undefined);
                               setSelectedViewField(undefined);
                             }}
                           >
                             <IconComponent
-                            name="Plus"
-                            className="h-[18px] w-[18px] text-ring"
+                              name="Plus"
+                              className="h-[18px] w-[18px] text-ring"
                             />
                           </Button>
                         </div>
@@ -415,7 +419,12 @@ export default function IOModal({
                     <div className="font-semibold">Playground</div>
                   </div>
                 </div>
-                <div className={cn(sidebarOpen ? "lg:hidden" : "", "flex items-center justify-center w-8 h-8 absolute right-10 top-2 rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2")}>
+                <div
+                  className={cn(
+                    sidebarOpen ? "lg:hidden" : "",
+                    "absolute right-10 top-2 flex h-8 w-8 items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                  )}
+                >
                   <Button
                     variant="ghost"
                     size="icon"
