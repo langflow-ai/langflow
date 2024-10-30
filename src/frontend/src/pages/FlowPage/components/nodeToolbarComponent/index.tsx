@@ -288,9 +288,7 @@ export default function NodeToolbarComponent({
         break;
     }
 
-    setTimeout(() => {
-      setSelectedValue(null);
-    }, 100);
+    setSelectedValue(null);
   };
 
   const isSaved = flows?.some((flow) =>
