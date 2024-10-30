@@ -5,7 +5,7 @@ import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { ContentBlockError } from "@/types/chat";
+import { ContentBlock, ErrorContent } from "@/types/chat";
 import Convert from "ansi-to-html";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
@@ -217,8 +217,10 @@ export default function ChatMessage({
   ) : null;
 
   // Add this before the default return statement
+  console.log(chat);
   if (chat.category === "error") {
-    const block = (chat.content_blocks?.[0] ?? {}) as ContentBlockError;
+    const block = (chat.content_blocks?.[0] ?? {}) as ContentBlock;
+    const errorContent = block.content as ErrorContent;
     return (
       <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
         <AnimatePresence mode="wait">
@@ -266,17 +268,19 @@ export default function ChatMessage({
                         closeChat?.();
                       }}
                     >
-                      {block.component}
+                      {errorContent.component}
                     </span>
                   </p>
-                  {block.field && <p className="pb-1">Field: {block.field}</p>}
-                  {block.reason && (
+                  {errorContent.field && (
+                    <p className="pb-1">Field: {errorContent.field}</p>
+                  )}
+                  {errorContent.reason && (
                     <span className="">
-                      Reason: <ClickableLinks text={block.reason} />
+                      Reason: <ClickableLinks text={errorContent.reason} />
                     </span>
                   )}
                 </div>
-                {block.solution && (
+                {errorContent.solution && (
                   <div>
                     <h3 className="pb-3 font-semibold">Steps to fix:</h3>
                     <ol className="list-decimal pl-5">
