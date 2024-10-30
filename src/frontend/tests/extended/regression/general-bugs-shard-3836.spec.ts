@@ -67,7 +67,7 @@ test("user must be able to send an image on chat using advanced tool on ChatInpu
 
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
   await page.getByTestId("showfiles").click();
   await page.getByText("Close").last().click();
 

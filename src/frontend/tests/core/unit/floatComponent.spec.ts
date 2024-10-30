@@ -75,7 +75,7 @@ test("FloatComponent", async ({ page }) => {
   }
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   await page.getByTestId("showmirostat_eta").click();
   expect(

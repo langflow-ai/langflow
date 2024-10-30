@@ -61,7 +61,7 @@ test("ToggleComponent", async ({ page }) => {
   await page.getByTestId("div-generic-node").click();
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   await page.locator('//*[@id="showload_hidden"]').click();
   expect(
@@ -113,7 +113,7 @@ test("ToggleComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   expect(
     await page.getByTestId("toggle_bool_load_hidden").isChecked(),
@@ -180,7 +180,7 @@ test("ToggleComponent", async ({ page }) => {
     await page.getByTestId("div-generic-node").click();
 
     await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("edit-button-modal").click();
+    await page.getByTestId("advanced-button-modal").click();
 
     await page.locator('//*[@id="showload_hidden"]').click();
     expect(

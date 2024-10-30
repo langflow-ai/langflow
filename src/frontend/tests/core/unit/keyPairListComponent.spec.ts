@@ -49,7 +49,7 @@ test("KeypairListComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   await page.getByTestId("showmodel_kwargs").click();
   expect(await page.getByTestId("showmodel_kwargs").isChecked()).toBeTruthy();
@@ -103,7 +103,7 @@ test("KeypairListComponent", async ({ page }) => {
     await page.getByTestId("div-generic-node").click();
 
     await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("edit-button-modal").click();
+    await page.getByTestId("advanced-button-modal").click();
 
     await page.locator('//*[@id="editNodekeypair0"]').click();
     await page.locator('//*[@id="editNodekeypair0"]').fill("testtesttesttest");

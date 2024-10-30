@@ -472,7 +472,7 @@ export default function NodeToolbarComponent({
                   }
                   value={"Controls"}
                   icon={"SlidersHorizontal"}
-                  dataTestId="edit-button-modal"
+                  dataTestId="advanced-button-modal"
                 />
               </SelectItem>
             )}

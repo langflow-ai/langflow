@@ -82,7 +82,7 @@ test("user should not be able to upload a file larger than the limit", async ({
 
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
   await page.getByText("Close").last().click();
 
   await page.getByText("Playground", { exact: true }).last().click();

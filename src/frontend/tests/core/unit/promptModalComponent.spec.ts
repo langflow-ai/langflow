@@ -105,7 +105,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   }
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   value =
     (await page.locator('//*[@id="textarea_str_edit_prompt"]').inputValue()) ??
@@ -194,7 +194,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.getByText("Close").last().click();
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   await page.locator('//*[@id="showprompt1"]').click();
   expect(await page.locator('//*[@id="showprompt1"]').isChecked()).toBeTruthy();
