@@ -86,11 +86,11 @@ def add_messagetables(messages: list[MessageTable], session: Session):
     import json
 
     new_messages = []
-    for i in messages:
-        i.meta_data = json.loads(i.meta_data) if i.meta_data else {}
-        i.content_blocks = [json.loads(j) for j in i.content_blocks]
-        i.category = i.category or ""
-        new_messages.append(i)
+    for msg in messages:
+        msg.properties = json.loads(msg.properties) if msg.properties else {}
+        msg.content_blocks = [json.loads(j) for j in msg.content_blocks]
+        msg.category = msg.category or ""
+        new_messages.append(msg)
 
     return [MessageRead.model_validate(message, from_attributes=True) for message in new_messages]
 
