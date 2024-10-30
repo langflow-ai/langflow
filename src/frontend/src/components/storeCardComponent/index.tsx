@@ -322,6 +322,7 @@ export default function StoreCardComponent({
           cleanOnClose={true}
           open={openPlayground}
           setOpen={setOpenPlayground}
+          isPlayground={playground}
         >
           <></>
         </IOModal>

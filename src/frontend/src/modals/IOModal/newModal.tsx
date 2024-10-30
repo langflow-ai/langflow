@@ -476,7 +476,7 @@ export default function IOModal({
                     lockChat={lockChat}
                     setLockChat={setLockChat}
                     visibleSession={visibleSession}
-                    closeChat={() => {
+                    closeChat={isPlayground ? undefined : () => {
                       setOpen(false);
                     }}
                   />

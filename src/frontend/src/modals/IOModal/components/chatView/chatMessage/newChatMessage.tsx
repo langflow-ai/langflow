@@ -258,7 +258,10 @@ export default function ChatMessage({
                     <p className="pb-1">
                       Component:{" "}
                       <span
-                        className="cursor-pointer underline"
+                        className={cn(
+                          "cursor-pointer",
+                          closeChat ? "underline" : "",
+                        )}
                         onClick={() => {
                           fitViewNode(chat.meta_data?.source ?? "");
                           closeChat?.();
