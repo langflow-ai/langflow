@@ -1,10 +1,13 @@
 import os
 
+import pytest
 from langflow.components.agents.tool_calling import ToolCallingAgentComponent
 from langflow.components.models.openai import OpenAIModelComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 
 
+@pytest.mark.api_key_required
+@pytest.mark.asyncio
 async def test_tool_calling_agent_component():
     tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
     input_value = "What is 2 + 2?"
