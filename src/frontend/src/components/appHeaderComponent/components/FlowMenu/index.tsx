@@ -93,12 +93,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   function printByBuildStatus() {
     if (isBuilding) {
-      return "Building...";
+      return <div className="truncate">Building...</div>;
     } else if (saveLoading) {
-      return "Saving...";
+      return <div className="truncate">Saving...</div>;
     }
     // return savedText;
-    return <div className="text-[#059669]">Saved</div>;
+    return <div className="truncate text-[#059669]">Saved</div>;
   }
 
   const handleSave = () => {
@@ -111,10 +111,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
   useHotkeys(changes, handleSave, { preventDefault: true });
 
   return currentFlow && onFlowPage ? (
-    <div className="flex items-baseline justify-center">
-      <div className="header-menu-bar">
+    <div className="flex items-baseline justify-center truncate">
+      <div className="header-menu-bar truncate">
         {currentFolder?.name && (
-          <div className="hidden sm:flex">
+          <div className="flex hidden truncate md:flex">
             <div
               className="cursor-pointer truncate text-muted-foreground hover:text-primary"
               onClick={() => {
@@ -129,13 +129,13 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="header-menu-bar-display-2 group">
+            <div className="header-menu-bar-display-2 group truncate">
               <div
                 className="header-menu-flow-name-2 truncate"
                 data-testid="flow-configuration-button"
               >
                 <div
-                  className="flex truncate font-semibold group-hover:text-primary dark:text-[white]"
+                  className="truncate font-semibold group-hover:text-primary dark:text-[white]"
                   data-testid="flow_name"
                 >
                   {currentFlow.name}
@@ -275,7 +275,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         ></FlowSettingsModal>
         <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
-      <div className="flex items-center truncate">
+      <div className="hidden items-center truncate sm:flex">
         {!autoSaving && (
           <Button
             variant="primary"
@@ -318,8 +318,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
           side="bottom"
           styleClasses="cursor-default z-10"
         >
-          <div className="ml-1 flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-            <div className="flex hidden cursor-default items-center gap-2 truncate text-sm text-zinc-500 transition-all sm:flex">
+          <div className="mr-3 flex cursor-default items-center gap-2 truncate text-sm text-muted-foreground">
+            <div className="flex cursor-default items-center gap-2 truncate text-sm text-zinc-500">
               <div className="w-full truncate text-xs">
                 {printByBuildStatus()}
               </div>
@@ -334,7 +334,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className={
                 isBuilding
-                  ? "flex hidden items-center gap-1.5 text-xs text-status-red transition-all sm:flex"
+                  ? "flex hidden items-center gap-1.5 text-xs text-status-red sm:flex"
                   : "hidden"
               }
             >

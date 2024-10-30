@@ -46,10 +46,17 @@ export default function AppHeader(): JSX.Element {
     };
   }, []);
 
+  const x = "left-[calc((100%-300px)/2)]";
+  const d =
+    "w-[192px] md:w-[192px] lg:w-[327.5px] xl:w-[327.5px] 2xl:w-[458px]";
+
   return (
-    <div className="fixed left-0 top-0 z-[1] flex h-[62px] w-full items-center justify-between border-b px-5 py-2.5 dark:bg-black">
+    <div className="fixed left-0 top-0 z-[1] flex h-[62px] w-full items-center border-b px-5 py-2.5 dark:bg-black">
+      <div className="float-left h-full w-[50%]"></div>
+      <div className="float-right h-full w-[50%]"></div>
+
       {/* Left Section */}
-      <div className="flex w-[192px] flex-none items-center gap-2 md:w-[192px] lg:w-[327.5px] xl:w-[327.5px] 2xl:w-[458px]">
+      <div className={`absolute left-[20px] flex gap-2`}>
         <Button
           unstyled
           onClick={() => navigate("/")}
@@ -64,7 +71,7 @@ export default function AppHeader(): JSX.Element {
             <span className="fill-black text-2xl dark:fill-white">⛓️</span>
           )}
         </Button>
-        {ENABLE_DATASTAX_LANGFLOW && (
+        {!ENABLE_DATASTAX_LANGFLOW && (
           <>
             <CustomOrgSelector />
             <CustomProductSelector />
@@ -73,12 +80,12 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Middle Section */}
-      <div className="flex-auto items-center">
+      <div className="absolute left-[225px] right-[225px] truncate md:left-[230px] md:right-[230px] lg:left-[350px] lg:right-[350px] xl:left-[350px] xl:right-[350px] 2xl:left-[500px] 2xl:right-[500px]">
         <FlowMenu />
       </div>
 
       {/* Right Section */}
-      <div className="flex w-[192px] flex-none items-center gap-2 md:w-[192px] lg:w-[327.5px] xl:w-[327.5px] 2xl:w-[458px]">
+      <div className={`absolute right-[20px] flex gap-2`}>
         {!ENABLE_DATASTAX_LANGFLOW && (
           <>
             <Button
