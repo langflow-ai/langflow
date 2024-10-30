@@ -14,23 +14,17 @@ from langflow.schema import Data
 
 
 class OllamaImageDescription(Component):
-    """
-    This component retrieves an image description using Ollama's Large Language Model (LLM).
-    """
+    """This component retrieves an image description using Ollama's Large Language Model (LLM)."""
 
     display_name = "Ollama Image Description"
-    description = (
-        "Gets image description using Ollama"
-    )
+    description = "Gets image description using Ollama"
 
     icon = "image"
     name = "OllamaImageDescription"
 
     # Define the input parameters for the component
     inputs = [
-        FileInput(
-            name="image_file", display_name="Image File", file_types=["jpg", "jpeg"]
-        ),
+        FileInput(name="image_file", display_name="Image File", file_types=["jpg", "jpeg"]),
         MultilineInput(name="content", display_name="Image Prompt", value=""),
         MessageTextInput(
             name="model",
@@ -42,9 +36,7 @@ class OllamaImageDescription(Component):
             display_name="LLM Base URL",
             value="http://localhost:11434",
         ),
-        MessageTextInput(
-            name="chat_path", display_name="Chat Path", value="/api/chat", advanced=True
-        ),
+        MessageTextInput(name="chat_path", display_name="Chat Path", value="/api/chat", advanced=True),
     ]
 
     # Define the output parameters for the component
@@ -57,8 +49,7 @@ class OllamaImageDescription(Component):
     ]
 
     def build_output(self) -> Data:
-        """
-        This method builds the output for the component.
+        """This method builds the output for the component.
 
         Returns:
             Data: The image description retrieved from the Ollama LLM.
@@ -110,8 +101,7 @@ class OllamaImageDescription(Component):
 
             # Try to send the request to the Ollama LLM
             try:
-                response = requests.request(
-                    "POST", url, headers=headers, data=payload)
+                response = requests.request("POST", url, headers=headers, data=payload)
                 response.raise_for_status()  # Raise an exception for bad status codes
             except requests.exceptions.RequestException as e:
                 # Handle any exceptions that occur while sending the request
