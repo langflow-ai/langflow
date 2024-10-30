@@ -250,7 +250,7 @@ export default function IOModal({
           <div
             className={cn(
               "flex h-full flex-shrink-0 flex-col justify-start transition-all duration-300",
-              sidebarOpen ? "w-0 lg:w-1/5 lg:max-w-[280px]" : "w-0",
+              sidebarOpen ? "absolute z-50 lg:relative lg:w-1/5 lg:max-w-[280px]" : "w-0",
             )}
           >
             <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-6 text-center custom-scroll dark:bg-background">
@@ -405,26 +405,22 @@ export default function IOModal({
                   </div>
                 )}
                 <div className={cn(sidebarOpen ? "lg:hidden" : "")}>
-                  <div className="-mt-4 flex items-center gap-2">
+                  <div className="-mt-4 -ml-4 flex items-center gap-2">
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setSidebarOpen(!sidebarOpen)}
+                      onClick={() => setSidebarOpen(true)}
+                      className="w-8 h-8"
                     >
                       <IconComponent
-                        name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
-                        className="h-6 w-6 text-ring"
+                        name={"PanelLeftOpen"}
+                        className="h-[18px] w-[18px] text-ring"
                       />
                     </Button>
                     <div className="font-semibold">Playground</div>
                   </div>
                 </div>
-                <div
-                  className={cn(
-                    sidebarOpen ? "lg:hidden" : "",
-                    "absolute right-10 top-2 flex h-8 w-8 items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                  )}
-                >
+                <div className={cn(sidebarOpen ? "opacity-0 pointer-events-none" : "", "flex items-center justify-center w-8 h-8 absolute right-10 top-2 rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2")}>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -441,7 +437,7 @@ export default function IOModal({
                 </div>
               </div>
               {haveChat ? (
-                <div className={visibleSession ? "h-[95%]" : "h-full"}>
+                <div className={cn(visibleSession ? "h-[95%]" : "h-full",sidebarOpen ? "lg:blur-0 blur-sm pointer-events-none lg:pointer-events-auto" : "")}>
                   <ChatView
                     focusChat={sessionId}
                     sendMessage={sendMessage}
