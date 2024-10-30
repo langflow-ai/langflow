@@ -32,7 +32,6 @@ export default function ChatView({
 
   const inputTypes = inputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
-  const { mutate: mutateDeleteFlowPool } = useDeleteBuilds();
 
   //build chat history
   useEffect(() => {
@@ -122,7 +121,6 @@ export default function ChatView({
     setIsDragging(false);
   };
 
-  const { mutate } = usePostUploadFile();
 
   return (
     <div
