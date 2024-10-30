@@ -25,6 +25,7 @@ import LogoIcon from "./components/chatLogoIcon";
 import { EditMessageButton } from "./components/editMessageButton/newMessageOptions";
 import EditMessageField from "./components/editMessageField/newEditMessageField";
 import FileCardWrapper from "./components/fileCardWrapper";
+import useFlowStore from "@/stores/flowStore";
 
 export default function ChatMessage({
   chat,
@@ -32,6 +33,7 @@ export default function ChatMessage({
   lastMessage,
   updateChat,
   setLockChat,
+  closeChat,
 }: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
@@ -39,6 +41,7 @@ export default function ChatMessage({
   const [promptOpen, setPromptOpen] = useState(false);
   const [streamUrl, setStreamUrl] = useState(chat.stream_url);
   const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
+  const fitViewNode = useFlowStore((state) => state.fitViewNode);
   // We need to check if message is not undefined because
   // we need to run .toString() on it
   const [chatMessage, setChatMessage] = useState(
@@ -216,7 +219,18 @@ export default function ChatMessage({
               </div>
               <div className="mb-4">
                 <h3 className="pb-3 font-semibold">Error details:</h3>
-                <p className="pb-1">Component: {block.component}</p>
+                <p className="pb-1">
+                  Component:{" "}
+                  <span
+                    className="underline cursor-pointer"
+                    onClick={() => {
+                      fitViewNode(chat.meta_data?.source ?? "");
+                      closeChat?.();
+                    }}
+                  >
+                    {block.component}
+                  </span>
+                </p>
                 {block.field && <p className="pb-1">Field: {block.field}</p>}
                 {block.reason && <p className="">Reason: {block.reason}</p>}
               </div>

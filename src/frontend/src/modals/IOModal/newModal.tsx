@@ -9,12 +9,6 @@ import IconComponent from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../components/ui/tabs";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { InputOutput } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";
@@ -482,6 +476,9 @@ export default function IOModal({
                     lockChat={lockChat}
                     setLockChat={setLockChat}
                     visibleSession={visibleSession}
+                    closeChat={() => {
+                      setOpen(false);
+                    }}
                   />
                 </div>
               ) : (

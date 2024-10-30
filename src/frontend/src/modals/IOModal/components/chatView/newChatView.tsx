@@ -23,6 +23,7 @@ export default function ChatView({
   setLockChat,
   visibleSession,
   focusChat,
+  closeChat,
 }: chatViewProps): JSX.Element {
   const { flowPool, inputs, CleanFlowPool } = useFlowStore();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -139,6 +140,7 @@ export default function ChatView({
               lastMessage={chatHistory.length - 1 === index ? true : false}
               key={`${chat.id}-${index}`}
               updateChat={updateChat}
+              closeChat={closeChat}
             />
           ))
         ) : (

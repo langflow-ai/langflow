@@ -581,6 +581,7 @@ export type chatMessagePropsType = {
     message: string,
     stream_url?: string,
   ) => void;
+  closeChat?: () => void;
 };
 
 export type genericModalPropsType = {
@@ -752,6 +753,7 @@ export type chatViewProps = {
   setLockChat: (lock: boolean) => void;
   visibleSession?: string;
   focusChat?: string;
+  closeChat?: () => void;
 };
 
 export type IOFileInputProps = {
