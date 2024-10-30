@@ -714,14 +714,14 @@ class Component(CustomComponent):
                 sender_id = re.search(r'\((.*?)\)', self.trace_name).group(1)
 
             message = Message(
-                sender=sender_id,
+                sender=self.display_name,
                 sender_name=self.display_name,
                 text=reason,
                 meta_data={
                     "text_color": "red",
                     "background_color": "red",
                     "edited": False,
-                    "source": self.display_name,
+                    "source": sender_id,
                     "icon": "error",
                     "allow_markdown": False,
                     "targets": [],
