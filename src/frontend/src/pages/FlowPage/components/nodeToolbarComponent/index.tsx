@@ -397,6 +397,7 @@ export default function NodeToolbarComponent({
                 });
               }}
               size="node-toolbar"
+              data-testid="more-options-modal"
             >
               <IconComponent
                 name="FreezeAll"
