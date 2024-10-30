@@ -253,28 +253,58 @@ export default function ChatMessage({
                   />
                   <span className="">An error stopped your flow.</span>
                 </div>
-                <div className="mb-4">
-                  <h3 className="pb-3 font-semibold">Error details:</h3>
-                  <p className="pb-1">
-                    Component:{" "}
-                    <span
-                      className={cn(
-                        "cursor-pointer",
-                        closeChat ? "underline" : "",
-                      )}
-                      onClick={() => {
-                        fitViewNode(chat.meta_data?.source ?? "");
-                        closeChat?.();
-                      }}
-                    >
-                      {block.component}
-                    </span>
-                  </p>
-                  {block.field && <p className="pb-1">Field: {block.field}</p>}
-                  {block.reason && (
-                    <span className="">
-                      Reason: <ClickableLinks text={block.reason} />
-                    </span>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="error"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="flex w-full gap-4 rounded-md p-2"
+              >
+                <LogoIcon />
+                <div className="w-full rounded-md border border-error-red-border bg-error-red p-4 text-foreground">
+                  <div className="mb-2 flex items-center gap-2">
+                    <ForwardedIconComponent
+                      className="h-[18px] w-[18px] text-destructive"
+                      name="OctagonAlert"
+                    />
+                    <span className="">An error stopped your flow.</span>
+                  </div>
+                  <div className="mb-4">
+                    <h3 className="pb-3 font-semibold">Error details:</h3>
+                    <p className="pb-1">
+                      Component:{" "}
+                      <span
+                        className={cn(
+                          closeChat ? "underline cursor-pointer" : "",
+                        )}
+                        onClick={() => {
+                          fitViewNode(chat.meta_data?.source ?? "");
+                          closeChat?.();
+                        }}
+                      >
+                        {block.component}
+                      </span>
+                    </p>
+                    {block.field && (
+                      <p className="pb-1">Field: {block.field}</p>
+                    )}
+                    {block.reason && (
+                      <span className="">
+                        Reason: <ClickableLinks text={block.reason} />
+                      </span>
+                    )}
+                  </div>
+                  {block.solution && (
+                    <div>
+                      <h3 className="pb-3 font-semibold">Steps to fix:</h3>
+                      <ol className="list-decimal pl-5">
+                        <li>Check the component settings</li>
+                        <li>Ensure all required fields are filled</li>
+                        <li>Re-run your flow</li>
+                      </ol>
+                    </div>
                   )}
                 </div>
                 {block.solution && (
