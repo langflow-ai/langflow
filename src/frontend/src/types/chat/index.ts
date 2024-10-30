@@ -18,7 +18,7 @@ export type ChatMessageType = {
   edit?: boolean;
   icon?: string;
   category?: string;
-  meta_data?: {
+  properties?: {
     source?: string;
     edited?: boolean;
     icon?: string;

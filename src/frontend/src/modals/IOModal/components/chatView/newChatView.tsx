@@ -70,7 +70,7 @@ export default function ChatView({
           text_color: message.text_color || "",
           content_blocks: message.content_blocks || [],
           category: message.category || "",
-          meta_data: message.meta_data || {},
+          properties: message.properties || {},
         };
       });
     const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {

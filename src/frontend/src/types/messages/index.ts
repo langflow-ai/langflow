@@ -13,7 +13,7 @@ type Message = {
   background_color: string;
   text_color: string;
   category?: string;
-  meta_data?: any;
+  properties?: any;
   content_blocks?: ContentBlock[];
 };
 
