@@ -74,6 +74,25 @@ def add_messages(messages: Message | list[Message], flow_id: str | None = None):
         raise
 
 
+def update_messages(messages: Message | list[Message]) -> list[Message]:
+    if not isinstance(messages, list):
+        messages = [messages]
+
+    with session_scope() as session:
+        updated_messages: list[MessageTable] = []
+        for message in messages:
+            msg = session.get(MessageTable, message.id)
+            if msg:
+                msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+                session.add(msg)
+                session.commit()
+                session.refresh(msg)
+                updated_messages.append(msg)
+            else:
+                logger.warning(f"Message with id {message.id} not found")
+        return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
+
+
 def add_messagetables(messages: list[MessageTable], session: Session):
     for message in messages:
         try:
@@ -133,7 +152,8 @@ def store_message(
     if not message.session_id or not message.sender or not message.sender_name:
         msg = "All of session_id, sender, and sender_name must be provided."
         raise ValueError(msg)
-
+    if hasattr(message, "id") and message.id:
+        return update_messages([message])
     return add_messages([message], flow_id=flow_id)
 
 
