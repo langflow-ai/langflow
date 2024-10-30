@@ -165,12 +165,11 @@ export default function ChatView({
           </div>
         )}
         <div
-          className={lockChat ? "flex-max-width py-6 pl-32 pr-9" : ""}
+          className={lockChat ? "w-5/6 max-w-[768px] py-4 word-break-break-word" : ""}
           ref={ref}
         >
           {lockChat &&
             !(chatHistory[chatHistory.length - 1]?.category === "error") && (
-              <div className="mr-3 mt-1 flex w-11/12 pb-3">
                 <div className="flex w-full gap-4 rounded-md p-2">
                   <LogoIcon />
                   <div className="flex items-center">
@@ -180,12 +179,11 @@ export default function ChatView({
                       </TextShimmer>
                     </div>
                   </div>
-                </div>
               </div>
             )}
         </div>
       </div>
-      <div className="m-auto w-5/6">
+      <div className="m-auto w-5/6 max-w-[768px]">
         <ChatInput
           chatValue={chatValue}
           noInput={!inputTypes.includes("ChatInput")}

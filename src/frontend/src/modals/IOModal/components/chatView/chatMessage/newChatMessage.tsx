@@ -215,12 +215,12 @@ export default function ChatMessage({
   const editedFlag = chat.edit ? (
     <div className="text-sm text-muted-foreground">(Edited)</div>
   ) : null;
+
   // Add this before the default return statement
   if (chat.category === "error") {
     const block = (chat.content_blocks?.[0] ?? {}) as ContentBlockError;
     return (
-      <div className="flex-max-width py-6 pl-32 pr-9">
-        <div className="mr-3 mt-1 flex w-11/12 pb-3">
+      <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
           <AnimatePresence mode="wait">
             {!showError && lastMessage ? (
               <motion.div
@@ -293,14 +293,13 @@ export default function ChatMessage({
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
       </div>
     );
   }
+
   return (
     <>
-      <div className="flex-max-width px-2 py-6 pl-32 pr-9">
-        <div className={"mr-3 mt-1 flex w-11/12 pb-3"}>
+      <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
           <div
             className={cn(
               "group relative flex w-full gap-4 rounded-md p-2",
@@ -635,7 +634,6 @@ export default function ChatMessage({
               </div>
             )}
           </div>
-        </div>
       </div>
       <div id={lastMessage ? "last-chat-message" : undefined} />
     </>
