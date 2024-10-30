@@ -1,3 +1,4 @@
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { ENABLE_NEW_IO_MODAL } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
@@ -9,7 +10,6 @@ import IOModalOld from "../../modals/IOModal";
 import IOModalNew from "../../modals/IOModal/newModal";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import cloneFLowWithParent from "../../utils/storeUtils";
-import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 
 export default function PlaygroundPage() {
