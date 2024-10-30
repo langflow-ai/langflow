@@ -262,7 +262,7 @@ export default function ChatMessage({
                         closeChat ? "cursor-pointer underline" : "",
                       )}
                       onClick={() => {
-                        fitViewNode(chat.meta_data?.source ?? "");
+                        fitViewNode(chat.properties?.source ?? "");
                         closeChat?.();
                       }}
                     >
@@ -309,20 +309,20 @@ export default function ChatMessage({
               !chat.isSend ? "bg-muted" : "border border-border",
             )}
             style={
-              chat.meta_data?.background_color
-                ? { backgroundColor: chat.meta_data.background_color }
+              chat.properties?.background_color
+                ? { backgroundColor: chat.properties.background_color }
                 : {}
             }
           >
             {!chat.isSend ? (
               <div className="flex h-[18px] w-[18px] items-center justify-center">
-                {chat.meta_data?.icon ? (
-                  chat.meta_data.icon.match(
+                {chat.properties?.icon ? (
+                  chat.properties.icon.match(
                     /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
                   ) ? (
-                    <span className="">{chat.meta_data.icon}</span>
+                    <span className="">{chat.properties.icon}</span>
                   ) : (
-                    <ForwardedIconComponent name={chat.meta_data.icon} />
+                    <ForwardedIconComponent name={chat.properties.icon} />
                   )
                 ) : (
                   <img
@@ -334,13 +334,13 @@ export default function ChatMessage({
               </div>
             ) : (
               <div className="flex h-[18px] w-[18px] items-center justify-center">
-                {chat.meta_data?.icon ? (
-                  chat.meta_data.icon.match(
+                {chat.properties?.icon ? (
+                  chat.properties.icon.match(
                     /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
                   ) ? (
-                    <div className="">{chat.meta_data.icon}</div>
+                    <div className="">{chat.properties.icon}</div>
                   ) : (
-                    <ForwardedIconComponent name={chat.meta_data.icon} />
+                    <ForwardedIconComponent name={chat.properties.icon} />
                   )
                 ) : (
                   <ProfileIcon />
@@ -355,8 +355,8 @@ export default function ChatMessage({
                   "flex max-w-full items-baseline gap-3 truncate pb-2 text-[14px] font-semibold",
                 )}
                 style={
-                  chat.meta_data?.text_color
-                    ? { color: chat.meta_data.text_color }
+                  chat.properties?.text_color
+                    ? { color: chat.properties.text_color }
                     : {}
                 }
                 data-testid={
@@ -364,9 +364,9 @@ export default function ChatMessage({
                 }
               >
                 {chat.sender_name}
-                {chat.meta_data?.source && (
+                {chat.properties?.source && (
                   <div className="text-[14px] font-normal text-muted-foreground">
-                    {chat.meta_data?.source}
+                    {chat.properties?.source}
                   </div>
                 )}
               </div>
