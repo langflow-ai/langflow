@@ -75,7 +75,7 @@ const CanvasControls = ({ children }) => {
   return (
     <Panel
       data-testid="canvas_controls"
-      className="react-flow__controls flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground shadow p-1.5 text-primary [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
+      className="react-flow__controls flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
       position="bottom-left"
     >
       {/* Zoom In */}
