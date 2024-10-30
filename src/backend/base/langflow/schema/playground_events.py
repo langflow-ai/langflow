@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_valid
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.utils import timestamp_to_str_validator
+from langflow.utils.constants import MESSAGE_SENDER_USER
 
 
 class PlaygroundEvent(BaseModel):
@@ -43,6 +44,8 @@ class MessageEvent(PlaygroundEvent):
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
     flow_id: UUID | str | None = Field(default=None)
+    sender: str = Field(default=MESSAGE_SENDER_USER)
+    sender_name: str = Field(default="User")
 
     @field_validator("flow_id")
     @classmethod
@@ -81,8 +84,7 @@ class TokenEvent(PlaygroundEvent):
 # Factory functions
 def create_message(
     text: str,
-    icon: str | None = None,
-    background_color: str = "#FFFFFF",
+    properties: dict | None = None,
     content_blocks: list[ContentBlock] | None = None,
     sender_name: str | None = None,
     files: list[str] | None = None,
@@ -93,10 +95,16 @@ def create_message(
     id: UUID | str | None = None,  # noqa: A002
     flow_id: UUID | str | None = None,
     *,
-    allow_markdown: bool = True,
     error: bool = False,
     edit: bool = False,
 ):
+    # Extract properties values or use defaults
+    props = properties or {}
+    icon = props.get("icon")
+    background_color = props.get("background_color", "#FFFFFF")
+    allow_markdown = props.get("allow_markdown", True)
+    text_color = props.get("text_color", "#000000")
+
     return MessageEvent(
         text=text,
         icon=icon,
@@ -113,6 +121,7 @@ def create_message(
         error=error,
         edit=edit,
         flow_id=flow_id,
+        text_color=text_color,
     )
 
 
