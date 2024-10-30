@@ -27,6 +27,7 @@ on:
 env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "21"
+  PYTEST_RUN_PATH: "src/backend/tests"
 
 jobs:
   build:

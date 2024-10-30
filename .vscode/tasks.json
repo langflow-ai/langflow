@@ -24,7 +24,7 @@
     {
       "label": "Test",
       "type": "shell",
-      "command": "make tests"
+      "command": "make unit_tests"
     },
     // make lint
     {

@@ -23,7 +23,7 @@ services:
     volumes:
       - ../:/app
     depends_on:
-      - postgres # Dependência no seu banco de dados existente
+      - postgres
     networks:
       -  dev-langflow
 
