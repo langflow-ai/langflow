@@ -4,9 +4,7 @@ import CanvasControls, {
   CustomControlButton,
 } from "@/components/canvasControlsComponent";
 import FlowToolbar from "@/components/flowToolbarComponent";
-import IconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
-import ShadTooltip from "@/components/shadTooltipComponent";
 import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
@@ -30,12 +28,9 @@ import { useHotkeys } from "react-hotkeys-hook";
 import ReactFlow, {
   Background,
   Connection,
-  ControlButton,
-  Controls,
   Edge,
   NodeDragHandler,
   OnSelectionChangeParams,
-  Panel,
   SelectionDragHandler,
   updateEdge,
   useReactFlow,
