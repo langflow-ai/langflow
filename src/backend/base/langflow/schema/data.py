@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, cast
+from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -218,6 +219,10 @@ def custom_serializer(obj):
         return obj.astimezone().isoformat()
     if isinstance(obj, Decimal):
         return float(obj)
+    if isinstance(obj, UUID):
+        return str(obj)
+    if isinstance(obj, BaseModel):
+        return obj.model_dump()
     # Add more custom serialization rules as needed
     msg = f"Type {type(obj)} not serializable"
     raise TypeError(msg)
