@@ -51,6 +51,11 @@ import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  fitViewNode: (nodeId) => {
+    if (get().reactFlowInstance && get().nodes.find((n) => n.id === nodeId)) {
+      get().reactFlowInstance?.fitView({ nodes: [{ id: nodeId }] });
+    }
+  },
   autoSaveFlow: undefined,
   componentsToUpdate: false,
   updateComponentsToUpdate: (nodes) => {
