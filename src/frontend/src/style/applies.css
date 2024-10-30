@@ -967,7 +967,7 @@
     @apply absolute bottom-2 right-4;
   }
   .form-modal-send-button {
-    @apply rounded-md p-1.5 px-2.5 transition-all duration-300;
+    @apply rounded-md p-1.5 px-2.5;
   }
   .form-modal-lock-icon {
     @apply ml-1 mr-1 h-5 w-5 animate-pulse;

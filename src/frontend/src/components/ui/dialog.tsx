@@ -2,6 +2,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import * as React from "react";
 import { cn } from "../../utils/utils";
+import ShadTooltip from "../shadTooltipComponent";
 
 const Dialog = DialogPrimitive.Root;
 
@@ -49,10 +50,12 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-        <Cross2Icon className="h-[18px] w-[18px]" />
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close>
+      <ShadTooltip styleClasses="z-50" side="left" content="Close">
+        <DialogPrimitive.Close className="flex items-center justify-center w-8 h-8 absolute right-2 top-2 rounded-sm ring-offset-background transition-opacity hover:bg-secondary-hover hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <Cross2Icon className="h-[18px] w-[18px]" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
+      </ShadTooltip>
     </DialogPrimitive.Content>
   </DialogPortal>
 ));

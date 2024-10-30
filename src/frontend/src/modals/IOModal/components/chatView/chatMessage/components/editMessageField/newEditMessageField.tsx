@@ -49,7 +49,7 @@ export default function EditMessageField({
                 onEdit(message);
                 setIsButtonClicked(false);
               }}
-              className="mt-2 bg-foreground"
+              className="mt-2 bg-primary text-background hover:text-secondary hover:bg-primary-hover"
             >
               Save
             </Button>
@@ -61,7 +61,7 @@ export default function EditMessageField({
                 onCancel();
                 setIsButtonClicked(false);
               }}
-              className="mt-2 bg-border"
+              className="mt-2 text-foreground !bg-transparent hover:!bg-secondary-hover"
             >
               Cancel
             </Button>

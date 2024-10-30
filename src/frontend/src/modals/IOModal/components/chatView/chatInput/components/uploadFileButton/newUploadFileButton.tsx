@@ -24,13 +24,15 @@ const UploadFileButton = ({
         />
         <Button
           disabled={lockChat}
-          className={`rounded-md bg-muted p-1 font-bold transition-all ${
-            lockChat ? "cursor-not-allowed" : "hover:text-muted-foreground"
+          className={`rounded-md bg-muted w-[32px] h-[32px] flex items-center justify-center font-bold transition-all ${
+            lockChat
+              ? "cursor-not-allowed"
+              : "text-muted-foreground hover:text-primary"
           }`}
           onClick={handleButtonClick}
           unstyled
         >
-          <ForwardedIconComponent name="Image" />
+          <ForwardedIconComponent className="w-[18px] h-[18px]" name="Image" />
         </Button>
       </div>
     </ShadTooltip>
