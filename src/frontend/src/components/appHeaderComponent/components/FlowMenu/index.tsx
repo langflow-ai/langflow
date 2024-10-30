@@ -64,13 +64,15 @@ export const MenuBar = ({}: {}): JSX.Element => {
     customStringify(currentFlow) !== customStringify(currentSavedFlow);
 
   const savedText =
-    updatedAt && changesNotSaved
-      ? SAVED_HOVER +
-        new Date(updatedAt).toLocaleString("en-US", {
-          hour: "numeric",
-          minute: "numeric",
-        })
-      : "Saved";
+    updatedAt && changesNotSaved ? (
+      SAVED_HOVER +
+      new Date(updatedAt).toLocaleString("en-US", {
+        hour: "numeric",
+        minute: "numeric",
+      })
+    ) : (
+      <div className="text-[#059669]">Saved</div>
+    );
 
   function handleAddFlow() {
     try {
@@ -113,31 +115,34 @@ export const MenuBar = ({}: {}): JSX.Element => {
         {currentFolder?.name && (
           <div className="hidden min-[710px]:flex">
             <div
-              className="cursor-pointer truncate font-normal text-zinc-500 dark:text-zinc-400"
+              className="cursor-pointer truncate text-muted-foreground hover:text-primary"
               onClick={() => {
                 navigate("/");
               }}
             >
               {currentFolder?.name}
             </div>
-            <div className="px-2 font-normal text-zinc-500">/</div>
+            <div className="px-2 font-normal text-muted-foreground">/</div>
           </div>
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="header-menu-bar-display-2">
+            <div className="header-menu-bar-display-2 group">
               <div
                 className="header-menu-flow-name-2 flex"
                 data-testid="flow-configuration-button"
               >
                 <div
-                  className="whitespace-nowrap font-semibold text-black dark:text-[white]"
+                  className="whitespace-nowrap font-semibold group-hover:text-primary dark:text-[white]"
                   data-testid="flow_name"
                 >
                   {currentFlow.name}
                 </div>
               </div>
-              <IconComponent name="ChevronDown" className="w-4 text-zinc-500" />
+              <IconComponent
+                name="ChevronDown"
+                className="w-4 text-muted-foreground group-hover:text-primary"
+              />
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44 bg-white dark:bg-black">
@@ -309,7 +314,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             )
           }
           side="bottom"
-          styleClasses="cursor-default"
+          styleClasses="cursor-default z-10"
         >
           <div className="ml-2 flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
             <div className="flex hidden cursor-default items-center gap-2 truncate text-sm text-zinc-500 transition-all sm:flex">

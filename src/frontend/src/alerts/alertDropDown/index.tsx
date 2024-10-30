@@ -13,6 +13,8 @@ import SingleAlert from "./components/singleAlertComponent";
 
 export default function AlertDropdown({
   children,
+  notificationRef,
+  onClose,
 }: AlertDropdownType): JSX.Element {
   const notificationList = useAlertStore((state) => state.notificationList);
   const clearNotificationList = useAlertStore(
@@ -29,6 +31,7 @@ export default function AlertDropdown({
 
   return (
     <Popover
+      data-testid="notification-dropdown"
       open={open}
       onOpenChange={(target) => {
         setOpen(target);
@@ -36,7 +39,11 @@ export default function AlertDropdown({
       }}
     >
       <PopoverTrigger>{children}</PopoverTrigger>
-      <PopoverContent className="noflow nowheel nopan nodelete nodrag flex h-[500px] w-[500px] flex-col">
+      <PopoverContent
+        ref={notificationRef}
+        data-testid="notification-dropdown-content"
+        className="noflow nowheel nopan nodelete nodrag flex h-[500px] w-[500px] flex-col"
+      >
         <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
           Notifications
           <div className="flex gap-3 pr-3">
@@ -45,6 +52,7 @@ export default function AlertDropdown({
               onClick={() => {
                 setOpen(false);
                 setTimeout(clearNotificationList, 100);
+                onClose?.();
               }}
             >
               <IconComponent name="Trash2" className="h-4 w-4" />
@@ -53,6 +61,7 @@ export default function AlertDropdown({
               className="text-foreground opacity-70 hover:opacity-100"
               onClick={() => {
                 setOpen(false);
+                onClose?.();
               }}
             >
               <Cross2Icon className="h-4 w-4" />
