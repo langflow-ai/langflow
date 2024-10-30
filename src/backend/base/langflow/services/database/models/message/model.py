@@ -6,6 +6,9 @@ from pydantic import field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
+from langflow.schema.content_block import ContentBlock
+from langflow.schema.properties import Properties
+
 if TYPE_CHECKING:
     from langflow.schema.message import Message
     from langflow.services.database.models.flow.model import Flow
@@ -21,9 +24,9 @@ class MessageBase(SQLModel):
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
 
-    properties: dict | None = Field(default=None)
+    properties: Properties | None = Field(default=None)
     category: str = Field()
-    content_blocks: list[dict] | None = Field(default=None)
+    content_blocks: list[ContentBlock] | None = Field(default=None)
 
     @field_validator("files", mode="before")
     @classmethod
