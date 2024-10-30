@@ -57,9 +57,9 @@ WORKDIR /app/src/backend/base
 # again we need these because of workspaces
 ADD ./pyproject.toml /app/pyproject.toml
 ADD ./uv.lock /app/uv.lock
-ADD ./src/backend/base/pyproject.toml /app/pyproject.toml
-ADD ./src/backend/base/uv.lock /app/uv.lock
-ADD ./src/backend/base/README.md /app/README.md
+ADD ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
+ADD ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
+ADD ./src/backend/base/README.md /app/src/backend/base/README.md
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable
 
