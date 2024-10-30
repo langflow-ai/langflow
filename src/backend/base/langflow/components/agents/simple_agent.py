@@ -1,3 +1,4 @@
+from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model import LCModelComponent
 from langflow.components.agents.tool_calling import ToolCallingAgentComponent
 from langflow.components.models.azure_openai import AzureChatOpenAIComponent
@@ -31,11 +32,19 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
         if component_input.name not in [input_field.name for input_field in LCModelComponent._base_inputs]
     ]
     inputs = [
-        HandleInput(
-            name="tools", display_name="Tools", input_types=["Tool", "BaseTool", "StructuredTool"], is_list=True
+        *LCToolsAgentComponent._base_inputs,
+        MessageTextInput(
+            name="system_prompt",
+            display_name="System Prompt",
+            info="Initial instructions and context provided to guide the agent's behavior.",
+            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
         ),
-        MessageTextInput(name="input_value", display_name="Input"),
-        DataInput(name="chat_history", display_name="Chat History", is_list=True, advanced=True),
+        MessageTextInput(
+            name="input_value",
+            display_name="Input",
+            info="The input provided by the user for the agent to process.",
+        ),
+        DataInput(name="chat_history", display_name="Chat Memory", is_list=True, advanced=True),    
         DropdownInput(
             name="agent_llm",
             display_name="Language Model Type",
@@ -56,7 +65,8 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
             raise ValueError(msg)
 
         agent = ToolCallingAgentComponent().set(
-            llm=llm_model, tools=[self.tools], chat_history=self.chat_history, input_value=self.input_value
+            llm=llm_model, tools=[self.tools], chat_history=self.chat_history, input_value=self.input_value,
+            system_prompt=self.system_prompt,
         )
 
         return await agent.message_response()
