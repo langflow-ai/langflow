@@ -58,7 +58,7 @@ export default function CodeTabsComponent({
     >
       <div className="api-modal-tablist-div">
         {tabs.length > 0 && tabs[0].name !== "" ? (
-          <TabsList>
+          <TabsList className="border-b mt-[-1px]">
             {tabs.map((tab, index) => (
               <TabsTrigger
                 className={
@@ -74,50 +74,6 @@ export default function CodeTabsComponent({
         ) : (
           <div></div>
         )}
-
-        <div className="float-right mx-2 mb-1 mt-2 flex items-center gap-4">
-          {nodes.length > 0 &&
-            tabs.find((tab) => tab.name.toLowerCase() === "tweaks") &&
-            tabs[activeTab].hasTweaks && (
-              <div className="flex gap-2">
-                <Switch
-                  style={{
-                    transform: `scaleX(${0.7}) scaleY(${0.7})`,
-                  }}
-                  id="tweaks-switch"
-                  onCheckedChange={setActiveTweaks}
-                  checked={activeTweaks}
-                  autoFocus={false}
-                />
-                <Label
-                  className={cn(
-                    "relative right-1 top-[4px] text-xs font-medium text-muted-foreground",
-                    activeTweaks ? "text-primary" : "",
-                  )}
-                  htmlFor="tweaks-switch"
-                >
-                  Tweaks
-                </Label>
-              </div>
-            )}
-
-          {tabs[activeTab].name.toLowerCase !== "tweaks" && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground"
-                onClick={copyToClipboard}
-              >
-                {isCopied ? (
-                  <IconComponent name="Check" className="h-4 w-4" />
-                ) : (
-                  <IconComponent name="Copy" className="h-4 w-4" />
-                )}
-              </Button>
-            </>
-          )}
-        </div>
       </div>
 
       {tabs.map((tab, idx) => (
@@ -134,10 +90,50 @@ export default function CodeTabsComponent({
                   dangerouslySetInnerHTML={{ __html: tab.description }}
                 ></div>
               )}
+              <div className="w-full rounded-t-md mt-2 px-4 flex items-center justify-end gap-4 bg-code-block-muted ">
+                {nodes.length > 0 &&
+                  tabs.find((tab) => tab.name.toLowerCase() === "tweaks") &&
+                  tabs[activeTab].hasTweaks && (
+                    <div className="flex gap-2 py-2">
+                      <Label
+                        className={"relative right-1 top-[4px] text-xs font-medium text-white"}
+                        htmlFor="tweaks-switch"
+                      >
+                        Enable Overrides
+                      </Label>
+                      <Switch
+                        style={{
+                          transform: `scaleX(${0.7}) scaleY(${0.7})`,
+                        }}
+                        id="tweaks-switch"
+                        onCheckedChange={setActiveTweaks}
+                        checked={activeTweaks}
+                        autoFocus={false}
+                      />
+                    </div>
+                  )}
+
+                {tabs[activeTab].name.toLowerCase !== "tweaks" && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-[#A1A1AA]"
+                      onClick={copyToClipboard}
+                    >
+                      {isCopied ? (
+                        <IconComponent name="Check" className="h-4 w-4" />
+                      ) : (
+                        <IconComponent name="Copy" className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </>
+                )}
+              </div>
               <SyntaxHighlighter
                 language={tab.language}
                 style={oneDark}
-                className="mt-0 h-full overflow-auto rounded-sm text-left custom-scroll"
+                className="!mt-0 !rounded-t-none h-full overflow-auto rounded-sm text-left custom-scroll bg-code-block"
               >
                 {tab.code}
               </SyntaxHighlighter>

@@ -165,6 +165,10 @@ const config = {
           DEFAULT: "hsl(var(--tooltip))",
           foreground: "hsl(var(--tooltip-foreground))",
         },
+        "code-block": {
+          DEFAULT: "#18181B",
+          muted: "#27272A",
+        },
       },
       borderRadius: {
         lg: `var(--radius)`,

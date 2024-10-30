@@ -886,7 +886,7 @@ export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";
 export const EMPTY_OUTPUT_SEND_MESSAGE = "Message empty.";
 
 export const TABS_ORDER = [
-  "run curl",
+  "curl",
   "python api",
   "js api",
   "python code",
