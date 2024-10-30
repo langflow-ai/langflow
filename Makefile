@@ -141,6 +141,7 @@ ifeq ($(async), true)
 		--instafail -n auto -ra -m "not api_key_required" \
 		--durations-path src/backend/tests/.test_durations \
 		--splitting-algorithm least_duration \
+		--exclude-warning-annotations \
 		$(args)
 else
 	uv run pytest src/backend/tests \
@@ -148,6 +149,7 @@ else
 		--instafail -ra -m "not api_key_required" \
 		--durations-path src/backend/tests/.test_durations \
 		--splitting-algorithm least_duration \
+		--exclude-warning-annotations \
 		$(args)
 endif
 
@@ -157,16 +159,19 @@ unit_tests_looponfail:
 integration_tests:
 	uv run pytest src/backend/tests/integration \
 		--instafail -ra \
+		--exclude-warning-annotations \
 		$(args)
 
 integration_tests_no_api_keys:
 	uv run pytest src/backend/tests/integration \
 		--instafail -ra -m "not api_key_required" \
+		--exclude-warning-annotations \
 		$(args)
 
 integration_tests_api_keys:
 	uv run pytest src/backend/tests/integration \
 		--instafail -ra -m "api_key_required" \
+		--exclude-warning-annotations \
 		$(args)
 
 tests: ## run unit, integration, coverage tests
