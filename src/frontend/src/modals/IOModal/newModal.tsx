@@ -250,7 +250,7 @@ export default function IOModal({
           <div
             className={cn(
               "flex h-full flex-shrink-0 flex-col justify-start transition-all duration-300",
-              sidebarOpen ? "w-1/5 max-w-[280px]" : "w-16",
+              sidebarOpen ? "w-0 lg:w-1/5 lg:max-w-[280px]" : "w-0",
             )}
           >
             <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-6 text-center custom-scroll dark:bg-background">
@@ -352,48 +352,78 @@ export default function IOModal({
                   {inputs.some(
                     (input) => input.id === selectedViewField.id,
                   ) && (
-                    <IOFieldView
-                      type={InputOutput.INPUT}
-                      left={false}
-                      fieldType={selectedViewField.type!}
-                      fieldId={selectedViewField.id!}
-                    />
-                  )}
+                      <IOFieldView
+                        type={InputOutput.INPUT}
+                        left={false}
+                        fieldType={selectedViewField.type!}
+                        fieldId={selectedViewField.id!}
+                      />
+                    )}
                   {outputs.some(
                     (output) => output.id === selectedViewField.id,
                   ) && (
-                    <IOFieldView
-                      type={InputOutput.OUTPUT}
-                      left={false}
-                      fieldType={selectedViewField.type!}
-                      fieldId={selectedViewField.id!}
-                    />
-                  )}
+                      <IOFieldView
+                        type={InputOutput.OUTPUT}
+                        left={false}
+                        fieldType={selectedViewField.type!}
+                        fieldId={selectedViewField.id!}
+                      />
+                    )}
                   {sessions.some(
                     (session) => session === selectedViewField.id,
                   ) && (
-                    <SessionView
-                      session={selectedViewField.id}
-                      id={currentFlowId}
-                    />
-                  )}
+                      <SessionView
+                        session={selectedViewField.id}
+                        id={currentFlowId}
+                      />
+                    )}
                 </div>
               </div>
             )}
             <div
               className={cn(
-                "flex h-full w-full flex-col p-6",
+                "flex h-full w-full flex-col p-6 justify-between",
                 selectedViewField ? "hidden" : "",
               )}
             >
               <div className="mb-4 h-[5%] text-[16px] font-semibold">
-                {visibleSession && sessions.length > 0 && (
-                  <div>
+                {visibleSession && sessions.length > 0 && sidebarOpen && (
+                  <div className="hidden lg:block">
                     {visibleSession === currentFlowId
                       ? "Default Session"
                       : `${visibleSession}`}
                   </div>
                 )}
+                <div className={cn(sidebarOpen ? " lg:hidden" : "")}>
+                  <div className="flex items-center gap-2 -mt-4">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setSidebarOpen(!sidebarOpen)}
+                    >
+                      <IconComponent
+                        name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
+                        className="h-6 w-6 text-ring"
+                      />
+                    </Button>
+                    <div className="font-semibold">Playground</div>
+                  </div>
+                </div>
+                <div className={cn(sidebarOpen?"lg:hidden":"","flex items-center justify-center w-8 h-8 absolute right-10 top-2 rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2")}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(_) => {
+                      setvisibleSession(undefined);
+                      setSelectedViewField(undefined);
+                    }}
+                  >
+                    <IconComponent
+                      name="Plus"
+                      className="h-[18px] w-[18px] text-ring"
+                    />
+                  </Button>
+                </div>
               </div>
               {haveChat ? (
                 <div className={visibleSession ? "h-[95%]" : "h-full"}>
