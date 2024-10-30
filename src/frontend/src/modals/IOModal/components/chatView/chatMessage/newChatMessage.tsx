@@ -167,13 +167,13 @@ export default function ChatMessage({
   const convertFiles = (
     files:
       | (
-          | string
-          | {
-              path: string;
-              type: string;
-              name: string;
-            }
-        )[]
+        | string
+        | {
+          path: string;
+          type: string;
+          name: string;
+        }
+      )[]
       | undefined,
   ) => {
     if (!files) return [];
@@ -253,58 +253,29 @@ export default function ChatMessage({
                   />
                   <span className="">An error stopped your flow.</span>
                 </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="flex w-full gap-4 rounded-md p-2"
-              >
-                <LogoIcon />
-                <div className="w-full rounded-md border border-error-red-border bg-error-red p-4 text-foreground">
-                  <div className="mb-2 flex items-center gap-2">
-                    <ForwardedIconComponent
-                      className="h-[18px] w-[18px] text-destructive"
-                      name="OctagonAlert"
-                    />
-                    <span className="">An error stopped your flow.</span>
-                  </div>
-                  <div className="mb-4">
-                    <h3 className="pb-3 font-semibold">Error details:</h3>
-                    <p className="pb-1">
-                      Component:{" "}
-                      <span
-                        className={cn(
-                          closeChat ? "underline cursor-pointer" : "",
-                        )}
-                        onClick={() => {
-                          fitViewNode(chat.meta_data?.source ?? "");
-                          closeChat?.();
-                        }}
-                      >
-                        {block.component}
-                      </span>
-                    </p>
-                    {block.field && (
-                      <p className="pb-1">Field: {block.field}</p>
-                    )}
-                    {block.reason && (
-                      <span className="">
-                        Reason: <ClickableLinks text={block.reason} />
-                      </span>
-                    )}
-                  </div>
-                  {block.solution && (
-                    <div>
-                      <h3 className="pb-3 font-semibold">Steps to fix:</h3>
-                      <ol className="list-decimal pl-5">
-                        <li>Check the component settings</li>
-                        <li>Ensure all required fields are filled</li>
-                        <li>Re-run your flow</li>
-                      </ol>
-                    </div>
+                <div className="mb-4">
+                  <h3 className="pb-3 font-semibold">Error details:</h3>
+                  <p className="pb-1">
+                    Component:{" "}
+                    <span
+                      className={cn(
+                        closeChat ? "underline cursor-pointer" : "",
+                      )}
+                      onClick={() => {
+                        fitViewNode(chat.meta_data?.source ?? "");
+                        closeChat?.();
+                      }}
+                    >
+                      {block.component}
+                    </span>
+                  </p>
+                  {block.field && (
+                    <p className="pb-1">Field: {block.field}</p>
+                  )}
+                  {block.reason && (
+                    <span className="">
+                      Reason: <ClickableLinks text={block.reason} />
+                    </span>
                   )}
                 </div>
                 {block.solution && (
@@ -423,7 +394,9 @@ export default function ChatMessage({
                       onClick={() => setHidden((prev) => !prev)}
                     />
                   )}
-                  {chat.thought && chat.thought !== "" && !hidden && <br></br>}
+                  {chat.thought && chat.thought !== "" && !hidden && (
+                    <br></br>
+                  )}
                   <div className="flex w-full flex-col">
                     <div
                       className="flex w-full flex-col dark:text-white"
@@ -431,7 +404,10 @@ export default function ChatMessage({
                     >
                       <div
                         data-testid={
-                          "chat-message-" + chat.sender_name + "-" + chatMessage
+                          "chat-message-" +
+                          chat.sender_name +
+                          "-" +
+                          chatMessage
                         }
                         className="flex w-full flex-col"
                       >
@@ -566,35 +542,35 @@ export default function ChatMessage({
                     >
                       {promptOpen
                         ? template?.split("\n")?.map((line, index) => {
-                            const regex = /{([^}]+)}/g;
-                            let match;
-                            let parts: Array<JSX.Element | string> = [];
-                            let lastIndex = 0;
-                            while ((match = regex.exec(line)) !== null) {
-                              // Push text up to the match
-                              if (match.index !== lastIndex) {
-                                parts.push(
-                                  line.substring(lastIndex, match.index),
-                                );
-                              }
-                              // Push div with matched text
-                              if (chat.message[match[1]]) {
-                                parts.push(
-                                  <span className="chat-message-highlight">
-                                    {chat.message[match[1]]}
-                                  </span>,
-                                );
-                              }
+                          const regex = /{([^}]+)}/g;
+                          let match;
+                          let parts: Array<JSX.Element | string> = [];
+                          let lastIndex = 0;
+                          while ((match = regex.exec(line)) !== null) {
+                            // Push text up to the match
+                            if (match.index !== lastIndex) {
+                              parts.push(
+                                line.substring(lastIndex, match.index),
+                              );
+                            }
+                            // Push div with matched text
+                            if (chat.message[match[1]]) {
+                              parts.push(
+                                <span className="chat-message-highlight">
+                                  {chat.message[match[1]]}
+                                </span>,
+                              );
+                            }
 
-                              // Update last index
-                              lastIndex = regex.lastIndex;
-                            }
-                            // Push text after the last match
-                            if (lastIndex !== line.length) {
-                              parts.push(line.substring(lastIndex));
-                            }
-                            return <p>{parts}</p>;
-                          })
+                            // Update last index
+                            lastIndex = regex.lastIndex;
+                          }
+                          // Push text after the last match
+                          if (lastIndex !== line.length) {
+                            parts.push(line.substring(lastIndex));
+                          }
+                          return <p>{parts}</p>;
+                        })
                         : isEmpty
                           ? EMPTY_INPUT_SEND_MESSAGE
                           : chatMessage}
@@ -614,14 +590,15 @@ export default function ChatMessage({
                     ) : (
                       <>
                         <div
-                          className={`flex w-full items-baseline gap-2 whitespace-pre-wrap break-words text-[14px] font-normal ${
-                            isEmpty
+                          className={`flex w-full items-baseline gap-2 whitespace-pre-wrap break-words text-[14px] font-normal ${isEmpty
                               ? "text-chat-trigger-disabled"
                               : "text-primary"
-                          }`}
+                            }`}
                           data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                         >
-                          {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
+                          {isEmpty
+                            ? EMPTY_INPUT_SEND_MESSAGE
+                            : decodedMessage}
                           {editedFlag}
                         </div>
                       </>
@@ -629,7 +606,9 @@ export default function ChatMessage({
                     {chat.files && (
                       <div className="my-2 flex flex-col gap-5">
                         {chat.files?.map((file, index) => {
-                          return <FileCardWrapper index={index} path={file} />;
+                          return (
+                            <FileCardWrapper index={index} path={file} />
+                          );
                         })}
                       </div>
                     )}
@@ -645,7 +624,7 @@ export default function ChatMessage({
                   onCopy={() => {
                     navigator.clipboard.writeText(chatMessage);
                   }}
-                  onDelete={() => {}}
+                  onDelete={() => { }}
                   onEdit={() => setEditMessage(true)}
                   className="h-fit group-hover:visible"
                 />
