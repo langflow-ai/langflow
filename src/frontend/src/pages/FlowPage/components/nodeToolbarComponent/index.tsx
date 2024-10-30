@@ -366,7 +366,7 @@ export default function NodeToolbarComponent({
                 onClick={() => {
                   setShowModalAdvanced(true);
                 }}
-                data-testid="advanced-button-modal"
+                data-testid="edit-button-modal"
                 size="node-toolbar"
               >
                 <IconComponent name="SlidersHorizontal" className="h-4 w-4" />
