@@ -142,12 +142,9 @@ def create_info(message: str):
     return InfoEvent(text=message)
 
 
-def create_token(chunk: str, text: str, sender: str, sender_name: str, id: str):  # noqa: A002
+def create_token(chunk: str, id: str):  # noqa: A002
     return TokenEvent(
         chunk=chunk,
-        text=text,
-        sender=sender,
-        sender_name=sender_name,
         id=id,
     )
 

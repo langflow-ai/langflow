@@ -909,28 +909,25 @@ class Component(CustomComponent):
             raise TypeError(msg)
 
         if isinstance(iterator, AsyncIterator):
-            return run_until_complete(self._handle_async_iterator(iterator, message, message_id))
+            return run_until_complete(self._handle_async_iterator(iterator, message_id))
 
         complete_message = ""
         for chunk in iterator:
-            complete_message = self._process_chunk(chunk.content, complete_message, message, message_id)
+            complete_message = self._process_chunk(chunk.content, complete_message, message_id)
         return complete_message
 
-    async def _handle_async_iterator(self, iterator: AsyncIterator, message: Message, message_id: str) -> str:
+    async def _handle_async_iterator(self, iterator: AsyncIterator, message_id: str) -> str:
         complete_message = ""
         async for chunk in iterator:
-            complete_message = self._process_chunk(chunk.content, complete_message, message, message_id)
+            complete_message = self._process_chunk(chunk.content, complete_message, message_id)
         return complete_message
 
-    def _process_chunk(self, chunk: str, complete_message: str, message: Message, message_id: str) -> str:
+    def _process_chunk(self, chunk: str, complete_message: str, message_id: str) -> str:
         complete_message += chunk
         if self._event_manager:
             self._event_manager.on_token(
                 data={
-                    "text": complete_message,
                     "chunk": chunk,
-                    "sender": message.sender,
-                    "sender_name": message.sender_name,
                     "id": str(message_id),
                 }
             )
