@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        shell: bash
+        shell: bash -ex -o pipefail {0}
     permissions:
       # Required to create tag
       contents: write
@@ -69,17 +69,10 @@ jobs:
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
 
-          BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
-          echo "Updating base project version to $BASE_TAG"
-          uv run ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
-          uv run ./scripts/ci/update_pyproject_version.py $BASE_TAG base
-
-          # Use the main tag created earlier
           MAIN_TAG="${{ steps.generate_main_tag.outputs.main_tag }}"
-          echo "Updating main project version to $MAIN_TAG"
-          uv run ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
-          uv run ./scripts/ci/update_pyproject_name.py langflow-nightly main
-          uv run ./scripts/ci/update_uv_dependency.py $BASE_TAG
+          BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
+          echo "Updating base project version to $BASE_TAG and updating main project version to $MAIN_TAG"
+          uv run ./scripts/ci/update_pyproject_combined.py main $MAIN_TAG $BASE_TAG
 
           uv lock
           cd src/backend/base && uv lock && cd ../../..

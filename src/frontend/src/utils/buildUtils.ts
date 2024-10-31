@@ -12,7 +12,7 @@ import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import { VertexLayerElementType } from "../types/zustand/flow";
-import { tryParseJson } from "./utils";
+import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
   setLockChat?: (lock: boolean) => void;
@@ -274,7 +274,21 @@ export async function buildFlowVertices({
             buildResults.push(true);
           }
         }
+
+        await useFlowStore.getState().clearEdgesRunningByNodes();
+
         if (buildData.next_vertices_ids) {
+          if (isStringArray(buildData.next_vertices_ids)) {
+            useFlowStore
+              .getState()
+              .setCurrentBuildingNodeId(buildData?.next_vertices_ids ?? []);
+            useFlowStore
+              .getState()
+              .updateEdgesRunningByNodes(
+                buildData?.next_vertices_ids ?? [],
+                true,
+              );
+          }
           onStartVertices(buildData.next_vertices_ids);
         }
         return true;

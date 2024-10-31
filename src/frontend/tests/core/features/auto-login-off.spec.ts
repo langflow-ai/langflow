@@ -128,12 +128,12 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("flow-configuration-button").click();
   await page.getByText("Settings", { exact: true }).last().click();
@@ -198,12 +198,12 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("flow-configuration-button").click();
   await page.getByText("Settings", { exact: true }).last().click();
