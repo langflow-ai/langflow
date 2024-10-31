@@ -53,6 +53,13 @@ test("user must be able to send an image on chat using advanced tool on ChatInpu
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
   const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
   const isApiKeyInputVisible = await apiKeyInput.isVisible();
 

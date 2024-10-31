@@ -81,7 +81,7 @@ export default function NodeName({
             className={cn(
               "max-w-44 truncate text-[14px]",
               validationStatus?.data?.duration && "max-w-36",
-              isOutdated && "max-w-28",
+              isOutdated && "max-w-40",
             )}
           >
             {display_name}

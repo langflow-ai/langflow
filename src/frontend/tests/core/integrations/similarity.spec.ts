@@ -201,6 +201,13 @@ test("user must be able to check similarity between embedding texts", async ({
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
   await page.getByTestId("fit_view").click();
 
   await page

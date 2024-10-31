@@ -43,7 +43,7 @@ test("Dynamic Agent", async ({ page }) => {
   }
 
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Dynamic Agent" }).click();
+  await page.getByRole("heading", { name: "Dynamic Agent" }).last().click();
 
   await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
@@ -62,6 +62,13 @@ test("Dynamic Agent", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
   await page
     .getByTestId("popover-anchor-input-api_key")
     .last()
@@ -71,11 +78,16 @@ test("Dynamic Agent", async ({ page }) => {
 
   let openAiLlms = await page.getByText("OpenAI", { exact: true }).count();
 
+  await page.waitForSelector('[data-testid="fit_view"]', {
+    timeout: 100000,
+  });
+
   for (let i = 0; i < openAiLlms; i++) {
     await page
       .getByTestId("popover-anchor-input-api_key")
       .nth(i)
       .fill(process.env.OPENAI_API_KEY ?? "");
+    await page.getByTestId("zoom_in").click();
 
     await page.getByTestId("dropdown_str_model_name").nth(i).click();
     await page.getByTestId("gpt-4o-1-option").last().click();

@@ -66,6 +66,13 @@ test("Simple Agent", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
   await page
     .getByTestId("popover-anchor-input-api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");

@@ -50,6 +50,13 @@ test("should able to see and interact with logs", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
   await page.getByTestId("icon-ChevronDown").click();
   await page.getByText("Logs").click();
   await page.getByText("No Data Available", { exact: true }).isVisible();

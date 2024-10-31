@@ -85,6 +85,9 @@ export default function FlowToolbar(): JSX.Element {
                 : "",
             )}
             data-testid="shared-button-flow"
+            onClick={() => {
+              setOpenShareModal(true);
+            }}
           >
             <>
               <ForwardedIconComponent
