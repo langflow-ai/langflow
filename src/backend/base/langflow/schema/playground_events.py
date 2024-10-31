@@ -5,16 +5,14 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from langflow.schema.content_block import ContentBlock
+from langflow.schema.properties import Properties
 from langflow.schema.utils import timestamp_to_str_validator
 from langflow.utils.constants import MESSAGE_SENDER_USER
 
 
 class PlaygroundEvent(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
-    background_color: str = Field(default="#FFFFFF")
-    text_color: str = Field(default="#000000")
-    allow_markdown: bool = Field(default=True)
-    icon: str | None = Field(default=None)
+    properties: Properties | None = Field(default=None)
     sender_name: str | None = Field(default=None)
     content_blocks: list[ContentBlock] | None = Field(default=None)
     format_type: Literal["default", "error", "warning", "info"] = Field(default="default")
@@ -102,19 +100,12 @@ def create_message(
     edit: bool = False,
 ):
     # Extract properties values or use defaults
-    props = properties or {}
-    icon = props.get("icon")
-    background_color = props.get("background_color", "#FFFFFF")
-    allow_markdown = props.get("allow_markdown", True)
-    text_color = props.get("text_color", "#000000")
 
     return MessageEvent(
         text=text,
-        icon=icon,
+        properties=properties,
         category=category,
-        background_color=background_color,
         content_blocks=content_blocks,
-        allow_markdown=allow_markdown,
         sender_name=sender_name,
         files=files,
         timestamp=timestamp,
@@ -125,7 +116,6 @@ def create_message(
         error=error,
         edit=edit,
         flow_id=flow_id,
-        text_color=text_color,
     )
 
 
