@@ -301,11 +301,11 @@ export async function buildFlowVertices({
         return true;
       }
       case "error": {
-        const errorMessage = data.error;
-        console.log(data);
-        onBuildError!("Error Running Flow", [errorMessage], []);
-        buildResults.push(false);
         useFlowStore.getState().setIsBuilding(false);
+        if (data.category === "error") {
+          useMessagesStore.getState().addMessage(data);
+        }
+        buildResults.push(false);
         return true;
       }
       default:

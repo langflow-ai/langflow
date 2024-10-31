@@ -216,8 +216,6 @@ export default function ChatMessage({
     <div className="text-sm text-muted-foreground">(Edited)</div>
   ) : null;
 
-  // Add this before the default return statement
-  console.log(chat);
   if (chat.category === "error") {
     const block = (chat.content_blocks?.[0] ?? {}) as ContentBlock;
     const errorContent = block.content as ErrorContent;

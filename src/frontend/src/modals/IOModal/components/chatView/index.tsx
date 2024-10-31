@@ -233,7 +233,7 @@ export default function ChatView({
             files: event.files,
             id: event.id || "",
             timestamp: event.timestamp || "",
-            content_blocks: event.content_blocks || null,
+            content_blocks: event.content_blocks || undefined,
             background_color: event.background_color || "",
             text_color: event.text_color || "",
           },
