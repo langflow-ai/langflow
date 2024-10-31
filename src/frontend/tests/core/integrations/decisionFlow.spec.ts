@@ -395,7 +395,7 @@ test("should create a flow with decision", async ({ page }) => {
     .fill(process.env.OPENAI_API_KEY ?? "");
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
-  await page.getByTestId(fit_view").click();
+  await page.getByTestId("fit_view").click();
   await page.getByText("Playground", { exact: true }).last().click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,

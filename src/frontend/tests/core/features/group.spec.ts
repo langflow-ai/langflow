@@ -26,7 +26,7 @@ test.describe("group node test", () => {
       .first()
       .click();
     await page.waitForTimeout(1000);
-    await page.getByTestId(fit_view").first().click();
+    await page.getByTestId("fit_view").first().click();
 
     await page.getByTestId("title-OpenAI").click();
     await page.getByTestId("title-OpenAI").click({ modifiers: ["Control"] });
