@@ -13,6 +13,11 @@ from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
 
+def set_advanced_true(component_input):
+    component_input.advanced = True
+    return component_input
+
+
 class SimpleAgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
@@ -20,21 +25,18 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
     beta = True
     name = "Agent"
 
-    openai_inputs = [
-        component_input
-        if component_input.name != "temperature"
-        else setattr(component_input, "advanced", True) or component_input
-        for component_input in OpenAIModelComponent().inputs
-        if component_input.name not in [input_field.name for input_field in LCModelComponent._base_inputs]
-    ]
     azure_inputs = [
-        component_input
+        set_advanced_true(component_input) if component_input.name == "temperature" else component_input
         for component_input in AzureChatOpenAIComponent().inputs
         if component_input.name not in [input_field.name for input_field in LCModelComponent._base_inputs]
     ]
-    memory_inputs = [
-        setattr(component_input, "advanced", True) or component_input for component_input in MemoryComponent().inputs
+    openai_inputs = [
+        set_advanced_true(component_input) if component_input.name == "temperature" else component_input
+        for component_input in OpenAIModelComponent().inputs
+        if component_input.name not in [input_field.name for input_field in LCModelComponent._base_inputs]
     ]
+
+    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
 
     inputs = [
         DropdownInput(
