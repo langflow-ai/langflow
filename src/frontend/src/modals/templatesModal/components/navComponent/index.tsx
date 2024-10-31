@@ -62,7 +62,7 @@ export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
                     >
                       <ForwardedIconComponent
                         name={link.icon}
-                        className={`mr-2 h-4 w-4 stroke-2 ${
+                        className={`h-4 w-4 stroke-2 ${
                           currentTab === link.id
                             ? "x-gradient"
                             : "text-muted-foreground"
