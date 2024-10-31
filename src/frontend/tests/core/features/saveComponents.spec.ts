@@ -117,10 +117,10 @@ test.describe("save component tests", () => {
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await page.getByTitle("fit view").click();
-    await page.getByTitle("zoom out").click();
-    await page.getByTitle("zoom out").click();
-    await page.getByTitle("zoom out").click();
+    await page.getByTestId("fit_view").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
     textArea = page.getByTestId("div-textarea-description");
     elementCountText = await textArea?.count();
     if (elementCountText > 0) {
