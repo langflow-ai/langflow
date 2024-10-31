@@ -65,7 +65,7 @@ export default function TemplatesModal({
                   <div className="flex flex-col items-start justify-center">
                     <div className="font-semibold">Start from scratch</div>
                     <div className="text-sm text-muted-foreground">
-                      Begin a fresh project to build from scratch.
+                      Begin with a fresh flow to build from scratch.
                     </div>
                   </div>
                   <Button
