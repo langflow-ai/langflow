@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/genericIconComponent";
+import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
 import {
   Sidebar,
   SidebarContent,
@@ -67,7 +68,11 @@ export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
                             : "text-muted-foreground"
                         }`}
                       />
-                      <span>{link.title}</span>
+                      <span
+                        data-testid={`category_title_${convertTestName(link.title)}`}
+                      >
+                        {link.title}
+                      </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
