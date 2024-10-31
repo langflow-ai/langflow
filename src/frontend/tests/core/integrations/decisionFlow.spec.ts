@@ -1,83 +1,150 @@
-import { test } from "@playwright/test";
+import { Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+// Helper function to wait for element to be ready
+async function waitForElement(page: Page, elementId: string, nth: number) {
+  const element = page.getByTestId(`title-${elementId}`).nth(nth);
 
-// Add this function at the beginning of the file, after the imports
+  // Wait for element to be visible and stable
+  await element.waitFor({
+    state: "visible",
+    timeout: 30000,
+  });
+
+  // Additional wait to ensure element is fully rendered and interactive
+  await page.waitForTimeout(1000);
+
+  return element;
+}
+
+// Improved version of moveElementByX with better error handling and waits
 async function moveElementByX(
-  page: any,
+  page: Page,
   elementId: string,
   moveX: number,
   nth: number,
 ) {
-  const element = await page.getByTestId(`title-${elementId}`).nth(nth);
-  await element.hover();
+  try {
+    const element = await waitForElement(page, elementId, nth);
+    await element.hover();
 
-  const boundingBox = await element.boundingBox();
+    const boundingBox = await element.boundingBox();
+    if (!boundingBox) {
+      throw new Error(
+        `Unable to get bounding box for the element: ${elementId}`,
+      );
+    }
 
-  if (boundingBox) {
     const startX = boundingBox.x + boundingBox.width / 2;
     const startY = boundingBox.y + boundingBox.height / 2;
 
+    // Break down mouse movements into smaller steps for more reliability
     await page.mouse.move(startX, startY);
+    await page.waitForTimeout(50);
     await page.mouse.down();
-    await page.mouse.move(startX + moveX, startY);
+    await page.waitForTimeout(50);
+
+    // Move in smaller increments
+    const steps = 3;
+    const stepX = moveX / steps;
+    for (let i = 1; i <= steps; i++) {
+      await page.mouse.move(startX + stepX * i, startY);
+      await page.waitForTimeout(50);
+    }
+
     await page.mouse.up();
-  } else {
-    throw new Error(`Unable to get bounding box for the element: ${elementId}`);
+    await page.waitForTimeout(100);
+  } catch (error) {
+    console.error(`Failed to move element ${elementId}:`, error);
+    throw error;
   }
 }
 
-// Add this function at the beginning of the file, after the imports
+// Improved version of moveElementByY with better error handling and waits
 async function moveElementByY(
-  page: any,
+  page: Page,
   elementId: string,
   moveY: number,
   nth: number,
 ) {
-  const element = await page.getByTestId(`title-${elementId}`).nth(nth);
-  await element.hover();
+  try {
+    const element = await waitForElement(page, elementId, nth);
+    await element.hover();
 
-  const boundingBox = await element.boundingBox();
+    const boundingBox = await element.boundingBox();
+    if (!boundingBox) {
+      throw new Error(
+        `Unable to get bounding box for the element: ${elementId}`,
+      );
+    }
 
-  if (boundingBox) {
     const startX = boundingBox.x + boundingBox.width / 2;
     const startY = boundingBox.y + boundingBox.height / 2;
 
     await page.mouse.move(startX, startY);
+    await page.waitForTimeout(100);
     await page.mouse.down();
-    await page.mouse.move(startX, startY + moveY);
+    await page.waitForTimeout(100);
+
+    // Move in smaller increments
+    const steps = 5;
+    const stepY = moveY / steps;
+    for (let i = 1; i <= steps; i++) {
+      await page.mouse.move(startX, startY + stepY * i);
+      await page.waitForTimeout(50);
+    }
+
     await page.mouse.up();
-  } else {
-    throw new Error(`Unable to get bounding box for the element: ${elementId}`);
+    await page.waitForTimeout(100);
+  } catch (error) {
+    console.error(`Failed to move element ${elementId}:`, error);
+    throw error;
   }
 }
 
-// Add this function at the beginning of the file, after the imports
+// Improved version of moveElementByXY with better error handling and waits
 async function moveElementByXY(
-  page: any,
+  page: Page,
   elementId: string,
   moveX: number,
   moveY: number,
   nth: number,
 ) {
-  const element = await page.getByTestId(`title-${elementId}`).nth(nth);
-  await element.hover();
+  try {
+    const element = await waitForElement(page, elementId, nth);
+    await element.hover();
 
-  const boundingBox = await element.boundingBox();
+    const boundingBox = await element.boundingBox();
+    if (!boundingBox) {
+      throw new Error(
+        `Unable to get bounding box for the element: ${elementId}`,
+      );
+    }
 
-  if (boundingBox) {
     const startX = boundingBox.x + boundingBox.width / 2;
     const startY = boundingBox.y + boundingBox.height / 2;
 
     await page.mouse.move(startX, startY);
+    await page.waitForTimeout(100);
     await page.mouse.down();
-    await page.mouse.move(startX + moveX, startY + moveY);
+    await page.waitForTimeout(100);
+
+    // Move in smaller increments
+    const steps = 5;
+    const stepX = moveX / steps;
+    const stepY = moveY / steps;
+    for (let i = 1; i <= steps; i++) {
+      await page.mouse.move(startX + stepX * i, startY + stepY * i);
+      await page.waitForTimeout(50);
+    }
+
     await page.mouse.up();
-  } else {
-    throw new Error(`Unable to get bounding box for the element: ${elementId}`);
+    await page.waitForTimeout(100);
+  } catch (error) {
+    console.error(`Failed to move element ${elementId}:`, error);
+    throw error;
   }
 }
-
 test("should create a flow with decision", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
@@ -222,30 +289,38 @@ test("should create a flow with decision", async ({ page }) => {
 
   await moveElementByX(page, "Chat Output", 400, 1);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Chat Output", 800, 0);
+  await moveElementByX(page, "Chat Output", 700, 0);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Conditional Router", 1200, 0);
+  await moveElementByX(page, "Conditional Router", 1000, 0);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "OpenAI", 1600, 0);
+  await page.getByTestId("fit_view").click();
+  await moveElementByX(page, "OpenAI", 980, 0);
+  await page.getByTestId("fit_view").click();
+
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Prompt", 2000, 0);
+  await moveElementByX(page, "Prompt", 990, 0);
+  await page.getByTestId("fit_view").click();
+
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Pass", 2400, 2);
+  await moveElementByX(page, "Pass", 1000, 2);
   await page.getByTestId("fit_view").click();
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Pass", 0, 200, 1);
+  await page.getByTestId("fit_view").click();
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Pass", 150, 200, 0);
+  await page.getByTestId("fit_view").click();
+
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Parse Data", 300, 200, 1);
+  await page.getByTestId("fit_view").click();
+
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Parse Data", 450, 200, 0);
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Create List", 600, 200, 1);
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Create List", 800, 200, 0);
-  await page.waitForTimeout(500);
-  await moveElementByXY(page, "Chat Input", 1000, 200, 0);
 
   await page.waitForTimeout(500);
   await page.getByTestId("fit_view").click();
