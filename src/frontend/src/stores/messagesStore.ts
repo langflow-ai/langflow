@@ -43,6 +43,21 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
       return { messages: updatedMessages };
     });
   },
+  updateMessageText: (id, chunk) => {
+    set((state) => {
+      const updatedMessages = [...state.messages];
+      for (let i = state.messages.length - 1; i >= 0; i--) {
+        if (state.messages[i].id === id) {
+          updatedMessages[i] = {
+            ...updatedMessages[i],
+            text: updatedMessages[i].text + chunk,
+          };
+          break;
+        }
+      }
+      return { messages: updatedMessages };
+    });
+  },
   clearMessages: () => {
     set(() => ({ messages: [] }));
   },

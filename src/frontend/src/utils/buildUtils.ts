@@ -289,7 +289,7 @@ export async function buildFlowVertices({
         // flushSync and timeout is needed to avoid react batched updates
         setTimeout(() => {
           flushSync(() => {
-            useMessagesStore.getState().updateMessagePartial(data);
+            useMessagesStore.getState().updateMessageText(data.id, data.chunk);
           });
         }, 10);
         return true;
