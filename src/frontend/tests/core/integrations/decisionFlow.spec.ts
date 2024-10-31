@@ -218,6 +218,8 @@ test("should create a flow with decision", async ({ page }) => {
 
   await page.getByTestId("fit_view").click();
 
+  await page.waitForTimeout(500);
+
   await moveElementByX(page, "Chat Output", 500, 1);
   await page.waitForTimeout(500);
   await moveElementByX(page, "Chat Output", 1000, 0);
