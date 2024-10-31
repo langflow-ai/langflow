@@ -30,13 +30,13 @@ export default function TemplateCardComponent({
 
   return (
     <div
-      className="group flex cursor-pointer flex-col gap-4 overflow-hidden"
+      className="group flex cursor-pointer gap-3 overflow-hidden rounded-md p-3 hover:bg-muted focus-visible:bg-muted"
       tabIndex={1}
       onKeyDown={handleKeyDown}
       onClick={onClick}
     >
       <div
-        className="relative h-40 overflow-hidden rounded-xl p-4 outline-none ring-ring group-focus-visible:border group-focus-visible:border-ring"
+        className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md p-4 outline-none ring-ring"
         style={{
           backgroundImage: bgGradient,
           transform: "scale(1)",
@@ -44,19 +44,19 @@ export default function TemplateCardComponent({
         }}
       >
         <div
-          className="absolute inset-0 transition-transform duration-300 group-hover:scale-110 group-focus-visible:scale-110"
+          className="absolute inset-0 transition-transform duration-300 group-hover:scale-125 group-focus-visible:scale-125"
           style={{
             backgroundImage: bgGradient,
           }}
         />
         <IconComponent
           name={example.icon || "FileText"}
-          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 !stroke-1 text-white opacity-25 mix-blend-plus-lighter duration-300 group-hover:scale-105 group-hover:opacity-50 group-focus-visible:scale-105 group-focus-visible:opacity-50"
+          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-white opacity-50 mix-blend-plus-lighter duration-300 group-hover:scale-105 group-hover:opacity-75 group-focus-visible:scale-105 group-focus-visible:opacity-50"
         />
       </div>
       <div className="flex flex-1 flex-col justify-between">
         <div>
-          <div className="flex w-full items-center justify-between">
+          <div className="flex w-full items-center">
             <h3
               className="line-clamp-3 font-semibold"
               data-testid={`template_${convertTestName(example.name)}`}
