@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
-import re
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
@@ -21,7 +20,7 @@ from langflow.helpers.custom import format_type
 from langflow.memory import store_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
-from langflow.schema.message import Message
+from langflow.schema.message import ErrorMessage, Message
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
@@ -693,60 +692,22 @@ class Component(CustomComponent):
     async def _build_without_tracing(self):
         return await self._build_results()
 
-    async def build_results(
-        self,
-    ):
+    async def build_results(self):
+        """Build the results of the component."""
         try:
             if self._tracing_service:
                 return await self._build_with_tracing()
             return await self._build_without_tracing()
         except Exception as e:
-            reason = e.__class__.__name__
-            if hasattr(e, "body") and "message" in e.body:
-                reason = e.body.get("message")
-            elif hasattr(e, "code"):
-                reason = e.code
-            import traceback
-
-            sender_id = self.display_name
-            # Remove the ID inside parentheses from trace_name
-            if hasattr(self, "trace_name"):
-                sender_id = re.search(r"\((.*?)\)", self.trace_name).group(1)
-
-            message = Message(
+            self.send_error(
+                exception=e,
                 session_id=self.graph.session_id,
-                sender=self.display_name,
-                sender_name=self.display_name,
-                text=reason,
-                properties={
-                    "text_color": "red",
-                    "background_color": "red",
-                    "edited": False,
-                    "source": sender_id,
-                    "icon": "error",
-                    "allow_markdown": False,
-                    "targets": [],
-                },
-                category="error",
-                error=True,
-                content_blocks=[
-                    {
-                        "title": "Error",
-                        "content": {
-                            "type": "error",
-                            "component": self.display_name,
-                            "field": str(e.field) if hasattr(e, "field") else None,
-                            "reason": reason,
-                            "solution": str(e.solution) if hasattr(e, "solution") else None,
-                            "traceback": traceback.format_exc(),
-                        },
-                    }
-                ],
+                display_name=self.display_name,
+                trace_name=getattr(self, "trace_name", None),
             )
-            self.send_message(message)
             raise
 
-    async def _build_results(self):
+    async def _build_results(self) -> tuple[dict, dict]:
         _results = {}
         _artifacts = {}
         if hasattr(self, "outputs"):
@@ -970,3 +931,19 @@ class Component(CustomComponent):
                 }
             )
         return complete_message
+
+    def send_error(
+        self,
+        exception: Exception,
+        session_id: str,
+        display_name: str,
+        trace_name: str | None = None,
+    ) -> None:
+        """Send an error message to the frontend."""
+        error_message = ErrorMessage(
+            exception=exception,
+            session_id=session_id,
+            display_name=display_name,
+            trace_name=trace_name,
+        )
+        self.send_message(error_message)
