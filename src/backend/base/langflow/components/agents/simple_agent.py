@@ -1,14 +1,16 @@
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model import LCModelComponent
 from langflow.components.agents.tool_calling import ToolCallingAgentComponent
+from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.models.azure_openai import AzureChatOpenAIComponent
 from langflow.components.models.openai import OpenAIModelComponent
 from langflow.io import (
     DataInput,
     DropdownInput,
-    MessageTextInput,
+    MultilineInput,
     Output,
 )
+from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
@@ -22,6 +24,8 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
 
     openai_inputs = [
         component_input
+        if component_input.name != "temperature"
+        else setattr(component_input, "advanced", True) or component_input
         for component_input in OpenAIModelComponent().inputs
         if component_input.name not in [input_field.name for input_field in LCModelComponent._base_inputs]
     ]
@@ -30,6 +34,11 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
         for component_input in AzureChatOpenAIComponent().inputs
         if component_input.name not in [input_field.name for input_field in LCModelComponent._base_inputs]
     ]
+    memory_inputs = [
+        setattr(component_input, "advanced", True) or component_input
+        for component_input in MemoryComponent().inputs
+    ]
+
     inputs = [
         DropdownInput(
             name="agent_llm",
@@ -41,7 +50,7 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
             input_types=[],
         ),
         *openai_inputs,
-        MessageTextInput(
+        MultilineInput(
             name="system_prompt",
             display_name="Agent Instructions",
             info="Initial instructions and context provided to guide the agent's behavior.",
@@ -49,7 +58,7 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
             advanced=False,
         ),
         *LCToolsAgentComponent._base_inputs,
-        DataInput(name="chat_history", display_name="Chat Memory", is_list=True, advanced=True),
+        *memory_inputs
     ]
     outputs = [Output(name="response", display_name="Response", method="get_response")]
 
@@ -58,6 +67,7 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
         if llm_model is None:
             msg = "No language model selected"
             raise ValueError(msg)
+        self.chat_history = self.get_memory_data()
 
         agent = ToolCallingAgentComponent().set(
             llm=llm_model,
@@ -68,6 +78,16 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
         )
 
         return await agent.message_response()
+
+
+
+    def get_memory_data(self):
+        memory_kwargs = {
+            component_input.name: getattr(self, f"{component_input.name}")
+            for component_input in self.memory_inputs
+        }
+
+        return MemoryComponent().set(**memory_kwargs).retrieve_messages()
 
     def get_llm(self):
         try:
