@@ -1,6 +1,5 @@
 import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
-import { BG_NOISE } from "@/utils/styleUtils";
-import gradient from "random-gradient";
+import { BG_NOISE, flowGradients } from "@/utils/styleUtils";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../components/genericIconComponent";
@@ -10,16 +9,10 @@ export default function TemplateCardComponent({
   example,
   onClick,
 }: TemplateCardComponentProps) {
-  const gradientDirections = ["horizontal", "vertical", "diagonal"];
   const directionIndex =
-    (example.gradient ? example.gradient.length : example.name.length) %
-    gradientDirections.length;
-  const bgGradient = {
-    background: gradient(
-      example.gradient || example.name,
-      gradientDirections[directionIndex],
-    ),
-  };
+    (example.gradient && example.gradient.split(",").length == 1
+      ? example.gradient.length
+      : example.name.length) % flowGradients.length;
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -27,6 +20,13 @@ export default function TemplateCardComponent({
       onClick();
     }
   };
+
+  const bgGradient =
+    BG_NOISE +
+    "," +
+    (example.gradient && example.gradient.split(",").length > 1
+      ? "linear-gradient(90deg, " + example.gradient + ")"
+      : flowGradients[directionIndex]);
 
   return (
     <div
@@ -36,9 +36,9 @@ export default function TemplateCardComponent({
       onClick={onClick}
     >
       <div
-        className="relative h-40 overflow-hidden rounded-xl p-4 outline-none ring-ring brightness-[90%] contrast-125 saturate-[80%] group-focus-visible:border group-focus-visible:border-ring"
+        className="relative h-40 overflow-hidden rounded-xl p-4 outline-none ring-ring group-focus-visible:border group-focus-visible:border-ring"
         style={{
-          backgroundImage: BG_NOISE + "," + bgGradient.background,
+          backgroundImage: bgGradient,
           transform: "scale(1)",
           transition: "transform 0.3s ease-in-out",
         }}
@@ -46,7 +46,7 @@ export default function TemplateCardComponent({
         <div
           className="absolute inset-0 transition-transform duration-300 group-hover:scale-110 group-focus-visible:scale-110"
           style={{
-            backgroundImage: BG_NOISE + "," + bgGradient.background,
+            backgroundImage: bgGradient,
           }}
         />
         <IconComponent

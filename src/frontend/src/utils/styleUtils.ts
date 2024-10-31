@@ -289,6 +289,30 @@ export const gradients = [
   "bg-gradient-to-br from-lime-600 via-yellow-300 to-red-600",
 ];
 
+/* 
+Specifications
+#FF3276 -> #F480FF
+#1A0250 -> #2F10FE
+#98F4FE -> #9BFEAA
+#F480FF -> #7528FC
+#F480FF -> #9BFEAA
+#2F10FE -> #9BFEAA
+#BB277F -> #050154
+#7528FC -> #9BFEAA
+#2F10FE -> #98F4FE
+*/
+export const flowGradients = [
+  "linear-gradient(90deg, #FF3276 0%, #F480FF 100%)",
+  "linear-gradient(90deg, #1A0250 0%, #2F10FE 100%)",
+  "linear-gradient(90deg, #98F4FE 0%, #9BFEAA 100%)",
+  "linear-gradient(90deg, #F480FF 0%, #7528FC 100%)",
+  "linear-gradient(90deg, #F480FF 0%, #9BFEAA 100%)",
+  "linear-gradient(90deg, #2F10FE 0%, #9BFEAA 100%)",
+  "linear-gradient(90deg, #BB277F 0%, #050154 100%)",
+  "linear-gradient(90deg, #7528FC 0%, #9BFEAA 100%)",
+  "linear-gradient(90deg, #2F10FE 0%, #98F4FE 100%)",
+];
+
 export const nodeColors: { [char: string]: string } = {
   inputs: "#10B981",
   outputs: "#AA2411",
