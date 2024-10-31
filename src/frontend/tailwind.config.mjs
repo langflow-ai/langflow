@@ -186,8 +186,8 @@ const config = {
           DEFAULT: "hsl(var(--inner-yellow))",
           foreground: "hsl(var(--inner-foreground-yellow))",
           muted: "hsl(var(--inner-yellow-muted-foreground))",
-          },
-          "inner-blue": {
+        },
+        "inner-blue": {
           DEFAULT: "hsl(var(--inner-blue))",
           foreground: "hsl(var(--inner-foreground-blue))",
           muted: "hsl(var(--inner-blue-muted-foreground))",
@@ -244,28 +244,12 @@ const config = {
         sm: "calc(var(--radius) - 4px)",
       },
       borderWidth: {
-        '1.75': '1.75px',
-        '1.5': '1.5px',
+        1.75: "1.75px",
+        1.5: "1.5px",
       },
       fontFamily: {
-        sans: [
-          "Inter",
-          "ui-sans-serif",
-          "system-ui",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "Roboto",
-          "Helvetica Neue",
-          "Arial",
-          "Noto Sans",
-          "sans-serif",
-          "Apple Color Emoji",
-          "Segoe UI Emoji",
-          "Segoe UI Symbol",
-          "Noto Color Emoji",
-        ],
-        jetbrains: ["JetBrains Mono", "monospace"],
+        sans: ["var(--font-sans)", ...fontFamily.sans],
+        mono: ["var(--font-mono)", ...fontFamily.mono],
       },
       boxShadow: {
         "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.5)",
