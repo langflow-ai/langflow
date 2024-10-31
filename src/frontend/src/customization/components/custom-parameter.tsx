@@ -45,7 +45,14 @@ export function getCustomParameterTitle({
   title: string;
   nodeId: string;
 }) {
-  return title;
+  return (
+    <span
+      data-testid={`title-${title.toLocaleLowerCase()}`}
+      className="text-[13px]"
+    >
+      {title}
+    </span>
+  );
 }
 
 export function CustomParameterLabel({

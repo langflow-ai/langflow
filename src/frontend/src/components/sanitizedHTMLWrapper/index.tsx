@@ -15,6 +15,7 @@ const SanitizedHTMLWrapper = forwardRef<
       dangerouslySetInnerHTML={{ __html: sanitizedHTML }}
       suppressContentEditableWarning={suppressWarning}
       {...props}
+      className="m-1"
     />
   );
 });
