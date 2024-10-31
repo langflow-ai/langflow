@@ -38,6 +38,7 @@ export default function SimplifiedCodeTabComponent({
           variant="ghost"
           size="icon"
           className="bg-card text-muted-foreground"
+          data-testid="copy-code-button"
           onClick={copyToClipboard}
         >
           {isCopied ? (

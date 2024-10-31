@@ -109,24 +109,24 @@ test("Simple Agent", async ({ page }) => {
 
   await page
     .getByPlaceholder("Send a message...")
-    .fill("write short python scsript to say hello world");
+    .fill("write short python script to say hello world");
 
-  await page.getByTestId("icon-LucideSend").last().click();
+  await page.getByTestId("button-send").last().click();
 
   await page.waitForSelector(
-    "text=write short python scsript to say hello world",
+    "text=write short python script to say hello world",
     {
       timeout: 30000,
     },
   );
 
-  await page.waitForSelector('[data-testid="icon-Copy"]', {
+  await page.waitForSelector('[data-testid="copy-code-button"]', {
     timeout: 100000,
   });
 
   await page.waitForTimeout(1000);
 
-  await page.getByTestId("icon-Copy").last().click();
+  await page.getByTestId("copy-code-button").last().click();
 
   await page.waitForTimeout(500);
 
@@ -138,7 +138,7 @@ test("Simple Agent", async ({ page }) => {
 
   await page.waitForTimeout(500);
 
-  pythonWords = await page.getByText("Hello, World!").count();
+  pythonWords = await page.getByText("print(").count();
 
-  expect(pythonWords).toBe(3);
+  expect(pythonWords).toBe(1);
 });

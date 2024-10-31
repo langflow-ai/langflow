@@ -65,7 +65,7 @@ test("Vector Store RAG", async ({ page }) => {
   if (process?.env?.ASTRA_DB_API_ENDPOINT?.includes("astra-dev")) {
     const getUA = await page.evaluate(() => navigator.userAgent);
     const userAgentInfo = uaParser(getUA);
-    let control = "Control";
+    let control = "Meta";
 
     if (userAgentInfo.os.name.includes("Mac")) {
       control = "Meta";

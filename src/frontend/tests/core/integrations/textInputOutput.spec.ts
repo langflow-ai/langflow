@@ -204,6 +204,9 @@ test("TextInputOutputComponent", async ({ page }) => {
 
   await page.waitForTimeout(1000);
   await page.getByText("Playground", { exact: true }).last().click();
+  await page.getByTestId("button_run_text_output").click();
+  await page.getByTestId(/^rf__node-TextOutput-[a-zA-Z0-9]+$/).getByTestId("output-inspection-text").click();
+
   await page.getByText("Run Flow", { exact: true }).click();
 
   await page.waitForTimeout(5000);
