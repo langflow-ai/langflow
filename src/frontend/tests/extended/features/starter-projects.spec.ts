@@ -22,9 +22,7 @@ test("user must be able to interact with starter projects", async ({
   }
 
   expect(page.getByText("Start from scratch")).toBeVisible();
-  expect(
-    page.getByRole("button", { name: "Create Blank Project" }),
-  ).toBeVisible();
+  expect(page.getByRole("button", { name: "Blank Project" })).toBeVisible();
 
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.waitForTimeout(500);
