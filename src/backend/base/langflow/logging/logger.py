@@ -32,11 +32,6 @@ class SizedLogBuffer:
         The buffer can be overwritten by an env variable LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE
         because the logger is initialized before the settings_service are loaded.
         """
-        self.max: int = 0
-        env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
-        if env_buffer_size.isdigit():
-            self.max = int(env_buffer_size)
-
         self.buffer: deque = deque()
 
         self._max_readers = max_readers
@@ -105,6 +100,14 @@ class SizedLogBuffer:
             return dict(as_list[-last_idx:])
         finally:
             self._rsemaphore.release()
+
+    @property
+    def max(self) -> int:
+        # Get it dynamically to allow for env variable changes
+        env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
+        if env_buffer_size.isdigit():
+            return int(env_buffer_size)
+        return 0
 
     def enabled(self) -> bool:
         return self.max > 0
