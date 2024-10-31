@@ -92,7 +92,7 @@ class IngestionComponent(Component):
             build_config.clear()
             build_config.update(items)
 
-        elif field_name == "data_mode" and hasattr(self, "collection_name"):
+        elif hasattr(self, "collection_name") and field_name in ["data_mode", "collection_name"]:
             if self.data_mode == "Read":
                 for key in ["path", "unstructured_api_key", "embedding_api_key"]:
                     if key in build_config:
