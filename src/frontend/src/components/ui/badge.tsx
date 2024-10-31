@@ -15,13 +15,15 @@ const badgeVariants = cva(
         destructive:
           "bg-destructive hover:bg-destructive/80 border-transparent text-destructive-foreground",
         outline: "text-primary/80 border-ring/60",
+        secondaryStatic: "bg-input text-muted-foreground",
+        pinkStatic: "bg-accent-pink text-accent-pink-foreground",
       },
       size: {
         sm: "h-4 text-xs",
         md: "h-5 text-sm",
         lg: "h-6 text-base",
-        sq: "h-6 text-sm font-normal rounded-md",
-        xq: "h-5 text-xs font-normal rounded-md",
+        sq: "h-6 px-1.5 text-sm font-medium rounded-md",
+        xq: "h-5 px-1 text-xs font-medium rounded-md",
       },
     },
     defaultVariants: {

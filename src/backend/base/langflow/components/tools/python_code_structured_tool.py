@@ -10,7 +10,14 @@ from pydantic.v1.fields import Undefined
 from typing_extensions import override
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs.inputs import BoolInput, DropdownInput, FieldTypes, HandleInput, MessageTextInput, MultilineInput
+from langflow.inputs.inputs import (
+    BoolInput,
+    DropdownInput,
+    FieldTypes,
+    HandleInput,
+    MessageTextInput,
+    MultilineInput,
+)
 from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
@@ -36,6 +43,7 @@ class PythonCodeStructuredTool(LCToolComponent):
     name = "PythonCodeStructuredTool"
     icon = "🐍"
     field_order = ["name", "description", "tool_code", "return_direct", "tool_function"]
+    legacy: bool = True
 
     inputs = [
         MultilineInput(
@@ -47,7 +55,12 @@ class PythonCodeStructuredTool(LCToolComponent):
             real_time_refresh=True,
             refresh_button=True,
         ),
-        MessageTextInput(name="tool_name", display_name="Tool Name", info="Enter the name of the tool.", required=True),
+        MessageTextInput(
+            name="tool_name",
+            display_name="Tool Name",
+            info="Enter the name of the tool.",
+            required=True,
+        ),
         MessageTextInput(
             name="tool_description",
             display_name="Description",
@@ -192,7 +205,10 @@ class PythonCodeStructuredTool(LCToolComponent):
                 schema_annotation = Any
             schema_fields[field_name] = (
                 schema_annotation,
-                Field(default=func_arg.get("default", Undefined), description=field_description),
+                Field(
+                    default=func_arg.get("default", Undefined),
+                    description=field_description,
+                ),
             )
 
         if "temp_annotation_type" in _globals:
@@ -214,7 +230,9 @@ class PythonCodeStructuredTool(LCToolComponent):
         """This function is called after the code validation is done."""
         frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
         frontend_node["template"] = self.update_build_config(
-            frontend_node["template"], frontend_node["template"]["tool_code"]["value"], "tool_code"
+            frontend_node["template"],
+            frontend_node["template"]["tool_code"]["value"],
+            "tool_code",
         )
         frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
         for key in frontend_node["template"]:
