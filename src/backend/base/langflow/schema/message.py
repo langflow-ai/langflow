@@ -6,7 +6,7 @@ import re
 import traceback
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
@@ -52,7 +52,7 @@ class Message(Data):
     edit: bool = Field(default=False)
 
     properties: Properties | None = None
-    category: str | None = None
+    category: Literal["message", "error", "warning", "info"] | None = "message"
     content_blocks: list[ContentBlock] | None = None
 
     @field_validator("flow_id", mode="before")

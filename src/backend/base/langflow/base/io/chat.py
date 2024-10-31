@@ -17,6 +17,8 @@ class ChatComponent(Component):
             raise ValueError(msg)
 
         stored_message = messages[0]
+        if not stored_message.category:
+            stored_message.category = "message"
         self._send_message_event(stored_message)
 
         if self._should_stream_message(stored_message, message):
