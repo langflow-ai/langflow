@@ -186,11 +186,11 @@ test("should copy code from playground modal", async ({ page }) => {
     .getByTestId("input-chat-playground")
     .fill("Could you provide a Python example for a 'Hello, World!' program?");
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-LucideSend").click();
+  await page.getByTestId("button-send").click();
 
   await page.getByRole("tab", { name: "python" }).isVisible({
     timeout: 100000,

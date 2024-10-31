@@ -137,7 +137,7 @@ AI:
 
   await page.getByText("Playground", { exact: true }).last().click();
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 
@@ -145,7 +145,7 @@ AI:
     .getByPlaceholder("Send a message...")
     .fill("hi, my car is blue and I like to eat pizza");
 
-  await page.getByTestId("icon-LucideSend").click();
+  await page.getByTestId("button-send").click();
 
   await page.waitForSelector("text=AI", { timeout: 30000 });
 
@@ -153,7 +153,7 @@ AI:
     .getByPlaceholder("Send a message...")
     .fill("what color is my car and what do I like to eat?");
 
-  await page.getByTestId("icon-LucideSend").click();
+  await page.getByTestId("button-send").click();
 
   await page.waitForTimeout(400);
 

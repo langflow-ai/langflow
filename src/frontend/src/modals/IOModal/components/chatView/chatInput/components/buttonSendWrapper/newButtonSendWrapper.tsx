@@ -61,6 +61,7 @@ const ButtonSendWrapper = ({
       disabled={lockChat && !isBuilding}
       onClick={handleClick}
       unstyled
+      data-testid="button-send"
     >
       <Case condition={showStopButton}>
         <div className="flex items-center gap-2 rounded-md text-[14px] font-medium">

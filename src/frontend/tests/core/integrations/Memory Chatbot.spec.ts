@@ -87,7 +87,7 @@ test("Memory Chatbot", async ({ page }) => {
     .getByTestId("input-chat-playground")
     .last()
     .fill("Remember that I'm a lion");
-  await page.getByTestId("icon-LucideSend").last().click();
+  await page.getByTestId("button-send").last().click();
 
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
@@ -98,11 +98,11 @@ test("Memory Chatbot", async ({ page }) => {
     .last()
     .fill("try reproduce the sound I made in words");
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-LucideSend").last().click();
+  await page.getByTestId("button-send").last().click();
 
   await page.waitForSelector("text=roar", { timeout: 30000 });
   await page.getByText("roar").last().isVisible();
