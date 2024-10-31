@@ -40,8 +40,8 @@ test("should be able to see error when something goes wrong on Code Modal", asyn
     .getByTestId("helpersCustom Component")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("code-button-modal").click();

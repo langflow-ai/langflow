@@ -1,10 +1,54 @@
+import { GRADIENT_CLASS } from "@/constants/constants";
 import ComponentTextModal from "@/modals/textAreaModal";
-import { classNames } from "@/utils/utils";
-import { useEffect } from "react";
+import { useRef, useState } from "react";
+import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
-import { Button } from "../../../ui/button";
-import { Textarea } from "../../../ui/textarea";
+import { Input } from "../../../ui/input";
+import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputProps, TextAreaComponentType } from "../../types";
+
+const inputClasses = {
+  base: ({ isFocused, password }: { isFocused: boolean; password: boolean }) =>
+    `w-full ${isFocused ? "" : "pr-3"} ${password ? "pr-16" : ""}`,
+  editNode: "input-edit-node",
+  normal: ({ isFocused }: { isFocused: boolean }) =>
+    `primary-input ${isFocused ? "text-primary" : "text-muted-foreground"}`,
+  disabled: "disabled-state",
+  password: "password",
+};
+
+const externalLinkIconClasses = {
+  gradient: ({
+    disabled,
+    editNode,
+    password,
+  }: {
+    disabled: boolean;
+    editNode: boolean;
+    password: boolean;
+  }) =>
+    disabled || password
+      ? ""
+      : editNode
+        ? "gradient-fade-input-edit-node"
+        : "gradient-fade-input",
+  background: ({
+    disabled,
+    editNode,
+  }: {
+    disabled: boolean;
+    editNode: boolean;
+  }) =>
+    disabled
+      ? ""
+      : editNode
+        ? "background-fade-input-edit-node"
+        : "background-fade-input",
+  icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
+  editNodeTop: "top-[-1.4rem] h-5",
+  normalTop: "top-[-2.1rem] h-7",
+  iconTop: "top-[-1.7rem]",
+};
 
 export default function TextAreaComponent({
   value,
@@ -12,122 +56,114 @@ export default function TextAreaComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
-  password,
   updateVisibility,
+  password,
 }: InputProps<string, TextAreaComponentType>): JSX.Element {
-  // Clear text area
-  useEffect(() => {
-    if (disabled && value !== "") {
-      handleOnNewValue({ value: "" }, { skipSnapshot: true });
-    }
-  }, [disabled]);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isFocused, setIsFocused] = useState(false);
 
-  const renderTextarea = () => (
-    <Textarea
-      id={id}
-      data-testid={id}
-      value={value}
-      disabled={disabled}
-      className={classNames(
-        "w-full resize-none",
-        password !== undefined && password && value !== ""
-          ? "text-clip password"
-          : "",
-        editNode ? "input-edit-node" : "",
-        password !== undefined ? "pr-8" : "",
-      )}
-      rows={1}
-      placeholder="Type something..."
-      onChange={(event) => handleOnNewValue({ value: event.target.value })}
-    />
-  );
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
-  const renderExternalLinkButton = () => (
-    <ComponentTextModal
-      changeVisibility={updateVisibility}
-      value={value}
-      setValue={(value) => handleOnNewValue({ value: value })}
-      disabled={disabled}
-      password={password}
-    >
-      <div className={classNames("flex items-center")}>
-        <Button unstyled disabled={disabled}>
-          <IconComponent
-            strokeWidth={1.5}
-            id={id}
-            name="ExternalLink"
-            className={classNames(
-              "icons-parameters-comp shrink-0",
-              disabled
-                ? "cursor-not-allowed text-ring"
-                : "hover:text-accent-foreground",
-            )}
-          />
-        </Button>
-      </div>
-    </ComponentTextModal>
-  );
-
-  const renderPasswordToggle = () => {
-    if (password === undefined) return null;
-
-    return (
-      <Button
-        unstyled
-        tabIndex={-1}
-        className={classNames(
-          "side-bar-button-size absolute right-3 top-1/2 mb-px -translate-y-1/2 text-muted-foreground hover:text-current",
-        )}
-        onClick={(event) => {
-          event.preventDefault();
-          if (updateVisibility) updateVisibility();
-        }}
-      >
-        {password ? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
-            />
-          </svg>
-        )}
-      </Button>
+  const getInputClassName = () => {
+    return cn(
+      inputClasses.base({ isFocused, password: password! }),
+      editNode ? inputClasses.editNode : inputClasses.normal({ isFocused }),
+      disabled && inputClasses.disabled,
+      password && !passwordVisible && "text-clip",
     );
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleOnNewValue({ value: e.target.value });
+  };
+
+  const renderIcon = () => (
+    <div className={cn(isFocused && "opacity-0")}>
+      {!disabled && (
+        <div
+          className={cn(
+            externalLinkIconClasses.gradient({
+              disabled,
+              editNode,
+              password: password!,
+            }),
+            editNode
+              ? externalLinkIconClasses.editNodeTop
+              : externalLinkIconClasses.normalTop,
+          )}
+          style={{
+            pointerEvents: "none",
+            background: isFocused
+              ? undefined
+              : disabled
+                ? "bg-background"
+                : GRADIENT_CLASS,
+          }}
+          aria-hidden="true"
+        />
+      )}
+
+      <IconComponent
+        dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
+        name={disabled ? "lock" : "Scan"}
+        className={cn(
+          "cursor-pointer bg-background",
+          externalLinkIconClasses.icon,
+          editNode
+            ? externalLinkIconClasses.editNodeTop
+            : externalLinkIconClasses.iconTop,
+          disabled
+            ? "bg-muted text-placeholder-foreground"
+            : "bg-background text-foreground",
+        )}
+      />
+    </div>
+  );
+
   return (
-    <div className={classNames("flex w-full items-center gap-3")}>
-      <div className="relative w-full" data-testid={`div-${id}`}>
-        {renderTextarea()}
-        {renderPasswordToggle()}
-      </div>
-      {renderExternalLinkButton()}
+    <div className={cn("w-full", disabled && "pointer-events-none")}>
+      <Input
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        id={id}
+        data-testid={id}
+        value={disabled ? "" : value}
+        onChange={handleInputChange}
+        disabled={disabled}
+        className={getInputClassName()}
+        placeholder={getPlaceholder(disabled, "Type something...")}
+        aria-label={disabled ? value : undefined}
+        ref={inputRef}
+        type={password ? (passwordVisible ? "text" : "password") : "text"}
+      />
+
+      <ComponentTextModal
+        changeVisibility={updateVisibility}
+        value={value}
+        setValue={(newValue) => handleOnNewValue({ value: newValue })}
+        disabled={disabled}
+      >
+        <div className="relative w-full">{renderIcon()}</div>
+      </ComponentTextModal>
+      {password && !isFocused && (
+        <div
+          onClick={() => {
+            setPasswordVisible(!passwordVisible);
+          }}
+        >
+          <IconComponent
+            name={passwordVisible ? "eye" : "eye-off"}
+            className={cn(
+              externalLinkIconClasses.icon,
+              editNode ? "top-[5px]" : "top-[13px]",
+              disabled
+                ? "text-placeholder"
+                : "text-placeholder-foreground hover:text-foreground",
+              "right-10",
+            )}
+          />
+        </div>
+      )}
     </div>
   );
 }
