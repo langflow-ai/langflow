@@ -93,15 +93,16 @@ class DirectoryReader:
         _file_path = Path(file_path)
         if not _file_path.is_file():
             return None
-        with _file_path.open(encoding="utf-8") as file:
-            # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069: character maps to <undefined>
-            try:
+        try:
+            with _file_path.open(encoding="utf-8") as file:
+                # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069:
+                # character maps to <undefined>
                 return file.read()
-            except UnicodeDecodeError:
-                # This is happening in Windows, so we need to open the file in binary mode
-                # The file is always just a python file, so we can safely read it as utf-8
-                with _file_path.open("rb") as f:
-                    return f.read().decode("utf-8")
+        except UnicodeDecodeError:
+            # This is happening in Windows, so we need to open the file in binary mode
+            # The file is always just a python file, so we can safely read it as utf-8
+            with _file_path.open("rb") as f:
+                return f.read().decode("utf-8")
 
     def get_files(self):
         """Walk through the directory path and return a list of all .py files."""
