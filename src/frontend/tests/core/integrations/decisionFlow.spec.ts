@@ -220,17 +220,17 @@ test("should create a flow with decision", async ({ page }) => {
 
   await page.waitForTimeout(500);
 
-  await moveElementByX(page, "Chat Output", 500, 1);
+  await moveElementByX(page, "Chat Output", 400, 1);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Chat Output", 1000, 0);
+  await moveElementByX(page, "Chat Output", 800, 0);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Conditional Router", 1500, 0);
+  await moveElementByX(page, "Conditional Router", 1200, 0);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "OpenAI", 2000, 0);
+  await moveElementByX(page, "OpenAI", 1600, 0);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Prompt", 2500, 0);
+  await moveElementByX(page, "Prompt", 2000, 0);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Pass", 3000, 2);
+  await moveElementByX(page, "Pass", 2400, 2);
   await page.getByTestId("fit_view").click();
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Pass", 0, 200, 1);
