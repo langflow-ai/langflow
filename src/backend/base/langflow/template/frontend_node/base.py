@@ -49,6 +49,8 @@ class FrontendNode(BaseModel):
     """Order of the fields in the frontend node."""
     beta: bool = False
     """Whether the frontend node is in beta."""
+    legacy: bool = False
+    """Whether the frontend node is legacy."""
     error: str | None = None
     """Error message for the frontend node."""
     edited: bool = False
@@ -81,7 +83,10 @@ class FrontendNode(BaseModel):
         if "output_types" in result and not result.get("outputs"):
             for base_class in result["output_types"]:
                 output = Output(
-                    display_name=base_class, name=base_class.lower(), types=[base_class], selected=base_class
+                    display_name=base_class,
+                    name=base_class.lower(),
+                    types=[base_class],
+                    selected=base_class,
                 )
                 result["outputs"].append(output.model_dump())
 

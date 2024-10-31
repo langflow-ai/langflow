@@ -30,12 +30,8 @@ test("user should be able to use ComposIO without getting api_key error", async 
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("composio");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("composio");
 
   await page.waitForTimeout(1000);
 
@@ -83,12 +79,8 @@ test("user should be able to use connect tools", async ({ page }) => {
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("search api");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("search api");
 
   await page.waitForTimeout(1000);
 
@@ -105,8 +97,8 @@ test("user should be able to use connect tools", async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("tool calling agent");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("tool calling agent");
 
   await page.waitForTimeout(1000);
 

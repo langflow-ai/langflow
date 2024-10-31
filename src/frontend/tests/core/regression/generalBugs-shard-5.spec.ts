@@ -30,13 +30,9 @@ test("should be able to see output preview from grouped components and connect c
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("text input");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("text input");
   await page.waitForTimeout(1000);
 
   await page
@@ -61,9 +57,8 @@ test("should be able to see output preview from grouped components and connect c
     .getByTestId("inputsText Input")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("combine text");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("combine text");
   await page.waitForTimeout(1000);
 
   await page
@@ -107,9 +102,8 @@ test("should be able to see output preview from grouped components and connect c
 
   await page.mouse.up();
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("text output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("text output");
   await page.waitForTimeout(1000);
 
   await page

@@ -9,7 +9,7 @@ export const GithubStarComponent = () => {
       <FaGithub className="h-4 w-4 text-black dark:text-[white]" />
       <div className="hidden text-black dark:text-[white] lg:block">Star</div>
       <div className="header-github-display text-black dark:text-[white]">
-        {stars.toLocaleString() ?? 0}
+        {stars?.toLocaleString() ?? 0}
       </div>
     </div>
   );

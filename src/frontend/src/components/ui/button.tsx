@@ -18,8 +18,10 @@ const buttonVariants = cva(
           "border bg-background text-secondary-foreground hover:bg-muted dark:hover:bg-muted hover:shadow-sm",
         secondary:
           "border border-muted bg-muted text-secondary-foreground hover:bg-secondary-foreground/5",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        menu: "hover:bg-muted hover:text-accent-foreground focus-visible:!ring-offset-0",
+        ghost: "text-foreground hover:bg-accent hover:text-accent-foreground",
+        ghostActive:
+          "bg-muted text-foreground hover:bg-accent hover:text-accent-foreground",
+        menu: "hover:bg-muted hover:text-accent-foreground focus:!ring-0 focus-visible:!ring-0",
         "menu-active":
           "font-semibold hover:bg-muted hover:text-accent-foreground focus-visible:!ring-offset-0",
         link: "underline-offset-4 hover:underline text-primary",
@@ -29,7 +31,9 @@ const buttonVariants = cva(
         sm: "h-9 px-3 rounded-md",
         xs: "py-0.5 px-3 rounded-md",
         lg: "h-11 px-8 rounded-md",
-        icon: "py-1 px-1 rounded-md",
+        iconMd: "p-1.5 rounded-md",
+        icon: "p-1 rounded-md",
+        iconSm: "p-0.5 rounded-md",
         "node-toolbar": "py-[6px] px-[6px] rounded-md",
       },
     },

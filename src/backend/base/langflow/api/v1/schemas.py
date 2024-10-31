@@ -4,7 +4,14 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_serializer,
+)
 
 from langflow.graph.schema import RunOutputs
 from langflow.graph.utils import serialize_field
@@ -316,7 +323,11 @@ class InputValueRequest(BaseModel):
                 },
                 {"components": ["Component Name"], "input_value": "input_value"},
                 {"input_value": "input_value"},
-                {"components": ["Component Name"], "input_value": "input_value", "session": "session_id"},
+                {
+                    "components": ["Component Name"],
+                    "input_value": "input_value",
+                    "session": "session_id",
+                },
                 {"input_value": "input_value", "session": "session_id"},
                 {"type": "chat", "input_value": "input_value"},
                 {"type": "json", "input_value": '{"key": "value"}'},
@@ -357,14 +368,3 @@ class ConfigResponse(BaseModel):
     auto_saving_interval: int
     health_check_max_retries: int
     max_file_size_upload: int
-
-
-class SidebarCategory(BaseModel):
-    display_name: str
-    name: str
-    icon: str
-    beta: bool = False
-
-
-class SidebarCategoriesResponse(BaseModel):
-    categories: list[SidebarCategory]

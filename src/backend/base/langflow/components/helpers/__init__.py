@@ -2,7 +2,6 @@ from .combine_text import CombineTextComponent
 from .create_list import CreateListComponent
 from .csv_to_data import CSVToDataComponent
 from .current_date import CurrentDateComponent
-from .custom_component import CustomComponent
 from .data_conditional_router import DataConditionalRouterComponent
 from .extract_key import ExtractDataKeyComponent
 from .filter_data import FilterDataComponent
@@ -25,7 +24,6 @@ __all__ = [
     "CombineTextComponent",
     "CreateListComponent",
     "CurrentDateComponent",
-    "CustomComponent",
     "DataConditionalRouterComponent",
     "DataFilterComponent",
     "ExtractDataKeyComponent",

@@ -30,13 +30,9 @@ test("should be able to upload a file", async ({ page }) => {
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("file");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("file");
 
   await page.waitForTimeout(1000);
 
@@ -58,8 +54,8 @@ test("should be able to upload a file", async ({ page }) => {
   );
   await page.getByText("test_file.txt").isVisible();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("text output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("text output");
 
   await page
     .getByTestId("outputsText Output")
@@ -72,8 +68,8 @@ test("should be able to upload a file", async ({ page }) => {
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("parse data");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("parse data");
   await page
     .getByTestId("helpersParse Data")
     .first()

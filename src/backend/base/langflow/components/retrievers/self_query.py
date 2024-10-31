@@ -13,6 +13,7 @@ class SelfQueryRetrieverComponent(Component):
     description = "Retriever that uses a vector store and an LLM to generate the vector store queries."
     name = "SelfQueryRetriever"
     icon = "LangChain"
+    legacy: bool = True
 
     inputs = [
         HandleInput(
@@ -48,7 +49,11 @@ class SelfQueryRetrieverComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Retrieved Documents", name="documents", method="retrieve_documents"),
+        Output(
+            display_name="Retrieved Documents",
+            name="documents",
+            method="retrieve_documents",
+        ),
     ]
 
     def retrieve_documents(self) -> list[Data]:

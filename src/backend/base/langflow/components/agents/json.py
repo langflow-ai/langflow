@@ -14,11 +14,22 @@ class JsonAgentComponent(LCAgentComponent):
     display_name = "JsonAgent"
     description = "Construct a json agent from an LLM and tools."
     name = "JsonAgent"
+    legacy: bool = True
 
     inputs = [
         *LCAgentComponent._base_inputs,
-        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
-        FileInput(name="path", display_name="File Path", file_types=["json", "yaml", "yml"], required=True),
+        HandleInput(
+            name="llm",
+            display_name="Language Model",
+            input_types=["LanguageModel"],
+            required=True,
+        ),
+        FileInput(
+            name="path",
+            display_name="File Path",
+            file_types=["json", "yaml", "yml"],
+            required=True,
+        ),
     ]
 
     def build_agent(self) -> AgentExecutor:

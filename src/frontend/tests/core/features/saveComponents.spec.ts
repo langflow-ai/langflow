@@ -103,12 +103,8 @@ test.describe("save component tests", () => {
     if (replaceButton) {
       await page.getByTestId("replace-button").click();
     }
-
-    await page.waitForSelector('[data-testid="extended-disclosure"]', {
-      timeout: 30000,
-    });
-    await page.getByPlaceholder("Search").click();
-    await page.getByPlaceholder("Search").fill("group");
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("group");
     await page.waitForTimeout(1000);
 
     await page

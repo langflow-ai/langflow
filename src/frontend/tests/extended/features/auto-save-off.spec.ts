@@ -50,12 +50,9 @@ test("user should be able to manually save a flow when the auto_save is off", as
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 5000,
-  });
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("NVIDIA");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
   await page.waitForTimeout(1000);
 
@@ -111,8 +108,8 @@ test("user should be able to manually save a flow when the auto_save is off", as
 
   expect(await page.getByText("NVIDIA").isVisible()).toBeFalsy();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("NVIDIA");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
   await page.waitForTimeout(1000);
 
@@ -143,8 +140,8 @@ test("user should be able to manually save a flow when the auto_save is off", as
 
   expect(await page.getByTestId("title-NVIDIA").isVisible()).toBeTruthy();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("NVIDIA");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
   await page.waitForTimeout(1000);
 

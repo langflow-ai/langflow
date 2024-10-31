@@ -28,23 +28,14 @@ test.describe("Flow Page tests", () => {
     }
 
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="extended-disclosure"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("extended-disclosure").click();
-    await page.getByPlaceholder("Search").click();
-    await page.getByPlaceholder("Search").fill("custom");
 
     await page.waitForTimeout(1000);
 
-    await page
-      .locator('//*[@id="helpersCustom Component"]')
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("sidebar-custom-component-button").click();
+
+    await page.getByTitle("fit view").click();
+    await page.getByTitle("zoom out").click();
+    await page.getByTitle("zoom out").click();
+    await page.getByTitle("zoom out").click();
   });
 });

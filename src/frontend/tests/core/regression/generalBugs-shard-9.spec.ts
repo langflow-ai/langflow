@@ -38,9 +38,8 @@ test("memory should work as expect", async ({ page }) => {
 
   await page.getByTestId("fit_view").click();
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat memory");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat memory");
 
   // Locate the canvas element
   const canvas = page.locator("#react-flow-id"); // Update the selector if needed

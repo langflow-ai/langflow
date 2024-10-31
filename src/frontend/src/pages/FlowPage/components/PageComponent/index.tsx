@@ -14,8 +14,9 @@ import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { nodeColors, nodeColorsName } from "@/utils/styleUtils";
-import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
+import { useAddComponent } from "@/hooks/useAddComponent";
+import { nodeColorsName } from "@/utils/styleUtils";
+import { isSupportedNodeTypes } from "@/utils/utils";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -120,6 +121,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [isHighlightingCursor, setIsHighlightingCursor] = useState(false);
 
+  const addComponent = useAddComponent();
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const { zoom } = useViewport();
 
@@ -439,23 +441,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
           event.dataTransfer.getData(datakey!),
         );
 
-        track("Component Added", { componentType: data.node?.display_name });
-
-        const newId = getNodeId(data.type);
-
-        const newNode: NodeType = {
-          id: newId,
-          type: getNodeRenderType(datakey!),
-          position: { x: 0, y: 0 },
-          data: {
-            ...data,
-            id: newId,
-          },
-        };
-        paste(
-          { nodes: [newNode], edges: [] },
-          { x: event.clientX, y: event.clientY },
-        );
+        addComponent(data.node!, data.type, {
+          x: event.clientX,
+          y: event.clientY,
+        });
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
         const position = {
@@ -478,8 +467,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
         });
       }
     },
-    // Specify dependencies for useCallback
-    [getNodeId, setNodes, takeSnapshot, paste],
+    [takeSnapshot, addComponent],
   );
 
   const onEdgeUpdateStart = useCallback(() => {
@@ -596,7 +584,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   };
 
   return (
-    <div className="h-full w-full" ref={reactFlowWrapper}>
+    <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
         <div id="react-flow-id" className="h-full w-full bg-canvas">
           <ReactFlow

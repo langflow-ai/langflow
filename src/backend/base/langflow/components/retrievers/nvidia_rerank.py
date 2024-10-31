@@ -2,9 +2,18 @@ from typing import Any, cast
 
 from langchain.retrievers import ContextualCompressionRetriever
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from langflow.base.vectorstores.model import (
+    LCVectorStoreComponent,
+    check_cached_vector_store,
+)
 from langflow.field_typing import Retriever, VectorStore
-from langflow.io import DropdownInput, HandleInput, MultilineInput, SecretStrInput, StrInput
+from langflow.io import (
+    DropdownInput,
+    HandleInput,
+    MultilineInput,
+    SecretStrInput,
+    StrInput,
+)
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Output
@@ -14,6 +23,7 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
     display_name = "NVIDIA Rerank"
     description = "Rerank documents using the NVIDIA API and a retriever."
     icon = "NVIDIA"
+    legacy: bool = True
 
     inputs = [
         MultilineInput(
@@ -28,7 +38,10 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
             info="The base URL of the NVIDIA API. Defaults to https://integrate.api.nvidia.com/v1.",
         ),
         DropdownInput(
-            name="model", display_name="Model", options=["nv-rerank-qa-mistral-4b:1"], value="nv-rerank-qa-mistral-4b:1"
+            name="model",
+            display_name="Model",
+            options=["nv-rerank-qa-mistral-4b:1"],
+            value="nv-rerank-qa-mistral-4b:1",
         ),
         SecretStrInput(name="api_key", display_name="API Key"),
         HandleInput(name="retriever", display_name="Retriever", input_types=["Retriever"]),

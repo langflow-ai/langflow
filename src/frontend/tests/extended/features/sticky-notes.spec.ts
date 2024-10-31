@@ -1,4 +1,3 @@
-import { ENABLE_MVPS } from "@/../../src/customization/feature-flags";
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
@@ -67,9 +66,6 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
   await page.getByTestId("add_note").click();
 
   await page.waitForTimeout(1000);

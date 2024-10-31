@@ -7,7 +7,6 @@ import {
   templatesGenerator,
   typesGenerator,
 } from "../utils/reactflowUtils";
-import useAlertStore from "./alertStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 
 export const useTypesStore = create<TypesStoreType>((set, get) => ({
