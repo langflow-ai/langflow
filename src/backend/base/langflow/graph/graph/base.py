@@ -790,7 +790,7 @@ class Graph:
         Returns:
             dict: The metadata of the graph.
         """
-        time_format = "%Y-%m-%d %H:%M:%S"
+        time_format = "%Y-%m-%d %H:%M:%S %Z"
         return {
             "start_time": self._start_time.strftime(time_format),
             "end_time": self._end_time.strftime(time_format),

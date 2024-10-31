@@ -45,7 +45,7 @@ class Message(Data):
     files: list[str | Image] | None = Field(default=[])
     session_id: str | None = Field(default="")
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
     )
     flow_id: str | UUID | None = None
     error: bool = Field(default=False)
@@ -70,7 +70,12 @@ class Message(Data):
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
-        return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").astimezone(timezone.utc)
+        try:
+            # Try parsing with timezone
+            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").astimezone(timezone.utc)
+        except ValueError:
+            # Try parsing without timezone
+            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -301,7 +306,7 @@ class MessageResponse(DefaultModel):
     @classmethod
     def serialize_timestamp(cls, v):
         v = v.replace(microsecond=0)
-        return v.strftime("%Y-%m-%d %H:%M:%S")
+        return v.strftime("%Y-%m-%d %H:%M:%S %Z")
 
     @field_serializer("files")
     @classmethod
