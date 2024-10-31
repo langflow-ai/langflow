@@ -1,9 +1,10 @@
 import json
 from uuid import UUID
 
+from orjson import orjson
+
 from langflow.memory import get_messages
 from langflow.services.database.models.flow import FlowCreate, FlowUpdate
-from orjson import orjson
 
 
 async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
