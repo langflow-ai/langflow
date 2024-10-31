@@ -91,7 +91,7 @@ class ChatInput(ChatComponent):
             properties={"background_color": _background_color, "text_color": _text_color, "icon": _icon},
         )
         if self.session_id and isinstance(message, Message) and self.should_store_message:
-            stored_message = self.store_message(
+            stored_message = self.send_message(
                 message,
             )
             self.message.value = stored_message

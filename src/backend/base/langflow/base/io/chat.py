@@ -10,24 +10,6 @@ class ChatComponent(Component):
     display_name = "Chat Component"
     description = "Use as base for chat components."
 
-    def store_message(self, message: Message) -> Message:
-        messages = store_message(message, flow_id=self.graph.flow_id)
-        if len(messages) != 1:
-            msg = "Only one message can be stored at a time."
-            raise ValueError(msg)
-
-        stored_message = messages[0]
-        if not stored_message.category:
-            stored_message.category = "message"
-        self._send_message_event(stored_message)
-
-        if self._should_stream_message(stored_message, message):
-            complete_message = self._stream_message(message, stored_message.id)
-            stored_message = self._update_stored_message(stored_message.id, complete_message)
-
-        self.status = stored_message
-        return stored_message
-
     def build_with_data(
         self,
         *,
