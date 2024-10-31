@@ -75,11 +75,12 @@ class InfoEvent(PlaygroundEvent):
     format_type: Literal["default", "error", "warning", "info"] = Field(default="info")
 
 
-class TokenEvent(PlaygroundEvent):
+class TokenEvent(BaseModel):
     chunk: str = Field(...)
-    sender: str = Field(...)
-    sender_name: str = Field(...)
     id: UUID | str | None = Field(alias="id")
+    timestamp: Annotated[str, timestamp_to_str_validator] = Field(
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    )
 
 
 # Factory functions
