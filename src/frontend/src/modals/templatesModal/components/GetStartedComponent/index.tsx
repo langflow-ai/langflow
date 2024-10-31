@@ -16,9 +16,6 @@ export default function GetStartedComponent() {
       spiralImage: memoryChatbotSpiral,
       icon: "MessagesSquare",
       category: "Chatbot",
-      title: "Memory Chatbot",
-      description:
-        "Get hands-on with Langflow by building a simple RAGbot that uses memory.",
       flow: examples.find((example) => example.name === "Memory Chatbot"),
     },
     {
@@ -26,9 +23,6 @@ export default function GetStartedComponent() {
       spiralImage: vectorRagSpiral,
       icon: "Database",
       category: "Vector RAG",
-      title: "Vector RAG",
-      description:
-        "Ingest data into a native vector store and efficiently retrieve it.",
       flow: examples.find((example) => example.name === "Vector Store RAG"),
     },
     {
@@ -36,10 +30,7 @@ export default function GetStartedComponent() {
       spiralImage: multiAgentSpiral,
       icon: "Bot",
       category: "Agents",
-      title: "Multi-Agent",
       flow: examples.find((example) => example.name === "Dynamic Agent"),
-      description:
-        "Deploy a team of agents with a Manager-Worker structure to tackle complex tasks.",
     },
   ];
 

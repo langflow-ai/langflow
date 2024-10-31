@@ -16,8 +16,6 @@ export interface CardData {
   spiralImage: string;
   icon: string;
   category: string;
-  title: string;
-  description: string;
   flow: FlowType | undefined;
 }
 

@@ -14,8 +14,6 @@ export default function TemplateGetStartedCardComponent({
   spiralImage,
   icon,
   category,
-  title,
-  description,
   flow,
 }: CardData) {
   const addFlow = useAddFlow();
@@ -33,7 +31,7 @@ export default function TemplateGetStartedCardComponent({
       });
       track("New Flow Created", { template: `${flow.name} Template` });
     } else {
-      console.error(`Flow template "${title}" not found`);
+      console.error(`Flow template not found`);
     }
   };
 
@@ -44,7 +42,7 @@ export default function TemplateGetStartedCardComponent({
     }
   };
 
-  return (
+  return flow ? (
     <div
       className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring"
       tabIndex={1}
@@ -62,7 +60,7 @@ export default function TemplateGetStartedCardComponent({
       <div className="absolute inset-2 h-[calc(100%-16px)] w-[calc(100%-16px)] overflow-hidden rounded-2xl">
         <img
           src={spiralImage}
-          alt={`${title} Spiral`}
+          alt={`${flow.name} Spiral`}
           className="h-full w-full object-cover opacity-25 transition-all duration-300 group-hover:scale-[102%] group-hover:opacity-60 group-focus-visible:scale-[102%] group-focus-visible:opacity-60"
         />
       </div>
@@ -74,15 +72,19 @@ export default function TemplateGetStartedCardComponent({
           </span>
         </div>
         <div className="flex w-full items-center justify-between">
-          <h3 className="line-clamp-3 text-lg font-bold lg:text-xl">{title}</h3>
+          <h3 className="line-clamp-3 text-lg font-bold lg:text-xl">
+            {flow.name}
+          </h3>
           <ForwardedIconComponent
             name="ArrowRight"
             className="mr-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100 group-focus-visible:translate-x-3 group-focus-visible:opacity-100"
           />
         </div>
 
-        <p className="text-xs font-medium opacity-90">{description}</p>
+        <p className="text-xs font-medium opacity-90">{flow.description}</p>
       </div>
     </div>
+  ) : (
+    <></>
   );
 }
