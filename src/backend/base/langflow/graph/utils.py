@@ -139,12 +139,11 @@ def _vertex_to_primitive_dict(target: Vertex) -> dict:
             return value
         return None
 
-    params = {
+    return {
         key: filter_valid_python_elements(value)
         for key, value in target.params.items()
         if filter_valid_python_elements(value) is not None
     }
-    return params
 
 
 async def log_transaction(
