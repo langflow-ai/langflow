@@ -875,7 +875,7 @@ class Component(CustomComponent):
         if hasattr(self, "_event_manager") and self._event_manager:
             data_dict = message.data if hasattr(message, "data") else message.model_dump()
             data_dict["id"] = id_
-            category = data_dict.pop("category", None)
+            category = data_dict.get("category", None)
             match category:
                 case "error":
                     self._event_manager.on_error(data=data_dict)

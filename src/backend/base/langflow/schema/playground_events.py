@@ -39,6 +39,7 @@ class PlaygroundEvent(BaseModel):
 
 
 class MessageEvent(PlaygroundEvent):
+    category: Literal["message", "error", "warning", "info"] = "message"
     format_type: Literal["default", "error", "warning", "info"] = Field(default="default")
     session_id: str | None = Field(default=None)
     error: bool = Field(default=False)
@@ -84,6 +85,7 @@ class TokenEvent(PlaygroundEvent):
 # Factory functions
 def create_message(
     text: str,
+    category: Literal["message", "error", "warning", "info"] = "message",
     properties: dict | None = None,
     content_blocks: list[ContentBlock] | None = None,
     sender_name: str | None = None,
@@ -108,6 +110,7 @@ def create_message(
     return MessageEvent(
         text=text,
         icon=icon,
+        category=category,
         background_color=background_color,
         content_blocks=content_blocks,
         allow_markdown=allow_markdown,
