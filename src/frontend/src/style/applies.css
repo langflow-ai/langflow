@@ -174,7 +174,7 @@
     @apply flex gap-2;
   }
   .primary-input {
-    @apply placeholder:text-muted-foreground form-input block w-full truncate rounded-md border-[1px] border-border bg-background px-3 text-left text-sm  hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground focus-visible:border-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
+    @apply form-input block w-full truncate rounded-md border-[1px] border-border bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground focus-visible:border-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .skeleton-card {
@@ -191,7 +191,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply placeholder:text-placeholder-foreground form-input block w-full rounded-md border-[1px] border-border bg-background px-3 text-left shadow-sm hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-foreground focus:ring-[0.75px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
+    @apply placeholder:text-placeholder-foreground form-input block w-full rounded-md border-[1px] border-border bg-background px-3 text-left shadow-sm hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
   }
 
   .input-edit-node {
@@ -220,7 +220,7 @@
     @apply w-6 fill-build-trigger stroke-build-trigger stroke-1;
   }
   .message-button-position {
-    @apply fixed top-20 right-4;
+    @apply fixed right-4 top-20;
   }
   .message-button-icon {
     @apply fill-medium-indigo stroke-medium-indigo stroke-1;
@@ -1215,7 +1215,7 @@
   }
 
   .disabled-state {
-    @apply pointer-events-none bg-secondary text-hard-zinc;
+    @apply text-hard-zinc pointer-events-none bg-secondary;
   }
 
   .background-fade-input {
@@ -1260,8 +1260,7 @@
   }
 
   .node-toolbar-buttons {
-    @apply flex items-center gap-1 rounded-lg text-foreground w-max min-w-10
-
+    @apply flex w-max min-w-10 items-center gap-1 rounded-lg text-foreground;
   }
 
   .share-button {
@@ -1294,8 +1293,6 @@
   --color1: 255, 50, 118;
   --color2: 244, 128, 255;
   --color3: 117, 40, 252;
-  --color4: 244, 128, 255;
-  --color5: 117, 40, 252;
   --color-interactive: 140, 100, 255;
   --circle-size: 50%;
   --blending: hard-light;
@@ -1307,10 +1304,8 @@
   --color1: 255, 50, 118;
   --color2: 244, 128, 255;
   --color3: 117, 40, 252;
-  --color4: 244, 128, 255;
-  --color5: 117, 40, 252;
   --color-interactive: 140, 100, 255;
-  --circle-size: 50%;
+  --circle-size: 60%;
   --blending: hard-light;
 }
 
@@ -1323,30 +1318,6 @@
   }
   100% {
     transform: rotate(360deg);
-  }
-}
-
-@keyframes moveVertical {
-  0% {
-    transform: translateY(-50%);
-  }
-  50% {
-    transform: translateY(50%);
-  }
-  100% {
-    transform: translateY(-50%);
-  }
-}
-
-@keyframes moveHorizontal {
-  0% {
-    transform: translateX(-50%) translateY(-10%);
-  }
-  50% {
-    transform: translateX(50%) translateY(10%);
-  }
-  100% {
-    transform: translateX(-50%) translateY(-10%);
   }
 }
 
@@ -1382,11 +1353,11 @@
 
     width: var(--circle-size);
     height: var(--circle-size);
-    top: calc(50% - var(--circle-size) / 2);
-    left: calc(50% - var(--circle-size) / 2);
+    top: 10%;
+    right: 20%;
 
-    transform-origin: center center;
-    animation: moveVertical 30s ease infinite;
+    transform-origin: 50% 100%;
+    animation: moveInCircle 4s linear infinite;
 
     opacity: 1;
   }
@@ -1403,11 +1374,11 @@
 
     width: var(--circle-size);
     height: var(--circle-size);
-    top: calc(50% - var(--circle-size) / 2);
-    left: calc(50% - var(--circle-size) / 2);
+    top: 10%;
+    left: 10%;
 
-    transform-origin: calc(50% - 400px);
-    animation: moveInCircle 20s reverse infinite;
+    transform-origin: 50% 100%;
+    animation: moveInCircle 6s linear infinite;
 
     opacity: 1;
   }
@@ -1424,11 +1395,11 @@
 
     width: var(--circle-size);
     height: var(--circle-size);
-    top: calc(50% - var(--circle-size) / 2 + 200px);
-    left: calc(50% - var(--circle-size) / 2 - 500px);
+    top: 10%;
+    right: 30%;
 
-    transform-origin: calc(50% + 400px);
-    animation: moveInCircle 40s linear infinite;
+    transform-origin: 50% 100%;
+    animation: moveInCircle 5s linear infinite;
 
     opacity: 1;
   }
@@ -1437,19 +1408,19 @@
     position: absolute;
     background: radial-gradient(
         circle at center,
-        rgba(var(--color4), 0.8) 0,
-        rgba(var(--color4), 0) 50%
+        rgba(var(--color1), 0.8) 0,
+        rgba(var(--color1), 0) 50%
       )
       no-repeat;
     mix-blend-mode: var(--blending);
 
     width: var(--circle-size);
     height: var(--circle-size);
-    top: calc(50% - var(--circle-size) / 2);
-    left: calc(50% - var(--circle-size) / 2);
+    top: 5%;
+    right: 50%;
 
-    transform-origin: calc(50% - 200px);
-    animation: moveHorizontal 40s ease infinite;
+    transform-origin: 50% 20%;
+    animation: moveInCircle 4s reverse linear infinite;
 
     opacity: 0.7;
   }
@@ -1458,38 +1429,41 @@
     position: absolute;
     background: radial-gradient(
         circle at center,
-        rgba(var(--color5), 0.8) 0,
-        rgba(var(--color5), 0) 50%
+        rgba(var(--color2), 0.8) 0,
+        rgba(var(--color2), 0) 50%
       )
       no-repeat;
     mix-blend-mode: var(--blending);
 
-    width: calc(var(--circle-size) * 1.5);
-    height: calc(var(--circle-size) * 1.5);
-    top: calc(50% - var(--circle-size));
-    left: calc(50% - var(--circle-size));
+    width: var(--circle-size);
+    height: var(--circle-size);
+    top: 10%;
+    left: 30%;
 
-    transform-origin: calc(50% - 800px) calc(50% + 200px);
-    animation: moveInCircle 20s ease infinite;
+    transform-origin: 50% 20%;
+    animation: moveInCircle 6s reverse linear infinite;
 
     opacity: 1;
   }
 
-  .interactive {
+  .g6 {
     position: absolute;
     background: radial-gradient(
         circle at center,
-        rgba(var(--color-interactive), 0.8) 0,
-        rgba(var(--color-interactive), 0) 50%
+        rgba(var(--color3), 0.8) 0,
+        rgba(var(--color3), 0) 50%
       )
       no-repeat;
     mix-blend-mode: var(--blending);
 
-    width: 100%;
-    height: 100%;
-    top: -50%;
-    left: -50%;
+    width: var(--circle-size);
+    height: var(--circle-size);
+    top: 10%;
+    right: 10%;
 
-    opacity: 0.6;
+    transform-origin: 50% 20%;
+    animation: moveInCircle 5s reverse linear infinite;
+
+    opacity: 1;
   }
 }

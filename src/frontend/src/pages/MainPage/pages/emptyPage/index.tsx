@@ -17,45 +17,7 @@ export const EmptyPage = ({
   setShowFolderModal,
   folderData,
 }: EmptyPageProps) => {
-  const interBubbleRef = useRef<HTMLDivElement>(null);
   const folders = useFolderStore((state) => state.folders);
-
-  useEffect(() => {
-    const interBubble = interBubbleRef.current;
-    const aside = document.querySelector("aside"); // Adjust this selector to target your aside
-
-    if (!interBubble || !aside) return;
-
-    let curX = 0;
-    let curY = 0;
-    let tgX = 0;
-    let tgY = 0;
-
-    const move = () => {
-      curX += (tgX - curX) / 20;
-      curY += (tgY - curY) / 20;
-      interBubble.style.transform = `translate(${Math.round(curX)}px, ${Math.round(curY)}px)`;
-      requestAnimationFrame(move);
-    };
-
-    const handleMouseMove = (event: MouseEvent) => {
-      const asideRect = aside.getBoundingClientRect();
-      const asideWidth = asideRect.width;
-
-      // Adjust for the aside's dynamic width
-      tgX = event.clientX - asideWidth;
-      tgY = event.clientY;
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    move();
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-    };
-  }, []);
-
-  console.log(folders?.length, "folders");
 
   return (
     <div className="m-0 p-0">
@@ -123,7 +85,7 @@ export const EmptyPage = ({
           <div className="g3" />
           <div className="g4" />
           <div className="g5" />
-          <div className="interactive" ref={interBubbleRef} />
+          <div className="g6" />
         </div>
       </div>
     </div>
