@@ -131,16 +131,18 @@ def _vertex_to_primitive_dict(target: Vertex) -> dict:
             # if it is a list we need to check if the contents are python types
             filtered_list = [filter_valid_python_elements(v) for v in value]
             return [v for v in filtered_list if v is not None]
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             # if it is a dict we need to check if the values are python types
             filtered_dict = {k: filter_valid_python_elements(v) for k, v in value.items()}
             return {k: v for k, v in filtered_dict.items() if v is not None}
-        elif isinstance(value, str | int | bool | float):
+        if isinstance(value, str | int | bool | float):
             return value
         return None
 
     params = {
-        key: filter_valid_python_elements(value) for key, value in target.params.items() if filter_valid_python_elements(value) is not None
+        key: filter_valid_python_elements(value)
+        for key, value in target.params.items()
+        if filter_valid_python_elements(value) is not None
     }
     return params
 
