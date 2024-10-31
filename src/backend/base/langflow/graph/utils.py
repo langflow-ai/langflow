@@ -125,13 +125,23 @@ def post_process_raw(raw, artifact_type: str):
 def _vertex_to_primitive_dict(target: Vertex) -> dict:
     """Cleans the parameters of the target vertex."""
     # Removes all keys that the values aren't python types like str, int, bool, etc.
-    params = {
-        key: value for key, value in target.params.items() if isinstance(value, str | int | bool | float | list | dict)
-    }
-    # if it is a list we need to check if the contents are python types
-    for key, value in params.items():
+
+    def filter_valid_python_elements(value):
         if isinstance(value, list):
-            params[key] = [item for item in value if isinstance(item, str | int | bool | float | list | dict)]
+            # if it is a list we need to check if the contents are python types
+            filtered_list = [filter_valid_python_elements(v) for v in value]
+            return [v for v in filtered_list if v is not None]
+        elif isinstance(value, dict):
+            # if it is a dict we need to check if the values are python types
+            filtered_dict = {k: filter_valid_python_elements(v) for k, v in value.items()}
+            return {k: v for k, v in filtered_dict.items() if v is not None}
+        elif isinstance(value, str | int | bool | float):
+            return value
+        return None
+
+    params = {
+        key: filter_valid_python_elements(value) for key, value in target.params.items() if filter_valid_python_elements(value) is not None
+    }
     return params
 
 
