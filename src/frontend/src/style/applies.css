@@ -97,9 +97,6 @@
   .extra-side-bar-save-disable {
     @apply text-muted-foreground;
   }
-  .extra-side-bar-save-disable:hover {
-    @apply hover:text-accent-foreground;
-  }
   .side-bar-button-size {
     @apply h-5 w-5;
   }
@@ -222,7 +219,7 @@
     @apply w-6 fill-build-trigger stroke-build-trigger stroke-1;
   }
   .message-button-position {
-    @apply fixed bottom-4 right-4;
+    @apply fixed top-20 right-4;
   }
   .message-button-icon {
     @apply fill-medium-indigo stroke-medium-indigo stroke-1;
@@ -1190,5 +1187,9 @@
   }
   .color-option-container {
     @apply w-fit;
+  }
+
+  .share-button {
+    @apply relative inline-flex h-full w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-accent;
   }
 }
