@@ -243,17 +243,7 @@ class CustomComponent(Component):
         return data
   `;
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("custom component");
-
-  await page.waitForTimeout(1000);
-
-  await page
-    .locator('//*[@id="helpersCustom Component"]')
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+  await page.getByTestId("sidebar-custom-component-button").click();
   await page.getByTestId("fit_view").click();
   await page.getByTestId("zoom_out").click();
 
