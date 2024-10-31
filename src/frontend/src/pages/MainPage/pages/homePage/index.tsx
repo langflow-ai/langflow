@@ -49,10 +49,14 @@ const HomePage = ({ type }) => {
   };
 
   useEffect(() => {
-    if (folderData?.folder?.name) {
+    console.log("folderData", folderData);
+  }, [folderData]);
+
+  useEffect(() => {
+    if (folderData && folderData?.folder?.name) {
       setFolderName(folderData.folder.name);
     }
-  }, [folderData?.folder?.name]);
+  }, [folderData, folderData?.folder?.name]);
 
   useEffect(() => {
     localStorage.setItem("view", view);

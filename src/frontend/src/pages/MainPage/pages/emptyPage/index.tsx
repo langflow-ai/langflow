@@ -75,8 +75,8 @@ export const EmptyPage = ({
       </div>
       {folders?.length > 1 ? (
         <svg
-          width="1440"
-          height="1055"
+          width="100vw"
+          height="calc(99vh - 62px)"
           viewBox="0 0 1440 1055"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -84,8 +84,8 @@ export const EmptyPage = ({
         >
           <g opacity="0.4">
             <rect
-              width="1440"
-              height="1055"
+              width="100%"
+              height="100%"
               fill="url(#pattern0_5875_59136)"
               fill-opacity="0.7"
             />
