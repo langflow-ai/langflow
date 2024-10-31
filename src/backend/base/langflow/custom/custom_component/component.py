@@ -858,17 +858,18 @@ class Component(CustomComponent):
     def send_message(self, message: Message | None = None, id_: str | None = None):
         if self.graph.session_id and message is not None and message.session_id is None:
             message.session_id = self.graph.session_id
-        stored_message = self._store_message(
-            message=message,
-            id_=id_,
-        )
+        stored_message = self._store_message(message)
+
         self._stored_message_id = stored_message.id
         try:
             complete_message = ""
             if self._should_stream_message(stored_message, message):
                 complete_message = self._stream_message(message, stored_message.id)
-            stored_message.text = complete_message
-            stored_message = self._update_stored_message(stored_message)
+                stored_message.text = complete_message
+                stored_message = self._update_stored_message(stored_message)
+            else:
+                # Only send message event for non-streaming messages
+                self._send_message_event(stored_message, id_=id_)
         except Exception:
             # remove the message from the database
             delete_message(stored_message.id)
@@ -876,15 +877,13 @@ class Component(CustomComponent):
         self.status = stored_message
         return stored_message
 
-    def _store_message(self, message: Message, **kwargs) -> Message:
+    def _store_message(self, message: Message) -> Message:
         messages = store_message(message, flow_id=self.graph.flow_id)
         if len(messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
 
-        stored_message = messages[0]
-        self._send_message_event(stored_message, **kwargs)
-        return stored_message
+        return messages[0]
 
     def _send_message_event(self, message: Message, id_: str | None = None):
         if hasattr(self, "_event_manager") and self._event_manager:
@@ -923,25 +922,38 @@ class Component(CustomComponent):
             raise TypeError(msg)
 
         if isinstance(iterator, AsyncIterator):
-            return run_until_complete(self._handle_async_iterator(iterator, message_id))
+            return run_until_complete(self._handle_async_iterator(iterator, message_id, message))
         try:
             complete_message = ""
+            first_chunk = True
             for chunk in iterator:
-                complete_message = self._process_chunk(chunk.content, complete_message, message_id)
+                complete_message = self._process_chunk(
+                    chunk.content, complete_message, message_id, message, first_chunk=first_chunk
+                )
+                first_chunk = False
         except Exception as e:
             raise StreamingError(cause=e, component_name=message.properties.source_display_name) from e
         else:
             return complete_message
 
-    async def _handle_async_iterator(self, iterator: AsyncIterator, message_id: str) -> str:
+    async def _handle_async_iterator(self, iterator: AsyncIterator, message_id: str, message: Message) -> str:
         complete_message = ""
+        first_chunk = True
         async for chunk in iterator:
-            complete_message = self._process_chunk(chunk.content, complete_message, message_id)
+            complete_message = self._process_chunk(
+                chunk.content, complete_message, message_id, message, first_chunk=first_chunk
+            )
+            first_chunk = False
         return complete_message
 
-    def _process_chunk(self, chunk: str, complete_message: str, message_id: str) -> str:
+    def _process_chunk(
+        self, chunk: str, complete_message: str, message_id: str, message: Message, *, first_chunk: bool = False
+    ) -> str:
         complete_message += chunk
         if self._event_manager:
+            if first_chunk:
+                # Send the initial message only on the first chunk
+                self._send_message_event(message, id_=message_id)
             self._event_manager.on_token(
                 data={
                     "chunk": chunk,
