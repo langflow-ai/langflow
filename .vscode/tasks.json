@@ -43,6 +43,12 @@
       "label": "Install",
       "type": "shell",
       "command": "make install_backend && make install_frontend"
+    },
+    // install backend
+    {
+      "label": "Install Backend",
+      "type": "shell",
+      "command": "make install_backend"
     }
   ]
 }
