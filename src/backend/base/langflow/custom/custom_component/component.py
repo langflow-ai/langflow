@@ -17,7 +17,7 @@ from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
-from langflow.memory import store_message
+from langflow.memory import store_message, update_messages
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
@@ -856,7 +856,8 @@ class Component(CustomComponent):
 
         if self._should_stream_message(stored_message, message):
             complete_message = self._stream_message(message, stored_message.id)
-            stored_message = self._update_stored_message(stored_message.id, complete_message)
+            stored_message.text = complete_message
+            stored_message = self._update_stored_message(stored_message)
 
         self.status = stored_message
         return stored_message
@@ -868,12 +869,12 @@ class Component(CustomComponent):
             raise ValueError(msg)
 
         stored_message = messages[0]
-        self._send_message_event(stored_message, **kwargs)
+        self._send_message_event(stored_message.model_copy(), **kwargs)
         return stored_message
 
     def _send_message_event(self, message: Message, id_: str | None = None):
         if hasattr(self, "_event_manager") and self._event_manager:
-            data_dict = message.data if hasattr(message, "data") else message.model_dump()
+            data_dict = message.data.copy() if hasattr(message, "data") else message.model_dump()
             data_dict["id"] = id_
             category = data_dict.get("category", None)
             match category:
@@ -890,10 +891,12 @@ class Component(CustomComponent):
             and not isinstance(original_message.text, str)
         )
 
-    def _update_stored_message(self, message_id: str, complete_message: str) -> Message:
-        from langflow.services.database.models.message import update_message
-
-        message_table = update_message(message_id=message_id, message={"text": complete_message})
+    def _update_stored_message(self, stored_message: Message) -> Message:
+        message_tables = update_messages(stored_message)
+        if len(message_tables) != 1:
+            msg = "Only one message can be updated at a time."
+            raise ValueError(msg)
+        message_table = message_tables[0]
         updated_message = Message(**message_table.model_dump())
         self.vertex._added_message = updated_message
         return updated_message
