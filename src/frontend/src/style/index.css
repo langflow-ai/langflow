@@ -6,6 +6,9 @@
 
 @layer base {
   :root {
+    --font-sans: "Inter", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+
     --foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --background: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --muted: 240 5% 96%; /* hsl(240, 5%, 96%) */
