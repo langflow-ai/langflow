@@ -36,6 +36,7 @@ export const CustomControlButton = ({
       className="!h-8 !w-8 rounded !p-0"
       onClick={onClick}
       disabled={disabled}
+      title={testId?.replace(/_/g, " ")}
     >
       <ShadTooltip content={tooltipText}>
         <div className={cn("rounded p-2.5", backgroundClasses)}>
