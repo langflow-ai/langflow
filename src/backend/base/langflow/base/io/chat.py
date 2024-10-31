@@ -54,11 +54,11 @@ class ChatComponent(Component):
             source_id = self.vertex.incoming_edges[0].source_id
             _source_vertex = self.graph.get_vertex(source_id)
             component = _source_vertex.custom_component
-            _display = component.display_name
-            _icon = component.icon
+            source = component.display_name
+            icon = component.icon
             possible_attributes = ["model_name", "model_id", "model"]
             for attribute in possible_attributes:
                 if hasattr(component, attribute) and getattr(component, attribute):
-                    return getattr(component, attribute), _icon
-            return _display, _icon
-        return None, None
+                    return getattr(component, attribute), icon, source
+            return source, icon, component.display_name
+        return None, None, None
