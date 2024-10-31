@@ -101,7 +101,7 @@ const CustomInputPopover = ({
               className={cn(
                 "flex items-center gap-1 truncate bg-muted",
                 nodeStyle &&
-                  "rounded-[3px] bg-emerald-100 px-1 font-jetbrains text-emerald-700 hover:bg-emerald-200",
+                  "font-jetbrains rounded-[3px] bg-emerald-100 px-1 text-emerald-700 hover:bg-emerald-200",
               )}
             >
               <div className="max-w-36 truncate">{selectedOption}</div>
