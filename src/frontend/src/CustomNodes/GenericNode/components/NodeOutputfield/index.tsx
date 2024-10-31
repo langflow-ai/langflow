@@ -130,7 +130,7 @@ export default function NodeOutputField({
       ref={ref}
       className={cn(
         "relative mt-1 flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
-        lastOutput ? "rounded-b-[10px]" : "",
+        lastOutput ? "rounded-b-[0.75rem]" : "",
       )}
     >
       <>
@@ -150,7 +150,6 @@ export default function NodeOutputField({
                       ? "Show output"
                       : "Hide output"
                 }
-                contrastTooltip
               >
                 <div>
                   <IconComponent
@@ -190,7 +189,6 @@ export default function NodeOutputField({
               />
             </span>
             <ShadTooltip
-              contrastTooltip
               content={
                 displayOutputPreview
                   ? unknownOutput

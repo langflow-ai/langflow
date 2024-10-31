@@ -2,7 +2,7 @@ import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import { log } from "console";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Handle, Position } from "reactflow";
+import { Handle, Position, useViewport } from "reactflow";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
   isValidConnection,
@@ -265,26 +265,41 @@ export default function HandleRenderComponent({
   const handleRef = useRef<HTMLDivElement>(null);
   const invisibleDivRef = useRef<HTMLDivElement>(null);
 
+  const { zoom } = useViewport();
+
+  const getTranslateX = () => {
+    if (left) {
+      if (zoom > 4) return "-translate-x-2/3";
+      if (zoom > 1.5) return "-translate-x-24";
+      return "-translate-x-12";
+    }
+    if (zoom > 4) return "translate-x-2/3";
+    if (zoom > 1.5) return "translate-x-24";
+    return "translate-x-12";
+  };
+
   return (
-    <div>
-      <ShadTooltip
-        open={openTooltip}
-        setOpen={setOpenTooltip}
-        styleClasses="tooltip-fixed-width custom-scroll nowheel bottom-2 relative"
-        delayDuration={1000}
-        contrastTooltip
-        content={
-          <HandleTooltipComponent
-            isInput={left}
-            colors={colors}
-            tooltipTitle={tooltipTitle}
-            isConnecting={!!filterPresent && !ownHandle}
-            isCompatible={openHandle}
-            isSameNode={sameNode && !ownHandle}
-          />
-        }
-        side="top"
-      >
+    <ShadTooltip
+      open={openTooltip}
+      setOpen={setOpenTooltip}
+      styleClasses={cn(
+        "tooltip-fixed-width custom-scroll nowheel bottom-2 ",
+        getTranslateX(),
+      )}
+      delayDuration={1000}
+      content={
+        <HandleTooltipComponent
+          isInput={left}
+          colors={colors}
+          tooltipTitle={tooltipTitle}
+          isConnecting={!!filterPresent && !ownHandle}
+          isCompatible={openHandle}
+          isSameNode={sameNode && !ownHandle}
+        />
+      }
+      side={left ? "left" : "right"}
+    >
+      <div>
         <div className="relative">
           <Handle
             ref={handleRef}
@@ -370,7 +385,7 @@ export default function HandleRenderComponent({
             }}
           />
         </div>
-      </ShadTooltip>
-    </div>
+      </div>
+    </ShadTooltip>
   );
 }

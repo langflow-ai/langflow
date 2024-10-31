@@ -43,9 +43,9 @@ test("should be able to see output preview from grouped components and connect c
     .getByTestId("inputsText Input")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -126,7 +126,7 @@ test("should be able to see output preview from grouped components and connect c
     .getByTestId("outputsText Output")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("fit view").click({
+  await page.getByTestId("fit_view").click({
     force: true,
   });
   await page.waitForTimeout(500);

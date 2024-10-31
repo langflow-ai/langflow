@@ -36,7 +36,7 @@ test("memory should work as expect", async ({ page }) => {
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(1000);
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
@@ -82,7 +82,7 @@ test("memory should work as expect", async ({ page }) => {
 
   await page.waitForTimeout;
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
 

@@ -251,7 +251,7 @@ export default function NodeStatus({
           </div>
         </ShadTooltip>
 
-        <ShadTooltip content={getTooltipContent()} contrastTooltip>
+        <ShadTooltip content={getTooltipContent()}>
           <div
             ref={divRef}
             className="button-run-bg hit-area-icon"

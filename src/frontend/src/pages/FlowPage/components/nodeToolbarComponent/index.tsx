@@ -327,7 +327,6 @@ export default function NodeToolbarComponent({
         <div className="flex items-center gap-1 rounded-lg bg-background p-1 shadow-sm">
           {hasCode && (
             <ShadTooltip
-              contrastTooltip
               content={
                 <ShortcutDisplay
                   {...shortcuts.find(
@@ -355,7 +354,6 @@ export default function NodeToolbarComponent({
 
           {nodeLength > 0 && (
             <ShadTooltip
-              contrastTooltip
               content={
                 <ShortcutDisplay
                   {...shortcuts.find(
@@ -381,7 +379,6 @@ export default function NodeToolbarComponent({
             </ShadTooltip>
           )}
           <ShadTooltip
-            contrastTooltip
             content={
               <ShortcutDisplay
                 {...shortcuts.find(
@@ -415,7 +412,6 @@ export default function NodeToolbarComponent({
             </Button>
           </ShadTooltip>
           <ShadTooltip
-            contrastTooltip
             content={
               <ShortcutDisplay
                 {...shortcuts.find(
@@ -437,7 +433,7 @@ export default function NodeToolbarComponent({
               <IconComponent name="Copy" className="h-4 w-4" />
             </Button>
           </ShadTooltip>
-          <ShadTooltip content="All" side="top" contrastTooltip>
+          <ShadTooltip content="All" side="top">
             <Button
               className="node-toolbar-buttons h-[2.125rem]"
               variant="ghost"
@@ -451,7 +447,7 @@ export default function NodeToolbarComponent({
         </div>
 
         <Select onValueChange={handleSelectChange} value={selectedValue!}>
-          <ShadTooltip content="All" side="bottom" contrastTooltip>
+          <ShadTooltip content="All" side="bottom">
             <SelectTrigger ref={selectTriggerRef}>
               <></>
             </SelectTrigger>
