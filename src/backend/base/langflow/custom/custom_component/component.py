@@ -18,7 +18,7 @@ from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
-from langflow.memory import store_message, update_messages
+from langflow.memory import delete_message, store_message, update_messages
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
@@ -862,12 +862,17 @@ class Component(CustomComponent):
             message=message,
             id_=id_,
         )
-
-        if self._should_stream_message(stored_message, message):
-            complete_message = self._stream_message(message, stored_message.id)
+        self._stored_message_id = stored_message.id
+        try:
+            complete_message = ""
+            if self._should_stream_message(stored_message, message):
+                complete_message = self._stream_message(message, stored_message.id)
             stored_message.text = complete_message
             stored_message = self._update_stored_message(stored_message)
-
+        except Exception:
+            # remove the message from the database
+            delete_message(stored_message.id)
+            raise
         self.status = stored_message
         return stored_message
 
