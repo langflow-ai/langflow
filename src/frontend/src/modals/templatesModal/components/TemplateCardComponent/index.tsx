@@ -51,7 +51,7 @@ export default function TemplateCardComponent({
         />
         <IconComponent
           name={example.icon || "FileText"}
-          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-white opacity-50 mix-blend-plus-lighter duration-300 group-hover:scale-105 group-hover:opacity-75 group-focus-visible:scale-105 group-focus-visible:opacity-50"
+          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-white duration-300 group-hover:scale-105 group-focus-visible:scale-105"
         />
       </div>
       <div className="flex flex-1 flex-col justify-between">
