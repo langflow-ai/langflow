@@ -869,13 +869,14 @@ class Component(CustomComponent):
             raise ValueError(msg)
 
         stored_message = messages[0]
-        self._send_message_event(stored_message.model_copy(), **kwargs)
+        self._send_message_event(stored_message, **kwargs)
         return stored_message
 
     def _send_message_event(self, message: Message, id_: str | None = None):
         if hasattr(self, "_event_manager") and self._event_manager:
             data_dict = message.data.copy() if hasattr(message, "data") else message.model_dump()
-            data_dict["id"] = id_
+            if id_ and not data_dict.get("id"):
+                data_dict["id"] = id_
             category = data_dict.get("category", None)
             match category:
                 case "error":
