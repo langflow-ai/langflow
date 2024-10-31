@@ -250,8 +250,6 @@ export type ShadToolTipType = {
   children?: ReactElement;
   delayDuration?: number;
   styleClasses?: string;
-  position?: { x: number; y: number };
-  zoom?: number;
 };
 
 export type TextHighlightType = {
