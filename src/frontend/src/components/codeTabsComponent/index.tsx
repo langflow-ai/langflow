@@ -58,7 +58,7 @@ export default function CodeTabsComponent({
     >
       <div className="api-modal-tablist-div">
         {tabs.length > 0 && tabs[0].name !== "" ? (
-          <TabsList className="border-b mt-[-1px]">
+          <TabsList className="mt-[-1px] border-b">
             {tabs.map((tab, index) => (
               <TabsTrigger
                 className={
@@ -90,7 +90,7 @@ export default function CodeTabsComponent({
                   dangerouslySetInnerHTML={{ __html: tab.description }}
                 ></div>
               )}
-              <div className="w-full rounded-t-md mt-2 px-4 py-2 flex items-center justify-end gap-4 bg-canvas-dark ">
+              <div className="mt-2 flex w-full items-center justify-end gap-4 rounded-t-md bg-canvas-dark px-4 py-2">
                 {nodes.length > 0 &&
                   tabs.find((tab) => tab.name.toLowerCase() === "tweaks") &&
                   tabs[activeTab].hasTweaks && (
@@ -110,7 +110,9 @@ export default function CodeTabsComponent({
                         checked={activeTweaks}
                         autoFocus={false}
                       />
-                      <span className="text-lg text-primary dark:text-primary-foreground">|</span>
+                      <span className="text-lg text-primary dark:text-primary-foreground">
+                        |
+                      </span>
                     </div>
                   )}
 
@@ -135,7 +137,7 @@ export default function CodeTabsComponent({
               <SyntaxHighlighter
                 language={tab.language}
                 style={tomorrow}
-                className="!mt-0 !rounded-t-none h-full overflow-auto rounded-sm text-left custom-scroll bg-code-block"
+                className="!mt-0 h-full overflow-auto rounded-sm !rounded-t-none bg-code-block text-left custom-scroll"
               >
                 {tab.code}
               </SyntaxHighlighter>
