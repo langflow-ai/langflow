@@ -105,6 +105,26 @@ export function FlowSidebarComponent() {
   useEffect(() => {
     filterComponents();
   }, [data, search, filterType, getFilterEdge, showBeta, showLegacy]);
+  function normalizeString(str: string): string {
+    return str.toLowerCase().replace(/_/g, " ").replace(/\s+/g, "");
+  }
+
+  function searchInMetadata(metadata: any, searchTerm: string): boolean {
+    if (!metadata || typeof metadata !== "object") return false;
+
+    return Object.entries(metadata).some(([key, value]) => {
+      if (typeof value === "string") {
+        return (
+          normalizeString(key).includes(searchTerm) ||
+          normalizeString(value).includes(searchTerm)
+        );
+      }
+      if (typeof value === "object") {
+        return searchInMetadata(value, searchTerm);
+      }
+      return false;
+    });
+  }
 
   const filterComponents = () => {
     let filteredData = cloneDeep(data);
@@ -119,6 +139,23 @@ export function FlowSidebarComponent() {
           );
           const filteredItems = Object.fromEntries(
             categoryResults.map((result) => [result.item.key, result.item]),
+          );
+          return [category, filteredItems];
+        }),
+      );
+    } else {
+      // Fallback to traditional search if Fuse.js is not available
+      const searchTerm = normalizeString(search);
+      filteredData = Object.fromEntries(
+        Object.entries(data).map(([category, items]) => {
+          const filteredItems = Object.fromEntries(
+            Object.entries(items).filter(
+              ([key, item]) =>
+                normalizeString(key).includes(searchTerm) ||
+                normalizeString(item.display_name).includes(searchTerm) ||
+                normalizeString(category).includes(searchTerm) ||
+                (item.metadata && searchInMetadata(item.metadata, searchTerm)),
+            ),
           );
           return [category, filteredItems];
         }),

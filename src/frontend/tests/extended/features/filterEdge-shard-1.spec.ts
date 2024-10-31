@@ -34,6 +34,15 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
   );
 
   await page.getByTestId("blank-flow").click();
+
+  await page.waitForTimeout(1000);
+
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-legacy-switch").click();
+  await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
+  await page.getByTestId("sidebar-options-trigger").click();
+
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("retrievalqa");
 
@@ -110,22 +119,29 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
 
   await page.getByTestId("sidebar-search-input").click();
 
-  const notVisibleModelSpecsTestIds = [
-    "model_specsVertexAI",
-    "model_specsCTransformers",
-    "model_specsAmazon Bedrock",
+  const visibleModelSpecsTestIds = [
+    "modelsAIML",
+    "modelsAmazon Bedrock",
+    "modelsAnthropic",
     "modelsAzure OpenAI",
-    "model_specsAzureChatOpenAI",
-    "model_specsChatAnthropic",
-    "model_specsChatLiteLLM",
-    "model_specsChatOllama",
-    "model_specsChatOpenAI",
-    "model_specsChatVertexAI",
+    "modelsCohere",
+    "modelsGoogle Generative AI",
+    "modelsGroq",
+    "modelsHuggingFace",
+    "modelsLM Studio",
+    "modelsMaritalk",
+    "modelsMistralAI",
+    "modelsNVIDIA",
+    "modelsOllama",
+    "modelsOpenAI",
+    "modelsPerplexity",
+    "modelsQianfan",
+    "modelsVertex AI",
   ];
 
   await Promise.all(
-    notVisibleModelSpecsTestIds.map((id) =>
-      expect(page.getByTestId(id)).not.toBeVisible(),
+    visibleModelSpecsTestIds.map((id) =>
+      expect(page.getByTestId(id)).toBeVisible(),
     ),
   );
 
