@@ -71,7 +71,7 @@ const HeaderComponent = ({
         {folderName}
       </div>
       <div className="flex flex-row-reverse pb-8">
-        <div className="w-full border-b dark:border-zinc-800" />
+        <div className="w-full border-b dark:border-border" />
         {["components", "flows"].map((type) => (
           <Button
             key={type}
@@ -81,7 +81,7 @@ const HeaderComponent = ({
             className={`border-b ${
               flowType === type
                 ? "border-b-2 border-black font-semibold dark:border-white dark:text-white"
-                : "border-zinc-400 text-zinc-400 dark:border-zinc-800 dark:hover:text-white"
+                : "border-border text-zinc-400 hover:text-black dark:hover:text-white"
             } px-3 pb-2`}
           >
             {type.charAt(0).toUpperCase() + type.slice(1)}
