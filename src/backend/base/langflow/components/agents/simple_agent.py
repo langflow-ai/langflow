@@ -5,12 +5,10 @@ from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.models.azure_openai import AzureChatOpenAIComponent
 from langflow.components.models.openai import OpenAIModelComponent
 from langflow.io import (
-    DataInput,
     DropdownInput,
     MultilineInput,
     Output,
 )
-from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
@@ -35,8 +33,7 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
         if component_input.name not in [input_field.name for input_field in LCModelComponent._base_inputs]
     ]
     memory_inputs = [
-        setattr(component_input, "advanced", True) or component_input
-        for component_input in MemoryComponent().inputs
+        setattr(component_input, "advanced", True) or component_input for component_input in MemoryComponent().inputs
     ]
 
     inputs = [
@@ -58,7 +55,7 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
             advanced=False,
         ),
         *LCToolsAgentComponent._base_inputs,
-        *memory_inputs
+        *memory_inputs,
     ]
     outputs = [Output(name="response", display_name="Response", method="get_response")]
 
@@ -79,12 +76,9 @@ class SimpleAgentComponent(ToolCallingAgentComponent):
 
         return await agent.message_response()
 
-
-
     def get_memory_data(self):
         memory_kwargs = {
-            component_input.name: getattr(self, f"{component_input.name}")
-            for component_input in self.memory_inputs
+            component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
         }
 
         return MemoryComponent().set(**memory_kwargs).retrieve_messages()
