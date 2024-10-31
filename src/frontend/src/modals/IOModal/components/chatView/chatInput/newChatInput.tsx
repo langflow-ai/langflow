@@ -193,7 +193,7 @@ export default function ChatInput({
 
   return (
     <div className="flex w-full flex-col-reverse">
-      <div className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.5px] focus:border-primary">
+      <div className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary">
         <TextAreaWrapper
           checkSendingOk={checkSendingOk}
           send={send}
