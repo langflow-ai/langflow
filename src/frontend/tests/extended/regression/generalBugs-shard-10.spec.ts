@@ -38,7 +38,7 @@ test("freeze must work correctly", async ({ page }) => {
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(1000);
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page.getByText("openai").first().click();
   await page.keyboard.press("Delete");

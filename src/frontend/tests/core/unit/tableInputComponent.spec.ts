@@ -57,8 +57,8 @@ test("user must be able to interact with table input component", async ({
     .getByTestId("helpersCustom Component")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("code-button-modal").click();

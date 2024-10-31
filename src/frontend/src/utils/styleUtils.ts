@@ -100,6 +100,7 @@ import {
   ListOrdered,
   Loader2,
   Lock,
+  LockOpen,
   LogIn,
   LogOut,
   LucideSend,
@@ -183,6 +184,8 @@ import {
   X,
   XCircle,
   Zap,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -557,6 +560,7 @@ export const nodeIconsLucide: iconsType = {
   Download,
   Eraser,
   Lock,
+  LockOpen,
   LucideSend,
   Sparkles,
   DownloadCloud,
@@ -667,4 +671,6 @@ export const nodeIconsLucide: iconsType = {
   TavilyIcon,
   DuckDuckGo: DuckDuckGoIcon,
   OpenSearch,
+  ZoomIn,
+  ZoomOut,
 };

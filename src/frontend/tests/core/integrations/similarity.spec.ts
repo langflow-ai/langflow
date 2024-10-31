@@ -40,7 +40,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("embeddingsOpenAI Embeddings")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -57,7 +57,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("embeddingsOpenAI Embeddings")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -79,7 +79,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("embeddingsText Embedder")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -96,7 +96,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("embeddingsText Embedder")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -118,7 +118,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("embeddingsEmbedding Similarity")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -140,7 +140,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("helpersParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -162,7 +162,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("outputsText Output")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -182,7 +182,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("helpersFilter Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -201,7 +201,7 @@ test("user must be able to check similarity between embedding texts", async ({
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page
     .getByTestId("textarea_str_template")
@@ -232,7 +232,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .nth(0)
     .fill("similarity_score");
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
   await page.mouse.wheel(0, 500);
   //connection 1
   const openAiEmbeddingOutput_0 = await page

@@ -42,7 +42,7 @@ test("user must be able to stop a building", async ({ page }) => {
     .getByTestId("inputsText Input")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -64,7 +64,7 @@ test("user must be able to stop a building", async ({ page }) => {
     .getByTestId("dataURL")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -86,7 +86,7 @@ test("user must be able to stop a building", async ({ page }) => {
     .getByTestId("helpersSplit Text")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -108,7 +108,7 @@ test("user must be able to stop a building", async ({ page }) => {
     .getByTestId("helpersParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -130,7 +130,7 @@ test("user must be able to stop a building", async ({ page }) => {
     .getByTestId("outputsChat Output")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -149,7 +149,7 @@ test("user must be able to stop a building", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   //connection 1
   const urlOutput = await page
@@ -175,7 +175,7 @@ test("user must be able to stop a building", async ({ page }) => {
   await splitTextInput.hover();
   await page.mouse.up();
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   //connection 3
   const splitTextOutput = await page
@@ -201,7 +201,7 @@ test("user must be able to stop a building", async ({ page }) => {
   await chatOutputInput.hover();
   await page.mouse.up();
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page.getByTestId("textarea_str_input_value").first().fill(",");
 
@@ -252,8 +252,8 @@ class CustomComponent(Component):
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("title-Custom Component").first().click();
 

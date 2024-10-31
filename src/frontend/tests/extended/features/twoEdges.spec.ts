@@ -35,16 +35,16 @@ test("user should be able to see multiple edges and interact with them", async (
   await page.getByText("Search Results", { exact: true }).first().isVisible();
 
   const focusElementsOnBoard = async ({ page }) => {
-    await page.waitForSelector('[title="fit view"]', { timeout: 30000 });
-    const focusElements = await page.getByTitle("fit view");
+    await page.waitForSelector('[data-testid="fit_view"]', { timeout: 30000 });
+    const focusElements = await page.getByTestId("fit_view");
     await focusElements.click();
   };
 
   await focusElementsOnBoard({ page });
 
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("input-inspection-retriever").first().click();
   await page.getByText("Retriever", { exact: true }).first().isHidden();

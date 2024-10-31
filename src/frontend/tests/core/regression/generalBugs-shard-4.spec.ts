@@ -34,11 +34,11 @@ test("should be able to move flow from folder, rename it and be displayed on cor
 
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Vector Store RAG" }).first().click();
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page.getByTestId("flow-configuration-button").click();
   await page.getByText("Settings").click();

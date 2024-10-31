@@ -36,10 +36,10 @@ test("user must see on handle hover a tooltip with possibility connections", asy
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   const outputElements = await page
     .getByTestId("handle-retrievalqa-shownode-text-right")
@@ -71,10 +71,10 @@ test("user must see on handle hover a tooltip with possibility connections", asy
     ).toBeVisible();
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   const rqaChainInputElements1 = await page
     .getByTestId("handle-retrievalqa-shownode-language model-left")
@@ -104,10 +104,10 @@ test("user must see on handle hover a tooltip with possibility connections", asy
       page.getByTestId("input-tooltip-languagemodel").first(),
     ).toBeVisible();
   });
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   const rqaChainInputElements0 = await page
     .getByTestId("handle-retrievalqa-shownode-retriever-left")
@@ -138,10 +138,10 @@ test("user must see on handle hover a tooltip with possibility connections", asy
     ).toBeVisible();
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   const rqaChainInputElements2 = await page
     .getByTestId("handle-retrievalqa-shownode-memory-left")
