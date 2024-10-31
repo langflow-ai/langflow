@@ -119,9 +119,9 @@ def create_message(
     )
 
 
-def create_error(error_message: str, traceback: str | None = None, title: str = "Error"):
+def create_error(error_message: str, traceback: str | None = None, title: str = "Error", timestamp: str | None = None):
     content_blocks = [ContentBlock(title=title, content=traceback)] if traceback else None
-    return ErrorEvent(text=error_message, content_blocks=content_blocks)
+    return ErrorEvent(text=error_message, content_blocks=content_blocks, timestamp=timestamp)
 
 
 def create_warning(message: str):

@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.custom.tree_visitor import RequiredInputsVisitor
+from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
@@ -698,6 +699,14 @@ class Component(CustomComponent):
             if self._tracing_service:
                 return await self._build_with_tracing()
             return await self._build_without_tracing()
+        except StreamingError as e:
+            self.send_error(
+                exception=e.cause,
+                session_id=self.graph.session_id,
+                display_name=e.component_name,
+                trace_name=getattr(self, "trace_name", None),
+            )
+            raise
         except Exception as e:
             self.send_error(
                 exception=e,
@@ -910,11 +919,14 @@ class Component(CustomComponent):
 
         if isinstance(iterator, AsyncIterator):
             return run_until_complete(self._handle_async_iterator(iterator, message_id))
-
-        complete_message = ""
-        for chunk in iterator:
-            complete_message = self._process_chunk(chunk.content, complete_message, message_id)
-        return complete_message
+        try:
+            complete_message = ""
+            for chunk in iterator:
+                complete_message = self._process_chunk(chunk.content, complete_message, message_id)
+        except Exception as e:
+            raise StreamingError(cause=e, component_name=message.properties.source_display_name) from e
+        else:
+            return complete_message
 
     async def _handle_async_iterator(self, iterator: AsyncIterator, message_id: str) -> str:
         complete_message = ""
