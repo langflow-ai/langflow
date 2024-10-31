@@ -78,8 +78,8 @@ const HomePage = ({ type }) => {
         className="flex h-full w-full flex-col xl:container"
         data-testid="cards-wrapper"
       >
-        {/* Move to Datastax LF */}
-        <div className="mx-4 mt-10 flex flex-row items-center rounded-lg border border-purple-700 bg-purple-950 p-4">
+        {/* TODO: Move to Datastax LF and update Icon */}
+        {/* <div className="mx-4 mt-10 flex flex-row items-center rounded-lg border border-purple-700 bg-purple-950 p-4">
           <ForwardedIconComponent name="info" className="mr-4 h-5 w-5" />
           <div className="text-sm">
             DataStax Langflow is in public preview and is not suitable for
@@ -94,7 +94,7 @@ const HomePage = ({ type }) => {
             </a>
             .
           </div>
-        </div>
+        </div> */}
 
         {/* mt-10 to mt-8 for Datastax LF */}
         <div className="mx-5 mb-5 mt-10 flex flex-col justify-start">
