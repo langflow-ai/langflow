@@ -105,7 +105,18 @@ const HomePage = ({ type }) => {
                   </div>
                 )
               ) : (
-                <div>No items found.</div> // TODO: add empty state
+                <div className="pt-2 text-center">
+                  No saved or custom components. Learn more about{" "}
+                  <a
+                    href="https://docs.shortlang.com/getting-started/custom-components"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                  >
+                    creating custom components
+                  </a>
+                  , or browse the store.
+                </div>
               )}
             </div>
           ) : (
@@ -125,7 +136,18 @@ const HomePage = ({ type }) => {
                   </div>
                 )
               ) : (
-                <div>No items found.</div> // TODO: add empty state
+                <div className="pt-2 text-center">
+                  No saved or custom components. Learn more about{" "}
+                  <a
+                    href="https://docs.shortlang.com/getting-started/custom-components"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                  >
+                    creating custom components
+                  </a>
+                  , or browse the store.
+                </div>
               )}
             </div>
           )}
