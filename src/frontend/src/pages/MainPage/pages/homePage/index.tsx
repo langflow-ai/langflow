@@ -49,10 +49,14 @@ const HomePage = ({ type }) => {
   };
 
   useEffect(() => {
-    if (folderData?.folder?.name) {
+    console.log("folderData", folderData);
+  }, [folderData]);
+
+  useEffect(() => {
+    if (folderData && folderData?.folder?.name) {
       setFolderName(folderData.folder.name);
     }
-  }, [folderData?.folder?.name]);
+  }, [folderData, folderData?.folder?.name]);
 
   useEffect(() => {
     localStorage.setItem("view", view);
@@ -105,7 +109,18 @@ const HomePage = ({ type }) => {
                   </div>
                 )
               ) : (
-                <div>No items found.</div> // TODO: add empty state
+                <div className="pt-2 text-center">
+                  No saved or custom components. Learn more about{" "}
+                  <a
+                    href="https://docs.shortlang.com/getting-started/custom-components"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                  >
+                    creating custom components
+                  </a>
+                  , or browse the store.
+                </div>
               )}
             </div>
           ) : (
@@ -125,7 +140,18 @@ const HomePage = ({ type }) => {
                   </div>
                 )
               ) : (
-                <div>No items found.</div> // TODO: add empty state
+                <div className="pt-2 text-center">
+                  No saved or custom components. Learn more about{" "}
+                  <a
+                    href="https://docs.shortlang.com/getting-started/custom-components"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                  >
+                    creating custom components
+                  </a>
+                  , or browse the store.
+                </div>
               )}
             </div>
           )}

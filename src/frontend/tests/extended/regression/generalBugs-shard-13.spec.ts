@@ -75,10 +75,10 @@ test("should be able to share a component on the store by clicking on the share 
 
   await page.waitForTimeout(500);
 
-  await page.waitForSelector("text=Publish workflow to the Langflow Store.", {
+  await page.waitForSelector("text=Share Flow", {
     timeout: 10000,
   });
-  await page.waitForSelector('[data-testid="share-modal-button-flow"]', {
+  await page.waitForSelector('[data-testid="shared-button-flow"]', {
     timeout: 10000,
   });
   await page.waitForSelector("text=Share Flow", { timeout: 10000 });
@@ -108,7 +108,7 @@ test("should be able to share a component on the store by clicking on the share 
   await page.waitForSelector("text=Publish workflow to the Langflow Store.", {
     timeout: 10000,
   });
-  await page.waitForSelector('[data-testid="share-modal-button-flow"]', {
+  await page.waitForSelector('[data-testid="shared-button-flow"]', {
     timeout: 10000,
   });
   await page.waitForSelector("text=Share Flow", { timeout: 10000 });

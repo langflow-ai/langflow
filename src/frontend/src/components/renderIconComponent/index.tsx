@@ -14,7 +14,7 @@ export default function RenderIcons({
     <span
       className={cn(
         "flex items-center gap-0.5",
-        tableRender ? "justify-start" : "justify-center text-xs",
+        tableRender ? "justify-start" : "justify-center text-[12px]",
       )}
     >
       {shortcutList.map((key, index) => (

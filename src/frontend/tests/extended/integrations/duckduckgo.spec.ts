@@ -43,7 +43,7 @@ test("user should be able to use duckduckgo search component", async ({
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page
     .getByTestId("popover-anchor-input-input_value")
@@ -51,7 +51,7 @@ test("user should be able to use duckduckgo search component", async ({
 
   await page.getByTestId("button_run_duckduckgo search").click();
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   const result = await Promise.race([
     page.waitForSelector("text=built successfully", { timeout: 30000 }),

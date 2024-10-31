@@ -111,8 +111,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
   useHotkeys(changes, handleSave, { preventDefault: true });
 
   return currentFlow && onFlowPage ? (
-    <div className="flex items-baseline justify-center truncate">
-      <div className="header-menu-bar truncate">
+    <div className="flex items-baseline gap-2 truncate">
+      <div className="header-menu-bar w-full justify-end truncate">
         {currentFolder?.name && (
           <div className="flex hidden truncate md:flex">
             <div
@@ -123,10 +123,14 @@ export const MenuBar = ({}: {}): JSX.Element => {
             >
               {currentFolder?.name}
             </div>
-            <div className="px-2 font-normal text-muted-foreground">/</div>
           </div>
         )}
+      </div>
+      <div className="hidden w-fit font-normal text-muted-foreground md:flex">
+        /
+      </div>
 
+      <div className="w-fit truncate text-sm sm:overflow-visible sm:whitespace-normal">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="header-menu-bar-display-2 group truncate">
@@ -143,7 +147,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               </div>
               <IconComponent
                 name="ChevronDown"
-                className="flex w-[24px] pr-1 text-muted-foreground group-hover:text-primary"
+                className="flex h-5 w-5 text-muted-foreground group-hover:text-primary"
               />
             </div>
           </DropdownMenuTrigger>
@@ -275,7 +279,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         ></FlowSettingsModal>
         <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
-      <div className="hidden items-center truncate sm:flex">
+      <div className="hidden w-full items-center truncate sm:flex">
         {!autoSaving && (
           <Button
             variant="primary"
