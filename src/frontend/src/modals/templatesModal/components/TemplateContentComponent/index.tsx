@@ -85,7 +85,6 @@ export default function TemplateContentComponent({
           placeholder="Search..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          tabIndex={1}
           ref={searchInputRef}
           className="w-3/4 rounded-lg bg-background pl-8 lg:w-2/3"
         />

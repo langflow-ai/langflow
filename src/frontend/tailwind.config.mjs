@@ -11,6 +11,7 @@ const config = {
   variants: {
     extend: {
       display: ["group-hover"],
+      textColor: ["group-increment-hover", "group-decrement-hover"],
     },
   },
   darkMode: ["class"],
@@ -41,10 +42,16 @@ const config = {
           "0%, 100%": { transform: "scale(100%)" },
           "50%": { transform: "scale(120%)" },
         },
+        "border-beam": {
+          "100%": {
+            "offset-distance": "100%",
+          },
+        },
       },
       animation: {
         wiggle: "wiggle 150ms ease-in-out 1",
         "slow-wiggle": "wiggle 500ms ease-in-out 1",
+        "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
       },
       colors: {
         "frozen-blue": "rgba(128, 190, 219, 0.86)", // Custom blue color for the frozen effect
@@ -98,6 +105,8 @@ const config = {
         "status-gray": "var(--status-gray)",
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
+        "accent-pink": "hsl(var(--accent-pink))",
+        "accent-pink-foreground": "hsl(var(--accent-pink-foreground))",
         filter: {
           foreground: "var(--filter-foreground)",
           background: "var(--filter-background)",
@@ -109,7 +118,7 @@ const config = {
         },
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
-        canvas: "var(--canvas)",
+        canvas: "hsl(var(--canvas))",
         ice: "var(--ice)",
         selected: "var(--selected)",
         hover: "var(--hover)",
@@ -119,6 +128,14 @@ const config = {
         "node-selected": "hsl(var(--node-selected))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        "emerald-success": "hsl(var(--emerald-success))",
+        "accent-emerald-foreground": "hsl(var(--accent-emerald-foreground))",
+        "emerald-smooth": "hsl(var(--emaral-smooth))",
+        "emerald-hard": "hsl(var(--emeral-hard))",
+        placeholder: "hsl(var(--placeholder))",
+        "hard-zinc": "hsl(var(--hard-zinc))",
+        "smooth-red": "hsl(var(--smooth-red))",
+        "placeholder-foreground": "hsl(var(--placeholder-foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -165,11 +182,70 @@ const config = {
           DEFAULT: "hsl(var(--tooltip))",
           foreground: "hsl(var(--tooltip-foreground))",
         },
+        "inner-yellow": {
+          DEFAULT: "hsl(var(--inner-yellow))",
+          foreground: "hsl(var(--inner-foreground-yellow))",
+          muted: "hsl(var(--inner-yellow-muted-foreground))",
+        },
+        "inner-blue": {
+          DEFAULT: "hsl(var(--inner-blue))",
+          foreground: "hsl(var(--inner-foreground-blue))",
+          muted: "hsl(var(--inner-blue-muted-foreground))",
+        },
+        "inner-gray": {
+          DEFAULT: "hsl(var(--inner-gray))",
+          foreground: "hsl(var(--inner-foreground-gray))",
+          muted: "hsl(var(--inner-gray-muted-foreground))",
+        },
+        "inner-lime": {
+          DEFAULT: "hsl(var(--inner-lime))",
+          foreground: "hsl(var(--inner-foreground-lime))",
+          muted: "hsl(var(--inner-lime-muted-foreground))",
+        },
+        "inner-red": {
+          DEFAULT: "hsl(var(--inner-red))",
+          foreground: "hsl(var(--inner-foreground-red))",
+          muted: "hsl(var(--inner-red-muted-foreground))",
+        },
+        "inner-violet": {
+          DEFAULT: "hsl(var(--inner-violet))",
+          foreground: "hsl(var(--inner-foreground-violet))",
+          muted: "hsl(var(--inner-violet-muted-foreground))",
+        },
+        "inner-emerald": {
+          DEFAULT: "hsl(var(--inner-emerald))",
+          foreground: "hsl(var(--inner-foreground-emerald))",
+          muted: "hsl(var(--inner-emerald-muted-foreground))",
+        },
+        "inner-fuchsia": {
+          DEFAULT: "hsl(var(--inner-fuchsia))",
+          foreground: "hsl(var(--inner-foreground-fuchsia))",
+          muted: "hsl(var(--inner-fuchsia-muted-foreground))",
+        },
+        "inner-purple": {
+          DEFAULT: "hsl(var(--inner-purple))",
+          foreground: "hsl(var(--inner-foreground-purple))",
+          muted: "hsl(var(--inner-purple-muted-foreground))",
+        },
+        "inner-cyan": {
+          DEFAULT: "hsl(var(--inner-cyan))",
+          foreground: "hsl(var(--inner-foreground-cyan))",
+          muted: "hsl(var(--inner-cyan-muted-foreground))",
+        },
+        "inner-indigo": {
+          DEFAULT: "hsl(var(--inner-indigo))",
+          foreground: "hsl(var(--inner-foreground-indigo))",
+          muted: "hsl(var(--inner-indigo-muted-foreground))",
+        },
       },
       borderRadius: {
         lg: `var(--radius)`,
         md: `calc(var(--radius) - 2px)`,
         sm: "calc(var(--radius) - 4px)",
+      },
+      borderWidth: {
+        1.75: "1.75px",
+        1.5: "1.5px",
       },
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
@@ -291,6 +367,10 @@ const config = {
     }),
     tailwindcssTypography,
     tailwindcssDottedBackground,
+    plugin(({ addVariant }) => {
+      addVariant("group-increment-hover", ":merge(.group-increment):hover &");
+      addVariant("group-decrement-hover", ":merge(.group-decrement):hover &");
+    }),
   ],
 };
 

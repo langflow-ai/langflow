@@ -13,7 +13,7 @@ test("should see general profile gradient", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByText("Settings").click();
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(2000);
 
   await page.getByText("General").nth(2).isVisible();
   await page.getByText("Profile Gradient").isVisible();
@@ -35,7 +35,7 @@ test("should interact with global variables", async ({ page }) => {
   await page
     .getByPlaceholder("Insert a name for the variable...")
     .fill(randomName);
-  await page.getByTestId("popover-anchor-type-global-variables").click();
+  await page.getByTestId("anchor-popover-anchor-type-global-variables").click();
   await page.getByPlaceholder("Search options...").fill("Generic");
   await page.waitForTimeout(1000);
   await page.getByText("Generic", { exact: true }).last().isVisible();

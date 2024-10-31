@@ -5,7 +5,7 @@ import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 
 const buttonVariants = cva(
-  "noflow nowheel nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "noflow nowheel nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-100 disabled:disabled-state [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -15,7 +15,7 @@ const buttonVariants = cva(
         outline:
           "border border-input hover:bg-input hover:text-accent-foreground",
         primary:
-          "border bg-background text-secondary-foreground hover:bg-secondary-foreground/5 dark:hover:bg-background/10 hover:shadow-sm",
+          "border bg-background text-secondary-foreground hover:bg-muted dark:hover:bg-muted hover:shadow-sm",
         secondary:
           "border border-muted bg-muted text-secondary-foreground hover:bg-secondary-foreground/5",
         ghost: "hover:bg-accent hover:text-accent-foreground",
@@ -30,6 +30,7 @@ const buttonVariants = cva(
         xs: "py-0.5 px-3 rounded-md",
         lg: "h-11 px-8 rounded-md",
         icon: "py-1 px-1 rounded-md",
+        "node-toolbar": "py-[6px] px-[6px] rounded-md",
       },
     },
     defaultVariants: {

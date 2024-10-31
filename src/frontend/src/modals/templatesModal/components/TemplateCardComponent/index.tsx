@@ -31,7 +31,7 @@ export default function TemplateCardComponent({
   return (
     <div
       className="group flex cursor-pointer gap-3 overflow-hidden rounded-md p-3 hover:bg-muted focus-visible:bg-muted"
-      tabIndex={1}
+      tabIndex={0}
       onKeyDown={handleKeyDown}
       onClick={onClick}
     >
