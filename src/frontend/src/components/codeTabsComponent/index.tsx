@@ -121,6 +121,7 @@ export default function CodeTabsComponent({
                       size="icon"
                       className="text-[#A1A1AA]"
                       onClick={copyToClipboard}
+                      data-testid="btn-copy-code"
                     >
                       {isCopied ? (
                         <IconComponent name="Check" className="h-4 w-4" />
