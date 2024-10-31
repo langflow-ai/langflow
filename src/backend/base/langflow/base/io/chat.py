@@ -55,7 +55,7 @@ class ChatComponent(Component):
     def _send_messages_events(self, messages) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
             for stored_message in messages:
-                self._event_manager.on_message(data=stored_message.data)
+                self._send_message_event(stored_message)
 
     def get_connected_model_name(self):
         if self.vertex.incoming_edges:
