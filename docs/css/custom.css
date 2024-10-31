@@ -8,7 +8,7 @@
   --ifm-navbar-link-hover-color: initial;
   --ifm-navbar-padding-vertical: 0;
   --ifm-navbar-item-padding-vertical: 0;
-  --ifm-font-family-base: -apple-system, BlinkMacSystemFont, Inter, Helvetica,
+  --ifm-font-family-base: Inter, -apple-system, BlinkMacSystemFont, Helvetica,
     Arial, sans-serif, "Apple Color Emoji", "Segoe UI emoji";
   --ifm-font-family-monospace: "SFMono-Regular", "Roboto Mono", Consolas,
     "Liberation Mono", Menlo, Courier, monospace;
@@ -118,17 +118,15 @@ body {
   width: 24px;
   height: 24px;
   display: flex;
-  background: url("/logos/gitLight.svg")
-    no-repeat;
+  background: url("/logos/gitLight.svg") no-repeat;
 }
 
-[data-theme='dark'] .header-github-link:before {
+[data-theme="dark"] .header-github-link:before {
   content: "";
   width: 24px;
   height: 24px;
   display: flex;
-  background: url("/logos/gitDark.svg")
-    no-repeat;
+  background: url("/logos/gitDark.svg") no-repeat;
 }
 
 /* Twitter */
@@ -145,7 +143,7 @@ body {
   background-size: contain;
 }
 
-[data-theme='dark'] .header-twitter-link::before {
+[data-theme="dark"] .header-twitter-link::before {
   content: "";
   width: 24px;
   height: 24px;
@@ -164,7 +162,7 @@ body {
   opacity: 0.6;
 }
 
-[data-theme='dark'] .header-discord-link::before {
+[data-theme="dark"] .header-discord-link::before {
   content: "";
   width: 24px;
   height: 24px;
@@ -241,6 +239,8 @@ body {
   min-height: 70px;
 }
 
-.theme-doc-sidebar-item-category.theme-doc-sidebar-item-category-level-2.menu__list-item:not(:first-child) {
-  margin-top: 0.25rem!important;
+.theme-doc-sidebar-item-category.theme-doc-sidebar-item-category-level-2.menu__list-item:not(
+    :first-child
+  ) {
+  margin-top: 0.25rem !important;
 }

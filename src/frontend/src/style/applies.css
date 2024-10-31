@@ -174,7 +174,7 @@
     @apply flex gap-2;
   }
   .primary-input {
-    @apply placeholder:text-muted-foreground form-input block w-full truncate rounded-md border-[1px] border-border bg-background px-3 text-left text-sm  hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground focus-visible:border-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
+    @apply form-input block w-full truncate rounded-md border-[1px] border-border bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .skeleton-card {
@@ -191,7 +191,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply placeholder:text-placeholder-foreground form-input block w-full rounded-md border-[1px] border-border bg-background px-3 text-left shadow-sm hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-foreground focus:ring-[0.75px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
+    @apply placeholder:text-placeholder-foreground form-input block w-full rounded-md border-[1px] border-border bg-background px-3 text-left shadow-sm hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
   }
 
   .input-edit-node {
@@ -220,7 +220,7 @@
     @apply w-6 fill-build-trigger stroke-build-trigger stroke-1;
   }
   .message-button-position {
-    @apply fixed top-20 right-4;
+    @apply fixed right-4 top-20;
   }
   .message-button-icon {
     @apply fill-medium-indigo stroke-medium-indigo stroke-1;
@@ -1190,6 +1190,10 @@
     @apply w-fit;
   }
 
+  .x-gradient {
+    @apply stroke-[url(#x-gradient)] bg-blend-hard-light;
+  }
+
   .button-run-bg {
     @apply flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm bg-transparent p-0 hover:bg-muted hover:p-1;
   }
@@ -1215,7 +1219,7 @@
   }
 
   .disabled-state {
-    @apply pointer-events-none bg-secondary text-hard-zinc;
+    @apply text-hard-zinc pointer-events-none bg-secondary;
   }
 
   .background-fade-input {
@@ -1260,8 +1264,7 @@
   }
 
   .node-toolbar-buttons {
-    @apply flex items-center gap-1 rounded-lg text-foreground w-max min-w-10
-
+    @apply flex w-max min-w-10 items-center gap-1 rounded-lg text-foreground;
   }
 
   .share-button {

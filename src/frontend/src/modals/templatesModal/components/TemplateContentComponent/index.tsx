@@ -62,51 +62,55 @@ export default function TemplateContentComponent({
     track("New Flow Created", { template: `${example.name} Template` });
   };
 
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
   const currentTabItem = categories.find((item) => item.id === currentTab);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-hidden">
-      <div className="relative flex-1 p-px md:grow-0">
+      <div className="relative flex-1 grow-0 p-px">
         <ForwardedIconComponent
           name="Search"
-          className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
+          className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
         />
         <Input
           type="search"
           placeholder="Search..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full rounded-lg bg-background pl-8 lg:w-3/4"
+          ref={searchInputRef}
+          className="w-3/4 rounded-lg bg-background pl-8 lg:w-2/3"
         />
       </div>
       <div
         ref={scrollContainerRef}
-        className="flex flex-1 flex-col gap-6 overflow-auto"
+        className="flex flex-1 flex-col gap-6 overflow-auto scrollbar-hide"
       >
-        {currentTab === "all-templates" ? (
-          categories.map(
-            (value) =>
-              filteredExamples.filter((example) =>
-                example.tags?.includes(value.id),
-              ).length > 0 && (
-                <TemplateCategoryComponent
-                  key={value.id}
-                  currentTab={value}
-                  examples={filteredExamples.filter((example) =>
-                    example.tags?.includes(value.id),
-                  )}
-                  onCardClick={handleCardClick}
-                />
-              ),
-          )
-        ) : currentTabItem ? (
+        {currentTabItem && filteredExamples.length > 0 ? (
           <TemplateCategoryComponent
-            currentTab={currentTabItem}
             examples={filteredExamples}
             onCardClick={handleCardClick}
           />
         ) : (
-          <></>
+          <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+            <p className="text-sm text-secondary-foreground">
+              No templates found.{" "}
+              <a
+                className="cursor-pointer underline underline-offset-4"
+                onClick={handleClearSearch}
+              >
+                Clear your search
+              </a>{" "}
+              and try a different query.
+            </p>
+          </div>
         )}
       </div>
     </div>

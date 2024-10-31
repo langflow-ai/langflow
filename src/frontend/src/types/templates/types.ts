@@ -12,17 +12,14 @@ export interface Category {
 }
 
 export interface CardData {
-  bgImage: string;
+  bg: string;
   spiralImage: string;
   icon: string;
   category: string;
-  title: string;
-  description: string;
   flow: FlowType | undefined;
 }
 
 export interface TemplateCategoryProps {
-  currentTab: NavItem;
   examples: any[];
   onCardClick: (example: any) => void;
 }
@@ -44,7 +41,7 @@ export interface TemplateCardComponentProps {
 }
 
 export interface NavProps {
-  links: NavItem[];
+  categories: Category[];
   currentTab: string;
-  onClick?: (id: string) => void;
+  setCurrentTab: (id: string) => void;
 }
