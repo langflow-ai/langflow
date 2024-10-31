@@ -80,6 +80,13 @@ test("Dynamic Agent", async ({ page }) => {
   //   .first()
   //   .fill("how much is an apple stock today");
   // await page.getByTestId("button_run_chat output").click();
+  // const result = await Promise.race([
+  //   page.waitForSelector("text=OpenAIException", { timeout: 30000 }),
+  //   page.waitForSelector("text=Error building", { timeout: 30000 }),
+  // ]);
+  // if (result) {
+  //   test.skip();
+  // }
   // await page.waitForSelector("text=built successfully", { timeout: 60000 * 3 });
   // await page.getByText("built successfully").last().click({
   //   timeout: 15000,
