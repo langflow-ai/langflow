@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
+import traceback
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated, Any
@@ -17,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_valid
 
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.content_block import ContentBlock
+from langflow.schema.content_types import ErrorContent
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.schema.properties import Properties
@@ -321,4 +324,60 @@ class MessageResponse(DefaultModel):
             files=message.files or [],
             timestamp=message.timestamp,
             flow_id=flow_id,
+        )
+
+
+class ErrorMessage(Message):
+    """A message class specifically for error messages with predefined error-specific attributes."""
+
+    def __init__(
+        self,
+        exception: Exception,
+        session_id: str,
+        display_name: str,
+        trace_name: str | None = None,
+    ) -> None:
+        # Get the error reason
+        reason = exception.__class__.__name__
+        if hasattr(exception, "body") and "message" in exception.body:
+            reason = exception.body.get("message")
+        elif hasattr(exception, "code"):
+            reason = exception.code
+
+        # Get the sender ID
+        sender_id = display_name
+        if trace_name:
+            match = re.search(r"\((.*?)\)", trace_name)
+            if match:
+                sender_id = match.group(1)
+
+        super().__init__(
+            session_id=session_id,
+            sender=display_name,
+            sender_name=display_name,
+            text=reason,
+            properties=Properties(
+                text_color="red",
+                background_color="red",
+                edited=False,
+                source=sender_id,
+                icon="error",
+                allow_markdown=False,
+                targets=[],
+            ),
+            category="error",
+            error=True,
+            content_blocks=[
+                ContentBlock(
+                    title="Error",
+                    content=ErrorContent(
+                        type="error",
+                        component=display_name,
+                        field=str(exception.field) if hasattr(exception, "field") else None,
+                        reason=reason,
+                        solution=str(exception.solution) if hasattr(exception, "solution") else None,
+                        traceback=traceback.format_exc(),
+                    ),
+                )
+            ],
         )
