@@ -149,6 +149,13 @@ test("user must be able to stop a building", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
   await page.getByTestId("fit_view").click();
 
   //connection 1
@@ -273,13 +280,11 @@ class CustomComponent(Component):
     timeout: 100000,
   });
 
-  await page.waitForSelector('[data-testid="loading_icon"]', {
-    timeout: 100000,
+  await page.waitForSelector('div[class*="animate-border-beam"]', {
+    state: "visible",
+    timeout: 5000,
   });
 
-  expect(
-    await page.getByTestId("loading_icon").last().isVisible(),
-  ).toBeTruthy();
   expect(
     await page.getByTestId("stop_building_button").isEnabled(),
   ).toBeTruthy();
@@ -288,7 +293,11 @@ class CustomComponent(Component):
 
   await page.waitForTimeout(1000);
 
-  expect(await page.getByTestId("loading_icon").isHidden()).toBeTruthy();
+  await page.waitForSelector('div[class*="animate-border-beam"]', {
+    state: "hidden",
+    timeout: 5000,
+  });
+
   expect(
     await page.getByTestId("stop_building_button").isEnabled(),
   ).toBeFalsy();
@@ -303,8 +312,9 @@ class CustomComponent(Component):
     timeout: 100000,
   });
 
-  await page.waitForSelector('[data-testid="loading_icon"]', {
-    timeout: 100000,
+  await page.waitForSelector('div[class*="animate-border-beam"]', {
+    state: "visible",
+    timeout: 5000,
   });
 
   await page.waitForSelector("text=Building", {
@@ -335,8 +345,9 @@ class CustomComponent(Component):
 
   await page.getByTestId("button_run_custom component").click();
 
-  await page.waitForSelector('[data-testid="loading_icon"]', {
-    timeout: 100000,
+  await page.waitForSelector('div[class*="animate-border-beam"]', {
+    state: "visible",
+    timeout: 5000,
   });
 
   await page.waitForSelector("text=Building", {

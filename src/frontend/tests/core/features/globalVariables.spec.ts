@@ -63,8 +63,7 @@ test("user must be able to save or delete a global variable", async ({
   await page
     .getByPlaceholder("Insert a name for the variable...")
     .fill(genericName);
-  await page.getByTestId("icon-ChevronsUpDown").nth(1).click();
-  await page.getByText("Generic", { exact: true }).click();
+  await page.getByText("Generic", { exact: true }).isVisible();
   await page
     .getByPlaceholder("Insert a value for the variable...")
     .fill("This is a test of generic variable value");
@@ -76,7 +75,10 @@ test("user must be able to save or delete a global variable", async ({
   await page
     .getByPlaceholder("Insert a name for the variable...")
     .fill(credentialName);
-  await page.getByTestId("icon-ChevronsUpDown").nth(1).click();
+  await page
+    .getByTestId("popover-anchor-type-global-variables")
+    .first()
+    .click();
   await page.getByText("Credential", { exact: true }).click();
   await page
     .getByPlaceholder("Insert a value for the variable...")

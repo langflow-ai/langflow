@@ -105,9 +105,19 @@ test("should copy code from playground modal", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+
+  if (isApiKeyInputVisible) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
@@ -128,6 +138,8 @@ test("should copy code from playground modal", async ({ page }) => {
   // Click and hold on the first element
   await page.getByTestId("zoom_in").click();
   await page.getByTestId("zoom_in").click();
+
+  await page.locator(".react-flow__pane").click();
 
   await visibleElementHandle.hover();
   await page.mouse.down();
@@ -173,7 +185,7 @@ test("should copy code from playground modal", async ({ page }) => {
     }
   }
 
-  // await visibleElementHandle.hover();
+  await visibleElementHandle.hover();
   await page.mouse.up();
 
   await page.getByTestId("fit_view").click();
@@ -196,14 +208,20 @@ test("should copy code from playground modal", async ({ page }) => {
     timeout: 100000,
   });
 
-  // await page.getByTestId("icon-Copy").first().click();
+  await page.waitForSelector('[data-testid="btn-copy-code"]', {
+    state: "visible",
+    timeout: 30000,
+  });
 
-  // const handle = await page.evaluateHandle(() =>
-  //   navigator.clipboard.readText(),
-  // );
-  // const clipboardContent = await handle.jsonValue();
-  // expect(clipboardContent.length).toBeGreaterThan(0);
-  // expect(clipboardContent).toContain("Hello");
+  await page.waitForTimeout(1000);
+  await page.getByTestId("btn-copy-code").last().click();
+
+  const handle = await page.evaluateHandle(() =>
+    navigator.clipboard.readText(),
+  );
+  const clipboardContent = await handle.jsonValue();
+  expect(clipboardContent.length).toBeGreaterThan(0);
+  expect(clipboardContent).toContain("Hello");
 });
 
 test("playground button should be enabled or disabled", async ({ page }) => {

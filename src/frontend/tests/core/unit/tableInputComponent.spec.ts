@@ -161,7 +161,7 @@ class CustomComponent(Component):
 
   await page.locator('input[type="checkbox"]').last().click();
 
-  await page.getByTestId("icon-Copy").click();
+  await page.getByTestId("icon-Copy").last().click();
 
   await page.waitForTimeout(500);
 
@@ -169,7 +169,7 @@ class CustomComponent(Component):
   expect(numberOfCopiedRows).toBe(2);
 
   await page.locator('input[type="checkbox"]').last().click();
-  await page.getByTestId("icon-Trash2").click();
+  await page.getByTestId("icon-Trash2").last().click();
 
   await page.waitForTimeout(500);
 

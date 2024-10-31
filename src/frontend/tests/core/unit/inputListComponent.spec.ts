@@ -55,7 +55,7 @@ test("InputListComponent", async ({ page }) => {
 
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   const value0 = await page.getByTestId("inputlist_str_urls_0").inputValue();
   const value1 = await page.getByTestId("inputlist_str_urls_1").inputValue();
@@ -101,7 +101,7 @@ test("InputListComponent", async ({ page }) => {
 
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   const value0Edit = await page
     .getByTestId("inputlist_str_edit_urls_0")

@@ -51,7 +51,7 @@ test("should be able to upload a file", async ({ page }) => {
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
   const fileChooserPromise = page.waitForEvent("filechooser");
-  await page.getByTestId("icon-FileSearch2").click();
+  await page.getByTestId("button_upload_file").click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(
     path.join(__dirname, "../../assets/test_file.txt"),
@@ -133,6 +133,8 @@ test("should be able to upload a file", async ({ page }) => {
       break;
     }
   }
+
+  await page.getByTitle("fit view").click();
 
   await visibleElementHandle.hover();
   await page.mouse.down();
