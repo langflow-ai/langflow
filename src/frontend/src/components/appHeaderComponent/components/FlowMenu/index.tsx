@@ -130,7 +130,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         /
       </div>
 
-      <div className="w-fit text-sm md:truncate">
+      <div className="w-fit truncate text-sm sm:overflow-visible sm:whitespace-normal">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="header-menu-bar-display-2 group truncate">
