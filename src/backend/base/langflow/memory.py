@@ -128,6 +128,19 @@ def delete_messages(session_id: str) -> None:
         )
 
 
+def delete_message(id_: str) -> None:
+    """Delete a message from the monitor service based on the provided ID.
+
+    Args:
+        id_ (str): The ID of the message to delete.
+    """
+    with session_scope() as session:
+        message = session.get(MessageTable, id_)
+        if message:
+            session.delete(message)
+            session.commit()
+
+
 def store_message(
     message: Message,
     flow_id: str | None = None,
