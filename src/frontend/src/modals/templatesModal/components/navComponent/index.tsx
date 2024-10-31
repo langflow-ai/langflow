@@ -56,7 +56,6 @@ export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
                   <SidebarMenuItem key={link.id}>
                     <SidebarMenuButton
                       tabIndex={1}
-                      variant="menu"
                       onClick={() => setCurrentTab(link.id)}
                       isActive={currentTab === link.id}
                       data-testid={`side_nav_options_${link.title.toLowerCase().replace(/\s+/g, "_")}`}
