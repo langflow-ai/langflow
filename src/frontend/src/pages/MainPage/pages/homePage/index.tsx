@@ -2,6 +2,7 @@ import CardsWrapComponent from "@/components/cardsWrapComponent";
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import PaginatorComponent from "@/components/paginatorComponent";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -79,8 +80,11 @@ const HomePage = ({ type }) => {
         data-testid="cards-wrapper"
       >
         {/* TODO: Move to Datastax LF and update Icon */}
-        {/* <div className="mx-4 mt-10 flex flex-row items-center rounded-lg border border-purple-700 bg-purple-950 p-4">
-          <ForwardedIconComponent name="info" className="mr-4 h-5 w-5" />
+        {/* <div className="mx-4 mt-10 flex flex-row items-center rounded-lg border border-purple-300 bg-purple-50 p-4 dark:border-purple-700 dark:bg-purple-950">
+          <ForwardedIconComponent
+            name="info"
+            className="mr-4 h-5 w-5 text-purple-500 dark:text-purple-400"
+          />
           <div className="text-sm">
             DataStax Langflow is in public preview and is not suitable for
             production. By continuing to use DataStax Langflow, you agree to the{" "}
@@ -128,7 +132,7 @@ const HomePage = ({ type }) => {
                 <div className="pt-2 text-center">
                   No saved or custom components. Learn more about{" "}
                   <a
-                    href="https://docs.shortlang.com/getting-started/custom-components"
+                    href="https://docs.langflow.org/components-custom-components"
                     target="_blank"
                     rel="noreferrer"
                     className="underline"
