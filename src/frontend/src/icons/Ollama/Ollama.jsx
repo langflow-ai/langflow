@@ -1,6 +1,5 @@
 export const SvgOllama = (props) => (
   <svg
-
     xmlnsXlink="http://www.w3.org/1999/xlink"
     width="40"
     height="40"
