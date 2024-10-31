@@ -52,8 +52,8 @@ export default function AppHeader(): JSX.Element {
 
   return (
     <div className="fixed left-0 top-0 z-[1] flex h-[62px] w-full items-center border-b px-5 py-2.5 dark:bg-black">
-      <div className="float-left h-full w-[50%]"></div>
-      <div className="float-right h-full w-[50%]"></div>
+      {/* <div className="float-left h-full w-[50%]"></div> */}
+      {/* <div className="float-right h-full w-[50%]"></div> */}
 
       {/* Left Section */}
       <div className={`absolute left-[20px] flex gap-2`}>
