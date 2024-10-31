@@ -62,7 +62,16 @@ export default function TemplateContentComponent({
     track("New Flow Created", { template: `${example.name} Template` });
   };
 
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
   const currentTabItem = categories.find((item) => item.id === currentTab);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-hidden">
@@ -77,6 +86,7 @@ export default function TemplateContentComponent({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           tabIndex={1}
+          ref={searchInputRef}
           className="w-3/4 rounded-lg bg-background pl-8 lg:w-2/3"
         />
       </div>
@@ -90,15 +100,16 @@ export default function TemplateContentComponent({
             onCardClick={handleCardClick}
           />
         ) : (
-          <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-            <ForwardedIconComponent
-              name="Search"
-              className="mb-4 h-8 w-8 text-muted-foreground"
-            />
-            <h3 className="mb-2 text-lg font-semibold">No results found</h3>
-            <p className="text-sm text-muted-foreground">
-              Try adjusting your search or filter to find what you're looking
-              for.
+          <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+            <p className="text-sm text-secondary-foreground">
+              No templates found.{" "}
+              <a
+                className="cursor-pointer underline underline-offset-4"
+                onClick={handleClearSearch}
+              >
+                Clear your search
+              </a>{" "}
+              and try a different query.
             </p>
           </div>
         )}
