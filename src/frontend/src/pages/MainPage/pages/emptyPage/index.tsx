@@ -84,7 +84,10 @@ export const EmptyPage = ({
           ) : (
             <span className="fill-black text-4xl dark:fill-white">⛓️</span>
           )}
-          <h3 className="pt-5 text-2xl font-semibold dark:text-white" data-testid="mainpage_title">
+          <h3
+            className="pt-5 text-2xl font-semibold dark:text-white"
+            data-testid="mainpage_title"
+          >
             Start building
           </h3>
           <p className="pb-2 text-sm dark:text-white">
