@@ -250,6 +250,14 @@
     --chat-bot-icon: #235d70;
     --chat-user-icon: #4f3d6e;
 
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
     --emerald-success: 160.1 84.1% 39.4%;
     --accent-emerald-foreground: 161.4 93.5% 30.4%;
     --placeholder: 240 5% 64.9%;

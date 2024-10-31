@@ -9,10 +9,14 @@ class RetrievalQAComponent(LCChainComponent):
     display_name = "Retrieval QA"
     description = "Chain for question-answering querying sources from a retriever."
     name = "RetrievalQA"
+    legacy: bool = True
 
     inputs = [
         MultilineInput(
-            name="input_value", display_name="Input", info="The input value to pass to the chain.", required=True
+            name="input_value",
+            display_name="Input",
+            info="The input value to pass to the chain.",
+            required=True,
         ),
         DropdownInput(
             name="chain_type",
@@ -22,8 +26,18 @@ class RetrievalQAComponent(LCChainComponent):
             value="Stuff",
             advanced=True,
         ),
-        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
-        HandleInput(name="retriever", display_name="Retriever", input_types=["Retriever"], required=True),
+        HandleInput(
+            name="llm",
+            display_name="Language Model",
+            input_types=["LanguageModel"],
+            required=True,
+        ),
+        HandleInput(
+            name="retriever",
+            display_name="Retriever",
+            input_types=["Retriever"],
+            required=True,
+        ),
         HandleInput(
             name="memory",
             display_name="Memory",
@@ -52,7 +66,10 @@ class RetrievalQAComponent(LCChainComponent):
             return_source_documents=True,
         )
 
-        result = runnable.invoke({"query": self.input_value}, config={"callbacks": self.get_langchain_callbacks()})
+        result = runnable.invoke(
+            {"query": self.input_value},
+            config={"callbacks": self.get_langchain_callbacks()},
+        )
 
         source_docs = self.to_data(result.get("source_documents", keys=[]))
         result_str = str(result.get("result", ""))
