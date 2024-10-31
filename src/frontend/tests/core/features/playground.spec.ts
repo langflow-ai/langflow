@@ -38,12 +38,9 @@ test.skip("fresh start playground", async ({ page }) => {
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
+
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat output");
   await page.waitForTimeout(1000);
 
   await page
@@ -52,8 +49,8 @@ test.skip("fresh start playground", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat input");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat input");
   await page.waitForTimeout(1000);
 
   await page

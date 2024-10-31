@@ -30,17 +30,8 @@ test("ToggleComponent", async ({ page }) => {
   });
   await page.getByTestId("blank-flow").click();
 
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  const focusElementsOnBoard = async ({ page }) => {
-    const focusElements = await page.getByTestId("extended-disclosure");
-    focusElements.click();
-  };
-
-  await focusElementsOnBoard({ page });
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("directory");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("directory");
 
   await page.waitForTimeout(1000);
   await page
