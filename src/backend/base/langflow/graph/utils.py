@@ -135,6 +135,10 @@ def _vertex_to_primitive_dict(target: Vertex) -> dict:
             # if it is a dict we need to check if the values are python types
             filtered_dict = {k: filter_valid_python_elements(v) for k, v in value.items()}
             return {k: v for k, v in filtered_dict.items() if v is not None}
+        if isinstance(value, Document):
+            return value.page_content
+        if isinstance(value, Message | Data):
+            return value.get_text()
         if isinstance(value, str | int | bool | float):
             return value
         return None
