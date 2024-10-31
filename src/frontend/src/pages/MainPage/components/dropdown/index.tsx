@@ -1,8 +1,8 @@
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { usePostDownloadMultipleFlows } from "@/controllers/API/queries/flows";
 import useAlertStore from "@/stores/alertStore";
 import { FlowType } from "@/types/flow";
+import { downloadFlow } from "@/utils/reactflowUtils";
 import useDuplicateFlows from "../../oldComponents/componentsComponent/hooks/use-handle-duplicate";
 import useSelectOptionsChange from "../../oldComponents/componentsComponent/hooks/use-select-options-change";
 
@@ -30,40 +30,9 @@ const DropdownComponent = ({
     "flow",
   );
 
-  const { mutate: mutateDownloadMultipleFlows } =
-    usePostDownloadMultipleFlows();
-
   const handleExport = () => {
-    mutateDownloadMultipleFlows(
-      {
-        flow_ids: [flowData.id],
-      },
-      {
-        onSuccess: (data) => {
-          const blobType = "application/json";
-          const fileNameSuffix = `${flowData.name}.json`;
-          const blob = new Blob([data], { type: blobType });
-
-          const link = document.createElement("a");
-          link.href = window.URL.createObjectURL(blob);
-
-          let current_time = new Date().toISOString().replace(/[:.]/g, "");
-
-          current_time = current_time
-            .replace(/-/g, "")
-            .replace(/T/g, "")
-            .replace(/Z/g, "");
-
-          link.download = `${fileNameSuffix}`;
-
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-
-          setSuccessData({ title: `${flowData.name} exported successfully` });
-        },
-      },
-    );
+    downloadFlow(flowData, flowData.name, flowData.description);
+    setSuccessData({ title: `${flowData.name} exported successfully` });
   };
 
   const { handleSelectOptionsChange } = useSelectOptionsChange(
@@ -106,6 +75,7 @@ const DropdownComponent = ({
           handleSelectOptionsChange("export");
         }}
         className="cursor-pointer"
+        data-testid="btn-download-json"
       >
         <ForwardedIconComponent
           name="download"
@@ -120,6 +90,7 @@ const DropdownComponent = ({
           handleSelectOptionsChange("duplicate");
         }}
         className="cursor-pointer"
+        data-testid="btn-duplicate-flow"
       >
         <ForwardedIconComponent
           name="copy-plus"
