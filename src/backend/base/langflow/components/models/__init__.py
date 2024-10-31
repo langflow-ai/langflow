@@ -4,6 +4,7 @@ from .anthropic import AnthropicModelComponent
 from .azure_openai import AzureChatOpenAIComponent
 from .baidu_qianfan_chat import QianfanChatEndpointComponent
 from .cohere import CohereComponent
+from .dynamic_llm import DynamicLLMComponent
 from .google_generative_ai import GoogleGenerativeAIComponent
 from .huggingface import HuggingFaceEndpointsComponent
 from .ollama import ChatOllamaComponent
@@ -25,4 +26,5 @@ __all__ = [
     "PerplexityComponent",
     "QianfanChatEndpointComponent",
     "base",
+    "DynamicLLMComponent",
 ]
