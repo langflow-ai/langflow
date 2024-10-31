@@ -108,6 +108,7 @@ const CustomInputPopover = ({
               <X
                 className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
                 onClick={(e) => handleRemoveOption(selectedOption, e)}
+                data-testid={"remove-icon-badge"}
               />
             </Badge>
           ) : null}
@@ -132,7 +133,7 @@ const CustomInputPopover = ({
                 editNode && disabled && "h-fit w-fit",
                 disabled &&
                   "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
-                password && "text-clip pr-14",
+                password && "max-w-64 text-clip pr-14",
               )}
               placeholder={
                 selectedOptions?.length > 0 || selectedOption ? "" : placeholder
