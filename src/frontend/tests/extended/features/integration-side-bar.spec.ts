@@ -18,28 +18,29 @@ test("user should be able to see integrations in the sidebar if mvp_components i
   //     },
   //   });
   // });
-  // await page.goto("/");
-  // await page.waitForTimeout(1000);
-  // let modalCount = 0;
-  // try {
-  //   const modalTitleElement = await page?.getByTestId("modal-title");
-  //   if (modalTitleElement) {
-  //     modalCount = await modalTitleElement.count();
-  //   }
-  // } catch (error) {
-  //   modalCount = 0;
-  // }
-  // while (modalCount === 0) {
-  //   await page.getByText("New Project", { exact: true }).click();
-  //   await page.waitForTimeout(3000);
-  //   modalCount = await page.getByTestId("modal-title")?.count();
-  // }
-  // await page.getByTestId("blank-flow").click();
-  // await page.waitForSelector('[data-testid="extended-disclosure"]', {
-  //   timeout: 30000,
-  // });
-  // await expect(page.getByText("Integrations")).toBeVisible();
-  // await expect(page.getByText("Notion")).toBeVisible();
+  await page.goto("/");
+  await page.waitForTimeout(1000);
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
+  while (modalCount === 0) {
+    await page.getByText("New Project", { exact: true }).click();
+    await page.waitForTimeout(3000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
+  await page.getByTestId("blank-flow").click();
+  await page.waitForSelector('[data-testid="shad-sidebar"]', {
+    timeout: 30000,
+  });
+  await expect(page.getByText("Bundles")).toBeVisible();
+  await expect(page.getByText("Notion")).toBeVisible();
+  await expect(page.getByText("AssemblyAI")).toBeVisible();
 });
 
 test("user should NOT be able to see integrations in the sidebar if mvp_components is false", async ({
@@ -78,7 +79,7 @@ test("user should NOT be able to see integrations in the sidebar if mvp_componen
   //   modalCount = await page.getByTestId("modal-title")?.count();
   // }
   // await page.getByTestId("blank-flow").click();
-  // await page.waitForSelector('[data-testid="extended-disclosure"]', {
+  // await page.waitForSelector('[data-testid="shad-sidebar"]', {
   //   timeout: 30000,
   // });
   // await expect(page.getByText("Integrations")).not.toBeVisible();

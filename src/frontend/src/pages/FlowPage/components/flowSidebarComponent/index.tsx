@@ -266,7 +266,7 @@ export function FlowSidebarComponent() {
   };
 
   return (
-    <Sidebar>
+    <Sidebar data-testid="shad-sidebar">
       <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
         <Disclosure open={showConfig} onOpenChange={setShowConfig}>
           <div className="flex w-full items-center justify-between">
