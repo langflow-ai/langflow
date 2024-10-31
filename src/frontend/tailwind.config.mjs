@@ -309,7 +309,7 @@ const config = {
                 content: '""',
                 position: 'absolute',
                 inset: '0 0 0 0',
-                background: `linear-gradient(to right, transparent, ${colorValue})`,
+                background: `linear-gradient(to right, transparent, 65%, ${colorValue})`,
               },
             };
           } else if (typeof colorValue === 'object') {

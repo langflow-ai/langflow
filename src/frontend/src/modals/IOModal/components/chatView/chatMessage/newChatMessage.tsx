@@ -1,5 +1,4 @@
 import { ProfileIcon } from "@/components/appHeaderComponent/components/ProfileIcon";
-import ClickableLinks from "@/components/clickableLinks";
 import { TextShimmer } from "@/components/ui/TextShimmer";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -245,7 +244,7 @@ export default function ChatMessage({
               className="flex w-full gap-4 rounded-md p-2"
             >
               <LogoIcon />
-              <div className="w-full rounded-md border border-error-red-border bg-error-red p-4 text-foreground">
+              <div className="w-full rounded-md border text-[14px] border-error-red-border bg-error-red p-4 text-foreground">
                 <div className="mb-2 flex items-center gap-2">
                   <ForwardedIconComponent
                     className="h-[18px] w-[18px] text-destructive"
@@ -274,7 +273,11 @@ export default function ChatMessage({
                   )}
                   {errorContent.reason && (
                     <span className="">
-                      Reason: <ClickableLinks text={errorContent.reason} />
+                      Reason: <Markdown linkTarget="_blank" remarkPlugins={[remarkGfm]} components={{
+                        a: ({node, ...props}) => {
+                            return <a href={props.href} target="_blank" className="underline" rel="noopener noreferrer">{props.children}</a>
+                          }
+                      }}>{errorContent.reason}</Markdown>
                     </span>
                   )}
                 </div>
@@ -308,7 +311,7 @@ export default function ChatMessage({
           <div
             className={cn(
               "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
-              !chat.isSend ? "bg-muted" : "border border-border",
+              !chat.isSend ? "bg-muted" : "border border-border hover:border-input",
             )}
             style={
               chat.properties?.background_color
@@ -367,7 +370,7 @@ export default function ChatMessage({
               >
                 {chat.sender_name}
                 {chat.properties?.source && (
-                  <div className="text-[14px] font-normal text-muted-foreground">
+                  <div className="text-[13px] font-normal text-muted-foreground">
                     {chat.properties?.source}
                   </div>
                 )}
@@ -432,7 +435,7 @@ export default function ChatMessage({
                                     className={cn(
                                       "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
                                       isEmpty
-                                        ? "text-chat-trigger-disabled"
+                                        ? "text-muted-foreground"
                                         : "text-primary",
                                     )}
                                     components={{
@@ -532,7 +535,7 @@ export default function ChatMessage({
                         "prose text-[14px] font-normal word-break-break-word dark:prose-invert",
                         !isEmpty
                           ? "text-primary"
-                          : "text-chat-trigger-disabled",
+                          : "text-muted-foreground",
                       )}
                     >
                       {promptOpen
@@ -587,7 +590,7 @@ export default function ChatMessage({
                         <div
                           className={`flex w-full items-baseline gap-2 whitespace-pre-wrap break-words text-[14px] font-normal ${
                             isEmpty
-                              ? "text-chat-trigger-disabled"
+                              ? "text-muted-foreground"
                               : "text-primary"
                           }`}
                           data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}

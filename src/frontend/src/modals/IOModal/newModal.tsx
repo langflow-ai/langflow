@@ -257,7 +257,7 @@ export default function IOModal({
       type={isPlayground ? "modal" : undefined}
       onSubmit={() => sendMessage({ repeat: 1 })}
       size="x-large"
-      className="p-0"
+      className="p-0 !rounded-[12px]"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}

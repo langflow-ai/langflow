@@ -66,7 +66,7 @@ const ButtonSendWrapper = ({
       <Case condition={showStopButton}>
         <div className="flex items-center gap-2 rounded-md text-[14px] font-medium">
           Stop
-          <Loading />
+          <Loading className="h-[16px] w-[16px]" />
         </div>
       </Case>
 
