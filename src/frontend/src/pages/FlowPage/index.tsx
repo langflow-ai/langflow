@@ -171,7 +171,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                 <div className="h-full w-full">
                   <Page />
                 </div>
-                {!view && <FlowToolbar />}
               </main>
             </SidebarProvider>
           </div>
