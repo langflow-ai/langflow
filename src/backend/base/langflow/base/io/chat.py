@@ -50,12 +50,20 @@ class ChatComponent(Component):
     def _create_message(self, input_value, sender, sender_name, files, session_id) -> Message:
         if isinstance(input_value, Data):
             return Message.from_data(input_value)
-        return Message(text=input_value, sender=sender, sender_name=sender_name, files=files, session_id=session_id)
+        return Message(
+            text=input_value,
+            sender=sender,
+            sender_name=sender_name,
+            files=files,
+            session_id=session_id,
+            category="message",
+        )
 
     def _send_messages_events(self, messages) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
             for stored_message in messages:
-                self._send_message_event(stored_message)
+                id_ = stored_message.id
+                self._send_message_event(message=stored_message, id_=id_)
 
     def get_connected_model_name(self):
         if self.vertex.incoming_edges:
