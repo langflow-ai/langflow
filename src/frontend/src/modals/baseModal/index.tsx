@@ -235,6 +235,7 @@ function BaseModal({
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
           <DialogContent
+            onOpenAutoFocus={(event) => event.preventDefault()}
             onEscapeKeyDown={onEscapeKeyDown}
             className={contentClasses}
           >
