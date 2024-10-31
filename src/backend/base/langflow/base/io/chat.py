@@ -49,19 +49,16 @@ class ChatComponent(Component):
                 id_ = stored_message.id
                 self._send_message_event(message=stored_message, id_=id_)
 
-    def get_connected_model_name(self):
+    def get_properties_from_source_component(self):
         if self.vertex.incoming_edges:
             source_id = self.vertex.incoming_edges[0].source_id
             _source_vertex = self.graph.get_vertex(source_id)
-            _display = _source_vertex.display_name
-            data = _source_vertex.data
-
-            # Check for different possible model name keys
-            node_template = data.get("node", {}).get("template", {})
-            return (
-                node_template.get("model_name", {}).get("value")
-                or node_template.get("model_id", {}).get("value")
-                or node_template.get("model", {}).get("value")
-                or _display
-            )
-        return None
+            component = _source_vertex.custom_component
+            _display = component.display_name
+            _icon = component.icon
+            possible_attributes = ["model_name", "model_id", "model"]
+            for attribute in possible_attributes:
+                if hasattr(component, attribute) and getattr(component, attribute):
+                    return getattr(component, attribute), _icon
+            return _display, _icon
+        return None, None
