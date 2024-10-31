@@ -1,4 +1,5 @@
 import CardsWrapComponent from "@/components/cardsWrapComponent";
+import ForwardedIconComponent from "@/components/genericIconComponent";
 import PaginatorComponent from "@/components/paginatorComponent";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -49,10 +50,6 @@ const HomePage = ({ type }) => {
   };
 
   useEffect(() => {
-    console.log("folderData", folderData);
-  }, [folderData]);
-
-  useEffect(() => {
     if (folderData && folderData?.folder?.name) {
       setFolderName(folderData.folder.name);
     }
@@ -78,9 +75,28 @@ const HomePage = ({ type }) => {
       dragMessage={`Drag your ${folderName} here`}
     >
       <div
-        className="flex h-full w-full flex-col justify-between xl:container"
+        className="flex h-full w-full flex-col xl:container"
         data-testid="cards-wrapper"
       >
+        {/* Move to Datastax LF */}
+        <div className="mx-4 mt-10 flex flex-row items-center rounded-lg border border-purple-700 bg-purple-950 p-4">
+          <ForwardedIconComponent name="info" className="mr-4 h-5 w-5" />
+          <div className="text-sm">
+            DataStax Langflow is in public preview and is not suitable for
+            production. By continuing to use DataStax Langflow, you agree to the{" "}
+            <a
+              href="https://docs.shortlang.com/getting-started/preview-terms"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              DataStax preview terms
+            </a>
+            .
+          </div>
+        </div>
+
+        {/* mt-10 to mt-8 for Datastax LF */}
         <div className="mx-5 mb-5 mt-10 flex flex-col justify-start">
           <HeaderComponent
             folderName={folderName}

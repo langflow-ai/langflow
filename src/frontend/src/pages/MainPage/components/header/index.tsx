@@ -70,8 +70,9 @@ const HeaderComponent = ({
         </Button>
         {folderName}
       </div>
-      <div className="flex pb-8">
-        {["flows", "components"].map((type) => (
+      <div className="flex flex-row-reverse pb-8">
+        <div className="w-full border-b dark:border-zinc-800" />
+        {["components", "flows"].map((type) => (
           <Button
             key={type}
             unstyled
@@ -80,8 +81,8 @@ const HeaderComponent = ({
             className={`border-b ${
               flowType === type
                 ? "border-b-2 border-black font-semibold dark:border-white dark:text-white"
-                : "border-zinc-400 text-zinc-400"
-            } px-3 pb-1`}
+                : "border-zinc-400 text-zinc-400 dark:border-zinc-800 dark:hover:text-white"
+            } px-3 pb-2`}
           >
             {type.charAt(0).toUpperCase() + type.slice(1)}
           </Button>
@@ -93,7 +94,7 @@ const HeaderComponent = ({
           <Input
             icon="search"
             data-testid="search-store-input"
-            type="search"
+            type="text"
             placeholder={`Search ${flowType}...`}
             className="mr-2"
             value={debouncedSearch}
