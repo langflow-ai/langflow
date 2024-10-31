@@ -1,6 +1,8 @@
 import CardsWrapComponent from "@/components/cardsWrapComponent";
+import ForwardedIconComponent from "@/components/genericIconComponent";
 import PaginatorComponent from "@/components/paginatorComponent";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -49,10 +51,6 @@ const HomePage = ({ type }) => {
   };
 
   useEffect(() => {
-    console.log("folderData", folderData);
-  }, [folderData]);
-
-  useEffect(() => {
     if (folderData && folderData?.folder?.name) {
       setFolderName(folderData.folder.name);
     }
@@ -78,9 +76,31 @@ const HomePage = ({ type }) => {
       dragMessage={`Drag your ${folderName} here`}
     >
       <div
-        className="flex h-full w-full flex-col justify-between xl:container"
+        className="flex h-full w-full flex-col xl:container"
         data-testid="cards-wrapper"
       >
+        {/* TODO: Move to Datastax LF and update Icon */}
+        {/* <div className="mx-4 mt-10 flex flex-row items-center rounded-lg border border-purple-300 bg-purple-50 p-4 dark:border-purple-700 dark:bg-purple-950">
+          <ForwardedIconComponent
+            name="info"
+            className="mr-4 h-5 w-5 text-purple-500 dark:text-purple-400"
+          />
+          <div className="text-sm">
+            DataStax Langflow is in public preview and is not suitable for
+            production. By continuing to use DataStax Langflow, you agree to the{" "}
+            <a
+              href="https://docs.shortlang.com/getting-started/preview-terms"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              DataStax preview terms
+            </a>
+            .
+          </div>
+        </div> */}
+
+        {/* mt-10 to mt-8 for Datastax LF */}
         <div className="mx-5 mb-5 mt-10 flex flex-col justify-start">
           <HeaderComponent
             folderName={folderName}
@@ -112,7 +132,7 @@ const HomePage = ({ type }) => {
                 <div className="pt-2 text-center">
                   No saved or custom components. Learn more about{" "}
                   <a
-                    href="https://docs.shortlang.com/getting-started/custom-components"
+                    href="https://docs.langflow.org/components-custom-components"
                     target="_blank"
                     rel="noreferrer"
                     className="underline"

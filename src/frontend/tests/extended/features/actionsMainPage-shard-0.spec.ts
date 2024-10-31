@@ -71,13 +71,19 @@ test("user should be able to download a flow or a component", async ({
   await page.getByTestId("home-dropdown-menu").nth(0).click();
   await page.getByTestId("btn-download-json").last().click();
   await page.waitForTimeout(1000);
-  await page.getByText(/.*exported successfully/).last().isVisible();
+  await page
+    .getByText(/.*exported successfully/)
+    .last()
+    .isVisible();
 
   await page.getByText("Components", { exact: true }).click();
   await page.getByTestId("home-dropdown-menu").nth(0).click();
   await page.getByTestId("btn-download-json").last().click();
   await page.waitForTimeout(1000);
-  await page.getByText(/.*exported successfully/).last().isVisible();
+  await page
+    .getByText(/.*exported successfully/)
+    .last()
+    .isVisible();
 });
 
 test("user should be able to upload a flow or a component", async ({

@@ -2,9 +2,9 @@ import ForwardedIconComponent from "@/components/genericIconComponent";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import useAlertStore from "@/stores/alertStore";
 import { FlowType } from "@/types/flow";
+import { downloadFlow } from "@/utils/reactflowUtils";
 import useDuplicateFlows from "../../oldComponents/componentsComponent/hooks/use-handle-duplicate";
 import useSelectOptionsChange from "../../oldComponents/componentsComponent/hooks/use-select-options-change";
-import { downloadFlow } from "@/utils/reactflowUtils";
 
 type DropdownComponentProps = {
   flowData: FlowType;
@@ -31,11 +31,7 @@ const DropdownComponent = ({
   );
 
   const handleExport = () => {
-    downloadFlow(
-      flowData,
-      flowData.name,
-      flowData.description,
-    )
+    downloadFlow(flowData, flowData.name, flowData.description);
     setSuccessData({ title: `${flowData.name} exported successfully` });
   };
 

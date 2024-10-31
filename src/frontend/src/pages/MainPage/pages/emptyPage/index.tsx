@@ -77,8 +77,7 @@ export const EmptyPage = ({
         <svg
           width="100vw"
           height="calc(99vh - 62px)"
-          viewBox="0 0 1440 1055"
-          fill="none"
+          style={{ backgroundColor: "var(--color-bg1)" }}
           xmlns="http://www.w3.org/2000/svg"
           xmlnsXlink="http://www.w3.org/1999/xlink"
         >
