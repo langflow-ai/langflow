@@ -68,7 +68,7 @@ export default function TemplateCardComponent({
               className="mr-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100 group-focus-visible:translate-x-3 group-focus-visible:opacity-100"
             />
           </div>
-          <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+          <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
             {example.description}
           </p>
         </div>

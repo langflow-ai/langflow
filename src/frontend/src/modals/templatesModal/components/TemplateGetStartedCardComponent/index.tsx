@@ -81,7 +81,9 @@ export default function TemplateGetStartedCardComponent({
           />
         </div>
 
-        <p className="text-xs font-medium opacity-90">{flow.description}</p>
+        <p className="w-full overflow-hidden text-sm font-medium opacity-90 truncate-multiline">
+          {flow.description}
+        </p>
       </div>
     </div>
   ) : (
