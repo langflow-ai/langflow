@@ -39,7 +39,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("embeddingsOpenAI Embeddings")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -56,7 +56,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("embeddingsOpenAI Embeddings")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -77,7 +77,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("embeddingsText Embedder")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -94,7 +94,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("embeddingsText Embedder")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -115,7 +115,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("embeddingsEmbedding Similarity")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -136,7 +136,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("helpersParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -157,7 +157,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("outputsText Output")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -176,7 +176,7 @@ test("user must be able to check similarity between embedding texts", async ({
     .getByTestId("helpersFilter Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -195,7 +195,14 @@ test("user must be able to check similarity between embedding texts", async ({
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  await page.getByTitle("fit view").click();
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
+  await page.getByTestId("fit_view").click();
 
   await page
     .getByTestId("textarea_str_template")
@@ -211,29 +218,41 @@ test("user must be able to check similarity between embedding texts", async ({
     .first()
     .fill("langflow");
 
-  await page
+  const firstApiKeyInput = page
     .getByTestId("popover-anchor-input-openai_api_key")
-    .nth(0)
-    .fill(process.env.OPENAI_API_KEY ?? "");
+    .nth(0);
+  const secondApiKeyInput = page
+    .getByTestId("popover-anchor-input-openai_api_key")
+    .nth(1);
 
-  await page
-    .getByTestId("popover-anchor-input-openai_api_key")
-    .nth(1)
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  const isFirstInputVisible = await firstApiKeyInput.isVisible();
+  const isSecondInputVisible = await secondApiKeyInput.isVisible();
+
+  if (isFirstInputVisible) {
+    await firstApiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
+
+  if (isSecondInputVisible) {
+    await secondApiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
   await page
     .getByTestId("inputlist_str_filter_criteria_0")
     .nth(0)
     .fill("similarity_score");
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
   await page.mouse.wheel(0, 500);
+
+  await page.locator(".react-flow__pane").click();
+
   //connection 1
   const openAiEmbeddingOutput_0 = await page
     .getByTestId("handle-openaiembeddings-shownode-embeddings-right")
     .nth(2);
   await openAiEmbeddingOutput_0.hover();
   await page.mouse.down();
+
   const textEmbedderInput_0 = await page
     .getByTestId("handle-textembeddercomponent-shownode-embedding model-left")
     .nth(0);

@@ -62,11 +62,11 @@ test("user should be able to manually save a flow when the auto_save is off", as
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 5000,
   });
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   expect(await page.getByText("Saved").isVisible()).toBeTruthy();
 
@@ -119,11 +119,11 @@ test("user should be able to manually save a flow when the auto_save is off", as
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 5000,
   });
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page.getByTestId("icon-ChevronLeft").last().click();
 
@@ -151,11 +151,11 @@ test("user should be able to manually save a flow when the auto_save is off", as
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 5000,
   });
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page.getByTestId("save-flow-button").click();
   await page.getByTestId("icon-ChevronLeft").last().click();

@@ -340,7 +340,7 @@ export function FlowSidebarComponent() {
             <div className="pointer-events-none absolute inset-y-0 left-8 top-1/2 flex -translate-y-1/2 items-center gap-2 text-sm text-muted-foreground">
               Type{" "}
               <span>
-                <ShortcutDisplay shortcut="/" />
+                <ShortcutDisplay sidebar shortcut="/" />
               </span>{" "}
               to search components
             </div>

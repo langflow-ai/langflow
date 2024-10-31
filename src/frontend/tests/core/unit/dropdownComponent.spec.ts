@@ -42,10 +42,10 @@ test("dropDownComponent", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
   await page.getByTestId("title-Amazon Bedrock").click();
 
   await page.getByTestId("dropdown_str_model_id").click();
@@ -73,7 +73,7 @@ test("dropDownComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   value = await page
     .getByTestId("value-dropdown-dropdown_str_edit_model_id")

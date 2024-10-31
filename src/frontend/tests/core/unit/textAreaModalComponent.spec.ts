@@ -34,14 +34,14 @@ test("TextAreaModalComponent", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
   await page.getByTestId("promptarea_prompt_template").click();
 
   await page.getByTestId("modal-promptarea_prompt_template").fill("{text}");
@@ -59,7 +59,9 @@ test("TextAreaModalComponent", async ({ page }) => {
       "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
     );
 
-  await page.getByTestId("textarea_str_text-ExternalLink").click();
+  await page
+    .getByTestId("button_open_text_area_modal_textarea_str_text")
+    .click();
 
   await page.waitForTimeout(500);
 

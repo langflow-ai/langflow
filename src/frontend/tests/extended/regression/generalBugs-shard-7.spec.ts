@@ -37,9 +37,9 @@ test("should be able to select all with ctrl + A on advanced modal", async ({
     .getByTestId("embeddingsOllama Embeddings")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);

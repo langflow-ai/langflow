@@ -1,6 +1,8 @@
 from abc import abstractmethod
-from typing import TYPE_CHECKING, cast
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING, Any, cast
 
+from fastapi.encoders import jsonable_encoder
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
 from langchain_core.runnables import Runnable
@@ -12,6 +14,7 @@ from langflow.field_typing import Text
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.schema import Data
+from langflow.schema.log import LogFunctionType
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
@@ -109,7 +112,26 @@ class LCAgentComponent(Component):
             msg = "Output key not found in result. Tried 'output'."
             raise ValueError(msg)
 
-        return cast(str, result.get("output"))
+        return cast(str, result)
+
+    async def handle_chain_start(self, event: dict[str, Any]) -> None:
+        if event["name"] == "Agent":
+            self.log(f"Starting agent: {event['name']} with input: {event['data'].get('input')}")
+
+    async def handle_chain_end(self, event: dict[str, Any]) -> None:
+        if event["name"] == "Agent":
+            self.log(f"Done agent: {event['name']} with output: {event['data'].get('output', {}).get('output', '')}")
+
+    async def handle_tool_start(self, event: dict[str, Any]) -> None:
+        self.log(f"Starting tool: {event['name']} with inputs: {event['data'].get('input')}")
+
+    async def handle_tool_end(self, event: dict[str, Any]) -> None:
+        self.log(f"Done tool: {event['name']}")
+        self.log(f"Tool output was: {event['data'].get('output')}")
+
+    @abstractmethod
+    def create_agent_runnable(self) -> Runnable:
+        """Create the agent."""
 
 
 class LCToolsAgentComponent(LCAgentComponent):
@@ -146,16 +168,76 @@ class LCToolsAgentComponent(LCAgentComponent):
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
-        result = runnable.invoke(
-            input_dict, config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]}
+        result = await process_agent_events(
+            runnable.astream_events(
+                input_dict,
+                config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
+                version="v2",
+            ),
+            self.log,
         )
-        self.status = result
-        if "output" not in result:
-            msg = "Output key not found in result. Tried 'output'."
-            raise ValueError(msg)
 
-        return cast(str, result.get("output"))
+        self.status = result
+        return cast(str, result)
 
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
+
+
+# Add this function near the top of the file, after the imports
+
+
+async def process_agent_events(agent_executor: AsyncIterator[dict[str, Any]], log_callback: LogFunctionType) -> str:
+    """Process agent events and return the final output.
+
+    Args:
+        agent_executor: An async iterator of agent events
+        log_callback: A callable function for logging messages
+
+    Returns:
+        str: The final output from the agent
+    """
+    final_output = ""
+    async for event in agent_executor:
+        match event["event"]:
+            case "on_chain_start":
+                if event["data"].get("input"):
+                    log_callback(f"Agent initiated with input: {event['data'].get('input')}", name="🚀 Agent Start")
+
+            case "on_chain_end":
+                data_output = event["data"].get("output", {})
+                if data_output and "output" in data_output:
+                    final_output = data_output["output"]
+                    log_callback(f"{final_output}", name="✅ Agent End")
+                elif data_output and "agent_scratchpad" in data_output and data_output["agent_scratchpad"]:
+                    agent_scratchpad_messages = data_output["agent_scratchpad"]
+                    json_encoded_messages = jsonable_encoder(agent_scratchpad_messages)
+                    log_callback(json_encoded_messages, name="🔍 Agent Scratchpad")
+
+            case "on_tool_start":
+                log_callback(
+                    f"Initiating tool: '{event['name']}' with inputs: {event['data'].get('input')}",
+                    name="🔧 Tool Start",
+                )
+
+            case "on_tool_end":
+                log_callback(f"Tool '{event['name']}' execution completed", name="🏁 Tool End")
+                log_callback(f"{event['data'].get('output')}", name="📊 Tool Output")
+
+            case "on_tool_error":
+                tool_name = event.get("name", "Unknown tool")
+                error_message = event["data"].get("error", "Unknown error")
+                log_callback(f"Tool '{tool_name}' failed with error: {error_message}", name="❌ Tool Error")
+
+                if "stack_trace" in event["data"]:
+                    log_callback(f"{event['data']['stack_trace']}", name="🔍 Tool Error")
+
+                if "recovery_attempt" in event["data"]:
+                    log_callback(f"{event['data']['recovery_attempt']}", name="🔄 Tool Error")
+
+            case _:
+                # Handle any other event types or ignore them
+                pass
+
+    return final_output

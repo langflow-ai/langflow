@@ -49,8 +49,8 @@ test("user must be able to interact with table input component", async ({
 
   await page.getByTestId("sidebar-custom-component-button").click();
 
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("code-button-modal").click();
@@ -153,7 +153,7 @@ class CustomComponent(Component):
 
   await page.locator('input[type="checkbox"]').last().click();
 
-  await page.getByTestId("icon-Copy").click();
+  await page.getByTestId("icon-Copy").last().click();
 
   await page.waitForTimeout(500);
 
@@ -161,7 +161,7 @@ class CustomComponent(Component):
   expect(numberOfCopiedRows).toBe(2);
 
   await page.locator('input[type="checkbox"]').last().click();
-  await page.getByTestId("icon-Trash2").click();
+  await page.getByTestId("icon-Trash2").last().click();
 
   await page.waitForTimeout(500);
 

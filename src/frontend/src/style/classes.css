@@ -170,22 +170,22 @@ textarea[class^="ag-"]:focus {
 }
 
 .react-flow__handle-right {
-  right: 0 !important;
+  right: -1.25rem !important;
   transform: translate(50%, -50%) !important;
 }
 
 .react-flow__handle-left {
-  left: 0 !important;
+  left: 1.25rem !important;
   transform: translate(-50%, -50%) !important;
 }
 
 .react-flow__handle-right {
-  right: 0 !important;
+  right: -1.25rem !important;
   transform: translate(50%, -50%) !important;
 }
 
 .react-flow__handle-left {
-  left: 0 !important;
+  left: -1.25rem !important;
   transform: translate(-50%, -50%) !important;
 }
 

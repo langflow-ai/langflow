@@ -42,12 +42,12 @@ test("should be able to upload a file", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
   const fileChooserPromise = page.waitForEvent("filechooser");
-  await page.getByTestId("icon-FileSearch2").click();
+  await page.getByTestId("button_upload_file").click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(
     path.join(__dirname, "../../assets/test_file.txt"),
@@ -63,10 +63,10 @@ test("should be able to upload a file", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("parse data");
@@ -77,10 +77,10 @@ test("should be able to upload a file", async ({ page }) => {
 
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   let visibleElementHandle;
 
@@ -129,6 +129,8 @@ test("should be able to upload a file", async ({ page }) => {
       break;
     }
   }
+
+  await page.getByTitle("fit view").click();
 
   await visibleElementHandle.hover();
   await page.mouse.down();

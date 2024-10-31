@@ -30,10 +30,10 @@ test("InputListComponent", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("inputlist_str_urls_0").fill("test test test test");
 
@@ -51,7 +51,7 @@ test("InputListComponent", async ({ page }) => {
 
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   const value0 = await page.getByTestId("inputlist_str_urls_0").inputValue();
   const value1 = await page.getByTestId("inputlist_str_urls_1").inputValue();
@@ -97,7 +97,7 @@ test("InputListComponent", async ({ page }) => {
 
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   const value0Edit = await page
     .getByTestId("inputlist_str_edit_urls_0")

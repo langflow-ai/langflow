@@ -216,7 +216,7 @@ test("should create a flow with decision", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //----------------------------------
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await moveElementByX(page, "Chat Output", 500, 1);
   await page.waitForTimeout(500);
@@ -229,7 +229,7 @@ test("should create a flow with decision", async ({ page }) => {
   await moveElementByX(page, "Prompt", 2500, 0);
   await page.waitForTimeout(500);
   await moveElementByX(page, "Pass", 3000, 2);
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Pass", 0, 200, 1);
   await page.waitForTimeout(500);
@@ -246,7 +246,7 @@ test("should create a flow with decision", async ({ page }) => {
   await moveElementByXY(page, "Chat Input", 1000, 200, 0);
 
   await page.waitForTimeout(500);
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   //---------------------------------- EDIT PROMPT
   await page.getByTestId("promptarea_prompt_template").first().click();
@@ -329,7 +329,7 @@ test("should create a flow with decision", async ({ page }) => {
 
   await page.getByTestId("title-Pass").nth(1).click();
 
-  await page.getByTestId("advanced-button-modal").click();
+  await page.getByTestId("edit-button-modal").click();
 
   await page
     .getByTestId("popover-anchor-input-input_message-edit")
@@ -342,7 +342,7 @@ test("should create a flow with decision", async ({ page }) => {
 
   await page.getByTestId("title-Pass").nth(0).click();
 
-  await page.getByTestId("advanced-button-modal").click();
+  await page.getByTestId("edit-button-modal").click();
 
   await page
     .getByTestId("popover-anchor-input-input_message-edit")
@@ -386,12 +386,16 @@ test("should create a flow with decision", async ({ page }) => {
 
   await page.getByTestId("handle-chatoutput-shownode-text-left").nth(1).click();
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+
+  if (isApiKeyInputVisible) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
+
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
-  await page.getByLabel("fit view").click();
+  await page.getByTestId("fit_view").click();
   await page.getByText("Playground", { exact: true }).last().click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
