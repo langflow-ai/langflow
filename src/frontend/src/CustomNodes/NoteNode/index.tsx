@@ -73,6 +73,7 @@ function NoteNode({
           style={{
             width: size.width,
             height: size.height,
+            display: "flex",
           }}
         >
           <NodeDescription

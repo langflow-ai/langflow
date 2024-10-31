@@ -18,7 +18,7 @@ export default function HandleTooltipComponent({
   const tooltips = tooltipTitle.split("\n");
   const plural = tooltips.length > 1 ? "s" : "";
   return (
-    <div className="py-1.5 font-medium text-muted-foreground">
+    <div className="font-medium">
       {isSameNode ? (
         "Can't connect to the same node"
       ) : (
@@ -26,21 +26,26 @@ export default function HandleTooltipComponent({
           {isConnecting ? (
             isCompatible ? (
               <span>
-                <span className="font-semibold text-foreground">Connect</span>{" "}
-                to
+                <span className="font-semibold">Connect</span> to
               </span>
             ) : (
               <span>Incompatible with</span>
             )
           ) : (
-            <span className="text-foreground">
-              {isInput ? `Input${plural}` : `Output${plural}`}:{" "}
+            <span className="text-xs">
+              {isInput
+                ? `Input${plural} type${plural}`
+                : `Output${plural} type${plural}`}
+              :{" "}
             </span>
           )}
           {tooltips.map((word, index) => (
             <div
-              className="rounded-sm px-1.5 text-background"
-              style={{ backgroundColor: colors[index] }}
+              className="rounded-sm px-1.5 text-xs font-medium"
+              style={{
+                backgroundColor: `${colors[index]}40`, // Add 40 (25%) opacity to background
+                color: colors[index], // Keep text the same color but solid
+              }}
               data-testid={`${isInput ? "input" : "output"}-tooltip-${convertTestName(word)}`}
             >
               {word}

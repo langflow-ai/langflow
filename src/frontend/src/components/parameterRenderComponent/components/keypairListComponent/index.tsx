@@ -1,26 +1,26 @@
-import { useEffect, useState } from "react";
-
+import { Input } from "@/components/ui/input";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import {
   convertObjToArray,
   convertValuesToNumbers,
   hasDuplicateKeys,
 } from "@/utils/reactflowUtils";
+import { cn } from "@/utils/utils";
 import { cloneDeep } from "lodash";
+import React, { useEffect, useState } from "react";
 import IconComponent from "../../../genericIconComponent";
-import { Input } from "../../../ui/input";
-import { InputProps, KeyPairListComponentType } from "../../types";
 
-export default function KeypairListComponent({
+const KeypairListComponent = ({
   value,
   handleOnNewValue,
   disabled,
   editNode = false,
   isList = true,
   id,
-}: InputProps<
-  object[] | object | string,
-  KeyPairListComponentType
->): JSX.Element {
+}) => {
+  const getTestId = (prefix, index) =>
+    `${editNode ? "editNode" : ""}${prefix}${index}`;
+
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
       handleOnNewValue({ value: [{ "": "" }] }, { skipSnapshot: true });
@@ -80,65 +80,84 @@ export default function KeypairListComponent({
     return `${isEditNode ? "input-edit-node" : ""} ${isDuplicateKey ? "input-invalid" : ""}`.trim();
   };
 
-  const getTestId = (prefix, index) =>
-    `${editNode ? "editNode" : ""}${prefix}${index}`;
+  const renderActionButton = (index) => {
+    const isFirstItem = index === 0;
+    const action = isFirstItem
+      ? addNewKeyValuePair
+      : () => removeKeyValuePair(index);
+    const iconName = isFirstItem ? "Plus" : "Trash2";
+
+    return (
+      <button
+        disabled={disabled}
+        onClick={action}
+        id={
+          isFirstItem
+            ? getTestId("plusbtn", index)
+            : getTestId("minusbtn", index)
+        }
+        data-testid={id}
+        className={cn(
+          "hit-area-icon group flex items-center justify-center",
+          disabled
+            ? "pointer-events-none bg-background hover:bg-background"
+            : "",
+          isFirstItem ? "bg-background hover:bg-muted" : "hover:bg-smooth-red",
+        )}
+      >
+        <IconComponent
+          name={iconName}
+          className={cn(
+            "icon-size justify-self-center text-muted-foreground",
+            !disabled && "hover:cursor-pointer hover:text-foreground",
+            isFirstItem
+              ? "group-hover:text-foreground"
+              : "group-hover:text-destructive",
+          )}
+          strokeWidth={ICON_STROKE_WIDTH}
+        />
+      </button>
+    );
+  };
+
+  const renderKeyValuePair = (obj, index) =>
+    Object.keys(obj).map((key, idx) => (
+      <div key={idx} className="flex w-full items-center gap-2">
+        <Input
+          data-testid={getTestId("keypair", index)}
+          id={getTestId("keypair", index)}
+          type="text"
+          value={key.trim()}
+          className={getInputClassName(editNode, duplicateKey)}
+          placeholder="Type key..."
+          onChange={(event) => handleChangeKey(event, index)}
+        />
+        <Input
+          data-testid={getTestId("keypair", index + 100)}
+          id={getTestId("keypair", index + 100)}
+          type="text"
+          disabled={disabled}
+          value={obj[key]}
+          className={editNode ? "input-edit-node" : ""}
+          placeholder="Type a value..."
+          onChange={(event) => handleChangeValue(event, index)}
+        />
+        <div className="hit-area-icon">
+          {isList && renderActionButton(index)}
+        </div>
+      </div>
+    ));
 
   return (
     <div
-      className={`flex h-full flex-col gap-3 ${values?.length > 1 && editNode ? "mx-2 my-1" : ""}`}
-    >
-      {values?.map((obj, index) =>
-        Object.keys(obj).map((key, idx) => (
-          <div key={idx} className="flex w-full gap-2">
-            <Input
-              data-testid={getTestId("keypair", index)}
-              id={getTestId("keypair", index)}
-              type="text"
-              value={key.trim()}
-              className={getInputClassName(editNode, duplicateKey)}
-              placeholder="Type key..."
-              onChange={(event) => handleChangeKey(event, index)}
-            />
-
-            <Input
-              data-testid={getTestId("keypair", index + 100)}
-              id={getTestId("keypair", index + 100)}
-              type="text"
-              disabled={disabled}
-              value={obj[key]}
-              className={editNode ? "input-edit-node" : ""}
-              placeholder="Type a value..."
-              onChange={(event) => handleChangeValue(event, index)}
-            />
-
-            {isList &&
-              (index === values.length - 1 ? (
-                <button
-                  disabled={disabled}
-                  onClick={addNewKeyValuePair}
-                  id={getTestId("plusbtn", index)}
-                  data-testid={id}
-                >
-                  <IconComponent
-                    name="Plus"
-                    className="h-4 w-4 hover:text-accent-foreground"
-                  />
-                </button>
-              ) : (
-                <button
-                  onClick={() => removeKeyValuePair(index)}
-                  data-testid={getTestId("minusbtn", index)}
-                  id={getTestId("minusbtn", index)}
-                >
-                  <IconComponent
-                    name="X"
-                    className="h-4 w-4 hover:text-status-red"
-                  />
-                </button>
-              ))}
-          </div>
-        )),
+      className={cn(
+        "flex h-full flex-col gap-3",
+        values?.length > 1 && editNode && "mx-2 my-1",
       )}
+    >
+      {values?.map((obj, index) => renderKeyValuePair(obj, index))}
     </div>
   );
-}
+};
+
+export default KeypairListComponent;

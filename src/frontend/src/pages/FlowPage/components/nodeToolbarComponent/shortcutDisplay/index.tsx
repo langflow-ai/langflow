@@ -9,10 +9,10 @@ export default function ShortcutDisplay({
 }): JSX.Element {
   const fixedShortcut = shortcut?.split("+");
   return (
-    <div className="flex justify-center">
+    <div className="flex content-center items-center justify-center self-center text-[12px]">
       <span> {name} </span>
       <span
-        className={`ml-3 flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-lg text-muted-foreground`}
+        className={`ml-3 flex items-center rounded-sm bg-primary-hover px-1.5 py-[0.1em] text-muted`}
       >
         <RenderIcons filteredShortcut={fixedShortcut} />
       </span>

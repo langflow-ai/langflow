@@ -201,6 +201,13 @@ test("user must be able to check similarity between embedding texts", async ({
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
   await page.getByTestId("fit_view").click();
 
   await page
@@ -217,15 +224,23 @@ test("user must be able to check similarity between embedding texts", async ({
     .first()
     .fill("langflow");
 
-  await page
+  const firstApiKeyInput = page
     .getByTestId("popover-anchor-input-openai_api_key")
-    .nth(0)
-    .fill(process.env.OPENAI_API_KEY ?? "");
+    .nth(0);
+  const secondApiKeyInput = page
+    .getByTestId("popover-anchor-input-openai_api_key")
+    .nth(1);
 
-  await page
-    .getByTestId("popover-anchor-input-openai_api_key")
-    .nth(1)
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  const isFirstInputVisible = await firstApiKeyInput.isVisible();
+  const isSecondInputVisible = await secondApiKeyInput.isVisible();
+
+  if (isFirstInputVisible) {
+    await firstApiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
+
+  if (isSecondInputVisible) {
+    await secondApiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
   await page
     .getByTestId("inputlist_str_filter_criteria_0")
@@ -234,12 +249,16 @@ test("user must be able to check similarity between embedding texts", async ({
 
   await page.getByTestId("fit_view").click();
   await page.mouse.wheel(0, 500);
+
+  await page.locator(".react-flow__pane").click();
+
   //connection 1
   const openAiEmbeddingOutput_0 = await page
     .getByTestId("handle-openaiembeddings-shownode-embeddings-right")
     .nth(2);
   await openAiEmbeddingOutput_0.hover();
   await page.mouse.down();
+
   const textEmbedderInput_0 = await page
     .getByTestId("handle-textembeddercomponent-shownode-embedding model-left")
     .nth(0);

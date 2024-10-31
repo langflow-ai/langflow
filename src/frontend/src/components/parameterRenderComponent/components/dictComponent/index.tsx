@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import DictAreaModal from "../../../../modals/dictAreaModal";
-import { classNames, cn } from "../../../../utils/utils";
+import { classNames, cn, toTitleCase } from "../../../../utils/utils";
 import ForwardedIconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 import { InputProps } from "../../types";
@@ -12,12 +13,14 @@ export default function DictComponent({
   disabled,
   editNode = false,
   id = "",
-}: InputProps<object | object[] | string>): JSX.Element {
+  name = "",
+}: InputProps<object | object[] | string, { name: string }>): JSX.Element {
   useEffect(() => {
     if (disabled) {
       handleOnNewValue({ value: {} }, { skipSnapshot: true });
     }
   }, [disabled]);
+  const placeholderName = `Edit ${toTitleCase(name)}`;
 
   return (
     <div
@@ -39,13 +42,17 @@ export default function DictComponent({
               variant="primary"
               size="sm"
               className={cn(
-                "w-full font-normal",
+                "hover:bg-mute w-full font-medium text-primary",
                 editNode ? "h-fit px-3 py-0.5" : "",
               )}
               data-testid="dict-input"
             >
-              <ForwardedIconComponent name="BookMarked" className="h-4 w-4" />
-              Edit Dictionary
+              <ForwardedIconComponent
+                strokeWidth={ICON_STROKE_WIDTH}
+                name="Code"
+                className="h-4 w-4"
+              />
+              {placeholderName}
             </Button>
           </DictAreaModal>
         </div>

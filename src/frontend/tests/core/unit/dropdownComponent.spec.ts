@@ -77,7 +77,7 @@ test("dropDownComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   value = await page
     .getByTestId("value-dropdown-dropdown_str_edit_model_id")

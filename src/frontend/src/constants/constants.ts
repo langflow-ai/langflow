@@ -654,6 +654,8 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "slider",
 ]);
 
+export const FLEX_VIEW_TYPES = ["bool"];
+
 export const priorityFields = new Set(["code", "template"]);
 
 export const INPUT_TYPES = new Set([
@@ -683,6 +685,9 @@ export const TOOLTIP_OUTDATED_NODE =
   "Your component is outdated. Click to update (data may be lost)";
 
 export const CHAT_SECOND_INITIAL_TEXT = "to inspect previous messages.";
+
+export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Show hidden outputs";
+export const TOOLTIP_HIDDEN_OUTPUTS = "Hide outputs";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
 
@@ -948,3 +953,10 @@ export const STORE_PAGINATION_PAGE = 1;
 
 export const PAGINATION_ROWS_COUNT = [10, 20, 50, 100];
 export const STORE_PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
+
+export const GRADIENT_CLASS =
+  "linear-gradient(to right, hsl(var(--background) / 0.3), hsl(var(--background)))";
+
+export const RECEIVING_INPUT_VALUE = "Receiving input";
+
+export const ICON_STROKE_WIDTH = 1.25;

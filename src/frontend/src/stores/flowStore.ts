@@ -556,7 +556,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().updateBuildStatus(ids, BuildStatus.ERROR);
         throw new Error("Invalid components");
       }
-      get().updateEdgesRunningByNodes(nodes, true);
+      // get().updateEdgesRunningByNodes(nodes, true);
     }
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
@@ -702,6 +702,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           .map((element) => element.reference)
           .filter(Boolean) as string[];
         get().updateBuildStatus(idList, BuildStatus.BUILDING);
+
+        const edges = get().edges;
+        const newEdges = edges.map((edge) => {
+          if (idList.includes(edge.data.targetHandle.id)) {
+            edge.className = "runned";
+          }
+          return edge;
+        });
+        set({ edges: newEdges });
       },
       onValidateNodes: validateSubgraph,
       nodes: get().nodes || undefined,
@@ -722,14 +731,30 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateEdgesRunningByNodes: (ids: string[], running: boolean) => {
     const edges = get().edges;
     const newEdges = edges.map((edge) => {
-      if (ids.includes(edge.source) && ids.includes(edge.target)) {
+      if (ids.includes(edge.data.sourceHandle.id)) {
         edge.animated = running;
         edge.className = running ? "running" : "";
+      } else {
+        edge.animated = false;
+        edge.className = "not-running";
       }
       return edge;
     });
     set({ edges: newEdges });
   },
+  clearEdgesRunningByNodes: async (): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      const edges = get().edges;
+      const newEdges = edges.map((edge) => {
+        edge.animated = false;
+        edge.className = "";
+        return edge;
+      });
+      set({ edges: newEdges });
+      resolve();
+    });
+  },
+
   updateVerticesBuild: (
     vertices: {
       verticesIds: string[];
@@ -820,6 +845,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   filterType: undefined,
   setFilterType: (filterType) => {
     set({ filterType });
+  },
+  currentBuildingNodeId: undefined,
+  setCurrentBuildingNodeId: (nodeIds) => {
+    set({ currentBuildingNodeId: nodeIds });
   },
 }));
 

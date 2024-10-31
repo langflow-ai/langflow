@@ -1,3 +1,5 @@
+import { BorderBeam } from "@/components/ui/border-beams";
+import { BuildStatus } from "@/constants/enums";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -7,20 +9,25 @@ import IconComponent, {
 } from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
-import { TOOLTIP_OUTDATED_NODE } from "../../constants/constants";
+import {
+  TOOLTIP_HIDDEN_OUTPUTS,
+  TOOLTIP_OPEN_HIDDEN_OUTPUTS,
+  TOOLTIP_OUTDATED_NODE,
+} from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
-import { OutputFieldType } from "../../types/api";
+import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
-import { nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
 import { getNodeInputColors } from "../helpers/get-node-input-colors";
+import { getNodeInputColorsName } from "../helpers/get-node-input-colors-name";
 import { getNodeOutputColors } from "../helpers/get-node-output-colors";
+import { getNodeOutputColorsName } from "../helpers/get-node-output-colors-name";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import getFieldTitle from "../utils/get-field-title";
@@ -31,6 +38,7 @@ import NodeName from "./components/NodeName";
 import NodeOutputField from "./components/NodeOutputfield";
 import NodeStatus from "./components/NodeStatus";
 import { NodeIcon } from "./components/nodeIcon";
+import { useBuildStatus } from "./hooks/use-get-build-status";
 
 export default function GenericNode({
   data,
@@ -61,8 +69,6 @@ export default function GenericNode({
     setIsUserEdited,
     updateNodeInternals,
   );
-
-  const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
 
   if (!data.node!.template) {
     setErrorData({
@@ -137,10 +143,15 @@ export default function GenericNode({
 
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
-  const renderOutputParameter = (output: OutputFieldType, idx: number) => {
+  const renderOutputParameter = (
+    output: OutputFieldType,
+    idx: number,
+    lastOutput: boolean,
+  ) => {
     return (
       <NodeOutputField
         index={idx}
+        lastOutput={lastOutput}
         selected={selected}
         key={
           scapedJSONStringfy({
@@ -164,6 +175,7 @@ export default function GenericNode({
         type={output.types.join("|")}
         showNode={showNode}
         outputName={output.name}
+        colorName={getNodeOutputColorsName(output, data, types)}
       />
     );
   };
@@ -250,9 +262,23 @@ export default function GenericNode({
             optionalHandle={data.node?.template[templateField].input_types}
             proxy={data.node?.template[templateField].proxy}
             showNode={showNode}
+            colorName={getNodeInputColorsName(
+              data.node?.template[templateField].input_types,
+              data.node?.template[templateField].type,
+              types,
+            )}
           />
         ),
     );
+
+  const buildStatus = useBuildStatus(data, data.id);
+  const hasOutputs = data.node?.outputs && data.node?.outputs.length > 0;
+  const [validationStatus, setValidationStatus] =
+    useState<VertexBuildTypeAPI | null>(null);
+  const getValidationStatus = (data) => {
+    setValidationStatus(data);
+    return null;
+  };
 
   return (
     <>
@@ -260,20 +286,33 @@ export default function GenericNode({
       <div
         className={cn(
           borderColor,
-          showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full",
+          showNode ? "w-80 rounded-xl" : "w-26 h-26 rounded-full",
           "generic-node-div group/node",
+          !hasOutputs && "pb-4",
         )}
       >
-        {data.node?.beta && showNode && (
-          <div className="beta-badge-wrapper">
-            <div className="beta-badge-content">BETA</div>
-          </div>
+        {BuildStatus.BUILDING === buildStatus && (
+          <BorderBeam
+            colorFrom="hsl(var(--foreground))"
+            colorTo="hsl(var(--muted-foreground))"
+            className="z-10"
+            borderWidth={1.75}
+            size={300}
+          />
         )}
         <div>
+          {data.node?.beta && showNode && (
+            <div className="h-8 rounded-t-[12px] bg-accent-pink px-4 pt-2 text-[11px] font-medium text-accent-pink-foreground">
+              BETA
+            </div>
+          )}
+        </div>
+
+        <div className="grid gap-3 truncate text-wrap border-b p-4 leading-5">
           <div
             data-testid={"div-generic-node"}
             className={
-              "generic-node-div-title " +
+              "generic-node-div-title justify-between" +
               (!showNode
                 ? " relative h-24 w-24 rounded-full"
                 : " justify-between rounded-t-lg")
@@ -298,22 +337,10 @@ export default function GenericNode({
                     display_name={data.node?.display_name}
                     nodeId={data.id}
                     selected={selected}
+                    showNode={showNode}
+                    validationStatus={validationStatus}
+                    isOutdated={isOutdated}
                   />
-                  {isOutdated && !isUserEdited && (
-                    <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
-                      <Button
-                        onClick={handleUpdateCode}
-                        unstyled
-                        className={"group p-1"}
-                        loading={loadingUpdate}
-                      >
-                        <IconComponent
-                          name="AlertTriangle"
-                          className="h-5 w-5 fill-status-yellow text-muted"
-                        />
-                      </Button>
-                    </ShadTooltip>
-                  )}
                 </div>
               )}
             </div>
@@ -328,6 +355,7 @@ export default function GenericNode({
                       data.node!.outputs?.findIndex(
                         (out) => out.name === shownOutputs[0].name,
                       ) ?? 0,
+                      false,
                     )}
                 </>
               )}
@@ -341,19 +369,28 @@ export default function GenericNode({
                 nodeId={data.id}
                 selected={selected}
                 setBorderColor={setBorderColor}
+                buildStatus={buildStatus}
+                isOutdated={isOutdated}
+                isUserEdited={isUserEdited}
+                handleUpdateCode={handleUpdateCode}
+                loadingUpdate={loadingUpdate}
+                getValidationStatus={getValidationStatus}
               />
             )}
           </div>
-        </div>
-
-        {showNode && (
-          <div className="relative pb-8 pt-5">
-            {/* increase height!! */}
+          <div>
             <NodeDescription
               description={data.node?.description}
               nodeId={data.id}
               selected={selected}
             />
+          </div>
+        </div>
+
+        {showNode && (
+          <div className="relative">
+            {/* increase height!! */}
+
             <>
               {renderInputParameter}
               <div
@@ -372,6 +409,7 @@ export default function GenericNode({
                     data.node!.outputs?.findIndex(
                       (out) => out.name === output.name,
                     ) ?? idx,
+                    idx === shownOutputs.length - 1,
                   ),
                 )}
               <div
@@ -379,41 +417,47 @@ export default function GenericNode({
               >
                 <div className="block">
                   {data.node!.outputs &&
-                    data.node!.outputs.map((output, idx) =>
-                      renderOutputParameter(
+                    data.node!.outputs.map((output, idx) => {
+                      return renderOutputParameter(
                         output,
                         data.node!.outputs?.findIndex(
                           (out) => out.name === output.name,
                         ) ?? idx,
-                      ),
-                    )}
+                        idx === (data.node!.outputs?.length ?? 0) - 1,
+                      );
+                    })}
                 </div>
               </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (
-                <div
-                  className={cn(
-                    "absolute left-0 right-0 flex justify-center",
-                    (shownOutputs && shownOutputs.length > 0) ||
-                      showHiddenOutputs
-                      ? "bottom-5"
-                      : "bottom-1.5",
-                  )}
+                <ShadTooltip
+                  content={
+                    showHiddenOutputs
+                      ? TOOLTIP_HIDDEN_OUTPUTS
+                      : TOOLTIP_OPEN_HIDDEN_OUTPUTS
+                  }
                 >
-                  <Button
-                    unstyled
-                    className="left-0 right-0 rounded-full border bg-background"
-                    onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
+                  <div
+                    className={cn(
+                      "absolute left-0 right-0 flex justify-center",
+                      (shownOutputs && shownOutputs.length > 0) ||
+                        showHiddenOutputs
+                        ? "bottom-[-0.8rem]"
+                        : "bottom-[-0.8rem]",
+                    )}
                   >
-                    <ForwardedIconComponent
-                      name={"ChevronDown"}
-                      strokeWidth={1.5}
-                      className={cn(
-                        "h-5 w-5 pt-px text-muted-foreground group-hover:text-medium-indigo group-hover/node:opacity-100",
-                        showHiddenOutputs ? "rotate-180 transform" : "",
-                      )}
-                    />
-                  </Button>
-                </div>
+                    <Button
+                      unstyled
+                      className="group flex h-6 w-6 items-center justify-center rounded-full border bg-background hover:border-foreground hover:text-foreground"
+                      onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
+                    >
+                      <ForwardedIconComponent
+                        name={showHiddenOutputs ? "EyeOff" : "Eye"}
+                        strokeWidth={1.5}
+                        className="h-4 w-4 text-placeholder-foreground group-hover:text-foreground"
+                      />
+                    </Button>
+                  </div>
+                </ShadTooltip>
               )}
             </>
           </div>

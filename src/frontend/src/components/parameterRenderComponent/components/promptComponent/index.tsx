@@ -1,9 +1,47 @@
+import { GRADIENT_CLASS } from "@/constants/constants";
 import PromptModal from "@/modals/promptModal";
-import { useEffect } from "react";
 import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
+import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputProps, PromptAreaComponentType } from "../../types";
+
+const promptContentClasses = {
+  base: "overflow-hidden text-clip whitespace-nowrap bg-background",
+  editNode: "input-edit-node input-dialog",
+  normal: "primary-input text-muted-foreground",
+  disabled: "disabled-state",
+};
+
+const externalLinkIconClasses = {
+  gradient: ({
+    disabled,
+    editNode,
+  }: {
+    disabled: boolean;
+    editNode: boolean;
+  }) =>
+    disabled
+      ? ""
+      : editNode
+        ? "gradient-fade-input-edit-node "
+        : "gradient-fade-input ",
+  background: ({
+    disabled,
+    editNode,
+  }: {
+    disabled: boolean;
+    editNode: boolean;
+  }) =>
+    disabled
+      ? ""
+      : editNode
+        ? "background-fade-input-edit-node "
+        : "background-fade-input",
+  icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
+  editNodeTop: "top-[0.375rem]",
+  normalTop: "top-2.5",
+};
 
 export default function PromptAreaComponent({
   field_name,
@@ -16,41 +54,59 @@ export default function PromptAreaComponent({
   id = "",
   readonly = false,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element {
-  useEffect(() => {
-    if (disabled && value !== "") {
-      handleOnNewValue({ value: "" }, { skipSnapshot: true });
-    }
-  }, [disabled]);
-
   const renderPromptText = () => (
     <span
       id={id}
       data-testid={id}
       className={cn(
-        editNode
-          ? "input-edit-node input-dialog"
-          : "primary-input text-muted-foreground",
-        disabled && !editNode && "input-disable text-ring",
+        promptContentClasses.base,
+        editNode ? promptContentClasses.editNode : promptContentClasses.normal,
+        disabled && !editNode && promptContentClasses.disabled,
       )}
     >
-      {value !== "" ? value : "Type your prompt here..."}
+      {value !== ""
+        ? value
+        : getPlaceholder(disabled, "Type your prompt here...")}
     </span>
   );
 
-  const renderExternalLinkIcon = () => {
-    if (editNode) return null;
-
-    return (
-      <IconComponent
-        id={id}
-        name="ExternalLink"
+  const renderExternalLinkIcon = () => (
+    <>
+      <div
         className={cn(
-          "icons-parameters-comp shrink-0",
-          disabled ? "text-ring" : "hover:text-accent-foreground",
+          externalLinkIconClasses.gradient({ disabled, editNode }),
+          editNode
+            ? externalLinkIconClasses.editNodeTop
+            : externalLinkIconClasses.normalTop,
+        )}
+        style={{
+          pointerEvents: "none",
+          background: disabled ? "" : GRADIENT_CLASS,
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className={cn(
+          externalLinkIconClasses.background({ disabled, editNode }),
+          editNode
+            ? externalLinkIconClasses.editNodeTop
+            : externalLinkIconClasses.normalTop,
+          disabled && "bg-border",
+        )}
+        aria-hidden="true"
+      />
+      <IconComponent
+        name={disabled ? "lock" : "Scan"}
+        className={cn(
+          externalLinkIconClasses.icon,
+          editNode
+            ? externalLinkIconClasses.editNodeTop
+            : externalLinkIconClasses.normalTop,
+          disabled ? "text-placeholder-foreground" : "text-foreground",
         )}
       />
-    );
-  };
+    </>
+  );
 
   return (
     <div className={cn("w-full", disabled && "pointer-events-none")}>
@@ -59,12 +115,16 @@ export default function PromptAreaComponent({
         field_name={field_name}
         readonly={readonly}
         value={value}
-        setValue={() => handleOnNewValue({ value: "" })}
+        setValue={(newValue) => handleOnNewValue({ value: newValue })}
         nodeClass={nodeClass}
         setNodeClass={handleNodeClass}
       >
-        <Button unstyled className="w-full">
-          <div className="flex w-full items-center gap-3">
+        <Button
+          unstyled
+          className="w-full"
+          data-testid="button_open_prompt_modal"
+        >
+          <div className="relative w-full">
             {renderPromptText()}
             {renderExternalLinkIcon()}
           </div>

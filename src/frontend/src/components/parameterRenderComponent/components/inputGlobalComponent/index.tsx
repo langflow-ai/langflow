@@ -10,6 +10,7 @@ import GlobalVariableModal from "../../../GlobalVariableModal/GlobalVariableModa
 import ForwardedIconComponent from "../../../genericIconComponent";
 import InputComponent from "../../../inputComponent";
 import { CommandItem } from "../../../ui/command";
+import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputGlobalComponentType, InputProps } from "../../types";
 
 export default function InputGlobalComponent({
@@ -68,6 +69,8 @@ export default function InputGlobalComponent({
   }
   return (
     <InputComponent
+      nodeStyle
+      placeholder={getPlaceholder(disabled, "Type something...")}
       id={id}
       editNode={editNode}
       disabled={disabled}

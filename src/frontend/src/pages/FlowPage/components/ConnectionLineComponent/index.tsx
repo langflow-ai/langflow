@@ -1,3 +1,4 @@
+import useFlowStore from "@/stores/flowStore";
 import { ConnectionLineComponentProps } from "reactflow";
 
 const ConnectionLineComponent = ({
@@ -5,24 +6,30 @@ const ConnectionLineComponent = ({
   fromY,
   toX,
   toY,
-  connectionLineStyle = {}, // provide a default value for connectionLineStyle
+  connectionLineStyle = {},
 }: ConnectionLineComponentProps): JSX.Element => {
+  const handleDragging = useFlowStore((state) => state.handleDragging);
+  const color = handleDragging?.color;
+
   return (
     <g>
       <path
         fill="none"
         // ! Replace hash # colors here
-        strokeWidth={1.5}
-        className="animated stroke-connection"
+        strokeWidth={2}
+        className={`animated`}
+        style={{
+          stroke: handleDragging ? handleDragging.color : "",
+          ...connectionLineStyle,
+        }}
         d={`M${fromX},${fromY} C ${fromX} ${toY} ${fromX} ${toY} ${toX},${toY}`}
-        style={connectionLineStyle}
       />
       <circle
         cx={toX}
         cy={toY}
         fill="#fff"
-        r={3}
-        stroke="#222"
+        r={5}
+        stroke={color}
         className=""
         strokeWidth={1.5}
       />

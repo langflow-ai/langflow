@@ -33,7 +33,7 @@ class APIRequestComponent(Component):
         ),
         MessageTextInput(
             name="curl",
-            display_name="Curl",
+            display_name="cURL",
             info="Paste a curl command to populate the fields. "
             "This will fill in the dictionary fields for headers and body.",
             advanced=False,

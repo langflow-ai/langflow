@@ -146,6 +146,13 @@ test.skip("user must be able to freeze a component", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
   await page.getByTestId("fit_view").click();
 
   //connection 1

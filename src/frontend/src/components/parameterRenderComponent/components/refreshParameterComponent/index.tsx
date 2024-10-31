@@ -1,8 +1,10 @@
 import { RefreshButton } from "@/components/ui/refreshButton";
+import { FLEX_VIEW_TYPES } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
 import { APIClassType, InputFieldType } from "@/types/api";
+import { cn } from "@/utils/utils";
 import { InputProps } from "../../types";
 
 export function RefreshParameterComponent({
@@ -39,9 +41,17 @@ export function RefreshParameterComponent({
       postTemplateValue,
       setErrorData,
     );
+
+  const isFlexView = FLEX_VIEW_TYPES.includes(templateData.type ?? "");
+
   return (
     (children || templateData.refresh_button) && (
-      <div className="flex w-full items-center justify-between gap-2">
+      <div
+        className={cn(
+          "flex w-full items-center justify-center gap-3",
+          isFlexView ? "justify-end" : "justify-center",
+        )}
+      >
         {children}
         {templateData.refresh_button && (
           <div className="shrink-0 flex-col">

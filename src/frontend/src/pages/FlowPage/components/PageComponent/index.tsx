@@ -14,6 +14,7 @@ import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { nodeColors, nodeColorsName } from "@/utils/styleUtils";
 import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
 import _, { cloneDeep } from "lodash";
 import {
@@ -397,6 +398,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
     // 👇 make dragging a node undoable
+
     takeSnapshot();
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
@@ -409,6 +411,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
+
     takeSnapshot();
   }, [takeSnapshot]);
 
@@ -581,10 +584,21 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     [isAddingNote],
   );
 
+  const handleEdgeClick = (event, edge) => {
+    const color =
+      nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] ||
+      "hsl(var(--foreground))";
+
+    console.log(edge?.data?.targetHandle);
+
+    const innerColor = `hsl(var(--inner-${color}-muted-foreground))`;
+    document.documentElement.style.setProperty("--selected", innerColor);
+  };
+
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
       {showCanvas ? (
-        <div id="react-flow-id" className="h-full w-full">
+        <div id="react-flow-id" className="h-full w-full bg-canvas">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -601,7 +615,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onSelectionDragStart={onSelectionDragStart}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
-            connectionRadius={25}
+            connectionRadius={30}
             edgeTypes={edgeTypes}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
@@ -619,6 +633,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}
             onPaneMouseMove={onPaneMouseMove}
+            onEdgeClick={handleEdgeClick}
           >
             <Background className="" />
             {!view && (
