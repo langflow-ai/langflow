@@ -37,7 +37,7 @@ export default function GetStartedComponent() {
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-8">
       <BaseModal.Header description="Start with templates showcasing Langflow's Chatbot, RAG, and Agent use cases.">
-        Get Started
+        Get started
       </BaseModal.Header>
       <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
         {cardData.map((card, index) => (

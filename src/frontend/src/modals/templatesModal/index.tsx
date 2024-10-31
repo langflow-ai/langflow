@@ -27,8 +27,8 @@ export default function TemplatesModal({
     {
       title: "Templates",
       items: [
-        { title: "Get Started", icon: "SquarePlay", id: "get-started" },
-        { title: "All Templates", icon: "LayoutPanelTop", id: "all-templates" },
+        { title: "Get started", icon: "SquarePlay", id: "get-started" },
+        { title: "All templates", icon: "LayoutPanelTop", id: "all-templates" },
       ],
     },
     {
