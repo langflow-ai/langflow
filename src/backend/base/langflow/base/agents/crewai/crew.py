@@ -78,6 +78,6 @@ class BaseCrewComponent(Component):
     async def build_output(self) -> Message:
         crew = self.build_crew()
         result = await crew.kickoff_async()
-        message = Message(text=result, sender=MESSAGE_SENDER_AI)
+        message = Message(text=result.raw, sender=MESSAGE_SENDER_AI)
         self.status = message
         return message
