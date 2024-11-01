@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
+import Loading from "@/components/ui/loading";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
@@ -22,8 +24,6 @@ import TextAreaWrapper from "./components/textAreaWrapper/newTextAreaWrapper";
 import UploadFileButton from "./components/uploadFileButton/newUploadFileButton";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
-import Loading from "@/components/ui/loading";
-import useFlowStore from "@/stores/flowStore";
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -185,12 +185,12 @@ export default function ChatInput({
               onClick={stopBuilding}
               data-testid="button-stop"
               unstyled
-              className="form-modal-send-button bg-muted hover:bg-secondary-hover dark:hover:bg-input text-foreground cursor-pointer"
+              className="form-modal-send-button cursor-pointer bg-muted text-foreground hover:bg-secondary-hover dark:hover:bg-input"
             >
               <div className="flex items-center gap-2 rounded-md text-[14px] font-medium">
                 Stop
-              <Loading className="h-[16px] w-[16px]" />
-            </div>
+                <Loading className="h-[16px] w-[16px]" />
+              </div>
             </Button>
           )}
 

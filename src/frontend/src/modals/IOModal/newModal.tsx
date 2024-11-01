@@ -257,7 +257,7 @@ export default function IOModal({
       type={isPlayground ? "modal" : undefined}
       onSubmit={() => sendMessage({ repeat: 1 })}
       size="x-large"
-      className="p-0 !rounded-[12px]"
+      className="!rounded-[12px] p-0"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
@@ -381,31 +381,31 @@ export default function IOModal({
                   {inputs.some(
                     (input) => input.id === selectedViewField.id,
                   ) && (
-                      <IOFieldView
-                        type={InputOutput.INPUT}
-                        left={false}
-                        fieldType={selectedViewField.type!}
-                        fieldId={selectedViewField.id!}
-                      />
-                    )}
+                    <IOFieldView
+                      type={InputOutput.INPUT}
+                      left={false}
+                      fieldType={selectedViewField.type!}
+                      fieldId={selectedViewField.id!}
+                    />
+                  )}
                   {outputs.some(
                     (output) => output.id === selectedViewField.id,
                   ) && (
-                      <IOFieldView
-                        type={InputOutput.OUTPUT}
-                        left={false}
-                        fieldType={selectedViewField.type!}
-                        fieldId={selectedViewField.id!}
-                      />
-                    )}
+                    <IOFieldView
+                      type={InputOutput.OUTPUT}
+                      left={false}
+                      fieldType={selectedViewField.type!}
+                      fieldId={selectedViewField.id!}
+                    />
+                  )}
                   {sessions.some(
                     (session) => session === selectedViewField.id,
                   ) && (
-                      <SessionView
-                        session={selectedViewField.id}
-                        id={currentFlowId}
-                      />
-                    )}
+                    <SessionView
+                      session={selectedViewField.id}
+                      id={currentFlowId}
+                    />
+                  )}
                 </div>
               </div>
             )}
@@ -483,8 +483,8 @@ export default function IOModal({
                       !canvasOpen
                         ? undefined
                         : () => {
-                          setOpen(false);
-                        }
+                            setOpen(false);
+                          }
                     }
                   />
                 </div>

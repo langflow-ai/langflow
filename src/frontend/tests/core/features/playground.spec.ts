@@ -177,28 +177,26 @@ test.skip("fresh start playground", async ({ page }) => {
   await page.getByRole("combobox").click();
   await page.getByLabel("Rename").getByText("Rename").click();
   await page.getByRole("textbox").fill("new name");
-  await page
-    .getByTestId("icon-Check")
-    .click();
+  await page.getByTestId("icon-Check").click();
   await page.waitForTimeout(500);
 
-  await page.getByTestId('session-selector').getByText('new name').click();
+  await page.getByTestId("session-selector").getByText("new name").click();
   // check cancel rename
   await page.getByRole("combobox").click();
   await page.getByLabel("Rename").getByText("Rename").click();
   await page.getByRole("textbox").fill("cancel name");
-  await page.getByTestId('session-selector').getByTestId("icon-X").click();
-  await page.getByTestId('session-selector').getByText('new name').click();
+  await page.getByTestId("session-selector").getByTestId("icon-X").click();
+  await page.getByTestId("session-selector").getByText("new name").click();
   // check cancel rename blur
   await page.getByRole("combobox").click();
   await page.getByLabel("Rename").getByText("Rename").click();
   await page.getByRole("textbox").fill("cancel_blur");
-  await page.getByText('PlaygroundChat').click();
-  await page.getByTestId('session-selector').getByText('new name').click();
+  await page.getByText("PlaygroundChat").click();
+  await page.getByTestId("session-selector").getByText("new name").click();
   // check delete session
   await page.getByRole("combobox").click();
   await page.getByLabel("Delete").click();
-  await page.getByRole('heading', { name: 'New chat' }).click();
+  await page.getByRole("heading", { name: "New chat" }).click();
   // check new session
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("session_after_delete");

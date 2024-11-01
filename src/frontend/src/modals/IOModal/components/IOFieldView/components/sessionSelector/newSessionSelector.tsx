@@ -122,7 +122,7 @@ export default function SessionSelector({
       )}
     >
       <div className="flex w-full items-center justify-between overflow-hidden px-2 py-1 align-middle">
-        <div className="flex min-w-0 w-full items-center">
+        <div className="flex w-full min-w-0 items-center">
           {isEditing ? (
             <div className="flex items-center">
               <Input
