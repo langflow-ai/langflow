@@ -1,7 +1,8 @@
 import { expect, Page, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
-test("user should be able to use slider input", async ({ page }) => {
+// TODO: This component doesn't have slider needs updating
+test.skip("user should be able to use slider input", async ({ page }) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,

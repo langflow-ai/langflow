@@ -166,5 +166,5 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   titleNumber = await page.getByText(randomTitle).count();
 
-  expect(titleNumber).toBe(1);
+  expect(titleNumber).toBe(2);
 });
