@@ -23,7 +23,7 @@ const HomePage = ({ type }) => {
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
   const handleFileDrop = useFileDrop("flows");
-  const [flowType, setFlowType] = useState<"flows" | "components">("flows");
+  const [flowType, setFlowType] = useState<"flows" | "components">(type);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const [folderName, setFolderName] = useState("");
 
@@ -163,7 +163,7 @@ const HomePage = ({ type }) => {
                 <div className="pt-2 text-center">
                   No saved or custom components. Learn more about{" "}
                   <a
-                    href="https://docs.shortlang.com/getting-started/custom-components"
+                    href="https://docs.langflow.org/components-custom-components"
                     target="_blank"
                     rel="noreferrer"
                     className="underline"

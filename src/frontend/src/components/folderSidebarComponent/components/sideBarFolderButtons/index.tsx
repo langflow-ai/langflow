@@ -125,10 +125,8 @@ const SideBarFoldersButtonsComponent = ({
       },
       {
         onSuccess: (data) => {
-          const folder = folders.find((f) => f.id === data.folderId);
-
-          data.folder_name = folder?.name || "folder";
-          data.folder_description = folder?.description || "";
+          data.folder_name = data?.name || "folder";
+          data.folder_description = data?.description || "";
 
           const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
             JSON.stringify(data),
@@ -136,7 +134,7 @@ const SideBarFoldersButtonsComponent = ({
 
           const link = document.createElement("a");
           link.href = jsonString;
-          link.download = `${data.folder_name}.json`;
+          link.download = `${data?.name}.json`;
 
           link.click();
           track("Folder Exported", { folderId: id! });
