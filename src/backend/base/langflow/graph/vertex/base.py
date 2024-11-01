@@ -94,7 +94,7 @@ class Vertex:
         self.result: ResultData | None = None
         self.results: dict[str, Any] = {}
         self.outputs_logs: dict[str, OutputValue] = {}
-        self.logs: dict[str, Log] = {}
+        self.logs: dict[str, list[Log]] = {}
         self.has_cycle_edges = False
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
