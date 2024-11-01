@@ -53,7 +53,7 @@ class Message(Data):
 
     properties: Properties | None = None
     category: Literal["message", "error", "warning", "info"] | None = "message"
-    content_blocks: list[ContentBlock] | None = None
+    content_blocks: list[ContentBlock] | None = Field(default_factory=list)
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -341,6 +341,7 @@ class ErrorMessage(Message):
         session_id: str,
         source: Source,
         trace_name: str | None = None,
+        flow_id: str | None = None,
     ) -> None:
         # Get the error reason
         reason = exception.__class__.__name__
@@ -384,4 +385,5 @@ class ErrorMessage(Message):
                     ),
                 )
             ],
+            flow_id=flow_id,
         )
