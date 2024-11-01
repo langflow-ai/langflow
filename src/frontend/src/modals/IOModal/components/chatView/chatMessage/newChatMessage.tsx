@@ -243,7 +243,7 @@ export default function ChatMessage({
               className="flex w-full gap-4 rounded-md p-2"
             >
               <LogoIcon />
-              <div className="w-full rounded-md border text-[14px] border-error-red-border bg-error-red p-4 text-foreground">
+              <div className="w-full rounded-md border border-error-red-border bg-error-red p-4 text-[14px] text-foreground">
                 <div className="mb-2 flex items-center gap-2">
                   <ForwardedIconComponent
                     className="h-[18px] w-[18px] text-destructive"
@@ -260,7 +260,7 @@ export default function ChatMessage({
                         closeChat ? "cursor-pointer underline" : "",
                       )}
                       onClick={() => {
-                        fitViewNode(chat.properties?.source ?? "");
+                        fitViewNode(chat.properties?.source?.id ?? "");
                         closeChat?.();
                       }}
                     >
@@ -272,11 +272,27 @@ export default function ChatMessage({
                   )}
                   {errorContent.reason && (
                     <span className="">
-                      Reason: <Markdown linkTarget="_blank" remarkPlugins={[remarkGfm]} components={{
-                        a: ({node, ...props}) => {
-                            return <a href={props.href} target="_blank" className="underline" rel="noopener noreferrer">{props.children}</a>
-                          }
-                      }}>{errorContent.reason}</Markdown>
+                      Reason:{" "}
+                      <Markdown
+                        linkTarget="_blank"
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          a: ({ node, ...props }) => {
+                            return (
+                              <a
+                                href={props.href}
+                                target="_blank"
+                                className="underline"
+                                rel="noopener noreferrer"
+                              >
+                                {props.children}
+                              </a>
+                            );
+                          },
+                        }}
+                      >
+                        {errorContent.reason}
+                      </Markdown>
                     </span>
                   )}
                 </div>
@@ -310,7 +326,9 @@ export default function ChatMessage({
           <div
             className={cn(
               "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
-              !chat.isSend ? "bg-muted" : "border border-border hover:border-input",
+              !chat.isSend
+                ? "bg-muted"
+                : "border border-border hover:border-input",
             )}
             style={
               chat.properties?.background_color
@@ -370,7 +388,7 @@ export default function ChatMessage({
                 {chat.sender_name}
                 {chat.properties?.source && (
                   <div className="text-[13px] font-normal text-muted-foreground">
-                    {chat.properties?.source}
+                    {chat.properties?.source.display_name}
                   </div>
                 )}
               </div>
@@ -532,9 +550,7 @@ export default function ChatMessage({
                     <span
                       className={cn(
                         "prose text-[14px] font-normal word-break-break-word dark:prose-invert",
-                        !isEmpty
-                          ? "text-primary"
-                          : "text-muted-foreground",
+                        !isEmpty ? "text-primary" : "text-muted-foreground",
                       )}
                     >
                       {promptOpen
@@ -588,9 +604,7 @@ export default function ChatMessage({
                       <>
                         <div
                           className={`w-full items-baseline whitespace-pre-wrap break-words text-[14px] font-normal ${
-                            isEmpty
-                              ? "text-muted-foreground"
-                              : "text-primary"
+                            isEmpty ? "text-muted-foreground" : "text-primary"
                           }`}
                           data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                         >
