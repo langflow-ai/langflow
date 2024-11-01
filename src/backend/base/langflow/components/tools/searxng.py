@@ -1,8 +1,6 @@
 import json
 from collections.abc import Sequence
 from typing import Any
-
-import requests
 from langchain.agents import Tool
 from langchain_core.tools import StructuredTool
 from loguru import logger
@@ -12,6 +10,7 @@ from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput, MultiselectInput
 from langflow.io import Output
 from langflow.schema.dotdict import dotdict
+from security import safe_requests
 
 
 class SearXNGToolComponent(LCToolComponent):
@@ -61,7 +60,7 @@ class SearXNGToolComponent(LCToolComponent):
         try:
             url = f"{field_value}/config"
 
-            response = requests.get(url=url, headers=self.search_headers.copy(), timeout=10)
+            response = safe_requests.get(url=url, headers=self.search_headers.copy(), timeout=10)
             data = None
             if response.headers.get("Content-Encoding") == "zstd":
                 data = json.loads(response.content)
@@ -96,7 +95,7 @@ class SearXNGToolComponent(LCToolComponent):
                 try:
                     url = f"{SearxSearch._url}/"
                     headers = SearxSearch._headers.copy()
-                    response = requests.get(
+                    response = safe_requests.get(
                         url=url,
                         headers=headers,
                         params={

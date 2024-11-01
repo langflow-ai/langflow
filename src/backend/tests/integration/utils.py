@@ -2,14 +2,13 @@ import dataclasses
 import os
 import uuid
 from typing import Any
-
-import requests
 from astrapy.admin import parse_api_endpoint
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.custom import Component
 from langflow.field_typing import Embeddings
 from langflow.graph import Graph
 from langflow.processing.process import run_graph_internal
+from security import safe_requests
 
 
 def check_env_vars(*env_vars):
@@ -96,7 +95,7 @@ class JSONFlow:
 
 
 def download_flow_from_github(name: str, version: str) -> JSONFlow:
-    response = requests.get(
+    response = safe_requests.get(
         f"https://raw.githubusercontent.com/langflow-ai/langflow/v{version}/src/backend/base/langflow/initial_setup/starter_projects/{name}.json",
         timeout=10,
     )

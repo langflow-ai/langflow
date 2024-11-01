@@ -5,6 +5,7 @@ import sys
 
 import packaging.version
 from packaging.version import Version
+from security import safe_requests
 
 PYPI_LANGFLOW_URL = "https://pypi.org/pypi/langflow/json"
 PYPI_LANGFLOW_NIGHTLY_URL = "https://pypi.org/pypi/langflow-nightly/json"
@@ -16,7 +17,6 @@ ARGUMENT_NUMBER = 2
 
 
 def get_latest_published_version(build_type: str, *, is_nightly: bool) -> Version:
-    import requests
 
     url = ""
     if build_type == "base":
@@ -27,7 +27,7 @@ def get_latest_published_version(build_type: str, *, is_nightly: bool) -> Versio
         msg = f"Invalid build type: {build_type}"
         raise ValueError(msg)
 
-    res = requests.get(url, timeout=10)
+    res = safe_requests.get(url, timeout=10)
     try:
         version_str = res.json()["info"]["version"]
     except Exception as e:

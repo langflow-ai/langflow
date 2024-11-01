@@ -7,6 +7,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
+from security import safe_requests
 
 
 class GroqModel(LCModelComponent):
@@ -68,7 +69,7 @@ class GroqModel(LCModelComponent):
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            response = safe_requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             model_list = response.json()
             return [model["id"] for model in model_list.get("data", [])]

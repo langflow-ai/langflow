@@ -13,7 +13,7 @@ This is a list of possible issues that you may encounter when installing Langflo
 
 
 ```bash
-> No module named 'langflow.__main__' 
+> No module named 'langflow.__main__'
 ```
 
 1. Run `python -m langflow run` instead of `langflow run`.

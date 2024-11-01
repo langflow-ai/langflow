@@ -8,6 +8,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.io import MessageTextInput, Output, SecretStrInput
+from security import safe_requests
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
@@ -54,7 +55,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
             raise ValueError(msg)
 
         try:
-            response = requests.get(f"{inference_endpoint}/health", timeout=5)
+            response = safe_requests.get(f"{inference_endpoint}/health", timeout=5)
         except requests.RequestException as e:
             msg = (
                 f"Inference endpoint '{inference_endpoint}' is not responding. "

@@ -7,6 +7,7 @@ from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import SecretStrInput, StrInput
 from langflow.schema import Data
+from security import safe_requests
 
 
 class NotionDatabaseProperties(LCToolComponent):
@@ -55,7 +56,7 @@ class NotionDatabaseProperties(LCToolComponent):
             "Notion-Version": "2022-06-28",  # Use the latest supported version
         }
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            response = safe_requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             data = response.json()
             return data.get("properties", {})

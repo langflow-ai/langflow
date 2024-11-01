@@ -7,6 +7,7 @@ from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import SecretStrInput, StrInput
 from langflow.schema import Data
+from security import safe_requests
 
 
 class NotionPageContent(LCToolComponent):
@@ -55,7 +56,7 @@ class NotionPageContent(LCToolComponent):
             "Notion-Version": "2022-06-28",
         }
         try:
-            blocks_response = requests.get(blocks_url, headers=headers, timeout=10)
+            blocks_response = safe_requests.get(blocks_url, headers=headers, timeout=10)
             blocks_response.raise_for_status()
             blocks_data = blocks_response.json()
             return self.parse_blocks(blocks_data.get("results", []))

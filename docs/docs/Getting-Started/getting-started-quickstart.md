@@ -24,7 +24,7 @@ slug: /getting-started-quickstart
 ### Create the basic prompting project {#c029603ddb1f42f5b28df92e58426ab3}
 
 
-1. From the Langflow dashboard, click **New Project**. 
+1. From the Langflow dashboard, click **New Project**.
 
 
 ![](./1835734464.png)
@@ -39,7 +39,7 @@ slug: /getting-started-quickstart
 ![](./487525520.png)
 
 
-This flow allows you to chat with the **OpenAI** component through the **Prompt** component. 
+This flow allows you to chat with the **OpenAI** component through the **Prompt** component.
 
 
 Examine the **Prompt** component. The **Template** field instructs the LLM to `Answer the user as if you were a pirate.` This should be interesting...

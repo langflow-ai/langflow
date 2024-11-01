@@ -107,7 +107,7 @@ jobs:
         if: ${{ inputs.version != '' }}
         id: get-version-input
         run: |
-          # Base version cannot have a version input, since you have to specify a valid main tag to checkout. 
+          # Base version cannot have a version input, since you have to specify a valid main tag to checkout.
           if [[ "${{ inputs.release_type }}" == "base" && "${{ inputs.version }}" != '' ]]; then
             echo "Cannot specify version for base release."
             echo "Build type is 'base' and version is non-empty. Exiting the workflow."
@@ -196,7 +196,7 @@ jobs:
               echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
-            else 
+            else
               echo "Invalid release type. Exiting the workflow."
               exit 1
             fi

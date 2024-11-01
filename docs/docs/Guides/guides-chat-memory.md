@@ -6,7 +6,7 @@ slug: /guides-chat-memory
 
 
 
-Langflow allows every chat message to be stored, and a single flow can have multiple memory sessions. This enables you to create separate _memories_ for agents to store and recall information as needed. 
+Langflow allows every chat message to be stored, and a single flow can have multiple memory sessions. This enables you to create separate _memories_ for agents to store and recall information as needed.
 
 
 In any project, as long as there are [**Chat**](/components-io) being used, memories are always being stored by default. These are messages from a user to the AI or vice-versa.
@@ -48,10 +48,10 @@ The **Chat Memory** component also retrieves message histories by `Session ID` w
 ![](./207457678.png)
 
 
- 
 
 
-By default, if the `Session ID`  value is empty, it is set to match the the same value as the `Flow ID`. 
+
+By default, if the `Session ID`  value is empty, it is set to match the the same value as the `Flow ID`.
 
 
 You can also display all messages stored across every flow and session by going to **Settings** &gt; **Messages**.
