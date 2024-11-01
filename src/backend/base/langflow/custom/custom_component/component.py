@@ -22,6 +22,7 @@ from langflow.memory import delete_message, store_message, update_messages
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
+from langflow.schema.properties import Source
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
@@ -705,15 +706,15 @@ class Component(CustomComponent):
             self.send_error(
                 exception=e.cause,
                 session_id=self.graph.session_id,
-                display_name=e.component_name,
                 trace_name=getattr(self, "trace_name", None),
+                source=e.source,
             )
-            raise
+            raise e.cause  # noqa: B904
         except Exception as e:
             self.send_error(
                 exception=e,
                 session_id=self.graph.session_id,
-                display_name=self.display_name,
+                source=Source(id=self._id, display_name=self.display_name, source=self.display_name),
                 trace_name=getattr(self, "trace_name", None),
             )
             raise
@@ -934,7 +935,7 @@ class Component(CustomComponent):
                 )
                 first_chunk = False
         except Exception as e:
-            raise StreamingError(cause=e, component_name=message.properties.source_display_name) from e
+            raise StreamingError(cause=e, source=message.properties.source) from e
         else:
             return complete_message
 
@@ -968,14 +969,14 @@ class Component(CustomComponent):
         self,
         exception: Exception,
         session_id: str,
-        display_name: str,
         trace_name: str | None = None,
+        source: Source | None = None,
     ) -> None:
         """Send an error message to the frontend."""
         error_message = ErrorMessage(
             exception=exception,
             session_id=session_id,
-            display_name=display_name,
             trace_name=trace_name,
+            source=source,
         )
         self.send_message(error_message)
