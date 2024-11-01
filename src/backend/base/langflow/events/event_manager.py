@@ -56,15 +56,14 @@ class EventManager:
 
     def send_event(self, *, event_type: str, data: LoggableType):
         try:
-            playground_event = create_event_by_type(event_type, **data)
-            data = playground_event
+            data = create_event_by_type(event_type, **data)
         except TypeError as e:
             logger.debug(f"Error creating playground event: {e}")
         except Exception:
             raise
         jsonable_data = jsonable_encoder(data)
         json_data = {"event": event_type, "data": jsonable_data}
-        event_id = uuid.uuid4()
+        event_id = f"{event_type}-{uuid.uuid4()}"
         str_data = json.dumps(json_data) + "\n\n"
         self.queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
 
