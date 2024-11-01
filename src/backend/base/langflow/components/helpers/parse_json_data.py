@@ -35,8 +35,7 @@ class ParseJSONDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Filtered Data",
-               name="filtered_data", method="filter_data"),
+        Output(display_name="Filtered Data", name="filtered_data", method="filter_data"),
     ]
 
     def _parse_data(self, input_value) -> str:
