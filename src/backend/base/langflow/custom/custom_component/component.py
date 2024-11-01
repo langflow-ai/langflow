@@ -866,8 +866,8 @@ class Component(CustomComponent):
         self._stored_message_id = stored_message.id
         try:
             complete_message = ""
-            if self._should_stream_message(stored_message, message):
-                complete_message = self._stream_message(message, stored_message.id)
+            if self._should_stream_message(stored_message, message) and message is not None:
+                complete_message = self._stream_message(message.text, stored_message)
                 stored_message.text = complete_message
                 stored_message = self._update_stored_message(stored_message)
             else:
@@ -918,20 +918,19 @@ class Component(CustomComponent):
         self.vertex._added_message = updated_message
         return updated_message
 
-    def _stream_message(self, message: Message, message_id: str) -> str:
-        iterator = message.text
+    def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> str:
         if not isinstance(iterator, AsyncIterator | Iterator):
             msg = "The message must be an iterator or an async iterator."
             raise TypeError(msg)
 
         if isinstance(iterator, AsyncIterator):
-            return run_until_complete(self._handle_async_iterator(iterator, message_id, message))
+            return run_until_complete(self._handle_async_iterator(iterator, message.id, message))
         try:
             complete_message = ""
             first_chunk = True
             for chunk in iterator:
                 complete_message = self._process_chunk(
-                    chunk.content, complete_message, message_id, message, first_chunk=first_chunk
+                    chunk.content, complete_message, message.id, message, first_chunk=first_chunk
                 )
                 first_chunk = False
         except Exception as e:
@@ -976,6 +975,7 @@ class Component(CustomComponent):
     ) -> None:
         """Send an error message to the frontend."""
         error_message = ErrorMessage(
+            flow_id=self.graph.flow_id,
             exception=exception,
             session_id=session_id,
             trace_name=trace_name,
