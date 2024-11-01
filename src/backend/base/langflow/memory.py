@@ -1,12 +1,13 @@
+import json
 from collections.abc import Sequence
 from uuid import UUID
 
+from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
 from loguru import logger
 from sqlalchemy import delete
 from sqlmodel import Session, col, select
 
-from langflow.field_typing import BaseChatMessageHistory
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
 from langflow.services.deps import session_scope
@@ -102,12 +103,11 @@ def add_messagetables(messages: list[MessageTable], session: Session):
         except Exception as e:
             logger.exception(e)
             raise
-    import json
 
     new_messages = []
     for msg in messages:
-        msg.properties = json.loads(msg.properties) if msg.properties else {}
-        msg.content_blocks = [json.loads(j) for j in msg.content_blocks]
+        msg.properties = json.loads(msg.properties) if isinstance(msg.properties, str) else msg.properties  # type: ignore[arg-type]
+        msg.content_blocks = [json.loads(j) if isinstance(j, str) else j for j in msg.content_blocks]  # type: ignore[arg-type]
         msg.category = msg.category or ""
         new_messages.append(msg)
 
