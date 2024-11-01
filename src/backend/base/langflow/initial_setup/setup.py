@@ -19,7 +19,6 @@ from langflow.base.constants import (
     NODE_FORMAT_ATTRIBUTES,
     ORJSON_OPTIONS,
 )
-from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
@@ -621,10 +620,6 @@ def create_or_update_starter_projects(all_types_dict: dict) -> None:
                 project_data.copy(), all_types_dict
             )
             updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
-            try:
-                Graph.from_payload(updated_project_data)
-            except Exception:  # noqa: BLE001
-                logger.exception(f"Error loading project {project_name}")
             if updated_project_data != project_data:
                 project_data = updated_project_data
                 # We also need to update the project data in the file
