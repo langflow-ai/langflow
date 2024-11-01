@@ -59,6 +59,6 @@ class ChatComponent(Component):
             possible_attributes = ["model_name", "model_id", "model"]
             for attribute in possible_attributes:
                 if hasattr(component, attribute) and getattr(component, attribute):
-                    return getattr(component, attribute), icon, source
-            return source, icon, component.display_name
-        return None, None, None
+                    return getattr(component, attribute), icon, source, component._id
+            return source, icon, component.display_name, component._id
+        return None, None, None, None

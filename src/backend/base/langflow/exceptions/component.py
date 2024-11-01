@@ -1,4 +1,8 @@
 # Create an exception class that receives the message and the formatted traceback
+
+from langflow.schema.properties import Source
+
+
 class ComponentBuildError(Exception):
     def __init__(self, message: str, formatted_traceback: str):
         self.message = message
@@ -7,7 +11,7 @@ class ComponentBuildError(Exception):
 
 
 class StreamingError(Exception):
-    def __init__(self, cause: Exception, component_name: str):
+    def __init__(self, cause: Exception, source: Source):
         self.cause = cause
-        self.component_name = component_name
+        self.source = source
         super().__init__(cause)

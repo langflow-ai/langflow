@@ -2,6 +2,7 @@ from langflow.base.io.chat import ChatComponent
 from langflow.inputs import BoolInput
 from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.schema.message import Message
+from langflow.schema.properties import Properties, Source
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER
 
 
@@ -80,7 +81,7 @@ class ChatOutput(ChatComponent):
     ]
 
     def message_response(self) -> Message:
-        _source, _icon, _display_name = self.get_properties_from_source_component()
+        _source, _icon, _display_name, _source_id = self.get_properties_from_source_component()
         _background_color = self.background_color
         _text_color = self.text_color
         if self.chat_icon:
@@ -90,13 +91,12 @@ class ChatOutput(ChatComponent):
             sender=self.sender,
             sender_name=self.sender_name,
             session_id=self.session_id,
-            properties={
-                "source": _source,
-                "icon": _icon,
-                "background_color": _background_color,
-                "text_color": _text_color,
-                "source_display_name": _display_name,
-            },
+            properties=Properties(
+                source=Source(id=_source_id, display_name=_display_name, source=_source),
+                icon=_icon,
+                background_color=_background_color,
+                text_color=_text_color,
+            ),
         )
         if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = self.send_message(
