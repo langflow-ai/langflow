@@ -22,7 +22,7 @@ const HomePage = ({ type }) => {
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
-  const handleFileDrop = useFileDrop(type);
+  const handleFileDrop = useFileDrop("flows");
   const [flowType, setFlowType] = useState<"flows" | "components">("flows");
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const [folderName, setFolderName] = useState("");

@@ -61,13 +61,13 @@ export default function LoginPage(): JSX.Element {
         const data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
       }}
-      className="h-full w-full"
+      className="h-screen w-full"
     >
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
         <div className="flex w-72 flex-col items-center justify-center gap-2">
           <span className="mb-4 text-5xl">⛓️</span>
           <span className="mb-6 text-2xl font-semibold text-primary">
-            Sign in to Langflow
+            Sign in to Langflows
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">
