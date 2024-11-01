@@ -32,7 +32,6 @@ from langflow.logging.logger import configure
 from langflow.services.deps import get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
 
-
 time_start = time.time()
 
 # Ignore Pydantic deprecation warnings from Langchain
