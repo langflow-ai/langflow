@@ -3,10 +3,10 @@ from typing_extensions import TypedDict
 
 
 class Source(BaseModel):
-    id: str = Field(description="The id of the source component.")
-    display_name: str = Field(description="The display name of the source component.")
-    source: str | None = Field(
-        default=None,
+    id: str = Field(default="", description="The id of the source component.")
+    display_name: str = Field(default="", description="The display name of the source component.")
+    source: str = Field(
+        default="",
         description="The source of the message. Normally used to display the model name (e.g. 'gpt-4o')",
     )
 
