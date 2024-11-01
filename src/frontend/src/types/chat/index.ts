@@ -18,14 +18,21 @@ export type ChatMessageType = {
   edit?: boolean;
   icon?: string;
   category?: string;
-  properties?: {
-    source?: string;
-    edited?: boolean;
-    icon?: string;
-    background_color?: string;
-    text_color?: string;
-  };
+  properties?: PropertiesType;
   content_blocks?: ContentBlock[];
+};
+
+export type SourceType = {
+  id: string;
+  display_name: string;
+  source: string;
+};
+
+export type PropertiesType = {
+  source: SourceType;
+  icon?: string;
+  background_color?: string;
+  text_color?: string;
 };
 
 export type ChatOutputType = {
