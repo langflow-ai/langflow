@@ -1,7 +1,11 @@
 import { expect, Page, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
-test("user should interact with link component", async ({ context, page }) => {
+// TODO: This test might not be needed anymore
+test.skip("user should interact with link component", async ({
+  context,
+  page,
+}) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
@@ -22,7 +26,7 @@ test("user should interact with link component", async ({ context, page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }

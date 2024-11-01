@@ -1,5 +1,5 @@
 import { Cross2Icon } from "@radix-ui/react-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import {
   Popover,
@@ -13,6 +13,8 @@ import SingleAlert from "./components/singleAlertComponent";
 
 export default function AlertDropdown({
   children,
+  notificationRef,
+  onClose,
 }: AlertDropdownType): JSX.Element {
   const notificationList = useAlertStore((state) => state.notificationList);
   const clearNotificationList = useAlertStore(
@@ -27,16 +29,29 @@ export default function AlertDropdown({
 
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    if (!open) {
+      onClose?.();
+    }
+  }, [open]);
+
   return (
     <Popover
+      data-testid="notification-dropdown"
       open={open}
       onOpenChange={(target) => {
         setOpen(target);
-        if (target) setNotificationCenter(false);
+        if (target) {
+          setNotificationCenter(false);
+        }
       }}
     >
       <PopoverTrigger>{children}</PopoverTrigger>
-      <PopoverContent className="noflow nowheel nopan nodelete nodrag flex h-[500px] w-[500px] flex-col">
+      <PopoverContent
+        ref={notificationRef}
+        data-testid="notification-dropdown-content"
+        className="noflow nowheel nopan nodelete nodrag z-10 flex h-[500px] w-[500px] flex-col"
+      >
         <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
           Notifications
           <div className="flex gap-3 pr-3">
