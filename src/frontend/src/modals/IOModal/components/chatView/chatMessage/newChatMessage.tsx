@@ -388,7 +388,7 @@ export default function ChatMessage({
                 {chat.sender_name}
                 {chat.properties?.source && (
                   <div className="text-[13px] font-normal text-muted-foreground">
-                    {chat.properties?.source.display_name}
+                    {chat.properties?.source.source}
                   </div>
                 )}
               </div>
