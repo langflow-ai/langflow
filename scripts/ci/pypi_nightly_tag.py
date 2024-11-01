@@ -17,7 +17,6 @@ ARGUMENT_NUMBER = 2
 
 
 def get_latest_published_version(build_type: str, *, is_nightly: bool) -> Version:
-
     url = ""
     if build_type == "base":
         url = PYPI_LANGFLOW_BASE_NIGHTLY_URL if is_nightly else PYPI_LANGFLOW_BASE_URL

@@ -1,15 +1,18 @@
 import json
 from collections.abc import Sequence
 from typing import Any
+
 from langchain.agents import Tool
 from langchain_core.tools import StructuredTool
 from loguru import logger
 from pydantic.v1 import Field, create_model
+from security import safe_requests
+
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput, MultiselectInput
 from langflow.io import Output
 from langflow.schema.dotdict import dotdict
-from security import safe_requests
+
 
 class SearXNGToolComponent(LCToolComponent):
     search_headers: dict = {}

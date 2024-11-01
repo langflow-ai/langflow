@@ -3,12 +3,12 @@ from urllib.parse import urlparse
 import requests
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
 from pydantic.v1.types import SecretStr
+from security import safe_requests
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.io import MessageTextInput, Output, SecretStrInput
-from security import safe_requests
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):

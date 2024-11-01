@@ -8,9 +8,9 @@ import threading
 import astra_assistants.tools as astra_assistants_tools
 from astra_assistants import OpenAIWithDefaultKey, patch
 from astra_assistants.tools.tool_interface import ToolInterface
+from security import safe_requests
 
 from langflow.services.cache.utils import CacheMiss
-from security import safe_requests
 
 client_lock = threading.Lock()
 client = None
