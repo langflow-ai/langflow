@@ -66,15 +66,11 @@ class FileComponent(Component):
             if is_zipfile(resolved_path):
                 self.log("Processing zip file at %s.", str(resolved_path))
 
-                return self._process_zip_file(
-                    resolved_path, silent_errors=self.silent_errors
-                )
+                return self._process_zip_file(resolved_path, silent_errors=self.silent_errors)
 
             self.log("Processing single file at %s.", str(resolved_path))
 
-            return self._process_single_file(
-                resolved_path, silent_errors=self.silent_errors
-            )
+            return self._process_single_file(resolved_path, silent_errors=self.silent_errors)
         except FileNotFoundError as _:
             self.log("File not found: %s", resolved_path)
 
@@ -96,11 +92,7 @@ class FileComponent(Component):
         data: list[Data] = []
         with ZipFile(zip_path, "r") as zip_file:
             # Filter file names based on extensions in TEXT_FILE_TYPES
-            valid_files = [
-                name
-                for name in zip_file.namelist()
-                if any(name.endswith(ext) for ext in TEXT_FILE_TYPES)
-            ]
+            valid_files = [name for name in zip_file.namelist() if any(name.endswith(ext) for ext in TEXT_FILE_TYPES)]
             if not valid_files:
                 msg = "No valid files in the zip archive."
                 self.log(msg)
@@ -116,20 +108,14 @@ class FileComponent(Component):
             for file_name in valid_files:
                 file_extension = Path(file_name).suffix
                 with zip_file.open(file_name) as file_content:
-                    with NamedTemporaryFile(
-                        delete=False, suffix=file_extension
-                    ) as temp_file:
+                    with NamedTemporaryFile(delete=False, suffix=file_extension) as temp_file:
                         temp_file.write(file_content.read())
                         temp_path = Path(temp_file.name)
                         self.log(str(temp_path))
 
                     try:
                         # Process the temporary file
-                        data.append(
-                            self._process_single_file(
-                                temp_path, silent_errors=silent_errors
-                            )
-                        )
+                        data.append(self._process_single_file(temp_path, silent_errors=silent_errors))
                     finally:
                         # Clean up the temporary file after processing
                         temp_path.unlink()
@@ -138,9 +124,7 @@ class FileComponent(Component):
 
         return data
 
-    def _process_single_file(
-        self, file_path: Path, *, silent_errors: bool = False
-    ) -> Data:
+    def _process_single_file(self, file_path: Path, *, silent_errors: bool = False) -> Data:
         """Process a single file.
 
         Args:
@@ -153,9 +137,7 @@ class FileComponent(Component):
         Raises:
             ValueError: For unsupported file formats.
         """
-        if not any(
-            file_path.suffix == ext for ext in ["." + f for f in TEXT_FILE_TYPES]
-        ):
+        if not any(file_path.suffix == ext for ext in ["." + f for f in TEXT_FILE_TYPES]):
             msg = f"Unsupported file type: {file_path.suffix}"
             self.log(msg)
 
