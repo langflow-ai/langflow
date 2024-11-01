@@ -1,6 +1,10 @@
 import { useTypesStore } from "@/stores/typesStore";
 import { nodeColors, nodeIconsLucide } from "@/utils/styleUtils";
 import emojiRegex from "emoji-regex";
+
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { checkLucideIcons } from "@/CustomNodes/helpers/check-lucide-icons";
+import { cn } from "@/utils/utils";
 import IconComponent from "../../../../components/genericIconComponent";
 
 export function NodeIcon({
@@ -19,16 +23,40 @@ export function NodeIcon({
   const isEmoji = emojiRegex().test(icon ?? "");
   const iconColor = nodeColors[types[dataType]];
   const iconName = icon || (isGroup ? "group_components" : name);
-  const iconClassName = `generic-node-icon ${
-    !showNode ? " absolute inset-x-6 h-12 w-12 " : ""
-  }`;
-  return icon && isEmoji ? (
-    <span className="text-lg">{icon}</span>
-  ) : (
-    <IconComponent
-      name={iconName}
-      className={iconClassName}
-      iconColor={iconColor}
-    />
+
+  const isLucideIcon = checkLucideIcons(iconName);
+
+  const iconClassName = cn(
+    "generic-node-icon",
+    !showNode ? " show-node-icon " : "",
+    isLucideIcon ? "lucide-icon" : "integration-icon",
   );
+
+  const renderIcon = () => {
+    if (icon && isEmoji) {
+      return <span className="text-lg">{icon}</span>;
+    }
+
+    if (isLucideIcon) {
+      return (
+        <div className="bg-lucide-icon text-foreground">
+          <IconComponent
+            strokeWidth={ICON_STROKE_WIDTH}
+            name={iconName}
+            className={iconClassName}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <IconComponent
+        name={iconName}
+        className={iconClassName}
+        iconColor={iconColor}
+      />
+    );
+  };
+
+  return <>{renderIcon()}</>;
 }

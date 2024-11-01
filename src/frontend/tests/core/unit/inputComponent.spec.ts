@@ -29,12 +29,8 @@ test("InputComponent", async ({ page }) => {
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("Chroma");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("Chroma");
 
   await page.waitForTimeout(1000);
 
@@ -67,7 +63,7 @@ test("InputComponent", async ({ page }) => {
   await page.getByTestId("div-generic-node").click();
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   await page.locator('//*[@id="showchroma_server_cors_allow_origins"]').click();
   expect(
@@ -146,7 +142,7 @@ test("InputComponent", async ({ page }) => {
     await page.getByTestId("div-generic-node").click();
 
     await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("edit-button-modal").click();
+    await page.getByTestId("advanced-button-modal").click();
 
     await page.getByText("Close").last().click();
 

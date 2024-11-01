@@ -9,7 +9,7 @@ from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER
 class ChatInput(ChatComponent):
     display_name = "Chat Input"
     description = "Get chat inputs from the Playground."
-    icon = "ChatInput"
+    icon = "MessagesSquare"
     name = "ChatInput"
 
     inputs = [

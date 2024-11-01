@@ -8,7 +8,7 @@ from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, 
 class ChatOutput(ChatComponent):
     display_name = "Chat Output"
     description = "Display a chat message in the Playground."
-    icon = "ChatOutput"
+    icon = "MessagesSquare"
     name = "ChatOutput"
 
     inputs = [

@@ -232,4 +232,7 @@ export type FlowStoreType = {
   stopBuilding: () => void;
   buildController: AbortController;
   setBuildController: (controller: AbortController) => void;
+  currentBuildingNodeId: string[] | undefined;
+  setCurrentBuildingNodeId: (nodeIds: string[] | undefined) => void;
+  clearEdgesRunningByNodes: () => Promise<void>;
 };

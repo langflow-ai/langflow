@@ -1,37 +1,87 @@
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
-import { Button } from "@/components/ui/button";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { useIsMobile } from "../../../../hooks/use-mobile";
+
 import { cn } from "@/utils/utils";
 import { NavProps } from "../../../../types/templates/types";
 
-export function Nav({ links, currentTab, onClick }: NavProps) {
+export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
+  const isMobile = useIsMobile();
+
   return (
-    <div className="group flex flex-col gap-4">
-      <nav className="grid">
-        {links.map((link, index) => (
-          <Button
-            variant={link.id === currentTab ? "menu-active" : "menu"}
-            size="sm"
-            key={index}
-            onClick={() => onClick?.(link.id)}
-            className="group"
+    <Sidebar collapsible={isMobile ? "icon" : "none"}>
+      <SidebarContent className="gap-0 p-2">
+        <div
+          className={cn("relative flex items-center gap-2 px-2 py-3 md:px-4")}
+          data-testid="modal-title"
+        >
+          <SidebarTrigger
+            className={cn(
+              "flex h-8 shrink-0 items-center rounded-md text-lg font-semibold leading-none tracking-tight text-primary outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 md:hidden [&>svg]:size-4 [&>svg]:shrink-0",
+            )}
+          />
+          <div
+            className={cn(
+              "flex h-8 shrink-0 items-center rounded-md text-lg font-semibold leading-none tracking-tight text-primary outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
+              "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+            )}
           >
-            <ForwardedIconComponent
-              name={link.icon}
-              className={cn(
-                "mr-2 h-4 w-4 stroke-2 text-muted-foreground",
-                link.id === currentTab && "text-pink-400",
-              )}
-            />
-            <span
-              data-testid={`side_nav_options_${convertTestName(link.title)}`}
-              className="flex-1 text-left text-primary"
+            Categories
+          </div>
+        </div>
+
+        {categories.map((category, index) => (
+          <SidebarGroup key={index}>
+            <SidebarGroupLabel
+              className={`${
+                index === 0
+                  ? "hidden"
+                  : "mb-1 text-sm font-semibold text-muted-foreground"
+              }`}
             >
-              {link.title}
-            </span>
-          </Button>
+              {category.title}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {category.items.map((link) => (
+                  <SidebarMenuItem key={link.id}>
+                    <SidebarMenuButton
+                      onClick={() => setCurrentTab(link.id)}
+                      isActive={currentTab === link.id}
+                      data-testid={`side_nav_options_${link.title.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      <ForwardedIconComponent
+                        name={link.icon}
+                        className={`h-4 w-4 stroke-2 ${
+                          currentTab === link.id
+                            ? "x-gradient"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                      <span
+                        data-testid={`category_title_${convertTestName(link.title)}`}
+                      >
+                        {link.title}
+                      </span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         ))}
-      </nav>
-    </div>
+      </SidebarContent>
+    </Sidebar>
   );
 }

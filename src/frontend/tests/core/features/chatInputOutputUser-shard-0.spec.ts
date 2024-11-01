@@ -52,9 +52,19 @@ test("user must be able to send an image on chat", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+
+  if (isApiKeyInputVisible) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
@@ -63,7 +73,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
 
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
   await page.getByText("Close").last().click();
 
   await page.getByText("Playground", { exact: true }).last().click();
