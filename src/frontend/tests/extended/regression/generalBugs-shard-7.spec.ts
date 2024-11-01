@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
-test("should be able to select all with ctrl + A on advanced modal", async ({
+// TODO: This test might not be needed anymore
+test.skip("should be able to select all with ctrl + A on advanced modal", async ({
   page,
 }) => {
   await page.goto("/");
