@@ -22,6 +22,8 @@ import TextAreaWrapper from "./components/textAreaWrapper/newTextAreaWrapper";
 import UploadFileButton from "./components/uploadFileButton/newUploadFileButton";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
+import Loading from "@/components/ui/loading";
+import useFlowStore from "@/stores/flowStore";
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -38,6 +40,7 @@ export default function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { validateFileSize } = useFileSizeValidator(setErrorData);
+  const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   useFocusOnUnlock(lockChat, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
@@ -165,16 +168,32 @@ export default function ChatInput({
     return (
       <div className="flex h-full w-full flex-col items-center justify-center">
         <div className="flex w-full flex-col items-center justify-center gap-3 rounded-md border border-input bg-muted p-2 py-4">
-          <Button
-            className="font-semibold"
-            onClick={() => {
-              sendMessage({
-                repeat: 1,
-              });
-            }}
-          >
-            Run Flow
-          </Button>
+          {!lockChat ? (
+            <Button
+              data-testid="button-send"
+              className="font-semibold"
+              onClick={() => {
+                sendMessage({
+                  repeat: 1,
+                });
+              }}
+            >
+              Run Flow
+            </Button>
+          ) : (
+            <Button
+              onClick={stopBuilding}
+              data-testid="button-stop"
+              unstyled
+              className="form-modal-send-button bg-muted hover:bg-secondary-hover dark:hover:bg-input text-foreground cursor-pointer"
+            >
+              <div className="flex items-center gap-2 rounded-md text-[14px] font-medium">
+                Stop
+              <Loading className="h-[16px] w-[16px]" />
+            </div>
+            </Button>
+          )}
+
           <p className="text-muted-foreground">
             Add a{" "}
             <a
