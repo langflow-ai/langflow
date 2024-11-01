@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
 
 from .content_types import ContentTypes
 
@@ -24,3 +25,10 @@ class ContentBlock(BaseModel):
         fields = self.__pydantic_core_schema__["schema"]["fields"]
         fields_with_default = (f for f, d in fields.items() if "default" in d["schema"])
         self.model_fields_set.update(fields_with_default)
+
+
+class ContentBlockDict(TypedDict):
+    title: str
+    content: ContentType
+    allow_markdown: bool
+    media_url: list[str] | None

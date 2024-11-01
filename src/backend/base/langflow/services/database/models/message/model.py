@@ -6,8 +6,8 @@ from pydantic import field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.schema.content_block import ContentBlock
-from langflow.schema.properties import Properties
+from langflow.schema.content_block import ContentBlock, ContentBlockDict
+from langflow.schema.properties import Properties, PropertiesDict
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
@@ -24,9 +24,9 @@ class MessageBase(SQLModel):
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
 
-    properties: Properties | None = Field(default=None)
+    properties: Properties = Field(default_factory=Properties)
     category: str = Field()
-    content_blocks: list[ContentBlock] | None = Field(default=None)
+    content_blocks: list[ContentBlock] = Field(default_factory=list)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -95,9 +95,9 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     flow_id: UUID | None = Field(default=None, foreign_key="flow.id")
     flow: "Flow" = Relationship(back_populates="messages")
     files: list[str] = Field(sa_column=Column(JSON))
-    properties: dict | None = Field(default=None, sa_column=Column(JSON))
+    properties: PropertiesDict = Field(default_factory=PropertiesDict, sa_column=Column(JSON))  # type: ignore[assignment]
     category: str = Field(sa_column=Column(Text))
-    content_blocks: list[dict] | None = Field(default=None, sa_column=Column(JSON))
+    content_blocks: list[ContentBlockDict] = Field(default_factory=list, sa_column=Column(JSON))  # type: ignore[assignment]
 
     @field_validator("flow_id", mode="before")
     @classmethod

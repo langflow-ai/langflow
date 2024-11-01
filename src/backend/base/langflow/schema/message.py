@@ -51,9 +51,9 @@ class Message(Data):
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
 
-    properties: Properties | None = None
+    properties: Properties = Field(default_factory=Properties)
     category: Literal["message", "error", "warning", "info"] | None = "message"
-    content_blocks: list[ContentBlock] | None = Field(default_factory=list)
+    content_blocks: list[ContentBlock] = Field(default_factory=list)
 
     @field_validator("flow_id", mode="before")
     @classmethod

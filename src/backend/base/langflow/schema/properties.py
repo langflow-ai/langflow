@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
+from typing_extensions import TypedDict
 
 
 class Source(BaseModel):
@@ -14,7 +15,7 @@ class Properties(BaseModel):
     text_color: str | None = None
     background_color: str | None = None
     edited: bool = False
-    source: Source | None = None
+    source: Source = Field(default_factory=Source)
     icon: str | None = None
     allow_markdown: bool = False
     targets: list = []
@@ -25,3 +26,13 @@ class Properties(BaseModel):
         if isinstance(v, str):
             return Source(id=v, display_name=v, source=v)
         return v
+
+
+class PropertiesDict(TypedDict, total=False):
+    text_color: str | None
+    background_color: str | None
+    edited: bool
+    source: Source | None
+    icon: str | None
+    allow_markdown: bool
+    targets: list
