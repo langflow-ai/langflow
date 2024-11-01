@@ -127,9 +127,22 @@ def create_error(
     title: str = "Error",
     timestamp: str | None = None,
     id: UUID | str | None = None,  # noqa: A002
+    flow_id: UUID | str | None = None,
+    session_id: str | None = None,
+    content_blocks: list[ContentBlock] | None = None,
 ) -> ErrorEvent:
-    content_blocks = [ContentBlock(title=title, content=traceback)] if traceback else None
-    return ErrorEvent(text=text, properties=properties, content_blocks=content_blocks, timestamp=timestamp, id=id)
+    if traceback:
+        content_blocks = content_blocks or []
+        content_blocks += [ContentBlock(title=title, content=traceback)]
+    return ErrorEvent(
+        text=text,
+        properties=properties,
+        content_blocks=content_blocks,
+        timestamp=timestamp,
+        id=id,
+        flow_id=flow_id,
+        session_id=session_id,
+    )
 
 
 def create_warning(message: str) -> WarningEvent:
