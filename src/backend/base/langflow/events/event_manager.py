@@ -4,6 +4,7 @@ import json
 import time
 import uuid
 from functools import partial
+from typing import Literal
 
 from fastapi.encoders import jsonable_encoder
 from loguru import logger
@@ -41,7 +42,12 @@ class EventManager:
             msg = "Callback must have exactly 3 parameters: manager, event_type, and data"
             raise ValueError(msg)
 
-    def register_event(self, name: str, event_type: str, callback: EventCallback | None = None) -> None:
+    def register_event(
+        self,
+        name: str,
+        event_type: Literal["message", "error", "warning", "info", "token"],
+        callback: EventCallback | None = None,
+    ) -> None:
         if not name:
             msg = "Event name cannot be empty"
             raise ValueError(msg)
@@ -54,9 +60,10 @@ class EventManager:
             _callback = partial(callback, manager=self, event_type=event_type)
         self.events[name] = _callback
 
-    def send_event(self, *, event_type: str, data: LoggableType):
+    def send_event(self, *, event_type: Literal["message", "error", "warning", "info", "token"], data: LoggableType):
         try:
-            data = create_event_by_type(event_type, **data)
+            if isinstance(data, dict):
+                data = create_event_by_type(event_type, **data)
         except TypeError as e:
             logger.debug(f"Error creating playground event: {e}")
         except Exception:
