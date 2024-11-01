@@ -49,13 +49,11 @@ test("should delete a flow", async ({ page }) => {
 
   await page.getByText("Website Content QA").first().isVisible();
 
-  await page.waitForSelector('[data-testid="checkbox-component"]', {
-    timeout: 100000,
-  });
+  await page.getByTestId("home-dropdown-menu").first().click();
+  await page.waitForTimeout(500);
 
-  await page.getByTestId("checkbox-component").first().click();
-
-  await page.getByTestId("icon-Trash2").click();
+  await page.getByText("Delete").last().click();
+  await page.waitForTimeout(500);
   await page
     .getByText("Are you sure you want to delete the selected component?")
     .isVisible();

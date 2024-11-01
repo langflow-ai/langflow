@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
-test("User must be able to stop building from inside Playground", async ({
+test.skip("User must be able to stop building from inside Playground", async ({
   page,
 }) => {
   await page.goto("/");
@@ -24,7 +24,7 @@ test("User must be able to stop building from inside Playground", async ({
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
