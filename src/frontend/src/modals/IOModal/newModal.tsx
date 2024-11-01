@@ -380,31 +380,31 @@ export default function IOModal({
                   {inputs.some(
                     (input) => input.id === selectedViewField.id,
                   ) && (
-                    <IOFieldView
-                      type={InputOutput.INPUT}
-                      left={false}
-                      fieldType={selectedViewField.type!}
-                      fieldId={selectedViewField.id!}
-                    />
-                  )}
+                      <IOFieldView
+                        type={InputOutput.INPUT}
+                        left={false}
+                        fieldType={selectedViewField.type!}
+                        fieldId={selectedViewField.id!}
+                      />
+                    )}
                   {outputs.some(
                     (output) => output.id === selectedViewField.id,
                   ) && (
-                    <IOFieldView
-                      type={InputOutput.OUTPUT}
-                      left={false}
-                      fieldType={selectedViewField.type!}
-                      fieldId={selectedViewField.id!}
-                    />
-                  )}
+                      <IOFieldView
+                        type={InputOutput.OUTPUT}
+                        left={false}
+                        fieldType={selectedViewField.type!}
+                        fieldId={selectedViewField.id!}
+                      />
+                    )}
                   {sessions.some(
                     (session) => session === selectedViewField.id,
                   ) && (
-                    <SessionView
-                      session={selectedViewField.id}
-                      id={currentFlowId}
-                    />
-                  )}
+                      <SessionView
+                        session={selectedViewField.id}
+                        id={currentFlowId}
+                      />
+                    )}
                 </div>
               </div>
             )}
@@ -444,19 +444,21 @@ export default function IOModal({
                     "absolute right-10 top-2 flex h-8 w-8 items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                   )}
                 >
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(_) => {
-                      setvisibleSession(undefined);
-                      setSelectedViewField(undefined);
-                    }}
-                  >
-                    <IconComponent
-                      name="Plus"
-                      className="h-[18px] w-[18px] text-ring"
-                    />
-                  </Button>
+                  <ShadTooltip styleClasses="z-50" content="New Chat">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(_) => {
+                        setvisibleSession(undefined);
+                        setSelectedViewField(undefined);
+                      }}
+                    >
+                      <IconComponent
+                        name="Plus"
+                        className="h-[18px] w-[18px] text-ring"
+                      />
+                    </Button>
+                  </ShadTooltip>
                 </div>
               </div>
               {haveChat ? (
@@ -480,8 +482,8 @@ export default function IOModal({
                       !canvasOpen
                         ? undefined
                         : () => {
-                            setOpen(false);
-                          }
+                          setOpen(false);
+                        }
                     }
                   />
                 </div>
