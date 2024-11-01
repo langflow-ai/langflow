@@ -956,7 +956,9 @@ class Component(CustomComponent):
         if self._event_manager:
             if first_chunk:
                 # Send the initial message only on the first chunk
-                self._send_message_event(message, id_=message_id)
+                msg_copy = message.model_copy()
+                msg_copy.text = complete_message
+                self._send_message_event(msg_copy, id_=message_id)
             self._event_manager.on_token(
                 data={
                     "chunk": chunk,
