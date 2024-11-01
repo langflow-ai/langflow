@@ -37,6 +37,7 @@ class SizedLogBuffer:
         self._max_readers = max_readers
         self._wlock = Lock()
         self._rsemaphore = Semaphore(max_readers)
+        self._max = 0
 
     def get_write_lock(self) -> Lock:
         return self._wlock
@@ -104,10 +105,15 @@ class SizedLogBuffer:
     @property
     def max(self) -> int:
         # Get it dynamically to allow for env variable changes
-        env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
-        if env_buffer_size.isdigit():
-            return int(env_buffer_size)
-        return 0
+        if self._max == 0:
+            env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
+            if env_buffer_size.isdigit():
+                self._max = int(env_buffer_size)
+        return self._max
+
+    @max.setter
+    def max(self, value: int) -> None:
+        self._max = value
 
     def enabled(self) -> bool:
         return self.max > 0
