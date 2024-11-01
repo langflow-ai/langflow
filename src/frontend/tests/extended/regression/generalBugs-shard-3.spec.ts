@@ -204,13 +204,13 @@ test("should copy code from playground modal", async ({ page }) => {
     timeout: 100000,
   });
 
-  await page.waitForSelector('[data-testid="btn-copy-code"]', {
+  await page.waitForSelector('[data-testid="copy-code-button"]', {
     state: "visible",
     timeout: 30000,
   });
 
   await page.waitForTimeout(1000);
-  await page.getByTestId("btn-copy-code").last().click();
+  await page.getByTestId("copy-code-button").last().click();
 
   const handle = await page.evaluateHandle(() =>
     navigator.clipboard.readText(),

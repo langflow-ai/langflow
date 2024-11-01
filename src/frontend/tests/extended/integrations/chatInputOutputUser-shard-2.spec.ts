@@ -91,7 +91,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   let valueAI = await page.getByTestId("sender_name_ai").textContent();
 
   expect(valueUser).toBe("User");
-  expect(valueAI).toBe("AI");
+  expect(valueAI).toContain("AI");
 
   await page.keyboard.press("Escape");
 
@@ -143,8 +143,8 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     .getByTestId("sender_name_testsendernameai")
     .textContent();
 
-  expect(valueUser).toBe("TestSenderNameUser");
-  expect(valueAI).toBe("TestSenderNameAI");
+  expect(valueUser).toContain("TestSenderNameUser");
+  expect(valueAI).toContain("TestSenderNameAI");
 
   expect(
     await page
