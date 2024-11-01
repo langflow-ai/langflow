@@ -91,6 +91,7 @@ class ChatOutput(ChatComponent):
             sender=self.sender,
             sender_name=self.sender_name,
             session_id=self.session_id,
+            flow_id=self.graph.flow_id,
             properties=Properties(
                 source=Source(id=_source_id, display_name=_display_name, source=_source),
                 icon=_icon,
