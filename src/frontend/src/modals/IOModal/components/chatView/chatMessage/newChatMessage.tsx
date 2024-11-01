@@ -66,7 +66,6 @@ export default function ChatMessage({
   const setPlaygroundScrollBehaves = useUtilityStore(
     (state) => state.setPlaygroundScrollBehaves,
   );
-
   // Sync ref with state
   useEffect(() => {
     chatMessageRef.current = chatMessage;
@@ -427,7 +426,7 @@ export default function ChatMessage({
                               />
                             ) : (
                               <>
-                                <div className="flex w-full items-baseline gap-2">
+                                <div className="w-full items-baseline gap-2">
                                   <Markdown
                                     remarkPlugins={[remarkGfm]}
                                     linkTarget="_blank"
@@ -588,7 +587,7 @@ export default function ChatMessage({
                     ) : (
                       <>
                         <div
-                          className={`flex w-full items-baseline gap-2 whitespace-pre-wrap break-words text-[14px] font-normal ${
+                          className={`w-full items-baseline whitespace-pre-wrap break-words text-[14px] font-normal ${
                             isEmpty
                               ? "text-muted-foreground"
                               : "text-primary"
