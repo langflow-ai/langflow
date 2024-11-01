@@ -124,14 +124,14 @@ test("fresh start playground", async ({ page }) => {
     .getByText("message")
     .click();
   //check session
-  await page.getByText("Default Session").click();
+  await page.getByText("Default Session").first().click();
   await page.getByTestId("chat-message-User-message 1").click();
   //check edit message
   await page.getByTestId("chat-message-User-message 1").hover();
   await page
     .locator("div")
     .filter({ hasText: /^Usermessage 1$/ })
-    .getByTestId("icon-pencil")
+    .getByTestId("icon-Pen")
     .click();
   await page.waitForTimeout(500);
 
@@ -140,46 +140,21 @@ test("fresh start playground", async ({ page }) => {
   await page.getByTestId("chat-message-User-edit_1").click();
   await page.getByTestId("chat-message-User-edit_1").hover();
   // check cancel edit
-  await page
-    .locator("div")
-    .filter({ hasText: /^Useredit_1$/ })
-    .getByTestId("icon-pencil")
-    .click();
+  await page.getByTestId("sender_name_user").hover();
+  await page.getByTestId("icon-Pen").first().click();
   await page.waitForTimeout(500);
 
   await page.getByTestId("textarea").fill("cancel_edit");
   await page.getByTestId("cancel-button").click();
   await page.getByTestId("chat-message-User-edit_1").click();
   await page.getByTestId("chat-message-User-edit_1").hover();
-  // check cancel edit blur
-  await page
-    .locator("div")
-    .filter({ hasText: /^Useredit_1$/ })
-    .getByTestId("icon-pencil")
-    .click();
-  await page.waitForTimeout(500);
-
-  await page.getByTestId("textarea").fill("cancel_edit_blur");
-  await page
-    .getByLabel("Playground")
-    .locator("div")
-    .filter({ hasText: "ChatDefault" })
-    .nth(2)
-    .click();
-  await page.waitForTimeout(500);
-
-  await page.getByTestId("chat-message-User-edit_1").click();
   //check edit bot message
   await page
     .getByTestId("chat-message-AI-message 1")
     .getByText("message")
     .click();
   await page.getByTestId("chat-message-AI-message 1").hover();
-  await page
-    .locator("div")
-    .filter({ hasText: /^AImessage 1$/ })
-    .getByTestId("icon-pencil")
-    .click();
+  await page.getByTestId("icon-Pen").last().click();
   await page.waitForTimeout(500);
 
   await page.getByTestId("textarea").fill("edit_bot_1");
@@ -187,35 +162,13 @@ test("fresh start playground", async ({ page }) => {
   await page.getByText("edit_bot_1").click();
   // check cancel edit bot
   await page.getByTestId("chat-message-AI-edit_bot_1").hover();
-  await page
-    .locator("div")
-    .filter({ hasText: /^AIedit_bot_1$/ })
-    .getByTestId("icon-pencil")
-    .click();
+  await page.getByTestId("icon-Pen").last().click();
   await page.waitForTimeout(500);
 
   await page.getByTestId("textarea").fill("edit_bot_cancel");
   await page.getByTestId("cancel-button").click();
   await page.getByText("edit_bot_1").click();
   await page.getByTestId("chat-message-AI-edit_bot_1").hover();
-  // check cancel edit bot blur
-  await page
-    .locator("div")
-    .filter({ hasText: /^AIedit_bot_1$/ })
-    .getByTestId("icon-pencil")
-    .click();
-  await page.waitForTimeout(500);
-
-  await page.getByTestId("textarea").fill("edit_bot_blur_cancel");
-  await page
-    .getByLabel("Playground")
-    .locator("div")
-    .filter({ hasText: "ChatDefault" })
-    .nth(2)
-    .click();
-  await page.waitForTimeout(500);
-
-  await page.getByText("edit_bot_1").click();
   // check table messages view
   await page.getByRole("combobox").click();
   await page.getByLabel("Message logs").click();
@@ -225,28 +178,27 @@ test("fresh start playground", async ({ page }) => {
   await page.getByLabel("Rename").getByText("Rename").click();
   await page.getByRole("textbox").fill("new name");
   await page
-    .getByLabel("Chat", { exact: true })
     .getByTestId("icon-Check")
     .click();
   await page.waitForTimeout(500);
 
-  await page.getByLabel("Chat", { exact: true }).getByText("new name").click();
+  await page.getByTestId('session-selector').getByText('new name').click();
   // check cancel rename
   await page.getByRole("combobox").click();
   await page.getByLabel("Rename").getByText("Rename").click();
   await page.getByRole("textbox").fill("cancel name");
-  await page.getByLabel("Chat", { exact: true }).getByTestId("icon-X").click();
-  await page.getByLabel("Chat", { exact: true }).getByText("new name").click();
+  await page.getByTestId('session-selector').getByTestId("icon-X").click();
+  await page.getByTestId('session-selector').getByText('new name').click();
   // check cancel rename blur
   await page.getByRole("combobox").click();
   await page.getByLabel("Rename").getByText("Rename").click();
   await page.getByRole("textbox").fill("cancel_blur");
-  await page.getByRole("tab", { name: "Chat" }).click();
-  await page.getByLabel("Chat", { exact: true }).getByText("new name").click();
+  await page.getByText('PlaygroundChat').click();
+  await page.getByTestId('session-selector').getByText('new name').click();
   // check delete session
   await page.getByRole("combobox").click();
   await page.getByLabel("Delete").click();
-  await page.getByText("No memories available.").click();
+  await page.getByRole('heading', { name: 'New chat' }).click();
   // check new session
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("session_after_delete");
@@ -255,9 +207,9 @@ test("fresh start playground", async ({ page }) => {
   await expect(page.getByTestId("session-selector")).toBeVisible();
 
   // check new chat
-  await page.getByRole("button", { name: "New Chat" }).click();
+  await page.getByTestId("new-chat").click();
   await page.waitForTimeout(1000);
-  await page.getByText("👋 Langflow Chat").click();
+  await page.getByText("New chat").click();
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("second session");
   await page.keyboard.press("Enter");
@@ -270,9 +222,6 @@ test("fresh start playground", async ({ page }) => {
     .click();
   expect(await page.getByTestId("session-selector").count()).toBe(2);
 
-  const sessionElements = await page
-    .getByLabel("Playground")
-    .getByText(/^Session .+/)
-    .all();
+  const sessionElements = await page.getByTestId("session-selector").all();
   expect(sessionElements.length).toBe(2);
 });

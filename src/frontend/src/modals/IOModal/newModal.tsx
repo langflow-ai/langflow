@@ -305,6 +305,7 @@ export default function IOModal({
                       <ShadTooltip styleClasses="z-50" content="New Chat">
                         <div>
                           <Button
+                            data-testid="new-chat"
                             variant="ghost"
                             className="flex h-8 w-8 items-center justify-center !p-0"
                             onClick={(_) => {
