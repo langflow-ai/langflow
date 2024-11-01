@@ -10,7 +10,15 @@ import orjson
 
 STREAM_INFO_TEXT = "Stream the response from the model. Streaming works only in Chat."
 
-NODE_FORMAT_ATTRIBUTES = ["beta", "icon", "display_name", "output_types", "edited", "metadata"]
+NODE_FORMAT_ATTRIBUTES = [
+    "beta",
+    "legacy",
+    "icon",
+    "display_name",
+    "output_types",
+    "edited",
+    "metadata",
+]
 
 
 FIELD_FORMAT_ATTRIBUTES = [

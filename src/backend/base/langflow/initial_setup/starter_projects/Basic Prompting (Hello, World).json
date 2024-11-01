@@ -108,6 +108,7 @@
             ],
             "frozen": false,
             "icon": "MessagesSquare",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -324,6 +325,7 @@
             ],
             "frozen": false,
             "icon": "prompts",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -445,6 +447,7 @@
             ],
             "frozen": false,
             "icon": "MessagesSquare",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -647,6 +650,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [

@@ -3,7 +3,10 @@ from typing import cast
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain_cohere import CohereRerank
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from langflow.base.vectorstores.model import (
+    LCVectorStoreComponent,
+    check_cached_vector_store,
+)
 from langflow.field_typing import Retriever, VectorStore
 from langflow.io import (
     DropdownInput,
@@ -22,6 +25,7 @@ class CohereRerankComponent(LCVectorStoreComponent):
     description = "Rerank documents using the Cohere API and a retriever."
     name = "CohereRerank"
     icon = "Cohere"
+    legacy: bool = True
 
     inputs = [
         MultilineInput(
