@@ -216,7 +216,7 @@ export default function ChatMessage({
 
   if (chat.category === "error") {
     const block = (chat.content_blocks?.[0] ?? {}) as ContentBlock;
-    const errorContent = block.content as ErrorContent;
+    const errorContent = (block.content as ErrorContent) ?? {};
     return (
       <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
         <AnimatePresence mode="wait">
