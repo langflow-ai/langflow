@@ -96,13 +96,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
         key = []
         # Partition keys are mandatory
         for k in self.partition_keys:
-            if k in args:
-                key.append(args[k])
-            elif self.static_filters[k] is not None:
-                key.append(self.static_filters[k])
-            else:
-                # TO-DO: Raise error - Missing information
-                key.append("none")
+            key.append(self.partition_keys[k])
 
         # Clustering keys are optional
         for k in self.clustering_keys:
