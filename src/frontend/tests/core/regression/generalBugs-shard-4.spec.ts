@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("should be able to move flow from folder, rename it and be displayed on correct folder", async ({
   page,
 }) => {
-  test.skip(true, "this functionality doesn't work yet w/ the uplift designs")
+  test.skip(true, "this functionality doesn't work yet w/ the uplift designs");
   const randomName = Math.random().toString(36).substring(2);
   const secondRandomName = Math.random().toString(36).substring(2);
 
